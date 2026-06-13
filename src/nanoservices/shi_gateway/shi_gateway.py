@@ -162,7 +162,7 @@ class OllamaBackend:
                                 size_bytes=size,
                                 quantization=quant,
                                 status=ModelStatus.READY,
-                            ),
+                            )
                         )
                     return models
         except Exception:

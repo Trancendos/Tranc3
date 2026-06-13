@@ -6,16 +6,17 @@ tier system, and pillar registry.
 """
 
 from Dimensional.pillars.entities import (
-    LOCATION_CONFIGS,
-    LOCATIONS,
     EntityTier,
     EntityType,
-    PillarEntity,
     PillarLocation,
+    PillarEntity,
     PillarLocationConfig,
     PillarRegistry,
     get_pillar_registry,
+    LOCATION_CONFIGS,
+    LOCATIONS,
 )
+
 
 # ──────────────────────────────────────────────
 # EntityTier Tests
@@ -247,7 +248,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AI,
                 tier=EntityTier.AI,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         registry.register(
             PillarEntity(
@@ -255,7 +256,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AI,
                 tier=EntityTier.AI,
                 location=PillarLocation.HIVE,
-            ),
+            )
         )
         nexus_entities = registry.get_by_location(PillarLocation.NEXUS)
         assert len(nexus_entities) == 1
@@ -269,7 +270,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AI,
                 tier=EntityTier.AI,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         registry.register(
             PillarEntity(
@@ -277,7 +278,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AGENT,
                 tier=EntityTier.AGENT,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         ai_entities = registry.get_by_tier(EntityTier.AI)
         assert len(ai_entities) == 1
@@ -290,7 +291,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AGENT,
                 tier=EntityTier.AGENT,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         registry.register(
             PillarEntity(
@@ -298,7 +299,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.BOT,
                 tier=EntityTier.BOT,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         agents = registry.get_by_type(EntityType.AGENT)
         assert len(agents) == 1
@@ -354,7 +355,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AI,
                 tier=EntityTier.AI,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         assert registry.location_count == 1
 
@@ -366,7 +367,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AI,
                 tier=EntityTier.AI,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         summary = registry.get_location_summary(PillarLocation.NEXUS)
         assert summary["entity_count"] == 1
@@ -380,7 +381,7 @@ class TestPillarRegistry:
                 entity_type=EntityType.AI,
                 tier=EntityTier.AI,
                 location=PillarLocation.NEXUS,
-            ),
+            )
         )
         summary = registry.get_full_summary()
         assert "total_entities" in summary

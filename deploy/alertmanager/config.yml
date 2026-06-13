@@ -1,0 +1,47 @@
+# Tranc3 Alertmanager Configuration
+# Zero-cost: Uses webhook receiver to trigger SmartStorageOrchestrator auto-migration
+# No paid notification services (no PagerDuty, OpsGenie, etc.)
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'storage-orchestrator'
+  group_by: ['alertname', 'storage_tier']
+  group_wait: 10s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Critical: Storage capacity > 95% — immediate action
+    - match:
+        severity: critical
+      receiver: 'storage-orchestrator-critical'
+      group_wait: 0s
+      repeat_interval: 1h
+    # Warning: Storage capacity > 80% — proactive migration
+    - match:
+        severity: warning
+      receiver: 'storage-orchestrator'
+      group_wait: 30s
+      repeat_interval: 2h
+
+receivers:
+  # Webhook to SmartStorageOrchestrator — triggers auto-migration
+  - name: 'storage-orchestrator'
+    webhook_configs:
+      - url: 'http://storage-orchestrator:8010/api/v1/storage/alert'
+        send_resolved: true
+
+  # Critical webhook — triggers immediate tier migration
+  - name: 'storage-orchestrator-critical'
+    webhook_configs:
+      - url: 'http://storage-orchestrator:8010/api/v1/storage/alert/critical'
+        send_resolved: true
+
+inhibit_rules:
+  # If critical alert is firing, suppress warning for the same tier
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['storage_tier']

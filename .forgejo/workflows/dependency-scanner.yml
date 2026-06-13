@@ -3,14 +3,12 @@
 # NO GitHub Actions — Forgejo CI only (The Workshop)
 #
 # What this does:
-#   1. pip-audit + osv-scanner — CVE / known vulnerability scanning (all req files)
-#   2. N-1 compliance          — Every pinned dep must be within 1 major/minor of latest
-#   3. Outdated report         — Full inventory of drift
-#   4. Auto-remediation PR     — Creates a Forgejo PR with safe patch/minor upgrades
-#   5. Go module audit         — govulncheck for aeonmind/go
-#   6. Container scan          — trivy for docker-compose images
-#   7. OSV-Scanner weekly      — multi-ecosystem SCA (Google, Apache 2.0)
-# NOTE: Safety removed — no longer free for commercial use. Replaced by osv-scanner.
+#   1. pip-audit + safety  — CVE / known vulnerability scanning (all req files)
+#   2. N-1 compliance      — Every pinned dep must be within 1 major/minor of latest
+#   3. Outdated report     — Full inventory of drift
+#   4. Auto-remediation PR — Creates a Forgejo PR with safe patch/minor upgrades
+#   5. Go module audit     — govulncheck for aeonmind/go
+#   6. Container scan      — trivy for docker-compose images
 #
 # Triggers:
 #   - Every Monday 06:30 UTC (weekly sweep)
@@ -32,8 +30,7 @@ name: Dependency Scanner & N-1 Auto-Remediator
 
 on:
   schedule:
-    - cron: '30 6 * * 1'  # Weekly Monday 06:30 UTC (dependency scanner + N-1)
-    - cron: '0 3 * * 0'   # Weekly Sunday 03:00 UTC (OSV-Scanner deep scan)
+    - cron: '30 6 * * 1'  # Weekly Monday 06:30 UTC
   pull_request:
     paths:
       - 'requirements*.txt'
@@ -60,7 +57,7 @@ jobs:
   # 1. Python CVE Vulnerability Scan
   # ──────────────────────────────────────────────────────────────────────────
   python-cve-scan:
-    name: Python CVE Scan (pip-audit + osv-scanner)
+    name: Python CVE Scan (pip-audit + safety)
     runs-on: ubuntu-latest
     outputs:
       vuln_count: ${{ steps.count.outputs.count }}
@@ -73,15 +70,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install audit tools
-        run: pip install --quiet pip-audit
-
-      - name: Install OSV-Scanner
-        run: |
-          curl -sSfL \
-            "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" \
-            -o /usr/local/bin/osv-scanner
-          chmod +x /usr/local/bin/osv-scanner
-          osv-scanner --version
+        run: pip install --quiet pip-audit safety
 
       - name: pip-audit — root requirements
         id: pip_audit
@@ -114,15 +103,11 @@ jobs:
               --output "reports/pip-audit-${name}.json" || true
           done
 
-      - name: OSV-Scanner — multi-ecosystem recursive scan
+      - name: Safety scan
         run: |
-          osv-scanner \
-            --recursive \
-            --format json \
-            --output reports/osv-scanner-weekly.json \
-            --config .osv-scanner.toml \
-            . 2>&1 | tee reports/osv-scanner-weekly.txt || true
-          echo "OSV-Scanner weekly sweep complete"
+          safety scan -r requirements.txt \
+            --json --output reports/safety-root.json || true
+          safety scan -r requirements.txt 2>&1 | tee reports/safety-root.txt || true
 
       - name: Count total vulnerabilities
         id: count
@@ -568,5 +553,4 @@ Policy: N-1 compliance (within 1 major/minor of latest stable)"
           echo "- Major bumps: require manual review + approval" >> $GITHUB_STEP_SUMMARY
           echo "- BLOCKER (2+ major behind): **blocks merge**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "_Zero-cost scanning powered by pip-audit, osv-scanner, govulncheck, N-1 checker_" >> $GITHUB_STEP_SUMMARY
-          echo "_NOTE: Safety removed — no longer free for commercial use._" >> $GITHUB_STEP_SUMMARY
+          echo "_Zero-cost scanning powered by pip-audit, safety, govulncheck, N-1 checker_" >> $GITHUB_STEP_SUMMARY

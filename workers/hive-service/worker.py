@@ -30,8 +30,6 @@ from pathlib import Path
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from src.entities.health_metadata import health_entity_block
-
 # Ensure the project root is on sys.path so Dimensional package is importable
 _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
@@ -69,12 +67,7 @@ async def _internal_auth(request: Request, call_next):
 @app.get("/health")
 async def health():
     """Standard health check — required by CI worker-validation and Docker healthcheck."""
-    return {
-        "status": "ok",
-        "service": "hive",
-        "port": WORKER_PORT,
-        "entity": health_entity_block(WORKER_PORT, WORKER_NAME),
-    }
+    return {"status": "ok", "service": "hive", "port": WORKER_PORT}
 
 
 @app.on_event("startup")
@@ -160,7 +153,7 @@ async def _worker_startup():
                 )
                 await hive.start_pipeline(pipeline.pipeline_id)
                 logger.info(
-                    f"Created and started pipeline: {pipe_cfg['name']} ({pipeline.pipeline_id})",
+                    f"Created and started pipeline: {pipe_cfg['name']} ({pipeline.pipeline_id})"
                 )
         except Exception as e:
             logger.warning(f"Failed to create pipeline {pipe_cfg['name']}: {e}")
@@ -195,7 +188,7 @@ async def _worker_startup():
 
     logger.info(
         f"HIVE ready: {len(sources)} sources, {len(sinks)} sinks, "
-        f"{len(pipeline_configs)} pipelines, port {WORKER_PORT}",
+        f"{len(pipeline_configs)} pipelines, port {WORKER_PORT}"
     )
 
 

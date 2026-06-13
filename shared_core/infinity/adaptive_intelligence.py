@@ -76,37 +76,35 @@ logger = logging.getLogger(__name__)
 # ── Optional imports (graceful degradation) ──────────────────────────────────
 
 try:
-    from shared_core.architecture.adaptive_pulse import (  # codeql[py/cyclic-import]
-        AdaptivePulseController,
-    )
+    from shared_core.architecture.adaptive_pulse import AdaptivePulseController, PulseMode
 
     _PULSE_AVAILABLE = True
 except ImportError:
     _PULSE_AVAILABLE = False
     AdaptivePulseController = None  # type: ignore[assignment,misc]
+    PulseMode = None  # type: ignore[assignment,misc]
 
 try:
-    from src.healing.anomaly_detector import AnomalyDetector  # codeql[py/cyclic-import]
+    from src.healing.anomaly_detector import Anomaly, AnomalyDetector
 
     _ANOMALY_AVAILABLE = True
 except ImportError:
     _ANOMALY_AVAILABLE = False
     AnomalyDetector = None  # type: ignore[assignment,misc]
+    Anomaly = None  # type: ignore[assignment,misc]
 
 try:
-    from src.healing.self_repair import (  # codeql[py/cyclic-import]
-        AdaptiveConfigTuner,
-        SelfRepairEngine,
-    )
+    from src.healing.self_repair import AdaptiveConfigTuner, RepairStrategy, SelfRepairEngine
 
     _REPAIR_AVAILABLE = True
 except ImportError:
     _REPAIR_AVAILABLE = False
     SelfRepairEngine = None  # type: ignore[assignment,misc]
     AdaptiveConfigTuner = None  # type: ignore[assignment,misc]
+    RepairStrategy = None  # type: ignore[assignment,misc]
 
 try:
-    from src.fluidic.reactive_state import StateStore  # codeql[py/cyclic-import]
+    from src.fluidic.reactive_state import ReactiveState, StateStore  # noqa: F401
 
     _REACTIVE_AVAILABLE = True
 except ImportError:
@@ -114,7 +112,7 @@ except ImportError:
     StateStore = None  # type: ignore[assignment,misc]
 
 try:
-    from src.fluidic.hot_config import HotConfig  # codeql[py/cyclic-import]
+    from src.fluidic.hot_config import HotConfig
 
     _HOTCONFIG_AVAILABLE = True
 except ImportError:
@@ -122,10 +120,7 @@ except ImportError:
     HotConfig = None  # type: ignore[assignment,misc]
 
 try:
-    from shared_core.middleware.telemetry import (  # codeql[py/cyclic-import]
-        TelemetryCollector,
-        TelemetryMiddleware,
-    )
+    from shared_core.middleware.telemetry import TelemetryCollector, TelemetryMiddleware
 
     _TELEMETRY_AVAILABLE = True
 except ImportError:
@@ -134,8 +129,9 @@ except ImportError:
     TelemetryMiddleware = None  # type: ignore[assignment,misc]
 
 try:
-    from src.adaptive.foresight import (  # codeql[py/cyclic-import]
+    from src.adaptive.foresight import (  # noqa: F401
         ConversationTrajectoryPredictor,
+        ProbabilityVector,
     )
 
     _FORESIGHT_AVAILABLE = True
@@ -144,14 +140,13 @@ except ImportError:
     ConversationTrajectoryPredictor = None  # type: ignore[assignment,misc]
 
 try:
-    from shared_core.security_automation.defense_engine import (  # codeql[py/cyclic-import]
-        DefenseEngine,
-    )
+    from shared_core.security_automation.defense_engine import DefenseEngine, ThreatLevel
 
     _DEFENSE_AVAILABLE = True
 except ImportError:
     _DEFENSE_AVAILABLE = False
     DefenseEngine = None  # type: ignore[assignment,misc]
+    ThreatLevel = None  # type: ignore[assignment,misc]
 
 
 # ── Health Tier ───────────────────────────────────────────────────────────────
@@ -273,8 +268,7 @@ class InfinityHealthOrchestrator:
                 min_interval=5.0,
             )
             logger.info(
-                "AdaptivePulseController ready for %s",
-                sanitize_for_log(self.config.service_name),
+                "AdaptivePulseController ready for %s", sanitize_for_log(self.config.service_name)
             )
         else:
             self.pulse = None
@@ -345,8 +339,7 @@ class InfinityHealthOrchestrator:
             try:
                 app.add_middleware(TelemetryMiddleware)
                 logger.info(
-                    "TelemetryMiddleware mounted on %s",
-                    sanitize_for_log(self.config.service_name),
+                    "TelemetryMiddleware mounted on %s", sanitize_for_log(self.config.service_name)
                 )
             except Exception as e:
                 logger.warning("Could not mount TelemetryMiddleware: %s", sanitize_for_log(str(e)))
@@ -380,8 +373,7 @@ class InfinityHealthOrchestrator:
             task.cancel()
         self._loops.clear()
         logger.info(
-            "InfinityHealthOrchestrator stopped for %s",
-            sanitize_for_log(self.config.service_name),
+            "InfinityHealthOrchestrator stopped for %s", sanitize_for_log(self.config.service_name)
         )
 
     # ── Daemon Registration ───────────────────────────────────────────────────
@@ -463,9 +455,7 @@ class InfinityHealthOrchestrator:
         self.record_metric("request_latency_ms", latency_ms, feed_anomaly=True)
         if is_error:
             self.record_metric(
-                "error_count",
-                self._metric_cache.get("error_count", 0) + 1,
-                feed_anomaly=False,
+                "error_count", self._metric_cache.get("error_count", 0) + 1, feed_anomaly=False
             )
 
     # ── Health Score ──────────────────────────────────────────────────────────
@@ -499,7 +489,7 @@ class InfinityHealthOrchestrator:
                         "tier_icon": tier_icon,
                         "pulse_mode": self.pulse.current_mode.value if self.pulse else "unknown",
                         "reason": reason,
-                    },
+                    }
                 ),
             )
 
@@ -548,8 +538,7 @@ class InfinityHealthOrchestrator:
         penalty = {"low": 0.05, "medium": 0.15, "high": 0.25, "critical": 0.4}.get(severity, 0.05)
         new_score = max(0.0, self._health_score - penalty)
         self.update_health(
-            new_score,
-            reason=f"anomaly:{getattr(anomaly, 'metric_name', 'unknown')}",
+            new_score, reason=f"anomaly:{getattr(anomaly, 'metric_name', 'unknown')}"
         )
 
         # Publish to Sentinel security channel for critical anomalies
@@ -668,8 +657,8 @@ class InfinityHealthOrchestrator:
                     else 0.0,
                     "entropy": round(traj.entropy(), 4) if hasattr(traj, "entropy") else 0.0,
                 }
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
         return HealthSummary(
             service_name=self.config.service_name,
@@ -714,8 +703,8 @@ class InfinityHealthOrchestrator:
             try:
                 incidents = self.defense.list_incidents()
                 return [i.to_dict() if hasattr(i, "to_dict") else i for i in incidents]
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
         return []
 
 

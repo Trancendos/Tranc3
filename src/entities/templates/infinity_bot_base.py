@@ -130,10 +130,7 @@ class InfinityBot:
         self._ewma_duration_ms: float = 0.0
 
         logger.info(
-            "%s initialised (tier=%d, interval=%.1fs)",
-            self.dna,
-            self.TIER,
-            interval_seconds,
+            "%s initialised (tier=%d, interval=%.1fs)", self.dna, self.TIER, interval_seconds
         )
 
     # ------------------------------------------------------------------
@@ -255,9 +252,8 @@ class InfinityBot:
     # Override points
     # ------------------------------------------------------------------
 
-    async def on_metrics(self, run: BotRun) -> None:  # noqa: B027 - optional override hook
+    async def on_metrics(self, run: BotRun) -> None:
         """Called after each run. Override to emit metrics upstream."""
-        return None
 
     # ------------------------------------------------------------------
     # Convenience accessors

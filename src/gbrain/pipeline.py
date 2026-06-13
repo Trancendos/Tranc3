@@ -10,12 +10,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sqlite3
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
-
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +45,7 @@ class GBrainPipeline:
         self._ready = False
         try:
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
-            conn = sqlite3_connect(str(self._db_path))
+            conn = sqlite3.connect(str(self._db_path))
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS interactions (
                     id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +74,7 @@ class GBrainPipeline:
             log.warning("GBrainPipeline.ingest: %s", exc)
 
     def _write_sync(self, i: AgentInteraction) -> None:
-        conn = sqlite3_connect(str(self._db_path))
+        conn = sqlite3.connect(str(self._db_path))
         conn.execute(
             "INSERT INTO interactions(ts, source, user_id, session_id, prompt, response)"
             " VALUES (?, ?, ?, ?, ?, ?)",

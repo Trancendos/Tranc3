@@ -8,18 +8,19 @@ scaling policies, cooldown management, and threshold triggers.
 import asyncio  # noqa: I001
 
 from Dimensional.hive.autoscaler import (
-    AutoScalerEngine,
-    CooldownManager,
-    MetricsCollector,
-    ScalingAction,
-    ScalingDecisionEngine,
-    ScalingDirection,
-    ScalingPolicyConfig,
     ScalingPolicyType,
     ScalingStatus,
+    ScalingDirection,
     ThroughputMetrics,
+    ScalingPolicyConfig,
+    ScalingAction,
+    MetricsCollector,
+    CooldownManager,
+    ScalingDecisionEngine,
+    AutoScalerEngine,
     get_autoscaler,
 )
+
 
 # ──────────────────────────────────────────────
 # ThroughputMetrics Tests
@@ -183,8 +184,8 @@ class TestMetricsCollector:
                         pending_tasks=0,
                         cpu_utilization=0.5,
                         memory_utilization=0.5,
-                    ),
-                ),
+                    )
+                )
             )
             loop.run_until_complete(
                 collector.record(
@@ -195,8 +196,8 @@ class TestMetricsCollector:
                         pending_tasks=0,
                         cpu_utilization=0.5,
                         memory_utilization=0.5,
-                    ),
-                ),
+                    )
+                )
             )
             ids = loop.run_until_complete(collector.get_all_swarm_ids())
             assert "swarm-1" in ids
@@ -218,8 +219,8 @@ class TestMetricsCollector:
                             pending_tasks=0,
                             cpu_utilization=0.5,
                             memory_utilization=0.5,
-                        ),
-                    ),
+                        )
+                    )
                 )
             trend = loop.run_until_complete(collector.get_load_trend("swarm-1"))
             assert trend is not None
@@ -239,8 +240,8 @@ class TestMetricsCollector:
                         pending_tasks=0,
                         cpu_utilization=0.5,
                         memory_utilization=0.5,
-                    ),
-                ),
+                    )
+                )
             )
             loop.run_until_complete(collector.clear())
             latest = loop.run_until_complete(collector.get_latest("swarm-1"))

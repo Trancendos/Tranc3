@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+
 PYPI_URL = "https://pypi.org/pypi/{package}/json"
 CACHE: dict[str, tuple[str, ...]] = {}
 
@@ -192,7 +193,7 @@ def check_file(req_file: Path, rate_limit_pause: float = 0.15) -> list[Finding]:
                     status=Status.UNPINNED,
                     message="No exact version pin — N-1 cannot be verified. Pin to exact version.",
                     requirement_file=str(req_file),
-                ),
+                )
             )
             continue
 
@@ -206,7 +207,7 @@ def check_file(req_file: Path, rate_limit_pause: float = 0.15) -> list[Finding]:
                     status=Status.UNKNOWN,
                     message="PyPI lookup failed — verify manually.",
                     requirement_file=str(req_file),
-                ),
+                )
             )
             continue
 
@@ -220,7 +221,7 @@ def check_file(req_file: Path, rate_limit_pause: float = 0.15) -> list[Finding]:
                     status=Status.UNKNOWN,
                     message="No stable release found on PyPI.",
                     requirement_file=str(req_file),
-                ),
+                )
             )
             continue
 
@@ -247,7 +248,7 @@ def check_file(req_file: Path, rate_limit_pause: float = 0.15) -> list[Finding]:
                 status=status,
                 message=msg,
                 requirement_file=str(req_file),
-            ),
+            )
         )
 
     return findings
@@ -267,7 +268,7 @@ def main() -> int:
 
     if args.all:
         target_files = sorted(root.glob("requirements*.txt")) + sorted(
-            root.glob("*/requirements*.txt"),
+            root.glob("*/requirements*.txt")
         )
     elif args.files:
         target_files = [Path(f) for f in args.files]

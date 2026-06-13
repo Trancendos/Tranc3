@@ -133,7 +133,7 @@ class NRCQueryContext:
             BackendChoice.POSTGRES,
             BackendChoice.SPARK,
             BackendChoice.IN_MEMORY,
-        ],
+        ]
     )
     schema_stats: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     historical_performance: Dict[str, List[Dict[str, float]]] = field(default_factory=dict)
@@ -271,9 +271,7 @@ class NRCGeneticOperators:
         self.tournament_size = tournament_size
 
     def tournament_selection(
-        self,
-        population: List[NRCPlanChromosome],
-        n_select: int,
+        self, population: List[NRCPlanChromosome], n_select: int
     ) -> List[NRCPlanChromosome]:
         """Binary tournament selection based on rank and crowding distance."""
         selected = []
@@ -285,9 +283,7 @@ class NRCGeneticOperators:
         return selected
 
     def sbx_crossover(
-        self,
-        parent1: NRCPlanChromosome,
-        parent2: NRCPlanChromosome,
+        self, parent1: NRCPlanChromosome, parent2: NRCPlanChromosome
     ) -> Tuple[NRCPlanChromosome, NRCPlanChromosome]:
         """Simulated Binary Crossover (SBX) for NRC plan genes."""
         if random.random() > self.crossover_prob:
@@ -438,8 +434,7 @@ class NSGAIIPlanOptimizer:
         return population
 
     def fast_non_dominated_sort(
-        self,
-        population: List[NRCPlanChromosome],
+        self, population: List[NRCPlanChromosome]
     ) -> List[List[NRCPlanChromosome]]:
         """Fast non-dominated sorting (NSGA-II core algorithm).
 
@@ -499,9 +494,7 @@ class NSGAIIPlanOptimizer:
             # For latency/cost: ascending. For accuracy/resource: descending.
             reverse = obj_name in ("accuracy", "resource_util")
             sorted_front = sorted(
-                front,
-                key=lambda x: x.fitness.get(obj_name, 0) if x.fitness else 0,
-                reverse=reverse,
+                front, key=lambda x: x.fitness.get(obj_name, 0) if x.fitness else 0, reverse=reverse
             )
 
             sorted_front[0].crowding_distance = float("inf")
@@ -628,9 +621,7 @@ class NSGAIIPlanOptimizer:
         return best_plan
 
     def _quantum_escalate(
-        self,
-        plan: NRCPlanChromosome,
-        context: NRCQueryContext,
+        self, plan: NRCPlanChromosome, context: NRCQueryContext
     ) -> NRCPlanChromosome:
         """Escalate plan optimization to quantum solver (QAOA).
 
@@ -691,7 +682,7 @@ class GeneticQueryOptimizer:
         """
         # Check cache
         cache_key = hashlib.sha3_256(
-            f"{context.nrc_dsl}:{sorted(context.relations)}".encode(),
+            f"{context.nrc_dsl}:{sorted(context.relations)}".encode()
         ).hexdigest()
 
         if cache_key in self._plan_cache:

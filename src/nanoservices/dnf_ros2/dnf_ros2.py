@@ -335,10 +335,7 @@ class ROS2ServiceBridge:
         logger.info("ROS2ServiceBridge initialized: %s", self.node_config.node_name)
 
     def create_publisher(
-        self,
-        topic: str,
-        topic_type: ROS2TopicType,
-        qos: ROS2QoSPolicy = ROS2QoSPolicy.RELIABLE,
+        self, topic: str, topic_type: ROS2TopicType, qos: ROS2QoSPolicy = ROS2QoSPolicy.RELIABLE
     ) -> ROS2Publisher:
         """Create a ROS2 publisher for a topic."""
         pub = ROS2Publisher(topic=topic, topic_type=topic_type, qos=qos)
@@ -485,7 +482,7 @@ class DNFROS2Extension:
                     target_node=fusion_node.node_id,
                     topic=f"{input_node.label}_data",
                     topic_type=input_node.config.get("topic_type", ROS2TopicType.STD_MSGS_STRING),
-                ),
+                )
             )
 
         # Create perception node
@@ -500,7 +497,7 @@ class DNFROS2Extension:
                 source_node=fusion_node.node_id,
                 target_node=perception_node.node_id,
                 topic="fused_data",
-            ),
+            )
         )
 
         # Create sink
@@ -515,7 +512,7 @@ class DNFROS2Extension:
                 source_node=perception_node.node_id,
                 target_node=sink_node.node_id,
                 topic="perception_result",
-            ),
+            )
         )
 
         # Validate and store
@@ -791,6 +788,6 @@ class DNFROS2Extension:
             "ros2_bridge": self.ros2_bridge.get_bridge_stats(),
             "flow_statuses": {
                 status: sum(1 for f in self._flows.values() if f.status == status)
-                for status in {f.status for f in self._flows.values()}
+                for status in set(f.status for f in self._flows.values())
             },
         }

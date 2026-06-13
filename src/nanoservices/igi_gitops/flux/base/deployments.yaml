@@ -17,19 +17,11 @@ spec:
       labels:
         app: nsa-broker
         tier: "2"
-      annotations:
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
+      hostIPC: true  # Required for /dev/shm access
       containers:
         - name: nsa-broker
-          image: forgejo.local/trancendos/nsa-broker:2026.06.07
+          image: nsa-broker:latest
           ports:
             - containerPort: 7780
               name: http
@@ -55,17 +47,11 @@ spec:
               port: 7780
             initialDelaySeconds: 3
             periodSeconds: 5
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: shm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 256Mi
+          hostPath:
+            path: /dev/shm
+            type: DirectoryOrCreate
 ---
 # SHI Gateway Deployment — Self-Hosted Inference
 apiVersion: apps/v1
@@ -86,19 +72,11 @@ spec:
       labels:
         app: shi-gateway
         tier: "3"
-      annotations:
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
+      hostIPC: true
       containers:
         - name: shi-gateway
-          image: forgejo.local/trancendos/shi-gateway:2026.06.07
+          image: shi-gateway:latest
           ports:
             - containerPort: 7781
               name: http
@@ -125,17 +103,11 @@ spec:
               port: 7781
             initialDelaySeconds: 10
             periodSeconds: 15
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: shm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 256Mi
+          hostPath:
+            path: /dev/shm
+            type: DirectoryOrCreate
         - name: models
           persistentVolumeClaim:
             claimName: models-pvc
@@ -159,19 +131,11 @@ spec:
       labels:
         app: dnf-orchestrator
         tier: "2"
-      annotations:
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
+      hostIPC: true
       containers:
         - name: dnf-orchestrator
-          image: forgejo.local/trancendos/dnf-orchestrator:2026.06.07
+          image: dnf-orchestrator:latest
           ports:
             - containerPort: 7782
               name: http
@@ -188,14 +152,8 @@ spec:
           volumeMounts:
             - name: shm
               mountPath: /dev/shm
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: shm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 256Mi
+          hostPath:
+            path: /dev/shm
+            type: DirectoryOrCreate

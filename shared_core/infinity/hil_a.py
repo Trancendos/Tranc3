@@ -343,7 +343,7 @@ class SelfGoverningVotingSystem:
             for existing in self._votes[request_id]:
                 if existing.voter_id == voter_id:
                     raise ValueError(
-                        f"Entity '{voter_id}' has already voted on request '{request_id}'",
+                        f"Entity '{voter_id}' has already voted on request '{request_id}'"
                     )
 
         # Validate voter tier (only Prime and below can vote)
@@ -585,7 +585,7 @@ class ChainProtocol:
                         "actor_tier": int(tier),
                         "timestamp": time.time(),
                         "reason": reason or "Higher authority override",
-                    },
+                    }
                 )
                 logger.info(
                     "HIL-A request %s: Higher authority Tier.%s approved (was at Tier.%s)",
@@ -597,7 +597,7 @@ class ChainProtocol:
             else:
                 raise ValueError(
                     f"Approver at Tier.{tier.name} cannot approve request at "
-                    f"Tier.{request.current_tier.name}",
+                    f"Tier.{request.current_tier.name}"
                 )
 
         # Record approval
@@ -609,7 +609,7 @@ class ChainProtocol:
                 "actor_tier": int(tier),
                 "timestamp": time.time(),
                 "reason": reason,
-            },
+            }
         )
 
         # Check if this is the final approval tier
@@ -657,7 +657,7 @@ class ChainProtocol:
                 "actor_tier": int(tier),
                 "timestamp": time.time(),
                 "reason": reason,
-            },
+            }
         )
         request.status = EnhancementStatus.REJECTED
 
@@ -795,7 +795,7 @@ class ChainProtocol:
                         EnhancementStatus.EXPIRED,
                         EnhancementStatus.CANCELLED,
                     )
-                ],
+                ]
             ),
             "approved": len([r for r in requests if r.status == EnhancementStatus.APPROVED]),
             "rejected": len([r for r in requests if r.status == EnhancementStatus.REJECTED]),

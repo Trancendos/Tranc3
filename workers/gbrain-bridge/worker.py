@@ -39,10 +39,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from shared_core.error_handlers import safe_error_detail
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -77,7 +73,7 @@ class _DB:
 
     def conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            self._conn = sqlite3_connect(str(self._path), check_same_thread=False)
+            self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")
@@ -167,14 +163,7 @@ class PageRankEngine:
         scores = dict.fromkeys(range(n), 1.0 / n)
 
         for _ in range(PAGERANK_ITERATIONS):
-            # Distribute dangling-node mass evenly across all nodes
-            dangling_sum = sum(scores[i] for i in range(n) if i not in out_links)
-            dangling_contrib = PAGERANK_DAMPING * dangling_sum / n if n else 0.0
-
-            new_scores: Dict[int, float] = dict.fromkeys(
-                range(n),
-                (1 - PAGERANK_DAMPING) / n + dangling_contrib,
-            )
+            new_scores: Dict[int, float] = dict.fromkeys(range(n), (1 - PAGERANK_DAMPING) / n)
             for src, links in out_links.items():
                 total_weight = sum(w for _, w in links)
                 for tgt, w in links:
@@ -256,12 +245,12 @@ def multi_hop_search(
                     {
                         "node_id": node_id,
                         "title": row["title"],
-                        "content": (row["content"] or "")[:500],
+                        "content": row["content"][:500],
                         "importance": row["importance"],
                         "hops": depth,
                         "path": path,
                         "tags": json.loads(row["tags"] or "[]"),
-                    },
+                    }
                 )
 
         if depth < max_hops:
@@ -308,7 +297,7 @@ def associative_bridge(
     rows = db.execute("SELECT node_id, title, content, importance FROM nodes").fetchall()
     scored = []
     for row in rows:
-        doc_tokens = set(_tokenize(row["title"] + " " + (row["content"] or "")))
+        doc_tokens = set(_tokenize(row["title"] + " " + row["content"]))
         overlap = len(q_tokens & doc_tokens)
         if overlap == 0:
             continue
@@ -321,7 +310,7 @@ def associative_bridge(
         {
             "node_id": r["node_id"],
             "title": r["title"],
-            "content": (r["content"] or "")[:500],
+            "content": r["content"][:500],
             "importance": r["importance"],
             "relevance_score": round(s, 4),
         }
@@ -344,7 +333,7 @@ def consolidate_knowledge(db: sqlite3.Connection) -> Dict[str, int]:
     - Returns stats: {"merged": N, "kept": M}
     """
     rows = db.execute(
-        "SELECT node_id, title, content, importance FROM nodes ORDER BY importance DESC",
+        "SELECT node_id, title, content, importance FROM nodes ORDER BY importance DESC"
     ).fetchall()
 
     to_delete: Set[str] = set()
@@ -353,21 +342,21 @@ def consolidate_knowledge(db: sqlite3.Connection) -> Dict[str, int]:
     for i, row_a in enumerate(rows):
         if row_a["node_id"] in to_delete:
             continue
-        toks_a = set(_tokenize(row_a["title"] + " " + (row_a["content"] or "")))
+        toks_a = set(_tokenize(row_a["title"] + " " + row_a["content"]))
         if not toks_a:
             continue
 
         for row_b in rows[i + 1 :]:
             if row_b["node_id"] in to_delete:
                 continue
-            toks_b = set(_tokenize(row_b["title"] + " " + (row_b["content"] or "")))
+            toks_b = set(_tokenize(row_b["title"] + " " + row_b["content"]))
             if not toks_b:
                 continue
 
             jaccard = len(toks_a & toks_b) / len(toks_a | toks_b)
             if jaccard >= CONSOLIDATION_SIMILARITY_THRESHOLD:
                 # Merge row_b content into row_a, delete row_b
-                merged_content = row_a["content"] or ""
+                merged_content = row_a["content"]
                 if row_b["content"] and row_b["content"] not in merged_content:
                     merged_content += (
                         f"\n\n[Consolidated from: {row_b['title']}]\n{row_b['content']}"
@@ -502,10 +491,9 @@ async def health() -> Response:  # type: ignore[return-value]
             "port": WORKER_PORT,
             "nodes": node_count,
             "edges": edge_count,
-            "entity": health_entity_block(WORKER_PORT, WORKER_NAME),
         }
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @_router.post("/nodes", status_code=201)
@@ -532,12 +520,8 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
-    return {  # type: ignore[return-value]
-        "node_id": node_id,
-        "title": body.title,
-        "created_at": now,
-    }
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"node_id": node_id, "title": body.title, "created_at": now}  # type: ignore[return-value]
 
 
 @_router.get("/nodes/{node_id}")
@@ -571,7 +555,7 @@ async def create_edge(body: EdgeCreate) -> Response:  # type: ignore[return-valu
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"edge_id": edge_id, "source_id": body.source_id, "target_id": body.target_id}  # type: ignore[return-value]
 
 
@@ -647,7 +631,7 @@ async def graph_stats() -> Response:  # type: ignore[return-value]
     node_count = db.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
     edge_count = db.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
     top_nodes = db.execute(
-        "SELECT node_id, title, importance FROM nodes ORDER BY importance DESC LIMIT 10",
+        "SELECT node_id, title, importance FROM nodes ORDER BY importance DESC LIMIT 10"
     ).fetchall()
     avg_importance = db.execute("SELECT AVG(importance) FROM nodes").fetchone()[0] or 0.0
     return {  # type: ignore[return-value]

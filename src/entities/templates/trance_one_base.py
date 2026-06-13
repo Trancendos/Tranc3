@@ -148,11 +148,7 @@ class TrancOne:
         )
 
         logger.info(
-            "%s initialised (tier=%d, slot=%d, active=%s)",
-            self.dna,
-            self.TIER,
-            slot,
-            self._active,
+            "%s initialised (tier=%d, slot=%d, active=%s)", self.dna, self.TIER, slot, self._active
         )
 
     # ------------------------------------------------------------------
@@ -190,10 +186,7 @@ class TrancOne:
     # ------------------------------------------------------------------
 
     async def emergency_stop(
-        self,
-        target_aid: str,
-        reason: str,
-        initiated_by: str = "orchestrator",
+        self, target_aid: str, reason: str, initiated_by: str = "orchestrator"
     ) -> EmergencyStopRecord:
         """Hard-stop a Prime and cascade to all its managed AIs."""
         record = EmergencyStopRecord(
@@ -209,10 +202,7 @@ class TrancOne:
                 await prime.stop()
             except Exception as exc:
                 logger.warning(
-                    "%s emergency_stop cascade failed for %s: %s",
-                    self.dna,
-                    target_aid,
-                    exc,
+                    "%s emergency_stop cascade failed for %s: %s", self.dna, target_aid, exc
                 )
         self._emergency_stops.append(record)
         logger.warning("%s EMERGENCY STOP: %s — reason: %s", self.dna, target_aid, reason)
@@ -267,23 +257,23 @@ class TrancOne:
             snap.weaknesses.append(f"{len(degraded_primes)} Primes in critical state")
         if self.pending_final_hila():
             snap.weaknesses.append(
-                f"{len(self.pending_final_hila())} escalated HIL-A decisions pending",
+                f"{len(self.pending_final_hila())} escalated HIL-A decisions pending"
             )
         if self._emergency_stops:
             snap.weaknesses.append(
-                f"{len(self._emergency_stops)} emergency stops recorded this session",
+                f"{len(self._emergency_stops)} emergency stops recorded this session"
             )
 
         if not self._active and self.dna.slot == 3:
             snap.opportunities.append("tAImra can be activated for personal assistant mode")
         if not _GENETIC_AVAILABLE:
             snap.opportunities.append(
-                "Install shared_core.genetics for ecosystem-level GA optimisation",
+                "Install shared_core.genetics for ecosystem-level GA optimisation"
             )
 
         if self._health_score < 0.3:
             snap.threats.append(
-                "CRITICAL: Orchestrator health failing — human intervention required",
+                "CRITICAL: Orchestrator health failing — human intervention required"
             )
         if len(degraded_primes) > len(self._primes) / 2:
             snap.threats.append("CRITICAL: Majority of Primes degraded — systemic failure risk")
@@ -339,8 +329,7 @@ class TrancOne:
         for prime in self._primes.values():
             await prime.start()
         self._task = asyncio.create_task(
-            self._orchestrate_loop(),
-            name=f"trance_one_{self.dna.aid}",
+            self._orchestrate_loop(), name=f"trance_one_{self.dna.aid}"
         )
         logger.info("%s orchestration started — %d Primes", self.dna, len(self._primes))
 

@@ -15,9 +15,6 @@ events flow correctly between the three bridge systems.
 
 import asyncio
 
-from Dimensional.hive.hive_core import (
-    Hive,
-)
 from Dimensional.infinity.bridge.bridge_core import (
     BridgeEvent,
     BridgePathManager,
@@ -31,10 +28,13 @@ from Dimensional.infinity.bridge.bridge_core import (
     get_infinity_bridge,
     get_sentinel_bridge,
 )
-from Dimensional.infinity.nomenclature import SentinelChannel, TransferSystem
 from Dimensional.nexus.nexus_core import (
     Nexus,
 )
+from Dimensional.hive.hive_core import (
+    Hive,
+)
+from Dimensional.infinity.nomenclature import SentinelChannel, TransferSystem
 
 
 # Helper to run async functions in sync tests

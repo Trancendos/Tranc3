@@ -1,0 +1,356 @@
+groups:
+  - name: tranc3_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(tranc3_requests_total{status="500"}[5m]) / rate(tranc3_requests_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TRANC3 error rate above 1%"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(tranc3_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TRANC3 p95 latency above 2s"
+          description: "p95 latency is {{ $value }}s."
+
+      - alert: ModelNotLoaded
+        expr: tranc3_requests_total{status="503"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TRANC3 model not loaded"
+          description: "Service returning 503 — model or tokenizer not ready."
+
+      - alert: RedisDown
+        expr: up{job="tranc3-redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance is unreachable — feature flags and caching disabled."
+
+      - alert: HighChurnRisk
+        expr: histogram_quantile(0.75, rate(tranc3_churn_risk_bucket[10m])) > 0.7
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High user churn risk detected"
+          description: "75th percentile churn risk is {{ $value }}."
+
+      - alert: LowResponseQuality
+        expr: histogram_quantile(0.5, rate(tranc3_response_quality_bucket[10m])) < 0.4
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Response quality degrading"
+          description: "Median quality score is {{ $value }} — consider triggering evolution."
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STORAGE CAPACITY ALERTS — Zero-Cost Auto-Migration Triggers
+  # Storage Tier Priority: ZFS(0) → MinIO(1) → Ceph(2) → R2(3) → OCI(4) → GCP(5) → Azure(6) → AWS(7)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - name: tranc3_storage_alerts
+    rules:
+      # ── ZFS Pool Alerts (Tier 0) ──────────────────────────────────────────
+      - alert: ZFSPoolCapacityWarning
+        expr: (zfs_pool_capacity_percent or ((1 - node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"}) * 100)) > 80
+        for: 5m
+        labels:
+          severity: warning
+          storage_tier: zfs
+        annotations:
+          summary: "ZFS pool approaching capacity limit"
+          description: "ZFS pool capacity is at {{ $value }}%. SmartStorageOrchestrator will begin proactive migration to MinIO/Ceph."
+
+      - alert: ZFSPoolCapacityCritical
+        expr: (zfs_pool_capacity_percent or ((1 - node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"}) * 100)) > 95
+        for: 1m
+        labels:
+          severity: critical
+          storage_tier: zfs
+        annotations:
+          summary: "ZFS pool CRITICAL capacity"
+          description: "ZFS pool capacity is at {{ $value }}%. Immediate auto-migration required to maintain zero-cost."
+
+      # ── MinIO Storage Alerts (Tier 1) ─────────────────────────────────────
+      - alert: MinIODiskCapacityWarning
+        expr: (minio_cluster_disk_free_bytes / minio_cluster_disk_total_bytes * 100) < 20
+        for: 5m
+        labels:
+          severity: warning
+          storage_tier: minio
+        annotations:
+          summary: "MinIO storage approaching capacity"
+          description: "MinIO free disk space is {{ $value }}%. Lifecycle policies should prune cold data."
+
+      - alert: MinIODiskCapacityCritical
+        expr: (minio_cluster_disk_free_bytes / minio_cluster_disk_total_bytes * 100) < 5
+        for: 1m
+        labels:
+          severity: critical
+          storage_tier: minio
+        annotations:
+          summary: "MinIO storage CRITICAL"
+          description: "MinIO free disk space is {{ $value }}%. Auto-migrating cold data to Ceph/R2."
+
+      # ── MinIO Health Alerts ───────────────────────────────────────────────
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          storage_tier: minio
+        annotations:
+          summary: "MinIO is down"
+          description: "MinIO storage service is unreachable. Falling back to Ceph/ZFS."
+
+      - alert: MinIOHighErrorRate
+        expr: rate(minio_s3_requests_errors_total[5m]) / rate(minio_s3_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          storage_tier: minio
+        annotations:
+          summary: "MinIO error rate above 5%"
+          description: "MinIO S3 error rate is {{ $value | humanizePercentage }}. Check disk health."
+
+      # ── Cloud Free-Tier Alerts (R2/OCI) ───────────────────────────────────
+      - alert: CloudFreeTierApproachingLimit
+        expr: tranc3_cloud_storage_used_bytes > (10 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: cloud
+        annotations:
+          summary: "Cloud free-tier approaching 10GB limit"
+          description: "Cloud storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: CloudFreeTierCritical
+        expr: tranc3_cloud_storage_used_bytes > (10 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: cloud
+        annotations:
+          summary: "Cloud free-tier CRITICAL — approaching 10GB hard limit"
+          description: "Cloud storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+      # ── GCP Cloud Storage Alerts (Tier 5) ──────────────────────────
+      - alert: GCPStorageApproachingLimit
+        expr: tranc3_gcp_storage_used_bytes > (5 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: gcp
+        annotations:
+          summary: "GCP Cloud Storage approaching 5GB free-tier limit"
+          description: "GCP storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: GCPStorageCritical
+        expr: tranc3_gcp_storage_used_bytes > (5 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: gcp
+        annotations:
+          summary: "GCP Cloud Storage CRITICAL — approaching 5GB hard limit"
+          description: "GCP storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+      # ── Azure Cosmos DB Alerts (Tier 6) ────────────────────────────
+      - alert: AzureCosmosApproachingLimit
+        expr: tranc3_azure_cosmos_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: azure
+        annotations:
+          summary: "Azure Cosmos DB approaching 25GB free-tier limit"
+          description: "Azure Cosmos DB storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: AzureCosmosCritical
+        expr: tranc3_azure_cosmos_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: azure
+        annotations:
+          summary: "Azure Cosmos DB CRITICAL — approaching 25GB hard limit"
+          description: "Azure Cosmos DB storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+      # ── AWS DynamoDB Alerts (Tier 7) ───────────────────────────────
+      - alert: AWSDynamoApproachingLimit
+        expr: tranc3_aws_dynamo_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: aws
+        annotations:
+          summary: "AWS DynamoDB approaching 25GB free-tier limit"
+          description: "AWS DynamoDB storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: AWSDynamoCritical
+        expr: tranc3_aws_dynamo_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: aws
+        annotations:
+          summary: "AWS DynamoDB CRITICAL — approaching 25GB hard limit"
+          description: "AWS DynamoDB storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+  # ══════════════════════════════════════════════════════════════════════
+  # PROACTIVE SYSTEM ALERTS — Intelligent Adaptive Proactive Systems (Phase 10)
+  # ProactiveOrchestrator + AdaptivePulseController + PredictiveAutoscaler
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: tranc3_proactive_alerts
+    rules:
+      # ── Composite Health Alerts ─────────────────────────────────────────
+      - alert: ProactiveSystemHealthDegraded
+        expr: tranc3_proactive_composite_health < 0.6
+        for: 3m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Proactive system composite health degraded"
+          description: "Composite health score is {{ $value | printf \"%.2f\" }}. Auto-healing should be active. Check subsystem breakdown."
+
+      - alert: ProactiveSystemHealthCritical
+        expr: tranc3_proactive_composite_health < 0.3
+        for: 1m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Proactive system composite health CRITICAL"
+          description: "Composite health score is {{ $value | printf \"%.2f\" }}. Emergency mode should be active. Immediate investigation required."
+
+      # ── Subsystem Health Alerts ─────────────────────────────────────────
+      - alert: SubsystemHealthDegraded
+        expr: tranc3_proactive_subsystem_health < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Subsystem {{ $labels.subsystem }} health degraded"
+          description: "Subsystem health score is {{ $value | printf \"%.2f\" }}. Auto-healing may be in progress."
+
+      - alert: SubsystemHealthCritical
+        expr: tranc3_proactive_subsystem_health < 0.2
+        for: 2m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Subsystem {{ $labels.subsystem }} health CRITICAL"
+          description: "Subsystem health score is {{ $value | printf \"%.2f\" }}. Manual intervention may be required."
+
+      # ── Zero-Cost Compliance Alerts ─────────────────────────────────────
+      - alert: ZeroCostViolation
+        expr: tranc3_proactive_zero_cost_compliant == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Zero-cost compliance VIOLATION"
+          description: "A storage tier has exceeded its free-tier limit. Immediate migration required to avoid charges."
+
+      - alert: ZeroCostApproachingLimit
+        expr: tranc3_proactive_zero_cost_approaching_limit > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Zero-cost approaching limit on {{ $value }} tier(s)"
+          description: "One or more storage tiers are approaching their free-tier limits. Proactive migration should be in progress."
+
+      # ── Orchestrator Mode Alerts ────────────────────────────────────────
+      - alert: ProactiveSystemInEmergencyMode
+        expr: tranc3_proactive_orchestrator_mode{mode="emergency"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Proactive orchestrator in EMERGENCY mode"
+          description: "The orchestrator has entered emergency mode. All subsystems are under maximum monitoring and healing is accelerated."
+
+      # ── Pulse Mode Alerts ──────────────────────────────────────────────
+      - alert: PulseInEmergencyMode
+        expr: tranc3_proactive_pulse_mode{mode="emergency"} > 0
+        for: 2m
+        labels:
+          severity: warning
+          component: adaptive_pulse
+        annotations:
+          summary: "Adaptive pulse in EMERGENCY mode"
+          description: "Daemon intervals are compressed to emergency levels. System health is critically degraded."
+
+      # ── Healing Alerts ─────────────────────────────────────────────────
+      - alert: HighHealingActivity
+        expr: tranc3_proactive_healing_active > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "High healing activity detected"
+          description: "{{ $value }} concurrent healing actions are active. System may be experiencing persistent issues."
+
+      - alert: StalePendingActions
+        expr: tranc3_proactive_pending_actions > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Stale pending actions accumulating"
+          description: "{{ $value }} actions are pending dispatch. The action dispatcher may be backlogged."
+
+      # ── Predictive Alerts ──────────────────────────────────────────────
+      - alert: PredictedDegradation
+        expr: tranc3_proactive_predictions_degrading > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Predicted degradation in {{ $value }} subsystem(s)"
+          description: "The predictive health analyzer forecasts degradation. Proactive actions should be generated."
+
+      # ── Scaling Alerts ─────────────────────────────────────────────────
+      - alert: ScalingUp
+        expr: tranc3_proactive_scaling_direction{direction="up"} > 0
+        for: 2m
+        labels:
+          severity: informational
+          component: predictive_scaler
+        annotations:
+          summary: "System is scaling up"
+          description: "The predictive autoscaler is scaling resources up based on predicted demand."
+
+      # ── Circuit Breaker Alerts ─────────────────────────────────────────
+      - alert: CircuitBreakersOpen
+        expr: tranc3_proactive_circuits_open > 0
+        for: 3m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "{{ $value }} circuit breaker(s) are OPEN"
+          description: "Circuit breakers are open, indicating service failures. Auto-healing should be attempting recovery."

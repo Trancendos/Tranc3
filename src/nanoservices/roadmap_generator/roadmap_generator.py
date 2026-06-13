@@ -261,7 +261,7 @@ class SHIRoadmapAdvisor:
                     estimated_effort_hours=task.estimated_effort_hours / len(phases),
                     dependencies=[subtasks[-1].task_id] if subtasks else [],
                     tags=task.tags + [phase_name.lower().replace(" ", "-")],
-                ),
+                )
             )
         return subtasks
 
@@ -280,7 +280,7 @@ class SHIRoadmapAdvisor:
                         estimated_effort_hours=parent.estimated_effort_hours / max(1, len(lines)),
                         dependencies=[],
                         tags=parent.tags,
-                    ),
+                    )
                 )
         return subtasks if subtasks else self._heuristic_breakdown(parent)
 

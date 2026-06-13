@@ -27,7 +27,6 @@ from Dimensional.infinity.bridge.bridge_core import (
     InfinityBridgeEvent,
     get_infinity_bridge,
 )
-from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +68,9 @@ def create_bridge_app() -> FastAPI:
         version="1.0.0",
     )
 
-    _cors_origins = [
-        o.strip()
-        for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-        if o.strip()
-    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_cors_origins,
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -128,11 +122,7 @@ def create_bridge_app() -> FastAPI:
     @app.get("/health")
     async def health():
         bridge = get_bridge()
-        payload = bridge.get_health()
-        payload["service"] = WORKER_NAME
-        payload["port"] = WORKER_PORT
-        payload["entity"] = health_entity_block(WORKER_PORT, WORKER_NAME)
-        return payload
+        return bridge.get_health()
 
     @app.post("/users/connect")
     async def connect_user(

@@ -61,6 +61,10 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP"]
+ignore = [
+    "E501",   # line length — handled by formatter
+    "N806",   # uppercase variable in function — valid for math/matrix notation (W, S, etc.)
+]
 
 [tool.mypy]
 python_version = "3.10"

@@ -1,6 +1,6 @@
 # flux/base/deployments.yaml
 # Core nanoservice deployments — NSA Broker, SHI Gateway, DNF Orchestrator
-# Shared memory uses pod-local emptyDir (medium: Memory) mounted at /dev/shm — not hostIPC.
+# All deployments use hostIPC for /dev/shm shared memory IPC
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -20,20 +20,11 @@ spec:
       labels:
         app: nsa-broker
         tier: tier-1
-      annotations:
-        # Self-hosted Forgejo registry — not in Trivy's default trusted list.
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
+      hostIPC: true  # Required for /dev/shm shared memory IPC
       containers:
         - name: nsa-broker
-          image: forgejo.local/trancendos/nsa-broker:2026.06.07
+          image: forgejo.local/trancendos/nsa-broker:latest
           ports:
             - containerPort: 7780
               name: http
@@ -67,20 +58,12 @@ spec:
               value: "64"
             - name: SLOT_SIZE
               value: "1024"
-          volumeMounts:
-            - name: shm
-              mountPath: /dev/shm
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
-      volumes:
-        - name: shm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 256Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -100,19 +83,11 @@ spec:
       labels:
         app: shi-gateway
         tier: tier-1
-      annotations:
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
+      hostIPC: true
       containers:
         - name: shi-gateway
-          image: forgejo.local/trancendos/shi-gateway:2026.06.07
+          image: forgejo.local/trancendos/shi-gateway:latest
           ports:
             - containerPort: 8000
               name: http
@@ -145,8 +120,6 @@ spec:
           volumeMounts:
             - name: model-cache
               mountPath: /models
-            - name: shm
-              mountPath: /dev/shm
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -158,10 +131,6 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 2Gi
-        - name: shm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 256Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -181,19 +150,11 @@ spec:
       labels:
         app: dnf-orchestrator
         tier: tier-1
-      annotations:
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
+      hostIPC: true
       containers:
         - name: dnf-orchestrator
-          image: forgejo.local/trancendos/dnf-orchestrator:2026.06.07
+          image: forgejo.local/trancendos/dnf-orchestrator:latest
           ports:
             - containerPort: 8080
               name: http
@@ -221,20 +182,12 @@ spec:
               value: "10"
             - name: STEP_TIMEOUT
               value: "60"
-          volumeMounts:
-            - name: shm
-              mountPath: /dev/shm
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
-      volumes:
-        - name: shm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 256Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -254,19 +207,10 @@ spec:
       labels:
         app: daas-stream
         tier: tier-2
-      annotations:
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: daas-stream
-          image: forgejo.local/trancendos/daas-stream:2026.06.07
+          image: forgejo.local/trancendos/daas-stream:latest
           ports:
             - containerPort: 8090
               name: http
@@ -297,9 +241,6 @@ metadata:
   labels:
     app: fmd-distiller
     tier: tier-2
-  annotations:
-    # False positive: Trivy KSV118 matches the substring "tiller" inside "distiller".
-    trivy-operator.aquasecurity.github.io/skip-checks: KSV118
 spec:
   replicas: 1
   selector:
@@ -310,20 +251,10 @@ spec:
       labels:
         app: fmd-distiller
         tier: tier-2
-      annotations:
-        # False positive: Trivy KSV118 matches the substring "tiller" inside "distiller".
-        trivy-operator.aquasecurity.github.io/skip-checks: KSV118,KSV013
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        runAsGroup: 65534
-        fsGroup: 65534
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: fmd-distiller
-          image: forgejo.local/trancendos/fmd-distiller:2026.06.07
+          image: forgejo.local/trancendos/fmd-distiller:latest
           ports:
             - containerPort: 8070
               name: http

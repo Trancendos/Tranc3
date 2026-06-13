@@ -23,8 +23,6 @@ The 9 Platform Locations:
 """
 
 from Dimensional.pillars.entities import (  # noqa: I001
-    LOCATION_CONFIGS,
-    LOCATIONS,
     EntityTier,
     EntityType,
     PillarEntity,
@@ -32,6 +30,8 @@ from Dimensional.pillars.entities import (  # noqa: I001
     PillarLocationConfig,
     PillarRegistry,
     get_pillar_registry,
+    LOCATION_CONFIGS,
+    LOCATIONS,
 )
 
 __all__ = [

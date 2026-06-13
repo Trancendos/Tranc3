@@ -148,12 +148,12 @@ export class ZFSProvider implements IStorageProvider {
   /** Get metadata for a file */
   async getMetadata(path: string): Promise<FileMetadata> {
     this.tick();
-    const resolved = this.resolve(path);
-    let handle: fs.FileHandle | undefined;
     try {
-      handle = await fs.open(resolved, 'r');
-      const stat = await handle.stat();
-      const data = await handle.readFile();
+      const resolved = this.resolve(path);
+      const stat = await fs.stat(resolved);
+
+      // Compute SHA-256 checksum
+      const data = await fs.readFile(resolved);
       const checksumSha256 = createHash('sha256').update(data).digest('hex');
 
       return {
@@ -168,8 +168,6 @@ export class ZFSProvider implements IStorageProvider {
       this._errorCount++;
       logger.error('Metadata error', { path, error: err.message });
       throw err;
-    } finally {
-      await handle?.close();
     }
   }
 

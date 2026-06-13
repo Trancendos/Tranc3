@@ -213,8 +213,8 @@ class InProcessPubSub:
                     # Drop oldest event to make room
                     try:
                         queue.get_nowait()
-                    except asyncio.QueueEmpty as _exc:
-                        logger.debug("suppressed %s", _exc, exc_info=False)
+                    except asyncio.QueueEmpty:
+                        pass
                     self._stats["dropped"] += 1
                 queue.put_nowait(event)
                 delivered += 1
@@ -238,8 +238,8 @@ class InProcessPubSub:
         if channel in self._subscribers:
             try:
                 self._subscribers[channel].remove(queue)
-            except ValueError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except ValueError:
+                pass
             if not self._subscribers[channel]:
                 del self._subscribers[channel]
 
@@ -309,22 +309,22 @@ class RedisConnectionManager:
             try:
                 await self._pubsub.unsubscribe()
                 await self._pubsub.aclose()
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
             self._pubsub = None
 
         if self._client:
             try:
                 await self._client.aclose()
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
             self._client = None
 
         if self._pool:
             try:
                 await self._pool.disconnect()
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
             self._pool = None
 
         self._connected = False
@@ -374,8 +374,8 @@ class RedisConnectionManager:
             return
         try:
             await self._pubsub.unsubscribe(channel)
-        except Exception as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except Exception:
+            pass
 
     async def get_messages(self, timeout: float = 0.1) -> List[Dict[str, Any]]:
         """Get messages from subscribed channels.
@@ -387,16 +387,15 @@ class RedisConnectionManager:
         messages = []
         try:
             msg = await asyncio.wait_for(
-                self._pubsub.get_message(ignore_subscribe_messages=True),
-                timeout=timeout,
+                self._pubsub.get_message(ignore_subscribe_messages=True), timeout=timeout
             )
             while msg:
                 messages.append(msg)
                 msg = self._pubsub.get_message(ignore_subscribe_messages=True)
-        except asyncio.TimeoutError as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
-        except Exception as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except asyncio.TimeoutError:
+            pass
+        except Exception:
+            pass
         return messages
 
 
@@ -497,8 +496,8 @@ class SentinelStation:
             self._listener_task.cancel()
             try:
                 await self._listener_task
-            except asyncio.CancelledError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except asyncio.CancelledError:
+                pass
             self._listener_task = None
 
         await self._redis_mgr.disconnect()
@@ -567,8 +566,7 @@ class SentinelStation:
                 event.compressed = True
 
             receivers = await self._redis_mgr.publish(
-                f"{self._config.redis_channel_prefix}{channel}",
-                message,
+                f"{self._config.redis_channel_prefix}{channel}", message
             )
 
             if receivers >= 0:
@@ -622,8 +620,8 @@ class SentinelStation:
         if handler and channel in self._local_handlers:
             try:
                 self._local_handlers[channel].remove(handler)
-            except ValueError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except ValueError:
+                pass
 
         # Unsubscribe from Redis
         if channel in self._subscribed_channels:
@@ -657,8 +655,8 @@ class SentinelStation:
                         except (json.JSONDecodeError, UnicodeDecodeError):
                             try:
                                 data = gzip.decompress(bytes.fromhex(data)).decode()
-                            except Exception as _exc:
-                                logger.debug("suppressed %s", _exc, exc_info=False)
+                            except Exception:
+                                pass
 
                         event = SentinelEvent.from_json(data)
                         self._stats["events_received"] += 1

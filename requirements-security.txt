@@ -1,0 +1,31 @@
+# TRANC3 — Security Scanning Toolchain (dev-only)
+# Install: pip install -r requirements-security.txt
+# These tools enforce proactive vulnerability management and compliance
+
+# === Dependency Vulnerability Scanning ===
+safety==3.8.0         # Scan Python dependencies for known CVEs (3.8.0 accepts filelock>=3.16.1)
+pip-audit==2.10.0     # Audit pip packages against OSV/NVD databases (2.10.0 accepts cyclonedx-python-lib<12)
+bandit==1.8.3         # Security linter — finds common Python security issues
+
+# === Supply Chain Verification ===
+pip-tools==7.4.0      # Pin and hash dependencies for reproducibility
+hashin==1.0.5         # Add package hashes to requirements for integrity
+
+# === OWASP Compliance ===
+# These support OWASP Top 10 validation in CI/CD
+semgrep==1.164.0      # Pattern-based static analysis for security anti-patterns
+
+# === SBOM Generation ===
+# CycloneDX for Software Bill of Materials (compliance requirement)
+cyclonedx-bom==7.3.0  # Generate SBOM from requirements/pip environment
+
+# === Transitive dependency overrides (security pins) ===
+# filelock: CVE-2025-68146, CVE-2026-22701 (fix: >=3.20.3) — transitive via semgrep
+# safety>=3.8.0 requires filelock>=3.16.1 so this pin is compatible
+filelock==3.20.3
+# cyclonedx-python-lib: pin to 11.x so pip resolves lxml<7,>=4 → lxml 6.1.1
+# (cyclonedx-bom 7.3.0 accepts cyclonedx-python-lib<12,>=8.0; 11.7.0 satisfies that
+#  AND requires lxml<7 which pins to 6.1.1, fixing PYSEC-2026-87)
+cyclonedx-python-lib==11.7.0
+# lxml: PYSEC-2026-87 (fix: >=6.1.0) — resolved by cyclonedx-python-lib==11.7.0 above
+lxml==6.1.1

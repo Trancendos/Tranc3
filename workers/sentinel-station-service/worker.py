@@ -38,7 +38,7 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,22 +47,20 @@ from sse_starlette.sse import EventSourceResponse
 
 # Phase 22: Infinity Ecosystem security integration
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
+from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import Permission, RBACEngine
+from Dimensional.infinity.rbac import RBACEngine
 
 # Sentinel Station core
 from Dimensional.infinity.sentinel_config import sentinel_config
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
-    SentinelStation,
     SharedSSEGenerator,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services integration
 from Dimensional.dimensionals import (
-    DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -74,6 +72,7 @@ from Dimensional.infinity.worker_integration import InfinityWorkerKit
 # Optional: ReactiveState for live Sentinel topology
 try:
     from src.fluidic.reactive_state import StateStore
+
     _REACTIVE_AVAILABLE = True
 except ImportError:
     _REACTIVE_AVAILABLE = False
@@ -84,7 +83,13 @@ except ImportError:
 
 PORT = int(os.environ.get("SENTINEL_PORT", "8041"))
 DB_PATH = os.environ.get("SENTINEL_DB_PATH", "data/sentinel_station.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 logger = logging.getLogger("sentinel-station-service")
 
@@ -119,12 +124,14 @@ if _REACTIVE_AVAILABLE:
     sentinel_topology_state = StateStore()
     # Set initial state
     try:
-        sentinel_topology_state.set({
-            "channels": {},
-            "subscribers": 0,
-            "events_published": 0,
-            "redis_connected": False,
-        })
+        sentinel_topology_state.set(
+            {
+                "channels": {},
+                "subscribers": 0,
+                "events_published": 0,
+                "redis_connected": False,
+            }
+        )
     except Exception:
         sentinel_topology_state = None
 else:
@@ -248,25 +255,30 @@ async def _lifespan(app: FastAPI):
                     )
                     # Update reactive topology state
                     if sentinel_topology_state is not None:
-                        sentinel_topology_state.set({
-                            "channels": stats.get("channel_stats", {}),
-                            "subscribers": stats.get("total_subscribers", 0),
-                            "events_published": stats.get("events_published", 0),
-                            "redis_connected": sentinel.is_redis_connected,
-                        })
+                        sentinel_topology_state.set(
+                            {
+                                "channels": stats.get("channel_stats", {}),
+                                "subscribers": stats.get("total_subscribers", 0),
+                                "events_published": stats.get("events_published", 0),
+                                "redis_connected": sentinel.is_redis_connected,
+                            }
+                        )
                     worker_kit.health.record_fire("topology_updater")
 
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
+                    summary_dict = summary.to_dict()
+                    worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     # Broadcast sentinel health to the platform channel
-                    await sentinel.publish(SentinelEvent(
-                        channel=SentinelChannel.PLATFORM,
-                        event_type="sentinel_health_report",
-                        source="sentinel_station",
-                        payload=summary_dict,
-                    ))
+                    await sentinel.publish(
+                        SentinelEvent(
+                            channel=SentinelChannel.PLATFORM,
+                            event_type="sentinel_health_report",
+                            source="sentinel_station",
+                            payload=summary_dict,
+                        )
+                    )
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -478,11 +490,13 @@ async def publish_events_batch(events: list[EventPublish], request: Request):
             event_type=body.event_type,
             source=body.source,
         )
-        published.append({
-            "id": event.id,
-            "channel": event.channel,
-            "event_type": event.event_type,
-        })
+        published.append(
+            {
+                "id": event.id,
+                "channel": event.channel,
+                "event_type": event.event_type,
+            }
+        )
 
     return {
         "published": published,
@@ -542,7 +556,7 @@ async def create_subscription(body: SubscriptionCreate, request: Request):
         )
 
     # Subscribe through Sentinel Station
-    queue = await sentinel.subscribe(body.channel)
+    await sentinel.subscribe(body.channel)
 
     # Persist subscription record
     sub_id = uuid.uuid4().hex[:16]
@@ -575,9 +589,7 @@ async def list_subscriptions(request: Request):
 
     db = _get_db()
     try:
-        rows = db.execute(
-            "SELECT * FROM subscriptions ORDER BY created_at DESC"
-        ).fetchall()
+        rows = db.execute("SELECT * FROM subscriptions ORDER BY created_at DESC").fetchall()
         return [dict(r) for r in rows]
     finally:
         db.close()
@@ -675,10 +687,12 @@ async def _sentinel_event_generator():
             try:
                 yield {
                     "event": "keepalive",
-                    "data": json.dumps({
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "service": "sentinel-station",
-                    }),
+                    "data": json.dumps(
+                        {
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "service": "sentinel-station",
+                        }
+                    ),
                 }
                 await asyncio.sleep(30)
             except asyncio.CancelledError:

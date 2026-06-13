@@ -42,6 +42,7 @@ from Dimensional.hive.hive_core import (
     get_hive,
 )
 
+
 # ---------------------------------------------------------------------------
 # FlowMonitor Tests
 # ---------------------------------------------------------------------------
@@ -233,9 +234,7 @@ class TestPipelineManager:
     async def test_start_pipeline(self):
         """Pipeline can be started."""
         pipeline = await self.manager.create_pipeline(
-            name="test",
-            source_id="src-1",
-            sink_ids=["sink-1"],
+            name="test", source_id="src-1", sink_ids=["sink-1"]
         )
         await self.manager.start_pipeline(pipeline.pipeline_id)
         updated = await self.manager.get_pipeline(pipeline.pipeline_id)
@@ -245,9 +244,7 @@ class TestPipelineManager:
     async def test_pause_pipeline(self):
         """Running pipeline can be paused."""
         pipeline = await self.manager.create_pipeline(
-            name="test",
-            source_id="src-1",
-            sink_ids=["sink-1"],
+            name="test", source_id="src-1", sink_ids=["sink-1"]
         )
         await self.manager.start_pipeline(pipeline.pipeline_id)
         await self.manager.pause_pipeline(pipeline.pipeline_id)
@@ -258,9 +255,7 @@ class TestPipelineManager:
     async def test_pause_non_running_pipeline(self):
         """Pausing a non-running pipeline raises ValueError."""
         pipeline = await self.manager.create_pipeline(
-            name="test",
-            source_id="src-1",
-            sink_ids=["sink-1"],
+            name="test", source_id="src-1", sink_ids=["sink-1"]
         )
         with pytest.raises(ValueError, match="not running"):
             await self.manager.pause_pipeline(pipeline.pipeline_id)
@@ -304,9 +299,7 @@ class TestPipelineManager:
     async def test_route_chunk(self):
         """Chunk routing delivers data and updates stats."""
         pipeline = await self.manager.create_pipeline(
-            name="test",
-            source_id="src-1",
-            sink_ids=["sink-1"],
+            name="test", source_id="src-1", sink_ids=["sink-1"]
         )
         chunk = DataChunk(
             pipeline_id=pipeline.pipeline_id,
@@ -611,7 +604,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_root_endpoint(self):
         """HIVE root endpoint returns system info."""
-        from httpx import ASGITransport, AsyncClient
+        from httpx import AsyncClient, ASGITransport
 
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -625,7 +618,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_status_endpoint(self):
         """HIVE status endpoint returns comprehensive status."""
-        from httpx import ASGITransport, AsyncClient
+        from httpx import AsyncClient, ASGITransport
 
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -637,7 +630,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_health_endpoint(self):
         """HIVE health endpoint returns health summary."""
-        from httpx import ASGITransport, AsyncClient
+        from httpx import AsyncClient, ASGITransport
 
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

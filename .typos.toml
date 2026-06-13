@@ -1,0 +1,34 @@
+# Typos configuration for Tranc3
+# Prevents typo-related security issues (e.g., "flate" instead of "flat")
+
+[files]
+extend-exclude = [
+    ".git",
+    "node_modules",
+    "__pycache__",
+    "*.pyc",
+    "bandit-results*.json",
+]
+
+[default]
+extend-ignore-re = [
+    # Allow common abbreviations and domain-specific terms
+    "tranc3",
+    "Tranc3",
+    "Trancendos",
+    "taimra",
+    "devocity",
+    "citadel",
+    "cryptex",
+    "nanocode",
+    "observatory",
+]
+
+[type.py]
+extend-ignore-re = [
+    # Variable names that look like typos but aren't
+    "nd",
+    "str",
+    "ser",
+    "frm",
+]

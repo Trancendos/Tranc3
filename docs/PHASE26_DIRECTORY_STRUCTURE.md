@@ -155,7 +155,7 @@ Tranc3/
 │
 ├── scripts/                          # Utility scripts
 │
-├── Dimensional/                      # ═══ Shared Core Libraries ═══
+├── Dimensional/                      # ═══ Dimensional Libraries ═══
 │   ├── __init__.py
 │   ├── architecture/                # Architecture patterns
 │   ├── dimensionals/                # Dimensional service abstractions

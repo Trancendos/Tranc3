@@ -135,8 +135,8 @@ class UnderverseModule:
                     # Only inherit tier if it's still the default
                     if self.tier == Tier.AGENT and parent.tier != Tier.AGENT:
                         self.tier = parent.tier
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to a JSON-friendly dictionary."""
@@ -522,7 +522,7 @@ class UnderverseRegistry:
             ),
             "pillars_represented": len({m.pillar for m in self._modules.values() if m.pillar}),
             "dimensionals_with_modules": len(
-                {m.parent_dimensional for m in self._modules.values() if m.parent_dimensional},
+                {m.parent_dimensional for m in self._modules.values() if m.parent_dimensional}
             ),
             "total_capabilities": len(self.get_capabilities_index()),
         }

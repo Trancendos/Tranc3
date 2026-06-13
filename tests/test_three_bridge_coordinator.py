@@ -14,15 +14,9 @@ Tests verify:
 """
 
 import asyncio
-
-from Dimensional.hive.hive_core import Hive
-from Dimensional.infinity.bridge.bridge_core import (
-    InfinityBridge,
-)
-from Dimensional.nexus.nexus_core import Nexus
-
 # Note: Direct _sentinel_station assignment used instead of patch.object
 # because sentinel_station is a property without a setter
+
 from Dimensional.three_bridge_coordinator import (
     BridgeIdentity,
     CoordinatorState,
@@ -30,6 +24,11 @@ from Dimensional.three_bridge_coordinator import (
     ThreeBridgeCoordinator,
     get_coordinator,
 )
+from Dimensional.infinity.bridge.bridge_core import (
+    InfinityBridge,
+)
+from Dimensional.nexus.nexus_core import Nexus
+from Dimensional.hive.hive_core import Hive
 
 
 def run_async(coro):
@@ -279,7 +278,7 @@ class TestCrossBridgeEvents:
                 sentinel_channel="bridge",
                 event_type="user_connected",
                 payload={"user_id": "user-1"},
-            ),
+            )
         )
         assert event.source_bridge == "infinity"
         assert "nexus" in event.target_bridges
@@ -297,7 +296,7 @@ class TestCrossBridgeEvents:
                 event_type="ai_alert",
                 payload={"severity": "high"},
                 target_bridges=["infinity"],
-            ),
+            )
         )
         assert event.target_bridges == ["infinity"]
 

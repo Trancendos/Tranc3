@@ -34,9 +34,6 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import log_server_error
-from Dimensional.sanitize import sanitize_for_log
-
 _log = logging.getLogger("tranc3.ecosystem")
 
 router = APIRouter(prefix="/api/ecosystem", tags=["ecosystem"])
@@ -126,7 +123,7 @@ PILLARS = [
         "name": "Commercial & Financial",
         "color": "#F97316",
         "hubs": [
-            "section-7",
+            "the-dutchy",
             "royal-bank-of-arcadia",
             "arcadian-exchange",
             "the-artifactory",
@@ -190,7 +187,7 @@ HUB_COLORS: Dict[str, str] = {
     "turings-hub": "#34D399",
     "chronosphere": "#A78BFA",
     "the-citadel": "#EF4444",
-    "section-7": "#F97316",
+    "the-dutchy": "#F97316",
     "the-studio": "#F59E0B",
     "imaginarium": "#FBBF24",
     "tranquility": "#EC4899",
@@ -224,15 +221,7 @@ _last_hub_update: float = 0.0
 
 
 def _get_system_mode() -> str:
-    try:
-        from src.platform.infrastructure_mode import PlatformInfraMode, get_infrastructure_mode
-
-        mode = get_infrastructure_mode()
-        if mode == PlatformInfraMode.LOCAL_ONLY:
-            return "TRUE_NAS"
-        return mode.value
-    except Exception:
-        return os.getenv("SYSTEM_MODE", "CLOUD_ONLY").upper()
+    return os.getenv("SYSTEM_MODE", "CLOUD_ONLY").upper()
 
 
 def _refresh_hub_states() -> Dict[str, Dict[str, Any]]:
@@ -536,7 +525,7 @@ async def get_pillars():
                 "onlineHubs": online,
                 "alerts": alerts,
                 "hubs": p["hubs"],
-            },
+            }
         )
     return result
 
@@ -714,8 +703,7 @@ async def get_storage_health():
         provider = _storage_factory.get_provider()
         return await provider.health()
     except Exception as e:
-        _log.warning("Storage health check failed: %s", sanitize_for_log(e))
-        return {"status": "error", "error": "Storage health check failed"}
+        return {"status": "error", "error": str(e)}
 
 
 # ---------------------------------------------------------------------------
@@ -738,10 +726,8 @@ async def get_ai_model_catalog(provider: Optional[str] = None):
             "catalog": catalog,
         }
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=log_server_error(exc, 500, context="AI model catalog"),
-        ) from exc
+        _log.error("Failed to get AI model catalog: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/ai/providers")
@@ -770,10 +756,8 @@ async def get_ai_provider_status():
             ),
         }
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=log_server_error(exc, 500, context="AI provider discovery"),
-        ) from exc
+        _log.error("Failed to discover AI providers: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/ai/routing-chains")
@@ -802,7 +786,7 @@ async def get_ai_routing_chains():
                         if chain_available >= 2
                         else "degraded"
                     ),
-                },
+                }
             )
         return {
             "total_chains": len(chains),
@@ -810,10 +794,8 @@ async def get_ai_routing_chains():
             "chains": chains,
         }
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=log_server_error(exc, 500, context="AI routing chains"),
-        ) from exc
+        _log.error("Failed to get routing chains: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/ai/optimal-chain")
@@ -832,10 +814,8 @@ async def get_optimal_routing_chain(chain_name: Optional[str] = None):
             "route_rules": chain.get_route_rules(),
         }
     except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=log_server_error(exc, 500, context="optimal AI routing chain"),
-        ) from exc
+        _log.error("Failed to get optimal chain: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -930,8 +910,7 @@ async def resolve_heartbeat_alert(alert_id: str):
     success = _heartbeat_aggregator.resolve_alert(alert_id)
     if not success:
         raise HTTPException(
-            status_code=404,
-            detail=f"Alert '{alert_id}' not found or already resolved",
+            status_code=404, detail=f"Alert '{alert_id}' not found or already resolved"
         )
     return {"status": "resolved", "alert_id": alert_id}
 

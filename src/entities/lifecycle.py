@@ -57,9 +57,7 @@ class LifecycleEmitter:
         return self._owner_name
 
     def on_lifecycle(
-        self,
-        event: LifecycleEvent,
-        listener: LifecycleListener,
+        self, event: LifecycleEvent, listener: LifecycleListener
     ) -> "LifecycleEmitter":
         """Register a listener for a specific lifecycle event."""
         key = event.value if isinstance(event, LifecycleEvent) else event
@@ -69,9 +67,7 @@ class LifecycleEmitter:
         return self
 
     def once_lifecycle(
-        self,
-        event: LifecycleEvent,
-        listener: LifecycleListener,
+        self, event: LifecycleEvent, listener: LifecycleListener
     ) -> "LifecycleEmitter":
         """Register a one-time listener for a specific lifecycle event."""
         # _key = event.value if isinstance(event, LifecycleEvent) else event
@@ -89,9 +85,7 @@ class LifecycleEmitter:
         return self
 
     def remove_lifecycle_listener(
-        self,
-        event: LifecycleEvent,
-        listener: LifecycleListener,
+        self, event: LifecycleEvent, listener: LifecycleListener
     ) -> "LifecycleEmitter":
         """Remove a specific listener."""
         key = event.value if isinstance(event, LifecycleEvent) else event
@@ -100,9 +94,7 @@ class LifecycleEmitter:
         return self
 
     async def emit_lifecycle(
-        self,
-        event: LifecycleEvent,
-        details: Optional[Dict[str, Any]] = None,
+        self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None
     ) -> None:
         """Emit a lifecycle event with standardised context."""
         ctx = LifecycleContext(
@@ -132,9 +124,7 @@ class LifecycleEmitter:
                 pass
 
     def emit_lifecycle_sync(
-        self,
-        event: LifecycleEvent,
-        details: Optional[Dict[str, Any]] = None,
+        self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None
     ) -> None:
         """Synchronous emit — for use in constructors where async isn't possible."""
         ctx = LifecycleContext(

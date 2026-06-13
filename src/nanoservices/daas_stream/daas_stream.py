@@ -300,7 +300,7 @@ class OPAPolicyEngine:
                 "effect": effect.value,
                 "reason": reason,
                 "rule_id": rule_id,
-            },
+            }
         )
 
 
@@ -513,7 +513,7 @@ class DaaSService:
                     "target_jurisdiction": "US",
                 },
                 priority=100,
-            ),
+            )
         )
 
         # Restricted data requires explicit authorization
@@ -527,7 +527,7 @@ class DaaSService:
                     "authorized": False,
                 },
                 priority=90,
-            ),
+            )
         )
 
         # Top secret data — always deny remote access
@@ -541,7 +541,7 @@ class DaaSService:
                     "access_type": "remote",
                 },
                 priority=100,
-            ),
+            )
         )
 
         # Allow public data by default
@@ -554,7 +554,7 @@ class DaaSService:
                     "data_classification": "public",
                 },
                 priority=0,
-            ),
+            )
         )
 
     async def start(self) -> None:

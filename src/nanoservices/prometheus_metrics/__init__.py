@@ -5,14 +5,14 @@ metrics export, custom dashboards, and alerting rules.
 """
 
 from .prometheus_metrics import (
-    AlertManager,
+    MetricType,
+    MetricLabel,
+    NanoServiceMetric,
+    PrometheusRegistry,
+    NanoserviceMetricsCollector,
     AlertRule,
     AlertSeverity,
-    MetricLabel,
-    MetricType,
-    NanoServiceMetric,
-    NanoserviceMetricsCollector,
-    PrometheusRegistry,
+    AlertManager,
 )
 
 __all__ = [

@@ -8,17 +8,18 @@ workflow execution, step execution, compensation, and saga rollback.
 import asyncio  # noqa: I001
 
 from Dimensional.cross_bridge_orchestrator import (
-    BridgeDispatcher,
     BridgeTarget,
-    CompensationManager,
-    CrossBridgeOrchestrator,
-    OrchestrationStep,
-    OrchestrationWorkflow,
-    StepExecutor,
     StepStatus,
     WorkflowStatus,
+    OrchestrationStep,
+    OrchestrationWorkflow,
+    BridgeDispatcher,
+    StepExecutor,
+    CompensationManager,
+    CrossBridgeOrchestrator,
     get_orchestrator,
 )
+
 
 # ──────────────────────────────────────────────
 # OrchestrationStep Tests
@@ -114,7 +115,7 @@ class TestBridgeDispatcher:
         loop = asyncio.new_event_loop()
         try:
             result = loop.run_until_complete(
-                dispatcher.dispatch(BridgeTarget.NEXUS, "process", {"data": 1}),
+                dispatcher.dispatch(BridgeTarget.NEXUS, "process", {"data": 1})
             )
             assert result["result"] == "ok"
         finally:

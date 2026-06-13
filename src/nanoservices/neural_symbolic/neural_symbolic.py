@@ -175,10 +175,7 @@ class KnowledgeBase:
         self._predicate_index: Dict[str, Set[str]] = {}
 
     def assert_fact(
-        self,
-        predicate: Predicate,
-        source: str = "asserted",
-        confidence: float = 1.0,
+        self, predicate: Predicate, source: str = "asserted", confidence: float = 1.0
     ) -> Fact:
         fact = Fact(predicate=predicate, source=source, confidence=confidence)
         self.facts[fact.fact_id] = fact
@@ -282,9 +279,7 @@ class ForwardChainer:
                         confidence = rule.weight * min(neural_conf, max(0.5, 1.0 - step * 0.01))
                         new_pred.confidence = confidence
                         new_fact = self.kb.assert_fact(
-                            new_pred,
-                            source=f"rule:{rule.rule_id}",
-                            confidence=confidence,
+                            new_pred, source=f"rule:{rule.rule_id}", confidence=confidence
                         )
                         new_facts.append(new_fact)
                         derived.append(new_fact)
@@ -326,11 +321,7 @@ class BackwardChainer:
         return result
 
     def _prove_recursive(
-        self,
-        goal: Predicate,
-        depth: int,
-        steps: List[ProofStep],
-        visited: Set[str],
+        self, goal: Predicate, depth: int, steps: List[ProofStep], visited: Set[str]
     ) -> Tuple[bool, Dict[str, str], List[ProofStep]]:
         goal_key = f"{goal.name}({','.join(a.name for a in goal.arguments)})"
         if goal_key in visited:
@@ -357,10 +348,7 @@ class BackwardChainer:
             for antecedent in rule.antecedents:
                 bound_antecedent = self._apply_bindings(antecedent, combined_bindings)
                 proven, sub_bindings, steps = self._prove_recursive(
-                    bound_antecedent,
-                    depth - 1,
-                    steps,
-                    visited,
+                    bound_antecedent, depth - 1, steps, visited
                 )
                 if not proven:
                     all_proven = False
@@ -409,11 +397,11 @@ class BackwardChainer:
         for step in steps:
             if step.rule_applied:
                 explanations.append(
-                    f"Applied rule {step.rule_applied} (confidence: {step.confidence:.2f})",
+                    f"Applied rule {step.rule_applied} (confidence: {step.confidence:.2f})"
                 )
             elif step.derived_fact:
                 explanations.append(
-                    f"Found fact {step.derived_fact.predicate.name} (confidence: {step.confidence:.2f})",
+                    f"Found fact {step.derived_fact.predicate.name} (confidence: {step.confidence:.2f})"
                 )
         return "; ".join(explanations)
 

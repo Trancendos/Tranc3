@@ -21,8 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
-from Dimensional.error_handlers import log_server_error
-from Dimensional.sanitize import sanitize_for_log
+from Dimensional.error_handlers import safe_error_detail
 
 _log = logging.getLogger("tranc3.enhanced_capabilities")
 
@@ -79,7 +78,7 @@ async def generate_code(
                 description=req.description,
                 context=req.context,
                 constraints=req.constraints,
-            ),
+            )
         )
         return {
             "code": result.code,
@@ -91,7 +90,7 @@ async def generate_code(
         }
     except Exception as exc:
         _log.error("code.generate error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 @router.post("/code/improve", tags=["code"])
@@ -112,7 +111,7 @@ async def improve_code(
         }
     except Exception as exc:
         _log.error("code.improve error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 @router.post("/code/explain", tags=["code"])
@@ -125,7 +124,7 @@ async def explain_code(req: CodeImproveRequest):
         return {"explanation": explanation}
     except Exception as exc:
         _log.error("code.explain error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 # ── Skills (Turing's Hub) ─────────────────────────────────────────────────────
@@ -151,7 +150,7 @@ async def search_skills(req: SkillSearchRequest):
         }
     except Exception as exc:
         _log.error("skills.search error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 @router.get("/skills/stats", tags=["skills"])
@@ -163,7 +162,7 @@ async def skill_stats():
         return registry.get_stats()
     except Exception as exc:
         _log.error("skills.stats error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 @router.post("/skills/detect-bundle", tags=["skills"])
@@ -178,7 +177,7 @@ async def detect_bundle(req: DetectBundleRequest):
         return {"bundle": None}
     except Exception as exc:
         _log.error("skills.detect-bundle error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 # ── DeepMind — Planning + Reasoning (Think Tank) ─────────────────────────────
@@ -196,7 +195,7 @@ async def plan(
         return await planner.plan_action(req.goal, req.state, req.constraints)
     except Exception as exc:
         _log.error("plan error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 @router.post("/reason", tags=["deepmind"])
@@ -211,7 +210,7 @@ async def chain_of_thought(
         return await ChainOfThoughtReasoner().reason(req.goal)
     except Exception as exc:
         _log.error("reason error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 # ── Self-Healing ──────────────────────────────────────────────────────────────
@@ -225,8 +224,8 @@ async def healing_dashboard():
 
         return await health_monitor.get_system_health()
     except Exception as exc:
-        _log.warning("healing.dashboard error: %s", sanitize_for_log(exc))
-        return {"status": "degraded", "error": "Health monitor unavailable"}
+        _log.warning("healing.dashboard error: %s", exc)
+        return {"status": "degraded", "error": str(exc)}
 
 
 @router.post("/healing/repair", tags=["healing"])
@@ -241,7 +240,7 @@ async def trigger_repair(
         return {"repairs_applied": results}
     except Exception as exc:
         _log.error("healing.repair error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 @router.get("/healing/bots", tags=["healing"])
@@ -253,4 +252,4 @@ async def bot_stats():
         return dispatcher.get_bot_stats()
     except Exception as exc:
         _log.warning("healing.bots error: %s", exc)
-        raise HTTPException(status_code=503, detail=log_server_error(exc, 503)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc

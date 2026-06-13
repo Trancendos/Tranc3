@@ -3,12 +3,12 @@ NSA — Nanoservice Architecture Client Library
 """
 
 from .nsa_client import (
-    IpcMessage,
-    IpcMessageType,
     NanoserviceClient,
-    NanoserviceRecord,
     ServiceId,
     ServiceRegistry,
+    IpcMessage,
+    IpcMessageType,
+    NanoserviceRecord,
     ServiceStatus,
     ShmRingBuffer,
 )

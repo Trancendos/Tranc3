@@ -460,8 +460,9 @@ func (o *Orchestrator) executeFlow(ctx context.Context, def *FlowDefinition, exe
 	exec.Status = FlowRunning
 	o.emitEvent("running", exec)
 
-	// Validate DAG (cycle detection) before scheduling ready steps
-	if _, err := o.topologicalSort(def); err != nil {
+	// Topological sort for execution order
+	order, err := o.topologicalSort(def)
+	if err != nil {
 		exec.Status = FlowFailed
 		exec.Error = err.Error()
 		now := time.Now()

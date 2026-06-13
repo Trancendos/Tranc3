@@ -371,8 +371,7 @@ class QuantizationPipeline:
 
     @staticmethod
     def estimate_model_size(
-        student_config: StudentConfig,
-        quantization: QuantizationLevel,
+        student_config: StudentConfig, quantization: QuantizationLevel
     ) -> float:
         """Estimate model size in MB after quantization."""
         # Rough estimate based on parameter count and quantization level

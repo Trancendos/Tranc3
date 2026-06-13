@@ -9,18 +9,19 @@ across light bridges.
 import asyncio  # noqa: I001
 
 from Dimensional.infinity.bridge.path_optimizer import (
-    FallbackRouter,
-    OptimizationStrategy,
-    OptimizedRoute,
-    PathHealth,
-    PathHealthMonitor,
     PathMetrics,
-    PathOptimizationEngine,
     PathOptimizerConfig,
-    PathScore,
+    OptimizationStrategy,
     PathScorer,
+    PathScore,
+    PathHealthMonitor,
+    PathHealth,
+    FallbackRouter,
+    PathOptimizationEngine,
+    OptimizedRoute,
     get_path_optimizer,
 )
+
 
 # ── PathMetrics Tests ────────────────────────────────────────────────────────
 
@@ -269,7 +270,7 @@ class TestFallbackRouter:
             # Score a path with low total_score to trigger fallback
             scored_paths = {}
             route = loop.run_until_complete(
-                router.get_fallback_route("A", "B", scored_paths, monitor),
+                router.get_fallback_route("A", "B", scored_paths, monitor)
             )
             # May return None or an OptimizedRoute
             assert route is None or isinstance(route, OptimizedRoute)

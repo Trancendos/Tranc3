@@ -16,20 +16,19 @@ Tests:
 """
 
 import json
-
 from src.bridge import (
+    EcosystemBridge,
+    EcosystemRegistry,
+    EcosystemEntity,
     BridgeEndpoint,
     BridgeTransport,
-    EcosystemBridge,
-    EcosystemEntity,
-    EcosystemRegistry,
     JsonRpcRequest,
 )
-from src.entities import OllamaConfig, Prime, Sovereign
 from src.protocols.a2a import A2AMessage, A2AMessageType, A2APriority
-from src.protocols.hil_a import HILAActionCategory, HILAChain
 from src.protocols.three_bridge import SentinelStation
 from src.protocols.three_bridge.three_bridge_coordinator import TrafficClass
+from src.protocols.hil_a import HILAChain, HILAActionCategory
+from src.entities import Prime, Sovereign, OllamaConfig
 
 
 def test_cross_ecosystem_bridge():
@@ -48,7 +47,7 @@ def test_cross_ecosystem_bridge():
             transport=BridgeTransport.HTTP,
             url="http://localhost:3001",
             health_url="http://localhost:3001/health",
-        ),
+        )
     )
     bridge.register_endpoint(
         BridgeEndpoint(
@@ -58,7 +57,7 @@ def test_cross_ecosystem_bridge():
             transport=BridgeTransport.HTTP,
             url="http://localhost:8000",
             health_url="http://localhost:8000/health",
-        ),
+        )
     )
     endpoints = bridge.list_endpoints()
     assert len(endpoints) == 2
@@ -152,7 +151,7 @@ def test_cross_ecosystem_bridge():
                     pillar=pillar,
                     lead_ai=lead_ais[pillar],
                     primary_function=f"{pillar.title()} operations",
-                ),
+                )
             )
     registry.register_entities(entities)
     all_entities = registry.list_entities()
@@ -199,7 +198,7 @@ def test_cross_ecosystem_bridge():
         payload=a2a_msg.payload,
     )
     print(
-        f"✓ HIL-A action: {action.id}, min_tier={action.minimum_approval_tier}, status={action.status.value}",
+        f"✓ HIL-A action: {action.id}, min_tier={action.minimum_approval_tier}, status={action.status.value}"
     )
 
     # 5. Tier hierarchy
@@ -208,7 +207,7 @@ def test_cross_ecosystem_bridge():
     sovereign.register_prime(prime)
     health = sovereign.health_check()
     print(
-        f"✓ Tier hierarchy: Sovereign({health.managed_entities} Primes) → Prime → AI → Agent → Bot",
+        f"✓ Tier hierarchy: Sovereign({health.managed_entities} Primes) → Prime → AI → Agent → Bot"
     )
 
     # 6. Ollama config cross-compatibility

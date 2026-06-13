@@ -1,0 +1,50 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Alertmanager integration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # ── Tranc3 API ─────────────────────────────────────────────────────────────
+  - job_name: tranc3-api
+    static_configs:
+      - targets: ['api:8000']
+    metrics_path: /metrics
+
+  # ── Smart Storage Orchestrator ─────────────────────────────────────────────
+  - job_name: storage-orchestrator
+    static_configs:
+      - targets: ['storage-orchestrator:8000']
+    metrics_path: /metrics
+
+  # ── MinIO — Built-in Prometheus Metrics ────────────────────────────────────
+  # MinIO natively exposes metrics at /minio/v2/metrics/cluster
+  - job_name: minio
+    metrics_path: /minio/v2/metrics/cluster
+    scheme: http
+    static_configs:
+      - targets: ['minio:9000']
+
+  # ── Node Exporter — Host Metrics (ZFS pool capacity) ───────────────────────
+  - job_name: node-exporter
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # ── Redis ──────────────────────────────────────────────────────────────
+  # Required by RedisDown alert in prometheus-alerts.yml
+  - job_name: tranc3-redis
+    static_configs:
+      - targets: ['redis:6379']
+
+  # ── Prometheus Self-Monitoring ─────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+rule_files:
+  - "prometheus-alerts.yml"

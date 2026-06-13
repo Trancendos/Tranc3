@@ -74,7 +74,7 @@ class QUBOProblem:
     num_variables: int = 0
     linear_terms: Dict[str, float] = field(default_factory=dict)  # var -> coefficient
     quadratic_terms: Dict[Tuple[str, str], float] = field(
-        default_factory=dict,
+        default_factory=dict
     )  # (var1, var2) -> coefficient
     constant: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -215,9 +215,7 @@ class QuantumCircuitLibrary:
 
     @staticmethod
     def vqe_circuit(
-        num_qubits: int,
-        depth: int = 2,
-        entanglement: str = "linear",
+        num_qubits: int, depth: int = 2, entanglement: str = "linear"
     ) -> Dict[str, Any]:
         """Generate VQE ansatz circuit specification (EfficientSU2 style)."""
         return {
@@ -464,10 +462,7 @@ class QuantumSolver:
         }
 
     def _build_circuit(
-        self,
-        algorithm: QuantumAlgorithm,
-        num_qubits: int,
-        depth: int,
+        self, algorithm: QuantumAlgorithm, num_qubits: int, depth: int
     ) -> Dict[str, Any]:
         """Build a quantum circuit specification for the given algorithm."""
         if algorithm == QuantumAlgorithm.QAOA:
@@ -480,10 +475,7 @@ class QuantumSolver:
             return self._circuit_library.qaoa_circuit(num_qubits, depth)
 
     def _simulate_quantum_solve(
-        self,
-        problem: QUBOProblem,
-        algorithm: QuantumAlgorithm,
-        shots: int,
+        self, problem: QUBOProblem, algorithm: QuantumAlgorithm, shots: int
     ) -> Dict[str, int]:
         """Simulate quantum solving (would use Qiskit in production)."""
         import random

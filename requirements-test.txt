@@ -1,0 +1,15 @@
+# TRANC3 — Test-only dependencies
+# Install alongside requirements.txt for running the test suite:
+#   pip install -r requirements.txt -r requirements-test.txt
+# NOT installed in the production Docker image.
+# ──────────────────────────────────────────────────────────────────
+
+# Fixes: CVE-2025-71176 (tempfile race condition)
+pytest==9.0.3
+pytest-asyncio==1.4.0  # 0.25.0 required pytest<9; 1.4.0 supports pytest<10,>=8.4
+pytest-cov==5.0.0
+
+# Worker deps imported by the test suite (tests/test_workers_p0.py imports the
+# infinity-auth worker, which requires pyotp for TOTP/MFA). Kept in sync with
+# workers/infinity-auth/requirements-worker.txt.
+pyotp==2.9.0

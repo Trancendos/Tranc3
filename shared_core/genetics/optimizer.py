@@ -13,15 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 import random
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from .fitness import FitnessEvaluator, LatencyThroughputFitness
-
-logger = logging.getLogger(__name__)
 
 Individual = Dict[str, Any]
 Population = List[Individual]
@@ -173,8 +170,8 @@ class GeneticOptimizer:
             import deap  # noqa: F401
 
             self._deap_available = True
-        except ImportError as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except ImportError:
+            pass
 
     def _random_individual(self) -> Individual:
         config: Dict[str, Any] = {}
@@ -204,8 +201,7 @@ class GeneticOptimizer:
                 else:
                     span = float(hi) - float(lo)
                     child[key] = max(
-                        float(lo),
-                        min(float(hi), child[key] + self._rng.gauss(0, span * 0.1)),
+                        float(lo), min(float(hi), child[key] + self._rng.gauss(0, span * 0.1))
                     )
         child.pop("_fitness", None)
         return child
@@ -235,7 +231,7 @@ class GeneticOptimizer:
                     a, b = self._rng.sample(pop, 2)
                     c1, c2 = self._crossover(a, b)
                     offspring.extend(
-                        [self._evaluate(self._mutate(c1)), self._evaluate(self._mutate(c2))],
+                        [self._evaluate(self._mutate(c1)), self._evaluate(self._mutate(c2))]
                     )
                 else:
                     parent = self._rng.choice(pop)

@@ -97,7 +97,7 @@ class Trace:
         self.spans.append(span)
         if span.context.parent_span_id is None:
             self.root_span = span
-        services = {s.service_name for s in self.spans if s.service_name}
+        services = set(s.service_name for s in self.spans if s.service_name)
         self.service_count = len(services)
 
     @property
@@ -249,9 +249,7 @@ class Tracer:
             return None
         parent_id = headers.get("parent-span-id") or None
         return SpanContext(
-            trace_id=trace_id,
-            span_id=span_id or uuid.uuid4().hex[:12],
-            parent_span_id=parent_id,
+            trace_id=trace_id, span_id=span_id or uuid.uuid4().hex[:12], parent_span_id=parent_id
         )
 
 
@@ -309,8 +307,7 @@ class DistributedTracingService:
 
     def initialize(self) -> None:
         logger.info(
-            "DistributedTracingService initialized (sample_rate=%.2f)",
-            self._collector._sample_rate,
+            "DistributedTracingService initialized (sample_rate=%.2f)", self._collector._sample_rate
         )
 
     def get_tracer(self, service_name: str) -> Tracer:

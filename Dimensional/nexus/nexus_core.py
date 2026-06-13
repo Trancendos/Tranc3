@@ -41,6 +41,7 @@ import hashlib
 import json
 import logging
 import os
+import sqlite3
 import time
 import uuid
 from collections import defaultdict
@@ -54,10 +55,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.infinity.abac import ABACEngine
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.rbac import RBACEngine
-from src.database.encrypted_sqlite import connect as sqlite3_connect
+from Dimensional.infinity.abac import ABACEngine
 
 logger = logging.getLogger("nexus")
 
@@ -445,7 +445,7 @@ class HealthAggregator:
     def _init_db(self) -> None:
         """Initialize the health database."""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3_connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS service_health (
                 service_id TEXT PRIMARY KEY,
@@ -478,7 +478,7 @@ class HealthAggregator:
         """Register an AI/Agent/Bot service for health tracking in the Nexus."""
         async with self._lock:
             self._services[health.service_id] = health
-        conn = sqlite3_connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
         conn.execute(
             """INSERT OR REPLACE INTO service_health
                (service_id, service_name, pillar, tier_requirement, status,
@@ -521,7 +521,7 @@ class HealthAggregator:
             if metadata:
                 svc.metadata.update(metadata)
 
-        conn = sqlite3_connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
         conn.execute(
             """UPDATE service_health
                SET status=?, last_heartbeat=?, response_time_ms=?, error_count=?, metadata=?
@@ -616,8 +616,8 @@ class HealthAggregator:
                                 "severity": "high",
                             }
                         )
-                except (ValueError, TypeError) as _exc:
-                    logger.debug("suppressed %s", _exc, exc_info=False)
+                except (ValueError, TypeError):
+                    pass
 
             # Check response time
             if svc.response_time_ms and svc.response_time_ms > self._thresholds["response_time_ms"]:
@@ -1200,79 +1200,6 @@ def create_nexus_app() -> FastAPI:
             ],
         }
 
-    # --- Phase 28: Nexus Cluster (Raft Consensus) Endpoints ---
-
-    @app.get("/cluster/status", tags=["cluster"])
-    async def cluster_status():
-        """Get the Nexus Cluster status with Raft consensus information."""
-        from Dimensional.nexus.raft.raft_core import get_nexus_cluster
-
-        cluster = get_nexus_cluster()
-        return cluster.get_cluster_status()
-
-    @app.post("/cluster/nodes/{node_id}", tags=["cluster"])
-    async def cluster_add_node(node_id: str):
-        """Add a node to the Nexus Cluster."""
-        from Dimensional.nexus.raft.raft_core import get_nexus_cluster
-
-        cluster = get_nexus_cluster()
-        await cluster.add_node(node_id)
-        return {"action": "add_node", "node_id": node_id, "status": "added"}
-
-    @app.delete("/cluster/nodes/{node_id}", tags=["cluster"])
-    async def cluster_remove_node(node_id: str):
-        """Remove a node from the Nexus Cluster."""
-        from Dimensional.nexus.raft.raft_core import get_nexus_cluster
-
-        cluster = get_nexus_cluster()
-        await cluster.remove_node(node_id)
-        return {"action": "remove_node", "node_id": node_id, "status": "removed"}
-
-    @app.post("/cluster/propose", tags=["cluster"])
-    async def cluster_propose(request: Request):
-        """Propose a command to the Nexus Cluster via Raft consensus."""
-        from Dimensional.nexus.raft.raft_core import get_nexus_cluster
-
-        body = await request.json()
-        cluster = get_nexus_cluster()
-        result = await cluster.propose(body.get("command", {}))
-        return {"action": "propose", "result": result}
-
-    # --- Phase 28: Pillar Entity Endpoints ---
-
-    @app.get("/pillars/locations", tags=["pillars"])
-    async def pillar_locations():
-        """Get all pillar entity locations and their configurations."""
-        from Dimensional.pillars.entities import get_pillar_registry
-
-        registry = get_pillar_registry()
-        return registry.get_full_summary()
-
-    @app.get("/pillars/locations/{location}", tags=["pillars"])
-    async def pillar_location_detail(location: str):
-        """Get pillar entities for a specific location."""
-        from Dimensional.pillars.entities import get_pillar_registry
-
-        registry = get_pillar_registry()
-        entities = registry.get_by_location(location)
-        return {
-            "location": location,
-            "entity_count": len(entities),
-            "entities": [e.model_dump() for e in entities],
-        }
-
-    @app.get("/pillars/tiers", tags=["pillars"])
-    async def pillar_tiers():
-        """Get pillar entities grouped by tier."""
-        from Dimensional.pillars.entities import EntityTier, get_pillar_registry
-
-        registry = get_pillar_registry()
-        result = {}
-        for tier in EntityTier:
-            entities = registry.get_by_tier(tier)
-            result[tier.name] = [e.model_dump() for e in entities]
-        return result
-
     # --- WebSocket Endpoint ---
 
     @app.websocket("/ws/events")
@@ -1290,8 +1217,8 @@ def create_nexus_app() -> FastAPI:
                         await ws.send_text(
                             json.dumps({"type": "subscribed", "channel": msg["channel"]})
                         )
-                except (json.JSONDecodeError, KeyError) as _exc:
-                    logger.debug("suppressed %s", _exc, exc_info=False)
+                except (json.JSONDecodeError, KeyError):
+                    pass
         except WebSocketDisconnect:
             _ws_manager.disconnect(ws)
 

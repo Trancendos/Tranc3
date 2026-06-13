@@ -236,9 +236,7 @@ class LLMDriftPredictor:
         self._prediction_cache: Dict[str, DriftPrediction] = {}
 
     async def predict_drift(
-        self,
-        signals: List[DriftSignal],
-        time_horizon_hours: float = 24.0,
+        self, signals: List[DriftSignal], time_horizon_hours: float = 24.0
     ) -> List[DriftPrediction]:
         """Use LLM to predict future drift events from current signals."""
         if not signals:
@@ -259,9 +257,7 @@ class LLMDriftPredictor:
         return self._heuristic_prediction(signals, time_horizon_hours)
 
     def _build_prediction_prompt(
-        self,
-        signals: List[DriftSignal],
-        time_horizon_hours: float,
+        self, signals: List[DriftSignal], time_horizon_hours: float
     ) -> str:
         """Build a prediction prompt for the LLM."""
         signal_summary = []
@@ -269,7 +265,7 @@ class LLMDriftPredictor:
             signal_summary.append(
                 f"- [{s.category.value}/{s.severity.value}] {s.resource_name}: "
                 f"expected={json.dumps(s.expected_state)[:100]} "
-                f"actual={json.dumps(s.actual_state)[:100]}",
+                f"actual={json.dumps(s.actual_state)[:100]}"
             )
 
         return f"""Analyze these infrastructure drift signals and predict likely future drift events in the next {time_horizon_hours} hours.
@@ -295,10 +291,7 @@ Respond in JSON format as a list of predictions."""
         return ""
 
     def _parse_llm_predictions(
-        self,
-        llm_response: str,
-        signals: List[DriftSignal],
-        time_horizon_hours: float,
+        self, llm_response: str, signals: List[DriftSignal], time_horizon_hours: float
     ) -> List[DriftPrediction]:
         """Parse LLM response into structured predictions."""
         predictions = []
@@ -325,9 +318,7 @@ Respond in JSON format as a list of predictions."""
         return predictions
 
     def _heuristic_prediction(
-        self,
-        signals: List[DriftSignal],
-        time_horizon_hours: float,
+        self, signals: List[DriftSignal], time_horizon_hours: float
     ) -> List[DriftPrediction]:
         """Heuristic drift prediction when LLM is unavailable.
 
@@ -362,7 +353,7 @@ Respond in JSON format as a list of predictions."""
                 auto_heal = False
 
             # Affected resources
-            resources = list({s.resource_name for s in cat_signals if s.resource_name})
+            resources = list(set(s.resource_name for s in cat_signals if s.resource_name))
 
             # Remediation suggestion
             remediation_map = {
@@ -423,7 +414,7 @@ class PredictiveDriftService:
         self._signals.extend(new_signals)
         self._prune_old_signals()
         logger.info(
-            f"Ingested {len(new_signals)} drift signals from {len(log_entries)} log entries",
+            f"Ingested {len(new_signals)} drift signals from {len(log_entries)} log entries"
         )
         return len(new_signals)
 
@@ -442,8 +433,7 @@ class PredictiveDriftService:
 
         # Generate predictions
         predictions = await self.llm_predictor.predict_drift(
-            recent_signals,
-            self.prediction_window_hours,
+            recent_signals, self.prediction_window_hours
         )
         self._predictions.extend(predictions)
 
@@ -501,7 +491,7 @@ class PredictiveDriftService:
                 self._healing_actions.append(healing_action)
                 logger.info(
                     f"Auto-heal initiated for {pred.category.value} drift "
-                    f"(confidence={pred.confidence:.2f}): {pred.remediation}",
+                    f"(confidence={pred.confidence:.2f}): {pred.remediation}"
                 )
 
     def _prune_old_signals(self) -> None:
@@ -548,7 +538,7 @@ class PredictiveDriftService:
             if pred.confidence >= 0.6:
                 recommendations.append(
                     f"[{pred.severity.value.upper()}] {pred.category.value}: "
-                    f"{pred.remediation} (confidence: {pred.confidence:.0%})",
+                    f"{pred.remediation} (confidence: {pred.confidence:.0%})"
                 )
         return recommendations[:10]
 

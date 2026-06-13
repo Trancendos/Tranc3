@@ -18,7 +18,6 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -181,23 +180,22 @@ class EscalationResult:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class IBridge(ABC):
+class IBridge:
     """Abstract base class for bridges."""
 
     @property
-    @abstractmethod
-    def domain(self) -> BridgeDomain: ...
+    def domain(self) -> BridgeDomain:
+        raise NotImplementedError
 
-    @abstractmethod
-    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket: ...
+    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
+        raise NotImplementedError
 
-    @abstractmethod
-    def health_check(self) -> BridgeHealthReport: ...
+    def health_check(self) -> BridgeHealthReport:
+        raise NotImplementedError
 
-    @abstractmethod
     def scan_and_cleanup(self) -> List[str]:
         """Proactive scan and cleanup. Returns list of actions taken."""
-        ...
+        raise NotImplementedError
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -413,7 +411,7 @@ class NexusBridge(IBridge):
     def scan_and_cleanup(self) -> List[str]:
         """Clean up stale channels and discovered agents."""
         actions = []
-        # _now = time.time()  # noqa: F841
+        # _now = time.time()  # noqa: assigned but unused
         # Clean channels with no recent activity
         stale_channels = [ch for ch, msgs in self._channels.items() if len(msgs) == 0]
         for ch in stale_channels:
@@ -636,7 +634,7 @@ class SentinelStation:
         #     requires_escalation=False,
         # )
 
-        # _result_packet = to_bridge.process_packet(packet)  # noqa: F841
+        # _result_packet = to_bridge.process_packet(packet)  # noqa: assigned but unused
 
         result = EscalationResult(
             success=True,
@@ -647,7 +645,7 @@ class SentinelStation:
         )
         self._escalation_log.append(result)
         logger.info(
-            f"Sentinel: Escalated {request.packet_id}: {request.from_bridge.value} → {request.to_bridge.value}",
+            f"Sentinel: Escalated {request.packet_id}: {request.from_bridge.value} → {request.to_bridge.value}"
         )
 
         return result
@@ -708,19 +706,19 @@ class SentinelStation:
 
             if health.error_rate > 0.1:
                 anomalies.append(
-                    f"{domain.value} bridge has high error rate: {health.error_rate * 100:.1f}%",
+                    f"{domain.value} bridge has high error rate: {health.error_rate * 100:.1f}%"
                 )
                 recommendations.append(f"Investigate {domain.value} bridge error patterns")
 
             if health.packets_pending > 100:
                 anomalies.append(
-                    f"{domain.value} bridge has {health.packets_pending} pending packets",
+                    f"{domain.value} bridge has {health.packets_pending} pending packets"
                 )
                 recommendations.append(f"Scale {domain.value} bridge capacity")
 
             if health.average_latency_ms > 1000:
                 anomalies.append(
-                    f"{domain.value} bridge has high latency: {health.average_latency_ms:.0f}ms",
+                    f"{domain.value} bridge has high latency: {health.average_latency_ms:.0f}ms"
                 )
                 recommendations.append(f"Optimize {domain.value} bridge processing")
 
@@ -734,57 +732,6 @@ class SentinelStation:
             "recommendations": recommendations,
             "healthy": len(anomalies) == 0,
         }
-
-    def _handle_health_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
-        """Handle an INTERNAL_HEALTH packet — aggregate all bridge health and embed in metadata."""
-        health = self.aggregate_health()
-        packet.metadata["health"] = health
-        packet.metadata["handled_by"] = "sentinel"
-        logger.debug("Sentinel: served health packet %s", packet.id)
-        return packet
-
-    def _handle_cross_bridge(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
-        """
-        Handle a CROSS_BRIDGE packet — route to the target bridge specified in
-        packet.destination, enforcing sentinel authorisation.
-
-        The calling side must set packet.destination to the name of the target
-        BridgeDomain value ("infinity", "nexus", or "hive") and set
-        packet.security_token to a non-empty authorisation marker.
-        """
-        if not packet.security_token:
-            logger.warning(
-                "Sentinel: cross-bridge packet %s rejected — no security_token",
-                packet.id,
-            )
-            packet.metadata["sentinel_error"] = "cross_bridge_requires_security_token"
-            return packet
-
-        try:
-            target_domain = BridgeDomain(packet.destination)
-        except ValueError:
-            logger.warning(
-                "Sentinel: cross-bridge packet %s has unknown destination %r",
-                packet.id,
-                packet.destination,
-            )
-            packet.metadata["sentinel_error"] = f"unknown_destination:{packet.destination}"
-            return packet
-
-        bridge = self._bridges.get(target_domain)
-        if not bridge:
-            logger.error("Sentinel: no bridge for cross-bridge destination %s", target_domain)
-            packet.metadata["sentinel_error"] = f"no_bridge:{target_domain.value}"
-            return packet
-
-        packet.traffic_class = TrafficClass.UNKNOWN  # de-classify before handing off
-        packet.metadata["cross_bridge_via"] = "sentinel"
-        logger.info(
-            "Sentinel: cross-bridge packet %s routed to %s",
-            packet.id,
-            target_domain.value,
-        )
-        return bridge.process_packet(packet)
 
     def get_bridge(self, domain: BridgeDomain) -> Optional[IBridge]:
         """Get a specific bridge by domain."""
