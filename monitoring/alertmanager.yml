@@ -15,6 +15,13 @@ route:
   receiver: 'default'
 
   routes:
+    # Security alerts first — must be before severity routes (first-match wins)
+    - match:
+        category: security
+      receiver: 'security'
+      group_wait: 10s
+      repeat_interval: 30m
+
     # Critical / P0 alerts → immediate Slack + optional PagerDuty
     - match:
         severity: critical
@@ -35,13 +42,6 @@ route:
       group_wait: 5m
       group_interval: 10m
       repeat_interval: 12h
-
-    # Security alerts → dedicated channel
-    - match:
-        category: security
-      receiver: 'security'
-      group_wait: 10s
-      repeat_interval: 30m
 
 receivers:
   - name: 'default'

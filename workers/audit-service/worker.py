@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import sqlite3
+import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -34,7 +35,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -45,10 +46,14 @@ from pydantic import BaseModel, Field
 
 PORT = int(os.environ.get("PORT", 8017))
 WORKER_NAME = "audit-service"
+INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 _data_dir = Path(os.environ.get("DATA_DIR", "/data"))
 _data_dir.mkdir(parents=True, exist_ok=True)
 DB_PATH = _data_dir / "audit.db"
+
+# Serialise chain-tip reads + inserts to prevent concurrent hash-chain forks
+_chain_lock = threading.Lock()
 
 # ---------------------------------------------------------------------------
 # Logging (structured JSON)
@@ -136,17 +141,18 @@ def _compute_hash(
     outcome: str,
 ) -> str:
     """
-    SHA-256( prev_hash + event_id + timestamp + action + actor + resource + outcome )
+    SHA-256( prev_hash + event_id + timestamp + service + action + actor + resource + outcome )
     All fields concatenated with '|' as separator to avoid ambiguity.
     """
     payload = "|".join([prev_hash, event_id, timestamp, action, actor, resource, outcome])
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def _tail_hash() -> str:
-    """Return the hash of the most recent entry, or GENESIS_HASH if empty."""
-    with _connect() as conn:
-        row = conn.execute("SELECT hash FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
+def _tail_hash(conn: sqlite3.Connection) -> str:
+    """Return the hash of the most recent entry, or GENESIS_HASH if empty.
+    Must be called within an open connection (and under _chain_lock).
+    """
+    row = conn.execute("SELECT hash FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
     return row["hash"] if row else GENESIS_HASH
 
 
@@ -367,57 +373,81 @@ async def health() -> HealthResponse:
     )
 
 
+def _require_internal(x_internal_secret: Optional[str] = Header(None)) -> None:
+    """Validate X-Internal-Secret header for write endpoints."""
+    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @app.post("/events", response_model=AuditEventCreated, status_code=201)
-async def append_event(body: AuditEventIn) -> AuditEventCreated:
+async def append_event(
+    body: AuditEventIn,
+    x_internal_secret: Optional[str] = Header(None),
+) -> AuditEventCreated:
     """Append a new audit event and chain it to the previous entry."""
+    _require_internal(x_internal_secret)
+
     event_id = body.event_id or str(uuid.uuid4())
-    timestamp = body.timestamp or datetime.now(timezone.utc).isoformat()
+
+    # Normalize timestamp to canonical UTC ISO-8601 (reject unparseable values)
+    if body.timestamp:
+        try:
+            dt = datetime.fromisoformat(body.timestamp.replace("Z", "+00:00"))
+            timestamp = dt.astimezone(timezone.utc).isoformat()
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid timestamp: {body.timestamp!r}",
+            ) from exc
+    else:
+        timestamp = datetime.now(timezone.utc).isoformat()
 
     # Validate enumerated fields
     outcome = body.outcome if body.outcome in VALID_OUTCOMES else "success"
     severity = body.severity if body.severity in VALID_SEVERITIES else "info"
 
-    prev_hash = _tail_hash()
-    entry_hash = _compute_hash(
-        prev_hash,
-        event_id,
-        timestamp,
-        body.action,
-        body.actor,
-        body.resource,
-        outcome,
-    )
-
-    try:
-        with _connect() as conn:
-            cur = conn.execute(
-                """
-                INSERT INTO audit_log
-                    (event_id, timestamp, service, action, actor, resource,
-                     outcome, severity, details_json, prev_hash, hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
+    # Atomic: read chain tip + insert in one transaction under lock to prevent forks
+    with _chain_lock:
+        try:
+            with _connect() as conn:
+                prev_hash = _tail_hash(conn)
+                entry_hash = _compute_hash(
+                    prev_hash,
                     event_id,
                     timestamp,
-                    body.service,
                     body.action,
                     body.actor,
                     body.resource,
                     outcome,
-                    severity,
-                    json.dumps(body.details),
-                    prev_hash,
-                    entry_hash,
-                ),
-            )
-            conn.commit()
-            row_id = cur.lastrowid
-    except sqlite3.IntegrityError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Event with event_id={event_id!r} already exists.",
-        ) from exc
+                )
+                cur = conn.execute(
+                    """
+                    INSERT INTO audit_log
+                        (event_id, timestamp, service, action, actor, resource,
+                         outcome, severity, details_json, prev_hash, hash)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        event_id,
+                        timestamp,
+                        body.service,
+                        body.action,
+                        body.actor,
+                        body.resource,
+                        outcome,
+                        severity,
+                        json.dumps(body.details),
+                        prev_hash,
+                        entry_hash,
+                    ),
+                )
+                conn.commit()
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Event with event_id={event_id!r} already exists.",
+            ) from exc
+        row_id = cur.lastrowid
 
     logger.info(
         "audit event appended id=%d event_id=%s action=%s actor=%s",

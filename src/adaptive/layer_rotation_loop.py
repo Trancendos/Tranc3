@@ -100,7 +100,7 @@ def _check_and_rotate(rotator: object) -> None:
             candidate_health = state.health.get(candidate_name, BackendHealth(name=candidate_name))
 
             # Check cooldown
-            if time.time() < candidate_health.cooldown_until:
+            if time.monotonic() < candidate_health.cooldown_until:
                 continue
 
             if candidate_health.available:

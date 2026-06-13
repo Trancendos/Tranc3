@@ -160,12 +160,12 @@ services:
     ports:
       - "4317:4317"   # OTLP gRPC
       - "4318:4318"   # OTLP HTTP
-      - "8888:8888"   # Collector self-metrics
+      - "8889:8888"   # Collector self-metrics (host:8889 avoids Traefik port 8888 conflict)
     volumes:
       - ./monitoring/otel-collector.yml:/etc/otel-collector.yml:ro
     command: ["--config=/etc/otel-collector.yml"]
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888/metrics"]
       interval: 30s
       timeout: 10s
       retries: 3
