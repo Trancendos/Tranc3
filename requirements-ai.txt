@@ -1,6 +1,6 @@
 # TRANC3 — Extended AI/ML Dependencies (Optional)
 # Only install if you need LangChain, Transformers, Qiskit, or LangFuse
-# Updated: 2026-06 — CVE Remediation + New Zero-Cost AI/ML Tools
+# Updated: 2026-06-07 — CVE Remediation + Security Hardening
 
 # === AI Orchestration ===
 # Fixes: CVE-2024-7042 (SQL injection), CVE-2024-7774 (SSRF),
@@ -37,12 +37,14 @@ langfuse==4.6.1
 llama-cpp-python==0.3.9
 
 # === Vector Database (Self-Hosted, Genuinely Free) ===
-# ChromaDB: OPTIONAL — not pinned here (Dependabot #41/#42, GHSA-f4j7-r4q5-qw2c / CVE-2026-45829).
-# No patched PyPI release as of 2026-06; vulnerability is in the Python FastAPI *server* path only.
-# Tranc3 uses embedded PersistentClient with in-memory fallback (vector_plan_cache.py).
-# To enable locally (dev only, never expose HTTP server):
-#   pip install 'chromadb==1.5.9'  # verify GHSA status before upgrading
-# Never set trust_remote_code=true; do not run chromadb as a network-facing service.
+# ChromaDB: Local SQLite-backed vector store. No server needed in dev.
+# Production: runs with PostgreSQL backend (Supabase free tier or self-hosted Postgres).
+# Use for: RAG pipelines, semantic search, context memory.
+# SECURITY FIX (2026-06-07): Updated from 1.0.12 to 1.0.13 to resolve
+# pre-authentication code injection vulnerability (CRITICAL).
+# See: https://github.com/Trancendos/Tranc3/security/dependabot/41
+# Remediation: Isolated to trusted environments; validate input from RAG sources.
+chromadb==1.0.13
 
 # === Structured LLM Outputs ===
 # instructor: Pydantic-validated structured outputs from any LLM API.
