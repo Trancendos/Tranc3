@@ -75,6 +75,9 @@ export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, E
     if (prevState.error && !this.state.error && !this.state.showFallback && prevState.retryCount > 0) {
       this.setState({ retryCount: 0 })
     }
+    if (this.state.showFallback && !this.props.fallback) {
+      this.setState({ showFallback: false })
+    }
   }
 
   override render() {
@@ -87,7 +90,6 @@ export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, E
 
     if (this.state.showFallback) {
       if (fallback) return <div className={`ux-error-boundary-cell ${className}`}>{fallback}</div>
-      this.setState({ showFallback: false })
       return null
     }
 
