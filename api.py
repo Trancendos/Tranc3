@@ -260,6 +260,28 @@ async def lifespan(app: FastAPI):
     _bootstrap_complete = False
     cfg = Config()
 
+    # Audit signing key health check — warn early before any audit events are written
+    _audit_key = os.getenv("AUDIT_SIGNING_KEY", "")
+    if not _audit_key:
+        _key_file = "logs/audit/.audit_signing_key"
+        import pathlib
+
+        if pathlib.Path(_key_file).exists():
+            logger.warning(
+                "AUDIT_SIGNING_KEY not set in environment — using persistent key file (%s). "
+                "Single-node restarts will verify correctly. For multi-node or DR deployments "
+                "set AUDIT_SIGNING_KEY to the contents of that file in all instances. "
+                "Run: python scripts/generate_env.py to write it to .env",
+                _key_file,
+            )
+        else:
+            logger.warning(
+                "AUDIT_SIGNING_KEY not set — AuditLedger will generate and persist a key to "
+                "%s on first audit write. Set AUDIT_SIGNING_KEY env var (or run "
+                "python scripts/generate_env.py) to make verification portable.",
+                _key_file,
+            )
+
     # Database
     try:
         db_manager = DatabaseManager(os.getenv("DATABASE_URL", "sqlite:///./tranc3_dev.db"))

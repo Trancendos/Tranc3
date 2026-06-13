@@ -11,23 +11,21 @@ import logging
 import os
 import re
 import stat
-import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger("container_sentinel")
 
 # Indicators of potential container escape / privilege escalation
 _DANGEROUS_PATHS = [
-    "/proc/1/root",       # Access to host PID 1
+    "/proc/1/root",  # Access to host PID 1
     "/proc/sysrq-trigger",
     "/sys/kernel/debug",
     "/dev/mem",
     "/dev/kmem",
     "/proc/kcore",
-    "/.dockerenv",        # Docker env file (expected — flag if modified)
+    "/.dockerenv",  # Docker env file (expected — flag if modified)
 ]
 
 _DANGEROUS_ENV_VARS = [
@@ -36,7 +34,9 @@ _DANGEROUS_ENV_VARS = [
     "AWS_EXECUTION_ENV",
 ]
 
-_SUID_BINARIES_PATTERN = re.compile(r"^/(?:usr/)?(?:bin|sbin)/(?:sudo|su|newgrp|passwd|chsh|chfn|mount|umount)")
+_SUID_BINARIES_PATTERN = re.compile(
+    r"^/(?:usr/)?(?:bin|sbin)/(?:sudo|su|newgrp|passwd|chsh|chfn|mount|umount)"
+)
 
 _ESCALATION_SYSCALL_PATTERNS = [
     "setuid",
@@ -83,6 +83,7 @@ class ContainerSentinel:
 
     def _alert(self, indicator_type: str, value: str, severity: str, details: str) -> EscapeAlert:
         import uuid
+
         a = EscapeAlert(
             alert_id=str(uuid.uuid4())[:8],
             detected_at=datetime.now(timezone.utc).isoformat(),
@@ -107,8 +108,10 @@ class ContainerSentinel:
             host_procs = list(Path("/proc").glob("[0-9]*"))
             if len(host_procs) > 500:  # Many PIDs = might be host namespace
                 a = self._alert(
-                    "pid_namespace", f"{len(host_procs)}_processes", "HIGH",
-                    "Unusually high PID count — possible host namespace access"
+                    "pid_namespace",
+                    f"{len(host_procs)}_processes",
+                    "HIGH",
+                    "Unusually high PID count — possible host namespace access",
                 )
                 new_alerts.append(a)
         except Exception:
@@ -116,21 +119,53 @@ class ContainerSentinel:
         return new_alerts
 
     def check_privileged_files(self) -> list[EscapeAlert]:
-        """Check for SUID/SGID files or writable dangerous paths."""
+        """Check for SUID/SGID files or writable dangerous paths, and SUID binaries."""
         new_alerts = []
+        seen_paths: set[str] = set()
         for path_str in _DANGEROUS_PATHS:
             try:
                 p = Path(path_str)
                 if p.exists():
                     st = p.stat()
                     if st.st_mode & (stat.S_ISUID | stat.S_ISGID):
-                        a = self._alert(
-                            "suid_file", path_str, "CRITICAL",
-                            f"SUID/SGID bit set on {path_str}"
-                        )
-                        new_alerts.append(a)
+                        if path_str not in seen_paths:
+                            seen_paths.add(path_str)
+                            a = self._alert(
+                                "suid_file",
+                                path_str,
+                                "CRITICAL",
+                                f"SUID/SGID bit set on {path_str}",
+                            )
+                            new_alerts.append(a)
             except (PermissionError, OSError):
                 pass
+        # Check for SUID binaries in well-known locations
+        for bin_dir in ["/bin", "/sbin", "/usr/bin", "/usr/sbin"]:
+            try:
+                for entry in Path(bin_dir).iterdir():
+                    if _SUID_BINARIES_PATTERN.match(str(entry)):
+                        entry_str = str(entry)
+                        if entry_str in seen_paths:
+                            continue
+                        try:
+                            st = entry.stat()
+                            if st.st_mode & stat.S_ISUID:
+                                seen_paths.add(entry_str)
+                                a = self._alert(
+                                    "suid_binary",
+                                    entry_str,
+                                    "HIGH",
+                                    f"SUID binary detected: {entry}",
+                                )
+                                new_alerts.append(a)
+                        except PermissionError:
+                            pass  # stat() can race with file removal; skip inaccessible entries
+                        except OSError as _stat_err:
+                            logger.debug("Unexpected OS error stat-ing %s: %s", entry, _stat_err)
+            except PermissionError:
+                pass  # directory not accessible in this container context
+            except OSError as _dir_err:
+                logger.debug("Unexpected OS error iterating %s: %s", bin_dir, _dir_err)
         return new_alerts
 
     def check_environment(self) -> list[EscapeAlert]:
@@ -141,8 +176,10 @@ class ContainerSentinel:
             if val and var == "DOCKER_HOST" and val.startswith("tcp://"):
                 # Remote Docker socket — potential escape vector
                 a = self._alert(
-                    "remote_docker_socket", f"{var}={val}", "HIGH",
-                    "Remote Docker socket exposed — potential privilege escalation vector"
+                    "remote_docker_socket",
+                    f"{var}={val}",
+                    "HIGH",
+                    "Remote Docker socket exposed — potential privilege escalation vector",
                 )
                 new_alerts.append(a)
         return new_alerts
@@ -159,8 +196,10 @@ class ContainerSentinel:
                     # CAP_SYS_ADMIN = bit 21; CAP_NET_ADMIN = bit 12
                     if caps & (1 << 21):  # CAP_SYS_ADMIN
                         a = self._alert(
-                            "capability", "CAP_SYS_ADMIN", "CRITICAL",
-                            "Process has CAP_SYS_ADMIN — highly privileged, escape risk"
+                            "capability",
+                            "CAP_SYS_ADMIN",
+                            "CRITICAL",
+                            "Process has CAP_SYS_ADMIN — highly privileged, escape risk",
                         )
                         new_alerts.append(a)
                 except ValueError:

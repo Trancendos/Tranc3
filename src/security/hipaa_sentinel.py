@@ -10,9 +10,9 @@ from __future__ import annotations
 import logging
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -25,16 +25,27 @@ _PHI_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("ssn", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
     ("npi", re.compile(r"\b\d{10}\b")),  # National Provider Identifier
     ("mrn", re.compile(r"\b(?:mrn|medical[_\s]?record)[:\s#]*\d{5,}\b", re.IGNORECASE)),
-    ("dob", re.compile(r"\b(?:dob|date[_\s]?of[_\s]?birth)[:\s]*\d{4}[-/]\d{2}[-/]\d{2}\b", re.IGNORECASE)),
+    (
+        "dob",
+        re.compile(
+            r"\b(?:dob|date[_\s]?of[_\s]?birth)[:\s]*\d{4}[-/]\d{2}[-/]\d{2}\b", re.IGNORECASE
+        ),
+    ),
     ("diagnosis_icd", re.compile(r"\b[A-Z]\d{2}(?:\.\d{1,4})?\b")),  # ICD-10 codes
-    ("email_phi_ctx", re.compile(r"(?:patient|diagnosis|prescription|treatment).*?[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}", re.IGNORECASE | re.DOTALL)),
+    (
+        "email_phi_ctx",
+        re.compile(
+            r"(?:patient|diagnosis|prescription|treatment).*?[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",
+            re.IGNORECASE | re.DOTALL,
+        ),
+    ),
 ]
 
 _REQUIRED_HIPAA_CONTROLS = [
-    "BAA_EXECUTED",          # env var — Business Associate Agreement
-    "AUDIT_LOG_ENABLED",     # env var — PHI access logging
-    "ENCRYPTION_AT_REST",    # env var — data encryption
-    "MFA_REQUIRED",          # env var — multi-factor authentication
+    "BAA_EXECUTED",  # env var — Business Associate Agreement
+    "AUDIT_LOG_ENABLED",  # env var — PHI access logging
+    "ENCRYPTION_AT_REST",  # env var — data encryption
+    "MFA_REQUIRED",  # env var — multi-factor authentication
 ]
 
 
@@ -54,7 +65,7 @@ def _check_hipaa_controls() -> list[str]:
     """Return list of missing HIPAA controls."""
     missing = []
     for control in _REQUIRED_HIPAA_CONTROLS:
-        if not os.getenv(control, "").lower() in ("true", "1", "yes"):
+        if os.getenv(control, "").lower() not in ("true", "1", "yes"):
             missing.append(control)
     return missing
 
@@ -79,7 +90,9 @@ class HIPAASentinelMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Only scan when HIPAA profile is active or on health/medical routes
         path = request.url.path
-        is_health_route = any(seg in path for seg in ["/health", "/medical", "/phi", "/patient", "/clinical"])
+        is_health_route = any(
+            seg in path for seg in ["/health", "/medical", "/phi", "/patient", "/clinical"]
+        )
 
         if self._hipaa_profile_active or is_health_route:
             # Read body for scanning (small bodies only to avoid memory issues)
@@ -95,6 +108,7 @@ class HIPAASentinelMiddleware(BaseHTTPMiddleware):
                 missing_controls = _check_hipaa_controls()
                 severity = "CRITICAL" if missing_controls else "HIGH"
                 import uuid
+
                 alert = PHIAlert(
                     alert_id=str(uuid.uuid4())[:8],
                     detected_at=datetime.now(timezone.utc).isoformat(),

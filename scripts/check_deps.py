@@ -17,13 +17,15 @@ def check(name: str, critical: bool = True):
     def decorator(fn: Callable[[], str]) -> Callable[[], str]:
         CHECKS.append((name, "critical" if critical else "optional", fn))
         return fn
+
     return decorator
 
 
 @check("torch", critical=True)
 def _torch():
     import torch
-    x = torch.randn(2, 2) @ torch.randn(2, 2)
+
+    _ = torch.randn(2, 2) @ torch.randn(2, 2)
     return f"v{torch.__version__} cuda={torch.cuda.is_available()}"
 
 
@@ -32,6 +34,7 @@ def _ncps():
     import torch
     from ncps.torch import CfC
     from ncps.wirings import AutoNCP
+
     wiring = AutoNCP(32, 3)
     model = CfC(4, wiring, batch_first=True)
     x = torch.randn(1, 5, 4)
@@ -44,8 +47,13 @@ def _ncps():
 def _deap():
     from deap import base, creator, tools
     import random
+
     creator.create("_TestFit", base.Fitness, weights=(-1.0,))
-    creator.create("_TestInd", list, fitness=creator.FitnessMin if hasattr(creator, "FitnessMin") else creator._TestFit)
+    creator.create(
+        "_TestInd",
+        list,
+        fitness=creator.FitnessMin if hasattr(creator, "FitnessMin") else creator._TestFit,
+    )
     tb = base.Toolbox()
     tb.register("attr", random.random)
     tb.register("individual", tools.initRepeat, creator._TestInd, tb.attr, n=3)
@@ -58,9 +66,9 @@ def _deap():
 def _pyswarms():
     import pyswarms as ps
     import numpy as np
+
     opt = ps.single.GlobalBestPSO(
-        n_particles=5, dimensions=3,
-        options={"c1": 0.5, "c2": 0.3, "w": 0.9}
+        n_particles=5, dimensions=3, options={"c1": 0.5, "c2": 0.3, "w": 0.9}
     )
     cost, pos = opt.optimize(lambda x, **kw: np.sum(x**2, axis=1), iters=5, verbose=False)
     return f"PSO converged cost={cost:.6f}"
@@ -68,9 +76,12 @@ def _pyswarms():
 
 @check("PersonalityLNN (integrated)", critical=True)
 def _personality_lnn():
-    import sys, os
+    import sys
+    import os
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from src.personality.lnn import PersonalityLNN, LNNInput, _USING_LNN
+
     lnn = PersonalityLNN()
     out = lnn.step(LNNInput(0.5, 0.8, 0.3, 0.5))
     mode = "CfC" if _USING_LNN else "EMA"
@@ -83,6 +94,7 @@ def _qiskit():
     from qiskit import transpile as qiskit_transpile
     from qiskit.circuit.library import QFT
     from qiskit_aer import AerSimulator
+
     n = 4
     qr = QuantumRegister(n, "q")
     cr = ClassicalRegister(n, "c")
@@ -98,10 +110,13 @@ def _qiskit():
 
 @check("QuantumOptimizationEngine (integrated)", critical=False)
 def _quantum_engine():
-    import sys, os
+    import sys
+    import os
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from src.quantum.quantum_engine import QuantumOptimizationEngine
     import numpy as np
+
     engine = QuantumOptimizationEngine(num_qubits=4)
     info = engine.get_quantum_state_info()
     params = np.random.rand(12)
@@ -112,14 +127,20 @@ def _quantum_engine():
 
 @check("GeneticOptimizer (integrated)", critical=True)
 def _genetic_optimizer():
-    import sys, os
+    import sys
+    import os
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from src.nanoservices.genetic_optimizer.genetic_optimizer import (
-        GeneticOptimizer, GeneSpec, Objective, ObjectiveType
+        GeneticOptimizer,
+        GeneSpec,
+        Objective,
+        ObjectiveType,
     )
+
     specs = [GeneSpec("lr", 0.0001, 0.1), GeneSpec("batch", 8.0, 128.0)]
     objs = [Objective("latency", ObjectiveType.MINIMIZE)]
-    go = GeneticOptimizer(specs, objs)
+    GeneticOptimizer(specs, objs)
     return "GeneticOptimizer ready"
 
 

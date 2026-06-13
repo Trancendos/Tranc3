@@ -7,6 +7,15 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+# Optional PSO acceleration via pyswarms
+try:
+    import numpy as np
+    import pyswarms as ps
+
+    _PSO_AVAILABLE = True
+except ImportError:
+    _PSO_AVAILABLE = False
+
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -170,3 +179,57 @@ class AdaptiveTuner:
             "best_fitness": self._best_fitness,
             "best_params": self._best_params,
         }
+
+    def pso_optimize(self, n_particles: int = 20, iters: int = 50) -> Dict[str, float]:
+        """Run Particle Swarm Optimization over the parameter space.
+
+        Falls back to current best params if pyswarms is unavailable.
+        Use for high-dimensional spaces (10+ parameters) where hill climbing stalls.
+
+        Raises RuntimeError if fitness_fn is a coroutine function — PSO requires a
+        synchronous fitness_fn. Use the async tuning path (tune_step / start) instead.
+        """
+        if not _PSO_AVAILABLE or not self._parameters:
+            return self.get_params()
+
+        param_names = list(self._parameters.keys())
+        n_dims = len(param_names)
+        bounds = (
+            np.array([self._parameters[n].min_value for n in param_names]),
+            np.array([self._parameters[n].max_value for n in param_names]),
+        )
+
+        if asyncio.iscoroutinefunction(self.fitness_fn):
+            raise RuntimeError(
+                "pso_optimize requires a synchronous fitness_fn; "
+                "use the async tuning path for coroutine fitness functions."
+            )
+
+        def _cost(particles: np.ndarray, **kwargs) -> np.ndarray:
+            costs = np.zeros(len(particles))
+            for i, particle in enumerate(particles):
+                params = {n: float(v) for n, v in zip(param_names, particle, strict=False)}
+                try:
+                    fitness = self.fitness_fn(params)
+                    costs[i] = -fitness  # PSO minimises; negate for fitness maximisation
+                except Exception:
+                    costs[i] = 1e9
+            return costs
+
+        try:
+            options = {"c1": 0.5, "c2": 0.3, "w": 0.9}
+            optimizer = ps.single.GlobalBestPSO(
+                n_particles=n_particles, dimensions=n_dims, options=options, bounds=bounds
+            )
+            best_cost, best_pos = optimizer.optimize(_cost, iters=iters, verbose=False)
+            best_params = {n: float(v) for n, v in zip(param_names, best_pos, strict=False)}
+            self.set_params(best_params)
+            fitness = -best_cost
+            if fitness > self._best_fitness:
+                self._best_fitness = fitness
+                self._best_params = best_params.copy()
+            logger.info("PSO optimization complete: fitness=%.4f params=%s", fitness, best_params)
+            return best_params
+        except Exception as e:
+            logger.warning("PSO optimization failed, using current params: %s", e)
+            return self.get_params()

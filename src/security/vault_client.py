@@ -62,14 +62,14 @@ class VaultClient:
                 self._cache[secret_name] = (value, datetime.now(timezone.utc))
                 return value
         except httpx.HTTPStatusError as e:
-            logger.error("Vault secret fetch failed for %s: %s", secret_name, e)
-            raise VaultError(f"Failed to fetch secret '{secret_name}': {e}") from e
+            logger.error("Vault secret fetch failed (name redacted): %s", e)
+            raise VaultError(f"Failed to fetch secret (name redacted): {e}") from e
         except Exception as e:
-            logger.warning("Vault unreachable, falling back to env for %s: %s", secret_name, e)
+            logger.warning("Vault unreachable, falling back to env (name redacted): %s", e)
             env_val = os.getenv(secret_name.upper().replace("-", "_"), "")
             if env_val:
                 return env_val
-            raise VaultError(f"Vault unreachable and no env fallback for '{secret_name}'") from e
+            raise VaultError("Vault unreachable and no env fallback (name redacted)") from e
 
     async def set_secret(self, secret_name: str, value: str, metadata: dict | None = None) -> str:
         try:
@@ -84,7 +84,7 @@ class VaultClient:
                 self._cache.pop(secret_name, None)
                 return data.get("id", "")
         except Exception as e:
-            raise VaultError(f"Failed to set secret '{secret_name}': {e}") from e
+            raise VaultError(f"Failed to set secret (name redacted): {e}") from e
 
     async def list_secrets(self) -> list[dict[str, Any]]:
         try:
@@ -105,26 +105,35 @@ class VaultClient:
                 return env_val
             return loop.run_until_complete(self.get_secret(secret_name))
         except Exception as e:
-            logger.warning("Sync vault get failed for %s, using env: %s", secret_name, e)
+            logger.warning("Sync vault get failed (name redacted), using env: %s", e)
             return os.getenv(secret_name.upper().replace("-", "_"), "")
 
 
-async def migrate_env_secrets_to_vault(client: VaultClient, secret_names: list[str]) -> dict[str, bool]:
+async def migrate_env_secrets_to_vault(
+    client: VaultClient, secret_names: list[str]
+) -> dict[str, bool]:
     """Migrate named environment secrets into the vault (one-time migration helper)."""
     results: dict[str, bool] = {}
     for name in secret_names:
         env_key = name.upper().replace("-", "_")
         value = os.getenv(env_key, "")
         if not value:
-            logger.info("Skipping %s — not set in environment", name)
+            logger.info("Skipping secret (name redacted) — not set in environment")
             results[name] = False
             continue
         try:
-            await client.set_secret(name, value, metadata={"source": "env_migration", "migrated_at": datetime.now(timezone.utc).isoformat()})
+            await client.set_secret(
+                name,
+                value,  # nosec B106 — value is env secret being migrated to vault, not logged
+                metadata={
+                    "source": "env_migration",
+                    "migrated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
             results[name] = True
-            logger.info("Migrated secret: %s", name)
+            logger.info("Secret migrated to vault (name redacted)")
         except VaultError as e:
-            logger.error("Migration failed for %s: %s", name, e)
+            logger.error("Migration failed for secret (name redacted): %s", e)
             results[name] = False
     return results
 
