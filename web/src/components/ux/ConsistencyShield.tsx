@@ -25,7 +25,6 @@ const HARD_COLOUR_RE = /^#[0-9a-fA-F]{3,8}$|^rgb\(|^rgba\(|^hsl\(/
 const HARD_PX_SPACE_RE = /^\d+px$/
 
 function auditNode(el: Element, violations: TokenViolation[]) {
-  const style = getComputedStyle(el)
   const tag = el.tagName.toLowerCase()
   const id = el.id ? `#${el.id}` : ''
   const label = `${tag}${id}`
