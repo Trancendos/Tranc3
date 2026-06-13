@@ -248,7 +248,6 @@ class TownHall:
                     articles=entry.domain,
                 ),
             )
-        )
 
 
 # ── Built-in policy checks ────────────────────────────────────────────────────

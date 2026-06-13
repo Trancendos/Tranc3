@@ -312,6 +312,13 @@ class BotDetail(BaseModel):
     has_override: bool = False
 
 
+class EntityTierUpdate(BaseModel):
+    """Payload for assigning a display tier to an entity slot."""
+
+    entity_ref: str
+    tier: int
+
+
 class EntityDetail(BaseModel):
     """Full detail for a platform entity with overrides applied."""
 

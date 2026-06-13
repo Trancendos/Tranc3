@@ -172,6 +172,8 @@ async def health():
     with get_conn() as conn:
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
+        archive_count = conn.execute("SELECT COUNT(*) FROM events WHERE archived=1").fetchone()[0] if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='events'").fetchone() else 0
+        parquet_total_bytes = 0
     return {
         "status": "healthy",
         "service": WORKER_NAME,

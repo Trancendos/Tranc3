@@ -88,7 +88,7 @@ ROTATION_ORDER = [
 
 def _init_db(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), check_same_thread=False)
+    conn = sqlite3.connect(str(path), check_same_thread=False, timeout=10.0)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(
         """

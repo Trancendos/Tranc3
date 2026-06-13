@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import logging
 import random
-import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -248,7 +247,10 @@ class MetaRouter:
         self._lazy_init()
         if name not in self._metrics:
             self._metrics[name] = RouteMetrics(name=name)
-        self._metrics[name].update(latency_ms, success=True)
+        m = self._metrics[name]
+        m.update(latency_ms, success=True)
+        if m.canary_traffic_pct > 0:
+            m.canary_calls += 1
 
         if self._quantum_router:
             self._quantum_router.record_success(name, latency_ms)
@@ -330,12 +332,7 @@ class DimensionalRouter:
         # Nano: in-process function
         if self._nano:
             try:
-                t0 = time.monotonic()
-                result = await self._nano.call(capability, *args, **kwargs)
-                latency = (time.monotonic() - t0) * 1000
-                if latency <= self.NANO_LATENCY_BUDGET_MS:
-                    return result
-                # Nano was too slow — fall through to micro
+                return await self._nano.call(capability, *args, **kwargs)
             except Exception:  # nano layer unavailable; fall through to micro
                 pass
 

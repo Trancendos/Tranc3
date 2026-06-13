@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,7 +17,7 @@ from typing import NamedTuple
 
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = Path(os.getenv("SQLITE_BACKUP_DIR", "./backups/sqlite")) if False else Path("./backups/sqlite")
+BACKUP_DIR = Path(os.getenv("SQLITE_BACKUP_DIR", "./backups/sqlite"))
 RETENTION_DAYS = 7
 MAX_BACKUPS_PER_DB = 14
 
@@ -29,11 +30,6 @@ class BackupResult(NamedTuple):
     size_bytes: int
     checksum: str
     error: str | None
-
-
-import os
-
-BACKUP_DIR = Path(os.getenv("SQLITE_BACKUP_DIR", "./backups/sqlite"))
 
 
 def _discover_databases() -> list[Path]:

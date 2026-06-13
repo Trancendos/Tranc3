@@ -249,6 +249,7 @@ _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
 _health_monitor = None
 _auto_evolve = None
+_bootstrap_complete = False
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -256,7 +257,7 @@ _auto_evolve = None
 async def lifespan(app: FastAPI):
     global model, tokenizer, personality_matrix, redis_client, feature_flags
     global quantum_core, consciousness_model, neuromorphic, evolution_engine
-    global db_manager, db_user_manager, _health_monitor, _auto_evolve
+    global db_manager, db_user_manager, _health_monitor, _auto_evolve, _bootstrap_complete
 
     logger.info("TRANC3 starting up...")
     _bootstrap_complete = False

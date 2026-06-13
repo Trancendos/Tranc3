@@ -26,8 +26,8 @@ class LogContext:
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
-_context_var: contextvars.ContextVar[LogContext] = contextvars.ContextVar(
-    "log_context", default=LogContext()
+_context_var: contextvars.ContextVar[Optional[LogContext]] = contextvars.ContextVar(
+    "log_context", default=None
 )
 
 

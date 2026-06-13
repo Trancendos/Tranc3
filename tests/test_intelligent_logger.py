@@ -123,6 +123,6 @@ def test_error_sets_anomaly_alert_after_burst():
     for _ in range(5):
         logger.error("something failed")
 
-    lines = [l for l in buf.getvalue().splitlines() if l.strip()]
-    alert_seen = any(json.loads(l).get("anomaly_alert") for l in lines)
+    lines = [ln for ln in buf.getvalue().splitlines() if ln.strip()]
+    alert_seen = any(json.loads(ln).get("anomaly_alert") for ln in lines)
     assert alert_seen, "anomaly_alert should appear in JSON output after burst"

@@ -567,7 +567,7 @@ def main() -> int:
     # ── Load or create ────────────────────────────────────────────────────────
     section("Generating secrets and configuration")
     existing = load_existing_env(ENV_FILE)
-    not ENV_FILE.exists()
+    _ = not ENV_FILE.exists()  # reserved for future "new file" detection
 
     if ENV_FILE.exists() and not args.force:
         info(f"Found existing .env ({len(existing)} variables) — preserving secrets, filling blanks")
