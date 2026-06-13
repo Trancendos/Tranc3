@@ -118,7 +118,7 @@ async def migrate_env_secrets_to_vault(
         env_key = name.upper().replace("-", "_")
         value = os.getenv(env_key, "")
         if not value:
-            logger.info("Skipping %s — not set in environment", name)
+            logger.info("Skipping secret (name redacted) — not set in environment")
             results[name] = False
             continue
         try:

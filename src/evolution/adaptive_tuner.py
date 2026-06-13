@@ -185,6 +185,9 @@ class AdaptiveTuner:
 
         Falls back to current best params if pyswarms is unavailable.
         Use for high-dimensional spaces (10+ parameters) where hill climbing stalls.
+
+        Raises RuntimeError if fitness_fn is a coroutine function — PSO requires a
+        synchronous fitness_fn. Use the async tuning path (tune_step / start) instead.
         """
         if not _PSO_AVAILABLE or not self._parameters:
             return self.get_params()

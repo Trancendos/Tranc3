@@ -68,7 +68,8 @@ export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, E
 
   override componentDidUpdate(prevProps: ErrorBoundaryCellProps, prevState: ErrorBoundaryCellState) {
     if (this.state.error && this.props.resetKeys && prevProps.resetKeys) {
-      const changed = this.props.resetKeys.some((k, i) => k !== (prevProps.resetKeys ?? [])[i])
+      const prevKeys = prevProps.resetKeys ?? []
+      const changed = this.props.resetKeys.length !== prevKeys.length || this.props.resetKeys.some((k, i) => k !== prevKeys[i])
       if (changed) this.reset()
     }
     if (prevState.error && !this.state.error && !this.state.showFallback && prevState.retryCount > 0) {
@@ -84,8 +85,10 @@ export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, E
       return <React.Fragment key={errorKey}>{children}</React.Fragment>
     }
 
-    if (this.state.showFallback && fallback) {
-      return <div className={`ux-error-boundary-cell ${className}`}>{fallback}</div>
+    if (this.state.showFallback) {
+      if (fallback) return <div className={`ux-error-boundary-cell ${className}`}>{fallback}</div>
+      this.setState({ showFallback: false })
+      return null
     }
 
     const exhausted = retryCount >= maxRetries
