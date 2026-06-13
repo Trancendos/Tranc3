@@ -126,9 +126,11 @@ class ContainerSentinel:
                 p = Path(path_str)
                 if p.exists():
                     st = p.stat()
+                    is_known_suid = _SUID_BINARIES_PATTERN.match(path_str) is not None
                     if st.st_mode & (stat.S_ISUID | stat.S_ISGID):
+                        severity = "HIGH" if is_known_suid else "CRITICAL"
                         a = self._alert(
-                            "suid_file", path_str, "CRITICAL", f"SUID/SGID bit set on {path_str}"
+                            "suid_file", path_str, severity, f"SUID/SGID bit set on {path_str}"
                         )
                         new_alerts.append(a)
             except (PermissionError, OSError):

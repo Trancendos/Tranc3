@@ -186,18 +186,21 @@ class IBridge(ABC):
 
     @property
     @abstractmethod
-    def domain(self) -> BridgeDomain: ...
+    def domain(self) -> BridgeDomain:
+        raise NotImplementedError
 
     @abstractmethod
-    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket: ...
+    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
+        raise NotImplementedError
 
     @abstractmethod
-    def health_check(self) -> BridgeHealthReport: ...
+    def health_check(self) -> BridgeHealthReport:
+        raise NotImplementedError
 
     @abstractmethod
     def scan_and_cleanup(self) -> List[str]:
         """Proactive scan and cleanup. Returns list of actions taken."""
-        ...
+        raise NotImplementedError
 
 
 # ─────────────────────────────────────────────────────────────────────────────

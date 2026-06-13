@@ -203,17 +203,21 @@ class HILATierHandler(ABC):
 
     @property
     @abstractmethod
-    def tier(self) -> int: ...
+    def tier(self) -> int:
+        raise NotImplementedError
 
     @property
     @abstractmethod
-    def entity_id(self) -> str: ...
+    def entity_id(self) -> str:
+        raise NotImplementedError
 
     @abstractmethod
-    async def can_decide(self, action: HILAAction) -> bool: ...
+    async def can_decide(self, action: HILAAction) -> bool:
+        raise NotImplementedError
 
     @abstractmethod
-    async def decide(self, action: HILAAction) -> HILADecision: ...
+    async def decide(self, action: HILAAction) -> HILADecision:
+        raise NotImplementedError
 
 
 # ─────────────────────────────────────────────────────────────────────────────
