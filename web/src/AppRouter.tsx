@@ -4,6 +4,7 @@ import ChatView from './ChatView'
 import TrancendosDashboard from './trancendos/Dashboard'
 import ComplianceDashboard from './pages/ComplianceDashboard'
 import UxShowcasePage from './pages/UxShowcasePage'
+import DigitalGridPage from './components/workflow/DigitalGridPage'
 
 // Guard: ux-showcase is a dev/admin reference tool, not for production users.
 const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development'
@@ -15,6 +16,7 @@ export default function AppRouter() {
         <Route path="/" element={<ChatView />} />
         <Route path="/dashboard" element={<TrancendosDashboard />} />
         <Route path="/compliance" element={<ComplianceDashboard />} />
+        <Route path="/grid" element={<DigitalGridPage />} />
         {isDev && <Route path="/ux-showcase" element={<UxShowcasePage />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
