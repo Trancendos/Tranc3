@@ -1,4 +1,7 @@
-"""Structured intelligent logger with context propagation and anomaly detection — stdlib only."""
+"""
+Structured logger with context propagation, severity classification,
+and anomaly detection — stdlib only.
+"""
 from __future__ import annotations
 
 import collections
@@ -9,19 +12,19 @@ import re
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Deque, Dict, Optional, Tuple
 
 
-# ------------------------------------------------------------------ #
-#  Context                                                              #
-# ------------------------------------------------------------------ #
+# ---------------------------------------------------------------------------
+# Context
+# ---------------------------------------------------------------------------
 
 @dataclass
 class LogContext:
     trace_id: str = ""
     user_id: str = ""
     service_name: str = ""
-    extra: dict[str, Any] = field(default_factory=dict)
+    extra: Dict[str, Any] = field(default_factory=dict)
 
 
 _context_var: contextvars.ContextVar[LogContext] = contextvars.ContextVar(
@@ -35,89 +38,85 @@ def set_context(
     service_name: str = "",
     **extra: Any,
 ) -> None:
-    _context_var.set(LogContext(trace_id=trace_id, user_id=user_id, service_name=service_name, extra=extra))
+    ctx = LogContext(trace_id=trace_id, user_id=user_id, service_name=service_name, extra=extra)
+    _context_var.set(ctx)
 
 
 def get_context() -> LogContext:
     return _context_var.get()
 
 
-# ------------------------------------------------------------------ #
-#  Severity Classifier                                                  #
-# ------------------------------------------------------------------ #
+# ---------------------------------------------------------------------------
+# Severity classifier
+# ---------------------------------------------------------------------------
 
-_CRITICAL_RE = re.compile(
-    r"\b(critical|fatal|catastrophe|crash|corrupt|kernel panic)\b", re.IGNORECASE
+_CRITICAL_PATTERNS = re.compile(
+    r"\b(critical|fatal|panic|crash|unrecoverable|catastroph)\b", re.IGNORECASE
 )
-_ERROR_RE = re.compile(
-    r"\b(error|exception|fail(ed|ure)?|traceback|abort|panic|unhandled|unexpected)\b",
+_ERROR_PATTERNS = re.compile(
+    r"\b(error|exception|fail(ed|ure)?|traceback|errno|raise|abort)\b", re.IGNORECASE
+)
+_WARNING_PATTERNS = re.compile(
+    r"\b(warn(ing)?|deprecat|caution|slow|timeout|retry|retrying|high\s+latency)\b",
     re.IGNORECASE,
 )
-_WARNING_RE = re.compile(
-    r"\b(warn(ing)?|deprecat|caution|unusual|slow|timeout|retry|degraded)\b",
-    re.IGNORECASE,
-)
-_DEBUG_RE = re.compile(
+_DEBUG_PATTERNS = re.compile(
     r"\b(debug|trace|verbose|dump|inspect)\b", re.IGNORECASE
 )
 
 
 class SeverityClassifier:
-    """Classifies a message string into a logging level integer."""
-
     @staticmethod
     def classify(message: str) -> int:
-        if _CRITICAL_RE.search(message):
+        """Return a stdlib logging level integer."""
+        if _CRITICAL_PATTERNS.search(message):
             return logging.CRITICAL
-        if _ERROR_RE.search(message):
+        if _ERROR_PATTERNS.search(message):
             return logging.ERROR
-        if _WARNING_RE.search(message):
+        if _WARNING_PATTERNS.search(message):
             return logging.WARNING
-        if _DEBUG_RE.search(message):
+        if _DEBUG_PATTERNS.search(message):
             return logging.DEBUG
         return logging.INFO
 
 
-# ------------------------------------------------------------------ #
-#  Anomaly Detector                                                     #
-# ------------------------------------------------------------------ #
+# ---------------------------------------------------------------------------
+# Anomaly detector (burst detection)
+# ---------------------------------------------------------------------------
 
 class AnomalyDetector:
-    """Tracks error counts in a rolling time window and fires a callback on burst."""
-
-    def __init__(
-        self,
-        window_secs: float = 60.0,
-        burst_threshold: int = 10,
-        on_alert: Optional[Any] = None,
-    ) -> None:
+    def __init__(self, window_secs: float = 60.0, burst_threshold: int = 10) -> None:
         self._window = window_secs
         self._threshold = burst_threshold
-        self._on_alert = on_alert  # callable(count) or None
-        self._timestamps: collections.deque[float] = collections.deque()
+        self._timestamps: Deque[float] = collections.deque()
         self._lock = threading.Lock()
-        self._alerted = False
+        self._alert_cb: Optional[Any] = None  # callable(count) -> None
+
+    def set_alert_callback(self, cb: Any) -> None:
+        self._alert_cb = cb
 
     def record_error(self) -> bool:
-        """Record an error event. Returns True if a burst alert fires."""
+        """Record an error event. Returns True if burst alert triggered."""
         now = time.monotonic()
         with self._lock:
-            self._timestamps.append(now)
+            # Purge old timestamps
             cutoff = now - self._window
             while self._timestamps and self._timestamps[0] < cutoff:
                 self._timestamps.popleft()
+            self._timestamps.append(now)
             count = len(self._timestamps)
-            if count >= self._threshold and not self._alerted:
-                self._alerted = True
-                if callable(self._on_alert):
-                    self._on_alert(count)
-                return True
-            # reset alert flag when below threshold
-            if count < self._threshold:
-                self._alerted = False
+
+        if count > self._threshold:
+            if self._alert_cb:
+                try:
+                    self._alert_cb(count)
+                except Exception:
+                    pass
+            return True
         return False
 
-    def current_count(self) -> int:
+    @property
+    def current_error_count(self) -> int:
         now = time.monotonic()
         with self._lock:
             cutoff = now - self._window
@@ -126,71 +125,86 @@ class AnomalyDetector:
             return len(self._timestamps)
 
 
-# ------------------------------------------------------------------ #
-#  JSON Formatter                                                       #
-# ------------------------------------------------------------------ #
+# ---------------------------------------------------------------------------
+# JSON formatter for Loki ingestion
+# ---------------------------------------------------------------------------
 
-class _JsonFormatter(logging.Formatter):
-    def __init__(self, service_name: str) -> None:
-        super().__init__()
-        self._service_name = service_name
-
+class _LokiJsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        ctx = _context_var.get()
-        payload: dict[str, Any] = {
-            "timestamp": time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ", time.gmtime(record.created)
-            ),
+        ctx = get_context()
+        payload: Dict[str, Any] = {
+            "timestamp": record.created,
             "level": record.levelname,
             "message": record.getMessage(),
             "logger": record.name,
-            "service_name": ctx.service_name or self._service_name,
             "trace_id": ctx.trace_id,
             "user_id": ctx.user_id,
+            "service_name": ctx.service_name or record.name,
         }
-        anomaly_alert = getattr(record, "anomaly_alert", False)
-        if anomaly_alert:
-            payload["anomaly_alert"] = True
-        if ctx.extra:
-            payload.update(ctx.extra)
+        # Merge extra context fields
+        payload.update(ctx.extra)
+
+        # Propagate anomaly_alert if set by the logger
+        if hasattr(record, "anomaly_alert"):
+            payload["anomaly_alert"] = record.anomaly_alert
+
         if record.exc_info:
-            payload["exc_info"] = self.formatException(record.exc_info)
+            payload["exception"] = self.formatException(record.exc_info)
+
         return json.dumps(payload, default=str)
 
 
-# ------------------------------------------------------------------ #
-#  IntelligentLogger                                                    #
-# ------------------------------------------------------------------ #
+# ---------------------------------------------------------------------------
+# IntelligentLogger
+# ---------------------------------------------------------------------------
 
 class IntelligentLogger:
     def __init__(
         self,
         name: str,
         service_name: str = "",
-        anomaly_threshold: int = 10,
         anomaly_window_secs: float = 60.0,
+        anomaly_burst_threshold: int = 10,
     ) -> None:
-        self._logger = logging.getLogger(name)
+        self._name = name
         self._service_name = service_name
         self._classifier = SeverityClassifier()
-        self._anomaly = AnomalyDetector(
-            window_secs=anomaly_window_secs,
-            burst_threshold=anomaly_threshold,
-        )
+        self._anomaly = AnomalyDetector(anomaly_window_secs, anomaly_burst_threshold)
+        self._logger = logging.getLogger(name)
+
         # Attach JSON handler if none present
         if not self._logger.handlers:
             handler = logging.StreamHandler()
-            handler.setFormatter(_JsonFormatter(service_name))
+            handler.setFormatter(_LokiJsonFormatter())
             self._logger.addHandler(handler)
             self._logger.setLevel(logging.DEBUG)
             self._logger.propagate = False
 
+    # ------------------------------------------------------------------
+    # Core log methods
+    # ------------------------------------------------------------------
+
     def _emit(self, level: int, message: str, **kwargs: Any) -> None:
-        anomaly_alert = False
-        if level >= logging.ERROR:
-            anomaly_alert = self._anomaly.record_error()
-        extra = {"anomaly_alert": anomaly_alert}
-        self._logger.log(level, message, extra=extra, **kwargs)
+        extra: Dict[str, Any] = {}
+        is_error = level >= logging.ERROR
+        if is_error:
+            alert_fired = self._anomaly.record_error()
+            if alert_fired:
+                extra["anomaly_alert"] = True
+
+        record = self._logger.makeRecord(
+            self._name,
+            level,
+            fn="",
+            lno=0,
+            msg=message,
+            args=(),
+            exc_info=None,
+            extra=extra,
+        )
+        for k, v in extra.items():
+            setattr(record, k, v)
+        self._logger.handle(record)
 
     def debug(self, message: str, **kwargs: Any) -> None:
         self._emit(logging.DEBUG, message, **kwargs)
@@ -208,13 +222,22 @@ class IntelligentLogger:
         self._emit(logging.CRITICAL, message, **kwargs)
 
     def auto_log(self, message: str, **kwargs: Any) -> None:
+        """Classify severity automatically and emit."""
         level = self._classifier.classify(message)
         self._emit(level, message, **kwargs)
 
+    # ------------------------------------------------------------------
+    # Anomaly detector access
+    # ------------------------------------------------------------------
 
-# ------------------------------------------------------------------ #
-#  Factory                                                              #
-# ------------------------------------------------------------------ #
+    @property
+    def anomaly_detector(self) -> AnomalyDetector:
+        return self._anomaly
+
+
+# ---------------------------------------------------------------------------
+# Factory
+# ---------------------------------------------------------------------------
 
 def get_logger(name: str, service_name: str = "") -> IntelligentLogger:
     return IntelligentLogger(name=name, service_name=service_name)

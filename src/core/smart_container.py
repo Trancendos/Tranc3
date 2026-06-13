@@ -1,185 +1,206 @@
-"""Smart DI container with auto-wiring, lifetimes, and thread-safe singletons."""
+"""
+Smart DI container with lifetime management and auto-wiring.
+"""
 from __future__ import annotations
 
 import inspect
 import threading
-from enum import Enum, auto
-from typing import Any, Callable, Optional, Type, TypeVar
+from contextlib import contextmanager
+from enum import Enum
+from typing import Any, Callable, Dict, Generator, Optional, Type, TypeVar
 
 T = TypeVar("T")
 
-_local = threading.local()
-
 
 class Lifetime(Enum):
-    SINGLETON = auto()
-    TRANSIENT = auto()
-    REQUEST = auto()
+    SINGLETON = "singleton"
+    TRANSIENT = "transient"
+    REQUEST = "request"
 
 
 class DIError(Exception):
-    """Raised when dependency injection fails."""
+    pass
+
+
+_request_scope_local = threading.local()
 
 
 class RequestScope:
-    """Context manager that establishes a per-request scope cache."""
+    """Context manager that isolates request-scoped instances."""
 
     def __init__(self, container: "SmartContainer") -> None:
         self._container = container
-        self._cache: dict[type, Any] = {}
 
     def __enter__(self) -> "RequestScope":
-        if not hasattr(_local, "scopes"):
-            _local.scopes = []
-        _local.scopes.append(self._cache)
+        if not hasattr(_request_scope_local, "stack"):
+            _request_scope_local.stack = []
+        _request_scope_local.stack.append({})
         return self
 
-    def __exit__(self, *_: Any) -> None:
-        if hasattr(_local, "scopes") and _local.scopes:
-            _local.scopes.pop()
+    def __exit__(self, *args: Any) -> None:
+        if hasattr(_request_scope_local, "stack") and _request_scope_local.stack:
+            _request_scope_local.stack.pop()
 
-    @staticmethod
-    def current() -> Optional[dict[type, Any]]:
-        scopes: list[dict[type, Any]] = getattr(_local, "scopes", [])
-        return scopes[-1] if scopes else None
+
+def _get_request_cache() -> Optional[Dict[type, Any]]:
+    stack = getattr(_request_scope_local, "stack", None)
+    if stack:
+        return stack[-1]
+    return None
 
 
 class _Registration:
-    __slots__ = ("factory", "lifetime", "instance", "lock")
-
-    def __init__(self, factory: Callable[[], Any], lifetime: Lifetime) -> None:
-        self.factory = factory
+    def __init__(
+        self,
+        lifetime: Lifetime,
+        factory: Callable[[], Any],
+    ) -> None:
         self.lifetime = lifetime
-        self.instance: Any = None
-        self.lock = threading.Lock()
+        self.factory = factory
+        self._singleton_instance: Any = None
+        self._singleton_lock = threading.Lock()
+
+    def get(self, type_: type) -> Any:
+        if self.lifetime == Lifetime.SINGLETON:
+            if self._singleton_instance is None:
+                with self._singleton_lock:
+                    if self._singleton_instance is None:
+                        self._singleton_instance = self.factory()
+            return self._singleton_instance
+
+        if self.lifetime == Lifetime.REQUEST:
+            cache = _get_request_cache()
+            if cache is None:
+                raise DIError(
+                    f"Cannot resolve REQUEST-scoped {type_.__name__} outside a request scope. "
+                    "Use container.request_scope() context manager."
+                )
+            if type_ not in cache:
+                cache[type_] = self.factory()
+            return cache[type_]
+
+        # TRANSIENT
+        return self.factory()
 
 
 class SmartContainer:
-    """DI container with auto-wiring, lifetimes, and thread-safe singleton creation."""
+    """
+    Dependency injection container with SINGLETON, TRANSIENT, and REQUEST lifetimes.
+    Supports auto-wiring via __init__ type annotations.
+    """
 
     def __init__(self) -> None:
-        self._registrations: dict[type, _Registration] = {}
-        self._global_lock = threading.Lock()
+        self._registry: Dict[type, _Registration] = {}
+        self._lock = threading.Lock()
 
-    # ------------------------------------------------------------------ #
-    #  Registration                                                         #
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
+    # Registration
+    # ------------------------------------------------------------------
 
     def register(
         self,
-        abstract: Type[T],
-        concrete: Optional[Type[T]] = None,
+        type_: Type[T],
+        implementation: Optional[Type[T]] = None,
         lifetime: Lifetime = Lifetime.TRANSIENT,
-    ) -> "SmartContainer":
-        """Register a type, optionally mapping abstract → concrete."""
-        impl = concrete if concrete is not None else abstract
-        self._registrations[abstract] = _Registration(
-            factory=lambda: self._build(impl),
-            lifetime=lifetime,
-        )
-        return self
+    ) -> None:
+        """Register a class (optionally with a different implementation class)."""
+        impl = implementation if implementation is not None else type_
+        factory = self._build_autowire_factory(impl)
+        with self._lock:
+            self._registry[type_] = _Registration(lifetime, factory)
 
     def register_factory(
         self,
-        abstract: Type[T],
+        type_: Type[T],
         factory: Callable[[], T],
         lifetime: Lifetime = Lifetime.TRANSIENT,
-    ) -> "SmartContainer":
-        """Register a callable factory for a type."""
-        self._registrations[abstract] = _Registration(
-            factory=factory,
-            lifetime=lifetime,
-        )
-        return self
+    ) -> None:
+        """Register a callable factory."""
+        with self._lock:
+            self._registry[type_] = _Registration(lifetime, factory)
 
-    def register_instance(self, abstract: Type[T], instance: T) -> "SmartContainer":
+    def register_instance(self, type_: Type[T], instance: T) -> None:
         """Register a pre-built singleton instance."""
-        reg = _Registration(factory=lambda: instance, lifetime=Lifetime.SINGLETON)
-        reg.instance = instance
-        self._registrations[abstract] = reg
-        return self
+        with self._lock:
+            self._registry[type_] = _Registration(
+                Lifetime.SINGLETON, lambda: instance
+            )
+            # Force singleton to be the instance
+            reg = self._registry[type_]
+            reg._singleton_instance = instance
 
-    # ------------------------------------------------------------------ #
-    #  Resolution                                                           #
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
+    # Resolution
+    # ------------------------------------------------------------------
 
-    def resolve(self, abstract: Type[T]) -> T:
+    def resolve(self, type_: Type[T]) -> T:
         """Resolve a type, raising DIError if not registered."""
-        if abstract not in self._registrations:
-            raise DIError(f"Type {abstract!r} is not registered in the container.")
-        reg = self._registrations[abstract]
-        return self._resolve_reg(abstract, reg)  # type: ignore[return-value]
+        with self._lock:
+            reg = self._registry.get(type_)
+        if reg is None:
+            raise DIError(
+                f"Type '{type_.__name__}' is not registered in the container."
+            )
+        return reg.get(type_)  # type: ignore[return-value]
 
-    def try_resolve(self, abstract: Type[T]) -> Optional[T]:
+    def try_resolve(self, type_: Type[T]) -> Optional[T]:
         """Resolve a type, returning None if not registered."""
         try:
-            return self.resolve(abstract)
+            return self.resolve(type_)
         except DIError:
             return None
 
-    def _resolve_reg(self, abstract: type, reg: _Registration) -> Any:
-        if reg.lifetime is Lifetime.SINGLETON:
-            if reg.instance is None:
-                with reg.lock:
-                    if reg.instance is None:  # double-checked locking
-                        reg.instance = reg.factory()
-            return reg.instance
+    # ------------------------------------------------------------------
+    # Request scope
+    # ------------------------------------------------------------------
 
-        if reg.lifetime is Lifetime.REQUEST:
-            scope = RequestScope.current()
-            if scope is None:
-                raise DIError(
-                    f"Cannot resolve REQUEST-scoped {abstract!r} outside a request scope."
-                )
-            if abstract not in scope:
-                scope[abstract] = reg.factory()
-            return scope[abstract]
+    @contextmanager
+    def request_scope(self) -> Generator[RequestScope, None, None]:
+        """Context manager for REQUEST-scoped lifetimes."""
+        scope = RequestScope(self)
+        with scope:
+            yield scope
 
-        # TRANSIENT
-        return reg.factory()
+    # ------------------------------------------------------------------
+    # Introspection
+    # ------------------------------------------------------------------
 
-    # ------------------------------------------------------------------ #
-    #  Auto-wiring                                                          #
-    # ------------------------------------------------------------------ #
+    def registered_types(self) -> list:
+        with self._lock:
+            return list(self._registry.keys())
 
-    def _build(self, cls: type) -> Any:
-        """Instantiate *cls* by auto-wiring typed __init__ parameters."""
+    def is_registered(self, type_: type) -> bool:
+        with self._lock:
+            return type_ in self._registry
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _build_autowire_factory(self, cls: type) -> Callable[[], Any]:
+        """Build a factory that auto-wires constructor dependencies."""
         try:
             sig = inspect.signature(cls.__init__)
         except (ValueError, TypeError):
-            return cls()
+            return cls  # type: ignore[return-value]
 
-        kwargs: dict[str, Any] = {}
+        params = []
         for name, param in sig.parameters.items():
             if name == "self":
                 continue
-            ann = param.annotation
-            if ann is inspect.Parameter.empty:
-                if param.default is inspect.Parameter.empty:
-                    raise DIError(
-                        f"Cannot auto-wire {cls!r}: parameter {name!r} has no type annotation and no default."
-                    )
-                continue  # use default
-            resolved = self.try_resolve(ann)
-            if resolved is None:
-                if param.default is inspect.Parameter.empty:
-                    raise DIError(
-                        f"Cannot auto-wire {cls!r}: dependency {ann!r} for parameter {name!r} is not registered."
-                    )
-                # fall back to default
-            else:
-                kwargs[name] = resolved
-        return cls(**kwargs)
+            if param.annotation is inspect.Parameter.empty:
+                continue
+            if param.annotation is type(None):
+                continue
+            params.append(param.annotation)
 
-    # ------------------------------------------------------------------ #
-    #  Introspection                                                        #
-    # ------------------------------------------------------------------ #
+        if not params:
+            return cls  # type: ignore[return-value]
 
-    def request_scope(self) -> RequestScope:
-        return RequestScope(self)
+        container_ref = self
 
-    def registered_types(self) -> list[type]:
-        return list(self._registrations.keys())
+        def factory() -> Any:
+            args = [container_ref.resolve(p) for p in params]
+            return cls(*args)
 
-    def is_registered(self, abstract: type) -> bool:
-        return abstract in self._registrations
+        return factory
