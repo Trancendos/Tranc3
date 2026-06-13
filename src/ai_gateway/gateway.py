@@ -167,11 +167,21 @@ class AIGateway:
         # 3. Resolve applicable routes
         routes = self._resolve_routes(config.routes, request)
         if not routes:
-            # Fallback: try all providers in registration order
-            routes = [
-                RouteRule(provider=name, priority=idx)
-                for idx, name in enumerate(self._providers.keys())
-            ]
+            # Fallback: try all providers in registration order, ranked by Thompson sampler
+            try:
+                from src.inference.thompson_sampler import get_sampler
+                sampler = get_sampler()
+                ranked = sampler.rank_all()
+                registered = set(self._providers.keys())
+                ordered = [n for n in ranked if n in registered]
+                # Append any providers not in sampler
+                ordered += [n for n in self._providers.keys() if n not in ordered]
+                routes = [RouteRule(provider=name, priority=idx) for idx, name in enumerate(ordered)]
+            except Exception:
+                routes = [
+                    RouteRule(provider=name, priority=idx)
+                    for idx, name in enumerate(self._providers.keys())
+                ]
 
         if not routes:
             raise AIGatewayError(
@@ -229,6 +239,14 @@ class AIGateway:
 
                 # Update metrics
                 self._track_success(route.provider, response)
+                try:
+                    from src.inference.thompson_sampler import get_sampler
+                    get_sampler().record_success(
+                        route.provider,
+                        latency_ms=response.latency_ms if hasattr(response, "latency_ms") else 0.0,
+                    )
+                except Exception:
+                    pass
 
                 # Cache response
                 if config.cache_enabled:
@@ -259,6 +277,11 @@ class AIGateway:
                     error=str(e),
                 )
                 self._track_error(route.provider)
+                try:
+                    from src.inference.thompson_sampler import get_sampler
+                    get_sampler().record_failure(route.provider)
+                except Exception:
+                    pass
 
         # All providers failed
         self._metrics.errors += 1
