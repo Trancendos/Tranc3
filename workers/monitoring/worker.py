@@ -440,12 +440,13 @@ async def list_alerts(
     elif state == "resolved":
         clauses.append("resolved_at IS NOT NULL")
 
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    # clauses contains only hardcoded SQL fragments; user values go into params via ?
+    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     params.append(limit)
 
     with _connect() as conn:
         rows = conn.execute(
-            f"SELECT * FROM alerts {where} ORDER BY fired_at DESC LIMIT ?",
+            "SELECT * FROM alerts" + where_sql + " ORDER BY fired_at DESC LIMIT ?",
             params,
         ).fetchall()
 
@@ -629,12 +630,13 @@ async def list_snapshots(
         clauses.append("metric_name = ?")
         params.append(metric)
 
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    # clauses contains only hardcoded SQL fragments; user values go into params via ?
+    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     params.append(limit)
 
     with _connect() as conn:
         rows = conn.execute(
-            f"SELECT * FROM metrics_snapshots {where} ORDER BY captured_at DESC LIMIT ?",
+            "SELECT * FROM metrics_snapshots" + where_sql + " ORDER BY captured_at DESC LIMIT ?",
             params,
         ).fetchall()
 

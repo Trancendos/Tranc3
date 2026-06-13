@@ -301,6 +301,14 @@ def _spot_check_chain(n: int = 100) -> bool:
     return True
 
 
+_STATS_QUERIES: Dict[str, str] = {
+    "service": "SELECT service, COUNT(*) AS c FROM audit_log WHERE timestamp >= ? GROUP BY service",
+    "action": "SELECT action, COUNT(*) AS c FROM audit_log WHERE timestamp >= ? GROUP BY action",
+    "severity": "SELECT severity, COUNT(*) AS c FROM audit_log WHERE timestamp >= ? GROUP BY severity",
+    "outcome": "SELECT outcome, COUNT(*) AS c FROM audit_log WHERE timestamp >= ? GROUP BY outcome",
+}
+
+
 def _build_stats_window(since_iso: str) -> StatsWindow:
     with _connect() as conn:
         total = conn.execute(
@@ -308,10 +316,8 @@ def _build_stats_window(since_iso: str) -> StatsWindow:
         ).fetchone()[0]
 
         def _group(col: str) -> Dict[str, int]:
-            rows = conn.execute(
-                f"SELECT {col}, COUNT(*) AS c FROM audit_log WHERE timestamp >= ? GROUP BY {col}",
-                (since_iso,),
-            ).fetchall()
+            sql = _STATS_QUERIES[col]  # col is always a key from this hardcoded dict
+            rows = conn.execute(sql, (since_iso,)).fetchall()
             return {r[col]: r["c"] for r in rows}
 
         return StatsWindow(
@@ -516,12 +522,13 @@ async def list_events(
         clauses.append("severity = ?")
         params.append(severity)
 
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    # clauses contains only hardcoded SQL fragments; user values go into params via ?
+    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     params += [limit, offset]
 
     with _connect() as conn:
         rows = conn.execute(
-            f"SELECT * FROM audit_log {where} ORDER BY id DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM audit_log" + where_sql + " ORDER BY id DESC LIMIT ? OFFSET ?",
             params,
         ).fetchall()
 
@@ -594,12 +601,13 @@ async def export_ndjson(
         clauses.append("timestamp <= ?")
         params.append(to)
 
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    # clauses contains only hardcoded SQL fragments; user values go into params via ?
+    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
 
     def _stream():
         with _connect() as conn:
             cur = conn.execute(
-                f"SELECT * FROM audit_log {where} ORDER BY id ASC",
+                "SELECT * FROM audit_log" + where_sql + " ORDER BY id ASC",
                 params,
             )
             for row in cur:
