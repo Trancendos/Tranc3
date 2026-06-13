@@ -42,8 +42,7 @@ class SemVer:
     @classmethod
     def parse(cls, version_str: str) -> "SemVer":
         match = re.match(
-            r"^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.]+))?(?:\+([a-zA-Z0-9.]+))?$",
-            version_str.strip(),
+            r"^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.]+))?(?:\+([a-zA-Z0-9.]+))?$", version_str.strip()
         )
         if not match:
             raise ValueError(f"Invalid semver: {version_str}")

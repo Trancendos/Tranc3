@@ -136,7 +136,12 @@ impl AdaptiveMetaLearner {
         // Initial Hessian approximation (scaled identity)
         let gamma = if m > 0 {
             let last = &self.history[m - 1];
-            dot(&last.s, &last.y) / dot(&last.y, &last.y)
+            let y_norm_sq = dot(&last.y, &last.y);
+            if y_norm_sq > 1e-10 {
+                dot(&last.s, &last.y) / y_norm_sq
+            } else {
+                1.0
+            }
         } else {
             1.0
         };
@@ -171,6 +176,9 @@ impl AdaptiveMetaLearner {
         // Compute L-BFGS direction
         let direction = self.lbfgs_direction(&clipped);
 
+        // Snapshot parameters before update so we can compute the true s vector
+        let prev_params = self.parameters.clone();
+
         // Momentum update
         let lr = self.config.learning_rate;
         for (vel, dir) in self.velocity.iter_mut().zip(direction.iter()) {
@@ -185,13 +193,13 @@ impl AdaptiveMetaLearner {
             *param = param.max(lo).min(hi);
         }
 
-        // Update L-BFGS history
+        // Update L-BFGS history with true parameter difference x_{k+1} - x_k
         if let Some(ref prev_grad) = self.prev_gradient {
             let s: Vec<f64> = self
                 .parameters
                 .iter()
-                .zip(gradient.iter())
-                .map(|(_, &g)| -lr * g) // Approximate s
+.zip(prev_params.iter())
+                .map(|(p_new, p_old)| p_new - p_old)
                 .collect();
             let y: Vec<f64> = clipped
                 .iter()
@@ -225,7 +233,7 @@ impl AdaptiveMetaLearner {
         let step = AdaptiveStep {
             iteration: self.iteration,
             cost: self.current_cost.unwrap_or(0.0),
-            gradient_norm: clipped_norm,
+            gradient_norm: grad_norm,
             learning_rate: self.config.learning_rate,
             step_size,
         };
@@ -342,7 +350,10 @@ mod tests {
         let mut learner = AdaptiveMetaLearner::new(config);
         let gradient = vec![100.0; 3];
         let step = learner.step(&gradient);
-        assert!(step.gradient_norm <= 1.0 + 1e-10);
+        // gradient_norm reports the pre-clip magnitude for convergence monitoring.
+        // Input [100, 100, 100] has L2 norm = 100*sqrt(3) ≈ 173.2, well above clip=1.0.
+        let expected_norm = (100.0_f64.powi(2) * 3.0).sqrt();
+        assert!((step.gradient_norm - expected_norm).abs() < 1e-6);
     }
 
     #[test]
@@ -378,15 +389,16 @@ mod tests {
             adaptive_lr: false,
             ..Default::default()
         };
-        let mut learner = AdaptiveMetaLearner::new(config);
+        // Use a deterministic starting point to avoid flakiness from random init.
+        let mut learner = AdaptiveMetaLearner::with_parameters(config, vec![3.0, -3.0, 3.0]);
         // Minimize f(x) = sum(x_i^2)
         for _ in 0..100 {
             let grad: Vec<f64> = learner.parameters.iter().map(|&x| 2.0 * x).collect();
             learner.step(&grad);
         }
-        // Parameters should move toward zero
+        // Parameters should converge near zero.
         let param_norm: f64 = learner.parameters.iter().map(|x| x * x).sum::<f64>().sqrt();
-        assert!(param_norm < 5.0);
+        assert!(param_norm < 1.0);
     }
 
     #[test]

@@ -99,7 +99,7 @@ class DroneCapabilities:
     max_flight_time_min: float = 30.0
     max_payload_kg: float = 2.0
     sensors: List[SensorType] = field(
-        default_factory=lambda: [SensorType.CAMERA_RGB, SensorType.GPS],
+        default_factory=lambda: [SensorType.CAMERA_RGB, SensorType.GPS]
     )
     wasm_runtime: bool = True
     edge_compute_tflops: float = 0.5
@@ -380,9 +380,7 @@ class SwarmCoordinator:
         return results
 
     def _simulate_sensor_collection(
-        self,
-        drone: DroneNode,
-        mission: DroneMission,
+        self, drone: DroneNode, mission: DroneMission
     ) -> List[DroneSensorReading]:
         """Simulate sensor data collection from a drone."""
         readings = []
@@ -461,10 +459,7 @@ class AerialDroneAdapter:
         )
 
     async def deploy_nrc_query(
-        self,
-        nrc_query: str,
-        n_drones: int = 1,
-        sensors: Optional[List[SensorType]] = None,
+        self, nrc_query: str, n_drones: int = 1, sensors: Optional[List[SensorType]] = None
     ) -> DroneMission:
         """Deploy an NRC query to the aerial drone swarm."""
         # Create waypoints based on available drones

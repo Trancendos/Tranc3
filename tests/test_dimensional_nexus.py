@@ -463,7 +463,7 @@ class TestHealthAggregator:
                 ("healthy", "AGENTS"),
                 ("degraded", "MODELS"),
                 ("unhealthy", "SECURITY"),
-            ],
+            ]
         ):
             health = NexusServiceHealth(
                 service_id=f"svc-{i}",

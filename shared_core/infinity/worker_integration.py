@@ -53,9 +53,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 try:
-    from shared_core.infinity.adaptive_intelligence import (  # codeql[py/cyclic-import]
+    from shared_core.infinity.adaptive_intelligence import (
         SUBSYSTEM_AVAILABILITY,
-        InfinityHealthOrchestrator,  # noqa: F401  # codeql[py/unused-import]
+        InfinityHealthOrchestrator,  # noqa: F401
         create_orchestrator,
     )
 
@@ -65,18 +65,14 @@ except ImportError:
     SUBSYSTEM_AVAILABILITY: dict = {}
 
 try:
-    from shared_core.infinity.proactive_defense import (  # codeql[py/cyclic-import]
-        ProactiveDefenseLayer,
-    )
+    from shared_core.infinity.proactive_defense import ProactiveDefenseLayer
 
     _DEFENSE_AVAILABLE = True
 except ImportError:
     _DEFENSE_AVAILABLE = False
 
 try:
-    from shared_core.infinity.fluidic_gateway import (  # codeql[py/cyclic-import]
-        InfinityFluidicGateway,
-    )
+    from shared_core.infinity.fluidic_gateway import InfinityFluidicGateway
 
     _GATEWAY_AVAILABLE = True
 except ImportError:
@@ -181,12 +177,12 @@ class InfinityWorkerKit:
         """Stop all layers cleanly."""
         try:
             await self.health.stop()
-        except Exception as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except Exception:
+            pass
         try:
             await self.gateway.stop()
-        except Exception as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except Exception:
+            pass
         self._started = False
         logger.info("InfinityWorkerKit[%s] stopped", self.service_name)
 
@@ -386,10 +382,7 @@ def _make_sentinel_fn(sentinel: Any) -> Callable:
 
     async def _publish(channel: str, event_type: str, payload: dict) -> None:
         try:
-            from shared_core.infinity.sentinel_station import (  # codeql[py/cyclic-import]
-                SentinelChannel,
-                SentinelEvent,
-            )
+            from shared_core.infinity.sentinel_station import SentinelChannel, SentinelEvent
 
             ch = SentinelChannel(channel) if isinstance(channel, str) else channel
             await sentinel.publish(

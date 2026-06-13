@@ -29,8 +29,9 @@ state along the way.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
-from src.database.encrypted_sqlite import connect as sqlite3_connect
+import sqlite3
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -226,7 +227,7 @@ class ContextWindow:
 
     def _init_db(self):
         """Initialize SQLite for persistent context storage."""
-        self._conn = sqlite3_connect(self._db_path, check_same_thread=False)
+        self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
         self._conn.execute("""
             CREATE TABLE IF NOT EXISTS user_contexts (
                 user_id TEXT PRIMARY KEY,
@@ -264,7 +265,7 @@ class ContextWindow:
                 if isinstance(context.status, SessionStatus)
                 else context.status,
                 ",".join(context.context_types),
-                str(context.metadata),
+                json.dumps(context.metadata),
                 context.connected_at,
                 context.last_active,
             ),

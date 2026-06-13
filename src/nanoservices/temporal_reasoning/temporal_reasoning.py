@@ -256,11 +256,7 @@ class EventCalculusEngine:
         return True
 
     def trajectory(
-        self,
-        fluent: str,
-        start: float,
-        end: float,
-        step: float = 1.0,
+        self, fluent: str, start: float, end: float, step: float = 1.0
     ) -> List[Tuple[float, bool]]:
         result = []
         t = start
@@ -366,11 +362,7 @@ class TemporalReasoningEngine:
         return fact
 
     def add_event(
-        self,
-        name: str,
-        start: float,
-        end: float,
-        properties: Optional[Dict[str, Any]] = None,
+        self, name: str, start: float, end: float, properties: Optional[Dict[str, Any]] = None
     ) -> TemporalEvent:
         event = TemporalEvent(
             name=name,
@@ -402,9 +394,7 @@ class TemporalReasoningEngine:
         ]
 
     def query_interval_relation(
-        self,
-        interval_a: TimeInterval,
-        interval_b: TimeInterval,
+        self, interval_a: TimeInterval, interval_b: TimeInterval
     ) -> TemporalRelation:
         return self.allen.relate(interval_a, interval_b)
 
@@ -433,7 +423,7 @@ class TemporalReasoningEngine:
                     "time": t,
                     "active_facts": len(active_facts),
                     "active_events": len(active_events),
-                },
+                }
             )
             t += step
         return timeline

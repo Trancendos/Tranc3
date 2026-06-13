@@ -38,6 +38,13 @@ from src.mesh.types import (
     ServiceMeshConfig,
 )
 
+try:
+    from src.fluidic.fluid_router import FluidRouter as _FluidRouter
+    _FLUID_ROUTER_AVAILABLE = True
+except ImportError:
+    _FluidRouter = None  # type: ignore[assignment,misc]
+    _FLUID_ROUTER_AVAILABLE = False
+
 logger = logging.getLogger("tranc3.mesh.service_mesh")
 
 
@@ -59,6 +66,7 @@ class ServiceMesh:
         self._call_handlers: dict[str, Callable] = {}
         self._http_client: httpx.AsyncClient | None = None
         self._health_task: asyncio.Task | None = None
+        self._fluid_router: Any = _FluidRouter() if _FLUID_ROUTER_AVAILABLE else None
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create the shared HTTP client."""
@@ -170,6 +178,21 @@ class ServiceMesh:
         if handler:
             return await self._call_handler(handler, service_name, path, payload, opts, trace_id)
 
+        # Use fluidic router to pick the best instance if multiple are registered
+        if self._fluid_router is not None:
+            try:
+                routed = self._fluid_router.select(service_name)
+                if routed is not None and hasattr(routed, "url"):
+                    descriptor = ServiceDescriptor(
+                        name=descriptor.name,
+                        url=routed.url,
+                        port=getattr(routed, "port", descriptor.port),
+                        category=descriptor.category,
+                        circuit_breaker_config=descriptor.circuit_breaker_config,
+                    )
+            except Exception:
+                pass  # fall through to original descriptor
+
         # HTTP call with retries
         return await self._call_http(descriptor, service_name, path, payload, opts, trace_id)
 
@@ -256,6 +279,11 @@ class ServiceMesh:
                     cb = self._circuit_breakers.get(service_name)
                     if cb:
                         cb.record_success()
+                    if self._fluid_router is not None:
+                        try:
+                            self._fluid_router.record_success(service_name, latency_ms)
+                        except Exception:
+                            pass
 
                     return ServiceCallResult(
                         success=True,

@@ -18,7 +18,7 @@ Features:
 - Session management
 - TOTP multi-factor authentication
 - User registration and login
-- Password hashing (bcrypt)
+- Password hashing (argon2)
 - Rate limiting on auth endpoints
 
 Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
@@ -41,22 +41,18 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-import bcrypt  # type: ignore[import-untyped]
 import pyotp
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
+from shared_core.sanitize import sanitize_for_log
 
 # Phase 22.5: Infinity Ecosystem nomenclature
 from shared_core.infinity.nomenclature import InfinityRole, Tier
 
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
-from shared_core.sanitize import sanitize_for_log
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.database.encrypted_sqlite import encrypt_field
-from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.infinity-auth")
 
@@ -66,7 +62,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. Infinity (auth service) cannot start without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 JWT_SECRET: str = _jwt_secret_raw
 JWT_ALGORITHM = "HS256"
@@ -179,7 +175,7 @@ class AuthDatabase:
     def __init__(self, db_path: str = DATABASE_PATH) -> None:
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3_connect(db_path, check_same_thread=False)
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._init_tables()
 
@@ -203,8 +199,7 @@ class AuthDatabase:
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
-                refresh_token TEXT NOT NULL,
-                refresh_token_hash TEXT UNIQUE NOT NULL DEFAULT '',
+                refresh_token TEXT UNIQUE NOT NULL,
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
                 is_revoked INTEGER DEFAULT 0,
@@ -217,24 +212,9 @@ class AuthDatabase:
                 window_start TEXT NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS token_revocations (
-                jti TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                revoked_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL
-            );
-
             CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-            CREATE INDEX IF NOT EXISTS idx_sessions_refresh ON sessions(refresh_token_hash);
-            CREATE INDEX IF NOT EXISTS idx_revocations_user ON token_revocations(user_id);
+            CREATE INDEX IF NOT EXISTS idx_sessions_refresh ON sessions(refresh_token);
         """)
-        # Migration: add refresh_token_hash if upgrading from older schema
-        try:
-            self._conn.execute(
-                "ALTER TABLE sessions ADD COLUMN refresh_token_hash TEXT UNIQUE DEFAULT ''"
-            )
-        except Exception:
-            pass  # column already exists
         self._conn.commit()
 
     def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
@@ -243,44 +223,20 @@ class AuthDatabase:
     def commit(self) -> None:
         self._conn.commit()
 
-    def token_hash(self, token: str) -> str:
-        """HMAC-SHA256 of a token for deterministic indexed lookup."""
-        from src.database.encrypted_sqlite import _derive_key
-
-        key = _derive_key(self.db_path)
-        return hmac.new(key, token.encode(), hashlib.sha256).hexdigest()
-
 
 # ── Password Hashing ───────────────────────────────────────────────────────────
 
-try:
-    _BCRYPT_ROUNDS = int(os.environ.get("BCRYPT_ROUNDS", "12"))
-except ValueError:
-    _BCRYPT_ROUNDS = 12
-_BCRYPT_ROUNDS = max(12, _BCRYPT_ROUNDS)  # never allow rounds < 12
-
-
-def _is_bcrypt_hash(stored_hash: str) -> bool:
-    """Return True if *stored_hash* is a bcrypt hash (``$2a/b/x/y$`` prefix)."""
-    return stored_hash.startswith("$2") and len(stored_hash) > 30
-
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt (work factor controlled by BCRYPT_ROUNDS env var)."""
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode()
+    """Hash a password using SHA-256 with salt (argon2 in production)."""
+    salt = secrets.token_hex(16)
+    hash_val = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
+    return f"{salt}:{hash_val}"
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify a password against a stored hash.
-
-    Supports both bcrypt hashes (new) and legacy PBKDF2-SHA256 hashes
-    (format ``salt:hexdigest``) so existing accounts keep working until
-    their next login triggers a transparent rehash.
-    """
+    """Verify a password against stored hash."""
     try:
-        if _is_bcrypt_hash(stored_hash):
-            return bcrypt.checkpw(password.encode(), stored_hash.encode())
-        # Legacy PBKDF2-SHA256: "salt:hexdigest"
         salt, hash_val = stored_hash.split(":", 1)
         computed = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
         return hmac.compare_digest(hash_val, computed)
@@ -417,39 +373,17 @@ async def _lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 break
             except Exception:
-                logger.exception("auth background health reporter error")
-
-    async def _revocation_cleanup_loop():
-        """Purge expired revocation records hourly to keep the table lean."""
-        while True:
-            try:
-                await asyncio.sleep(3600)
-                deleted = db.execute(
-                    "DELETE FROM token_revocations WHERE expires_at < ?",
-                    (datetime.now(timezone.utc).isoformat(),),
-                ).rowcount
-                db.commit()
-                if deleted:
-                    logger.info(
-                        "Revocation cleanup: purged %d expired entries", sanitize_for_log(deleted)
-                    )
-            except asyncio.CancelledError:
-                break
-            except Exception:
-                logger.exception("revocation cleanup error")
+                pass  # swallow background loop errors — not critical path
 
     task = asyncio.create_task(_bg_loop())
-    cleanup_task = asyncio.create_task(_revocation_cleanup_loop())
     try:
         yield
     finally:
         task.cancel()
-        cleanup_task.cancel()
-        for t in (task, cleanup_task):
-            try:
-                await t
-            except asyncio.CancelledError:
-                pass
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass  # expected: task was cancelled, shutdown can proceed
         await worker_kit.shutdown()
         logger.info("Infinity-Auth smart adaptive layer stopped")
 
@@ -503,19 +437,10 @@ worker_kit = InfinityWorkerKit(
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict[str, Any]:
-    """Validate JWT token and return user payload.
-
-    Checks the token_revocations table so that logged-out tokens are
-    immediately rejected even before their exp claim elapses.
-    """
+    """Validate JWT token and return user payload."""
     payload = decode_access_token(credentials.credentials)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    jti = payload.get("jti")
-    if jti:
-        revoked = db.execute("SELECT 1 FROM token_revocations WHERE jti = ?", (jti,)).fetchone()
-        if revoked:
-            raise HTTPException(status_code=401, detail="Token has been revoked")
     return payload
 
 
@@ -542,11 +467,18 @@ async def health():
         "status": "healthy",
         "service": "infinity-auth",
         "version": "2.0.0",
+        "entity": {
+            "location": "Infinity",
+            "pillar": "Security",
+            "lead_ai": "The Guardian (Anchor: Orb of Orisis)",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Centralized Auth & OAuth 2.0",
+        },
+        # Phase 22.6: Smart health
         "health_score": health_summary.get("health_score", 1.0),
         "health_tier": health_summary.get("tier", "EXCELLENT"),
         "smart_adaptive": True,
         "defense_blocked_ips": len(worker_kit.defense.get_blocked_ips()),
-        "entity": health_entity_block(8005, "infinity-auth"),
     }
 
 
@@ -558,8 +490,7 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     """
     # Check if username exists
     existing = db.execute(
-        "SELECT user_id FROM users WHERE username = ?",
-        (user.username,),
+        "SELECT user_id FROM users WHERE username = ?", (user.username,)
     ).fetchone()
     if existing:
         raise HTTPException(status_code=409, detail="Username already exists")
@@ -578,15 +509,7 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
 
     db.execute(
         "INSERT INTO users (user_id, username, email, password_hash, display_name, created_at, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (
-            user_id,
-            user.username,
-            user.email,
-            password_hash,
-            encrypt_field(db.db_path, user.display_name),
-            now,
-            role,
-        ),
+        (user_id, user.username, user.email, password_hash, user.display_name, now, role),
     )
     db.commit()
 
@@ -596,19 +519,12 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     access_token = create_access_token(user_id, user.username, role=role)
     refresh_token = create_refresh_token()
 
-    # Store session (refresh token encrypted at rest)
+    # Store session
     session_id = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRY_DAYS)).isoformat()
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, refresh_token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            session_id,
-            user_id,
-            encrypt_field(db.db_path, refresh_token),
-            db.token_hash(refresh_token),
-            now,
-            expires_at,
-        ),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+        (session_id, user_id, refresh_token, now, expires_at),
     )
     db.commit()
 
@@ -649,18 +565,6 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     # Verify password
     if not verify_password(credentials.password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    # Transparently rehash legacy PBKDF2 hashes to bcrypt on successful login
-    if not _is_bcrypt_hash(row["password_hash"]):
-        try:
-            new_hash = hash_password(credentials.password)
-            db.execute(
-                "UPDATE users SET password_hash = ? WHERE user_id = ?",
-                (new_hash, row["user_id"]),
-            )
-            db.commit()
-        except Exception:
-            logger.exception("Password rehash failed for user=%s", sanitize_for_log(row["user_id"]))
 
     # Check MFA
     if row["mfa_enabled"]:
@@ -707,20 +611,13 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     access_token = create_access_token(user_id, username, role=role)
     refresh_token = create_refresh_token()
 
-    # Store session (refresh token encrypted at rest)
+    # Store session
     now = datetime.now(timezone.utc).isoformat()
     session_id = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRY_DAYS)).isoformat()
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, refresh_token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            session_id,
-            user_id,
-            encrypt_field(db.db_path, refresh_token),
-            db.token_hash(refresh_token),
-            now,
-            expires_at,
-        ),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+        (session_id, user_id, refresh_token, now, expires_at),
     )
 
     # Update last login
@@ -750,8 +647,8 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
     """Refresh an access token using a valid refresh token."""
     # Find session
     row = db.execute(
-        "SELECT session_id, user_id, expires_at, is_revoked FROM sessions WHERE refresh_token_hash = ?",
-        (db.token_hash(request.refresh_token),),
+        "SELECT session_id, user_id, expires_at, is_revoked FROM sessions WHERE refresh_token = ?",
+        (request.refresh_token,),
     ).fetchone()
 
     if not row:
@@ -789,15 +686,8 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
     # Create new session
     new_session_id = str(uuid.uuid4())
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, refresh_token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            new_session_id,
-            row["user_id"],
-            encrypt_field(db.db_path, new_refresh_token),
-            db.token_hash(new_refresh_token),
-            now,
-            new_expires_at,
-        ),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+        (new_session_id, row["user_id"], new_refresh_token, now, new_expires_at),
     )
     db.commit()
 
@@ -818,21 +708,8 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
 
 @app.post("/auth/logout")
 async def logout(user: dict = Depends(get_current_user)):
-    """Revoke all sessions and the current JWT for the user."""
-    user_id = user["sub"]
-    db.execute("UPDATE sessions SET is_revoked = 1 WHERE user_id = ?", (user_id,))
-    jti = user.get("jti")
-    if jti:
-        exp = user.get("exp", int(time.time()) + JWT_EXPIRY_MINUTES * 60)
-        db.execute(
-            "INSERT OR IGNORE INTO token_revocations (jti, user_id, revoked_at, expires_at) VALUES (?, ?, ?, ?)",
-            (
-                jti,
-                user_id,
-                datetime.now(timezone.utc).isoformat(),
-                datetime.fromtimestamp(exp, tz=timezone.utc).isoformat(),
-            ),
-        )
+    """Revoke all sessions for the current user."""
+    db.execute("UPDATE sessions SET is_revoked = 1 WHERE user_id = ?", (user["sub"],))
     db.commit()
     return {"message": "Logged out successfully"}
 
@@ -905,8 +782,7 @@ async def enable_mfa(user: dict = Depends(get_current_user)):
 async def disable_mfa(user: dict = Depends(get_current_user)):
     """Disable MFA for the current user."""
     db.execute(
-        "UPDATE users SET mfa_enabled = 0, totp_secret = NULL WHERE user_id = ?",
-        (user["sub"],),
+        "UPDATE users SET mfa_enabled = 0, totp_secret = NULL WHERE user_id = ?", (user["sub"],)
     )
     db.commit()
     return {"message": "MFA disabled"}
@@ -973,8 +849,8 @@ async def update_user_role(
 
     logger.info(
         "role_updated: user_id=%s new_role=%s by=%s",
-        sanitize_for_log(user_id),
-        sanitize_for_log(role),
+        user_id,
+        role,
         sanitize_for_log(current_user.get("username", "unknown")),
     )
 
@@ -986,47 +862,6 @@ async def update_user_role(
         "tier": tier.value,
         "infinity_role": infinity_role.value,
     }
-
-
-# ── Admin: revoke all tokens for a user ──────────────────────────────────────
-
-
-@app.post("/auth/admin/revoke-user-tokens/{user_id}", tags=["admin"])
-async def admin_revoke_user_tokens(
-    user_id: str,
-    current_user: dict = Depends(get_current_user),
-):
-    """Immediately revoke all active tokens for a user (admin only)."""
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required")
-
-    # Verify target user exists
-    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    if not user_row:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Revoke all active sessions — marks sessions table + purges via token_revocations
-    sessions = db.execute(
-        "SELECT session_id, expires_at FROM sessions WHERE user_id = ? AND is_revoked = 0",
-        (user_id,),
-    ).fetchall()
-
-    now = datetime.now(timezone.utc).isoformat()
-    # Also revoke any JTIs in the revocation table that belong to this user
-    db.execute(
-        "INSERT OR IGNORE INTO token_revocations (jti, user_id, revoked_at, expires_at) "
-        "SELECT 'session:' || session_id, ?, ?, expires_at FROM sessions WHERE user_id = ? AND is_revoked = 0",
-        (user_id, now, user_id),
-    )
-    db.execute("UPDATE sessions SET is_revoked = 1 WHERE user_id = ?", (user_id,))
-    db.commit()
-
-    logger.warning(
-        "Admin revoked all tokens for user_id=%s by admin_user_id=%s",
-        sanitize_for_log(user_id),
-        sanitize_for_log(current_user.get("user_id", "unknown")),
-    )
-    return {"revoked": len(sessions), "user_id": user_id}
 
 
 # ── OIDC Discovery (RFC 8414 / OpenID Connect Discovery 1.0) ────────────────
@@ -1087,11 +922,11 @@ async def jwks():
                             "alg": "RS256",
                             "n": _b64url(pub_numbers.n, 256),
                             "e": _b64url(pub_numbers.e, 3),
-                        },
-                    ],
+                        }
+                    ]
                 }
         except Exception as exc:
-            logger.debug("JWKS generation failed: %s", sanitize_for_log(exc))
+            logger.debug("JWKS generation failed: %s", exc)
     return {"keys": []}
 
 
@@ -1192,10 +1027,9 @@ async def token_endpoint(req: TokenRequest):
 
 
 async def _refresh_via_token(refresh_token: str) -> dict:
-    # sessions table stores refresh_token_hash (sha256 via db.token_hash)
     row = db.execute(
-        "SELECT * FROM sessions WHERE refresh_token_hash = ? AND is_revoked = 0 AND expires_at > ?",
-        (db.token_hash(refresh_token), datetime.now(timezone.utc).isoformat()),
+        "SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > ?",
+        (refresh_token, int(time.time())),
     ).fetchone()
     if not row:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
@@ -1204,19 +1038,13 @@ async def _refresh_via_token(refresh_token: str) -> dict:
         raise HTTPException(status_code=401, detail="User not found")
     from jose import jwt as _jwt  # noqa: PLC0415
 
-    role = user["role"] if "role" in user.keys() else "user"
-    tier = _get_tier_for_role(role)
-    infinity_role = _get_infinity_role_for_role(role)
     claims = {
         "sub": user["user_id"],
         "username": user["username"],
-        "role": role,
-        "tier": tier.value,
-        "infinity_role": infinity_role.value,
+        "role": user["role"],
         "iss": AUTH_ISSUER,
         "iat": int(time.time()),
         "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60,
-        "jti": str(uuid.uuid4()),
     }
     return {
         "access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),

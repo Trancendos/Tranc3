@@ -335,7 +335,7 @@ class TestServiceMeshRegistration:
                 url="http://localhost",
                 port=8005,
                 circuit_breaker_config=custom_config,
-            ),
+            )
         )
         cb = mesh.get_circuit_breaker("auth-api")
         assert cb.config.failure_threshold == 10
@@ -426,7 +426,7 @@ class TestServiceMeshDependencyGraph:
                 url="http://localhost",
                 port=8005,
                 dependencies=["users-api"],
-            ),
+            )
         )
         mesh.register(
             ServiceDescriptor(
@@ -434,7 +434,7 @@ class TestServiceMeshDependencyGraph:
                 url="http://localhost",
                 port=8006,
                 dependencies=[],
-            ),
+            )
         )
         graph = mesh.get_dependency_graph()
         assert graph["auth-api"] == ["users-api"]

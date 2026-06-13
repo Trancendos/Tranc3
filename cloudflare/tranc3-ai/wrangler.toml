@@ -3,43 +3,30 @@ main = "src/index.js"
 compatibility_date = "2024-09-23"
 account_id = "e0214028cb64d31232f5662548a55e4e"
 
+# Tranc3 uses its own self-hosted inference — no external AI APIs.
+# Set TRANC3_BACKEND_URL / TRANC3_NANO_URL via: wrangler secret put <NAME>
+
 [vars]
 ENVIRONMENT = "production"
 
-# ── Workers AI binding (free on Cloudflare, ~10K req/day) ────────────────────
-[ai]
-binding = "AI"
-
-# ── KV: response cache + daily usage counters ────────────────────────────────
+# ── KV: response cache (AI_CACHE — existing namespace) ───────────────────────
 [[kv_namespaces]]
 binding = "CACHE"
 id = "2a0e09cfd22741eeb3245607ce6e76fd"
 
-# ── KV: session store ────────────────────────────────────────────────────────
+# ── KV: session store (TRANC3-SESSIONS — created 2026-05-08) ─────────────────
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "f321bee2495547ad9e224522f214defd"
 
 # ── Secrets (set via: wrangler secret put <NAME> --name tranc3-ai) ────────────
-# Adaptive rotation — set whichever free-tier keys you have; unset ones are skipped.
-#
-# GROQ_API_KEY       → https://console.groq.com   (free, 6k RPM)
-# GEMINI_API_KEY     → https://aistudio.google.com (free, 15 RPM / 1M TPD)
-# CEREBRAS_API_KEY   → https://cerebras.ai         (free, 60 RPM)
-# SAMBANOVA_API_KEY  → https://sambanova.ai        (free, 80 RPD)
-# OPENROUTER_API_KEY → https://openrouter.ai       (free models)
-# HF_API_KEY         → https://huggingface.co      (free inference API)
-# DEEPSEEK_API_KEY   → https://platform.deepseek.com (free tier)
-# GITHUB_TOKEN       → https://github.com/settings/tokens (free — any PAT works, 50 RPD GPT-4o)
-# TRANC3_AUTH_URL    → https://infinity-auth-api.luminous-aimastermind.workers.dev
-# ALLOWED_ORIGINS    → https://trancendos.com (comma-separated extras)
-# MISTRAL_API_KEY    → https://console.mistral.ai (free plan — 500K tokens/month)
-# COHERE_API_KEY     → https://dashboard.cohere.com (free trial — 1K req/month)
-# TOGETHER_API_KEY   → https://api.together.ai (free $1 credit)
-# FIREWORKS_API_KEY  → https://fireworks.ai (free $1/month credit)
+# TRANC3_BACKEND_URL  → https://trancendos-backend.fly.dev   (after fly deploy)
+# TRANC3_NANO_URL     → https://trancendos-backend.fly.dev   (nanoservices on same host)
+# TRANC3_AUTH_URL     → https://infinity-auth-api.luminous-aimastermind.workers.dev
+# ALLOWED_ORIGINS     → https://trancendos.com (extra CORS, comma-separated)
 
-# ── Deploy ────────────────────────────────────────────────────────────────────
-# wrangler secret put GROQ_API_KEY
-# wrangler secret put GEMINI_API_KEY
-# ... (repeat for each key you have)
-# wrangler deploy
+# ── Deploy steps ──────────────────────────────────────────────────────────────
+# 1. fly deploy                         (from Tranc3 repo root — app: trancendos-backend)
+# 2. cd cloudflare/tranc3-ai && npm ci
+# 3. wrangler secret put TRANC3_BACKEND_URL   (paste: https://trancendos-backend.fly.dev)
+# 4. wrangler deploy

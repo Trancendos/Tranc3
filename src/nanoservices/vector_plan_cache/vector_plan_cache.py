@@ -113,7 +113,7 @@ class SimpleTextEncoder:
 
         for token in ngrams:
             # Feature hashing
-            h = int(hashlib.md5(token.encode(), usedforsecurity=False).hexdigest(), 16)
+            h = int(hashlib.md5(token.encode()).hexdigest(), 16)
             idx = h % self.EMBEDDING_DIM
             sign = 1.0 if (h >> 8) % 2 == 0 else -1.0
             embedding[idx] += sign
@@ -154,9 +154,7 @@ class InMemoryVectorStore:
             self._metadata[id_] = meta
 
     def query(
-        self,
-        query_vector: List[float],
-        top_k: int = 10,
+        self, query_vector: List[float], top_k: int = 10
     ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors using cosine similarity."""
         results = []
@@ -221,7 +219,6 @@ class ChromaDBPlanStore:
         try:
             import chromadb
 
-            # CVE-2026-45829: only embedded client — never chromadb server / trust_remote_code.
             if persist_dir:
                 self._client = chromadb.PersistentClient(path=persist_dir)
             else:
@@ -248,9 +245,7 @@ class ChromaDBPlanStore:
             self._fallback.add(ids, vectors, metadatas)
 
     def query(
-        self,
-        query_vector: List[float],
-        top_k: int = 10,
+        self, query_vector: List[float], top_k: int = 10
     ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors."""
         if self._use_chromadb and self._collection:
@@ -333,9 +328,7 @@ class LanceDBPlanStore:
             self._fallback.add(ids, vectors, metadatas)
 
     def query(
-        self,
-        query_vector: List[float],
-        top_k: int = 10,
+        self, query_vector: List[float], top_k: int = 10
     ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors."""
         if self._use_lancedb and self._table is not None:
@@ -412,7 +405,7 @@ class VectorPlanCache:
                     "status": plan.status.value,
                     "generation": plan.generation,
                     "backend": plan.backend,
-                },
+                }
             ],
         )
 
@@ -446,7 +439,7 @@ class VectorPlanCache:
                         similarity_score=1.0,
                         distance=0.0,
                         exact_match=True,
-                    ),
+                    )
                 ]
 
         # Vector similarity search
@@ -476,7 +469,7 @@ class VectorPlanCache:
                         similarity_score=similarity,
                         distance=1.0 - similarity,
                         exact_match=exact,
-                    ),
+                    )
                 )
 
         if not search_results:

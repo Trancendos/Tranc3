@@ -148,7 +148,7 @@ class MonitoringDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -216,10 +216,10 @@ class MonitoringDatabase:
                 )
             """)
             cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_health_service ON health_reports(service_name)",
+                "CREATE INDEX IF NOT EXISTS idx_health_service ON health_reports(service_name)"
             )
             cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_health_timestamp ON health_reports(timestamp)",
+                "CREATE INDEX IF NOT EXISTS idx_health_timestamp ON health_reports(timestamp)"
             )
             cur.execute("CREATE INDEX IF NOT EXISTS idx_metrics_name ON metrics(name)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON metrics(timestamp)")
@@ -291,10 +291,7 @@ class MonitoringDatabase:
             )
 
     def query_metrics(
-        self,
-        name: str,
-        hours: int = 1,
-        labels: Optional[Dict[str, str]] = None,
+        self, name: str, hours: int = 1, labels: Optional[Dict[str, str]] = None
     ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
@@ -346,7 +343,7 @@ class MonitoringDatabase:
         conn = self._get_conn()
         if enabled_only:
             rows = conn.execute(
-                "SELECT * FROM alert_rules WHERE enabled=1 ORDER BY name",
+                "SELECT * FROM alert_rules WHERE enabled=1 ORDER BY name"
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM alert_rules ORDER BY name").fetchall()
@@ -378,9 +375,7 @@ class MonitoringDatabase:
         return alert
 
     def get_alerts(
-        self,
-        state: Optional[AlertState] = None,
-        hours: int = 168,
+        self, state: Optional[AlertState] = None, hours: int = 168
     ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
@@ -417,7 +412,7 @@ class AlertEngine:
     def __init__(self, db: MonitoringDatabase):
         self.db = db
         self._metric_buffer: Dict[str, List[tuple]] = defaultdict(
-            list,
+            list
         )  # rule_id -> [(value, timestamp)]
 
     def evaluate(self, metric: MetricPayload):
@@ -502,7 +497,7 @@ class DashboardWSManager:
 
     async def broadcast(self, event_type: str, data: Any):
         msg = json.dumps(
-            {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()},
+            {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()}
         )
         stale = []
         with self._lock:
@@ -528,10 +523,6 @@ app = FastAPI(
     description="Self-hosted monitoring, metrics, alerting, and dashboard API. Replaces CF infinity-monitoring-dashboard.",
     version="1.0.0",
 )
-
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "monitoring")
 
 app.add_middleware(
     CORSMiddleware,
@@ -566,12 +557,18 @@ STARTED_AT = datetime.now(timezone.utc)
 async def health():
     uptime = (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
     return {
-        "entity": health_entity_block(8007, "the-observatory"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": uptime,
         "version": "1.0.0",
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+        },
     }
 
 
@@ -602,8 +599,7 @@ async def submit_health_report(report: HealthReport):
     """Submit a health report for a service."""
     db.store_health(report)
     await ws_manager.broadcast(
-        "health_update",
-        {"service": report.service_name, "status": report.status.value},
+        "health_update", {"service": report.service_name, "status": report.status.value}
     )
     return {"ok": True, "service": report.service_name, "status": report.status.value}
 
@@ -778,15 +774,10 @@ async def collect_health():
                 db.store_health(report)
                 results.append({"service": svc["name"], "status": "healthy"})
         except Exception as e:
-            safe_message = log_server_error(
-                e,
-                500,
-                context=f"health collection for {svc['name']}",
-            )
             report = HealthReport(
                 service_name=svc["name"],
                 status=HealthStatus.unhealthy,
-                metadata={"error": safe_message},
+                metadata={"error": safe_error_detail(e, 500)},
             )
             db.store_health(report)
             results.append(

@@ -41,7 +41,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from Dimensional.sanitize import sanitize_for_log
-from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")
 
@@ -50,7 +49,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. The Nexus cannot authenticate WebSocket connections. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 JWT_SECRET: str = _jwt_secret_raw
 
@@ -133,10 +132,7 @@ class ConnectionManager:
         )
 
     async def connect(
-        self,
-        ws: WebSocket,
-        user_id: str,
-        metadata: dict[str, Any] | None = None,
+        self, ws: WebSocket, user_id: str, metadata: dict[str, Any] | None = None
     ) -> bool:
         """Accept a new WebSocket connection."""
         if self.total_connections >= self.max_connections:
@@ -180,8 +176,7 @@ class ConnectionManager:
         conn_info = self._connections.pop(ws, None)
         if conn_info:
             logger.info(
-                "ws_disconnected: user=%s",
-                sanitize_for_log(conn_info.get("user_id", "unknown")),
+                "ws_disconnected: user=%s", sanitize_for_log(conn_info.get("user_id", "unknown"))
             )  # codeql[py/cleartext-logging]
 
     async def subscribe(self, ws: WebSocket, channel: str) -> bool:
@@ -232,10 +227,7 @@ class ConnectionManager:
         return recipients
 
     async def _broadcast_to_channel(
-        self,
-        channel: str,
-        message: WSMessage,
-        exclude: WebSocket | None = None,
+        self, channel: str, message: WSMessage, exclude: WebSocket | None = None
     ) -> int:
         """Broadcast a message to all connections in a channel."""
         recipients = self._channels.get(channel, set())
@@ -280,8 +272,7 @@ def verify_token(token: str, secret: str = "") -> dict[str, Any] | None:
         return None
     except pyjwt.InvalidTokenError as e:
         logger.warning(
-            "token_verification_failed: %s",
-            sanitize_for_log(e),
+            "token_verification_failed: %s", sanitize_for_log(e)
         )  # codeql[py/cleartext-logging]
         return None
 
@@ -293,10 +284,6 @@ app = FastAPI(
     description="Self-hosted WebSocket communication hub for Trancendos",
     version="1.0.0",
 )
-
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "infinity-ws")
 
 _cors_origins = [
     o.strip()
@@ -337,7 +324,13 @@ async def health():
         "service": "infinity-ws",
         "connections": manager.total_connections,
         "channels": manager.total_channels,
-        "entity": health_entity_block(8004, "infinity-ws"),
+        "entity": {
+            "location": "The Nexus",
+            "pillar": "Architectural",
+            "lead_ai": "The Nexus",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "AI Communication Gateway & Transfer Hub",
+        },
     }
 
 
@@ -394,7 +387,7 @@ async def websocket_endpoint(
                         sender="system",
                         message_id=str(uuid.uuid4()),
                         timestamp=datetime.now(timezone.utc).isoformat(),
-                    ).model_dump(),
+                    ).model_dump()
                 )
                 continue
 
@@ -409,7 +402,7 @@ async def websocket_endpoint(
                         sender="system",
                         message_id=str(uuid.uuid4()),
                         timestamp=datetime.now(timezone.utc).isoformat(),
-                    ).model_dump(),
+                    ).model_dump()
                 )
                 continue
 
@@ -421,7 +414,7 @@ async def websocket_endpoint(
                         sender="system",
                         message_id=str(uuid.uuid4()),
                         timestamp=datetime.now(timezone.utc).isoformat(),
-                    ).model_dump(),
+                    ).model_dump()
                 )
 
             elif message.type == "subscribe" and message.channel:
@@ -436,7 +429,7 @@ async def websocket_endpoint(
                         sender="system",
                         message_id=str(uuid.uuid4()),
                         timestamp=datetime.now(timezone.utc).isoformat(),
-                    ).model_dump(),
+                    ).model_dump()
                 )
 
             elif message.type == "unsubscribe" and message.channel:
@@ -449,7 +442,7 @@ async def websocket_endpoint(
                         sender="system",
                         message_id=str(uuid.uuid4()),
                         timestamp=datetime.now(timezone.utc).isoformat(),
-                    ).model_dump(),
+                    ).model_dump()
                 )
 
             elif message.type == "message" and message.channel:
@@ -463,7 +456,7 @@ async def websocket_endpoint(
                         sender="system",
                         message_id=message.message_id,
                         timestamp=datetime.now(timezone.utc).isoformat(),
-                    ).model_dump(),
+                    ).model_dump()
                 )
 
             elif message.type == "channels":
@@ -475,7 +468,7 @@ async def websocket_endpoint(
                         sender="system",
                         message_id=str(uuid.uuid4()),
                         timestamp=datetime.now(timezone.utc).isoformat(),
-                    ).model_dump(),
+                    ).model_dump()
                 )
 
     except WebSocketDisconnect:

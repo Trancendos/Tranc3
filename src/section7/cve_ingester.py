@@ -120,8 +120,7 @@ class NvdFeedIngestor:
         # Description (prefer English)
         descs = cve_node.get("description", {}).get("description_data", [])
         description = next(
-            (d["value"] for d in descs if d.get("lang") == "en"),
-            "No description available.",
+            (d["value"] for d in descs if d.get("lang") == "en"), "No description available."
         )
 
         # CVSS v3 preferred, fall back to v2
@@ -244,7 +243,7 @@ class CisaKevIngestor:
                         tags=tags,
                         published=v.get("dateAdded", ""),
                         raw=v,
-                    ),
+                    )
                 )
             return records
         except (URLError, OSError) as exc:
@@ -339,7 +338,7 @@ class OpenCveCompatIngestor:
                         published=item.get("created_at", ""),
                         source="opencve",
                         raw=item,
-                    ),
+                    )
                 )
             return records
         except (URLError, OSError) as exc:
@@ -540,12 +539,10 @@ def get_default_ingestors(
 
     All sources are zero-cost and require no paid API keys.
     opencve.io has a free self-hosted tier and a free cloud tier.
-    OSV (Google Open Source Vulnerabilities) — no auth required.
     """
     return [
         NvdFeedIngestor(max_items=50),
         CisaKevIngestor(max_items=25),
-        OsvIngestor(max_items=30),
         OpenCveCompatIngestor(
             base_url=opencve_base_url,
             api_key=opencve_api_key,

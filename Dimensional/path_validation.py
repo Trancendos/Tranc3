@@ -9,13 +9,11 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
-import shutil
 from pathlib import Path, PurePosixPath
-from typing import Any, Union
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -25,117 +23,6 @@ _TRAVERSAL_PATTERN = re.compile(r"(?:\.\.)|(?:\x00)")
 
 class PathTraversalError(ValueError):
     """Raised when a path escapes its allowed base directory."""
-
-
-def _base_dir_realpath(base_dir: Union[str, Path]) -> str:
-    return os.path.realpath(str(base_dir))
-
-
-def _is_path_under_base(candidate: str, base: str) -> bool:
-    """Return True when *candidate* is *base* or a path under *base*."""
-    candidate = os.path.normpath(candidate)
-    base = os.path.normpath(base)
-    if candidate == base:
-        return True
-    return candidate.startswith(base + os.sep)
-
-
-def _fs_exists(path: str) -> bool:
-    """Probe disk for a path already verified under its allowed base (internal)."""
-    # codeql[py/path-injection]
-    return os.path.exists(path)
-
-
-def _fs_isfile(path: str) -> bool:
-    """Probe whether a base-verified path is a regular file (internal)."""
-    # codeql[py/path-injection]
-    return os.path.isfile(path)
-
-
-def _fs_open_text(path: str, *, encoding: str, errors: str):
-    """Open a base-verified path for text reads (internal)."""
-    # codeql[py/path-injection]
-    return open(path, encoding=encoding, errors=errors)
-
-
-def _fs_open_write(path: str, *, encoding: str):
-    """Open a base-verified path for text writes (internal)."""
-    # codeql[py/path-injection]
-    return open(path, "w", encoding=encoding)
-
-
-def _fs_makedirs(path: str) -> None:
-    """Create a base-verified directory tree (internal)."""
-    # codeql[py/path-injection]
-    os.makedirs(path, exist_ok=True)
-
-
-def _fs_rmtree(path: str) -> None:
-    """Remove a base-verified directory tree (internal)."""
-    # codeql[py/path-injection]
-    shutil.rmtree(path, ignore_errors=True)
-
-
-def _fs_listdir(path: str) -> list[str]:
-    """List entries in a base-verified directory (internal)."""
-    # codeql[py/path-injection]
-    return os.listdir(path)
-
-
-def _fs_stat_isdir(path: str) -> bool:
-    """Return True when a base-verified path is a directory (internal)."""
-    # codeql[py/path-injection]
-    return os.path.isdir(path)
-
-
-def _fs_stat_isfile(path: str) -> bool:
-    """Return True when a base-verified path is a regular file (internal)."""
-    # codeql[py/path-injection]
-    return os.path.isfile(path)
-
-
-def _fs_stat_size(path: str) -> int:
-    """Return size of a base-verified regular file (internal)."""
-    # codeql[py/path-injection]
-    return os.path.getsize(path)
-
-
-def _validated_path_str(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-    *,
-    must_exist: bool = False,
-    allow_create: bool = True,
-    must_be_file: bool = False,
-) -> str:
-    """Resolve *path* under *base_dir* using os.path (CodeQL path-injection safe)."""
-    raw = str(path) if isinstance(path, Path) else path
-
-    if _TRAVERSAL_PATTERN.search(raw):
-        raise PathTraversalError(
-            f"Path contains disallowed components (null byte or '..'): {raw!r}"
-        )
-
-    base = _base_dir_realpath(base_dir)
-    if os.path.isabs(raw):
-        candidate = os.path.normpath(raw)
-    else:
-        candidate = os.path.normpath(os.path.join(base, raw))
-    resolved = os.path.realpath(candidate)
-
-    if not _is_path_under_base(resolved, base):
-        raise PathTraversalError(f"Path escapes base directory: {resolved} is not under {base}")
-
-    if must_exist and not _fs_exists(resolved):
-        raise FileNotFoundError(f"Validated path does not exist: {resolved}")
-
-    if not allow_create and not _fs_exists(resolved):
-        raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
-
-    if must_be_file and not _fs_isfile(resolved):
-        raise FileNotFoundError(f"Validated path is not a file: {resolved}")
-
-    return resolved
 
 
 def validate_path(
@@ -164,151 +51,35 @@ def validate_path(
         FileNotFoundError: If *must_exist* is True and path is missing.
         ValueError: If *path* contains obviously malicious components.
     """
-    return Path(
-        _validated_path_str(
-            path,
-            base_dir,
-            must_exist=must_exist,
-            allow_create=allow_create,
+    if isinstance(path, Path):
+        raw = str(path)
+    else:
+        raw = path
+
+    # Reject null bytes and ".." sequences in the raw input before resolution
+    if _TRAVERSAL_PATTERN.search(raw):
+        raise PathTraversalError(
+            f"Path contains disallowed components (null byte or '..'): {raw!r}"
         )
-    )
 
+    base = Path(base_dir).resolve()
+    resolved = (base / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
 
-def validate_existing_file(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> Path:
-    """Validate that *path* resolves to an existing regular file under *base_dir*.
+    # Ensure the resolved path starts with the base directory
+    try:
+        resolved.relative_to(base)
+    except ValueError:
+        raise PathTraversalError(
+            f"Path escapes base directory: {resolved} is not under {base}"
+        ) from None
 
-    Combines ``validate_path`` with an ``is_file()`` check so callers do not
-    need to touch user-influenced paths after validation (CodeQL path-injection).
-    """
-    return Path(
-        _validated_path_str(
-            path,
-            base_dir,
-            must_exist=True,
-            allow_create=False,
-            must_be_file=True,
-        )
-    )
+    if must_exist and not resolved.exists():
+        raise FileNotFoundError(f"Validated path does not exist: {resolved}")
 
+    if not allow_create and not resolved.exists():
+        raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
 
-def existing_file_path_str(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> str:
-    """Return filesystem path string for an existing file under *base_dir*.
-
-    Use for APIs (e.g. ``FileResponse``) that require ``str`` so callers never
-    stringify user-influenced paths outside this module (CodeQL path-injection).
-    """
-    return _validated_path_str(
-        path,
-        base_dir,
-        must_exist=True,
-        allow_create=False,
-        must_be_file=True,
-    )
-
-
-def read_validated_file_text(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-    *,
-    max_bytes: int = 512_000,
-    encoding: str = "utf-8",
-) -> tuple[str, int]:
-    """Read text from an existing file under *base_dir* after validation.
-
-    Keeps ``is_file()`` / ``read_text()`` inside this module so callers never
-    touch user-influenced paths after validation (CodeQL path-injection).
-    """
-    safe_path = existing_file_path_str(path, base_dir)
-    with _fs_open_text(safe_path, encoding=encoding, errors="replace") as handle:
-        payload = handle.read(max_bytes + 1)
-    if len(payload) > max_bytes:
-        raise ValueError(f"File too large (>{max_bytes} bytes)")
-    return payload, len(payload.encode(encoding))
-
-
-def remove_validated_file(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> None:
-    """Delete an existing file under *base_dir* after validation."""
-    os.remove(existing_file_path_str(path, base_dir))
-
-
-def ensure_validated_directory(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> str:
-    """Create (if needed) and return a directory path under *base_dir*."""
-    resolved = _validated_path_str(path, base_dir, allow_create=True)
-    _fs_makedirs(resolved)
     return resolved
-
-
-def remove_validated_tree(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> None:
-    """Remove a directory tree under *base_dir* after validation."""
-    resolved = _validated_path_str(path, base_dir, must_exist=False, allow_create=True)
-    if _fs_exists(resolved):
-        _fs_rmtree(resolved)
-
-
-def list_validated_children(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> list[dict[str, Any]]:
-    """List immediate children of a validated directory under *base_dir*."""
-    resolved = _validated_path_str(path, base_dir, must_exist=True, allow_create=False)
-    if not _fs_stat_isdir(resolved):
-        raise FileNotFoundError(f"Validated path is not a directory: {resolved}")
-
-    entries: list[dict[str, Any]] = []
-    for name in sorted(_fs_listdir(resolved)):
-        child = os.path.join(resolved, name)
-        is_dir = _fs_stat_isdir(child)
-        entries.append(
-            {
-                "name": name,
-                "is_dir": is_dir,
-                "file_size": 0 if is_dir else _fs_stat_size(child),
-            }
-        )
-    return entries
-
-
-def write_validated_json(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-    payload: Any,
-    *,
-    encoding: str = "utf-8",
-) -> None:
-    """Write JSON to a file under *base_dir*, creating parent directories."""
-    parent = str(Path(path).parent) if str(Path(path).parent) not in (".", "") else ""
-    if parent:
-        ensure_validated_directory(parent, base_dir)
-    resolved = _validated_path_str(path, base_dir, allow_create=True)
-    with _fs_open_write(resolved, encoding=encoding) as handle:
-        json.dump(payload, handle)
-
-
-def read_validated_json(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-    *,
-    encoding: str = "utf-8",
-) -> Any:
-    """Read JSON from an existing file under *base_dir*."""
-    resolved = existing_file_path_str(path, base_dir)
-    with _fs_open_text(resolved, encoding=encoding, errors="strict") as handle:
-        return json.load(handle)
 
 
 def safe_join(

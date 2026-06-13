@@ -15,7 +15,6 @@ Free tier provisioning:
     --name tranc3 --edition GeneralPurpose --family Gen5 \\
     --capacity 1 --free-limit OnlyFreeDb
 """
-
 from __future__ import annotations
 
 import logging

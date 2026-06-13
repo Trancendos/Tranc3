@@ -1,20 +1,11 @@
 # src/quantum/quantum_engine.py
 # TRANC3 Full Quantum Module
-from __future__ import annotations
 
 import logging
 from typing import Dict, List, Optional
 
 import numpy as np
-
-try:
-    import torch
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 from qiskit import transpile as qiskit_transpile
 from qiskit.circuit.library import QFT

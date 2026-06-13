@@ -154,7 +154,7 @@ async def _handle_agent_create(params: Dict[str, Any]) -> Dict[str, Any]:
             "name": runtime.name,
             "agent_type": runtime.agent_type,
             "state": runtime.state.value,
-        },
+        }
     )
 
 
@@ -173,7 +173,7 @@ async def _handle_agent_start(params: Dict[str, Any]) -> Dict[str, Any]:
         {
             "agent_id": runtime.agent_id,
             "state": runtime.state.value,
-        },
+        }
     )
 
 
@@ -195,7 +195,7 @@ async def _handle_agent_stop(params: Dict[str, Any]) -> Dict[str, Any]:
             "agent_id": runtime.agent_id,
             "state": runtime.state.value,
             "metrics": runtime.metrics,
-        },
+        }
     )
 
 
@@ -267,7 +267,7 @@ async def _handle_agent_assign_goal(params: Dict[str, Any]) -> Dict[str, Any]:
             "goal_id": goal_id,
             "description": description,
             "priority": priority,
-        },
+        }
     )
 
 
@@ -295,7 +295,7 @@ async def _handle_agent_list_goals(params: Dict[str, Any]) -> Dict[str, Any]:
             "agent_id": runtime.agent_id,
             "goals": goals,
             "total": len(goals),
-        },
+        }
     )
 
 
@@ -328,7 +328,7 @@ async def _handle_agent_decompose_task(params: Dict[str, Any]) -> Dict[str, Any]
             "strategy": decomposition.strategy,
             "subtasks": [st.to_dict() for st in decomposition.subtasks],
             "total_complexity": decomposition.estimated_total_complexity,
-        },
+        }
     )
 
 
@@ -368,7 +368,7 @@ async def _handle_agent_retrieve_memory(params: Dict[str, Any]) -> Dict[str, Any
             "agent_id": runtime.agent_id,
             "memories": [m.to_dict() for m in memories],
             "total": len(memories),
-        },
+        }
     )
 
 
@@ -394,7 +394,7 @@ async def _handle_agent_reflect(params: Dict[str, Any]) -> Dict[str, Any]:
             "agent_id": runtime.agent_id,
             "reflections": reflections,
             "total": len(reflections),
-        },
+        }
     )
 
 
@@ -417,14 +417,14 @@ async def _handle_agent_list_all(params: Dict[str, Any]) -> Dict[str, Any]:
                 "agent_type": runtime.agent_type,
                 "state": runtime.state.value,
                 "is_running": runtime.is_running,
-            },
+            }
         )
 
     return _ok(
         {
             "agents": agents_info,
             "total": len(agents_info),
-        },
+        }
     )
 
 
@@ -450,7 +450,7 @@ async def _handle_agent_find_best(params: Dict[str, Any]) -> Dict[str, Any]:
             "best_match": profile.to_dict(),
             "required_tags": sorted(required_tags),
             "match_score": round(profile.matches_tags(required_tags), 4),
-        },
+        }
     )
 
 
@@ -470,7 +470,7 @@ async def _handle_agent_profiles(params: Dict[str, Any]) -> Dict[str, Any]:
         {
             "profiles": profiles,
             "total": len(profiles),
-        },
+        }
     )
 
 

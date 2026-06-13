@@ -159,18 +159,18 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if bearer_token:
             try:
                 # Import here to avoid circular imports and missing dependency issues
-                from auth import token_manager  # codeql[py/cyclic-import]
+                from auth import token_manager
 
                 payload = token_manager.decode_token(bearer_token)
                 username = payload.get("sub")
                 if username:
                     # Try to get full user info
                     try:
-                        from auth import user_manager  # codeql[py/cyclic-import]
+                        from auth import user_manager
 
                         user = user_manager.get_user(username)
-                    except Exception as _exc:
-                        logger.debug("suppressed %s", _exc, exc_info=False)
+                    except Exception:
+                        pass
                     if not user:
                         user = {
                             "sub": username,

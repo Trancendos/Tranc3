@@ -395,8 +395,8 @@ class HybridStorageProvider(StorageProvider):
         if self._sync_enabled:
             try:
                 await self._cloud.delete(path)
-            except FileNotFoundError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except FileNotFoundError:
+                pass
 
     async def list(self, prefix: str = "") -> List[str]:
         return await self._local.list(prefix)
@@ -469,8 +469,8 @@ class HybridStorageProvider(StorageProvider):
             self._sync_task.cancel()
             try:
                 await self._sync_task
-            except asyncio.CancelledError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except asyncio.CancelledError:
+                pass
             # Final sync before stopping
             await self.sync_to_cloud()
         self._sync_task = None

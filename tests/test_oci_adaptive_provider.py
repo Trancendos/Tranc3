@@ -299,7 +299,7 @@ class TestAwsSig4Sign:
         url="https://example.r2.cloudflarestorage.com/bucket/key",
         headers={"content-type": "application/octet-stream"},
         body=b"",
-        access_key="AKIAIOSFODNN7EXAMPLE",  # pragma: allowlist secret
+        access_key="AKIAIOSFODNN7EXAMPLE",
         secret_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",  # pragma: allowlist secret
         service="s3",
         region="auto",
@@ -325,7 +325,7 @@ class TestAwsSig4Sign:
     def test_authorization_contains_access_key(self):
         signed = _aws_sig4_sign(**self._BASE_ARGS)
         auth = next(v for k, v in signed.items() if k.lower() == "authorization")
-        assert "AKIAIOSFODNN7EXAMPLE" in auth  # pragma: allowlist secret
+        assert "AKIAIOSFODNN7EXAMPLE" in auth
 
     def test_authorization_contains_credential_scope(self):
         signed = _aws_sig4_sign(**self._BASE_ARGS)

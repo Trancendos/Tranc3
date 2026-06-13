@@ -223,7 +223,6 @@ async def health():
         sent = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='sent'").fetchone()[0]
         failed = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='failed'").fetchone()[0]
     return {
-        "entity": health_entity_block(8019, "sms-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -232,6 +231,14 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
+        "entity": {
+            "location": "The Nexus",
+            "pillar": "Architectural",
+            "lead_ai": "The Nexus",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "AI Communication Gateway & Transfer Hub",
+            "layer": "supporting",
+        },
     }
 
 
@@ -287,8 +294,7 @@ async def retry_sms(sms_id: int):
         if not conn.execute("SELECT id FROM outbox WHERE id = ?", (sms_id,)).fetchone():
             raise HTTPException(status_code=404, detail="SMS not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
-            (sms_id,),
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,)
         )
         conn.commit()
     return {"retrying": sms_id}
@@ -298,10 +304,10 @@ async def retry_sms(sms_id: int):
 async def stats():
     with get_conn() as conn:
         by_status = conn.execute(
-            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status",
+            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status"
         ).fetchall()
         by_provider = conn.execute(
-            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider",
+            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider"
         ).fetchall()
     return {
         "by_status": [dict(r) for r in by_status],

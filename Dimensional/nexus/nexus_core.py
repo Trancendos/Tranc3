@@ -41,6 +41,7 @@ import hashlib
 import json
 import logging
 import os
+import sqlite3
 import time
 import uuid
 from collections import defaultdict
@@ -57,7 +58,6 @@ from pydantic import BaseModel, Field
 from Dimensional.infinity.abac import ABACEngine
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.rbac import RBACEngine
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger("nexus")
 
@@ -445,7 +445,7 @@ class HealthAggregator:
     def _init_db(self) -> None:
         """Initialize the health database."""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3_connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS service_health (
                 service_id TEXT PRIMARY KEY,
@@ -478,7 +478,7 @@ class HealthAggregator:
         """Register an AI/Agent/Bot service for health tracking in the Nexus."""
         async with self._lock:
             self._services[health.service_id] = health
-        conn = sqlite3_connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
         conn.execute(
             """INSERT OR REPLACE INTO service_health
                (service_id, service_name, pillar, tier_requirement, status,
@@ -521,7 +521,7 @@ class HealthAggregator:
             if metadata:
                 svc.metadata.update(metadata)
 
-        conn = sqlite3_connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
         conn.execute(
             """UPDATE service_health
                SET status=?, last_heartbeat=?, response_time_ms=?, error_count=?, metadata=?
@@ -616,8 +616,8 @@ class HealthAggregator:
                                 "severity": "high",
                             }
                         )
-                except (ValueError, TypeError) as _exc:
-                    logger.debug("suppressed %s", _exc, exc_info=False)
+                except (ValueError, TypeError):
+                    pass
 
             # Check response time
             if svc.response_time_ms and svc.response_time_ms > self._thresholds["response_time_ms"]:
@@ -1273,6 +1273,7 @@ def create_nexus_app() -> FastAPI:
             result[tier.name] = [e.model_dump() for e in entities]
         return result
 
+
     # --- WebSocket Endpoint ---
 
     @app.websocket("/ws/events")
@@ -1290,8 +1291,8 @@ def create_nexus_app() -> FastAPI:
                         await ws.send_text(
                             json.dumps({"type": "subscribed", "channel": msg["channel"]})
                         )
-                except (json.JSONDecodeError, KeyError) as _exc:
-                    logger.debug("suppressed %s", _exc, exc_info=False)
+                except (json.JSONDecodeError, KeyError):
+                    pass
         except WebSocketDisconnect:
             _ws_manager.disconnect(ws)
 

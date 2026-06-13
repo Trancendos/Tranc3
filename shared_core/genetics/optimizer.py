@@ -13,15 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 import random
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from .fitness import FitnessEvaluator, LatencyThroughputFitness
-
-logger = logging.getLogger(__name__)
 
 Individual = Dict[str, Any]
 Population = List[Individual]
@@ -173,8 +170,8 @@ class GeneticOptimizer:
             import deap  # noqa: F401
 
             self._deap_available = True
-        except ImportError as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except ImportError:
+            pass
 
     def _random_individual(self) -> Individual:
         config: Dict[str, Any] = {}

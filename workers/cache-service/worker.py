@@ -217,7 +217,6 @@ async def health():
     now = time.time()
     active = sum(1 for _, (_, exp) in _store.items() if exp is None or exp > now)
     return {
-        "entity": health_entity_block(8023, "cache-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

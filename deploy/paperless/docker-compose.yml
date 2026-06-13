@@ -1,0 +1,85 @@
+version: "3.8"
+# DocUtari (Paperless-ngx) — Document Management Hub — Port 8765
+# Zero-cost self-hosted document management.
+
+services:
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: docutari
+    restart: unless-stopped
+    ports:
+      - "8765:8000"
+    environment:
+      PAPERLESS_REDIS: "redis://paperless-redis:6379"
+      PAPERLESS_DBHOST: "paperless-db"
+      PAPERLESS_DBNAME: "paperless"
+      PAPERLESS_DBUSER: "paperless"
+      PAPERLESS_DBPASS: "${PAPERLESS_DB_PASSWORD}"
+      PAPERLESS_SECRET_KEY: "${PAPERLESS_SECRET_KEY}"
+      PAPERLESS_URL: "${PAPERLESS_URL:-http://localhost:8765}"
+      PAPERLESS_ADMIN_USER: "${PAPERLESS_ADMIN_USER:-admin}"
+      PAPERLESS_ADMIN_PASSWORD: "${PAPERLESS_ADMIN_PASSWORD}"
+      PAPERLESS_ADMIN_MAIL: "${PAPERLESS_ADMIN_EMAIL:-ops@trancendos.com}"
+      # OCR
+      PAPERLESS_OCR_LANGUAGE: "eng"
+      PAPERLESS_OCR_LANGUAGES: "eng"
+      # Timezone
+      PAPERLESS_TIME_ZONE: "${TZ:-UTC}"
+      # Consumer
+      PAPERLESS_CONSUMER_POLLING: "60"
+      USERMAP_UID: "1000"
+      USERMAP_GID: "1000"
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - paperless-export:/usr/src/paperless/export
+      - paperless-consume:/usr/src/paperless/consume
+    depends_on:
+      paperless-db:
+        condition: service_healthy
+      paperless-redis:
+        condition: service_started
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.paperless.rule=PathPrefix(`/documents`)"
+      - "traefik.http.routers.paperless.entrypoints=web"
+      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
+
+  paperless-db:
+    image: postgres:15-alpine
+    container_name: paperless-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: "${PAPERLESS_DB_PASSWORD}"
+    volumes:
+      - paperless-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    restart: unless-stopped
+    networks:
+      - tranc3-network
+
+volumes:
+  paperless-data:
+  paperless-media:
+  paperless-export:
+  paperless-consume:
+  paperless-db-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network

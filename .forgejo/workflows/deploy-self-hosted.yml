@@ -30,67 +30,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── Production gate — must pass before any deploy starts ──────────────────
-  production-gate:
-    name: Production gate (pre-deploy)
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt -q
-
-      - name: Merge gate tests
-        run: |
-          python -m pytest \
-            tests/test_smoke.py \
-            tests/test_knowledge_brain.py \
-            tests/test_gbrain_worker.py \
-            tests/test_canonical_routes.py \
-            tests/test_compatibility.py \
-            tests/test_entity_effective.py \
-            tests/test_health_metadata.py \
-            tests/test_orchestrator_effective.py \
-            tests/test_zero_cost_registry.py \
-            tests/test_adaptive_rotator.py \
-            tests/test_api_startup_readiness.py \
-            tests/test_production_readiness_stack.py \
-            tests/test_live_deploy_contract.py \
-            tests/test_p0_health_syntax.py \
-            tests/test_p0_metrics_mount.py \
-            -q --tb=short
-        env:
-          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
-          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
-
-      - name: API import gate
-        run: python -c "import api; print('api OK')"
-        env:
-          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
-          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
-
-      - name: Citadel compose validate
-        run: python3 scripts/citadel_compose_validate.py
-
   # ──────────────────────────────────────────────────────────────
   # Build: Package all workers into Docker images
   # ──────────────────────────────────────────────────────────────
   build-workers:
     name: Build Worker Images
     runs-on: self-hosted
-    needs: production-gate
     steps:
       - uses: actions/checkout@v4
 

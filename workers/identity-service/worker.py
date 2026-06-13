@@ -39,26 +39,6 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-
-# Allowlist of valid column names — prevents SQL injection via dynamic column interpolation.
-# Any key not in this set is rejected before it can reach a SQL string.
-_VALID_COLUMNS: frozenset = frozenset(
-    {
-        "identity_id",
-        "user_id",
-        "provider",
-        "provider_id",
-        "email",
-        "display_name",
-        "avatar_url",
-        "metadata",
-        "verified",
-        "created_at",
-        "updated_at",
-    }
-)
-
-
 class IdentitiesDatabase:
     """SQLite-backed storage for identities."""
 
@@ -107,22 +87,15 @@ class IdentitiesDatabase:
     def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         data.setdefault("created_at", now)
-        # Filter to allowlisted columns only — prevents SQL injection via user-supplied keys
-        cols = [c for c in data.keys() if c in _VALID_COLUMNS]
-        if not cols:
-            raise ValueError("No valid columns provided for INSERT")
-        vals = [data[c] for c in cols]
+        cols = list(data.keys())
+        vals = list(data.values())
         placeholders = ", ".join("?" for _ in cols)
-        col_str = ", ".join(cols)  # safe: all keys are allowlisted above
         with self._cursor() as cur:
-            cur.execute(f"INSERT INTO identities ({col_str}) VALUES ({placeholders})", vals)
+            cur.execute(f"INSERT INTO identities ({', '.join(cols)}) VALUES ({placeholders})", vals)
         return data
 
     def get(self, id_field: str, id_value: str) -> Optional[Dict[str, Any]]:
-        if id_field not in _VALID_COLUMNS:
-            raise ValueError(f"Invalid id_field: {id_field!r}")
         conn = self._get_conn()
-        # id_field is allowlisted above — safe to interpolate
         row = conn.execute(f"SELECT * FROM identities WHERE {id_field}=?", (id_value,)).fetchone()
         return dict(row) if row else None
 
@@ -131,9 +104,7 @@ class IdentitiesDatabase:
         query = "SELECT * FROM identities WHERE 1=1"
         params: list = []
         for key, val in filters.items():
-            if key not in _VALID_COLUMNS:
-                continue  # silently skip unknown filter keys — prevents SQL injection
-            query += f" AND {key}=?"  # key is allowlisted above
+            query += f" AND {key}=?"
             params.append(val)
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
@@ -141,24 +112,14 @@ class IdentitiesDatabase:
         return [dict(r) for r in rows]
 
     def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
-        if id_field not in _VALID_COLUMNS:
-            raise ValueError(f"Invalid id_field: {id_field!r}")
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        # Filter to allowlisted columns only — prevents SQL injection via user-supplied keys
-        valid_data = {k: v for k, v in data.items() if k in _VALID_COLUMNS}
-        if not valid_data:
-            return False
-        sets = ", ".join(f"{k}=?" for k in valid_data.keys())  # keys are allowlisted above
-        vals = list(valid_data.values()) + [id_value]
+        sets = ", ".join(f"{k}=?" for k in data.keys())
+        vals = list(data.values()) + [id_value]
         with self._cursor() as cur:
-            # id_field is allowlisted above — safe to interpolate
             cur.execute(f"UPDATE identities SET {sets} WHERE {id_field}=?", vals)
             return cur.rowcount > 0
 
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
-        if id_field not in _VALID_COLUMNS:
-            raise ValueError(f"Invalid id_field: {id_field!r}")
-        # id_field is allowlisted above — safe to interpolate
         if soft:
             with self._cursor() as cur:
                 cur.execute(
@@ -210,7 +171,6 @@ STARTED_AT = datetime.now(timezone.utc)
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8015, "identity-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

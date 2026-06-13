@@ -215,8 +215,7 @@ class EnhancedSkillRegistry:
         if self._embedder is not None:
             loop = asyncio.get_event_loop()
             query_vec = await loop.run_in_executor(
-                None,
-                lambda: self._embedder.encode(query).tolist(),
+                None, lambda: self._embedder.encode(query).tolist()
             )
 
         candidates = [s for s in self.skills.values() if category is None or s.category == category]
@@ -648,7 +647,7 @@ def _bootstrap_registry(reg: EnhancedSkillRegistry) -> None:
             trigger_keywords=["gdpr", "compliance", "audit", "license", "privacy"],
             skills=["gdpr-compliance-check", "license-scanner", "model-card-generator"],
             description="Full compliance audit: GDPR, OSS licensing, ML model cards.",
-        ),
+        )
     )
     reg.register_bundle(
         SkillBundle(
@@ -662,7 +661,7 @@ def _bootstrap_registry(reg: EnhancedSkillRegistry) -> None:
                 "rate-limiter-sliding-window",
             ],
             description="Complete backend API stack with auth, database, and rate limiting.",
-        ),
+        )
     )
     reg.register_bundle(
         SkillBundle(
@@ -675,7 +674,7 @@ def _bootstrap_registry(reg: EnhancedSkillRegistry) -> None:
                 "embedding-drift-detector",
             ],
             description="AI pipeline: embeddings, vector search, LLM chaining, drift detection.",
-        ),
+        )
     )
     reg.register_bundle(
         SkillBundle(
@@ -690,7 +689,7 @@ def _bootstrap_registry(reg: EnhancedSkillRegistry) -> None:
             ],
             skills=["prometheus-metrics", "structured-logging"],
             description="Full observability stack: Prometheus metrics and structured logging.",
-        ),
+        )
     )
 
 
@@ -727,7 +726,7 @@ async def route_skill_request(query: str) -> List[SkillSearchResult]:
                             skill=skill,
                             score=0.5,
                             match_reason=f"bundle:{bundle.id}",
-                        ),
+                        )
                     )
 
     return results

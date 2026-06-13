@@ -4,6 +4,7 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ThemeProvider } from './contexts/ThemeContext'
 import './index.css'
+import './ux-system.css'
 
 // Automated accessibility audits in development
 if (import.meta.env.DEV) {

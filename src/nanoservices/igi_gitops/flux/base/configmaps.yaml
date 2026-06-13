@@ -4,8 +4,6 @@ kind: ConfigMap
 metadata:
   name: tranc3-config
   namespace: tranc3
-  annotations:
-    trivy-operator.aquasecurity.github.io/skip-checks: KSV104
 data:
   NSA_BROKER_URL: "http://nsa-broker:7780"
   SHI_GATEWAY_URL: "http://shi-gateway:7781"
@@ -20,8 +18,6 @@ kind: ConfigMap
 metadata:
   name: tranc3-dev-vars
   namespace: tranc3
-  annotations:
-    trivy-operator.aquasecurity.github.io/skip-checks: KSV104
 data:
   ENVIRONMENT: "dev"
   LOG_LEVEL: "debug"
@@ -32,8 +28,6 @@ kind: ConfigMap
 metadata:
   name: tranc3-staging-vars
   namespace: tranc3
-  annotations:
-    trivy-operator.aquasecurity.github.io/skip-checks: KSV104
 data:
   ENVIRONMENT: "staging"
   LOG_LEVEL: "info"
@@ -44,8 +38,6 @@ kind: ConfigMap
 metadata:
   name: tranc3-prod-vars
   namespace: tranc3
-  annotations:
-    trivy-operator.aquasecurity.github.io/skip-checks: KSV104
 data:
   ENVIRONMENT: "production"
   LOG_LEVEL: "warn"

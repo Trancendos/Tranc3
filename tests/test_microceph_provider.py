@@ -276,12 +276,12 @@ class TestPoolInfo:
 class TestRgwCredentials:
     def test_construction(self):
         creds = RgwCredentials(
-            access_key="TEST-ACCESS-KEY-123",  # pragma: allowlist secret
-            secret_key="test-secret-value",  # pragma: allowlist secret
+            access_key="AKIATEST123",
+            secret_key="supersecret",
             user_id="tranc3-admin",
             display_name="Tranc3 Admin",
         )
-        assert creds.access_key == "TEST-ACCESS-KEY-123"
+        assert creds.access_key == "AKIATEST123"
         assert creds.user_id == "tranc3-admin"
 
 

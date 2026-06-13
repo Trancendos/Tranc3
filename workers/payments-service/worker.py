@@ -22,9 +22,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -50,7 +47,7 @@ class PaymentsDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -124,8 +121,7 @@ class PaymentsDatabase:
         if soft:
             with self._cursor() as cur:
                 cur.execute(
-                    f"UPDATE payments SET status='cancelled' WHERE {id_field}=?",
-                    (id_value,),
+                    f"UPDATE payments SET status='cancelled' WHERE {id_field}=?", (id_value,)
                 )
                 return cur.rowcount > 0
         else:
@@ -144,10 +140,6 @@ app = FastAPI(
     description="Payment processing API. Replaces CF trancendos-payments-service.",
     version="1.0.0",
 )
-
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "payments-service")
 
 app.add_middleware(
     CORSMiddleware,
@@ -176,7 +168,6 @@ STARTED_AT = datetime.now(timezone.utc)
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8013, "payments-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -291,7 +282,7 @@ async def payment_stats():
     """Aggregate payment statistics by status and total amounts."""
     conn = db._get_conn()
     rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(amount) as total FROM payments GROUP BY status",
+        "SELECT status, COUNT(*) as count, SUM(amount) as total FROM payments GROUP BY status"
     ).fetchall()
     return {"stats": [dict(r) for r in rows]}
 

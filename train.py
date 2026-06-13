@@ -180,7 +180,7 @@ def train(args):
 
     if args.resume:
         logger.info("Resuming from checkpoint: %s", args.resume)
-        checkpoint = torch.load(args.resume, map_location=device, weights_only=True)
+        checkpoint = torch.load(args.resume, map_location=device)
         model = AdvancedTransformerModel(ModelConfig())
         model.load_state_dict(checkpoint["model_state_dict"])
         start_step = checkpoint.get("step", 0)

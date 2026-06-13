@@ -40,8 +40,34 @@ from Dimensional.sanitize import sanitize_for_log
 load_dotenv()
 from src.core.startup_validator import validate_startup
 
-# Shared startup rules for api.py and api_enhanced.py (dev generates ephemeral secrets).
-validate_startup()
+# ── Fail fast on missing critical secrets ────────────────────────────────────
+_SECRET_KEY = os.getenv("SECRET_KEY")
+if not _SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY is not set. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_JWT_SECRET = os.getenv("JWT_SECRET")
+if not _JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET is not set. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_DATABASE_URL = os.getenv("DATABASE_URL")
+if not _DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. "
+        "Set to your PostgreSQL connection string (e.g. postgresql://user:pass@host/db)."
+    )
+
+_REDIS_URL = os.getenv("REDIS_URL")
+if not _REDIS_URL:
+    raise RuntimeError(
+        "REDIS_URL is not set. "
+        "Set to your Redis connection string (e.g. redis://localhost:6379 or rediss://...)."
+    )
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
@@ -65,7 +91,6 @@ from src.database.schema import (  # noqa: F401  # intentional top-level import
     Message,
 )
 from src.database.vector_store import vector_store  # noqa: F401  # intentional top-level import
-from src.errors import make_error_response  # noqa: F401
 from src.errors.error_catalog import (  # noqa: F401  # intentional top-level import
     ErrorCode,
     format_error_response,
@@ -76,7 +101,6 @@ from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-leve
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
 )
-from src.observability.audit_middleware import AuditMiddleware  # noqa: F401
 from src.observability.metrics import (  # noqa: F401  # intentional top-level import
     log,
     record_churn_risk,
@@ -157,7 +181,7 @@ except ImportError as _e:
 
 try:
     from src.personality.matrix import (
-        EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
+        PersonalityMatrix as EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
     )
 except ImportError as _e:
     EnhancedPersonalityMatrix = None  # type: ignore[assignment,misc]
@@ -226,7 +250,6 @@ _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
 _health_monitor = None
 _auto_evolve = None
-_bootstrap_complete = False
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -234,7 +257,7 @@ _bootstrap_complete = False
 async def lifespan(app: FastAPI):
     global model, tokenizer, personality_matrix, redis_client, feature_flags
     global quantum_core, consciousness_model, neuromorphic, evolution_engine
-    global db_manager, db_user_manager, _health_monitor, _auto_evolve, _bootstrap_complete
+    global db_manager, db_user_manager, _health_monitor, _auto_evolve
 
     logger.info("TRANC3 starting up...")
     _bootstrap_complete = False
@@ -364,9 +387,7 @@ async def lifespan(app: FastAPI):
         model = AdvancedTransformerModel(cfg)
         if os.path.exists(cfg.model_path):
             if _TORCH_AVAILABLE and torch is not None:
-                model.load_state_dict(
-                    torch.load(cfg.model_path, map_location="cpu", weights_only=True)
-                )
+                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu"))
             logger.info("Model weights loaded")
         else:
             logger.warning("No model weights — echo mode active")
@@ -492,6 +513,30 @@ async def lifespan(app: FastAPI):
     except Exception as _ti_exc:
         logger.warning("Section 7 threat intel loop unavailable: %s", sanitize_for_log(_ti_exc))
 
+    # Healing Bridge — wire health monitor → self-repair engine
+    try:
+        from src.healing.healing_bridge import HealingBridge
+        from src.healing.self_repair import SelfRepairEngine
+
+        if _health_monitor is not None:
+            _repair_engine = SelfRepairEngine()
+            _healing_bridge = HealingBridge(_health_monitor, _repair_engine)
+            _healing_bridge.attach()
+            logger.info("Healing Bridge active — health monitor wired to self-repair engine")
+    except Exception as _hb_exc:
+        logger.warning("Healing Bridge unavailable: %s", sanitize_for_log(_hb_exc))
+
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("OpenTelemetry FastAPI instrumentation active")
+    except ImportError:
+        logger.debug("opentelemetry-instrumentation-fastapi not installed — traces disabled")
+    except Exception as _otel_exc:
+        logger.warning("OpenTelemetry instrumentation failed: %s", sanitize_for_log(_otel_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
@@ -518,24 +563,6 @@ async def lifespan(app: FastAPI):
             await _health_monitor.stop()
         except Exception as _stop_exc:
             logger.warning("ProactiveHealthMonitor stop error: %s", sanitize_for_log(_stop_exc))
-    try:
-        from src.adaptive.cloud_rotation_loop import stop_cloud_auto_rotation
-
-        await stop_cloud_auto_rotation()
-    except Exception:
-        pass
-    try:
-        from src.adaptive.layer_rotation_loop import stop_layer_auto_rotation
-
-        await stop_layer_auto_rotation()
-    except Exception:
-        pass
-    try:
-        from src.admin_os.backup_loop import stop_admin_os_auto_backup
-
-        await stop_admin_os_auto_backup()
-    except Exception:
-        pass
     if redis_client:
         redis_client.close()
 
@@ -655,78 +682,6 @@ app.add_middleware(ZeroTrustASGIMiddleware)
 if os.getenv("CAB_GATE_ENABLED", "false").lower() == "true":
     app.add_middleware(CABMiddleware)
 app.add_middleware(RBACMiddleware)
-# AuditMiddleware runs outermost so it captures every request after auth resolution
-app.add_middleware(AuditMiddleware, service_name="tranc3-backend")
-
-
-# ── Global exception handlers ─────────────────────────────────────────────────
-
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """Normalise all HTTPExceptions to the ErrorResponse envelope."""
-    from src.errors import ErrorCode
-
-    request_id = getattr(request.state, "request_id", None)
-
-    # If detail is already our structured dict, wrap it; otherwise use SYS_UNKNOWN fallback
-    if isinstance(exc.detail, dict) and "error" in exc.detail:
-        body = exc.detail
-        if request_id and isinstance(body.get("error"), dict):
-            body["error"]["request_id"] = request_id
-    else:
-        # Map common HTTP status codes to ErrorCode
-        _status_map = {
-            400: ErrorCode.SEC_INPUT_BLOCKED,
-            401: ErrorCode.AUTH_TOKEN_MISSING,
-            403: ErrorCode.AUTH_ACCOUNT_DISABLED,
-            404: ErrorCode.AUTH_USER_NOT_FOUND,
-            429: ErrorCode.RATE_HOURLY_EXCEEDED,
-        }
-        code = _status_map.get(exc.status_code, ErrorCode.SYS_UNKNOWN)
-        body = make_error_response(
-            code,
-            detail=str(exc.detail) if exc.detail else None,
-            request_id=request_id,
-        ).model_dump()
-
-    return JSONResponse(status_code=exc.status_code, content=body)
-
-
-@app.exception_handler(Exception)
-async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Catch-all for unhandled exceptions — log to Observatory, return structured 500."""
-    import traceback
-
-    from src.errors import ErrorCode
-    from src.observability.observatory import EventCategory, EventSeverity, get_observatory
-
-    request_id = getattr(request.state, "request_id", None)
-    tb = traceback.format_exc()
-
-    try:
-        get_observatory().record(
-            "http.unhandled_exception",
-            actor=None,
-            target=request.url.path,
-            category=EventCategory.SYSTEM,
-            severity=EventSeverity.CRITICAL,
-            outcome="failure",
-            metadata={
-                "exception_type": type(exc).__name__,
-                "traceback": tb[:2000],
-                "path": request.url.path,
-                "method": request.method,
-                "request_id": request_id,
-            },
-            session_id=request_id,
-        )
-    except Exception:
-        pass
-
-    body = make_error_response(ErrorCode.SYS_UNKNOWN, request_id=request_id).model_dump()
-    return JSONResponse(status_code=500, content=body)
-
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
@@ -739,47 +694,6 @@ from src.observability.routes import (
 )
 
 app.include_router(_observatory_router)
-
-# ── Capacity Guard (hard stops + utilisation status) ─────────────────────────
-from src.capacity.guard import (  # noqa: F401
-    CapacityService,
-    get_capacity_guard,
-)
-
-
-@app.get(
-    "/capacity/status", tags=["platform"], summary="Capacity utilisation for all external services"
-)
-async def capacity_status(current_user: dict = Depends(get_current_user)):
-    """Returns live utilisation for all external services. Highlights services at 80/90/95/100%."""
-    guard = get_capacity_guard()
-    raw = guard.status()
-    # Partition by alert level for easy scanning
-    by_level: dict = {"hard_stop": [], "critical": [], "alert": [], "warning": [], "ok": []}
-    for svc, data in raw.items():
-        by_level[data["status"]].append({**data, "service": svc})
-    return {"services": raw, "by_level": by_level}
-
-
-@app.post(
-    "/capacity/reset/{service_id}", tags=["platform"], summary="Admin: reset a capacity counter"
-)
-async def capacity_reset(service_id: str, current_user: dict = Depends(get_current_user)):
-    """Reset a single service counter (admin only — use after a billing window reset)."""
-    try:
-        svc = CapacityService(service_id)
-    except ValueError:
-        from src.errors import ErrorCode, make_error_response
-
-        raise HTTPException(
-            status_code=404,
-            detail=make_error_response(
-                ErrorCode.ENT_NOT_FOUND, f"Unknown capacity service: {service_id}"
-            ).model_dump(),
-        )
-    get_capacity_guard().reset(svc)
-    return {"reset": service_id, "note": "Counter reset to zero. Window clock restarted."}
-
 
 # ── The Nexus (AI communications + transfer hub) ─────────────────────────────
 from src.nexus.routes import router as _nexus_router  # noqa: F401  # intentional top-level import
@@ -881,16 +795,6 @@ from src.devocity.routes import (
 
 app.include_router(_devocity_router)
 
-# ── DEFSTAN Compliance Framework (The Chaos Party compliance tooling) ────────
-try:
-    from src.compliance.api_routes import router as _compliance_router
-
-    app.include_router(_compliance_router)
-except Exception:  # pragma: no cover — graceful degradation if pyyaml absent
-    import logging as _logging
-
-    _logging.getLogger(__name__).warning("Compliance router not loaded — pyyaml may be missing")
-
 # ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
 from src.artifactory.routes import (
     router as _artifactory_router,  # noqa: F401  # intentional top-level import
@@ -934,17 +838,6 @@ try:
 except ImportError:
     logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
-# ── Master Worker (MAPE-K sovereign orchestration engine) ────────────────────
-# Zero-cost enforcement, platform registry, adaptive blueprints.
-# Replaces GitHub Actions + Cloudflare Workers with self-hosted Python.
-try:
-    from src.master_worker.router import router as _master_worker_router  # noqa: F401
-
-    app.include_router(_master_worker_router)
-    logger.info("Master Worker router registered at /master")
-except Exception as _mw_err:
-    logger.warning("Master Worker router not loaded: %s", _mw_err)
-
 # ── Enhanced Capabilities (code gen, skills, planning, self-healing) ─────────
 # Migrated from legacy api_enhanced.py into the canonical entry point.
 from src.routers.enhanced_capabilities import router as _enhanced_router  # noqa: F401
@@ -956,25 +849,6 @@ app.include_router(_enhanced_router)
 from src.routers.ecosystem import router as _ecosystem_router  # noqa: F401
 
 app.include_router(_ecosystem_router)
-
-from src.routers.adaptive import router as _adaptive_router  # noqa: F401
-
-app.include_router(_adaptive_router)
-
-from src.routers.admin_os import router as _admin_os_router  # noqa: F401
-
-app.include_router(_admin_os_router)
-
-from src.monitoring.api_routes import router as monitoring_router  # noqa: F401
-
-app.include_router(monitoring_router, tags=["monitoring"])
-
-# ── Dashboard & Infinity Admin OS (static, zero-cost) ─────────────────────────
-_DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")
-if os.path.isdir(_DASHBOARD_DIR):
-    from fastapi.staticfiles import StaticFiles
-
-    app.mount("/dashboard", StaticFiles(directory=_DASHBOARD_DIR, html=True), name="dashboard")
 
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
@@ -1246,15 +1120,12 @@ async def health():
     degraded = any(str(v).startswith(("degraded", "unavailable")) for v in components.values())
     overall = "degraded" if degraded else "healthy"
 
-    from src.entities.health_metadata import health_entity_block
-
     return {
         "status": overall,
         "version": "2.0.0",
         "timestamp": datetime.datetime.utcnow().isoformat(),
         "uptime_seconds": round(time.time() - _start_time, 1),
         "components": components,
-        "entity": health_entity_block(8000, "tranc3-backend"),
     }
 
 
@@ -1979,162 +1850,6 @@ async def admin_healing(
 ):
     """Self-healing action history."""
     return {"history": self_healer.get_history()}
-
-
-@app.post(
-    "/admin/settings",
-    tags=["admin"],
-    summary="Persist runtime settings",
-    description=(
-        "Accepts a JSON body of key-value pairs (API keys, env var overrides). "
-        "Values are stored in the process environment for the session. "
-        "Sensitive keys are redacted from logs. "
-        "Does NOT persist across restarts — use Docker .env or Vault for permanent storage."
-    ),
-)
-async def admin_settings_write(
-    payload: dict,
-    current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:config"),
-):
-    """Store runtime setting overrides in the process environment."""
-    import os
-
-    SENSITIVE = {"SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL"}
-    ALLOWED_KEYS = {
-        "GROQ_API_KEY",
-        "GOOGLE_GEMINI_API_KEY",
-        "GITHUB_TOKEN",
-        "CEREBRAS_API_KEY",
-        "SAMBANOVA_API_KEY",
-        "MISTRAL_API_KEY",
-        "COHERE_API_KEY",
-        "DEEPSEEK_API_KEY",
-        "OLLAMA_URL",
-        "SECRET_KEY",
-        "JWT_SECRET",
-        "DATABASE_URL",
-        "REDIS_URL",
-    }
-    updated = []
-    skipped = []
-    for k, v in payload.items():
-        if k not in ALLOWED_KEYS:
-            skipped.append(k)
-            continue
-        if isinstance(v, str) and v:
-            os.environ[k] = v
-            updated.append(k if k not in SENSITIVE else f"{k}=***")
-    return {
-        "updated": updated,
-        "skipped": skipped,
-        "note": "Changes are in-process only. Restart or use .env for persistence.",
-    }
-
-
-@app.get(
-    "/admin/settings",
-    tags=["admin"],
-    summary="List runtime setting keys",
-    description="Returns which allowed setting keys are currently set (values are redacted).",
-)
-async def admin_settings_read(
-    current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:config"),
-):
-    import os
-
-    ALLOWED_KEYS = {
-        "GROQ_API_KEY",
-        "GOOGLE_GEMINI_API_KEY",
-        "GITHUB_TOKEN",
-        "CEREBRAS_API_KEY",
-        "SAMBANOVA_API_KEY",
-        "MISTRAL_API_KEY",
-        "COHERE_API_KEY",
-        "DEEPSEEK_API_KEY",
-        "OLLAMA_URL",
-        "SECRET_KEY",
-        "JWT_SECRET",
-        "DATABASE_URL",
-        "REDIS_URL",
-    }
-    return {k: ("set" if os.environ.get(k) else "unset") for k in sorted(ALLOWED_KEYS)}
-
-
-# ── User Settings — encrypted, server-side, per-user ─────────────────────────
-
-
-class UserSettingWrite(BaseModel):
-    """Single key/value pair for POST /user/settings."""
-
-    key: str = Field(..., description="Setting name (must be in the allowed list)")
-    value: str = Field(..., description="Plaintext value to encrypt and store")
-
-
-@app.get(
-    "/user/settings",
-    tags=["settings"],
-    summary="List which settings this user has stored",
-    description=(
-        "Returns {key: 'set'|'unset'} for every allowed setting key. "
-        "Values are never returned — use this to know what has been saved."
-    ),
-)
-async def user_settings_list(current_user: dict = Depends(get_current_user)):
-    from src.settings_store import get_settings_store
-
-    username: str = current_user.get("username") or current_user.get("sub", "unknown")
-    return get_settings_store().list_keys(username)
-
-
-@app.post(
-    "/user/settings",
-    tags=["settings"],
-    summary="Store an encrypted setting",
-    description=(
-        "Encrypts *value* with AES-128-CBC (Fernet) before persisting. "
-        "Key must be in the allowed list. Empty value is rejected — use DELETE to clear."
-    ),
-    status_code=200,
-)
-async def user_settings_write(
-    body: UserSettingWrite,
-    current_user: dict = Depends(get_current_user),
-):
-    from src.settings_store import ALLOWED_KEYS, get_settings_store
-
-    username: str = current_user.get("username") or current_user.get("sub", "unknown")
-    if body.key not in ALLOWED_KEYS:
-        raise HTTPException(
-            status_code=422, detail=f"Key '{body.key}' is not in the allowed settings list"
-        )
-    if not body.value.strip():
-        raise HTTPException(
-            status_code=422,
-            detail="value must not be empty — use DELETE /user/settings/{key} to clear",
-        )
-    get_settings_store().set(username, body.key, body.value)
-    return {"key": body.key, "status": "stored"}
-
-
-@app.delete(
-    "/user/settings/{key}",
-    tags=["settings"],
-    summary="Delete a stored setting",
-    description="Removes the encrypted value for *key*. Returns 404 if key was not set.",
-)
-async def user_settings_delete(
-    key: str,
-    current_user: dict = Depends(get_current_user),
-):
-    from src.settings_store import get_settings_store
-
-    username: str = current_user.get("username") or current_user.get("sub", "unknown")
-    deleted = get_settings_store().delete(username, key)
-    if not deleted:
-        raise HTTPException(status_code=404, detail=f"Setting '{key}' not found for this user")
-    return {"key": key, "status": "deleted"}
 
 
 @app.get(

@@ -2,42 +2,24 @@
     "name": "tranc3-web",
     "version": "1.0.0",
     "private": true,
-    "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
-        "preview": "vite preview",
-        "test": "vitest run",
-        "test:a11y": "vitest run src/test/a11y.test.tsx",
-        "test:watch": "vitest",
-        "lighthouse": "node ../scripts/lighthouse-audit.mjs"
+        "preview": "vite preview"
     },
     "dependencies": {
         "lucide-react": "^0.378.0",
         "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "react-router-dom": "^6.23.1"
+        "react-dom": "^18.3.1"
     },
     "devDependencies": {
-        "@axe-core/react": "^4.11.3",
-        "@testing-library/jest-dom": "^6.9.1",
-        "@testing-library/react": "^16.3.2",
-        "@testing-library/user-event": "^14.6.1",
-        "@types/jest-axe": "^3.5.9",
         "@types/react": "^18.3.1",
         "@types/react-dom": "^18.3.0",
-        "@types/react-router-dom": "^5.3.3",
         "@vitejs/plugin-react": "^5.2.0",
-        "@vitest/coverage-v8": "^4.1.8",
         "autoprefixer": "^10.4.19",
-        "axe-core": "^4.12.0",
-        "jest-axe": "^10.0.0",
-        "jsdom": "^29.1.1",
-        "lighthouse": "^13.3.0",
         "postcss": "^8.4.38",
         "tailwindcss": "^3.4.3",
         "typescript": "^5.4.5",
-        "vite": "^8.0.14",
-        "vitest": "^4.1.8"
+        "vite": "^8.0.14"
     }
 }

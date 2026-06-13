@@ -75,10 +75,6 @@ _jobs: Dict[str, Job] = {}
 WORKDIR = Path(os.environ.get("FFMPEG_WORKDIR", "/app/workdir"))
 WORKDIR.mkdir(parents=True, exist_ok=True)
 
-# Allowed root for input media (paths must resolve under this directory)
-MEDIA_ROOT = Path(os.environ.get("FFMPEG_MEDIA_ROOT", str(WORKDIR / "media")))
-MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -101,16 +97,6 @@ def _ffmpeg_version() -> str:
     except Exception:
         pass
     return "unknown"
-
-
-def _validated_input_path_str(input_path: str) -> str:
-    """Return validated filesystem path string for input media under MEDIA_ROOT."""
-    try:
-        return existing_file_path_str(input_path, MEDIA_ROOT)
-    except PathTraversalError as exc:
-        raise HTTPException(status_code=400, detail="Invalid input path") from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Input file not found") from exc
 
 
 def _quality_to_crf(quality: str) -> str:
@@ -175,11 +161,11 @@ async def _run_job(job_id: str, coro) -> None:  # noqa: ANN001
         output_path = await coro
         job.output_path = str(output_path)
         job.status = JobStatus.DONE
-        log.info("job %s done → %s", sanitize_for_log(job_id), sanitize_for_log(output_path))
+        log.info("job %s done → %s", job_id, output_path)
     except Exception as exc:  # noqa: BLE001
         job.status = JobStatus.FAILED
         job.error = str(exc)
-        log.error("job %s failed: %s", sanitize_for_log(job_id), sanitize_for_log(exc))
+        log.error("job %s failed: %s", job_id, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -399,11 +385,10 @@ async def transcode(req: TranscodeRequest) -> dict:
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="ffmpeg not found in PATH")
 
-    input_path = _validated_input_path_str(req.input_path)
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
     asyncio.create_task(
-        _run_job(job_id, _transcode(input_path, req.output_format, req.quality)),
+        _run_job(job_id, _transcode(req.input_path, req.output_format, req.quality))
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
@@ -423,11 +408,10 @@ async def thumbnail(req: ThumbnailRequest) -> dict:
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="ffmpeg not found in PATH")
 
-    input_path = _validated_input_path_str(req.input_path)
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
     asyncio.create_task(
-        _run_job(job_id, _thumbnail(input_path, req.timestamp_seconds)),
+        _run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds))
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
@@ -438,11 +422,10 @@ async def compress(req: CompressRequest) -> dict:
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="ffmpeg not found in PATH")
 
-    input_path = _validated_input_path_str(req.input_path)
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
     asyncio.create_task(
-        _run_job(job_id, _compress(input_path, req.target_mb)),
+        _run_job(job_id, _compress(req.input_path, req.target_mb))
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 

@@ -116,8 +116,7 @@ def _save_cache(ip: str, data: dict, source: str) -> None:
 
 
 async def _lookup_ip_api(ip: str) -> Optional[dict]:
-    safe_ip = validate_ip_address(ip)
-    url = f"http://ip-api.com/json/{safe_ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org"
+    url = f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org"
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(url)
@@ -141,8 +140,7 @@ async def _lookup_ip_api(ip: str) -> Optional[dict]:
 
 
 async def _lookup_ipapi_co(ip: str) -> Optional[dict]:
-    safe_ip = validate_ip_address(ip)
-    url = f"https://ipapi.co/{safe_ip}/json/"
+    url = f"https://ipapi.co/{ip}/json/"
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(url, headers={"User-Agent": "trancendos-geo-service/1.0"})
@@ -180,28 +178,22 @@ def _stub_result(ip: str) -> dict:
 
 
 async def lookup_ip(ip: str) -> dict:
-    try:
-        safe_ip = validate_ip_address(ip)
-    except SSRFError as exc:
-        logger.warning("Invalid IP address rejected: %s", sanitize_for_log(exc))
-        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
-
-    cached = _get_cached(safe_ip)
+    cached = _get_cached(ip)
     if cached:
         return {**cached, "cached": True}
 
     # Try ip-api.com first, then ipapi.co
-    data = await _lookup_ip_api(safe_ip)
+    data = await _lookup_ip_api(ip)
     source = "ip-api.com"
     if not data:
-        data = await _lookup_ipapi_co(safe_ip)
+        data = await _lookup_ipapi_co(ip)
         source = "ipapi.co"
     if not data:
-        data = _stub_result(safe_ip)
+        data = _stub_result(ip)
         source = "stub"
 
-    _save_cache(safe_ip, data, source)
-    return {**data, "ip": safe_ip, "source": source, "cached": False}
+    _save_cache(ip, data, source)
+    return {**data, "ip": ip, "source": source, "cached": False}
 
 
 # ---------------------------------------------------------------------------
@@ -297,12 +289,18 @@ async def health():
     with get_conn() as conn:
         cached = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
     return {
-        "entity": health_entity_block(8027, "geo-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "cached_ips": cached,
+        "entity": {
+            "location": "The Dutchy",
+            "pillar": "DevOps",
+            "lead_ai": "Predictive lore",
+            "primes": ["Trancendos"],
+            "primary_function": "Intelligence & Market Analysis",
+        },
     }
 
 
@@ -347,11 +345,10 @@ async def cache_stats():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
         fresh = conn.execute(
-            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?",
-            (now - CACHE_TTL,),
+            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?", (now - CACHE_TTL,)
         ).fetchone()[0]
         by_source = conn.execute(
-            "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source",
+            "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source"
         ).fetchall()
     return {
         "total_cached": total,

@@ -186,13 +186,16 @@ class IBridge(ABC):
 
     @property
     @abstractmethod
-    def domain(self) -> BridgeDomain: ...
+    def domain(self) -> BridgeDomain:
+        ...
 
     @abstractmethod
-    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket: ...
+    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
+        ...
 
     @abstractmethod
-    def health_check(self) -> BridgeHealthReport: ...
+    def health_check(self) -> BridgeHealthReport:
+        ...
 
     @abstractmethod
     def scan_and_cleanup(self) -> List[str]:
@@ -413,7 +416,7 @@ class NexusBridge(IBridge):
     def scan_and_cleanup(self) -> List[str]:
         """Clean up stale channels and discovered agents."""
         actions = []
-        # _now = time.time()  # noqa: F841
+        # _now = time.time()  # noqa: assigned but unused
         # Clean channels with no recent activity
         stale_channels = [ch for ch, msgs in self._channels.items() if len(msgs) == 0]
         for ch in stale_channels:
@@ -636,7 +639,7 @@ class SentinelStation:
         #     requires_escalation=False,
         # )
 
-        # _result_packet = to_bridge.process_packet(packet)  # noqa: F841
+        # _result_packet = to_bridge.process_packet(packet)  # noqa: assigned but unused
 
         result = EscalationResult(
             success=True,
@@ -647,7 +650,7 @@ class SentinelStation:
         )
         self._escalation_log.append(result)
         logger.info(
-            f"Sentinel: Escalated {request.packet_id}: {request.from_bridge.value} → {request.to_bridge.value}",
+            f"Sentinel: Escalated {request.packet_id}: {request.from_bridge.value} → {request.to_bridge.value}"
         )
 
         return result
@@ -708,19 +711,19 @@ class SentinelStation:
 
             if health.error_rate > 0.1:
                 anomalies.append(
-                    f"{domain.value} bridge has high error rate: {health.error_rate * 100:.1f}%",
+                    f"{domain.value} bridge has high error rate: {health.error_rate * 100:.1f}%"
                 )
                 recommendations.append(f"Investigate {domain.value} bridge error patterns")
 
             if health.packets_pending > 100:
                 anomalies.append(
-                    f"{domain.value} bridge has {health.packets_pending} pending packets",
+                    f"{domain.value} bridge has {health.packets_pending} pending packets"
                 )
                 recommendations.append(f"Scale {domain.value} bridge capacity")
 
             if health.average_latency_ms > 1000:
                 anomalies.append(
-                    f"{domain.value} bridge has high latency: {health.average_latency_ms:.0f}ms",
+                    f"{domain.value} bridge has high latency: {health.average_latency_ms:.0f}ms"
                 )
                 recommendations.append(f"Optimize {domain.value} bridge processing")
 
@@ -780,9 +783,7 @@ class SentinelStation:
         packet.traffic_class = TrafficClass.UNKNOWN  # de-classify before handing off
         packet.metadata["cross_bridge_via"] = "sentinel"
         logger.info(
-            "Sentinel: cross-bridge packet %s routed to %s",
-            packet.id,
-            target_domain.value,
+            "Sentinel: cross-bridge packet %s routed to %s", packet.id, target_domain.value
         )
         return bridge.process_packet(packet)
 

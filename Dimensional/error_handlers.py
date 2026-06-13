@@ -23,8 +23,6 @@ from typing import Optional
 
 from fastapi import HTTPException
 
-from Dimensional.sanitize import sanitize_for_log
-
 logger = logging.getLogger(__name__)
 
 # In production, we return generic messages. In development, we can be
@@ -83,8 +81,8 @@ def safe_error_detail(
             "Error ref=%s status=%d: %s: %s",
             ref_id,
             status_code,
-            sanitize_for_log(type(exc).__name__),
-            sanitize_for_log(exc),
+            type(exc).__name__,
+            exc,
         )
         if _IS_PROD:
             return f"{_SAFE_MESSAGES.get(status_code, 'An error occurred.')} (ref: {ref_id})"
@@ -108,40 +106,6 @@ def safe_error_detail(
         return sanitized
 
     return _SAFE_MESSAGES.get(status_code, "An error occurred.")
-
-
-def log_server_error(
-    exc: Exception,
-    status_code: int = 500,
-    *,
-    context: str = "",
-    log_reference: bool = True,
-) -> str:
-    """Log *exc* server-side and return a CWE-209-safe client message.
-
-    Unlike :func:`safe_error_detail`, the returned string never embeds
-    ``str(exc)``, so static analysis (CodeQL py/exception-information-leakage)
-    can prove responses do not leak internal exception details.
-    """
-    ref_suffix = ""
-    if log_reference:
-        import uuid
-
-        ref_id = uuid.uuid4().hex[:8]
-        log_fn = logger.warning if status_code < 500 else logger.error
-        prefix = f"{sanitize_for_log(context)}: " if context else ""
-        log_fn(
-            "Error ref=%s status=%d %s%s: %s",
-            ref_id,
-            status_code,
-            sanitize_for_log(prefix),
-            sanitize_for_log(type(exc).__name__),
-            sanitize_for_log(exc),
-        )
-        if _IS_PROD:
-            ref_suffix = f" (ref: {ref_id})"
-    base = _SAFE_MESSAGES.get(status_code, "An error occurred.")
-    return f"{base}{ref_suffix}"
 
 
 class SafeHTTPException(HTTPException):

@@ -255,18 +255,18 @@
     "rule_id": "CWE-327",
     "directory": "src/nanoservices/vector_plan_cache",
     "file_glob": "src/nanoservices/vector_plan_cache/*.py",
-    "observation_count": 47,
+    "observation_count": 51,
     "false_positive_count": 0,
-    "last_seen": "2026-05-30T06:52:21.944320+00:00",
+    "last_seen": "2026-05-31T17:40:36.308457+00:00",
     "notes": ""
   },
   "CWE-327:src/nanoservices/feature_flags": {
     "rule_id": "CWE-327",
     "directory": "src/nanoservices/feature_flags",
     "file_glob": "src/nanoservices/feature_flags/*.py",
-    "observation_count": 47,
+    "observation_count": 51,
     "false_positive_count": 0,
-    "last_seen": "2026-05-30T06:52:21.944333+00:00",
+    "last_seen": "2026-05-31T17:40:36.308580+00:00",
     "notes": ""
   },
   "PY-008:src/nanoservices/circuit_breaker": {
@@ -660,18 +660,18 @@
     "rule_id": "CWE-327",
     "directory": "workers/cdn-service",
     "file_glob": "workers/cdn-service/*.py",
-    "observation_count": 47,
+    "observation_count": 51,
     "false_positive_count": 0,
-    "last_seen": "2026-05-30T06:52:21.947022+00:00",
+    "last_seen": "2026-05-31T17:40:36.309327+00:00",
     "notes": ""
   },
   "CWE-327:workers/storage-service": {
     "rule_id": "CWE-327",
     "directory": "workers/storage-service",
     "file_glob": "workers/storage-service/*.py",
-    "observation_count": 47,
+    "observation_count": 51,
     "false_positive_count": 0,
-    "last_seen": "2026-05-30T06:52:21.947033+00:00",
+    "last_seen": "2026-05-31T17:40:36.309196+00:00",
     "notes": ""
   },
   "CWE-117:workers/hive-service": {

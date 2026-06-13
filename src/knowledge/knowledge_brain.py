@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import math
-import os
 import re
 import sqlite3
 import time
@@ -23,8 +22,6 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
-
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # ── Dataclasses ──────────────────────────────────────────────────────────────
 
@@ -185,7 +182,7 @@ class KnowledgeBrain:
     def __init__(self, db_path: str = ":memory:", markdown_dir: Optional[str] = None) -> None:
         self._db_path = db_path
         self._markdown_dir = Path(markdown_dir) if markdown_dir else None
-        self._conn = sqlite3_connect(db_path, check_same_thread=False)
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._bm25 = BM25Index()
         self._init_db()
@@ -289,8 +286,7 @@ class KnowledgeBrain:
         if cursor.rowcount > 0:
             self._bm25.remove(page_id)
             self._conn.execute(
-                "DELETE FROM links WHERE source_id = ? OR target_id = ?",
-                (page_id, page_id),
+                "DELETE FROM links WHERE source_id = ? OR target_id = ?", (page_id, page_id)
             )
             self._conn.commit()
             return True
@@ -300,8 +296,7 @@ class KnowledgeBrain:
         """List all pages, optionally filtered by source."""
         if source is not None:
             rows = self._conn.execute(
-                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC",
-                (source,),
+                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC", (source,)
             ).fetchall()
         else:
             rows = self._conn.execute("SELECT * FROM pages ORDER BY updated_at DESC").fetchall()
@@ -376,7 +371,7 @@ class KnowledgeBrain:
         sources = [
             r[0]
             for r in self._conn.execute(
-                "SELECT DISTINCT source FROM pages WHERE source != ''",
+                "SELECT DISTINCT source FROM pages WHERE source != ''"
             ).fetchall()
         ]
         return {
@@ -417,10 +412,6 @@ class KnowledgeBrain:
             return fut.result(timeout=10)
         return loop.run_until_complete(self.list_pages(source=source))
 
-    async def start_dream_cycle(self, interval_seconds: float = 3600.0) -> None:
-        """Background consolidation hook (no-op until full dream-cycle scheduler lands)."""
-        del interval_seconds
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -438,18 +429,6 @@ def _parse_wikilinks(source_id: str, content: str) -> list[KBLink]:
         if target and target != source_id:
             links.append(KBLink(source_id=source_id, target_id=target, alias=alias.strip()))
     return links
-
-
-_brain_singleton: Optional[KnowledgeBrain] = None
-
-
-def get_brain(db_path: Optional[str] = None) -> KnowledgeBrain:
-    """Return process-wide KnowledgeBrain instance (The Library)."""
-    global _brain_singleton
-    if _brain_singleton is None:
-        path = db_path or os.environ.get("KNOWLEDGE_BRAIN_DB", "data/knowledge.db")
-        _brain_singleton = KnowledgeBrain(path)
-    return _brain_singleton
 
 
 def _make_excerpt(content: str, query: str, window: int = 120) -> str:

@@ -15,17 +15,8 @@ import random
 from pathlib import Path
 from typing import Dict, List
 
-try:
-    import torch
-    from torch.utils.data import DataLoader, Dataset
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    DataLoader = object  # type: ignore[assignment,misc]
-    Dataset = object  # type: ignore[assignment,misc]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
+from torch.utils.data import DataLoader, Dataset
 
 from ..core.tokenizer import Tranc3Tokenizer
 
@@ -52,7 +43,7 @@ class ConversationDataset(Dataset):
         data_path = Path(data_dir) / split
         if not data_path.exists():
             raise FileNotFoundError(
-                f"Data split not found: {data_path}\nRun: python scripts/prepare_data.py",
+                f"Data split not found: {data_path}\nRun: python scripts/prepare_data.py"
             )
 
         self.samples = self._load_and_tokenize(data_path)

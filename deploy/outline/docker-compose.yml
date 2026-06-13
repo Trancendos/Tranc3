@@ -1,0 +1,85 @@
+version: "3.8"
+# The Library (Outline Wiki) — Zimik — Port 3300
+# Zero-cost self-hosted knowledge base.
+# Requires: outline-db (postgres), outline-redis, and an S3-compatible store.
+# For fully local use, set FILE_STORAGE=local and mount a volume.
+
+services:
+  outline:
+    image: outlinewiki/outline:latest
+    container_name: the-library
+    restart: unless-stopped
+    ports:
+      - "3300:3000"
+    environment:
+      SECRET_KEY: "${OUTLINE_SECRET_KEY}"
+      UTILS_SECRET: "${OUTLINE_UTILS_SECRET}"
+      DATABASE_URL: "postgres://outline:${OUTLINE_DB_PASSWORD}@outline-db:5432/outline"
+      REDIS_URL: "redis://outline-redis:6379"
+      URL: "${OUTLINE_URL:-http://localhost:3300}"
+      PORT: "3000"
+      # File storage — local (zero-cost, no S3 needed)
+      FILE_STORAGE: "local"
+      FILE_STORAGE_LOCAL_ROOT_DIR: "/var/lib/outline/data"
+      FILE_STORAGE_UPLOAD_MAX_SIZE: "26214400"
+      # Auth — OIDC via Infinity (The Guardian)
+      OIDC_CLIENT_ID: "${INFINITY_OIDC_CLIENT_ID:-outline}"
+      OIDC_CLIENT_SECRET: "${INFINITY_OIDC_CLIENT_SECRET}"
+      OIDC_AUTH_URI: "${INFINITY_URL:-http://localhost:8005}/oauth/authorize"
+      OIDC_TOKEN_URI: "${INFINITY_URL:-http://localhost:8005}/oauth/token"
+      OIDC_USERINFO_URI: "${INFINITY_URL:-http://localhost:8005}/oauth/userinfo"
+      OIDC_DISPLAY_NAME: "Trancendos Infinity"
+      OIDC_SCOPES: "openid profile email"
+      # Collaboration
+      COLLABORATION_URL: ""
+      FORCE_HTTPS: "false"
+      ENABLE_UPDATES: "false"
+      LOG_LEVEL: "info"
+    volumes:
+      - outline-data:/var/lib/outline/data
+    depends_on:
+      outline-db:
+        condition: service_healthy
+      outline-redis:
+        condition: service_started
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.outline.rule=PathPrefix(`/library`)"
+      - "traefik.http.routers.outline.entrypoints=web"
+      - "traefik.http.services.outline.loadbalancer.server.port=3000"
+
+  outline-db:
+    image: postgres:15-alpine
+    container_name: outline-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: outline
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: "${OUTLINE_DB_PASSWORD}"
+    volumes:
+      - outline-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  outline-redis:
+    image: redis:7-alpine
+    container_name: outline-redis
+    restart: unless-stopped
+    networks:
+      - tranc3-network
+
+volumes:
+  outline-data:
+  outline-db-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network

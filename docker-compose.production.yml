@@ -39,15 +39,6 @@ x-worker-common: &worker-common
   labels:
     - "tranc3.stack=production"
 
-# Platform workers: shared read-only admin DB for entity name overrides in /health
-x-worker-platform: &worker-platform
-  <<: *worker-common
-  environment:
-    ENTITY_OVERRIDES_DB: /app/data/infinity_admin.db
-    INFINITY_ADMIN_DB_PATH: /app/data/infinity_admin.db
-  volumes:
-    - admin-data:/app/data:ro
-
 x-healthcheck-default: &healthcheck-default
   interval: 30s
   timeout: 5s
@@ -106,20 +97,17 @@ services:
     image: hashicorp/vault:1.15
     container_name: tranc3-vault
     <<: *common
-    command: server -config=/vault/config/vault.hcl
-    cap_add:
-      - IPC_LOCK
+    command: server -dev
     environment:
-      - VAULT_ADDR=http://127.0.0.1:8200
+      - VAULT_DEV_ROOT_TOKEN_ID=tranc3-root-token
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
     ports:
       - "8200:8200"
     volumes:
       - vault-data:/vault/data
-      - vault-logs:/vault/logs
-      - ./deploy/vault/vault.hcl:/vault/config/vault.hcl:ro
-      - ./deploy/vault/policies:/vault/policies:ro
+      - vault-config:/vault/config
     healthcheck:
-      test: ["CMD-SHELL", "vault status >/dev/null 2>&1 || [ $$? -eq 2 ]"]
+      test: ["CMD", "vault", "status"]
       <<: *healthcheck-default
 
   # ── Prometheus — Metrics Collection ──────────────────────────────────
@@ -132,7 +120,6 @@ services:
       - "9091:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -241,24 +228,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Ollama — local zero-cost LLM (Tier 1 inference) ───────────────────
-  ollama:
-    image: ollama/ollama:latest
-    container_name: tranc3-ollama
-    <<: *common
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    labels:
-      - "traefik.enable=false"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-
   # ── Zot — OCI Container Registry ─────────────────────────────────────
   # Apache 2.0. Prevents Docker Hub rate-limiting for the platform.
   # All workers can pull images from http://zot:5000 inside the network.
@@ -366,60 +335,17 @@ services:
   # P0 WORKERS — Critical Path
   # ═══════════════════════════════════════════════════════════════════════
 
-  # ── Tranc3 Backend — Core FastAPI App (Port 8000) ────────────────────
-  tranc3-backend:
-    <<: *worker-platform
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: tranc3-backend
-    environment:
-      - SECRET_KEY=${SECRET_KEY}
-      - JWT_SECRET=${JWT_SECRET}
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL:-redis://valkey:6379/0}
-      - ENVIRONMENT=production
-      - CORS_ORIGINS=${CORS_ORIGINS}
-      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
-      - AUDIT_SIGNING_KEY=${AUDIT_SIGNING_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - HF_API_KEY=${HF_API_KEY:-}
-      - ENTITY_OVERRIDES_DB=/app/data/infinity_admin.db
-      - PROACTIVE_ORCHESTRATOR_ENABLED=${PROACTIVE_ORCHESTRATOR_ENABLED:-true}
-      - ADAPTIVE_ROTATION_ENABLED=${ADAPTIVE_ROTATION_ENABLED:-true}
-    ports:
-      - "8000:8000"
-    volumes:
-      - admin-data:/app/data
-      - backend-models:/app/models
-      - backend-cache:/app/cache
-      - backend-logs:/app/logs
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.tranc3-backend.rule=PathPrefix(`/api/backend`) || PathPrefix(`/mcp`) || PathPrefix(`/adaptive`) || PathPrefix(`/dashboard`)"
-      - "traefik.http.routers.tranc3-backend.entrypoints=web"
-      - "traefik.http.services.tranc3-backend.loadbalancer.server.port=8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
-      <<: *healthcheck-default
-    depends_on:
-      valkey:
-        condition: service_healthy
-      ollama:
-        condition: service_started
-
   # ── Tranc3 AI — The Spark (Port 8001) ────────────────────────────────
   tranc3-ai:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/tranc3-ai/Dockerfile
+      context: ./workers/tranc3-ai
+      dockerfile: Dockerfile
     container_name: tranc3-ai-worker
     environment:
-      - TRANC3_BACKEND_URL=http://tranc3-backend:8000
-      - TRANC3_NANO_URL=http://tranc3-backend:8001
-      - TRANC3_AUTH_URL=${INFINITY_AUTH_URL:-http://infinity-auth:8005}
+      - TRANC3_BACKEND_URL=${TRANC3_BACKEND_URL:-}
+      - TRANC3_NANO_URL=${TRANC3_NANO_URL:-}
+      - TRANC3_AUTH_URL=${TRANC3_AUTH_URL:-}
       - ENVIRONMENT=production
     ports:
       - "8001:8001"
@@ -431,16 +357,13 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       <<: *healthcheck-default
-    depends_on:
-      - tranc3-backend
 
   # ── The Void — Secrets Vault (Port 8002) ────────────────────────────
   infinity-void:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/infinity-void/Dockerfile
+      context: ./workers/infinity-void
+      dockerfile: Dockerfile
     container_name: infinity-void-worker
     environment:
       - MASTER_KEY_SEED=${MASTER_KEY_SEED}
@@ -460,31 +383,19 @@ services:
 
   # ── API Gateway (Port 8003) ─────────────────────────────────────────
   api-gateway:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/api-gateway/Dockerfile
+      context: ./workers/api-gateway
+      dockerfile: Dockerfile
     container_name: trancendos-api-gateway-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
-      - INTERNAL_SECRET=${INTERNAL_SECRET}
-      - AUTH_SERVICE_URL=http://infinity-auth:8005
-      - USERS_SERVICE_URL=http://users-service:8006
-      - PRODUCTS_SERVICE_URL=http://products-service:8011
-      - ORDERS_SERVICE_URL=http://orders-service:8012
-      - PAYMENTS_SERVICE_URL=http://payments-service:8013
       - TRANC3_AI_SERVICE_URL=http://tranc3-ai:8001
       - ENVIRONMENT=production
     ports:
       - "8003:8003"
     depends_on:
       - tranc3-ai
-      - infinity-auth
-      - users-service
-      - products-service
-      - orders-service
-      - payments-service
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api-gateway.rule=PathPrefix(`/api/`)"
@@ -496,11 +407,10 @@ services:
 
   # ── The Nexus — WebSocket API (Port 8004) ──────────────────────────
   infinity-ws:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/infinity-ws/Dockerfile
+      context: ./workers/infinity-ws
+      dockerfile: Dockerfile
     container_name: infinity-ws-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -517,11 +427,10 @@ services:
 
   # ── Infinity Auth — OAuth2/SSO (Port 8005) ──────────────────────────
   infinity-auth:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/infinity-auth/Dockerfile
+      context: ./workers/infinity-auth
+      dockerfile: Dockerfile
     container_name: infinity-auth-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -545,11 +454,10 @@ services:
 
   # ── Users Service (Port 8006) ────────────────────────────────────────
   users-service:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/users-service/Dockerfile
+      context: ./workers/users-service
+      dockerfile: Dockerfile
     container_name: users-service-worker
     ports:
       - "8006:8006"
@@ -561,11 +469,10 @@ services:
 
   # ── The Observatory — Monitoring Dashboard (Port 8007) ──────────────
   monitoring:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/monitoring/Dockerfile
+      context: ./workers/monitoring
+      dockerfile: Dockerfile
     container_name: monitoring-worker
     ports:
       - "8007:8007"
@@ -577,11 +484,10 @@ services:
 
   # ── Notifications Service (Port 8008) ───────────────────────────────
   notifications:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/notifications/Dockerfile
+      context: ./workers/notifications
+      dockerfile: Dockerfile
     container_name: notifications-worker
     ports:
       - "8008:8008"
@@ -593,11 +499,10 @@ services:
 
   # ── Infinity AI — AI API Gateway (Port 8009) ────────────────────────
   infinity-ai:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/infinity-ai/Dockerfile
+      context: ./workers/infinity-ai
+      dockerfile: Dockerfile
     container_name: infinity-ai-worker
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -618,7 +523,7 @@ services:
 
   # ── The Digital Grid — Workflow Orchestration (Port 8010) ────────────
   the-grid:
-    <<: *worker-platform
+    <<: *worker-common
     build:
       context: ./workers/the-grid
       dockerfile: Dockerfile
@@ -633,11 +538,10 @@ services:
 
   # ── Products Service (Port 8011) ─────────────────────────────────────
   products-service:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/products-service/Dockerfile
+      context: ./workers/products-service
+      dockerfile: Dockerfile
     container_name: products-service-worker
     ports:
       - "8011:8011"
@@ -649,11 +553,10 @@ services:
 
   # ── Orders Service (Port 8012) ───────────────────────────────────────
   orders-service:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/orders-service/Dockerfile
+      context: ./workers/orders-service
+      dockerfile: Dockerfile
     container_name: orders-service-worker
     ports:
       - "8012:8012"
@@ -665,11 +568,10 @@ services:
 
   # ── Payments Service (Port 8013) ─────────────────────────────────────
   payments-service:
-    <<: *worker-platform
+    <<: *worker-common
     build:
-
-      context: .
-      dockerfile: workers/payments-service/Dockerfile
+      context: ./workers/payments-service
+      dockerfile: Dockerfile
     container_name: payments-service-worker
     ports:
       - "8013:8013"
@@ -681,7 +583,7 @@ services:
 
   # ── Files Service (Port 8014) ────────────────────────────────────────
   files-service:
-    <<: *worker-platform
+    <<: *worker-common
     build:
       context: ./workers/files-service
       dockerfile: Dockerfile
@@ -696,7 +598,7 @@ services:
 
   # ── Identity Service (Port 8015) ─────────────────────────────────────
   identity-service:
-    <<: *worker-platform
+    <<: *worker-common
     build:
       context: ./workers/identity-service
       dockerfile: Dockerfile
@@ -714,7 +616,7 @@ services:
   # ═══════════════════════════════════════════════════════════════════════
 
   analytics-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/analytics-service, dockerfile: Dockerfile }
     container_name: analytics-service-worker
     ports: ["8016:8016"]
@@ -722,21 +624,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8016/health"]
       <<: *healthcheck-default
 
-  mlflow-service:
-    <<: *worker-platform
-    build: { context: ./workers/mlflow-service, dockerfile: Dockerfile }
-    container_name: mlflow-service-worker
-    ports: ["8039:8039"]
-    environment:
-      - MLFLOW_DATA_DIR=/data/mlflow-service
-    volumes:
-      - mlflow_data:/data/mlflow-service
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8039/health"]
-      <<: *healthcheck-default
-
   search-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/search-service, dockerfile: Dockerfile }
     container_name: search-service-worker
     ports: ["8017:8017"]
@@ -745,7 +634,7 @@ services:
       <<: *healthcheck-default
 
   email-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/email-service, dockerfile: Dockerfile }
     container_name: email-service-worker
     ports: ["8018:8018"]
@@ -754,7 +643,7 @@ services:
       <<: *healthcheck-default
 
   sms-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/sms-service, dockerfile: Dockerfile }
     container_name: sms-service-worker
     ports: ["8019:8019"]
@@ -763,7 +652,7 @@ services:
       <<: *healthcheck-default
 
   storage-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/storage-service, dockerfile: Dockerfile }
     container_name: storage-service-worker
     ports: ["8020:8020"]
@@ -772,7 +661,7 @@ services:
       <<: *healthcheck-default
 
   cron-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/cron-service, dockerfile: Dockerfile }
     container_name: cron-service-worker
     ports: ["8021:8021"]
@@ -781,7 +670,7 @@ services:
       <<: *healthcheck-default
 
   queue-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/queue-service, dockerfile: Dockerfile }
     container_name: queue-service-worker
     ports: ["8022:8022"]
@@ -790,7 +679,7 @@ services:
       <<: *healthcheck-default
 
   cache-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/cache-service, dockerfile: Dockerfile }
     container_name: cache-service-worker
     ports: ["8023:8023"]
@@ -799,7 +688,7 @@ services:
       <<: *healthcheck-default
 
   config-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/config-service, dockerfile: Dockerfile }
     container_name: config-service-worker
     ports: ["8024:8024"]
@@ -808,7 +697,7 @@ services:
       <<: *healthcheck-default
 
   audit-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/audit-service, dockerfile: Dockerfile }
     container_name: audit-service-worker
     ports: ["8025:8025"]
@@ -817,7 +706,7 @@ services:
       <<: *healthcheck-default
 
   rate-limit-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/rate-limit-service, dockerfile: Dockerfile }
     container_name: rate-limit-service-worker
     ports: ["8026:8026"]
@@ -826,7 +715,7 @@ services:
       <<: *healthcheck-default
 
   geo-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/geo-service, dockerfile: Dockerfile }
     container_name: geo-service-worker
     ports: ["8027:8027"]
@@ -835,7 +724,7 @@ services:
       <<: *healthcheck-default
 
   cdn-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/cdn-service, dockerfile: Dockerfile }
     container_name: cdn-service-worker
     ports: ["8028:8028"]
@@ -844,7 +733,7 @@ services:
       <<: *healthcheck-default
 
   health-aggregator:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/health-aggregator, dockerfile: Dockerfile }
     container_name: health-aggregator-worker
     ports: ["8029:8029"]
@@ -855,7 +744,7 @@ services:
   # ── P3 — Intelligence / AI Layer (8030–8038) ─────────────────────────────
 
   gbrain-bridge:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/gbrain-bridge, dockerfile: Dockerfile }
     container_name: gbrain-bridge-worker
     ports: ["8030:8030"]
@@ -864,7 +753,7 @@ services:
       <<: *healthcheck-default
 
   topology-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/topology-service, dockerfile: Dockerfile }
     container_name: topology-service-worker
     ports: ["8031:8031"]
@@ -873,7 +762,7 @@ services:
       <<: *healthcheck-default
 
   ledger-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/ledger-service, dockerfile: Dockerfile }
     container_name: ledger-service-worker
     ports: ["8032:8032"]
@@ -882,7 +771,7 @@ services:
       <<: *healthcheck-default
 
   model-router-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/model-router-service, dockerfile: Dockerfile }
     container_name: model-router-service-worker
     ports: ["8033:8033"]
@@ -891,7 +780,7 @@ services:
       <<: *healthcheck-default
 
   workflow-engine-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/workflow-engine-service, dockerfile: Dockerfile }
     container_name: workflow-engine-service-worker
     ports: ["8034:8034"]
@@ -899,40 +788,17 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8034/health"]
       <<: *healthcheck-default
 
-  turings-hub-service:
-    <<: *worker-platform
-    build: { context: ., dockerfile: workers/turings-hub-service/Dockerfile }
-    container_name: turings-hub-service-worker
+  skills-benchmark-service:
+    <<: *worker-common
+    build: { context: ./workers/skills-benchmark-service, dockerfile: Dockerfile }
+    container_name: skills-benchmark-service-worker
     ports: ["8035:8035"]
-    volumes:
-      - turings-hub-vrm:/app/assets/vrm
-      - turings-hub-animations:/app/assets/animations
-      - turings-hub-portraits:/app/assets/portraits
-      - turings-hub-audio:/app/assets/audio
-    environment:
-      - KOKORO_URL=http://kokoro:8880
-      - RHUBARB_BIN=/usr/local/bin/rhubarb
-      - PERSONALITY_DIR=/app/src/personality/profiles
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
       <<: *healthcheck-default
 
-  sentinel-station-service:
-    <<: *worker-platform
-    build: { context: ./workers/sentinel-station-service, dockerfile: Dockerfile }
-    container_name: sentinel-station-service-worker
-    ports: ["8041:8041"]
-    environment:
-      SENTINEL_PORT: "8041"
-      SENTINEL_DB_PATH: /data/sentinel_station.db
-    volumes:
-      - sentinel-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8041/health"]
-      <<: *healthcheck-default
-
   langchain-integration-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/langchain-integration-service, dockerfile: Dockerfile }
     container_name: langchain-integration-service-worker
     ports: ["8036:8036"]
@@ -941,7 +807,7 @@ services:
       <<: *healthcheck-default
 
   deepagents-orchestrator-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/deepagents-orchestrator-service, dockerfile: Dockerfile }
     container_name: deepagents-orchestrator-service-worker
     ports: ["8037:8037"]
@@ -950,7 +816,7 @@ services:
       <<: *healthcheck-default
 
   vault-service:
-    <<: *worker-platform
+    <<: *worker-common
     build: { context: ./workers/vault-service, dockerfile: Dockerfile }
     container_name: vault-service-worker
     ports: ["8038:8038"]
@@ -1004,7 +870,7 @@ services:
 
   # ── Blender Worker — Headless 3D Rendering for TranceFlow (Port 8050) ───
   blender-worker:
-    <<: *worker-platform
+    <<: *worker-common
     build:
       context: ./workers/blender-worker
       dockerfile: Dockerfile
@@ -1019,7 +885,7 @@ services:
 
   # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8051) ──
   triposr-worker:
-    <<: *worker-platform
+    <<: *worker-common
     build:
       context: ./workers/triposr-worker
       dockerfile: Dockerfile
@@ -1049,24 +915,6 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8052/health"]
-      <<: *healthcheck-default
-
-  # ── Swarm Coordinator — proactive manifest runner (Port 8053) ───────────
-  swarm-coordinator:
-    <<: *worker-platform
-    build:
-      context: .
-      dockerfile: workers/swarm-coordinator-service/Dockerfile
-    container_name: trancendos-swarm-coordinator
-    ports:
-      - "8053:8053"
-    environment:
-      SWARM_MANIFEST_DIR: /app/config/swarm/manifests
-      SWARM_POLL_INTERVAL_SECONDS: "300"
-    volumes:
-      - swarm-logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8053/health"]
       <<: *healthcheck-default
 
   # ── Langfuse — AI Observability (Port 3002) ──────────────────────────
@@ -1114,44 +962,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Infinity Portal — Front Entrance + Infinity Gate (Port 8042) ─────────
-  infinity-portal:
-    <<: *worker-common
-    build:
-      context: .
-      dockerfile: workers/infinity-portal-service/Dockerfile
-    container_name: infinity-portal-worker
-    ports:
-      - "8042:8042"
-    environment:
-      INFINITY_PORTAL_DB_PATH: /app/data/infinity_portal.db
-      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
-      INFINITY_ONE_URL: http://infinity-one-worker:8043
-      INFINITY_ADMIN_URL: http://infinity-admin-worker:8044
-    volumes:
-      - portal-data:/app/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8042/health"]
-      <<: *healthcheck-default
-
-  # ── Infinity-One — Single Identity Layer (Port 8043) ──────────────────────
-  infinity-one:
-    <<: *worker-common
-    build:
-      context: .
-      dockerfile: workers/infinity-one-service/Dockerfile
-    container_name: infinity-one-worker
-    ports:
-      - "8043:8043"
-    environment:
-      INFINITY_ONE_DB_PATH: /app/data/infinity_one.db
-      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
-    volumes:
-      - infinity-one-data:/app/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8043/health"]
-      <<: *healthcheck-default
-
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -1161,11 +971,8 @@ services:
     container_name: infinity-admin-worker
     ports:
       - "8044:8044"
-    environment:
-      INFINITY_ADMIN_DB_PATH: /app/data/infinity_admin.db
-      ENTITY_OVERRIDES_DB: /app/data/infinity_admin.db
     volumes:
-      - admin-data:/app/data
+      - admin-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8044/health"]
       <<: *healthcheck-default
@@ -1664,15 +1471,7 @@ volumes:
     driver: local
   vault-data:
     driver: local
-  vault-logs:
-    driver: local
-  backend-models:
-    driver: local
-  backend-cache:
-    driver: local
-  backend-logs:
-    driver: local
-  ollama-data:
+  vault-config:
     driver: local
   prometheus-data:
     driver: local
@@ -1730,8 +1529,6 @@ volumes:
     driver: local
   ffmpeg-workdir:
     driver: local
-  swarm-logs:
-    driver: local
   langfuse-db-data:
     driver: local
   woodpecker-data:
@@ -1759,24 +1556,6 @@ volumes:
   signoz-clickhouse-logs:
     driver: local
   signoz-query-data:
-    driver: local
-  sentinel-data:
-    driver: local
-  portal-data:
-    driver: local
-  infinity-one-data:
-    driver: local
-  shards-data:
-    driver: local
-  turings-hub-vrm:
-    driver: local
-  turings-hub-animations:
-    driver: local
-  turings-hub-portraits:
-    driver: local
-  turings-hub-audio:
-    driver: local
-  mlflow_data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

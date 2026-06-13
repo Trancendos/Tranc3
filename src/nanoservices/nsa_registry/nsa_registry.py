@@ -328,7 +328,7 @@ class NSARegistry:
                 s.health.error_rate if s.health is not None else 0.0,
                 s.health.latency_ms if s.health is not None else 0.0,
                 s.health.request_count if s.health is not None else 0,
-            ),
+            )
         )
         return healthy[0]
 

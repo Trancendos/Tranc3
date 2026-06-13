@@ -189,13 +189,19 @@ async def health():
         ns_count = conn.execute("SELECT COUNT(*) FROM namespaces").fetchone()[0]
         cfg_count = conn.execute("SELECT COUNT(*) FROM configs").fetchone()[0]
     return {
-        "entity": health_entity_block(8024, "config-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "namespaces": ns_count,
         "config_keys": cfg_count,
+        "entity": {
+            "location": "The Void",
+            "pillar": "Security",
+            "lead_ai": "Prometheus",
+            "primes": ["The Guardian (Marcus Magnolia)"],
+            "primary_function": "Secrets Vault & Password Store",
+        },
     }
 
 
@@ -271,8 +277,7 @@ async def get_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM configs WHERE namespace = ? AND key = ?",
-            (namespace, key),
+            "SELECT * FROM configs WHERE namespace = ? AND key = ?", (namespace, key)
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Config key not found")
@@ -288,8 +293,7 @@ async def set_key(namespace: str, key: str, req: ConfigSet):
     str_value = json.dumps(req.value) if req.value_type == "json" else str(req.value)
     with get_conn() as conn:
         existing = conn.execute(
-            "SELECT version, value FROM configs WHERE namespace = ? AND key = ?",
-            (namespace, key),
+            "SELECT version, value FROM configs WHERE namespace = ? AND key = ?", (namespace, key)
         ).fetchone()
         if existing:
             version = existing["version"] + 1
@@ -316,8 +320,7 @@ async def delete_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
         if not conn.execute(
-            "SELECT id FROM configs WHERE namespace = ? AND key = ?",
-            (namespace, key),
+            "SELECT id FROM configs WHERE namespace = ? AND key = ?", (namespace, key)
         ).fetchone():
             raise HTTPException(status_code=404, detail="Config key not found")
         conn.execute("DELETE FROM configs WHERE namespace = ? AND key = ?", (namespace, key))

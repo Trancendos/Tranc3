@@ -310,10 +310,8 @@ class ABACEngine:
                             "sensitivity_check_invalid_tier",
                         )
                         return False
-            except ValueError as _exc:
-                logger.debug(
-                    "suppressed %s", _exc, exc_info=False
-                )  # Unknown sensitivity, skip check
+            except ValueError:
+                pass  # Unknown sensitivity, skip check
 
         # Pre-policy checks: threat-level adaptive access
         threat = env.get("threat_level", self._threat_level.value)
@@ -332,8 +330,8 @@ class ABACEngine:
                         "threat_level_restriction",
                     )
                     return False
-        except ValueError as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except ValueError:
+            pass
 
         # Evaluate policies
         permit_matched = False

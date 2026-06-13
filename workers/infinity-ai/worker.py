@@ -32,11 +32,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.url_validation import SSRFError, validate_ollama_base_url
-from shared_core.sanitize import sanitize_for_log
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -45,17 +40,8 @@ WORKER_NAME = "infinity-ai"
 DB_PATH = Path(__file__).parent / "data" / "ai_gateway.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-
 # Provider configuration — zero-cost providers only
-def _load_ollama_base_url() -> str:
-    raw = os.getenv("OLLAMA_URL", "http://localhost:11434")
-    try:
-        return validate_ollama_base_url(raw)
-    except SSRFError as exc:
-        raise RuntimeError(f"Invalid OLLAMA_URL: {exc}") from exc
-
-
-OLLAMA_BASE_URL = _load_ollama_base_url()
+OLLAMA_BASE_URL = "http://localhost:11434"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 HUGGINGFACE_BASE_URL = "https://api-inference.huggingface.co"
 
@@ -167,7 +153,7 @@ class AIDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -313,11 +299,7 @@ class OllamaClient:
         self._available: Optional[bool] = None
 
     async def complete(
-        self,
-        model: str,
-        messages: List[ChatMessage],
-        max_tokens: int,
-        temperature: float,
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
     ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
@@ -340,9 +322,7 @@ class OllamaClient:
                 result = json.loads(resp.read().decode())
                 return result
         except Exception as e:
-            logger.warning(
-                "Ollama request failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Ollama request failed: %s", e)
             self._available = False
             return None
 
@@ -373,11 +353,7 @@ class OpenRouterClient:
         self.api_key = api_key
 
     async def complete(
-        self,
-        model: str,
-        messages: List[ChatMessage],
-        max_tokens: int,
-        temperature: float,
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
     ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
@@ -408,14 +384,10 @@ class OpenRouterClient:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 return json.loads(resp.read().decode())
         except urllib.error.HTTPError as e:
-            logger.warning(
-                "OpenRouter HTTP error: %s %s", e.code, sanitize_for_log(e.reason)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("OpenRouter HTTP error: %s %s", e.code, e.reason)
             return None
         except Exception as e:
-            logger.warning(
-                "OpenRouter request failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("OpenRouter request failed: %s", e)
             return None
 
 
@@ -433,11 +405,7 @@ class HuggingFaceClient:
         self.api_key = api_key
 
     async def complete(
-        self,
-        model: str,
-        messages: List[ChatMessage],
-        max_tokens: int,
-        temperature: float,
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
     ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
@@ -464,9 +432,7 @@ class HuggingFaceClient:
                     text = result[0].get("generated_text", "")
                     return {"content": text}
                 elif isinstance(result, dict) and "error" in result:
-                    logger.warning(
-                        "HuggingFace error: %s", sanitize_for_log(result["error"])
-                    )  # codeql[py/cleartext-logging]
+                    logger.warning("HuggingFace error: %s", result["error"])
                     return None
                 return result
         except urllib.error.HTTPError as e:
@@ -476,9 +442,7 @@ class HuggingFaceClient:
                 logger.warning("HuggingFace HTTP error: %s", e.code)
             return None
         except Exception as e:
-            logger.warning(
-                "HuggingFace request failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("HuggingFace request failed: %s", e)
             return None
 
 
@@ -492,11 +456,7 @@ class OfflineClient:
     }
 
     async def complete(
-        self,
-        model: str,
-        messages: List[ChatMessage],
-        max_tokens: int,
-        temperature: float,
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
     ) -> Dict[str, Any]:
         # Simple keyword matching for offline responses
         last_msg = messages[-1].content.lower() if messages else ""
@@ -520,65 +480,17 @@ class AIGatewayRouter:
     def __init__(self, db: AIDatabase):
         self.db = db
         self.cache = LRUCache(max_size=500)
-        self.ollama = OllamaClient(OLLAMA_BASE_URL)
+        self.ollama = OllamaClient()
         self.openrouter = OpenRouterClient()
         self.huggingface = HuggingFaceClient()
         self.offline = OfflineClient()
         # Provider priority: Ollama first (free+local), then free-tier cloud, then offline
-        self._provider_map = {
-            ProviderName.ollama: self.ollama,
-            ProviderName.openrouter: self.openrouter,
-            ProviderName.huggingface: self.huggingface,
-            ProviderName.offline: self.offline,
-        }
-        self.providers = self._default_provider_order()
-
-    def _default_provider_order(self) -> list:
-        return [
+        self.providers = [
             (ProviderName.ollama, self.ollama),
             (ProviderName.openrouter, self.openrouter),
             (ProviderName.huggingface, self.huggingface),
             (ProviderName.offline, self.offline),
         ]
-
-    def _adaptive_provider_order(self) -> list:
-        """Reorder cloud providers via zero-cost rotator (Ollama always first)."""
-        if os.environ.get("ADAPTIVE_ROTATION_ENABLED", "true").lower() not in (
-            "1",
-            "true",
-            "yes",
-        ):
-            return self._default_provider_order()
-        try:
-            from src.adaptive.provider_rotator import get_provider_rotator
-
-            rotator = get_provider_rotator()
-            name_map = {
-                "ollama": ProviderName.ollama,
-                "openrouter": ProviderName.openrouter,
-                "huggingface": ProviderName.huggingface,
-                "offline": ProviderName.offline,
-            }
-            keys: list[str] = ["ollama"]
-            active = rotator.active_provider()
-            if active and active not in keys and active in name_map:
-                keys.append(active)
-            for p in rotator._state.providers:
-                if p not in keys and p in name_map:
-                    keys.append(p)
-            if "offline" not in keys:
-                keys.append("offline")
-            ordered = []
-            for k in keys:
-                enum_name = name_map.get(k)
-                if enum_name and enum_name in self._provider_map:
-                    ordered.append((enum_name, self._provider_map[enum_name]))
-            return ordered or self._default_provider_order()
-        except Exception as exc:
-            logger.warning(
-                "Adaptive order fallback: %s", sanitize_for_log(exc)
-            )  # codeql[py/cleartext-logging]
-            return self._default_provider_order()
 
     def _make_cache_key(
         self,
@@ -603,27 +515,21 @@ class AIGatewayRouter:
         )
         if not self.db.check_budget(tenant_id, estimated_tokens):
             raise HTTPException(
-                429,
-                "Token budget exceeded for today. Try again tomorrow or contact admin.",
+                429, "Token budget exceeded for today. Try again tomorrow or contact admin."
             )
 
         # Check cache
         cache_key = self._make_cache_key(
-            request.model,
-            request.messages,
-            request.max_tokens,
-            request.temperature,
-            tenant_id,
+            request.model, request.messages, request.max_tokens, request.temperature, tenant_id
         )
         cached = self.cache.get(cache_key)
         if cached:
             cached.provider = "cache"
             return cached
 
-        # Try providers in priority order (adaptive rotation when enabled)
-        providers = self._adaptive_provider_order()
+        # Try providers in priority order
         last_error = None
-        for provider_name, provider in providers:
+        for provider_name, provider in self.providers:
             try:
                 result = await provider.complete(
                     request.model,
@@ -656,7 +562,7 @@ class AIGatewayRouter:
                         ChatCompletionChoice(
                             message=ChatMessage(role="assistant", content=content),
                             finish_reason="stop",
-                        ),
+                        )
                     ],
                     usage=ChatCompletionUsage(
                         prompt_tokens=prompt_tokens,
@@ -683,13 +589,6 @@ class AIGatewayRouter:
                 # Cache successful responses
                 self.cache.put(cache_key, response)
 
-                try:
-                    from src.adaptive.provider_rotator import get_provider_rotator
-
-                    get_provider_rotator().record_success(provider_name.value)
-                except Exception:
-                    pass
-
                 return response
 
             except Exception as e:
@@ -711,10 +610,7 @@ class AIGatewayRouter:
 
         # All providers failed — use offline as last resort
         result = await self.offline.complete(
-            request.model,
-            request.messages,
-            request.max_tokens,
-            request.temperature,
+            request.model, request.messages, request.max_tokens, request.temperature
         )
         content = result.get("content", "")
         latency_ms = int((time.time() - start_time) * 1000)
@@ -733,9 +629,8 @@ class AIGatewayRouter:
             model=request.model,
             choices=[
                 ChatCompletionChoice(
-                    message=ChatMessage(role="assistant", content=content),
-                    finish_reason="stop",
-                ),
+                    message=ChatMessage(role="assistant", content=content), finish_reason="stop"
+                )
             ],
             usage=ChatCompletionUsage(total_tokens=len(content) // 4),
             provider="offline",
@@ -754,10 +649,6 @@ app = FastAPI(
     description="Self-hosted OpenAI-compatible API with Ollama-first routing. Replaces CF ai-api.",
     version="1.0.0",
 )
-
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "infinity-ai")
 
 app.add_middleware(
     CORSMiddleware,
@@ -792,7 +683,6 @@ STARTED_AT = datetime.now(timezone.utc)
 async def health():
     ollama_ok = await router.ollama.health_check()
     return {
-        "entity": health_entity_block(8009, "infinity-ai"),
         "status": "healthy" if ollama_ok else "degraded",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

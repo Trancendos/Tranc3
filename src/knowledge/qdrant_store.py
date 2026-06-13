@@ -7,7 +7,6 @@ Falls back gracefully to no-op if Qdrant is unavailable or not installed.
 Free tier: unlimited vectors on self-hosted Qdrant.
 Docker: qdrant/qdrant:latest on port 6333.
 """
-
 from __future__ import annotations
 
 import logging
@@ -59,7 +58,7 @@ def upsert(doc_id: str, vector: list[float], payload: dict[str, Any]) -> bool:
                     id=abs(hash(doc_id)) % (2**63),
                     vector=vector,
                     payload={**payload, "doc_id": doc_id},
-                ),
+                )
             ],
         )
         return True

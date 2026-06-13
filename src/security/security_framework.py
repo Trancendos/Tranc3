@@ -27,7 +27,7 @@ if not _JWT_SECRET:
     logger.warning(
         "JWT_SECRET not set — generated a random ephemeral key. "
         "Tokens will be invalidated on restart. "
-        "Set JWT_SECRET in production for persistent token validity.",
+        "Set JWT_SECRET in production for persistent token validity."
     )
 SECRET_KEY = _JWT_SECRET
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
@@ -51,12 +51,12 @@ else:
     if _PRIVATE_KEY_PEM or _PUBLIC_KEY_PEM:
         logger.warning(
             "Only one of JWT_PRIVATE_KEY / JWT_PUBLIC_KEY is set — "
-            "both are required for RS256. Falling back to HS256.",
+            "both are required for RS256. Falling back to HS256."
         )
     else:
         logger.warning(
             "JWT_PRIVATE_KEY / JWT_PUBLIC_KEY not set — using HS256. "
-            "Set both env vars in production for RS256 asymmetric signing.",
+            "Set both env vars in production for RS256 asymmetric signing."
         )
 
 

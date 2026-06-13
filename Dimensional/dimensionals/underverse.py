@@ -135,8 +135,8 @@ class UnderverseModule:
                     # Only inherit tier if it's still the default
                     if self.tier == Tier.AGENT and parent.tier != Tier.AGENT:
                         self.tier = parent.tier
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to a JSON-friendly dictionary."""

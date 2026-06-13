@@ -10,45 +10,27 @@ Architecture: Decoder-only transformer (GPT-style)
 - Rotary positional embeddings (RoPE) — no learned position table needed
 """
 
-from __future__ import annotations
-
 import math
 from typing import Optional, Tuple
 
-try:
-    import torch
-    import torch.nn as nn
-    import torch.nn.functional as F
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    F = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 from .config import ModelConfig
-
-# Deferred no_grad decorator — evaluated at import time when torch may be None
-_no_grad = torch.no_grad() if _TORCH_AVAILABLE else (lambda f: f)
 
 # ---------------------------------------------------------------------------
 # Rotary Positional Embeddings (RoPE)
 # ---------------------------------------------------------------------------
 
 
-class RotaryEmbedding(nn.Module if nn is not None else object):
+class RotaryEmbedding(nn.Module):
     """
     Encodes position information directly into the attention query/key vectors.
     More generalizable than learned absolute position embeddings.
     """
 
     def __init__(self, dim: int, max_seq_len: int = 2048):
-        if not _TORCH_AVAILABLE:
-            raise RuntimeError(
-                "RotaryEmbedding requires PyTorch, but it is not available in this runtime."
-            )
         super().__init__()
         inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
         self.register_buffer("inv_freq", inv_freq)
@@ -67,10 +49,7 @@ class RotaryEmbedding(nn.Module if nn is not None else object):
         return torch.cat([-x2, x1], dim=-1)
 
     def forward(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        seq_len: int,
+        self, q: torch.Tensor, k: torch.Tensor, seq_len: int
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         cos = self.cos_cache[:, :, :seq_len, :]
         sin = self.sin_cache[:, :, :seq_len, :]
@@ -84,7 +63,7 @@ class RotaryEmbedding(nn.Module if nn is not None else object):
 # ---------------------------------------------------------------------------
 
 
-class MultiHeadAttention(nn.Module if nn is not None else object):
+class MultiHeadAttention(nn.Module):
     def __init__(self, config: ModelConfig):
         super().__init__()
         self.n_heads = config.n_heads
@@ -138,7 +117,7 @@ class MultiHeadAttention(nn.Module if nn is not None else object):
 # ---------------------------------------------------------------------------
 
 
-class FeedForward(nn.Module if nn is not None else object):
+class FeedForward(nn.Module):
     """
     SwiGLU activation: better gradient flow and representation capacity
     than standard ReLU/GELU for language modelling.
@@ -166,7 +145,7 @@ class FeedForward(nn.Module if nn is not None else object):
 # ---------------------------------------------------------------------------
 
 
-class TransformerBlock(nn.Module if nn is not None else object):
+class TransformerBlock(nn.Module):
     def __init__(self, config: ModelConfig):
         super().__init__()
         self.norm1 = nn.LayerNorm(config.d_model)
@@ -186,7 +165,7 @@ class TransformerBlock(nn.Module if nn is not None else object):
 # ---------------------------------------------------------------------------
 
 
-class Tranc3Model(nn.Module if nn is not None else object):
+class Tranc3Model(nn.Module):
     """
     The core Tranc3 language model.
     Decoder-only transformer with RoPE, SwiGLU, and pre-norm.
@@ -256,7 +235,7 @@ class Tranc3Model(nn.Module if nn is not None else object):
 
         return logits, loss
 
-    @_no_grad
+    @torch.no_grad()
     def generate(
         self,
         input_ids: torch.Tensor,

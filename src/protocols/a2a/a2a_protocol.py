@@ -18,7 +18,6 @@ Key components:
 
 from __future__ import annotations  # noqa: I001
 
-from abc import ABC, abstractmethod
 import asyncio
 import json
 import logging
@@ -26,7 +25,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Awaitable
 
 import aiohttp
 
@@ -292,22 +291,20 @@ class A2ARouteRule:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class A2ATransport(ABC):
+class A2ATransport:
     """Abstract base class for A2A transports."""
 
-    @abstractmethod
-    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse: ...
+    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse:
+        raise NotImplementedError
 
-    @abstractmethod
-    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]: ...
+    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
+        raise NotImplementedError
 
-    async def start(self) -> None:  # noqa: B027 - optional lifecycle hook
-        """Optional startup hook; in-process transports may not need any setup."""
-        return None
+    async def start(self) -> None:  # noqa: B027
+        pass
 
-    async def stop(self) -> None:  # noqa: B027 - optional lifecycle hook
-        """Optional shutdown hook; in-process transports may not need any teardown."""
-        return None
+    async def stop(self) -> None:  # noqa: B027
+        pass
 
 
 class InMemoryA2ATransport(A2ATransport):
@@ -434,7 +431,7 @@ class A2ARouter:
             self._skill_index[skill.id].append(card.id)
 
         logger.info(
-            f"A2A Router: Registered agent {card.id} ({card.name}) with {len(card.skills)} skills",
+            f"A2A Router: Registered agent {card.id} ({card.name}) with {len(card.skills)} skills"
         )
 
     def unregister(self, agent_id: str) -> None:

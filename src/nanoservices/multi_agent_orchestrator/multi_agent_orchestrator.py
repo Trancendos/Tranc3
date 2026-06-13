@@ -243,7 +243,7 @@ class ConsensusEngine:
                 message_type=MessageType.CONSENSUS_REQUEST,
                 content={"proposal_id": proposal.proposal_id, "content": content},
                 correlation_id=proposal.proposal_id,
-            ),
+            )
         )
         return proposal
 
@@ -265,7 +265,7 @@ class ConsensusEngine:
                 message_type=MessageType.CONSENSUS_VOTE,
                 content={"proposal_id": proposal_id, "vote": vote},
                 correlation_id=proposal_id,
-            ),
+            )
         )
         return True
 
@@ -357,7 +357,7 @@ class MultiAgentOrchestrator:
                     message_type=MessageType.TASK_ASSIGN,
                     content=task.to_dict(),
                     correlation_id=task.task_id,
-                ),
+                )
             )
 
         task.status = "delegated"
@@ -376,7 +376,7 @@ class MultiAgentOrchestrator:
                 message_type=MessageType.TASK_RESULT,
                 content={"task_id": task_id, "result": result},
                 correlation_id=task_id,
-            ),
+            )
         )
 
         task.result = result
@@ -387,17 +387,13 @@ class MultiAgentOrchestrator:
             self.agents[agent_id].state = AgentState.IDLE
             self.agents[agent_id].task_history.append(task_id)
             self.agents[agent_id].reputation_score = min(
-                2.0,
-                self.agents[agent_id].reputation_score + 0.01,
+                2.0, self.agents[agent_id].reputation_score + 0.01
             )
 
         return True
 
     def request_consensus(
-        self,
-        proposer_id: str,
-        content: Any,
-        voters: Optional[Set[str]] = None,
+        self, proposer_id: str, content: Any, voters: Optional[Set[str]] = None
     ) -> ConsensusProposal:
         return self.consensus_engine.propose(proposer_id, content, voters)
 
@@ -412,7 +408,7 @@ class MultiAgentOrchestrator:
                     sender_id=agent_id,
                     message_type=MessageType.HEARTBEAT,
                     content={"status": self.agents[agent_id].state.value},
-                ),
+                )
             )
             return True
         return False

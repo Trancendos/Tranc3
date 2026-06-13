@@ -10,7 +10,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
 
-from Dimensional.error_handlers import log_server_error
+from Dimensional.error_handlers import safe_error_detail
 
 router = APIRouter(prefix="/turingshub", tags=["turings-hub"])
 
@@ -57,10 +57,7 @@ async def list_personalities() -> list:
         )
         return [{"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles]
     except Exception as exc:
-        return JSONResponse(
-            {"error": log_server_error(exc, 500, context="list personalities")},
-            status_code=500,
-        )
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.get("/personalities/{personality_id}")
@@ -88,20 +85,11 @@ async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         result = _spawner().spawn(personality_id, repo_name, output_dir=output_dir)
         return result
     except ValueError as exc:
-        return JSONResponse(
-            {"error": log_server_error(exc, 400, context="spawn personality")},
-            status_code=400,
-        )
+        return JSONResponse({"error": safe_error_detail(exc, 400)}, status_code=400)
     except FileExistsError as exc:
-        return JSONResponse(
-            {"error": log_server_error(exc, 409, context="spawn personality")},
-            status_code=409,
-        )
+        return JSONResponse({"error": safe_error_detail(exc, 409)}, status_code=409)
     except Exception as exc:
-        return JSONResponse(
-            {"error": log_server_error(exc, 500, context="spawn personality")},
-            status_code=500,
-        )
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.get("/matrix/active")
@@ -114,7 +102,4 @@ async def active_personality() -> Dict[str, Any]:
             active = active()
         return {"active_personality": active}
     except Exception as exc:
-        return {
-            "active_personality": None,
-            "note": log_server_error(exc, 500, context="matrix active personality"),
-        }
+        return {"active_personality": None, "note": safe_error_detail(exc, 500)}

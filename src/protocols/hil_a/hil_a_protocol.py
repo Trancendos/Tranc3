@@ -203,17 +203,21 @@ class HILATierHandler(ABC):
 
     @property
     @abstractmethod
-    def tier(self) -> int: ...
+    def tier(self) -> int:
+        ...
 
     @property
     @abstractmethod
-    def entity_id(self) -> str: ...
+    def entity_id(self) -> str:
+        ...
 
     @abstractmethod
-    async def can_decide(self, action: HILAAction) -> bool: ...
+    async def can_decide(self, action: HILAAction) -> bool:
+        ...
 
     @abstractmethod
-    async def decide(self, action: HILAAction) -> HILADecision: ...
+    async def decide(self, action: HILAAction) -> HILADecision:
+        ...
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -281,7 +285,7 @@ class HILAChain:
 
         self._actions[action.id] = action
         logger.info(
-            f"Action submitted: {action.id} '{name}' (category={category.value}, minTier={minimum_tier}, currentTier={requested_by_tier})",
+            f"Action submitted: {action.id} '{name}' (category={category.value}, minTier={minimum_tier}, currentTier={requested_by_tier})"
         )
 
         # If the requesting tier already meets the minimum, auto-approve
@@ -314,7 +318,7 @@ class HILAChain:
         # Check if the approving tier meets the minimum
         if tier > action.minimum_approval_tier:
             logger.warning(
-                f"Tier {tier} insufficient for action {action_id} (requires tier {action.minimum_approval_tier})",
+                f"Tier {tier} insufficient for action {action_id} (requires tier {action.minimum_approval_tier})"
             )
             decision = HILADecision(
                 tier=tier,
@@ -415,8 +419,7 @@ class HILAChain:
         self._start_tier_timer(action_id)
 
         logger.info(
-            f"Action escalated: {action_id} → Tier {next_tier}"
-            + (f" ({reason})" if reason else ""),
+            f"Action escalated: {action_id} → Tier {next_tier}" + (f" ({reason})" if reason else "")
         )
         self._emit(action_id, "escalated")
         return action
@@ -436,7 +439,7 @@ class HILAChain:
 
         if target_tier > action.current_tier:
             logger.warning(
-                f"Cannot delegate to lower tier: {target_tier} < current {action.current_tier}",
+                f"Cannot delegate to lower tier: {target_tier} < current {action.current_tier}"
             )
             return action
 
@@ -694,7 +697,7 @@ class HILAChain:
         """Health check for the HIL-A chain."""
         anomalies = self.scan_for_anomalies()
         pending = len(self.query_actions(status=HILAActionStatus.PENDING)) + len(
-            self.query_actions(status=HILAActionStatus.ESCALATED),
+            self.query_actions(status=HILAActionStatus.ESCALATED)
         )
         handler_count = sum(len(h) for h in self._handlers.values())
 
@@ -747,7 +750,7 @@ class HILAChain:
         self._clear_tier_timer(action_id)
 
         logger.info(
-            f"Action auto-approved: {action_id} (tier {tier} ≥ minimum {action.minimum_approval_tier})",
+            f"Action auto-approved: {action_id} (tier {tier} ≥ minimum {action.minimum_approval_tier})"
         )
         self._emit(action_id, "approved")
 

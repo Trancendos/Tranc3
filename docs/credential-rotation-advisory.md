@@ -1,31 +1,12 @@
 # Credential Rotation Advisory
 
-**Date:** 2026-06-07 (updated)  
+**Date:** 2026-05-22  
 **Scope:** Tranc3 Smart Adaptive Automation Implementation  
-**Severity:** **URGENT** — Supabase `service_role` key requires rotation (GitHub secret scan #1)
-
-## URGENT: Supabase service_role key (GitHub alert #1)
-
-A `service_role` JWT was committed historically in `deploy/forgejo/set-org-secrets.sh` (removed in commit `2375429`). The key may still exist in git history and was referenced in issue/chat context.
-
-**Rotate immediately** (do not wait for the next 90-day cycle):
-
-1. Supabase Dashboard → **Project Settings → API** → **service_role** → **Regenerate** (or create a new key if your plan supports it).
-2. Update secrets everywhere the old value was stored:
-   - Forgejo org secrets: `SUPABASE_SERVICE_ROLE_KEY` (via `set-org-secrets.sh --include-service-role` after sourcing `.env`)
-   - Fly.io / production env if applicable
-   - Any local `.env` files (never commit)
-3. Confirm `deploy/forgejo/set-org-secrets.sh` reads from env only (line 73 is a comment; no literals).
-4. Close GitHub secret scanning alert **#1** as **Revoked** after rotation.
-5. Optional: use [GitHub secret scanning push protection](https://docs.github.com/en/code-security/secret-scanning) and `gitleaks` in pre-commit to prevent recurrence.
-
-**Never** paste `service_role` keys into issues, chat, or logs. Use `SUPABASE_SERVICE_ROLE_KEY` env var only.
-
----
+**Severity:** ADVISORY — No hardcoded secrets found in source code
 
 ## Executive Summary
 
-A comprehensive scan of the codebase was performed using the `VaultSecretLoader.detect_leaks()` utility and pattern-based grep analysis. **No hardcoded secrets remain in current source files** — the Supabase leak was remediated in-repo; **credential rotation in Supabase is still required** because the old key may have been exposed.
+A comprehensive scan of the codebase was performed using the `VaultSecretLoader.detect_leaks()` utility and pattern-based grep analysis. **No hardcoded secrets were found in any source files, CI configurations, or committed dotfiles.** However, several environment-level findings warrant attention.
 
 ## Findings
 
@@ -104,4 +85,4 @@ The `VaultSecretLoader` implements memory zeroization via `ctypes.memset` for th
 
 ## Conclusion
 
-**Immediate action:** rotate `SUPABASE_SERVICE_ROLE_KEY` in Supabase and all deployment secret stores (see URGENT section above). Otherwise the codebase follows good practices with placeholder-only values in `.env.example` and no hardcoded secrets on `main`. The `GITHUB_TOKEN` finding is expected CI runtime behavior. Implementing the recommended rotation schedule and CI-integrated leak detection will provide ongoing protection.
+No immediate credential rotation is required. The codebase follows good practices with placeholder-only values in `.env.example` and no hardcoded secrets in source code. The `GITHUB_TOKEN` finding is expected CI runtime behavior. Implementing the recommended rotation schedule and CI-integrated leak detection will provide ongoing protection.

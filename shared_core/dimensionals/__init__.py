@@ -36,17 +36,17 @@ Usage:
     ))
 """
 
-from shared_core.dimensionals.registry import (  # codeql[py/cyclic-import]
+from shared_core.dimensionals.registry import (
     DimensionalService,
     DimensionalServiceRegistry,
     DimensionalServiceStatus,
     get_dimensional_registry,
 )
-from shared_core.dimensionals.service_bus import (  # codeql[py/cyclic-import]
+from shared_core.dimensionals.service_bus import (
     DimensionalServiceBus,
     get_dimensional_bus,
 )
-from shared_core.dimensionals.underverse import (  # codeql[py/cyclic-import]
+from shared_core.dimensionals.underverse import (
     UnderverseModule,
     UnderverseRegistry,
     get_underverse_registry,

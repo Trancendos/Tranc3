@@ -204,12 +204,7 @@ class Tranc3:
     # ------------------------------------------------------------------
 
     def record_peer_metrics(
-        self,
-        peer: str,
-        rps: float,
-        latency_ms: float,
-        queue: int = 0,
-        slots: int = 0,
+        self, peer: str, rps: float, latency_ms: float, queue: int = 0, slots: int = 0
     ) -> None:
         """Feed live metrics into the gas/kinetic subsystem."""
         self._last_latency_ms = latency_ms
@@ -353,9 +348,8 @@ class Tranc3:
     # Override points
     # ------------------------------------------------------------------
 
-    async def on_cycle(self) -> None:  # noqa: B027 - optional override hook
+    async def on_cycle(self) -> None:  # noqa: B027
         """Called on every heartbeat cycle. Override for periodic work."""
-        return None
 
     async def process(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Process an incoming request payload. Override in concrete classes."""

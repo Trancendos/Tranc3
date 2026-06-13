@@ -27,26 +27,6 @@ for _var, _default in (
 ):
     os.environ[_var] = os.environ.get(_var) or _default
 
-# ── Worker SQLite DB paths ───────────────────────────────────────────────────
-# Some workers default SQLite paths to `/data/<name>.db` (production volumes).
-# Tests import worker modules directly, which can open DBs at import time.
-# Point configurable paths at a writable temp dir so collection never fails.
-_WORKER_DATA_DIR = os.environ.get("TRANC3_TEST_DATA_DIR") or tempfile.mkdtemp(
-    prefix="tranc3-test-data-"
-)
-os.environ["TRANC3_TEST_DATA_DIR"] = _WORKER_DATA_DIR
-for _var, _fname in (
-    ("USERS_DATABASE_PATH", "users.db"),
-    ("USERS_DB_PATH", "users.db"),  # legacy alias used by older branches/docs
-    ("AUTH_DATABASE_PATH", "auth.db"),
-):
-    os.environ[_var] = os.environ.get(_var) or os.path.join(_WORKER_DATA_DIR, _fname)
-
-# STORAGE_ROOT defaults to /mnt/data/tranc3 (NAS in production) — not writable in CI.
-os.environ["STORAGE_ROOT"] = os.environ.get("STORAGE_ROOT") or os.path.join(
-    _WORKER_DATA_DIR, "storage"
-)
-
 # ── Configure root test logger ────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.DEBUG,
@@ -192,7 +172,7 @@ def sample_error_payloads():
         "command_injection": ["; ls -la", "| cat /etc/passwd", "`id`", "$(whoami)"],
         "null_bytes": [null + "admin", "test" + null + "injection", null * 3],
         "oversized": ["A" * 100_001, "B" * 1_000_000],
-        "unicode_tricks": ["\u200b", "\ufffd", "\u202e" + "txt.exe", "admin\u200b"],
+        "unicode_tricks": ["​", "�", "‮" + "txt.exe", "admin​"],
         "json_injection": ['{"__proto__": {"admin": true}}', '{"constructor": {"prototype": {}}}'],
         "empty": ["", "   ", "\t\n"],
     }

@@ -166,16 +166,23 @@ async def health():
     with get_conn() as conn:
         count = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
         last = conn.execute(
-            "SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1",
+            "SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1"
         ).fetchone()
     return {
-        "entity": health_entity_block(8025, "audit-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_entries": count,
         "chain_tip": last["chain_hash"] if last else GENESIS_HASH,
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+            "layer": "supporting",
+        },
     }
 
 
@@ -220,7 +227,7 @@ async def append_batch(batch: AuditBatchIn):
         for entry in batch.entries:
             ts = entry.timestamp or time.time()
             row = conn.execute(
-                "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1",
+                "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1"
             ).fetchone()
             prev_hash = row["chain_hash"] if row else GENESIS_HASH
             cur = conn.execute(
@@ -302,11 +309,7 @@ async def verify_chain():
     broken_at = None
     for row in rows:
         expected = _compute_hash(
-            row["id"],
-            row["actor"],
-            row["action"],
-            row["timestamp"],
-            row["prev_hash"],
+            row["id"], row["actor"], row["action"], row["timestamp"], row["prev_hash"]
         )
         if row["chain_hash"] != expected or row["prev_hash"] != prev_hash:
             broken_at = row["id"]
@@ -326,13 +329,13 @@ async def stats():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
         by_actor = conn.execute(
-            "SELECT actor, COUNT(*) as c FROM audit_log GROUP BY actor ORDER BY c DESC LIMIT 10",
+            "SELECT actor, COUNT(*) as c FROM audit_log GROUP BY actor ORDER BY c DESC LIMIT 10"
         ).fetchall()
         by_action = conn.execute(
-            "SELECT action, COUNT(*) as c FROM audit_log GROUP BY action ORDER BY c DESC LIMIT 10",
+            "SELECT action, COUNT(*) as c FROM audit_log GROUP BY action ORDER BY c DESC LIMIT 10"
         ).fetchall()
         by_outcome = conn.execute(
-            "SELECT outcome, COUNT(*) as c FROM audit_log GROUP BY outcome",
+            "SELECT outcome, COUNT(*) as c FROM audit_log GROUP BY outcome"
         ).fetchall()
     return {
         "total_entries": total,

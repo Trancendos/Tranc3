@@ -279,7 +279,7 @@ class TestCrossBridgeEvents:
                 sentinel_channel="bridge",
                 event_type="user_connected",
                 payload={"user_id": "user-1"},
-            ),
+            )
         )
         assert event.source_bridge == "infinity"
         assert "nexus" in event.target_bridges
@@ -297,7 +297,7 @@ class TestCrossBridgeEvents:
                 event_type="ai_alert",
                 payload={"severity": "high"},
                 target_bridges=["infinity"],
-            ),
+            )
         )
         assert event.target_bridges == ["infinity"]
 

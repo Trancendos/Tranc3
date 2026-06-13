@@ -37,7 +37,7 @@ _FAKE_OPENAI_RESPONSE = {
         {
             "message": {"content": "Hello from provider"},
             "finish_reason": "stop",
-        },
+        }
     ],
     "model": "test-model",
     "usage": {
@@ -469,7 +469,7 @@ class TestNewProvidersInGateway:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"gemini": gemini, "offline": offline},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -490,7 +490,7 @@ class TestNewProvidersInGateway:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"cerebras": cerebras, "offline": offline},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -510,7 +510,7 @@ class TestNewProvidersInGateway:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"sambanova": sambanova, "offline": offline},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -533,8 +533,8 @@ class TestNewProvidersInGateway:
                     "cerebras": CerebrasProvider(api_key=""),
                     "sambanova": SambanovaProvider(api_key=""),
                     "offline": OfflineProvider(),
-                },
-            ),
+                }
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",

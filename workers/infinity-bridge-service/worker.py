@@ -27,7 +27,6 @@ from Dimensional.infinity.bridge.bridge_core import (
     InfinityBridgeEvent,
     get_infinity_bridge,
 )
-from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger(__name__)
 
@@ -128,11 +127,7 @@ def create_bridge_app() -> FastAPI:
     @app.get("/health")
     async def health():
         bridge = get_bridge()
-        payload = bridge.get_health()
-        payload["service"] = WORKER_NAME
-        payload["port"] = WORKER_PORT
-        payload["entity"] = health_entity_block(WORKER_PORT, WORKER_NAME)
-        return payload
+        return bridge.get_health()
 
     @app.post("/users/connect")
     async def connect_user(

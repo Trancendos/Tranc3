@@ -193,7 +193,7 @@ async def _worker_startup():
 
     logger.info(
         f"Nexus ready: {len(core_services)} AI/Agent/Bot services, "
-        f"{len(edges)} topology edges, port {WORKER_PORT}",
+        f"{len(edges)} topology edges, port {WORKER_PORT}"
     )
 
 

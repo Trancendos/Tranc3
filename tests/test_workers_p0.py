@@ -37,12 +37,10 @@ def _import_worker(module_dotted: str, file_path: Path):
 
 
 ws_mod = _import_worker(
-    "infinity_ws_worker",
-    _TRANC3_ROOT / "workers" / "infinity-ws" / "worker.py",
+    "infinity_ws_worker", _TRANC3_ROOT / "workers" / "infinity-ws" / "worker.py"
 )
 auth_mod = _import_worker(
-    "infinity_auth_worker",
-    _TRANC3_ROOT / "workers" / "infinity-auth" / "worker.py",
+    "infinity_auth_worker", _TRANC3_ROOT / "workers" / "infinity-auth" / "worker.py"
 )
 
 
@@ -275,8 +273,8 @@ class TestInfinityWSWebSocket:
                             "type": "message",
                             "channel": "broadcast-test",
                             "data": "hello everyone",
-                        },
-                    ),
+                        }
+                    )
                 )
 
                 # ws2 should receive the broadcast
@@ -310,7 +308,7 @@ class TestAuthPasswordHashing:
     def test_hash_password_returns_string(self):
         hashed = auth_mod.hash_password("testpassword123")
         assert isinstance(hashed, str)
-        assert hashed.startswith("$2")  # bcrypt format
+        assert ":" in hashed  # salt:hash format
 
     def test_hash_password_different_salts(self):
         h1 = auth_mod.hash_password("samepassword")
@@ -461,8 +459,7 @@ class TestAuthDatabase:
         auth_db.commit()
 
         row = auth_db.execute(
-            "SELECT * FROM sessions WHERE refresh_token = ?",
-            (refresh_token,),
+            "SELECT * FROM sessions WHERE refresh_token = ?", (refresh_token,)
         ).fetchone()
         assert row is not None
         assert row["user_id"] == user_id
@@ -848,8 +845,7 @@ class TestInfinityAuthHTTPEndpoints:
 
         # Setup MFA — capture the TOTP secret so we can generate a valid code
         setup_resp = auth_client.post(
-            "/auth/mfa/setup",
-            headers={"Authorization": f"Bearer {token}"},
+            "/auth/mfa/setup", headers={"Authorization": f"Bearer {token}"}
         )
         totp_secret = setup_resp.json()["secret"]
         auth_client.post("/auth/mfa/enable", headers={"Authorization": f"Bearer {token}"})

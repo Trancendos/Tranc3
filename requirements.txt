@@ -36,7 +36,7 @@ cryptography==48.0.0
 
 # Fixes: 20 CVEs including request smuggling, DoS, header parsing,
 #        information disclosure (CVE-2025-69223 through CVE-2026-34520)
-aiohttp==3.14.0
+aiohttp==3.13.5
 
 # Fixes: CVE-2026-24486, CVE-2024-53981, CVE-2026-42561, CVE-2026-40347
 python-multipart==0.0.29
@@ -75,27 +75,9 @@ idna==3.16
 # Transitive via requests, httpx — pinned explicitly to prevent downgrade.
 urllib3==2.7.0
 
-# === Authentication & Password Hashing ===
-# bcrypt: password hashing — used by src/auth/ for stored credentials
-bcrypt==4.3.0
-pyotp==2.9.0
-# passlib: high-level password hashing API wrapping bcrypt
-passlib==1.7.4
-
-# === Database ORM & Migrations ===
-# SQLAlchemy: ORM used by src/database/schema.py and src/settings_store.py
-sqlalchemy==2.0.41
-# alembic: database migration tool — migrations/ directory
-alembic==1.16.1
-# psycopg2-binary: PostgreSQL driver for SQLAlchemy (binary wheel, no build deps)
-psycopg2-binary==2.9.10
-
 # === Testing ===
 # Fixes: CVE-2025-71176 (tempfile race condition)
 pytest==9.0.3
-# pytest-asyncio: async test support (marks @pytest.mark.asyncio)
-pytest-asyncio==1.4.0
-# httpx is already pinned above — TestClient uses it for async transport
 
 # === Graph / Flow Algorithms ===
 # Used by: src/workflow/ (FlowBasedDAGRouter), src/neural/neural_mesh.py
@@ -132,20 +114,19 @@ cachetools==5.5.0
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
 
-# === Redis/Valkey Client ===
+# === Database / ORM ===
+# SQLAlchemy: ORM models in src/database/schema.py + src/auth/db_user_manager.py.
+#   Imported transitively by api.py (via DBUserManager) — required for the API to
+#   start, not optional.
+# alembic: schema migrations in migrations/ (`make migrate` → alembic upgrade head).
+sqlalchemy==2.0.50
+alembic==1.18.4
+
+# === Redis Client ===
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
 #   src/security/security_framework.py, src/mcp/tools.py for caching, session
 #   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
-#   Production target: self-hosted Valkey (Redis-compatible, BSD-3, zero cost).
-#   docker-compose.production.yml runs Valkey on port 6379.
 redis==7.4.0
-
-# === Vector DB Client ===
-# qdrant-client: Self-hosted Qdrant vector database (Apache 2.0, zero cost).
-#   Replaces Pinecone (paid). docker-compose.production.yml runs Qdrant on port 6333.
-#   Used by src/database/vector_store.py (primary backend) and
-#   src/knowledge/qdrant_store.py (knowledge/RAG layer).
-qdrant-client==1.14.3
 
 # === Master Worker / BotSwarm / Task Orchestration ===
 # pyyaml: YAML task definition parsing — powers src/master/task_loader.py

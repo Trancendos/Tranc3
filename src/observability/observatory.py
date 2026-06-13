@@ -15,16 +15,12 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import sqlite3
-import threading
 import time
 import uuid
 from collections import deque
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from Dimensional.sanitize import sanitize_for_log
@@ -33,40 +29,6 @@ logger = logging.getLogger(__name__)
 
 # Max events kept in memory
 _RING_BUFFER_SIZE = 10_000
-
-# Audit log durability — SQLite append-only store
-_AUDIT_DB_PATH = "/data/observatory_audit.db"
-_RETENTION_DAYS = 90
-_FLUSH_INTERVAL = 60  # seconds between ring-buffer → SQLite flushes
-
-
-def _get_audit_db() -> sqlite3.Connection:
-    """Return a WAL-mode SQLite connection for audit persistence."""
-    Path(_AUDIT_DB_PATH).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(_AUDIT_DB_PATH, check_same_thread=False)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=FULL")
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS audit_events (
-            id          TEXT PRIMARY KEY,
-            timestamp   REAL NOT NULL,
-            event_type  TEXT NOT NULL,
-            category    TEXT NOT NULL,
-            severity    TEXT NOT NULL,
-            actor       TEXT,
-            actor_ip    TEXT,
-            target      TEXT,
-            service     TEXT,
-            location    TEXT,
-            outcome     TEXT,
-            metadata    TEXT,
-            session_id  TEXT
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_events(timestamp)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_events(actor)")
-    conn.commit()
-    return conn
 
 
 class EventSeverity(str, Enum):
@@ -128,10 +90,6 @@ class Observatory:
         self._lock = asyncio.Lock() if asyncio.get_event_loop().is_running() else None
         self._write_queue: Optional[asyncio.Queue] = None
         self._writer_task: Optional[asyncio.Task] = None
-        self._unflushed: List[AuditEvent] = []
-        self._unflushed_lock = threading.Lock()
-        self._flush_task: Optional[asyncio.Task] = None
-        self._db_conn: Optional[sqlite3.Connection] = None
 
     def record(
         self,
@@ -163,8 +121,6 @@ class Observatory:
             session_id=session_id,
         )
         self._buffer.append(event)
-        with self._unflushed_lock:
-            self._unflushed.append(event)
         logger.debug(  # codeql[py/cleartext-logging]
             "observatory: %s actor=%s target=%s outcome=%s",
             sanitize_for_log(event_type),
@@ -209,9 +165,7 @@ class Observatory:
             logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
     def recent(
-        self,
-        limit: int = 100,
-        category: Optional[EventCategory] = None,
+        self, limit: int = 100, category: Optional[EventCategory] = None
     ) -> List[AuditEvent]:
         """Return recent events, newest first. Optionally filter by category."""
         events = list(self._buffer)
@@ -220,10 +174,7 @@ class Observatory:
         return list(reversed(events))[-limit:]
 
     def search(
-        self,
-        actor: Optional[str] = None,
-        event_type: Optional[str] = None,
-        limit: int = 50,
+        self, actor: Optional[str] = None, event_type: Optional[str] = None, limit: int = 50
     ) -> List[AuditEvent]:
         """Search the buffer for events matching the given actor or event_type prefix."""
         results = []
@@ -236,110 +187,6 @@ class Observatory:
             if len(results) >= limit:
                 break
         return results
-
-    def _get_db(self) -> sqlite3.Connection:
-        if self._db_conn is None:
-            self._db_conn = _get_audit_db()
-        return self._db_conn
-
-    def flush_to_db(self) -> int:
-        """Write pending events to SQLite. Returns number of events flushed."""
-        with self._unflushed_lock:
-            if not self._unflushed:
-                return 0
-            batch = self._unflushed[:]
-            self._unflushed.clear()
-        try:
-            conn = self._get_db()
-            conn.executemany(
-                """INSERT OR IGNORE INTO audit_events
-                   (id, timestamp, event_type, category, severity, actor, actor_ip,
-                    target, service, location, outcome, metadata, session_id)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                [
-                    (
-                        e.id,
-                        e.timestamp,
-                        e.event_type,
-                        e.category.value,
-                        e.severity.value,
-                        e.actor,
-                        e.actor_ip,
-                        e.target,
-                        e.service,
-                        e.location,
-                        e.outcome,
-                        json.dumps(e.metadata),
-                        e.session_id,
-                    )
-                    for e in batch
-                ],
-            )
-            conn.commit()
-            return len(batch)
-        except Exception:
-            logger.exception(
-                "observatory: flush_to_db failed — re-queuing %d events",
-                sanitize_for_log(len(batch)),
-            )
-            with self._unflushed_lock:
-                self._unflushed[:0] = batch  # prepend back
-            return 0
-
-    def purge_old_events(self) -> int:
-        """Delete audit rows older than _RETENTION_DAYS. Returns deleted count."""
-        cutoff = time.time() - _RETENTION_DAYS * 86400
-        try:
-            conn = self._get_db()
-            cur = conn.execute("DELETE FROM audit_events WHERE timestamp < ?", (cutoff,))
-            conn.commit()
-            return cur.rowcount
-        except Exception:
-            logger.exception("observatory: purge_old_events failed")
-            return 0
-
-    async def start_flush_loop(self) -> None:
-        """Start the background flush + retention-purge task."""
-        if self._flush_task and not self._flush_task.done():
-            return
-
-        async def _loop() -> None:
-            while True:
-                await asyncio.sleep(_FLUSH_INTERVAL)
-                try:
-                    flushed = await asyncio.to_thread(self.flush_to_db)
-                    if flushed:
-                        logger.debug(
-                            "observatory: flushed %d events to audit DB", sanitize_for_log(flushed)
-                        )
-                    # Hourly purge (every ~60 flush cycles)
-                    if int(time.time()) % 3600 < _FLUSH_INTERVAL:
-                        purged = await asyncio.to_thread(self.purge_old_events)
-                        if purged:
-                            logger.info(
-                                "observatory: purged %d events older than %d days",
-                                sanitize_for_log(purged),
-                                sanitize_for_log(_RETENTION_DAYS),
-                            )
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    logger.exception("observatory: flush loop error")
-
-        self._flush_task = asyncio.ensure_future(_loop())
-
-    async def stop_flush_loop(self) -> None:
-        """Cancel the flush task and drain any remaining events."""
-        if self._flush_task:
-            self._flush_task.cancel()
-            try:
-                await self._flush_task
-            except asyncio.CancelledError:
-                pass
-        self.flush_to_db()
-        if self._db_conn:
-            self._db_conn.close()
-            self._db_conn = None
 
     def stats(self) -> Dict[str, Any]:
         """Return summary statistics about the event buffer."""

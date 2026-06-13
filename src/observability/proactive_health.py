@@ -17,13 +17,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sqlite3
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +93,7 @@ class ProactiveHealthMonitor:
 
     def _init_db(self) -> None:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3_connect(self._db_path) as conn:
+        with sqlite3.connect(self._db_path) as conn:
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS alerts (
                     alert_id TEXT PRIMARY KEY,
@@ -103,13 +102,13 @@ class ProactiveHealthMonitor:
                     message TEXT,
                     raised_at REAL,
                     acknowledged INTEGER DEFAULT 0
-                )""",
+                )"""
             )
             conn.commit()
 
     def _persist_alert(self, alert: ProactiveAlert) -> None:
         try:
-            with sqlite3_connect(self._db_path) as conn:
+            with sqlite3.connect(self._db_path) as conn:
                 conn.execute(
                     "INSERT OR IGNORE INTO alerts VALUES (?,?,?,?,?,?)",
                     (

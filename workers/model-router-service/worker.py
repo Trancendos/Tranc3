@@ -123,7 +123,7 @@ def _seed_default_models() -> None:
             250,
             7,
         ),
-        # gpt-4o-mini removed — OpenAI is a paid API (~$0.00015/1k tokens); zero-cost violation
+        ("gpt-4o-mini", "openai", "gpt-4o-mini", 1, ["chat", "completion", "vision"], 0.0, 180, 6),
         ("llama3.1:8b", "ollama", "llama3.1:8b", 1, ["chat", "completion"], 0.0, 200, 5),
         (
             "qwen2.5-coder:7b",
@@ -136,17 +136,6 @@ def _seed_default_models() -> None:
             5,
         ),
         ("nomic-embed-text", "ollama", "nomic-embed-text", 1, ["embedding"], 0.0, 50, 3),
-        # Cerebras free tier — 60k TPM / 1M TPD; zero-cost
-        (
-            "cerebras-llama3.3-70b",
-            "cerebras",
-            "llama3.3-70b",
-            1,
-            ["chat", "completion", "reasoning"],
-            0.0,
-            180,
-            6,
-        ),
     ]
     for name, provider, model_id, is_free, caps, cost, latency, priority in defaults:
         mid = _new_id()
@@ -265,12 +254,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "model-router-service",
-        "port": 8033,
-        "entity": health_entity_block(8033, "model-router-service"),
-    }
+    return {"status": "ok", "service": "model-router-service", "port": 8033}
 
 
 # ---------------------------------------------------------------------------
@@ -316,9 +300,7 @@ async def register_model(body: ModelRegister):
 
 @_router.get("/models")
 async def list_models(
-    active_only: bool = True,
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ):
     conn = _get_db()
     q = "SELECT * FROM models WHERE 1=1"
@@ -436,7 +418,7 @@ async def get_stats():
     free = conn.execute("SELECT COUNT(*) as c FROM models WHERE is_free=1").fetchone()["c"]
     active = conn.execute("SELECT COUNT(*) as c FROM models WHERE is_active=1").fetchone()["c"]
     total_requests = conn.execute(
-        "SELECT COALESCE(SUM(total_requests), 0) as c FROM models",
+        "SELECT COALESCE(SUM(total_requests), 0) as c FROM models"
     ).fetchone()["c"]
     conn.close()
     return {

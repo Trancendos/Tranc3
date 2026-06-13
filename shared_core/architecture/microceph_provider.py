@@ -1,22 +1,10 @@
 # Re-export from canonical location — Dimensional.architecture is the source of truth.
-from Dimensional.architecture.microceph_provider import (  # noqa: F401  # codeql[py/unused-import]
-    CEPH_CMD,
-    CEPH_CONF_PATH,
-    COMMAND_TIMEOUT_SECONDS,
+from Dimensional.architecture.microceph_provider import (  # noqa: F401
     DEFAULT_POOLS,
-    HEALTH_CHECK_INTERVAL,
     MAX_PG_COUNT,
     MICROCEPH_CMD,
-    MICROCEPH_SOCKET,
     MIN_PG_COUNT,
-    OSD_LOOP_SIZE_GB,
     OSD_TARGET_PG_PER_OSD,
-    RADOSGW_ADMIN_CMD,
-    RGW_DEFAULT_HOST,
-    RGW_DEFAULT_PORT,
-    RGW_REALM,
-    RGW_ZONE,
-    RGW_ZONE_GROUP,
     CephHealthMonitor,
     CephHealthStatus,
     CephPoolManager,

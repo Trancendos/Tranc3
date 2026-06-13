@@ -1,21 +1,20 @@
 """
-Trancendos vault-service — DEPRECATED
-======================================
-DEPRECATED: All new secrets management must use workers/infinity-void/ (The Void,
-port 8002), which is the canonical single vault for the platform.
+Trancendos vault-service — Self-Hosted Worker
+==============================================
+Secure secret management with memory-mapped injection, zeroization,
+and audit integration. Wraps Dimensional.architecture.vault and
+vault_security into a FastAPI microservice.
 
-This service (port 8038) is retained only to serve the legacy encrypted records
-already stored in data/vault.db until they are migrated.  It MUST NOT be used for
-storing new secrets.  Migrate remaining secrets with:
+Features:
+    - Load secrets from env vars, .env files, or inject at runtime
+    - Memory-mapped secret injection (mmap) for zero-copy access
+    - Automatic zeroization on TTL expiry or explicit revoke
+    - Hash-chained audit trail for every secret access
+    - Leak detection (scans environment for known secret patterns)
+    - Secret rotation with versioning
 
-    python scripts/migrate_vault_secrets.py --from vault-service --to infinity-void
-
-Once migration is complete this worker can be removed from docker-compose.
-
-The insecure XOR cipher (Tranc3Vault2024!ZeroCostCrypto) has been completely
-eradicated.  All records in vault.db are AES-256-GCM encrypted.
-
-Port: 8038 (read-only / migration endpoint only)
+Port: 8038
+Zero-cost: FastAPI + SQLite + mmap, no external vault required.
 """
 
 from __future__ import annotations
@@ -61,10 +60,6 @@ AUDIT_LOG_PATH = os.environ.get("VAULT_AUDIT_LOG", "data/vault_audit.jsonl")
 DEFAULT_TTL = int(os.environ.get("VAULT_DEFAULT_TTL", "3600"))
 # Master key seed for AES-256-GCM derivation — must be set via env var in production
 VAULT_MASTER_KEY = os.environ.get("VAULT_MASTER_KEY", "")
-_ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
-
-if _ENVIRONMENT == "production" and not VAULT_MASTER_KEY:
-    raise RuntimeError("vault-service requires VAULT_MASTER_KEY in production")
 
 logger = logging.getLogger("vault-service")
 
@@ -141,7 +136,7 @@ def _get_master_key() -> str:
         # In production, VAULT_MASTER_KEY must be set via environment.
         logger.warning(
             "vault-service: VAULT_MASTER_KEY not set — using ephemeral key. "
-            "Secrets will NOT survive restarts. Set VAULT_MASTER_KEY in production.",
+            "Secrets will NOT survive restarts. Set VAULT_MASTER_KEY in production."
         )
         # Use a stable-per-process key so secrets survive within a single run
         import threading
@@ -192,7 +187,7 @@ def _decrypt_secret(ciphertext_hex: str) -> str:
 
     raw = bytes.fromhex(ciphertext_hex)
     if len(raw) < 60:  # 32 + 12 + 16 minimum
-        raise ValueError("vault-service: ciphertext too short — record is corrupted")
+        raise ValueError("vault-service: ciphertext too short — corrupted or legacy XOR data")
     salt = raw[:32]
     iv = raw[32:44]
     ct_with_tag = raw[44:]
@@ -223,7 +218,7 @@ _last_audit_hash = "0" * 64  # Genesis hash
 
 def _get_last_hash(conn: sqlite3.Connection) -> str:
     row = conn.execute(
-        "SELECT hash FROM audit_log ORDER BY created_at DESC, rowid DESC LIMIT 1",
+        "SELECT hash FROM audit_log ORDER BY created_at DESC, rowid DESC LIMIT 1"
     ).fetchone()
     return row["hash"] if row else "0" * 64
 
@@ -305,12 +300,8 @@ async def _lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Tranc3 Vault Service — DEPRECATED",
-    description=(
-        "DEPRECATED: Use workers/infinity-void/ (The Void, port 8002) for all new secrets. "
-        "This service exists only for legacy record migration. "
-        "XOR cipher (Tranc3Vault2024!ZeroCostCrypto) has been eradicated."
-    ),
+    title="Tranc3 Vault Service (AES-256-GCM)",
+    description="Secure secret storage — XOR cipher replaced with AES-256-GCM + PBKDF2.",
     version="1.0.0",
     lifespan=_lifespan,
 )
@@ -337,17 +328,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "deprecated",
-        "service": "vault-service",
-        "port": 8038,
-        "successor": "infinity-void (port 8002)",
-        "message": (
-            "vault-service is DEPRECATED. Migrate all secrets to The Void (workers/infinity-void/). "
-            "XOR cipher has been eradicated. Only AES-256-GCM records remain."
-        ),
-        "entity": health_entity_block(8038, "vault-service"),
-    }
+    return {"status": "ok", "service": "vault-service", "port": 8030}
 
 
 # ---------------------------------------------------------------------------
@@ -389,9 +370,7 @@ async def create_secret(body: SecretCreate):
 
 @_router.get("/secrets", response_model=List[SecretResponse])
 async def list_secrets(
-    active_only: bool = True,
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ):
     conn = _get_db()
     q = "SELECT * FROM secrets WHERE 1=1"
@@ -461,10 +440,7 @@ async def update_secret(secret_id: str, body: SecretUpdate):
     set_clause = ", ".join(f"{k}=?" for k in updates)
     conn.execute(f"UPDATE secrets SET {set_clause} WHERE id=?", (*updates.values(), secret_id))
     _append_audit(
-        conn,
-        secret_id,
-        "secret.update",
-        details={"fields_updated": list(updates.keys())},
+        conn, secret_id, "secret.update", details={"fields_updated": list(updates.keys())}
     )
     conn.commit()
 
@@ -548,7 +524,7 @@ async def get_audit_log(
 async def verify_audit_chain():
     conn = _get_db()
     rows = conn.execute(
-        "SELECT id, hash, prev_hash FROM audit_log ORDER BY created_at ASC, rowid ASC",
+        "SELECT id, hash, prev_hash FROM audit_log ORDER BY created_at ASC, rowid ASC"
     ).fetchall()
     conn.close()
     if not rows:
@@ -603,7 +579,7 @@ async def get_stats():
     revoked = conn.execute("SELECT COUNT(*) as c FROM secrets WHERE is_active=0").fetchone()["c"]
     audit = conn.execute("SELECT COUNT(*) as c FROM audit_log").fetchone()["c"]
     leaks = conn.execute(
-        "SELECT COUNT(*) as c FROM leak_detections WHERE status='open'",
+        "SELECT COUNT(*) as c FROM leak_detections WHERE status='open'"
     ).fetchone()["c"]
     conn.close()
     return {

@@ -188,7 +188,7 @@ class SelfRepairEngine:
                 condition=lambda ctx: float(ctx.get("memory_percent", 0)) > 85.0,
                 action=_memory_pressure_action,
                 cooldown_sec=120.0,
-            ),
+            )
         )
 
         # 2. High error rate → circuit breaker pattern
@@ -217,7 +217,7 @@ class SelfRepairEngine:
                 condition=lambda ctx: float(ctx.get("error_rate", 0)) > 0.1,
                 action=_high_error_rate_action,
                 cooldown_sec=60.0,
-            ),
+            )
         )
 
         # 3. Evolution stagnation → inject diversity
@@ -243,7 +243,7 @@ class SelfRepairEngine:
                 ),
                 action=_evolution_stagnation_action,
                 cooldown_sec=600.0,
-            ),
+            )
         )
 
         # 4. Model drift → trigger model refresh
@@ -270,7 +270,7 @@ class SelfRepairEngine:
                 condition=lambda ctx: float(ctx.get("prediction_confidence", 1.0)) < 0.5,
                 action=_model_drift_action,
                 cooldown_sec=900.0,
-            ),
+            )
         )
 
         # 5. Queue overflow → backpressure
@@ -292,7 +292,7 @@ class SelfRepairEngine:
                 condition=lambda ctx: int(ctx.get("queue_depth", 0)) > 1000,
                 action=_queue_overflow_action,
                 cooldown_sec=30.0,
-            ),
+            )
         )
 
 

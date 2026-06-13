@@ -74,13 +74,7 @@ from src.entities.health_metadata import health_entity_block
 
 PORT = int(os.environ.get("INFINITY_ONE_PORT", "8043"))
 DB_PATH = os.environ.get("INFINITY_ONE_DB_PATH", "data/infinity_one.db")
-_jwt_secret_raw = os.environ.get("JWT_SECRET")
-if not _jwt_secret_raw:
-    raise RuntimeError(
-        "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
-    )
-JWT_SECRET: str = _jwt_secret_raw
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 logger = logging.getLogger("infinity-one-service")
 
@@ -284,7 +278,7 @@ class IdentitySummary(BaseModel):
 async def _lifespan(app: FastAPI):
     """Startup/shutdown lifecycle for the Infinity-One service."""
     # ── Startup ──
-    logger.info("Infinity-One starting on port %d", sanitize_for_log(PORT))
+    logger.info("Infinity-One starting on port %d", PORT)
 
     # Start Sentinel Station
     await sentinel.start()
@@ -314,7 +308,7 @@ async def _lifespan(app: FastAPI):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "smart_adaptive": True,
             },
-        ),
+        )
     )
 
     logger.info("Infinity-One ready — single identity, multi-app access ✨")
@@ -327,6 +321,7 @@ async def _lifespan(app: FastAPI):
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
                     summary_dict = summary.to_dict()
+
                     worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     await sentinel.publish(
@@ -335,12 +330,12 @@ async def _lifespan(app: FastAPI):
                             event_type="health_report",
                             source="infinity_one",
                             payload=summary_dict,
-                        ),
+                        )
                     )
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.debug("Infinity-One background loop error: %s", sanitize_for_log(exc))
+                logger.debug("Infinity-One background loop error: %s", exc)
 
     _bg_task = asyncio.create_task(_background_loop())
 
@@ -485,7 +480,6 @@ async def health():
     """Health check for the Infinity-One service."""
     health_summary = worker_kit.health.get_health_summary()
     return {
-        "entity": health_entity_block(8043, "unknown"),
         "status": "healthy",
         "service": "infinity-one",
         "location": "Infinity-One",
@@ -514,11 +508,16 @@ async def create_identity(request: Request, identity: IdentityCreate):
     if existing:
         raise HTTPException(status_code=409, detail="Identity already exists")
 
-    # Determine tier and infinity_role from role using canonical mapping functions
-    from shared_core.infinity.nomenclature import get_infinity_role_for_role, get_tier_for_role
+    # Determine tier and infinity_role from role
+    from Dimensional.infinity.nomenclature import (
+        get_infinity_role_for_role as _girr,
+    )
+    from Dimensional.infinity.nomenclature import (
+        get_tier_for_role as _gtr,
+    )
 
-    tier = get_tier_for_role(identity.role)
-    infinity_role = get_infinity_role_for_role(identity.role)
+    tier = _gtr(identity.role)
+    infinity_role = _girr(identity.role)
 
     now = datetime.now(timezone.utc).isoformat()
     db.execute(
@@ -564,7 +563,7 @@ async def create_identity(request: Request, identity: IdentityCreate):
                 "username": identity.username,
                 "role": identity.role,
             },
-        ),
+        )
     )
 
     return IdentityResponse(
@@ -681,26 +680,15 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         updates.append("role = ?")
         params.append(update.role)
         # Update tier and infinity_role based on new role
-        from shared_core.infinity.nomenclature import InfinityRole as _IR
-        from shared_core.infinity.nomenclature import Tier as _T
+        from Dimensional.infinity.nomenclature import (
+            get_infinity_role_for_role as _girr,
+        )
+        from Dimensional.infinity.nomenclature import (
+            get_tier_for_role as _gtr,
+        )
 
-        _role_tier = {
-            "admin": _T.ADMIN,
-            "superadmin": _T.ADMIN,
-            "devops": _T.ADMIN,
-            "moderator": _T.PILLAR,
-            "manager": _T.PILLAR,
-            "pillar": _T.PILLAR,
-        }
-        _role_ir = {
-            "admin": _IR.ADMIN,
-            "superadmin": _IR.ADMIN,
-            "devops": _IR.DEVOPS,
-            "moderator": _IR.MODERATOR,
-            "manager": _IR.MANAGER,
-        }
-        tier = _role_tier.get(update.role.lower().strip(), _T.HUMAN)
-        infinity_role = _role_ir.get(update.role.lower().strip(), _IR.USER)
+        tier = _gtr(update.role)
+        infinity_role = _girr(update.role)
         updates.append("tier = ?")
         params.append(tier.value)
         updates.append("infinity_role = ?")
@@ -736,7 +724,7 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
             event_type="identity_updated",
             source="infinity_one",
             payload={"user_id": user_id},
-        ),
+        )
     )
 
     return {"message": "Identity updated", "user_id": user_id}
@@ -773,7 +761,7 @@ async def deactivate_identity(user_id: str, request: Request):
             event_type="identity_deactivated",
             source="infinity_one",
             payload={"user_id": user_id, "username": row["username"]},
-        ),
+        )
     )
 
     return {"message": "Identity deactivated", "user_id": user_id}
@@ -802,14 +790,9 @@ async def grant_app_access(user_id: str, access: AppAccessGrant, request: Reques
     ).fetchone()
 
     if existing:
-        logger.warning(
-            "Duplicate app access rejected user=%s app=%s",
-            sanitize_for_log(user_id),
-            sanitize_for_log(access.app_name),
-        )
         raise HTTPException(
             status_code=409,
-            detail="Active access already exists",
+            detail=f"Active access already exists for app '{access.app_name}'",
         )
 
     access_id = uuid.uuid4().hex[:16]
@@ -950,7 +933,7 @@ async def identity_summary():
 
     # By pillar
     pillar_rows = db.execute(
-        "SELECT pillar, COUNT(*) as cnt FROM identities WHERE pillar IS NOT NULL GROUP BY pillar",
+        "SELECT pillar, COUNT(*) as cnt FROM identities WHERE pillar IS NOT NULL GROUP BY pillar"
     ).fetchall()
     by_pillar = {r["pillar"]: r["cnt"] for r in pillar_rows}
 
@@ -973,10 +956,10 @@ async def stats():
     """Get Infinity-One service statistics."""
     total_identities = db.execute("SELECT COUNT(*) as cnt FROM identities").fetchone()["cnt"]
     active_identities = db.execute(
-        "SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1",
+        "SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1"
     ).fetchone()["cnt"]
     total_app_access = db.execute(
-        "SELECT COUNT(*) as cnt FROM app_access WHERE is_revoked = 0",
+        "SELECT COUNT(*) as cnt FROM app_access WHERE is_revoked = 0"
     ).fetchone()["cnt"]
     total_devices = db.execute("SELECT COUNT(*) as cnt FROM devices").fetchone()["cnt"]
     total_events = db.execute("SELECT COUNT(*) as cnt FROM identity_events").fetchone()["cnt"]

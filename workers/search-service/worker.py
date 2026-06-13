@@ -190,13 +190,19 @@ async def health():
         index_count = conn.execute("SELECT COUNT(*) FROM indices").fetchone()[0]
         doc_count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
     return {
-        "entity": health_entity_block(8017, "search-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "indices": index_count,
         "documents": doc_count,
+        "entity": {
+            "location": "The Library",
+            "pillar": "Knowledge",
+            "lead_ai": "Zimik",
+            "primes": ["Norman Hawkins"],
+            "primary_function": "Knowledge Base & Wiki",
+        },
     }
 
 
@@ -246,8 +252,7 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
     now = time.time()
     with get_conn() as conn:
         existing = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-            (index, doc_id),
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
         ).fetchone()
         if existing:
             conn.execute(
@@ -262,8 +267,7 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
             )
             conn.execute("UPDATE indices SET doc_count=doc_count+1 WHERE name=?", (index,))
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-            (index, doc_id),
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
         ).fetchone()
         conn.execute(
             "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -281,8 +285,7 @@ async def batch_index(index: str, req: BatchIndexIn):
     with get_conn() as conn:
         for doc in req.documents:
             existing = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-                (index, doc.id),
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
             ).fetchone()
             if existing:
                 conn.execute(
@@ -297,8 +300,7 @@ async def batch_index(index: str, req: BatchIndexIn):
                 )
                 inserted += 1
             row = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-                (index, doc.id),
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
             ).fetchone()
             conn.execute(
                 "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -314,8 +316,7 @@ async def delete_document(index: str, doc_id: str):
     _ensure_index(index)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-            (index, doc_id),
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Document not found")
@@ -364,8 +365,8 @@ async def search(
         d = dict(r)
         try:
             d["metadata"] = json.loads(d["metadata"])
-        except json.JSONDecodeError:
-            d["metadata"] = {}
+        except Exception:
+            pass
         results.append(d)
     return {"query": q, "index": index, "results": results, "count": len(results)}
 

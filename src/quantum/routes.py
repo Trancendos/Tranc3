@@ -11,7 +11,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
-from Dimensional.error_handlers import log_server_error
+from Dimensional.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/thinktank", tags=["think-tank"])
@@ -71,10 +71,7 @@ async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
             status_code=503,
         )
     except Exception as exc:
-        return JSONResponse(
-            {"error": log_server_error(exc, 500, context="quantum simulate")},
-            status_code=500,
-        )
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.post("/deepmind/plan")
@@ -99,5 +96,5 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         return {
             "problem": body.get("problem", ""),
             "plan": None,
-            "error": log_server_error(exc, 500, context="deepmind plan"),
+            "error": safe_error_detail(exc, 500),
         }

@@ -71,11 +71,13 @@ logger = logging.getLogger(__name__)
 
 try:
     from src.fluidic.causal_bus import CausalEventBus
+    from src.fluidic.causal_bus import causal_bus as _global_causal_bus
 
     _CAUSAL_AVAILABLE = True
 except ImportError:
     _CAUSAL_AVAILABLE = False
     CausalEventBus = None  # type: ignore[assignment,misc]
+    _global_causal_bus = None
 
 try:
     from src.fluidic.reactive_state import StateStore

@@ -57,10 +57,7 @@ class DBUserManager:
         self._session_factory = db_session_factory
         self._fallback: dict = {}  # in-memory fallback
         self._use_db = db_session_factory is not None
-        logger.info(
-            "DBUserManager initialised — DB=%s",
-            sanitize_for_log("enabled" if self._use_db else "fallback"),
-        )
+        logger.info("DBUserManager initialised — DB=%s", "enabled" if self._use_db else "fallback")
 
     def _get_session(self) -> Optional[Session]:
         if self._session_factory:
@@ -215,6 +212,5 @@ class DBUserManager:
             errors.append("one number")
         if errors:
             raise HTTPException(
-                status_code=400,
-                detail=f"Password must contain: {', '.join(errors)}",
+                status_code=400, detail=f"Password must contain: {', '.join(errors)}"
             )

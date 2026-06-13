@@ -138,17 +138,12 @@ async def _check_one(name: str, url: str) -> dict:
         }
     except Exception as exc:
         ms = (time.time() - start) * 1000
-        safe_message = log_server_error(
-            exc,
-            503,
-            context=f"health check for {name}",
-        )
         return {
             "service": name,
             "status": "down",
             "http_code": None,
             "response_ms": round(ms, 1),
-            "details": {"error": safe_message},
+            "details": {"error": str(exc)},
         }
 
 
@@ -251,7 +246,6 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 async def health():
     healthy = sum(1 for v in _latest.values() if v["status"] == "healthy")
     return {
-        "entity": health_entity_block(8029, "health-aggregator"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -259,6 +253,13 @@ async def health():
         "monitored_services": len(_latest),
         "healthy": healthy,
         "degraded_or_down": len(_latest) - healthy,
+        "entity": {
+            "location": "DevOcity",
+            "pillar": "DevOps",
+            "lead_ai": "Kitty",
+            "primes": ["Trancendos"],
+            "primary_function": "Development Operations",
+        },
     }
 
 

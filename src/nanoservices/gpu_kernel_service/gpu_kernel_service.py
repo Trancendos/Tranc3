@@ -132,7 +132,7 @@ class CompiledKernel:
                 json.dumps(
                     {"type": self.spec.kernel_type.value, "backend": self.spec.backend.value},
                     sort_keys=True,
-                ).encode(),
+                ).encode()
             ).hexdigest()[:16]
 
 

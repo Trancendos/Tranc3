@@ -104,8 +104,7 @@ async def _visibility_restore_loop() -> None:
                 if row["retry_count"] + 1 >= MAX_RETRIES:
                     # promote to DLQ
                     msg = conn.execute(
-                        "SELECT * FROM messages WHERE id = ?",
-                        (row["id"],),
+                        "SELECT * FROM messages WHERE id = ?", (row["id"],)
                     ).fetchone()
                     conn.execute(
                         "INSERT OR REPLACE INTO dead_letters (id, topic, payload, retry_count, moved_at, last_error) VALUES (?,?,?,?,?,?)",
@@ -220,11 +219,10 @@ async def health():
     with get_conn() as conn:
         pending = conn.execute("SELECT COUNT(*) FROM messages WHERE status='pending'").fetchone()[0]
         processing = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE status='processing'",
+            "SELECT COUNT(*) FROM messages WHERE status='processing'"
         ).fetchone()[0]
         dlq = conn.execute("SELECT COUNT(*) FROM dead_letters").fetchone()[0]
     return {
-        "entity": health_entity_block(8022, "queue-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -232,6 +230,13 @@ async def health():
         "pending": pending,
         "processing": processing,
         "dead_letters": dlq,
+        "entity": {
+            "location": "The HIVE",
+            "pillar": "Architectural",
+            "lead_ai": "The Queen",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Data Transport Hub",
+        },
     }
 
 
@@ -273,7 +278,7 @@ async def delete_topic(topic: str):
 def _ensure_topic(topic: str) -> None:
     with get_conn() as conn:
         if not conn.execute("SELECT name FROM topics WHERE name = ?", (topic,)).fetchone():
-            raise HTTPException(status_code=404, detail="Topic not found")
+            raise HTTPException(status_code=404, detail=f"Topic '{topic}' not found")
 
 
 # --- Publish ---
@@ -282,20 +287,6 @@ def _ensure_topic(topic: str) -> None:
 @_router.post("/topics/{topic}/publish", status_code=201)
 async def publish(topic: str, req: PublishIn):
     _ensure_topic(topic)
-    # Capacity hard stop — queue depth
-    try:
-        import os
-        import sys
-
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from src.capacity.guard import CapacityExceededError, CapacityService, get_capacity_guard
-
-        get_capacity_guard().consume(CapacityService.QUEUE_DEPTH, amount=1)
-    except Exception as _qe:
-        from src.capacity.guard import CapacityExceededError
-
-        if isinstance(_qe, CapacityExceededError):
-            raise HTTPException(status_code=503, detail=safe_error_detail(_qe, 503)) from _qe
     now = time.time()
     msg_id = str(uuid.uuid4())
     visible_after = now + req.delay
@@ -362,7 +353,7 @@ async def consume(
                 "enqueued_at": r["enqueued_at"],
             }
             for r in rows
-        ],
+        ]
     }
 
 
@@ -376,8 +367,7 @@ async def ack(topic: str, message_id: str):
         ).fetchone()
         if not row:
             raise HTTPException(
-                status_code=404,
-                detail="Message not found or not in processing state",
+                status_code=404, detail="Message not found or not in processing state"
             )
         conn.execute(
             "UPDATE messages SET status='acknowledged', acked_at=? WHERE id=?",
@@ -397,8 +387,7 @@ async def nack(topic: str, message_id: str):
         ).fetchone()
         if not row:
             raise HTTPException(
-                status_code=404,
-                detail="Message not found or not in processing state",
+                status_code=404, detail="Message not found or not in processing state"
             )
         if row["retry_count"] + 1 >= MAX_RETRIES:
             conn.execute(
@@ -431,16 +420,13 @@ async def topic_stats(topic: str):
     _ensure_topic(topic)
     with get_conn() as conn:
         pending = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='pending'",
-            (topic,),
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='pending'", (topic,)
         ).fetchone()[0]
         processing = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='processing'",
-            (topic,),
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='processing'", (topic,)
         ).fetchone()[0]
         acked = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='acknowledged'",
-            (topic,),
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='acknowledged'", (topic,)
         ).fetchone()[0]
         dlq = conn.execute("SELECT COUNT(*) FROM dead_letters WHERE topic=?", (topic,)).fetchone()[
             0

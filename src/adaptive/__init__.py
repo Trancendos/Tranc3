@@ -1,11 +1,26 @@
-"""Adaptive switching, rotation, and proactive zero-cost orchestration."""
+# src/adaptive/__init__.py
+# Tranc3 Adaptive Layer — Predictive & Adaptive Systems
 
-from src.adaptive.proactive_orchestrator import ProactiveOrchestrator, get_proactive_orchestrator
-from src.adaptive.provider_rotator import AdaptiveProviderRotator, get_provider_rotator
+from .predictive_scaler import (
+    LoadForecast,
+    LoadForecaster,
+    LoadSample,
+    PredictiveAutoscaler,
+    ScalerConfig,
+    ScalingDecision,
+    ScalingDirection,
+    ScalingReason,
+    predictive_scaler,
+)
 
 __all__ = [
-    "AdaptiveProviderRotator",
-    "ProactiveOrchestrator",
-    "get_provider_rotator",
-    "get_proactive_orchestrator",
+    "PredictiveAutoscaler",
+    "LoadForecaster",
+    "LoadForecast",
+    "LoadSample",
+    "ScalingDecision",
+    "ScalingDirection",
+    "ScalingReason",
+    "ScalerConfig",
+    "predictive_scaler",
 ]

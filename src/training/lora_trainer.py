@@ -34,16 +34,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-try:
-    import torch
-    import torch.nn as nn
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
+import torch.nn as nn
 
 from .lora import (
     LoRAConfig,
@@ -80,7 +72,7 @@ class LoRATrainingConfig:
             "out_proj",
             "qkv_proj",
             "down_proj",
-        ],
+        ]
     )
     quantize_4bit: bool = False
     use_dora: bool = False
@@ -275,8 +267,8 @@ class LoRATrainer:
                 self.save_adapter(
                     str(
                         Path(self.cfg.checkpoint_dir)
-                        / f"{self.cfg.run_name}_step{self.step + 1}.pt",
-                    ),
+                        / f"{self.cfg.run_name}_step{self.step + 1}.pt"
+                    )
                 )
 
             self.step += 1

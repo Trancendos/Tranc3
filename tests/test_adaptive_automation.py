@@ -254,7 +254,7 @@ class TestViolationPredictor:
         code_file.write_text(
             "import os\n\n"
             "from Dimensional.path_validation import validate_path\n\n"
-            "def handler(path):\n    safe_path = validate_path(path)\n",
+            "def handler(path):\n    safe_path = validate_path(path)\n"
         )
 
         predictor = ViolationPredictor()
@@ -277,7 +277,7 @@ class TestViolationPredictor:
             "    if x:\n"
             "        if y:\n"
             "            return hashlib.md5(str(z).encode())\n"
-            "    return None\n",
+            "    return None\n"
         )
 
         predictor = ViolationPredictor()
@@ -403,7 +403,7 @@ class TestVaultSecretLoader:
         """Should detect potential secret leaks in environment."""
         from Dimensional.architecture.vault import VaultSecretLoader
 
-        os.environ["LEAKED_API_KEY"] = "FAKE-NOT-A-SECRET-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        os.environ["LEAKED_API_KEY"] = "sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234"
         try:
             loader = VaultSecretLoader()
             leaks = loader.detect_leaks()
@@ -692,10 +692,7 @@ class TestCircuitBreaker:
         from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(
-            name="test-cb",
-            failure_threshold=2,
-            cooldown_seconds=0.05,
-            success_threshold=2,
+            name="test-cb", failure_threshold=2, cooldown_seconds=0.05, success_threshold=2
         )
         cb.record_failure()
         cb.record_failure()
@@ -721,10 +718,7 @@ class TestCircuitBreaker:
         from Dimensional.orchestration.health_monitor import CircuitBreaker
 
         cb = CircuitBreaker(
-            name="test-cb",
-            failure_threshold=2,
-            cooldown_seconds=10.0,
-            max_cooldown=300.0,
+            name="test-cb", failure_threshold=2, cooldown_seconds=10.0, max_cooldown=300.0
         )
         # First opening
         cb.record_failure()

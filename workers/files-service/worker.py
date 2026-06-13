@@ -168,7 +168,6 @@ STARTED_AT = datetime.now(timezone.utc)
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8014, "files-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -185,24 +184,6 @@ async def list_all(limit: int = 50, offset: int = 0):
 @_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new files entry."""
-    # Capacity hard stop — daily upload count and storage bytes
-    try:
-        import os
-        import sys
-
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from src.capacity.guard import CapacityExceededError, CapacityService, get_capacity_guard
-
-        _g = get_capacity_guard()
-        _g.consume(CapacityService.FILES_UPLOADS_DAILY, amount=1)
-        file_size = data.get("file_size", 0) or 0
-        if file_size:
-            _g.consume(CapacityService.STORAGE_BYTES, amount=int(file_size))
-    except Exception as _fe:
-        from src.capacity.guard import CapacityExceededError
-
-        if isinstance(_fe, CapacityExceededError):
-            raise HTTPException(status_code=503, detail=safe_error_detail(_fe, 503)) from _fe
     item_id = data.get("file_id", str(uuid.uuid4()))
     data["file_id"] = item_id
     created = db.create(data)
@@ -293,10 +274,10 @@ async def storage_stats():
     """Total storage used per user and overall."""
     conn = db._get_conn()
     total = conn.execute(
-        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files",
+        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files"
     ).fetchone()
     by_user = conn.execute(
-        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20",
+        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20"
     ).fetchall()
     return {
         "total_bytes": total["total_bytes"] or 0,

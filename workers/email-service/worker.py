@@ -273,7 +273,6 @@ async def health():
         sent = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='sent'").fetchone()[0]
         failed = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='failed'").fetchone()[0]
     return {
-        "entity": health_entity_block(8018, "email-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -282,6 +281,14 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
+        "entity": {
+            "location": "Arcadia",
+            "pillar": "Commercial / Financial",
+            "lead_ai": "Lilli SC",
+            "primes": ["Dorris Fontaine"],
+            "primary_function": "Post-Login User Frontend, Forum & Email Hub",
+            "layer": "supporting",
+        },
     }
 
 
@@ -348,8 +355,7 @@ async def retry_email(email_id: int):
         if not row:
             raise HTTPException(status_code=404, detail="Email not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
-            (email_id,),
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,)
         )
         conn.commit()
     return {"retrying": email_id}
@@ -375,7 +381,7 @@ async def create_template(req: TemplateCreate):
 async def list_templates():
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, name, subject, created_at FROM templates ORDER BY name",
+            "SELECT id, name, subject, created_at FROM templates ORDER BY name"
         ).fetchall()
     return {"templates": [dict(r) for r in rows]}
 

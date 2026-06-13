@@ -86,13 +86,7 @@ except ImportError:
 
 PORT = int(os.environ.get("SENTINEL_PORT", "8041"))
 DB_PATH = os.environ.get("SENTINEL_DB_PATH", "data/sentinel_station.db")
-_jwt_secret_raw = os.environ.get("JWT_SECRET")
-if not _jwt_secret_raw:
-    raise RuntimeError(
-        "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
-    )
-JWT_SECRET: str = _jwt_secret_raw
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 logger = logging.getLogger("sentinel-station-service")
 
@@ -133,7 +127,7 @@ if _REACTIVE_AVAILABLE:
                 "subscribers": 0,
                 "events_published": 0,
                 "redis_connected": False,
-            },
+            }
         )
     except Exception:
         sentinel_topology_state = None
@@ -175,7 +169,7 @@ def _init_db() -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_event_log_channel ON event_log(channel);
         CREATE INDEX IF NOT EXISTS idx_event_log_created ON event_log(created_at);
-        """,
+        """
     )
     conn.close()
 
@@ -195,15 +189,9 @@ def _check_rbac(request: Request, endpoint: str, method: str) -> None:
     """Check RBAC access for the given endpoint/method. Raises 403 if denied."""
     user = _get_user(request)
     if not rbac_engine.check_access(user, endpoint, method):
-        logger.warning(
-            "RBAC denied method=%s endpoint=%s user=%s",
-            sanitize_for_log(method),
-            sanitize_for_log(endpoint),
-            sanitize_for_log(user.get("sub", "anonymous")),
-        )
         raise HTTPException(
             status_code=403,
-            detail="Access denied: insufficient permissions",
+            detail=f"Access denied: insufficient permissions for {method} {endpoint}",
         )
 
 
@@ -222,8 +210,8 @@ async def _lifespan(app: FastAPI):
     await sentinel.start()
     logger.info(
         "Sentinel Station started (backend: %s, port: %d)",
-        sanitize_for_log("redis" if sentinel.is_redis_connected else "fallback"),
-        sanitize_for_log(PORT),
+        "redis" if sentinel.is_redis_connected else "fallback",
+        PORT,
     )
 
     # Create shared SSE generator for broadcasting events
@@ -270,13 +258,14 @@ async def _lifespan(app: FastAPI):
                                 "subscribers": stats.get("total_subscribers", 0),
                                 "events_published": stats.get("events_published", 0),
                                 "redis_connected": sentinel.is_redis_connected,
-                            },
+                            }
                         )
                     worker_kit.health.record_fire("topology_updater")
 
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
                     summary_dict = summary.to_dict()
+
                     worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     # Broadcast sentinel health to the platform channel
@@ -286,12 +275,12 @@ async def _lifespan(app: FastAPI):
                             event_type="sentinel_health_report",
                             source="sentinel_station",
                             payload=summary_dict,
-                        ),
+                        )
                     )
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.debug("Sentinel background loop error: %s", sanitize_for_log(exc))
+                logger.debug("Sentinel background loop error: %s", exc)
 
     _bg_task = asyncio.create_task(_bg_loop())
 
@@ -383,7 +372,6 @@ async def health():
     sentinel_health = await sentinel.health_check()
     health_summary = worker_kit.health.get_health_summary()
     return {
-        "entity": health_entity_block(8041, "unknown"),
         "status": "ok",
         "service": "sentinel-station-service",
         "version": "0.8.0",
@@ -440,10 +428,9 @@ async def publish_event(body: EventPublish, request: Request):
     # Validate channel name
     valid_channels = [ch.value for ch in SentinelChannel]
     if body.channel not in valid_channels:
-        logger.warning("Invalid channel rejected: %s", sanitize_for_log(body.channel))
         raise HTTPException(
             400,
-            detail="Invalid channel",
+            detail=f"Invalid channel: {body.channel}. Valid channels: {', '.join(valid_channels)}",
         )
 
     # Publish through Sentinel Station
@@ -498,7 +485,7 @@ async def publish_events_batch(events: list[EventPublish], request: Request):
 
     for i, body in enumerate(events):
         if body.channel not in valid_channels:
-            errors.append({"index": i, "error": "Invalid channel"})
+            errors.append({"index": i, "error": f"Invalid channel: {body.channel}"})
             continue
 
         event = await sentinel.publish(
@@ -512,7 +499,7 @@ async def publish_events_batch(events: list[EventPublish], request: Request):
                 "id": event.id,
                 "channel": event.channel,
                 "event_type": event.event_type,
-            },
+            }
         )
 
     return {
@@ -567,10 +554,9 @@ async def create_subscription(body: SubscriptionCreate, request: Request):
 
     valid_channels = [ch.value for ch in SentinelChannel]
     if body.channel not in valid_channels:
-        logger.warning("Invalid channel rejected: %s", sanitize_for_log(body.channel))
         raise HTTPException(
             400,
-            detail="Invalid channel",
+            detail=f"Invalid channel: {body.channel}. Valid channels: {', '.join(valid_channels)}",
         )
 
     # Subscribe through Sentinel Station
@@ -671,10 +657,9 @@ async def channel_stats(channel_name: str, request: Request):
 
     valid_channels = [ch.value for ch in SentinelChannel]
     if channel_name not in valid_channels:
-        logger.warning("Invalid channel rejected: %s", sanitize_for_log(channel_name))
         raise HTTPException(
             400,
-            detail="Invalid channel",
+            detail=f"Invalid channel: {channel_name}. Valid channels: {', '.join(valid_channels)}",
         )
 
     stats = sentinel.get_stats()
@@ -710,7 +695,7 @@ async def _sentinel_event_generator():
                         {
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                             "service": "sentinel-station",
-                        },
+                        }
                     ),
                 }
                 await asyncio.sleep(30)

@@ -44,16 +44,6 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from Dimensional.path_validation import (
-    PathTraversalError,
-    ensure_validated_directory,
-    read_validated_json,
-    remove_validated_tree,
-    sanitize_filename,
-    write_validated_json,
-)
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-
 # ── Configuration ───────────────────────────────────────────────
 
 _master_key_raw = os.getenv("MASTER_KEY_SEED")
@@ -61,7 +51,7 @@ if not _master_key_raw or _master_key_raw == "change-me-in-production":
     raise RuntimeError(
         "MASTER_KEY_SEED is not set (or still the default). "
         "The Void vault cannot start without a strong unique key. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 MASTER_KEY_SEED: str = _master_key_raw
 
@@ -70,7 +60,7 @@ if not _internal_secret_raw or _internal_secret_raw == "internal-dev-secret":
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "The Void vault cannot start without a strong unique internal secret. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 INTERNAL_SECRET: str = _internal_secret_raw
 INFINITY_ONE_URL = os.getenv("INFINITY_ONE_URL", "")
@@ -156,7 +146,7 @@ def hash_value(value: str) -> str:
 def get_db() -> sqlite3.Connection:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     R2_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3_connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -264,10 +254,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "infinity-void")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -293,15 +279,12 @@ app.add_middleware(
 async def health():
     conn = get_db()
     sealed = conn.execute(
-        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'",
+        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
     ).fetchone()
     count = conn.execute(
-        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'",
+        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
     ).fetchone()
     conn.close()
-    from src.entities.health_metadata import health_entity_block
-
-    void_port = int(os.getenv("PORT", "8002"))
     return {
         "status": "healthy",
         "service": "the-void-worker",
@@ -312,7 +295,6 @@ async def health():
         "hosting": "self-hosted (replaces Cloudflare Worker)",
         "environment": ENVIRONMENT,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "entity": health_entity_block(void_port, "the-void-worker"),
     }
 
 
@@ -323,10 +305,10 @@ async def vault_status(authorization: str | None = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
     conn = get_db()
     sealed = conn.execute(
-        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'",
+        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
     ).fetchone()
     count = conn.execute(
-        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'",
+        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
     ).fetchone()
     conn.close()
     return {
@@ -358,16 +340,11 @@ async def store_secret(request: Request, authorization: str | None = Header(None
     encrypted = encrypt_secret(plaintext, MASTER_KEY_SEED)
 
     # Store payload in R2-like file storage
-    safe_user = sanitize_filename(user_id)
-    safe_secret = sanitize_filename(secret_id)
-    r2_key = f"secrets/{safe_user}/{safe_secret}"
-    secret_rel = f"{safe_user}/{safe_secret}"
-    ensure_validated_directory(secret_rel, R2_DIR)
-    write_validated_json(
-        f"{secret_rel}/payload.json",
-        R2_DIR,
-        {"ciphertext": encrypted["ciphertext"]},
-    )
+    r2_key = f"secrets/{user_id}/{secret_id}"
+    r2_path = R2_DIR / user_id / secret_id
+    r2_path.mkdir(parents=True, exist_ok=True)
+    with open(r2_path / "payload.json", "w") as f:
+        json.dump({"ciphertext": encrypted["ciphertext"]}, f)
 
     conn = get_db()
     conn.execute(
@@ -436,21 +413,19 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
         conn.close()
         raise HTTPException(status_code=410, detail="Secret is not active")
 
-    # Read payload from R2-like file storage
-    safe_user = sanitize_filename(user_id)
-    safe_secret = sanitize_filename(secret_id)
-    payload_rel = f"{safe_user}/{safe_secret}/payload.json"
-    try:
-        payload = read_validated_json(payload_rel, R2_DIR)
-    except (FileNotFoundError, PathTraversalError, json.JSONDecodeError):
+    # Read payload from R2-like storage
+    r2_path = R2_DIR / user_id / secret_id / "payload.json"
+    if r2_path.exists():
+        with open(r2_path) as f:
+            payload = json.load(f)
+    else:
         conn.close()
-        raise HTTPException(status_code=404, detail="Payload not found") from None
+        raise HTTPException(status_code=404, detail="Payload not found")
 
     plaintext = decrypt_secret(payload["ciphertext"], row["iv"], row["salt"], MASTER_KEY_SEED)
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute(
-        "UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?",
-        (now, secret_id),
+        "UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?", (now, secret_id)
     )
     conn.execute(
         "INSERT INTO void_audit_log (audit_id, secret_id, action, actor_id, actor_type, success, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -510,8 +485,7 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
 
     conn = get_db()
     row = conn.execute(
-        "SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?",
-        (secret_id,),
+        "SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?", (secret_id,)
     ).fetchone()
     if not row:
         conn.close()
@@ -521,9 +495,11 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
         raise HTTPException(status_code=403, detail="Forbidden")
 
     # Crypto-shred: delete R2 payload
-    safe_user = sanitize_filename(user_id)
-    safe_secret = sanitize_filename(secret_id)
-    remove_validated_tree(f"{safe_user}/{safe_secret}", R2_DIR)
+    r2_path = R2_DIR / user_id / secret_id
+    if r2_path.exists():
+        import shutil
+
+        shutil.rmtree(r2_path, ignore_errors=True)
 
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute(
@@ -548,8 +524,7 @@ async def get_audit_log(secret_id: str, authorization: str | None = Header(None)
 
     conn = get_db()
     secret = conn.execute(
-        "SELECT owner_id FROM void_secrets WHERE secret_id = ?",
-        (secret_id,),
+        "SELECT owner_id FROM void_secrets WHERE secret_id = ?", (secret_id,)
     ).fetchone()
     if not secret:
         conn.close()

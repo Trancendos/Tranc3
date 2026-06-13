@@ -264,12 +264,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "workflow-engine-service",
-        "port": 8034,
-        "entity": health_entity_block(8034, "workflow-engine-service"),
-    }
+    return {"status": "ok", "service": "workflow-engine-service", "port": 8034}
 
 
 # ---------------------------------------------------------------------------
@@ -316,8 +311,7 @@ async def create_workflow(body: WorkflowCreate):
 async def list_workflows(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM workflows ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM workflows ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [
@@ -537,8 +531,7 @@ async def create_checkpoint(run_id: str, body: CheckpointCreate):
 async def get_run_logs(run_id: str):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM checkpoints WHERE run_id=? ORDER BY created_at",
-        (run_id,),
+        "SELECT * FROM checkpoints WHERE run_id=? ORDER BY created_at", (run_id,)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

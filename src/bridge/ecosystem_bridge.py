@@ -173,7 +173,7 @@ class EcosystemBridge:
         """Register a bridge endpoint."""
         self._endpoints[endpoint.id] = endpoint
         logger.info(
-            f"Registered bridge endpoint: {endpoint.id} ({endpoint.ecosystem}/{endpoint.service})",
+            f"Registered bridge endpoint: {endpoint.id} ({endpoint.ecosystem}/{endpoint.service})"
         )
 
     def get_endpoint(self, endpoint_id: str) -> Optional[BridgeEndpoint]:
@@ -219,7 +219,7 @@ class EcosystemBridge:
 
                     if response.error:
                         raise Exception(
-                            f"RPC Error {response.error.get('code')}: {response.error.get('message')}",
+                            f"RPC Error {response.error.get('code')}: {response.error.get('message')}"
                         )
 
                     return response.result
@@ -301,7 +301,7 @@ class EcosystemBridge:
                 health = await self.check_health()
                 if health["bridge"] != "healthy":
                     logger.warning(
-                        f"Bridge health: {health['bridge']} (python={health['python']}, typescript={health['typescript']})",
+                        f"Bridge health: {health['bridge']} (python={health['python']}, typescript={health['typescript']})"
                     )
             except Exception as e:
                 logger.error(f"Health check failed: {e}")

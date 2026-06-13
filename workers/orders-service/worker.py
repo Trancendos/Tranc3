@@ -22,9 +22,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -50,7 +47,7 @@ class OrdersDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -144,10 +141,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "orders-service")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
@@ -175,7 +168,6 @@ STARTED_AT = datetime.now(timezone.utc)
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8012, "orders-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -263,8 +255,7 @@ async def ship_order(order_id: str):
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "confirmed":
         raise HTTPException(
-            409,
-            f"Order must be confirmed before shipping, got '{item.get('status')}'",
+            409, f"Order must be confirmed before shipping, got '{item.get('status')}'"
         )
     db.update("order_id", order_id, {"status": "shipped"})
     return {"ok": True, "order_id": order_id, "status": "shipped"}
@@ -278,8 +269,7 @@ async def deliver_order(order_id: str):
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "shipped":
         raise HTTPException(
-            409,
-            f"Order must be shipped before delivery, got '{item.get('status')}'",
+            409, f"Order must be shipped before delivery, got '{item.get('status')}'"
         )
     db.update("order_id", order_id, {"status": "delivered"})
     return {"ok": True, "order_id": order_id, "status": "delivered"}
@@ -302,7 +292,7 @@ async def order_stats():
     """Order counts and total revenue by status."""
     conn = db._get_conn()
     rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status",
+        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status"
     ).fetchall()
     return {"stats": [dict(r) for r in rows]}
 

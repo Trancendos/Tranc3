@@ -178,27 +178,6 @@ class Library:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-        # Also emit directly to the EventBus for search-service indexing
-        try:
-            from src.event_bus import get_event_bus  # noqa: PLC0415
-
-            bus = get_event_bus()
-            bus.emit_async(
-                event_type=event_type,
-                data={
-                    "id": art.id,
-                    "title": art.title,
-                    "body": art.body,
-                    "tags": art.tags,
-                    "author": art.author,
-                    "source": art.source,
-                    "status": art.status.value,
-                },
-                source="library",
-            )
-        except Exception:
-            pass  # nosec B110 — graceful degradation
-
     def _seed_platform_articles(self) -> None:
         """Seed initial platform documentation articles."""
         seed_articles = [

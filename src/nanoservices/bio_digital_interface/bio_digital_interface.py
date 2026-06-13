@@ -439,8 +439,7 @@ class BrainComputerInterface:
                 # Simplified band power estimation
                 n = len(ch)
                 power = sum(x * x for x in ch[int(n * low / 250) : int(n * high / 250)]) / max(
-                    1,
-                    n * (high - low) / 250,
+                    1, n * (high - low) / 250
                 )
                 powers.append(power)
             features[f"{band_name}_power"] = [sum(powers) / len(powers)]

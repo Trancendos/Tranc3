@@ -174,7 +174,7 @@ class KustomizeOverlay:
                     {
                         "patch": f'[{{"op": "replace", "path": "/spec/replicas", "value": {count}}}]',
                         "target": {"kind": "Deployment", "name": name},
-                    },
+                    }
                 )
             kustomization.setdefault("patches", []).extend(patches)
 
@@ -193,11 +193,11 @@ class KustomizeOverlay:
                                     "op": "replace",
                                     "path": "/data",
                                     "value": data,
-                                },
-                            ],
+                                }
+                            ]
                         ),
                         "target": {"kind": "ConfigMap", "name": cm_name},
-                    },
+                    }
                 )
 
         return kustomization
@@ -249,7 +249,7 @@ class DriftDetector:
                         declared_state={},
                         actual_state=actual,
                         diff={"action": "delete", "reason": "resource not in git"},
-                    ),
+                    )
                 )
                 continue
 
@@ -262,7 +262,7 @@ class DriftDetector:
                         declared_state=declared,
                         actual_state={},
                         diff={"action": "create", "reason": "resource missing from cluster"},
-                    ),
+                    )
                 )
                 continue
 
@@ -277,7 +277,7 @@ class DriftDetector:
                         declared_state=declared,
                         actual_state=actual,
                         diff=diff,
-                    ),
+                    )
                 )
 
         self._drift_history.extend(drifts)

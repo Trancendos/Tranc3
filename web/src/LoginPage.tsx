@@ -51,7 +51,7 @@ export default function LoginPage({ onLogin }: Props) {
     }
 
     return (
-        <main className="min-h-screen bg-gray-950 flex items-center justify-center p-4" id="main-content">
+        <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
             <div className="w-full max-w-sm bg-gray-900 rounded-2xl p-8 shadow-2xl border border-gray-800">
                 <div className="text-center mb-8">
                     <div className="text-4xl mb-2">⚡</div>
@@ -59,14 +59,11 @@ export default function LoginPage({ onLogin }: Props) {
                     <p className="text-gray-400 text-sm mt-1">Conscious AI Platform</p>
                 </div>
 
-                <div role="group" aria-label="Account action" className="flex rounded-lg bg-gray-800 p-1 mb-6">
+                <div className="flex rounded-lg bg-gray-800 p-1 mb-6">
                     {(['login', 'register'] as const).map(m => (
-                        <button
-                            key={m}
-                            onClick={() => setMode(m)}
-                            aria-pressed={mode === m}
-                            className={`focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent flex-1 py-2 rounded-md text-sm font-medium transition-all ${mode === m ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
-                        >
+                        <button key={m} onClick={() => setMode(m)}
+                            className={`focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent flex-1 py-2 rounded-md text-sm font-medium transition-all ${mode === m ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
+                                }`}>
                             {m === 'login' ? 'Sign In' : 'Register'}
                         </button>
                     ))}
@@ -77,14 +74,14 @@ export default function LoginPage({ onLogin }: Props) {
                         <label htmlFor="username" className="block text-sm text-gray-400 mb-1">Username</label>
                         <input id="username" value={username} onChange={e => setUsername(e.target.value)}
                             autoComplete="username"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent"
                             placeholder="your_username" required />
                     </div>
                     <div>
                         <label htmlFor="password" className="block text-sm text-gray-400 mb-1">Password</label>
                         <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
                             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent"
                             placeholder="••••••••" required />
                     </div>
                     {error && <p className="text-red-400 text-sm" role="alert">{error}</p>}
@@ -99,10 +96,10 @@ export default function LoginPage({ onLogin }: Props) {
                     </button>
                 </form>
 
-                <p className="text-center text-gray-400 text-xs mt-6">
+                <p className="text-center text-gray-600 text-xs mt-6">
                     Free tier: 100 requests/hour
                 </p>
             </div>
-        </main>
+        </div>
     )
 }

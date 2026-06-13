@@ -1,7 +1,5 @@
 # tests/test_enhanced_api.py
-# LEGACY TEST — api_enhanced.py has been archived to archive/api_enhanced.py.
-# Canonical tests for these routes now live in tests/test_canonical_routes.py.
-# This file is retained for historical reference only; it imports from archive/.
+# Tests for api_enhanced.py — covers auth, rate limiting, all endpoint groups.
 # Uses TestClient with mocked subsystems so no real Redis/DB/AI needed.
 
 import os
@@ -31,7 +29,7 @@ def _make_enhanced_mock():
         "evolution": MagicMock(
             get_stats=MagicMock(return_value={"generation": 1, "best_fitness": 0.9}),
             record_feedback=MagicMock(),
-        ),
+        )
     }
     return m
 
@@ -43,12 +41,8 @@ def client():
         patch("src.core.startup_validator.validate_startup"),
         patch("src.main_enhanced.enhanced", enhanced_mock),
     ):
-        import os as _os
-        import sys
-
         from fastapi.testclient import TestClient
 
-        sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", "archive"))
         from api_enhanced import app
 
         # Manually inject mock into app state (lifespan won't run in TestClient)
@@ -87,8 +81,7 @@ class TestCoreEndpoints:
 
     def test_think_with_personality(self, client):
         r = client.post(
-            "/think",
-            json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"},
+            "/think", json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"}
         )
         assert r.status_code == 200
 
@@ -351,10 +344,6 @@ class TestAuthAndRateLimiting:
 
     def test_rate_limit_in_memory_tracking(self):
         """Verify _rate_store tracks requests per IP."""
-        import os as _os
-        import sys
-
-        sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", "archive"))
         import api_enhanced as api
 
         initial = len(api._rate_store)

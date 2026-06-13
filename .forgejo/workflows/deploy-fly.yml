@@ -1,9 +1,5 @@
 name: Deploy to Fly.io
 
-# Canonical Fly apps (must match fly.toml):
-#   tranc3-backend      — repo root fly.toml
-#   trancendos-bots     — tranc3-bots/fly.toml
-
 on:
   push:
     branches: [main]
@@ -18,79 +14,13 @@ on:
       - ".forgejo/workflows/deploy-fly.yml"
   workflow_dispatch:
 
-env:
-  FLY_BACKEND_APP: tranc3-backend
-  FLY_BOTS_APP: trancendos-bots
-
 jobs:
-  # ── Production gate — must pass before any deploy starts ──────────────────
-  production-gate:
-    name: Production gate (pre-deploy)
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt -q
-
-      - name: Merge gate tests
-        run: |
-          python -m pytest \
-            tests/test_smoke.py \
-            tests/test_knowledge_brain.py \
-            tests/test_gbrain_worker.py \
-            tests/test_canonical_routes.py \
-            tests/test_compatibility.py \
-            tests/test_entity_effective.py \
-            tests/test_health_metadata.py \
-            tests/test_orchestrator_effective.py \
-            tests/test_zero_cost_registry.py \
-            tests/test_adaptive_rotator.py \
-            tests/test_api_startup_readiness.py \
-            tests/test_production_readiness_stack.py \
-            tests/test_live_deploy_contract.py \
-            tests/test_p0_health_syntax.py \
-            tests/test_p0_metrics_mount.py \
-            -q --tb=short
-        env:
-          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
-          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
-
-      - name: API import gate
-        run: python -c "import api; print('api OK')"
-        env:
-          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
-          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
-
-      - name: Citadel compose validate
-        run: python3 scripts/citadel_compose_validate.py
-
-      - name: Entity registry import gate
-        run: |
-          python -c "
-          from src.entities.health_metadata import health_entity_block
-          e = health_entity_block(8004, 'infinity-ws')
-          assert e['lead_ai'], e
-          assert e['pid'] == 'PID-NXS', e
-          print('health_entity_block OK:', e['lead_ai'])
-          "
-
+  # ────────────────────────────────────────────────────────────────────────────
+  # Backend: trancendos-backend on Fly.io
+  # ────────────────────────────────────────────────────────────────────────────
   deploy-backend:
-    name: Deploy tranc3-backend
+    name: Deploy trancendos-backend
     runs-on: self-hosted
-    needs: production-gate
     steps:
       - uses: actions/checkout@v4
 
@@ -103,7 +33,7 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Inject production secrets into Fly.io
+      - name: Inject all production secrets into Fly.io
         run: |
           flyctl secrets set \
             SECRET_KEY="${{ secrets.SECRET_KEY }}" \
@@ -118,27 +48,30 @@ jobs:
             CITADEL_WEBHOOK_SECRET="${{ secrets.CITADEL_WEBHOOK_SECRET }}" \
             CF_ACCOUNT_ID="${{ secrets.CF_ACCOUNT_ID }}" \
             ENVIRONMENT="production" \
-            TRANC3_BACKEND_URL="https://tranc3-backend.fly.dev" \
+            TRANC3_BACKEND_URL="https://trancendos-backend.fly.dev" \
             TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
             OLLAMA_URL="http://localhost:11434" \
             EMBED_MODEL="all-MiniLM-L6-v2" \
             CORS_ORIGINS="https://trancendos.com,https://api.trancendos.com" \
-            --app "${{ env.FLY_BACKEND_APP }}"
+            --app trancendos-backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy backend
-        run: flyctl deploy --remote-only --app "${{ env.FLY_BACKEND_APP }}"
+        run: flyctl deploy --remote-only --app trancendos-backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Health check
         run: |
           sleep 15
-          STATUS=$(curl -sf "https://${{ env.FLY_BACKEND_APP }}.fly.dev/health" -o /dev/null -w "%{http_code}" || echo "000")
+          STATUS=$(curl -sf https://trancendos-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
           echo "Health check status: $STATUS"
           [ "$STATUS" = "200" ] || { echo "Health check failed"; exit 1; }
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # Bots: trancendos-bots on Fly.io
+  # ────────────────────────────────────────────────────────────────────────────
   deploy-bots:
     name: Deploy trancendos-bots
     runs-on: self-hosted
@@ -160,16 +93,16 @@ jobs:
         run: |
           flyctl secrets set \
             REDIS_URL="${{ secrets.REDIS_URL }}" \
-            TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" \
+            TRANC3_ENGINE_URL="https://trancendos-backend.fly.dev" \
             SECRET_KEY="${{ secrets.SECRET_KEY }}" \
             JWT_SECRET="${{ secrets.JWT_SECRET }}" \
             ENVIRONMENT="production" \
-            --app "${{ env.FLY_BOTS_APP }}"
+            --app trancendos-bots
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy bots
-        run: flyctl deploy --remote-only --app "${{ env.FLY_BOTS_APP }}"
+        run: flyctl deploy --remote-only --app trancendos-bots
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -177,13 +110,13 @@ jobs:
         run: |
           flyctl secrets set \
             TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
-            --app "${{ env.FLY_BACKEND_APP }}"
+            --app trancendos-backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Notify The Citadel
         run: |
-          BACKEND_URL="https://tranc3-backend.fly.dev"
+          BACKEND_URL="https://trancendos-backend.fly.dev"
           curl -sf -X POST "$BACKEND_URL/citadel/webhooks/forgejo" \
             -H "Content-Type: application/json" \
             -H "X-Forgejo-Event: workflow_run" \

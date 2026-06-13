@@ -374,8 +374,8 @@ class EnvironmentDetector:
         try:
             with open("/proc/1/cgroup", "r") as f:
                 cgroup = "docker" in f.read() or "containerd" in f.read()
-        except (OSError, IOError) as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+        except (OSError, IOError):
+            pass
 
         return DetectionResult(
             name="docker_available",

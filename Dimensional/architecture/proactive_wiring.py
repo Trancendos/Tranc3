@@ -233,14 +233,12 @@ class ProactiveSystemBootstrap:
         logger.info("ProactiveSystemBootstrap: Beginning system wiring...")
 
         # Lazy-load orchestrator and auxiliary systems
-        from Dimensional.architecture.adaptive_pulse import (
-            adaptive_pulse,  # codeql[py/cyclic-import]
-        )
-        from Dimensional.architecture.auto_config import auto_config  # codeql[py/cyclic-import]
-        from Dimensional.architecture.proactive_orchestrator import (  # codeql[py/cyclic-import]
+        from Dimensional.architecture.adaptive_pulse import adaptive_pulse
+        from Dimensional.architecture.auto_config import auto_config
+        from Dimensional.architecture.proactive_orchestrator import (
             proactive_orchestrator,
         )
-        from src.adaptive.predictive_scaler import predictive_scaler  # codeql[py/cyclic-import]
+        from src.adaptive.predictive_scaler import predictive_scaler
 
         self._orchestrator = subsystems.get("orchestrator", proactive_orchestrator)
         self._pulse = subsystems.get("pulse", adaptive_pulse)
@@ -330,8 +328,8 @@ class ProactiveSystemBootstrap:
             for handler in self._event_handlers:
                 try:
                     event_bus.unsubscribe("*", handler)
-                except Exception as _exc:
-                    logger.debug("suppressed %s", _exc, exc_info=False)
+                except Exception:
+                    pass
 
         # Mark all bridges as disconnected
         for bridge in self._bridges.values():
@@ -400,7 +398,7 @@ class ProactiveSystemBootstrap:
             self._event_handlers.append(_on_proactive_event)
 
             # Publish wiring event
-            from Dimensional.models import EventMessage  # codeql[py/cyclic-import]
+            from Dimensional.models import EventMessage
 
             await event_bus.publish(
                 EventMessage(
@@ -824,9 +822,7 @@ class ProactiveSystemBootstrap:
             # Register storage tiers as scalable resources
             storage = self._subsystems.get("storage")
             if storage and hasattr(storage, "_get_priority_order"):
-                from Dimensional.architecture.smart_storage import (
-                    StorageTier,  # codeql[py/cyclic-import]
-                )
+                from Dimensional.architecture.smart_storage import StorageTier
 
                 tier_limits = {
                     StorageTier.R2: 10,  # 10GB free
@@ -843,10 +839,8 @@ class ProactiveSystemBootstrap:
                             max_units=free_limit,
                             free_tier_limit=free_limit,
                         )
-                    except Exception as _exc:
-                        logger.debug(
-                            "suppressed %s", _exc, exc_info=False
-                        )  # Resource may already be registered
+                    except Exception:
+                        pass  # Resource may already be registered
 
             bridge.mark_connected()
             self._bridges[BridgeType.SCALER] = bridge
@@ -870,9 +864,7 @@ class ProactiveSystemBootstrap:
         Each action type (HEAL, SCALE_UP, MIGRATE_STORAGE, etc.) gets a
         dedicated handler that routes the action to the appropriate subsystem.
         """
-        from Dimensional.architecture.proactive_orchestrator import (  # codeql[py/cyclic-import]
-            ProactiveAction,
-        )
+        from Dimensional.architecture.proactive_orchestrator import ProactiveAction
 
         dispatcher = getattr(self._orchestrator, "_action_dispatcher", None)
         if dispatcher is None:
@@ -940,8 +932,8 @@ class ProactiveSystemBootstrap:
         for name, baseline in daemon_intervals.items():
             try:
                 self._pulse.register(name, baseline)
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)  # May already be registered
+            except Exception:
+                pass  # May already be registered
 
         logger.info(
             "ProactiveSystemBootstrap: Registered %d pulse-controlled daemons",
@@ -1123,7 +1115,7 @@ class ProactiveSystemBootstrap:
         """Handle ALERT actions by publishing to EventBus."""
         event_bus = self._subsystems.get("event_bus")
         if event_bus and hasattr(event_bus, "publish"):
-            from Dimensional.models import EventMessage  # codeql[py/cyclic-import]
+            from Dimensional.models import EventMessage
 
             await event_bus.publish(
                 EventMessage(
@@ -1184,16 +1176,14 @@ class ProactiveSystemBootstrap:
             return
 
         if key == "proactive.mode":
-            from Dimensional.architecture.proactive_orchestrator import (  # codeql[py/cyclic-import]
-                OrchestratorMode,
-            )
+            from Dimensional.architecture.proactive_orchestrator import OrchestratorMode
 
             try:
                 mode = OrchestratorMode(value) if isinstance(value, str) else value
                 self._orchestrator.set_mode(mode)
                 logger.info("ProactiveSystemBootstrap: Orchestrator mode → %s", mode.value)
-            except (ValueError, AttributeError) as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except (ValueError, AttributeError):
+                pass
         elif key == "proactive.orchestration_interval":
             if hasattr(self._orchestrator, "_orchestration_interval"):
                 self._orchestrator._orchestration_interval = float(value)
@@ -1261,8 +1251,8 @@ class ProactiveSystemBootstrap:
         if self._orchestrator and hasattr(self._orchestrator, "get_dashboard"):
             try:
                 orchestrator_dashboard = self._orchestrator.get_dashboard()
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
         # Get health profile if available
         health_profile = {}
@@ -1270,8 +1260,8 @@ class ProactiveSystemBootstrap:
             try:
                 hp = self._orchestrator.get_health_profile()
                 health_profile = hp.to_dict() if hasattr(hp, "to_dict") else {}
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
         # Get zero-cost status if available
         zero_cost_status = {}
@@ -1279,24 +1269,24 @@ class ProactiveSystemBootstrap:
             try:
                 zc = self._orchestrator.get_zero_cost_status()
                 zero_cost_status = zc.to_dict() if hasattr(zc, "to_dict") else {}
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
         # Get pulse state if available
         pulse_state = {}
         if self._pulse and hasattr(self._pulse, "get_all_intervals"):
             try:
                 pulse_state = self._pulse.get_all_intervals()
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
         # Get scaler state if available
         scaler_state = {}
         if self._scaler and hasattr(self._scaler, "get_all_decisions"):
             try:
                 scaler_state = self._scaler.get_all_decisions()
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
         return {
             "system_status": status,

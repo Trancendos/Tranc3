@@ -99,7 +99,31 @@ doctor:
 
 # ── Monitor (live worker health dashboard in terminal) ────────────────────────
 monitor:
-	@python3 scripts/monitor_p0_workers.py
+	@echo "Monitoring P0/P1 workers..."
+	@python3 -c "
+import asyncio, httpx, time
+
+WORKERS = [
+    ('infinity-ws',   'http://localhost:8004/health'),
+    ('infinity-auth', 'http://localhost:8005/health'),
+    ('users-svc',     'http://localhost:8006/health'),
+    ('monitoring',    'http://localhost:8007/health'),
+    ('notifications', 'http://localhost:8008/health'),
+    ('infinity-ai',   'http://localhost:8009/health'),
+]
+
+async def check():
+    async with httpx.AsyncClient(timeout=2.0) as c:
+        for name, url in WORKERS:
+            try:
+                r = await c.get(url)
+                status = 'UP  ' if r.status_code == 200 else f'ERR {r.status_code}'
+            except Exception as e:
+                status = f'DOWN ({type(e).__name__})'
+            print(f'  {status}  {name} ({url})')
+
+asyncio.run(check())
+"
 
 # ── Legacy setup (kept for compatibility — prefer make setup-dev) ─────────────
 setup:
@@ -141,19 +165,7 @@ lint:
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 frontend:
-	cd web && npm ci && npm run build
-	@echo "✓ Frontend built → web/dist/ ($(shell du -sh web/dist 2>/dev/null | cut -f1) on disk)"
-
-frontend-check:
-	cd web && npm ci && npx tsc --noEmit
-
-frontend-docker:
-	docker build -t tranc3-web -f docker/Dockerfile.web .
-	@echo "✓ tranc3-web Docker image built"
-
-frontend-ci: frontend-check frontend
-	@test -f web/dist/index.html || (echo "✗ web/dist/index.html missing — build failed" && exit 1)
-	@echo "✓ Frontend CI passed"
+	cd web && npm install && npm run build
 
 # ── Deploy ────────────────────────────────────────────────────────────────────
 deploy:
@@ -174,85 +186,6 @@ health:
 
 health-json:
 	@python3 scripts/health_check.py --json
-
-swarm-run:
-	@python3 scripts/swarm_runner.py --manifest config/swarm/manifests/platform-health.yaml
-
-entity-audit:
-	@python3 scripts/entity_registry_audit.py
-
-ansible-health:
-	@ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
-
-deploy-citadel:
-	@bash deploy/citadel/deploy-production.sh
-
-deploy-live:
-	@bash scripts/deploy_live.sh
-
-generate-prod-env:
-	@bash scripts/generate_production_env.sh
-
-wait-healthy:
-	@python3 scripts/wait_for_healthy.py
-
-citadel-preflight:
-	@python3 scripts/citadel_compose_validate.py
-	@python3 scripts/citadel_preflight.py
-
-citadel-compose-validate:
-	@python3 scripts/citadel_compose_validate.py
-
-branch-audit:
-	@python3 scripts/branch_benefit_audit.py
-
-stale-branch-cleanup:
-	@python3 scripts/stale_branch_cleanup.py
-
-stale-branch-cleanup-apply:
-	@python3 scripts/stale_branch_cleanup.py --apply
-
-integration-plan:
-	@python3 scripts/integration_scope_plan.py --branch cursor/production-integration-8d67
-
-fork-audit:
-	@python3 scripts/fork_audit.py
-
-pr-audit:
-	@python3 scripts/pr_readiness_audit.py --state open --limit 100 --fail-on-unstable
-
-pr-hygiene:
-	@python3 scripts/pr_hygiene.py
-
-pr-hygiene-apply:
-	@python3 scripts/pr_hygiene.py --apply
-
-zero-cost-audit:
-	@python3 scripts/zero_cost_audit.py
-
-production-score:
-	@python3 scripts/production_readiness_score.py
-
-dependency-audit:
-	@python3 scripts/dependency_audit.py
-
-pre-deploy-gate:
-	@python3 scripts/pre_deploy_quality_gate.py
-
-citadel-deploy-all:
-	@python3 scripts/citadel_deploy_all.py
-
-citadel-deploy-all-gate:
-	@python3 scripts/citadel_deploy_all.py --gate-only
-
-deploy-cloud:
-	@python3 scripts/deploy_cloud.py
-
-deploy-cloud-gate:
-	@python3 scripts/deploy_cloud.py --gate-only
-
-pre-deploy-fix:
-	@python3 -m ruff check src/ api.py workers/infinity-auth workers/infinity-ws workers/api-gateway workers/tranc3-ai workers/infinity-void workers/users-service workers/products-service workers/orders-service workers/payments-service workers/notifications workers/infinity-ai workers/monitoring --fix || true
 
 # ── Infrastructure (OpenTofu) ─────────────────────────────────────────────────
 infra-plan:

@@ -1206,8 +1206,8 @@ class ProactiveOrchestrator:
             self._orchestration_task.cancel()
             try:
                 await self._orchestration_task
-            except asyncio.CancelledError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except asyncio.CancelledError:
+                pass
             self._orchestration_task = None
 
         await self._publish_event(

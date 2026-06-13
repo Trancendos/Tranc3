@@ -8,18 +8,9 @@ The model does the language generation; the personality shapes the behaviour.
 Security: Uses safe_torch_load to prevent pickle-based RCE (CVE-2024-48063, CVE-2025-32434)
 """
 
-from __future__ import annotations
-
 from typing import Any, Dict, List, Optional
 
-try:
-    import torch
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
 
 from ..core.config import InferenceConfig, ModelConfig
 from ..core.model import Tranc3Model
@@ -29,10 +20,6 @@ from ..personality.matrix import PersonalityMatrix, PersonalityProfile
 
 
 def resolve_device(preference: str = "auto") -> torch.device:
-    if not _TORCH_AVAILABLE:
-        raise RuntimeError(
-            "resolve_device requires PyTorch, but it is not available in this runtime."
-        )
     if preference == "auto":
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return torch.device(preference)
@@ -131,7 +118,7 @@ class Tranc3Engine:
 def run_cli(engine: Tranc3Engine):
     print(
         f"\nTranc3 [{engine.active_profile.name}] — type 'exit' to quit, "
-        f"'switch <profile>' to change personality\n",
+        f"'switch <profile>' to change personality\n"
     )
 
     history = []

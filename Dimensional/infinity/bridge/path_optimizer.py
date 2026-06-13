@@ -472,8 +472,8 @@ class PathOptimizationEngine:
             self._health_check_task.cancel()
             try:
                 await self._health_check_task
-            except asyncio.CancelledError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except asyncio.CancelledError:
+                pass
             self._health_check_task = None
         logger.info("PathOptimizationEngine stopped")
 

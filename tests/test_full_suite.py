@@ -78,7 +78,7 @@ class TestErrorCatalog:
     def test_error_http_statuses_valid(self):
         from src.errors.error_catalog import CATALOG
 
-        valid_statuses = {200, 400, 401, 403, 404, 409, 422, 429, 500, 503, 504}
+        valid_statuses = {200, 400, 401, 403, 404, 422, 429, 500, 503}
         for code, defn in CATALOG.items():
             assert defn.http_status in valid_statuses, (
                 f"{code} has invalid HTTP status {defn.http_status}"
@@ -427,7 +427,7 @@ class TestHolographicMemory:
                 "temporal": torch.randn(4),
                 "frequency": torch.randn(4),
                 "consciousness": torch.randn(4),
-            },
+            }
         )
         results = hm.parallel_search(torch.randn(4))
         assert isinstance(results, list)
@@ -442,7 +442,7 @@ class TestHolographicMemory:
                 "temporal": torch.randn(4),
                 "frequency": torch.randn(4),
                 "consciousness": torch.randn(4),
-            },
+            }
         )
         result = hm.recall_by_association(torch.randn(4), ["spatial"])
         assert "raw" in result
@@ -593,9 +593,7 @@ class TestAPIIntegration:
         with patch(
             "redis.from_url",
             return_value=MagicMock(
-                ping=lambda: True,
-                get=lambda k: None,
-                set=lambda *a, **kw: True,
+                ping=lambda: True, get=lambda k: None, set=lambda *a, **kw: True
             ),
         ):
             from fastapi.testclient import TestClient

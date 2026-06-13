@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from Dimensional.sanitize import sanitize_for_log
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.event_bus.types import (
     DEFAULT_EVENT_BUS_CONFIG,
     DeliveryResult,
@@ -37,11 +36,12 @@ from src.event_bus.types import (
 
 # Optional NATS transport — imported lazily to avoid hard dependency
 try:
-    from src.event_bus.nats_transport import _event_type_to_subject
+    from src.event_bus.nats_transport import NATSTransport, _event_type_to_subject
 
     _NATS_TRANSPORT_AVAILABLE = True
 except ImportError:
     _NATS_TRANSPORT_AVAILABLE = False
+    NATSTransport = None  # type: ignore[assignment,misc]
     _event_type_to_subject = None  # type: ignore[assignment]
 
 logger = logging.getLogger("tranc3.event_bus")
@@ -93,7 +93,7 @@ class EventBus:
         """Initialise SQLite persistence."""
         db_path = Path(path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3_connect(str(db_path))
+        self._db = sqlite3.connect(str(db_path))
         self._db.execute("""
             CREATE TABLE IF NOT EXISTS events (
                 event_id TEXT PRIMARY KEY,
@@ -230,7 +230,7 @@ class EventBus:
                     data=data,
                     source=source,
                     tenant_id=tenant_id,
-                ),
+                )
             )
         except RuntimeError:
             logger.warning("emit_async_no_loop", extra={"event_type": event_type})

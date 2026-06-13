@@ -445,7 +445,7 @@ class TestSparkPlatformTools:
                 "event_type": "test.spark.tool_call",
                 "category": "AI",
                 "service": "pytest",
-            },
+            }
         )
         assert result.get("observed") is True or "error" in result
 
@@ -468,7 +468,7 @@ class TestMigrations:
         import os
 
         base = os.path.realpath(
-            os.path.join(os.path.dirname(__file__), "..", "migrations", "versions"),
+            os.path.join(os.path.dirname(__file__), "..", "migrations", "versions")
         )
         files = os.listdir(base)
         py_files = [f for f in files if f.endswith(".py") and not f.startswith("__")]
@@ -480,7 +480,7 @@ class TestMigrations:
         import re
 
         base = os.path.realpath(
-            os.path.join(os.path.dirname(__file__), "..", "migrations", "versions"),
+            os.path.join(os.path.dirname(__file__), "..", "migrations", "versions")
         )
         revisions = {}
         for fname in sorted(os.listdir(base)):

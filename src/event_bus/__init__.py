@@ -31,22 +31,10 @@ from src.event_bus.types import (
     PlatformEventType,
 )
 
-_default_bus: "EventBus | None" = None
-
-
-def get_event_bus() -> EventBus:
-    """Return the process-level singleton EventBus, creating it on first call."""
-    global _default_bus
-    if _default_bus is None:
-        _default_bus = EventBus()
-    return _default_bus
-
-
 __all__ = [
     "EventBus",
     "NATSTransport",
     "make_nats_transport",
-    "get_event_bus",
     "DeliveryResult",
     "DeliveryStatus",
     "EventCallback",

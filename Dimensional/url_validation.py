@@ -15,11 +15,9 @@
 from __future__ import annotations
 
 import ipaddress
-import json
 import logging
 import re
-import urllib.request
-from typing import Any, Optional
+from typing import Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -93,24 +91,11 @@ _ALLOWED_SCHEMES: set[str] = {"https"}
 # Maximum URL length to prevent buffer-based attacks
 _MAX_URL_LENGTH = 2048
 
-# Safe workflow/resource IDs for URL path interpolation (blocks traversal, @, etc.)
-_WORKFLOW_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
-_MAX_WORKFLOW_ID_LENGTH = 128
-
-
-def _normalize_ip_address(
-    addr: ipaddress.IPv4Address | ipaddress.IPv6Address,
-) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
-    """Map IPv4-mapped IPv6 addresses (e.g. ``::ffff:127.0.0.1``) to their IPv4 form."""
-    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
-        return addr.ipv4_mapped
-    return addr
-
 
 def _is_ip_private(ip_str: str) -> bool:
     """Return True if the IP address falls in a private/reserved range."""
     try:
-        addr = _normalize_ip_address(ipaddress.ip_address(ip_str))
+        addr = ipaddress.ip_address(ip_str)
     except ValueError:
         return True  # If we can't parse it, treat as unsafe
 
@@ -224,8 +209,8 @@ def validate_url(
                 for network in blocked_networks:
                     if addr in network:
                         raise SSRFError(f"URL resolves to blocked IP range: {ip_str} in {network}")
-        except socket.gaierror as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)  # Already handled above
+        except socket.gaierror:
+            pass  # Already handled above
 
     return url
 
@@ -246,94 +231,3 @@ def validate_webhook_url(url: str) -> str:
         SSRFError: If the URL fails SSRF safety checks.
     """
     return validate_url(url)
-
-
-def validate_workflow_id(workflow_id: str) -> str:
-    """Validate a workflow ID before interpolating it into an outbound URL path.
-
-    Blocks path traversal (``../``), URL metacharacters, and other values that
-    could alter the request target when embedded in a path segment.
-
-    Args:
-        workflow_id: The workflow identifier from a route parameter or payload.
-
-    Returns:
-        The validated workflow ID (unchanged).
-
-    Raises:
-        SSRFError: If the ID is empty, too long, or contains unsafe characters.
-    """
-    if not workflow_id:
-        raise SSRFError("Workflow ID must not be empty")
-
-    if len(workflow_id) > _MAX_WORKFLOW_ID_LENGTH:
-        raise SSRFError(
-            f"Workflow ID exceeds maximum length of {_MAX_WORKFLOW_ID_LENGTH} characters"
-        )
-
-    if not _WORKFLOW_ID_PATTERN.match(workflow_id):
-        raise SSRFError(f"Invalid workflow ID format: {workflow_id!r}")
-
-    return workflow_id
-
-
-def validate_ip_address(ip: str, *, allow_private: bool = False) -> str:
-    """Validate an IP address before interpolating it into an outbound URL path.
-
-    Ensures the value is a syntactically valid IPv4/IPv6 address.  By default,
-    private, loopback, link-local, and other reserved addresses are rejected so
-    they cannot be used to probe internal networks via third-party geo APIs.
-
-    Args:
-        ip: The IP address string (from a route parameter or batch payload).
-        allow_private: When ``True``, permit private/reserved addresses.
-            Use only for explicitly local lookups (e.g. localhost shortcuts).
-
-    Returns:
-        The canonical string form of the validated IP address.
-
-    Raises:
-        SSRFError: If the address is invalid or (when ``allow_private`` is
-            ``False``) falls in a private/reserved range.
-    """
-    if not ip or not ip.strip():
-        raise SSRFError("IP address must not be empty")
-
-    ip = ip.strip()
-    try:
-        addr = _normalize_ip_address(ipaddress.ip_address(ip))
-    except ValueError as exc:
-        raise SSRFError(f"Invalid IP address: {ip!r}") from exc
-
-    canonical = str(addr)
-    if not allow_private and _is_ip_private(canonical):
-        raise SSRFError(f"Private/reserved IP addresses are not allowed: {canonical}")
-
-    return canonical
-
-
-def validate_ollama_base_url(url: str) -> str:
-    """Validate an Ollama provider base URL.
-
-    Loopback HTTP (localhost / 127.0.0.1 / ::1) is permitted for local inference.
-    All other hosts must use HTTPS and pass standard SSRF checks.
-    """
-    if not url or not url.strip():
-        raise SSRFError("Ollama base URL must not be empty")
-
-    normalized = url.strip().rstrip("/")
-    parsed = urlparse(normalized)
-    host = (parsed.hostname or "").lower()
-    if parsed.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}:
-        return normalized
-    return validate_url(normalized)
-
-
-def post_json_webhook(url: str, payload: Any, *, timeout: float = 10.0) -> bool:
-    """POST JSON to a validated webhook URL (SSRF-safe outbound request)."""
-    validated_url = validate_webhook_url(url)
-    data = json.dumps(payload).encode()
-    req = urllib.request.Request(validated_url, data=data, method="POST")
-    req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.status < 400

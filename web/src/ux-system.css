@@ -1,0 +1,762 @@
+/*
+ * Tranc3 UX System — Laws of UX Design Token & Utility Layer
+ *
+ * Encodes all 30 Laws of UX as CSS primitives:
+ *   Aesthetic-Usability, Choice Overload, Chunking, Cognitive Load,
+ *   Doherty Threshold, Fitts's Law, Flow, Goal-Gradient, Hick's Law,
+ *   Jakob's Law, Gestalt (Common Region, Proximity, Prägnanz, Similarity,
+ *   Uniform Connectedness), Mental Model, Miller's Law, Occam's Razor,
+ *   Pareto Principle, Peak-End Rule, Postel's Law, Serial Position Effect,
+ *   Tesler's Law, Von Restorff Effect, Working Memory, Zeigarnik Effect.
+ *
+ * Philosophy: fluid ↔ adaptive ↔ reactive ↔ modular ↔ intelligent
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 1 — FLUID DESIGN TOKENS (DNA)
+   All primitives are custom properties so every child component inherits
+   the same single source of truth and changes cascade platform-wide.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* ── Colour genome ───────────────────────────────────────────────────────── */
+  --ux-brand-primary:    #6366f1; /* indigo-500  */
+  --ux-brand-secondary:  #8b5cf6; /* violet-500  */
+  --ux-accent:           #06b6d4; /* cyan-500    */
+  --ux-success:          #22c55e; /* green-500   */
+  --ux-warning:          #f59e0b; /* amber-500   */
+  --ux-danger:           #ef4444; /* red-500     */
+  --ux-surface:          #111827; /* gray-900    */
+  --ux-surface-raised:   #1f2937; /* gray-800    */
+  --ux-surface-sunken:   #030712; /* gray-950    */
+  --ux-text-primary:     #f9fafb; /* gray-50     */
+  --ux-text-secondary:   #9ca3af; /* gray-400    */
+  --ux-text-muted:       #4b5563; /* gray-600    */
+  --ux-border:           #374151; /* gray-700    */
+  --ux-border-subtle:    #1f2937; /* gray-800    */
+
+  /* Von Restorff Effect — highlight colour for distinctly important items */
+  --ux-highlight:        #fbbf24; /* amber-400 — stands out from indigo palette */
+  --ux-highlight-text:   #111827;
+
+  /* ── Fluid type scale (clamp: min, preferred vw, max) ───────────────────── */
+  --ux-text-xs:   clamp(0.65rem,  0.6rem + 0.25vw,  0.75rem);
+  --ux-text-sm:   clamp(0.8rem,   0.75rem + 0.3vw,  0.875rem);
+  --ux-text-base: clamp(0.9rem,   0.85rem + 0.35vw, 1rem);
+  --ux-text-md:   clamp(1rem,     0.95rem + 0.4vw,  1.125rem);
+  --ux-text-lg:   clamp(1.1rem,   1rem + 0.5vw,     1.25rem);
+  --ux-text-xl:   clamp(1.2rem,   1.1rem + 0.6vw,   1.5rem);
+  --ux-text-2xl:  clamp(1.4rem,   1.2rem + 0.9vw,   1.875rem);
+  --ux-text-3xl:  clamp(1.7rem,   1.4rem + 1.3vw,   2.25rem);
+
+  /* ── Adaptive spacing — liquidic, responds to viewport ─────────────────── */
+  --ux-space-1:   clamp(0.2rem,  0.15rem + 0.25vw, 0.25rem);
+  --ux-space-2:   clamp(0.35rem, 0.3rem + 0.3vw,   0.5rem);
+  --ux-space-3:   clamp(0.6rem,  0.5rem + 0.4vw,   0.75rem);
+  --ux-space-4:   clamp(0.85rem, 0.75rem + 0.5vw,  1rem);
+  --ux-space-6:   clamp(1.2rem,  1rem + 0.75vw,    1.5rem);
+  --ux-space-8:   clamp(1.5rem,  1.25rem + 1vw,    2rem);
+  --ux-space-12:  clamp(2rem,    1.75rem + 1.5vw,  3rem);
+  --ux-space-16:  clamp(2.5rem,  2rem + 2vw,       4rem);
+
+  /* ── Doherty Threshold — motion timing DNA ───────────────────────────────
+     Doherty: keep response < 400ms for perceived speed.
+     All transitions obey this — nothing feels sluggish.           */
+  --ux-dur-instant:    50ms;   /* sub-perceptual (micro-interactions)     */
+  --ux-dur-fast:       120ms;  /* hover / focus ring transitions          */
+  --ux-dur-base:       200ms;  /* standard state changes                  */
+  --ux-dur-moderate:   300ms;  /* panel slides, accordions                */
+  --ux-dur-slow:       400ms;  /* page-level, Doherty threshold maximum   */
+  --ux-dur-deliberate: 600ms;  /* only onboarding / first-run sequences   */
+
+  --ux-ease-out:       cubic-bezier(0.0, 0, 0.2, 1);   /* snappy close */
+  --ux-ease-in:        cubic-bezier(0.4, 0, 1, 1);     /* smooth enter */
+  --ux-ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1); /* spring pop  */
+  --ux-ease-smooth:    cubic-bezier(0.4, 0, 0.2, 1);   /* material std */
+
+  /* ── Fitts's Law — touch target DNA ─────────────────────────────────────
+     Minimum tap target 44×44px (WCAG 2.5.5). Primary CTAs are larger.  */
+  --ux-target-min:     44px;
+  --ux-target-comfort: 48px;
+  --ux-target-primary: 52px;
+
+  /* ── Gestalt — border-radius & shadow DNA ────────────────────────────── */
+  --ux-radius-sm:   4px;
+  --ux-radius-md:   8px;
+  --ux-radius-lg:   12px;
+  --ux-radius-xl:   16px;
+  --ux-radius-pill: 9999px;
+
+  --ux-shadow-sm:   0 1px 3px 0 rgba(0,0,0,0.4),  0 1px 2px -1px rgba(0,0,0,0.3);
+  --ux-shadow-md:   0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
+  --ux-shadow-lg:   0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.3);
+  --ux-shadow-glow: 0 0 0 1px var(--ux-brand-primary), 0 0 12px rgba(99,102,241,0.3);
+
+  /* ── Miller's Law — chunk width DNA (5–9 items max per group) ─────────── */
+  --ux-chunk-cols: 3;   /* overridden per context via container query     */
+
+  /* ── Zeigarnik — progress DNA ────────────────────────────────────────── */
+  --ux-progress-track:  var(--ux-border);
+  --ux-progress-fill:   var(--ux-brand-primary);
+  --ux-progress-height: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 2 — ADAPTIVE THEME (reactive to system preference)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: light) {
+  :root {
+    --ux-surface:         #ffffff;
+    --ux-surface-raised:  #f9fafb;
+    --ux-surface-sunken:  #f3f4f6;
+    --ux-text-primary:    #111827;
+    --ux-text-secondary:  #6b7280;
+    --ux-text-muted:      #9ca3af;
+    --ux-border:          #e5e7eb;
+    --ux-border-subtle:   #f3f4f6;
+    --ux-shadow-sm:       0 1px 3px 0 rgba(0,0,0,0.1),  0 1px 2px -1px rgba(0,0,0,0.06);
+    --ux-shadow-md:       0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.06);
+    --ux-shadow-lg:       0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.05);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 3 — COGNITIVE LOAD REDUCTION (global base styles)
+   Law of Prägnanz: simplest form. Occam's Razor: no unnecessary flourish.
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Smooth scroll (respects prefers-reduced-motion below) */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Reduced-motion safety net ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 4 — UX LAW COMPONENT PRIMITIVES
+   Each class name encodes the law it serves.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Fitts's Law — large, close, reachable targets ──────────────────────── */
+.ux-fitts-primary {
+  min-height: var(--ux-target-primary);
+  min-width:  var(--ux-target-primary);
+  padding: var(--ux-space-3) var(--ux-space-6);
+  border-radius: var(--ux-radius-md);
+  font-size: var(--ux-text-base);
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--ux-brand-primary);
+  color: var(--ux-text-primary);
+  border: none;
+  transition: background var(--ux-dur-fast) var(--ux-ease-out),
+              transform  var(--ux-dur-fast) var(--ux-ease-spring),
+              box-shadow var(--ux-dur-fast) var(--ux-ease-out);
+  touch-action: manipulation; /* remove 300ms tap delay */
+}
+.ux-fitts-primary:hover {
+  background: var(--ux-brand-secondary);
+  box-shadow: var(--ux-shadow-glow);
+}
+.ux-fitts-primary:active {
+  transform: scale(0.97);
+}
+
+.ux-fitts-secondary {
+  min-height: var(--ux-target-comfort);
+  min-width:  var(--ux-target-comfort);
+  padding: var(--ux-space-2) var(--ux-space-4);
+  border-radius: var(--ux-radius-md);
+  font-size: var(--ux-text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ux-text-primary);
+  border: 1px solid var(--ux-border);
+  transition: background var(--ux-dur-fast) var(--ux-ease-out),
+              border-color var(--ux-dur-fast) var(--ux-ease-out);
+  touch-action: manipulation;
+}
+.ux-fitts-secondary:hover {
+  background: var(--ux-surface-raised);
+  border-color: var(--ux-brand-primary);
+}
+
+/* ── Hick's Law — progressive disclosure, choice reduction ──────────────── */
+.ux-hicks-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ux-space-2);
+  /* Max 7 visible choices before scroll/collapse (Miller's Law synergy) */
+}
+.ux-hicks-group > * {
+  flex: 0 0 auto;
+}
+/* Collapse overflow beyond 7 choices — JS toggles .ux-hicks-expanded */
+.ux-hicks-group:not(.ux-hicks-expanded) > *:nth-child(n+8) {
+  display: none;
+}
+.ux-hicks-reveal {
+  font-size: var(--ux-text-xs);
+  color: var(--ux-text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: var(--ux-space-1) var(--ux-space-2);
+  min-height: var(--ux-target-min);
+}
+
+/* ── Miller's Law — chunked information groups ──────────────────────────── */
+.ux-miller-chunk {
+  display: grid;
+  gap: var(--ux-space-4);
+  /* 3-column grid that compresses gracefully — max 3 chunks visible = 9 items */
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  /* container-type is on the parent .ux-container-region wrapper, not here,
+     so @container rules can match .ux-miller-chunk as a descendant */
+}
+
+.ux-miller-chunk-item {
+  background: var(--ux-surface-raised);
+  border: 1px solid var(--ux-border-subtle);
+  border-radius: var(--ux-radius-lg);
+  padding: var(--ux-space-6);
+  transition: border-color var(--ux-dur-base) var(--ux-ease-out),
+              box-shadow   var(--ux-dur-base) var(--ux-ease-out);
+}
+.ux-miller-chunk-item:hover {
+  border-color: var(--ux-brand-primary);
+  box-shadow: var(--ux-shadow-md);
+}
+
+/* ── Gestalt: Law of Proximity ───────────────────────────────────────────── */
+.ux-proximity-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ux-space-2); /* tight internal spacing = grouped perception */
+}
+.ux-proximity-group + .ux-proximity-group {
+  margin-top: var(--ux-space-8); /* wider gap between groups = separated perception */
+}
+
+/* ── Gestalt: Law of Common Region ──────────────────────────────────────── */
+.ux-common-region {
+  border: 1px solid var(--ux-border);
+  border-radius: var(--ux-radius-lg);
+  padding: var(--ux-space-6);
+  background: var(--ux-surface-raised);
+}
+.ux-common-region + .ux-common-region {
+  margin-top: var(--ux-space-4);
+}
+
+/* ── Gestalt: Law of Similarity ─────────────────────────────────────────── */
+.ux-similarity-group {
+  display: contents; /* logical group, no visual wrapper needed */
+}
+.ux-similarity-group > [data-variant="primary"]   { --_accent: var(--ux-brand-primary); }
+.ux-similarity-group > [data-variant="secondary"] { --_accent: var(--ux-brand-secondary); }
+.ux-similarity-group > [data-variant="success"]   { --_accent: var(--ux-success); }
+.ux-similarity-group > [data-variant="warning"]   { --_accent: var(--ux-warning); }
+.ux-similarity-group > [data-variant="danger"]    { --_accent: var(--ux-danger); }
+
+/* ── Gestalt: Uniform Connectedness ─────────────────────────────────────── */
+.ux-connected-pair {
+  display: flex;
+  align-items: center;
+  gap: var(--ux-space-2);
+}
+.ux-connected-pair::before {
+  content: '';
+  display: block;
+  width: 2px;
+  height: 1.2em;
+  background: var(--ux-border);
+  border-radius: var(--ux-radius-pill);
+  flex-shrink: 0;
+}
+
+/* ── Zeigarnik Effect — progress indicators ─────────────────────────────── */
+.ux-progress-track {
+  width: 100%;
+  height: var(--ux-progress-height);
+  background: var(--ux-progress-track);
+  border-radius: var(--ux-radius-pill);
+  overflow: hidden;
+}
+.ux-progress-fill {
+  height: 100%;
+  background: var(--ux-progress-fill);
+  border-radius: var(--ux-radius-pill);
+  transition: width var(--ux-dur-moderate) var(--ux-ease-smooth);
+  will-change: width;
+}
+
+/* Goal-Gradient: animate fill with spring near completion */
+.ux-progress-fill[data-completion="high"] {
+  background: linear-gradient(90deg, var(--ux-brand-primary), var(--ux-success));
+  transition: width var(--ux-dur-slow) var(--ux-ease-spring);
+}
+
+/* ── Serial Position Effect — first/last prominence ─────────────────────── */
+.ux-serial-list > *:first-child,
+.ux-serial-list > *:last-child {
+  font-weight: 600;
+  color: var(--ux-text-primary);
+}
+.ux-serial-list > *:not(:first-child):not(:last-child) {
+  color: var(--ux-text-secondary);
+}
+
+/* ── Von Restorff Effect — strategic distinctiveness ────────────────────── */
+.ux-restorff-highlight {
+  background: var(--ux-highlight);
+  color: var(--ux-highlight-text);
+  border-radius: var(--ux-radius-sm);
+  padding: var(--ux-space-1) var(--ux-space-2);
+  font-weight: 700;
+  font-size: var(--ux-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Aesthetic-Usability Effect — surface polish DNA ────────────────────── */
+.ux-surface-card {
+  background: var(--ux-surface-raised);
+  border: 1px solid var(--ux-border-subtle);
+  border-radius: var(--ux-radius-xl);
+  box-shadow: var(--ux-shadow-sm);
+  transition: box-shadow var(--ux-dur-base) var(--ux-ease-out),
+              border-color var(--ux-dur-base) var(--ux-ease-out);
+}
+.ux-surface-card:hover {
+  box-shadow: var(--ux-shadow-lg);
+  border-color: var(--ux-border);
+}
+
+/* Glassmorphism variant — Aesthetic-Usability, depth */
+.ux-surface-glass {
+  background: rgba(31, 41, 55, 0.7);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--ux-radius-xl);
+}
+
+/* ── Doherty Threshold — skeleton loading states ────────────────────────── */
+@keyframes ux-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.ux-skeleton {
+  background: var(--ux-surface-raised);
+  border-radius: var(--ux-radius-md);
+  animation: ux-skeleton-pulse 1.5s var(--ux-ease-smooth) infinite;
+}
+.ux-skeleton-text   { height: 1em;   width: 80%; }
+.ux-skeleton-title  { height: 1.5em; width: 50%; }
+.ux-skeleton-avatar { height: 40px;  width: 40px; border-radius: 50%; }
+.ux-skeleton-image  { height: 200px; width: 100%; }
+
+/* ── Peak-End Rule — delight moments ────────────────────────────────────── */
+@keyframes ux-peak-celebrate {
+  0%   { transform: scale(1);    opacity: 1; }
+  25%  { transform: scale(1.08); opacity: 1; }
+  50%  { transform: scale(0.97); opacity: 1; }
+  75%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.ux-peak-celebrate {
+  animation: ux-peak-celebrate var(--ux-dur-deliberate) var(--ux-ease-spring);
+}
+
+@keyframes ux-peak-success-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(34,197,94,0.6); }
+  70%  { box-shadow: 0 0 0 10px rgba(34,197,94,0);  }
+  100% { box-shadow: 0 0 0 0   rgba(34,197,94,0);   }
+}
+.ux-peak-success-ring {
+  animation: ux-peak-success-ring 0.8s var(--ux-ease-out);
+}
+
+/* ── Jakob's Law — familiar navigation patterns ──────────────────────────── */
+/* Standard nav item — matches expected industry pattern */
+.ux-jakob-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ux-space-3);
+  padding: var(--ux-space-2) var(--ux-space-4);
+  border-radius: var(--ux-radius-md);
+  color: var(--ux-text-secondary);
+  font-size: var(--ux-text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--ux-dur-fast) var(--ux-ease-out),
+              color     var(--ux-dur-fast) var(--ux-ease-out);
+  min-height: var(--ux-target-min);
+}
+.ux-jakob-nav-item:hover,
+.ux-jakob-nav-item:focus-visible {
+  background: var(--ux-surface-raised);
+  color: var(--ux-text-primary);
+}
+.ux-jakob-nav-item[aria-current="page"],
+.ux-jakob-nav-item[aria-pressed="true"] {
+  background: rgba(99,102,241,0.15);
+  color: var(--ux-brand-primary);
+  font-weight: 600;
+}
+
+/* ── Goal-Gradient — step indicator ─────────────────────────────────────── */
+.ux-goal-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ux-goal-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ux-space-1);
+  position: relative;
+  flex: 1;
+}
+.ux-goal-step:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  top: 16px;
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: var(--ux-border);
+  z-index: 0;
+}
+.ux-goal-step[data-status="complete"]::before {
+  background: var(--ux-brand-primary);
+}
+.ux-goal-step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--ux-border);
+  background: var(--ux-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--ux-text-xs);
+  font-weight: 700;
+  z-index: 1;
+  transition: all var(--ux-dur-base) var(--ux-ease-spring);
+}
+.ux-goal-step[data-status="complete"] .ux-goal-step-dot {
+  background: var(--ux-brand-primary);
+  border-color: var(--ux-brand-primary);
+  color: white;
+}
+.ux-goal-step[data-status="active"] .ux-goal-step-dot {
+  border-color: var(--ux-brand-primary);
+  color: var(--ux-brand-primary);
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.2);
+}
+
+/* ── Tesler's Law — complexity absorption (smart form fields) ────────────── */
+.ux-tesler-field {
+  position: relative;
+  width: 100%;
+}
+.ux-tesler-input {
+  width: 100%;
+  min-height: var(--ux-target-comfort);
+  padding: var(--ux-space-3) var(--ux-space-4);
+  background: var(--ux-surface-sunken);
+  border: 1px solid var(--ux-border);
+  border-radius: var(--ux-radius-md);
+  color: var(--ux-text-primary);
+  font-size: var(--ux-text-base);
+  transition: border-color var(--ux-dur-fast) var(--ux-ease-out),
+              box-shadow   var(--ux-dur-fast) var(--ux-ease-out);
+}
+.ux-tesler-input:focus-visible {
+  outline: none;
+  border-color: var(--ux-brand-primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.25);
+}
+.ux-tesler-input[aria-invalid="true"] {
+  border-color: var(--ux-danger);
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.2);
+}
+.ux-tesler-label {
+  display: block;
+  font-size: var(--ux-text-sm);
+  font-weight: 500;
+  color: var(--ux-text-secondary);
+  margin-bottom: var(--ux-space-2);
+}
+/* Floating label variant */
+.ux-tesler-label-float {
+  position: absolute;
+  left: var(--ux-space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--ux-text-base);
+  color: var(--ux-text-muted);
+  pointer-events: none;
+  transition: all var(--ux-dur-fast) var(--ux-ease-out);
+}
+.ux-tesler-input:focus ~ .ux-tesler-label-float,
+.ux-tesler-input:not(:placeholder-shown) ~ .ux-tesler-label-float {
+  top: 0;
+  font-size: var(--ux-text-xs);
+  color: var(--ux-brand-primary);
+  background: var(--ux-surface-sunken);
+  padding: 0 var(--ux-space-1);
+}
+
+/* ── Postel's Law — forgiving inputs ─────────────────────────────────────── */
+.ux-postel-hint {
+  font-size: var(--ux-text-xs);
+  color: var(--ux-text-muted);
+  margin-top: var(--ux-space-1);
+}
+.ux-postel-error {
+  font-size: var(--ux-text-xs);
+  color: var(--ux-danger);
+  margin-top: var(--ux-space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--ux-space-1);
+}
+.ux-postel-success {
+  font-size: var(--ux-text-xs);
+  color: var(--ux-success);
+  margin-top: var(--ux-space-1);
+}
+
+/* ── Selective Attention — visual hierarchy ──────────────────────────────── */
+.ux-attention-primary {
+  color: var(--ux-text-primary);
+  font-size: var(--ux-text-lg);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.ux-attention-secondary {
+  color: var(--ux-text-secondary);
+  font-size: var(--ux-text-base);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.ux-attention-meta {
+  color: var(--ux-text-muted);
+  font-size: var(--ux-text-xs);
+  font-weight: 400;
+}
+
+/* ── Working Memory — always-visible context anchors ────────────────────── */
+.ux-memory-anchor {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--ux-surface);
+  border-bottom: 1px solid var(--ux-border);
+  padding: var(--ux-space-3) var(--ux-space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--ux-space-4);
+  backdrop-filter: blur(8px);
+}
+
+/* ── Flow state — distraction-free reading ───────────────────────────────── */
+.ux-flow-prose {
+  max-width: 65ch; /* optimal reading line length */
+  line-height: 1.7;
+  font-size: var(--ux-text-base);
+  color: var(--ux-text-secondary);
+}
+.ux-flow-prose > * + * {
+  margin-top: var(--ux-space-4);
+}
+
+/* ── Pareto Principle — 80/20 layout ─────────────────────────────────────── */
+.ux-pareto-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* 80% content / 20% sidebar roughly */
+  gap: var(--ux-space-8);
+}
+@media (max-width: 768px) {
+  .ux-pareto-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 5 — SMART REACTIVE STATES (data-* driven, JS-free where possible)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Loading intelligence — Doherty: show content fast or show skeleton */
+[data-loading="true"]  { pointer-events: none; opacity: 0.6; }
+[data-loading="true"] * { cursor: wait; }
+
+/* Disabled intelligence — Tesler: absorb complexity, not expose it */
+[data-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Selected state — Gestalt similarity, clear group membership */
+[data-selected="true"] {
+  outline: 2px solid var(--ux-brand-primary);
+  outline-offset: 2px;
+}
+
+/* Interactive elevation — Aesthetic-Usability feedback */
+[data-interactive="true"] {
+  cursor: pointer;
+  transition: transform var(--ux-dur-fast) var(--ux-ease-spring),
+              box-shadow var(--ux-dur-fast) var(--ux-ease-out);
+}
+[data-interactive="true"]:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ux-shadow-md);
+}
+[data-interactive="true"]:active {
+  transform: translateY(0);
+  box-shadow: var(--ux-shadow-sm);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 6 — ARIA & WCAG 2.2 LIVE REGION ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Focus ring consistency — WCAG 2.4.7, 2.4.11 */
+:focus-visible {
+  outline: 2px solid var(--ux-brand-primary);
+  outline-offset: 2px;
+}
+
+/* ARIA invalid */
+[aria-invalid="true"] { border-color: var(--ux-danger) !important; }
+
+/* ARIA expanded chevron — Hick's Law, progressive disclosure */
+[aria-expanded="false"] .ux-chevron { transform: rotate(0deg);    transition: transform var(--ux-dur-fast) var(--ux-ease-out); }
+[aria-expanded="true"]  .ux-chevron { transform: rotate(180deg);  transition: transform var(--ux-dur-fast) var(--ux-ease-out); }
+
+/* ARIA busy — Doherty: user knows system is working.
+   Excluded from elements that manage their own spinner via data-custom-spinner. */
+[aria-busy="true"]:not([data-custom-spinner])::after {
+  content: '';
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  border: 2px solid transparent;
+  border-top-color: currentcolor;
+  border-radius: 50%;
+  animation: ux-spin 0.6s linear infinite;
+  margin-left: 0.5em;
+  vertical-align: middle;
+}
+@keyframes ux-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ARIA live region — subtle fade-in for dynamic updates */
+[aria-live] > * {
+  animation: ux-live-appear var(--ux-dur-base) var(--ux-ease-out);
+}
+@keyframes ux-live-appear {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Screen-reader only utility ────────────────────────────────────────── */
+.ux-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.ux-sr-only-focusable:focus,
+.ux-sr-only-focusable:focus-visible {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 7 — CONTAINER QUERIES (adaptive/liquidic layouts)
+   NOTE: @container rules match DESCENDANTS of the container, not the element
+   that establishes the container context. Wrapper elements carry the
+   container-type; children respond via @container.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Named container — wraps grid/pareto sections */
+.ux-container-region {
+  container-type: inline-size;
+  container-name: ux-region;
+}
+
+@container ux-region (max-width: 400px) {
+  .ux-miller-chunk { grid-template-columns: 1fr; }
+  .ux-pareto-layout { grid-template-columns: 1fr; }
+  .ux-fitts-primary { width: 100%; }
+}
+
+@container ux-region (min-width: 600px) {
+  .ux-miller-chunk { grid-template-columns: repeat(2, 1fr); }
+}
+
+@container ux-region (min-width: 900px) {
+  .ux-miller-chunk { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ── Flow state — hide secondary chrome in idle focus mode ──────────────── */
+[data-flow="active"] .ux-memory-anchor { opacity: 0.3; transition: opacity var(--ux-dur-moderate) var(--ux-ease-smooth); }
+[data-flow="active"] .ux-attention-meta { opacity: 0.5; transition: opacity var(--ux-dur-moderate) var(--ux-ease-smooth); }
+[data-flow="active"]:hover .ux-memory-anchor,
+[data-flow="active"]:hover .ux-attention-meta { opacity: 1; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 8 — UTILITY BELT (atomic, composable)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.ux-flex     { display: flex; }
+.ux-flex-col { display: flex; flex-direction: column; }
+.ux-items-center { align-items: center; }
+.ux-justify-between { justify-content: space-between; }
+.ux-gap-1 { gap: var(--ux-space-1); }
+.ux-gap-2 { gap: var(--ux-space-2); }
+.ux-gap-4 { gap: var(--ux-space-4); }
+.ux-gap-6 { gap: var(--ux-space-6); }
+.ux-p-4  { padding: var(--ux-space-4); }
+.ux-p-6  { padding: var(--ux-space-6); }
+.ux-mt-4 { margin-top: var(--ux-space-4); }
+.ux-mt-8 { margin-top: var(--ux-space-8); }
+.ux-w-full { width: 100%; }
+.ux-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ux-rounded { border-radius: var(--ux-radius-md); }
+.ux-rounded-lg { border-radius: var(--ux-radius-lg); }

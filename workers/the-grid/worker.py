@@ -40,10 +40,6 @@ from src.entities.health_metadata import health_entity_block
 WORKER_PORT = 8010
 WORKER_NAME = "the-grid-api"
 DB_PATH = Path(__file__).parent / "data" / "grid.db"
-_NOTIFICATIONS_DISPATCH_URL = os.environ.get(
-    "NOTIFICATIONS_SERVICE_URL",
-    "http://127.0.0.1:8008/notifications/send",
-)
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -164,7 +160,7 @@ class GridDatabase:
                 )
             """)
             cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_exec_workflow ON workflow_executions(workflow_id)",
+                "CREATE INDEX IF NOT EXISTS idx_exec_workflow ON workflow_executions(workflow_id)"
             )
             cur.execute("CREATE INDEX IF NOT EXISTS idx_exec_status ON workflow_executions(status)")
 
@@ -187,16 +183,14 @@ class GridDatabase:
     def get_definition(self, workflow_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT * FROM workflow_definitions WHERE workflow_id=?",
-            (workflow_id,),
+            "SELECT * FROM workflow_definitions WHERE workflow_id=?", (workflow_id,)
         ).fetchone()
         return dict(row) if row else None
 
     def list_definitions(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         rows = conn.execute(
-            "SELECT * FROM workflow_definitions ORDER BY name LIMIT ? OFFSET ?",
-            (limit, offset),
+            "SELECT * FROM workflow_definitions ORDER BY name LIMIT ? OFFSET ?", (limit, offset)
         ).fetchall()
         return [dict(r) for r in rows]
 
@@ -227,8 +221,7 @@ class GridDatabase:
     def get_execution(self, execution_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT * FROM workflow_executions WHERE execution_id=?",
-            (execution_id,),
+            "SELECT * FROM workflow_executions WHERE execution_id=?", (execution_id,)
         ).fetchone()
         return dict(row) if row else None
 
@@ -328,10 +321,7 @@ class WorkflowEngine:
             return execution
 
     async def _execute_step(
-        self,
-        step: WorkflowStep,
-        step_results: Dict[str, Any],
-        input_data: Dict[str, Any],
+        self, step: WorkflowStep, step_results: Dict[str, Any], input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Execute a single workflow step."""
         logger.info("Executing step: %s (action: %s)", step.name, step.action)
@@ -359,24 +349,15 @@ class WorkflowEngine:
             return {"status": "failed", "error": str(e)}
 
     async def _action_http_call(
-        self,
-        step: WorkflowStep,
-        step_results: Dict,
-        input_data: Dict,
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
     ) -> Dict[str, Any]:
         import urllib.request
 
         url = step.config.get("url", "")
         method = step.config.get("method", "GET").upper()
-        if not url:
-            return {"status": "failed", "error": "http_call step requires config.url"}
-        try:
-            validated_url = validate_webhook_url(url)
-        except SSRFError as exc:
-            return {"status": "failed", "error": str(exc)}
         try:
             if method == "GET":
-                req = urllib.request.Request(validated_url, method="GET")
+                req = urllib.request.Request(url, method="GET")
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     body = resp.read().decode()
                     return {
@@ -385,7 +366,7 @@ class WorkflowEngine:
                     }
             else:
                 data = json.dumps(step.config.get("body", {})).encode()
-                req = urllib.request.Request(validated_url, data=data, method=method)
+                req = urllib.request.Request(url, data=data, method=method)
                 req.add_header("Content-Type", "application/json")
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     body = resp.read().decode()
@@ -397,10 +378,7 @@ class WorkflowEngine:
             return {"status": "failed", "error": str(e)}
 
     async def _action_transform(
-        self,
-        step: WorkflowStep,
-        step_results: Dict,
-        input_data: Dict,
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
     ) -> Dict[str, Any]:
         """Transform data using simple mappings."""
         mapping = step.config.get("mapping", {})
@@ -418,20 +396,12 @@ class WorkflowEngine:
         return {"status": "completed", "output": result}
 
     async def _action_notify(
-        self,
-        step: WorkflowStep,
-        step_results: Dict,
-        input_data: Dict,
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
     ) -> Dict[str, Any]:
         """Send a notification (via the notifications service)."""
         import urllib.request
 
-        notif_url = step.config.get("notifications_url") or _NOTIFICATIONS_DISPATCH_URL
-        if step.config.get("notifications_url"):
-            try:
-                notif_url = validate_webhook_url(notif_url)
-            except SSRFError as exc:
-                return {"status": "failed", "error": str(exc)}
+        notif_url = step.config.get("notifications_url", "http://localhost:8008/notifications/send")
         payload = {
             "user_id": step.config.get("user_id", "system"),
             "channel": step.config.get("channel", "in_app"),
@@ -448,18 +418,13 @@ class WorkflowEngine:
             return {"status": "completed", "output": {"notified": False, "error": str(e)}}
 
     async def _action_script(
-        self,
-        step: WorkflowStep,
-        step_results: Dict,
-        input_data: Dict,
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
     ) -> Dict[str, Any]:
         """Execute a simple inline Python script (sandboxed)."""
         script = step.config.get("code", "result = input_data")
         local_vars = {"input_data": input_data, "step_results": step_results, "result": None}
         try:
-            exec(
-                script, {"__builtins__": {}}, local_vars
-            )  # lgtm[py/unsafe-exec]  # nosec B102  # noqa: S102
+            exec(script, {"__builtins__": {}}, local_vars)
             return {"status": "completed", "output": local_vars.get("result", {})}
         except Exception as e:
             return {"status": "failed", "error": str(e)}
@@ -535,7 +500,6 @@ STARTED_AT = datetime.now(timezone.utc)
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8010, "the-grid-api"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -596,10 +560,9 @@ async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
             "status": execution.status.value,
         }
     except ValueError as e:
-        raise HTTPException(404, safe_error_detail(e, 404)) from None
+        raise HTTPException(404, str(e)) from None
     except Exception as e:
-        logger.error("Workflow execution failed: %s", sanitize_for_log(e))
-        raise HTTPException(500, safe_error_detail(e, 500)) from None
+        raise HTTPException(500, f"Execution failed: {e}") from None
 
 
 @_router.get("/executions")
@@ -612,11 +575,8 @@ async def list_executions(
     """List workflow executions."""
     return {
         "executions": db.list_executions(
-            workflow_id=workflow_id,
-            status=status,
-            limit=limit,
-            offset=offset,
-        ),
+            workflow_id=workflow_id, status=status, limit=limit, offset=offset
+        )
     }
 
 

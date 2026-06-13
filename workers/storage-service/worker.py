@@ -16,6 +16,7 @@ import logging
 import mimetypes
 import os
 import secrets
+import shutil
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -103,25 +104,12 @@ def init_db() -> None:
 
 
 def _object_path(bucket: str, key: str) -> Path:
-    bucket_dir = safe_join(STORAGE_ROOT, bucket)
-    normalized_key = key.replace("\\", "/").lstrip("/")
-    if not normalized_key:
-        raise ValueError("Object key must not be empty")
-    return validate_path(normalized_key, bucket_dir, allow_create=True)
-
-
-def _stored_object_file_path_str(stored_path: str) -> str:
-    """Validate DB-stored object path under STORAGE_ROOT (CodeQL path-injection)."""
-    try:
-        return existing_file_path_str(stored_path, STORAGE_ROOT.resolve())
-    except PathTraversalError as exc:
-        raise HTTPException(status_code=400, detail="Invalid object path") from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Object file missing from storage") from exc
+    safe_key = key.replace("/", os.sep)
+    return STORAGE_ROOT / bucket / safe_key
 
 
 def _etag(data: bytes) -> str:
-    return hashlib.md5(data, usedforsecurity=False).hexdigest()
+    return hashlib.md5(data).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +190,6 @@ async def health():
         obj_count = conn.execute("SELECT COUNT(*) FROM objects").fetchone()[0]
         total_size = conn.execute("SELECT COALESCE(SUM(size), 0) FROM objects").fetchone()[0]
     return {
-        "entity": health_entity_block(8020, "storage-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -210,6 +197,14 @@ async def health():
         "buckets": bucket_count,
         "objects": obj_count,
         "total_bytes": total_size,
+        "entity": {
+            "location": "DocUtari",
+            "pillar": "Knowledge",
+            "lead_ai": "To be Defined",
+            "primes": ["Norman Hawkins"],
+            "primary_function": "Document Management Hub",
+            "layer": "supporting",
+        },
     }
 
 
@@ -233,8 +228,7 @@ async def create_bucket(req: BucketCreate):
             (req.name, req.description, time.time()),
         )
         conn.commit()
-    safe_name = sanitize_filename(req.name)
-    ensure_validated_directory(safe_name, STORAGE_ROOT)
+    (STORAGE_ROOT / req.name).mkdir(parents=True, exist_ok=True)
     return {"name": req.name}
 
 
@@ -244,15 +238,15 @@ async def delete_bucket(bucket: str):
         if not conn.execute("SELECT name FROM buckets WHERE name = ?", (bucket,)).fetchone():
             raise HTTPException(status_code=404, detail="Bucket not found")
         obj_count = conn.execute(
-            "SELECT COUNT(*) FROM objects WHERE bucket=?",
-            (bucket,),
+            "SELECT COUNT(*) FROM objects WHERE bucket=?", (bucket,)
         ).fetchone()[0]
         if obj_count > 0:
             raise HTTPException(status_code=409, detail=f"Bucket not empty ({obj_count} objects)")
         conn.execute("DELETE FROM buckets WHERE name = ?", (bucket,))
         conn.commit()
-    safe_bucket = sanitize_filename(bucket)
-    remove_validated_tree(safe_bucket, STORAGE_ROOT)
+    bucket_dir = STORAGE_ROOT / bucket
+    if bucket_dir.exists():
+        shutil.rmtree(str(bucket_dir))
     return {"deleted": bucket}
 
 
@@ -280,8 +274,7 @@ async def list_objects(
                 (bucket, f"{prefix}%", limit, offset),
             ).fetchall()
             total = conn.execute(
-                "SELECT COUNT(*) FROM objects WHERE bucket=? AND key LIKE ?",
-                (bucket, f"{prefix}%"),
+                "SELECT COUNT(*) FROM objects WHERE bucket=? AND key LIKE ?", (bucket, f"{prefix}%")
             ).fetchone()[0]
         else:
             rows = conn.execute(
@@ -289,8 +282,7 @@ async def list_objects(
                 (bucket, limit, offset),
             ).fetchall()
             total = conn.execute(
-                "SELECT COUNT(*) FROM objects WHERE bucket=?",
-                (bucket,),
+                "SELECT COUNT(*) FROM objects WHERE bucket=?", (bucket,)
             ).fetchone()[0]
     return {"bucket": bucket, "total": total, "objects": [dict(r) for r in rows]}
 
@@ -303,9 +295,7 @@ async def upload_object(bucket: str, key: str, file: UploadFile = File(...)):
     content_type = file.content_type or mimetypes.guess_type(key)[0] or "application/octet-stream"
     obj_path = _object_path(bucket, key)
     obj_path.parent.mkdir(parents=True, exist_ok=True)
-    obj_path.write_bytes(
-        data
-    )  # codeql[py/path-injection] – obj_path from safe_join/validate_path barrier
+    obj_path.write_bytes(data)
     now = time.time()
     import uuid
 
@@ -330,8 +320,7 @@ async def get_object_meta(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM objects WHERE bucket=? AND key=?",
-            (bucket, key),
+            "SELECT * FROM objects WHERE bucket=? AND key=?", (bucket, key)
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Object not found")
@@ -343,19 +332,14 @@ async def download_object(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT path, content_type, etag FROM objects WHERE bucket=? AND key=?",
-            (bucket, key),
+            "SELECT path, content_type, etag FROM objects WHERE bucket=? AND key=?", (bucket, key)
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Object not found")
-    file_path = _stored_object_file_path_str(row["path"])
-    return (
-        FileResponse(  # codeql[py/path-injection] – file_path from existing_file_path_str barrier
-            file_path,
-            media_type=row["content_type"],
-            headers={"ETag": row["etag"]},
-        )
-    )
+    path = Path(row["path"])
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Object file missing from storage")
+    return FileResponse(str(path), media_type=row["content_type"], headers={"ETag": row["etag"]})
 
 
 @_router.delete("/buckets/{bucket}/objects/{key:path}")
@@ -363,18 +347,13 @@ async def delete_object(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT path FROM objects WHERE bucket=? AND key=?",
-            (bucket, key),
+            "SELECT path FROM objects WHERE bucket=? AND key=?", (bucket, key)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Object not found")
-        try:
-            remove_validated_file(row["path"], STORAGE_ROOT.resolve())
-        except PathTraversalError as exc:
-            raise HTTPException(status_code=400, detail="Invalid object path") from exc
-        except FileNotFoundError:
-            # DB row exists but blob already removed from disk; still delete metadata.
-            pass
+        path = Path(row["path"])
+        if path.exists():
+            path.unlink()
         conn.execute("DELETE FROM objects WHERE bucket=? AND key=?", (bucket, key))
         conn.commit()
     return {"deleted": key, "bucket": bucket}
@@ -385,8 +364,7 @@ async def create_download_token(bucket: str, key: str, ttl: int = Query(3600)):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         if not conn.execute(
-            "SELECT key FROM objects WHERE bucket=? AND key=?",
-            (bucket, key),
+            "SELECT key FROM objects WHERE bucket=? AND key=?", (bucket, key)
         ).fetchone():
             raise HTTPException(status_code=404, detail="Object not found")
         token = secrets.token_urlsafe(32)
@@ -403,8 +381,7 @@ async def download_via_token(token: str):
     now = time.time()
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT bucket, key, expires_at FROM download_tokens WHERE token=?",
-            (token,),
+            "SELECT bucket, key, expires_at FROM download_tokens WHERE token=?", (token,)
         ).fetchone()
     if not row or row["expires_at"] < now:
         raise HTTPException(status_code=403, detail="Token expired or invalid")
@@ -415,7 +392,7 @@ async def download_via_token(token: str):
 async def storage_stats():
     with get_conn() as conn:
         by_bucket = conn.execute(
-            "SELECT bucket, COUNT(*) as objects, SUM(size) as bytes FROM objects GROUP BY bucket",
+            "SELECT bucket, COUNT(*) as objects, SUM(size) as bytes FROM objects GROUP BY bucket"
         ).fetchall()
     return {"buckets": [dict(r) for r in by_bucket]}
 
