@@ -1,0 +1,96 @@
+# Traefik v3 Static Configuration — Trancendos Platform
+# =========================================================
+# Provides TLS termination, mTLS for internal services, rate limiting,
+# and dynamic provider configuration via the file provider.
+#
+# Inter-service mTLS:
+#   All internal worker-to-worker calls use the "internal" TLSOption which
+#   requires client certificates signed by the internal CA
+#   (infra/traefik/certs/internal-ca.pem). Generate with:
+#       ./infra/traefik/scripts/gen-internal-certs.sh
+#
+# External traffic:
+#   HTTPS via Let's Encrypt ACME (TLS challenge), no client cert required.
+
+# Port reference (Trancendos platform):
+#   80/443    — Traefik ingress (HTTP/HTTPS)
+#   8000      — tranc3-backend (FastAPI main app)
+#   8001      — nanoservices (internal proxy)
+#   8004      — infinity-ws (The Nexus WebSocket hub)
+#   8005      — infinity-auth (Infinity OAuth2/SSO/MFA)
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: keep
+      names:
+        X-Request-ID: keep
+        X-Forwarded-For: keep
+        X-Device-Posture: keep
+
+api:
+  dashboard: false   # Enable only behind VPN/auth in production
+  insecure: false
+
+ping:
+  entryPoint: ping
+
+entryPoints:
+  # Public HTTPS (internet-facing)
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+    http2:
+      maxConcurrentStreams: 256
+
+  # HTTP redirect to HTTPS
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  # Internal mTLS port (worker-to-worker only, not exposed externally)
+  internal:
+    address: ":8443"
+    http:
+      tls: {}
+
+  # Health/ping (internal Docker network only)
+  ping:
+    address: ":8090"
+
+# Let's Encrypt ACME certificate resolver
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: ops@trancendos.com
+      storage: /letsencrypt/acme.json
+      tlsChallenge: {}
+
+providers:
+  # File provider for dynamic configuration (mTLS options, middleware, routes)
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+  # Docker provider — discovers services via container labels
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: tranc3-network
+    defaultRule: "Host(`{{ normalize .Name }}.trancendos.local`)"

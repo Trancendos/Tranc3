@@ -1,0 +1,60 @@
+name: metrics-collection
+description: Collect Prometheus metrics, aggregate token usage, and store in The Observatory
+version: "1.0"
+enabled: true
+tags:
+  - observability
+  - prometheus
+  - analytics
+
+schedule:
+  type: interval
+  minutes: 5
+  timezone: UTC
+
+notify_on_failure: true
+notify_on_success: false
+
+steps:
+  - name: scrape-worker-metrics
+    bot: monitor
+    action: scrape_prometheus
+    params:
+      endpoints:
+        - "http://localhost:8007/metrics"
+      labels:
+        environment: production
+    timeout_seconds: 20
+    retry:
+      max_attempts: 2
+      backoff_seconds: 5
+
+  - name: collect-ai-usage
+    bot: memory
+    action: aggregate_token_usage
+    params:
+      window_minutes: 5
+      group_by: tenant
+    timeout_seconds: 15
+    retry:
+      max_attempts: 2
+      backoff_seconds: 3
+
+  - name: store-metrics
+    bot: memory
+    action: store_metrics_snapshot
+    params:
+      persist: true
+      compress: false
+    timeout_seconds: 10
+    retry:
+      max_attempts: 3
+      backoff_seconds: 2
+      backoff_multiplier: 2.0
+      max_backoff_seconds: 20
+
+retry: 3
+timeout: 300
+healthCheck:
+  enabled: true
+  interval: 60
