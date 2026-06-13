@@ -21,10 +21,11 @@ import csv
 import io
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 
 from Dimensional.sanitize import sanitize_for_log
@@ -35,6 +36,8 @@ from src.observability.observatory import (
     get_observatory,
     observe,
 )
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 logger = logging.getLogger(__name__)
 
@@ -106,12 +109,16 @@ async def observatory_recent(
                 status_code=400,
             )
 
-    # Fetch with optional category filter (Observatory.recent supports it)
-    events: List[AuditEvent] = obs.recent(limit=limit * 4 if sev else limit, category=cat)
-
-    # Apply severity filter client-side (Observatory.recent doesn't support it)
+    # Fetch full buffer when severity filtering — a capped prefetch window can miss
+    # valid events that happen to fall outside the window but match the severity.
     if sev:
+        events: List[AuditEvent] = list(obs._buffer)  # noqa: SLF001
+        if cat:
+            events = [e for e in events if e.category == cat]
         events = [e for e in events if e.severity == sev]
+        events = list(reversed(events))  # newest first
+    else:
+        events = obs.recent(limit=limit, category=cat)
 
     return [e.to_dict() for e in events[:limit]]
 
@@ -227,10 +234,16 @@ async def observatory_export(
         writer = csv.DictWriter(buf, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
         for row in dicts:
-            # Flatten metadata to a JSON string so CSV doesn't choke on dicts
-            flat = {
-                k: (json.dumps(v) if isinstance(v, (dict, list)) else v) for k, v in row.items()
-            }
+            # Flatten metadata + escape CSV formula injection (=, +, -, @ prefix attacks)
+            flat = {}
+            for k, v in row.items():
+                if isinstance(v, (dict, list)):
+                    cell = json.dumps(v)
+                elif isinstance(v, str) and v[:1] in ("=", "+", "-", "@", "\t", "\r"):
+                    cell = f"'{v}"  # prefix with single-quote to neutralise formula
+                else:
+                    cell = v
+                flat[k] = cell
             writer.writerow(flat)
         content = buf.getvalue()
         return PlainTextResponse(
@@ -298,11 +311,17 @@ async def observatory_sse(request: Request):
 
 
 @router.post("/events", status_code=202, summary="Ingest an AuditEvent (internal)")
-async def observatory_ingest(request: Request):
+async def observatory_ingest(
+    request: Request,
+    x_internal_secret: Optional[str] = Header(None),
+):
     """
     Internal endpoint — emit an event from any Trancendos service via HTTP.
     Accepts a JSON body matching the AuditEvent field names.
+    Requires X-Internal-Secret header when INTERNAL_SECRET env var is set.
     """
+    if _INTERNAL_SECRET and x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
     try:
         body = await request.json()
     except Exception:
