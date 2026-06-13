@@ -6,6 +6,7 @@ automatically under load. Provides FastAPI middleware and standalone client.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections import defaultdict, deque
@@ -145,12 +146,7 @@ class AdaptiveRateLimiterMiddleware(BaseHTTPMiddleware):
 
         allowed, meta = self._limiter.check(key, ip=client_ip)
         if not allowed:
-            logger.warning(
-                "Rate limit exceeded: %s path=%s util=%.2f",
-                client_ip,
-                path_prefix,
-                meta.get("utilization", 0),
-            )
+            logger.warning("Rate limit exceeded: %s path=%s util=%.2f", client_ip, path_prefix, meta.get("utilization", 0))
             return Response(
                 content='{"error":"rate_limit_exceeded","retry_after":60}',
                 status_code=429,

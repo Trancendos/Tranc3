@@ -1,7 +1,64 @@
 # TRANC3 Makefile
-# Usage: make bootstrap | make dev | make test | make deploy | make doctor
+# Usage: make setup-dev | make dev-api | make test | make doctor | make compliance-check
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan
+.PHONY: dev test deploy setup setup-dev setup-env setup-prod bootstrap bootstrap-prod bootstrap-start \
+        doctor monitor lint migrate migrate-new clean \
+        frontend frontend-check frontend-docker frontend-ci \
+        health health-json infra-plan infra-apply infra-oracle-plan \
+        swarm-run entity-audit ansible-health production-score \
+        dependency-audit compliance-check compliance-report compliance-ci compliance-merged \
+        security-scan security-install security-full pre-commit-install \
+        gate-check zero-cost-status backup-status backup-all dr-drill dr-verify \
+        perf-gate perf-gate-update sbom download-model dev-api dev-web \
+        submodules check-env
+
+# ── First-time setup (single command) ─────────────────────────────────────────
+# Recommended entry point for new developers or CI environments.
+# Detects running services, generates .env with real secrets, creates data dirs,
+# wires submodules, installs Python deps, and applies DB schema.
+setup-dev:
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════╗"
+	@echo "║        Tranc3 — Local Development Setup         ║"
+	@echo "╚══════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "1/5  Installing Python dependencies..."
+	@pip install -r requirements.txt -r requirements-test.txt --quiet --no-warn-script-location
+	@echo "2/5  Generating .env (auto-detecting services, generating secrets)..."
+	@python scripts/generate_env.py
+	@echo "3/5  Wiring git submodules (Magna-Carta + CranBania)..."
+	@bash scripts/setup_external_repos.sh 2>/dev/null || true
+	@echo "4/5  Applying database schema..."
+	@python -m alembic upgrade head 2>/dev/null || echo "     Note: DB migration skipped (no DB running — SQLite will auto-create on first start)"
+	@echo "5/5  Validating environment..."
+	@python scripts/generate_env.py --check --quiet
+	@echo ""
+	@echo "✓ Setup complete! Run 'make dev-api' to start the backend."
+	@echo ""
+
+# ── Production setup ──────────────────────────────────────────────────────────
+setup-prod:
+	@echo "Running production environment setup..."
+	@pip install -r requirements.txt --quiet --no-warn-script-location
+	@python scripts/generate_env.py --prod
+	@bash scripts/setup_external_repos.sh
+	@python -m alembic upgrade head
+	@python scripts/generate_env.py --check
+
+# ── .env generation only ──────────────────────────────────────────────────────
+setup-env:
+	@python scripts/generate_env.py
+
+setup-env-force:
+	@python scripts/generate_env.py --force
+
+# ── Validate .env ─────────────────────────────────────────────────────────────
+check-env:
+	@python scripts/generate_env.py --check
+
+# ── Submodules ────────────────────────────────────────────────────────────────
+submodules:
+	@bash scripts/setup_external_repos.sh
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -68,14 +125,9 @@ async def check():
 asyncio.run(check())
 "
 
-# ── Setup ─────────────────────────────────────────────────────────────────────
+# ── Legacy setup (kept for compatibility — prefer make setup-dev) ─────────────
 setup:
-	@echo "Setting up TRANC3..."
-	pip install -r requirements.txt
-	cp -n .env.example .env || true
-	$(MAKE) migrate
-	cd web && npm install
-	@echo "Setup complete. Run 'make dev' to start."
+	@$(MAKE) setup-dev
 
 # ── Development ───────────────────────────────────────────────────────────────
 dev:
@@ -171,3 +223,59 @@ pre-commit-install:
 	pre-commit install --hook-type commit-msg
 
 security-full: security-install security-scan
+
+# ── DEFSTAN Compliance ────────────────────────────────────────────────────────
+compliance-check:
+	@echo "Running DEFSTAN compliance check..."
+	python -m src.compliance.checker
+
+compliance-report:
+	@echo "Generating DEFSTAN compliance report..."
+	python -m src.compliance.checker --report
+
+compliance-ci:
+	@echo "Running DEFSTAN compliance CI gate (threshold: 70%)..."
+	python -m src.compliance.checker --ci
+
+compliance-merged:
+	@echo "Running full merged compliance check (DEFSTAN + Magna Carta)..."
+	python -m src.compliance.checker --magna-carta compliance/magna-carta/compliance/magna_carta_register.yaml --report
+
+compliance-mc:
+	@echo "Running Magna Carta compliance check only..."
+	python -c "
+from pathlib import Path
+from src.compliance.checker import load_and_check_merged, REGISTER_PATH
+from src.compliance.report_generator import generate_markdown
+mc = Path('compliance/magna-carta/compliance/magna_carta_register.yaml')
+report = load_and_check_merged(REGISTER_PATH, mc)
+print(generate_markdown(report))
+"
+
+gate-check:
+	@echo "Running 13-Gate lifecycle compliance check..."
+	python -m src.compliance.gate_lifecycle
+
+zero-cost-status:
+	python -c "from src.monitoring.zero_cost_tracker import tracker; import json; print(json.dumps(tracker.get_summary(), indent=2))"
+
+# ── Disaster Recovery ─────────────────────────────────────────────────────────
+backup-status:
+	python scripts/dr_restore.py rpo-status
+
+backup-all:
+	python scripts/dr_restore.py list
+
+dr-drill:
+	@echo "Running DR drill (verify + dry-run restore all workers)..."
+	python scripts/dr_restore.py dr-drill
+
+dr-verify:
+	python scripts/dr_restore.py verify
+
+# ── Performance Regression Gate (REQ-QA-007) ──────────────────────────────────
+perf-gate:
+	python -m src.benchmark.perf_gate
+
+perf-gate-update:
+	python -m src.benchmark.perf_gate --update

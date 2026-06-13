@@ -7,9 +7,14 @@ promote MC items from PARTIAL to COMPLIANT.
 
 from __future__ import annotations
 
+import asyncio
+import os
+import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -66,9 +71,7 @@ def validate_mc_rule_004() -> dict:
     """MC-RULE-004: Control-to-component traceability documented."""
     control_map = REPO_ROOT / "docs" / "architecture" / "CONTROL-TO-COMPONENT-MAP.md"
     passed = control_map.exists()
-    return _rule(
-        "MC-RULE-004", passed, f"Control map: {passed}", [str(control_map)] if passed else []
-    )
+    return _rule("MC-RULE-004", passed, f"Control map: {passed}", [str(control_map)] if passed else [])
 
 
 def validate_mc_rule_005() -> dict:
@@ -183,7 +186,7 @@ def main() -> int:
     write_results(results)
     failed = [r for r in results if not r["passed"]]
     if failed:
-        print("\nFailed rules:")
+        print(f"\nFailed rules:")
         for r in failed:
             print(f"  {r['rule_id']}: {r['details']}")
     return 0 if not failed else 1

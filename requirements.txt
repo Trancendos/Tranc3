@@ -87,9 +87,10 @@ networkx==3.6.1
 # === Adaptive / Evolutionary Systems ===
 # ncps: Liquid Time-Constant (LTC) neural networks — ODE-governed adaptive routing
 #   Replaces hand-coded decay math in src/fluidic/fluid_router.py
-ncps==0.0.7
+ncps==1.0.1
 # deap: NSGA-II + CMA-ES genetic algorithms — powers src/nanoservices/genetic_optimizer/
-deap==1.4.1
+# Note: 1.4.1 fails to build on systems without matching setuptools; 1.4.4 is the stable equivalent
+deap==1.4.4
 # pygad: Simple GA for worker hyperparameter tuning (batch_size, cache_ttl, concurrency)
 pygad==3.3.1
 # pyswarms: Particle Swarm Optimization — high-dimensional load balancing (10+ workers)
@@ -135,15 +136,12 @@ apscheduler==3.10.4
 # watchdog: Filesystem events — hot-reload YAML task files without restart
 watchdog==4.0.0
 
-# === Database & Auth ===
-# sqlalchemy: ORM for database models (src/database/, workers)
-sqlalchemy==2.0.50
-# alembic: Database schema migrations (migrations/)
-alembic==1.15.2
-# bcrypt: Password hashing for auth module (auth.py)
-bcrypt==4.3.0
-# pyotp: TOTP/HOTP for MFA (workers/infinity-auth/)
-pyotp==2.9.0
+# === Quantum Computing (Think Tank) ===
+# qiskit 2.x + qiskit-aer: quantum circuit simulation for Think Tank features.
+# Graceful degradation: api.py logs a warning if missing; all quantum paths fall back to stubs.
+# QFT gates must be decomposed before AerSimulator.run() in Qiskit 2.x (no raw high-level gates).
+qiskit==2.4.1
+qiskit-aer==0.17.2
 
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt

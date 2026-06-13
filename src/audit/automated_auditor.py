@@ -11,6 +11,7 @@ Runs on a background schedule to:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -52,16 +53,10 @@ class AutomatedAuditor:
     def __init__(self) -> None:
         self._findings: list[AuditFinding] = []
 
-    def _finding(
-        self, check: str, status: str, detail: str, auto_remediated: bool = False
-    ) -> AuditFinding:
+    def _finding(self, check: str, status: str, detail: str, auto_remediated: bool = False) -> AuditFinding:
         f = AuditFinding(check, status, detail, auto_remediated)
         self._findings.append(f)
-        log_fn = (
-            logger.info
-            if status == "PASS"
-            else (logger.warning if status == "WARN" else logger.error)
-        )
+        log_fn = logger.info if status == "PASS" else (logger.warning if status == "WARN" else logger.error)
         log_fn("[%s] %s: %s", status, check, detail)
         return f
 
@@ -71,14 +66,10 @@ class AutomatedAuditor:
         """Check all evidence paths in compliance register exist."""
         findings: list[AuditFinding] = []
         if not REGISTER_PATH.exists():
-            findings.append(
-                self._finding("register_exists", "FAIL", f"Register not found: {REGISTER_PATH}")
-            )
+            findings.append(self._finding("register_exists", "FAIL", f"Register not found: {REGISTER_PATH}"))
             return findings
 
-        findings.append(
-            self._finding("register_exists", "PASS", "compliance/register.yaml present")
-        )
+        findings.append(self._finding("register_exists", "PASS", "compliance/register.yaml present"))
 
         try:
             with open(REGISTER_PATH) as f:
@@ -97,21 +88,12 @@ class AutomatedAuditor:
                     missing_evidence.append(f"{req_id}: {ev}")
 
         if missing_evidence:
-            findings.append(
-                self._finding(
-                    "evidence_paths",
-                    "WARN",
-                    f"{len(missing_evidence)} evidence paths missing: {missing_evidence[:5]}...",
-                )
-            )
+            findings.append(self._finding(
+                "evidence_paths", "WARN",
+                f"{len(missing_evidence)} evidence paths missing: {missing_evidence[:5]}..."
+            ))
         else:
-            findings.append(
-                self._finding(
-                    "evidence_paths",
-                    "PASS",
-                    f"All evidence paths present for {len(requirements)} requirements",
-                )
-            )
+            findings.append(self._finding("evidence_paths", "PASS", f"All evidence paths present for {len(requirements)} requirements"))
 
         return findings
 
@@ -123,13 +105,15 @@ class AutomatedAuditor:
         try:
             sys.path.insert(0, str(REPO_ROOT))
             from src.compliance.mc_validator import run_all_validators, write_results
-
             results = run_all_validators()
             write_results(results)
             passed = sum(1 for r in results if r["passed"])
             total = len(results)
             status = "PASS" if passed == total else ("WARN" if passed >= total * 0.7 else "FAIL")
-            findings.append(self._finding("mc_rules", status, f"MC rules: {passed}/{total} passed"))
+            findings.append(self._finding(
+                "mc_rules", status,
+                f"MC rules: {passed}/{total} passed"
+            ))
             for r in results:
                 if not r["passed"]:
                     findings.append(self._finding(f"mc_{r['rule_id']}", "FAIL", r["details"]))
@@ -148,47 +132,32 @@ class AutomatedAuditor:
         if not secret_key:
             findings.append(self._finding("secret_key", "FAIL", "SECRET_KEY not set"))
         elif secret_key in ("changeme", "secret", "development", "test"):
-            findings.append(
-                self._finding("secret_key", "FAIL", "SECRET_KEY is a weak default value")
-            )
+            findings.append(self._finding("secret_key", "FAIL", "SECRET_KEY is a weak default value"))
         else:
             findings.append(self._finding("secret_key", "PASS", "SECRET_KEY is set"))
 
         # Check JWT secret
         jwt_secret = os.getenv("JWT_SECRET", "")
         if not jwt_secret:
-            findings.append(
-                self._finding(
-                    "jwt_secret", "WARN", "JWT_SECRET not set — JWT rotation may not function"
-                )
-            )
+            findings.append(self._finding("jwt_secret", "WARN", "JWT_SECRET not set — JWT rotation may not function"))
         else:
             findings.append(self._finding("jwt_secret", "PASS", "JWT_SECRET is set"))
 
         # Check vault service
         vault_url = os.getenv("VAULT_SERVICE_URL", "")
-        findings.append(
-            self._finding(
-                "vault_configured",
-                "PASS" if vault_url else "WARN",
-                f"Vault URL: {'configured' if vault_url else 'not configured — secrets from env only'}",
-            )
-        )
+        findings.append(self._finding(
+            "vault_configured", "PASS" if vault_url else "WARN",
+            f"Vault URL: {'configured' if vault_url else 'not configured — secrets from env only'}"
+        ))
 
         # Check log redactor installed
         import logging as _logging
-
         root = _logging.getLogger()
         has_redactor = any("RedactingFilter" in type(f).__name__ for f in root.filters)
-        findings.append(
-            self._finding(
-                "log_redactor",
-                "PASS" if has_redactor else "WARN",
-                "Log redactor: installed"
-                if has_redactor
-                else "Log redactor not installed (call install_global_redactor())",
-            )
-        )
+        findings.append(self._finding(
+            "log_redactor", "PASS" if has_redactor else "WARN",
+            "Log redactor: installed" if has_redactor else "Log redactor not installed (call install_global_redactor())"
+        ))
 
         # Check critical security files exist
         security_files = [
@@ -202,11 +171,7 @@ class AutomatedAuditor:
         for rel_path, name in security_files:
             p = REPO_ROOT / rel_path
             status = "PASS" if p.exists() else "FAIL"
-            findings.append(
-                self._finding(
-                    f"file_{name}", status, f"{rel_path}: {'present' if p.exists() else 'MISSING'}"
-                )
-            )
+            findings.append(self._finding(f"file_{name}", status, f"{rel_path}: {'present' if p.exists() else 'MISSING'}"))
 
         return findings
 
@@ -217,17 +182,12 @@ class AutomatedAuditor:
         backup_dir = Path("./backups/sqlite")
         if backup_dir.exists():
             backups = list(backup_dir.rglob("*.db"))
-            findings.append(
-                self._finding("sqlite_backups", "PASS", f"{len(backups)} backup files found")
-            )
+            findings.append(self._finding("sqlite_backups", "PASS", f"{len(backups)} backup files found"))
         else:
-            findings.append(
-                self._finding(
-                    "sqlite_backups",
-                    "WARN",
-                    "No backup directory found — trigger backup_all() to initialise",
-                )
-            )
+            findings.append(self._finding(
+                "sqlite_backups", "WARN",
+                "No backup directory found — trigger backup_all() to initialise"
+            ))
         return findings
 
     # ── DSR SLA Audit ────────────────────────────────────────────────────────
@@ -236,29 +196,20 @@ class AutomatedAuditor:
         findings: list[AuditFinding] = []
         try:
             from src.privacy.dsr_workflow import get_workflow
-
             wf = get_workflow()
             report = wf.sla_report()
             if report["breached"] > 0:
-                findings.append(
-                    self._finding(
-                        "dsr_sla", "FAIL", f"{report['breached']} DSR requests in SLA breach"
-                    )
-                )
+                findings.append(self._finding(
+                    "dsr_sla", "FAIL",
+                    f"{report['breached']} DSR requests in SLA breach"
+                ))
             elif report["high_risk"] > 0:
-                findings.append(
-                    self._finding(
-                        "dsr_sla", "WARN", f"{report['high_risk']} DSR requests at high SLA risk"
-                    )
-                )
+                findings.append(self._finding(
+                    "dsr_sla", "WARN",
+                    f"{report['high_risk']} DSR requests at high SLA risk"
+                ))
             else:
-                findings.append(
-                    self._finding(
-                        "dsr_sla",
-                        "PASS",
-                        f"{report['active_requests']} active DSRs, all within SLA",
-                    )
-                )
+                findings.append(self._finding("dsr_sla", "PASS", f"{report['active_requests']} active DSRs, all within SLA"))
         except Exception as e:
             findings.append(self._finding("dsr_sla", "WARN", f"DSR audit error: {e}"))
         return findings
@@ -275,7 +226,6 @@ class AutomatedAuditor:
         if "sqlite_backups" in fail_checks:
             try:
                 from src.database.sqlite_backup import backup_all
-
                 results = backup_all()
                 actions.append(f"Triggered SQLite backup: {len(results)} databases")
             except Exception as e:
@@ -285,7 +235,6 @@ class AutomatedAuditor:
         if "jwt_rotator" in fail_checks:
             try:
                 from src.security.jwt_rotator import get_rotator
-
                 rotator = get_rotator()
                 if rotator.should_rotate():
                     rotator.rotate()
@@ -297,7 +246,6 @@ class AutomatedAuditor:
         if "mc_rules" in fail_checks:
             try:
                 from src.compliance.mc_validator import main as mc_main
-
                 mc_main()
                 actions.append("MC validation re-run, evidence updated")
             except Exception as e:
@@ -339,12 +287,7 @@ class AutomatedAuditor:
 
         AUDIT_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
         AUDIT_OUTPUT.write_text(yaml.dump(result, default_flow_style=False, sort_keys=False))
-        logger.info(
-            "Audit complete: %d/%d checks passed (%.1f%%)",
-            passed,
-            total,
-            result["meta"]["score_pct"],
-        )
+        logger.info("Audit complete: %d/%d checks passed (%.1f%%)", passed, total, result["meta"]["score_pct"])
         return result
 
     async def audit_loop(self) -> None:

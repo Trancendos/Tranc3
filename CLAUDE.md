@@ -68,7 +68,7 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **Turing's Hub** | Samantha Turing | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |
 | **Arcadia** | Lilli SC | Front-end post-login, forum & email hub | 🔧 Partial | `web/` |
 | **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
-| **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, legal, compliance, policies | 🔧 Planned | `src/townhall/` (to create) |
+| **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | ✅ Integrated | `workers/cranbania/` (CranBania submodule, Port 8071), `src/townhall/`, `src/compliance/middleware.py` |
 | **The Library** | Zimik | Knowledge base & wiki | 🔧 Planned | Outline (self-hosted) |
 | **The Academy** | Shimshi | Learning management — education & skill training | 🔧 Planned | Custom LMS |
 | **DocUtari** | To be Defined | Document management hub | 🔧 Planned | Paperless-ngx |
@@ -175,6 +175,8 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | **Luminous** | `src/bio_neural/`, `src/core/tranc3_inference.py` | AI brain, consciousness, inference |
 | **Think Tank** | `src/quantum/`, `src/deepmind/` | Quantum + deep research engines |
 | **Turing's Hub** | `src/personality/` | Personality profiles + spawner |
+| **The Town Hall** | `workers/cranbania/` (git submodule) | CranBania — Kanban+ITSM+Prince2+Agile board, 40+ MCP tools — Port 8071, Traefik `/townhall` |
+| **Magna Carta** | `compliance/magna-carta/` (git submodule) | Compliance framework — 9 runtime rules, 150+ governance docs; wired via `src/compliance/magna_carta.py` + `src/compliance/middleware.py` |
 
 ### Self-Hosted Worker Map (replacing Cloudflare Workers)
 
@@ -184,7 +186,13 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | nanoservices | 8001 | — | `src/nanoservices/` | Internal proxy |
 | tranc3-bots | 8080 | — | `tranc3-bots/` | 12 bot types |
 | infinity-ws | 8004 | P0 | `workers/infinity-ws/` | infinity-ws-api |
-| infinity-auth | 8005 | P0 | `workers/infinity-auth/` | infinity-auth-api |
+| infinity-auth | 8005 | P0 | `workers/infinity-auth/` | Infinity Core Auth engine (OAuth2/SSO/MFA) |
+| infinity-portal-service | 8042 | P1 | `workers/infinity-portal-service/` | Infinity Portal — front entrance + Infinity Gate (embedded) |
+| infinity-one-service | 8043 | P1 | `workers/infinity-one-service/` | Infinity-One — single identity layer |
+| infinity-admin-service | 8044 | P1 | `workers/infinity-admin-service/` | Infinity Admin — Admin OS |
+| infinity-shards-service | 8045 | P1 | `workers/infinity-shards-service/` | Infinity Shards — pluggable entity power-ups |
+| infinity-bridge-service | 8070 | P1 | `workers/infinity-bridge-service/` | Infinity Bridge — human traffic transfer hub |
+| cranbania | 8071 | P1 | `workers/cranbania/` (git submodule: `https://github.com/Trancendos/CranBania`) | The Town Hall — Kanban+ITSM+Agile+Prince2, 40+ MCP tools, Traefik at `/townhall` |
 | users-service | 8006 | P1 | `workers/users-service/` | trancendos-users-service |
 | monitoring | 8007 | P1 | `workers/monitoring/` | infinity-monitoring-dashboard |
 | notifications | 8008 | P1 | `workers/notifications/` | trancendos-notifications-service |

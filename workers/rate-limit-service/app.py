@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 import threading
@@ -162,9 +163,7 @@ def _do_consume(key: str, capacity: int, window_secs: int) -> dict:
         # Re-fetch under lock — another thread may have just updated this entry
         bucket = _cache.get(key, bucket)
         rate = bucket["capacity"] / max(bucket["window_secs"], 1)
-        bucket["tokens"] = min(
-            float(bucket["capacity"]), bucket["tokens"] + (now - bucket["last_refill"]) * rate
-        )
+        bucket["tokens"] = min(float(bucket["capacity"]), bucket["tokens"] + (now - bucket["last_refill"]) * rate)
         bucket["last_refill"] = now
 
         allowed = bucket["tokens"] >= 1.0

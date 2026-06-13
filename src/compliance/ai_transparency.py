@@ -12,18 +12,16 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 # Routes that serve AI-generated content
-_AI_ROUTES = frozenset(
-    [
-        "/v1/chat",
-        "/v1/completions",
-        "/v1/embed",
-        "/mcp/rpc",
-        "/generate",
-        "/chat",
-        "/inference",
-        "/ai/",
-    ]
-)
+_AI_ROUTES = frozenset([
+    "/v1/chat",
+    "/v1/completions",
+    "/v1/embed",
+    "/mcp/rpc",
+    "/generate",
+    "/chat",
+    "/inference",
+    "/ai/",
+])
 
 
 class AITransparencyMiddleware(BaseHTTPMiddleware):

@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from qiskit import QuantumCircuit
+from qiskit import transpile as qiskit_transpile
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
 
@@ -99,10 +100,10 @@ class QuantumNeuralCore:
                 qc.ry(float(w) * np.pi, i)
             for i in range(n - 1):
                 qc.cx(i, i + 1)
-            qc.append(QFT(n), range(n))
+            qc.append(QFT(n, do_swaps=True).decompose(), range(n))
             qc.measure_all()
 
-            job = self.backend.run(qc, shots=512)
+            job = self.backend.run(qiskit_transpile(qc, self.backend), shots=512)
             counts = job.result().get_counts()
 
             # Map counts back to attention weights over input shape
@@ -133,7 +134,7 @@ class QuantumNeuralCore:
             qc = QuantumCircuit(8)
             qc.h(range(8))
             qc.measure_all()
-            job = self.backend.run(qc, shots=1)
+            job = self.backend.run(qiskit_transpile(qc, self.backend), shots=1)
             counts = job.result().get_counts()
             bits = list(counts.keys())[0].replace(" ", "")
             return hex(int(bits, 2))[2:].zfill(2)

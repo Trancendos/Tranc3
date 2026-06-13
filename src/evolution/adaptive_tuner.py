@@ -11,7 +11,6 @@ from typing import Any, Callable, Dict, List, Optional
 try:
     import numpy as np
     import pyswarms as ps
-
     _PSO_AVAILABLE = True
 except ImportError:
     _PSO_AVAILABLE = False
@@ -185,9 +184,6 @@ class AdaptiveTuner:
 
         Falls back to current best params if pyswarms is unavailable.
         Use for high-dimensional spaces (10+ parameters) where hill climbing stalls.
-
-        Raises RuntimeError if fitness_fn is a coroutine function — PSO requires a
-        synchronous fitness_fn. Use the async tuning path (tune_step / start) instead.
         """
         if not _PSO_AVAILABLE or not self._parameters:
             return self.get_params()
@@ -199,18 +195,12 @@ class AdaptiveTuner:
             np.array([self._parameters[n].max_value for n in param_names]),
         )
 
-        if asyncio.iscoroutinefunction(self.fitness_fn):
-            raise RuntimeError(
-                "pso_optimize requires a synchronous fitness_fn; "
-                "use the async tuning path for coroutine fitness functions."
-            )
-
         def _cost(particles: np.ndarray, **kwargs) -> np.ndarray:
             costs = np.zeros(len(particles))
             for i, particle in enumerate(particles):
-                params = {n: float(v) for n, v in zip(param_names, particle, strict=False)}
+                params = {n: float(v) for n, v in zip(param_names, particle)}
                 try:
-                    fitness = self.fitness_fn(params)
+                    fitness = self.fitness_fn(params) if not asyncio.iscoroutinefunction(self.fitness_fn) else 0.0
                     costs[i] = -fitness  # PSO minimises; negate for fitness maximisation
                 except Exception:
                     costs[i] = 1e9
@@ -222,7 +212,7 @@ class AdaptiveTuner:
                 n_particles=n_particles, dimensions=n_dims, options=options, bounds=bounds
             )
             best_cost, best_pos = optimizer.optimize(_cost, iters=iters, verbose=False)
-            best_params = {n: float(v) for n, v in zip(param_names, best_pos, strict=False)}
+            best_params = {n: float(v) for n, v in zip(param_names, best_pos)}
             self.set_params(best_params)
             fitness = -best_cost
             if fitness > self._best_fitness:

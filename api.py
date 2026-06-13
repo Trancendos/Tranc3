@@ -116,6 +116,9 @@ from src.security.ip_protection import (  # noqa: F401  # intentional top-level 
     abuse_detector,
     watermarker,
 )
+from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
+from src.compliance.cab_gate import CABMiddleware  # noqa: F401
+from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
 from src.security.middleware import (  # noqa: F401  # intentional top-level import
     GovernanceMiddleware,
     RBACMiddleware,
@@ -265,7 +268,6 @@ async def lifespan(app: FastAPI):
     if not _audit_key:
         _key_file = "logs/audit/.audit_signing_key"
         import pathlib
-
         if pathlib.Path(_key_file).exists():
             logger.warning(
                 "AUDIT_SIGNING_KEY not set in environment — using persistent key file (%s). "
@@ -547,8 +549,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(AITransparencyMiddleware)
+
+
+# ── API version header (REQ-SD-002 — DEF STAN 00-056 API Contract Versioning) ─
+_API_VERSION = "2.0.0"
+_API_VERSION_HEADER = "X-API-Version"
+
+
+@app.middleware("http")
+async def api_version_header_middleware(request, call_next):
+    """Attach X-API-Version to every response for explicit contract versioning."""
+    response = await call_next(request)
+    response.headers[_API_VERSION_HEADER] = _API_VERSION
+    return response
+
+
 app.add_middleware(GovernanceMiddleware)
+# MagnaCartaMiddleware is inner to ZeroTrustASGIMiddleware so that jwt_claims/zero_trust_ok
+# are already on request.state when compliance rules execute. Advisory by default.
+app.add_middleware(MagnaCartaMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
+# CABMiddleware: enforces X-Change-ID on mutating requests to protected paths when enabled.
+# Runs innermost (added first, executes last after auth+MC checks complete).
+if os.getenv("CAB_GATE_ENABLED", "false").lower() == "true":
+    app.add_middleware(CABMiddleware)
 app.add_middleware(RBACMiddleware)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────

@@ -106,33 +106,20 @@ ok "Secrets generated (hex-256 entropy)"
 ENV_FILE="$REPO_ROOT/.env"
 
 if [ -f "$ENV_FILE" ]; then
-  warn ".env already exists — backing up to .env.backup.$(date +%Y%m%d_%H%M%S)"
-  cp "$ENV_FILE" "$ENV_FILE.backup.$(date +%Y%m%d_%H%M%S)"
+  warn ".env already exists — preserving secrets, filling any blanks"
+else
+  info "No .env found — generating fresh configuration..."
 fi
 
-if [ ! -f "$REPO_ROOT/.env.example" ]; then
-  die ".env.example not found. Cannot generate .env."
+# Use generate_env.py as the authoritative .env generator.
+# It auto-detects running services, generates all secrets, and validates output.
+PROD_FLAG=""
+if [ "$ENV_MODE" = "production" ]; then
+  PROD_FLAG="--prod"
 fi
+python3 "$REPO_ROOT/scripts/generate_env.py" $PROD_FLAG || die "generate_env.py failed — check Python dependencies"
 
-cp "$REPO_ROOT/.env.example" "$ENV_FILE"
-
-# Inject generated secrets using sed (portable: BSD sed on macOS needs '' arg)
-_sed_i() { if [[ "$OSTYPE" == "darwin"* ]]; then sed -i '' "$@"; else sed -i "$@"; fi; }
-_sed_i "s|^SECRET_KEY=.*|SECRET_KEY=${SECRET_KEY}|" "$ENV_FILE"
-_sed_i "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" "$ENV_FILE"
-
-# Set environment mode
-_sed_i "s|^ENVIRONMENT=.*|ENVIRONMENT=${ENV_MODE}|" "$ENV_FILE"
-
-# Set sensible defaults for self-hosted zero-cost stack
-if ! grep -q "^OLLAMA_URL=" "$ENV_FILE"; then
-  echo "OLLAMA_URL=http://localhost:11434" >> "$ENV_FILE"
-fi
-if ! grep -q "^EMBED_MODEL=" "$ENV_FILE"; then
-  echo "EMBED_MODEL=all-MiniLM-L6-v2" >> "$ENV_FILE"
-fi
-
-ok ".env created at $ENV_FILE"
+ok ".env ready at $ENV_FILE"
 
 # ── 4. Initialise SQLite databases ────────────────────────────────────────────
 info "Initialising SQLite databases for workers..."
