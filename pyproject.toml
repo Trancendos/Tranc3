@@ -109,3 +109,38 @@ show_missing = true
 [tool.pip-audit]
 strict = false
 desc = true
+
+# ── uv (drop-in pip replacement, zero-cost) ───────────────────────────
+# uv is used for faster dependency resolution in CI.
+# Install: curl -LsSf https://astral.sh/uv/install.sh | sh
+[tool.uv]
+dev-dependencies = [
+  "pip-audit",
+  "bandit[toml]",
+  "ruff",
+  "mypy",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "checkov",
+  "semgrep",
+  "cyclonedx-bom",
+]
+
+# ── checkov (IaC + Docker Compose security) ───────────────────────────
+[tool.checkov]
+# Frameworks to scan (dockerfile, docker-compose)
+framework = ["dockerfile", "docker-compose"]
+# Suppress known-acceptable findings
+skip-check = [
+  # Allow EXPOSE of high ports in dev Dockerfiles (self-hosted, no DMZ)
+  "CKV_DOCKER_7",
+  # Allow ADD (used for COPY+extract patterns in some workers)
+  "CKV_DOCKER_4",
+]
+soft-fail = true
+output = ["json"]
+
+# ── osv-scanner ───────────────────────────────────────────────────────
+# Config file: .osv-scanner.toml (false-positive suppression)
+# Run: osv-scanner --recursive --config .osv-scanner.toml .

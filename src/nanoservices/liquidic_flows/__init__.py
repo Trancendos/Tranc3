@@ -6,14 +6,14 @@ to container constraints and environmental conditions.
 """
 
 from .liquidic_flows import (
-    FlowState,
     ContainerShape,
-    FluidProperties,
-    LiquidicService,
-    GasService,
     FlowContainer,
-    PressureValve,
+    FlowState,
+    FluidProperties,
+    GasService,
     LiquidicFlowEngine,
+    LiquidicService,
+    PressureValve,
 )
 
 __all__ = [

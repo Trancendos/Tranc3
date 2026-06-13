@@ -300,10 +300,10 @@ class A2ATransport:
     async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
         raise NotImplementedError
 
-    async def start(self) -> None:
+    async def start(self) -> None:  # noqa: B027
         pass
 
-    async def stop(self) -> None:
+    async def stop(self) -> None:  # noqa: B027
         pass
 
 

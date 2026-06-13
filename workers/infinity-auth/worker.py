@@ -46,8 +46,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
-
-from Dimensional.sanitize import sanitize_for_log
+from shared_core.sanitize import sanitize_for_log
 
 # Phase 22.5: Infinity Ecosystem nomenclature
 from shared_core.infinity.nomenclature import InfinityRole, Tier
@@ -396,10 +395,18 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
+_cors_origins_raw = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+# Wildcard origin is incompatible with allow_credentials=True (Starlette raises ValueError)
+_cors_allow_credentials = "*" not in _cors_origins_raw
+_cors_origins = _cors_origins_raw if _cors_allow_credentials else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -567,7 +574,11 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
         code = credentials.totp_code.strip()
         if code.isdigit() and len(code) == 6:
             # Standard TOTP path — ±30s clock drift tolerance
-            if not pyotp.TOTP(totp_secret).verify(code, valid_window=1):
+            try:
+                valid = pyotp.TOTP(totp_secret).verify(code, valid_window=1)
+            except Exception:
+                raise HTTPException(status_code=403, detail="Invalid MFA code") from None
+            if not valid:
                 raise HTTPException(status_code=403, detail="Invalid MFA code")
         else:
             # Backup code recovery path — compare HMAC hashes, constant-time, one-time use
@@ -910,8 +921,8 @@ async def jwks():
                         }
                     ]
                 }
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("JWKS generation failed: %s", exc)
     return {"keys": []}
 
 
@@ -987,10 +998,10 @@ async def token_endpoint(req: TokenRequest):
     if not row:
         raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
 
-        # PKCE verification
-        if row["code_challenge"]:
-            import base64
-            import hashlib  # noqa: PLC0415, E401
+    # PKCE verification — must run on the success path, not inside the error branch
+    if row["code_challenge"]:
+        import base64  # noqa: PLC0415
+        import hashlib  # noqa: PLC0415
 
         if not req.code_verifier:
             raise HTTPException(status_code=400, detail="code_verifier required")

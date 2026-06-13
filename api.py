@@ -40,9 +40,34 @@ from Dimensional.sanitize import sanitize_for_log
 load_dotenv()
 from src.core.startup_validator import validate_startup
 
-# Run the shared startup validator in the canonical production entrypoint so
-# dev/prod rules stay consistent across api.py and api_enhanced.py.
-validate_startup()
+# ── Fail fast on missing critical secrets ────────────────────────────────────
+_SECRET_KEY = os.getenv("SECRET_KEY")
+if not _SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY is not set. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_JWT_SECRET = os.getenv("JWT_SECRET")
+if not _JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET is not set. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_DATABASE_URL = os.getenv("DATABASE_URL")
+if not _DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. "
+        "Set to your PostgreSQL connection string (e.g. postgresql://user:pass@host/db)."
+    )
+
+_REDIS_URL = os.getenv("REDIS_URL")
+if not _REDIS_URL:
+    raise RuntimeError(
+        "REDIS_URL is not set. "
+        "Set to your Redis connection string (e.g. redis://localhost:6379 or rediss://...)."
+    )
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
@@ -222,7 +247,6 @@ _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
 _health_monitor = None
 _auto_evolve = None
-_bootstrap_complete = False
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -230,7 +254,7 @@ _bootstrap_complete = False
 async def lifespan(app: FastAPI):
     global model, tokenizer, personality_matrix, redis_client, feature_flags
     global quantum_core, consciousness_model, neuromorphic, evolution_engine
-    global db_manager, db_user_manager, _health_monitor, _auto_evolve, _bootstrap_complete
+    global db_manager, db_user_manager, _health_monitor, _auto_evolve
 
     logger.info("TRANC3 starting up...")
     _bootstrap_complete = False
@@ -362,6 +386,19 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("AutoEvolve failed to start: %s", sanitize_for_log(e))
 
+    # pgvector — bootstrap embeddings table (no-ops gracefully if unavailable)
+    try:
+        from src.database.pgvector import (
+            bootstrap as _pgvector_bootstrap,  # codeql[py/cyclic-import]
+        )
+
+        if _pgvector_bootstrap():
+            logger.info("pgvector embeddings table ready")
+        else:
+            logger.debug("pgvector unavailable — vector ops will use fallback")
+    except Exception as _pgv_exc:
+        logger.debug("pgvector bootstrap skipped: %s", sanitize_for_log(_pgv_exc))
+
     # Knowledge Brain (The Library) — start dream-cycle consolidation
     _knowledge_brain = None
     try:
@@ -380,7 +417,6 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("TRANC3 shutting down")
-    _bootstrap_complete = False
     if _knowledge_brain is not None:
         try:
             await _knowledge_brain.stop_dream_cycle()

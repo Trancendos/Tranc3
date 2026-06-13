@@ -135,6 +135,16 @@ apscheduler==3.10.4
 # watchdog: Filesystem events — hot-reload YAML task files without restart
 watchdog==4.0.0
 
+# === Database & Auth ===
+# sqlalchemy: ORM for database models (src/database/, workers)
+sqlalchemy==2.0.50
+# alembic: Database schema migrations (migrations/)
+alembic==1.15.2
+# bcrypt: Password hashing for auth module (auth.py)
+bcrypt==4.3.0
+# pyotp: TOTP/HOTP for MFA (workers/infinity-auth/)
+pyotp==2.9.0
+
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt
 # See: requirements-security.txt for scanning toolchain

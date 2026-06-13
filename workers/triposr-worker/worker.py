@@ -28,9 +28,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from Dimensional.error_handlers import log_server_error
-from src.entities.health_metadata import health_entity_block
-
 WORKER_PORT = 8051
 WORKER_NAME = "triposr-worker"
 
@@ -145,7 +142,7 @@ async def lifespan(app: FastAPI):
         logger.info("TripoSR package detected; model will be loaded on first request.")
     else:
         logger.warning(
-            "tsr package not found — /reconstruct will return 503 until TripoSR is installed.",
+            "tsr package not found — /reconstruct will return 503 until TripoSR is installed."
         )
     yield
 
@@ -178,7 +175,6 @@ async def health():
     tsr_ok = _check_tsr_available()
     model_loaded = _MODEL is not None
     return {
-        "entity": health_entity_block(8051, "triposr-worker"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -186,6 +182,12 @@ async def health():
         "available": tsr_ok,
         "model": "TripoSR",
         "model_loaded": model_loaded,
+        "entity": {
+            "platform_service": "Sashas Photo Studio",
+            "lead_ai": "Madam Krystal",
+            "role": "Photo & image generation center",
+            "status": "Planned",
+        },
     }
 
 
@@ -206,7 +208,7 @@ async def reconstruct(req: ReconstructRequest):
     except Exception as exc:
         return JSONResponse(
             status_code=400,
-            content={"error": log_server_error(exc, 400, context="invalid base64 image")},
+            content={"error": f"Invalid base64 image data: {exc}"},
         )
 
     try:
@@ -226,7 +228,7 @@ async def reconstruct(req: ReconstructRequest):
     except Exception as exc:
         return JSONResponse(
             status_code=400,
-            content={"error": log_server_error(exc, 400, context="image decode")},
+            content={"error": f"Cannot decode image: {exc}"},
         )
 
     # Load model (lazy)
@@ -235,12 +237,13 @@ async def reconstruct(req: ReconstructRequest):
     except RuntimeError as exc:
         return JSONResponse(
             status_code=503,
-            content={"error": log_server_error(exc, 503, context="TripoSR model unavailable")},
+            content={"error": str(exc)},
         )
     except Exception as exc:
+        logger.exception("Failed to load TripoSR model")
         return JSONResponse(
             status_code=500,
-            content={"error": log_server_error(exc, 500, context="TripoSR model load")},
+            content={"error": f"Model load failed: {exc}"},
         )
 
     # Run reconstruction
@@ -290,13 +293,10 @@ async def reconstruct(req: ReconstructRequest):
         }
 
     except Exception as exc:
+        logger.exception("TripoSR reconstruction failed (run_id=%s)", run_id)
         return JSONResponse(
             status_code=500,
-            content={
-                "success": False,
-                "error": log_server_error(exc, 500, context=f"TripoSR reconstruction {run_id}"),
-                "run_id": run_id,
-            },
+            content={"success": False, "error": str(exc), "run_id": run_id},
         )
 
 

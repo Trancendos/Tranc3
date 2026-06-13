@@ -41,6 +41,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
+# Phase 22.4: Dimensional Services
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
@@ -55,13 +62,6 @@ from Dimensional.infinity.sentinel_station import (
     get_sentinel_station,
 )
 
-# Phase 22.4: Dimensional Services
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
@@ -71,13 +71,7 @@ from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 PORT = int(os.environ.get("INFINITY_ONE_PORT", "8043"))
 DB_PATH = os.environ.get("INFINITY_ONE_DB_PATH", "data/infinity_one.db")
-_jwt_secret_raw = os.environ.get("JWT_SECRET")
-if not _jwt_secret_raw:
-    raise RuntimeError(
-        "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
-    )
-JWT_SECRET: str = _jwt_secret_raw
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 logger = logging.getLogger("infinity-one-service")
 
@@ -324,6 +318,7 @@ async def _lifespan(app: FastAPI):
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
                     summary_dict = summary.to_dict()
+
                     worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     await sentinel.publish(
@@ -372,9 +367,15 @@ app = FastAPI(
 )
 
 # CORS
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -506,8 +507,10 @@ async def create_identity(request: Request, identity: IdentityCreate):
 
     # Determine tier and infinity_role from role
     from Dimensional.infinity.nomenclature import (
-        get_tier_for_role as _gtr,
         get_infinity_role_for_role as _girr,
+    )
+    from Dimensional.infinity.nomenclature import (
+        get_tier_for_role as _gtr,
     )
 
     tier = _gtr(identity.role)
@@ -675,8 +678,10 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         params.append(update.role)
         # Update tier and infinity_role based on new role
         from Dimensional.infinity.nomenclature import (
-            get_tier_for_role as _gtr,
             get_infinity_role_for_role as _girr,
+        )
+        from Dimensional.infinity.nomenclature import (
+            get_tier_for_role as _gtr,
         )
 
         tier = _gtr(update.role)

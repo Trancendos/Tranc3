@@ -34,6 +34,16 @@ from src.event_bus.types import (
     EventSubscription,
 )
 
+# Optional NATS transport — imported lazily to avoid hard dependency
+try:
+    from src.event_bus.nats_transport import NATSTransport, _event_type_to_subject
+
+    _NATS_TRANSPORT_AVAILABLE = True
+except ImportError:
+    _NATS_TRANSPORT_AVAILABLE = False
+    NATSTransport = None  # type: ignore[assignment,misc]
+    _event_type_to_subject = None  # type: ignore[assignment]
+
 logger = logging.getLogger("tranc3.event_bus")
 
 
@@ -72,6 +82,9 @@ class EventBus:
         self._event_log: list[EventEnvelope] = []
         self._db: sqlite3.Connection | None = None
 
+        # Optional NATS JetStream transport (set via set_nats_transport())
+        self._nats_transport: Any | None = None  # NATSTransport instance
+
         # Initialise SQLite if configured
         if self.config.sqlite_path:
             self._init_sqlite(self.config.sqlite_path)
@@ -106,6 +119,30 @@ class EventBus:
             await self.flush()
         if self._db:
             self._db.close()
+        if self._nats_transport is not None:
+            await self._nats_transport.disconnect()
+
+    # ── NATS transport ───────────────────────────────────────
+
+    def set_nats_transport(self, transport: Any) -> None:
+        """
+        Attach an optional NATS JetStream transport adapter.
+
+        Once set, every call to ``emit()`` will publish the event through
+        NATS JetStream *in addition* to the local SQLite + callback delivery.
+
+        Pass a ``NATSTransport`` instance (from ``src.event_bus.nats_transport``).
+        The transport must already be connected (``await transport.connect()``).
+
+        Example::
+
+            from src.event_bus.nats_transport import make_nats_transport
+            transport = make_nats_transport()
+            await transport.connect()
+            bus.set_nats_transport(transport)
+        """
+        self._nats_transport = transport
+        logger.info("event_bus_nats_transport_attached")
 
     # ── Emit ─────────────────────────────────────────────────
 
@@ -145,6 +182,20 @@ class EventBus:
 
         # Buffer for batch processing
         self._buffer.append(event)
+
+        # Publish through NATS JetStream if transport is attached
+        if self._nats_transport is not None and _event_type_to_subject is not None:
+            try:
+                nats_subject = _event_type_to_subject(event_type)
+                await self._nats_transport.publish(
+                    nats_subject,
+                    event.model_dump(mode="json"),
+                )
+            except Exception as _nats_exc:  # noqa: BLE001
+                logger.error(
+                    "nats_publish_error",
+                    extra={"event_type": event_type, "error": str(_nats_exc)},
+                )
 
         # Find matching subscriptions
         results: list[DeliveryResult] = []

@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from Dimensional.architecture.oci_adaptive_provider import (
+from shared_core.architecture.oci_adaptive_provider import (
     OCI_FREE_TIER_LIMITS,
     AdaptiveInstanceDatum,
     AdaptiveProviderConfig,
@@ -204,7 +204,7 @@ class TestOciQuotaTracker:
     def fresh_tracker(self, tmp_path, monkeypatch):
         # OciQuotaTracker persists to /tmp/tranc3_oci_quota.json — redirect to a
         # fresh temp file so tests are fully isolated from each other and from the host.
-        import Dimensional.architecture.oci_adaptive_provider as _mod
+        import shared_core.architecture.oci_adaptive_provider as _mod
 
         sidecar = str(tmp_path / "oci_quota_test.json")
         monkeypatch.setattr(_mod.OciQuotaTracker, "_SIDECAR", sidecar)

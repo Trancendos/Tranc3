@@ -26,9 +26,10 @@ import asyncio
 import logging
 import time
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Awaitable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.hil_a")
 
@@ -197,22 +198,26 @@ class HILAConfig:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class HILATierHandler:
+class HILATierHandler(ABC):
     """Abstract handler that can approve/reject actions at a specific tier."""
 
     @property
+    @abstractmethod
     def tier(self) -> int:
-        raise NotImplementedError
+        ...
 
     @property
+    @abstractmethod
     def entity_id(self) -> str:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     async def can_decide(self, action: HILAAction) -> bool:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     async def decide(self, action: HILAAction) -> HILADecision:
-        raise NotImplementedError
+        ...
 
 
 # ─────────────────────────────────────────────────────────────────────────────

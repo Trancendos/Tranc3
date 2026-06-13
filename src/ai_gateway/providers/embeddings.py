@@ -88,19 +88,21 @@ class OllamaEmbeddingProvider:
             if not embedding:
                 raise RuntimeError(
                     f"Ollama returned empty embedding for model {self.model}. "
-                    f"Pull with: ollama pull {self.model}",
+                    f"Pull with: ollama pull {self.model}"
                 )
             return embedding
 
         except httpx.ConnectError:
             raise RuntimeError(
-                f"Ollama not available at {self.base_url}. Start with: ollama serve",
+                f"Ollama not available at {self.base_url}. "
+                "Start with: ollama serve"
             ) from None
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             if status == 404:
                 raise RuntimeError(
-                    f"Ollama model '{self.model}' not found. Pull with: ollama pull {self.model}",
+                    f"Ollama model '{self.model}' not found. "
+                    f"Pull with: ollama pull {self.model}"
                 ) from None
             raise RuntimeError(f"Ollama embedding HTTP error: {status}") from None
         except RuntimeError:
@@ -164,7 +166,7 @@ class GeminiEmbeddingProvider:
         if not self._is_available():
             raise RuntimeError(
                 "GOOGLE_GEMINI_API_KEY is not set. "
-                "Get a free key at https://aistudio.google.com/apikey",
+                "Get a free key at https://aistudio.google.com/apikey"
             )
 
         payload = {
@@ -252,9 +254,7 @@ class EmbeddingRouter:
             vector = await self._ollama.embed(text)
             latency_ms = (time.monotonic() - start) * 1000
             logger.debug(
-                "Embedding via ollama in %.1fms, dim=%d",
-                latency_ms,
-                len(vector),
+                "Embedding via ollama in %.1fms, dim=%d", latency_ms, len(vector)
             )
             return vector
         except Exception as e:
@@ -267,9 +267,7 @@ class EmbeddingRouter:
             vector = await self._gemini.embed(text)
             latency_ms = (time.monotonic() - start) * 1000
             logger.debug(
-                "Embedding via gemini in %.1fms, dim=%d",
-                latency_ms,
-                len(vector),
+                "Embedding via gemini in %.1fms, dim=%d", latency_ms, len(vector)
             )
             return vector
         except Exception as e:
@@ -281,7 +279,7 @@ class EmbeddingRouter:
             f"All embedding providers failed. "
             f"For Ollama: run `ollama pull nomic-embed-text`. "
             f"For Gemini: set GOOGLE_GEMINI_API_KEY. "
-            f"Errors: {error_summary}",
+            f"Errors: {error_summary}"
         )
 
     async def get_available_providers(self) -> dict[str, bool]:

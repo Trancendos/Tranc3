@@ -252,7 +252,7 @@ class InfinityBot:
     # Override points
     # ------------------------------------------------------------------
 
-    async def on_metrics(self, run: BotRun) -> None:
+    async def on_metrics(self, run: BotRun) -> None:  # noqa: B027
         """Called after each run. Override to emit metrics upstream."""
 
     # ------------------------------------------------------------------

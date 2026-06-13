@@ -29,6 +29,7 @@ state along the way.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import sqlite3
 import time
@@ -264,7 +265,7 @@ class ContextWindow:
                 if isinstance(context.status, SessionStatus)
                 else context.status,
                 ",".join(context.context_types),
-                str(context.metadata),
+                json.dumps(context.metadata),
                 context.connected_at,
                 context.last_active,
             ),

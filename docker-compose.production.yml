@@ -76,7 +76,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"   # Traefik dashboard
+      - "8888:8080"   # Traefik dashboard (moved from 8080 to avoid KrakenD conflict)
       - "9090:9090"   # Metrics
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -186,6 +186,66 @@ services:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
       <<: *healthcheck-default
 
+  # ── VictoriaMetrics — Prometheus-Compatible TSDB ─────────────────────
+  # Apache 2.0. Drop-in Prometheus replacement with 10× less RAM and disk.
+  # Scrapes same targets as Prometheus; Grafana talks to both.
+  # Query API: http://victoriametrics:8428  (Prometheus-compatible PromQL)
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: tranc3-victoriametrics
+    <<: *common
+    command:
+      - "--storageDataPath=/storage"
+      - "--retentionPeriod=30d"
+      - "--httpListenAddr=:8428"
+      - "--promscrape.config=/etc/prometheus/prometheus.yml"
+    ports:
+      - "8428:8428"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - victoriametrics-data:/storage
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8428/health"]
+      <<: *healthcheck-default
+
+  # ── Valkey — BSD-3 Redis-Compatible Key-Value Store ───────────────────
+  # Drop-in Redis replacement (same redis-py client, same port 6379).
+  # BSD-3 licence; community fork of Redis 7.2 under Linux Foundation.
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: tranc3-valkey
+    <<: *common
+    command: ["valkey-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Zot — OCI Container Registry ─────────────────────────────────────
+  # Apache 2.0. Prevents Docker Hub rate-limiting for the platform.
+  # All workers can pull images from http://zot:5000 inside the network.
+  zot:
+    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    container_name: tranc3-zot
+    <<: *common
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config/zot/config.json:/etc/zot/config.json:ro
+      - zot-data:/var/lib/registry
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # ── IPFS — Distributed Storage ───────────────────────────────────────
   # Replaces: Cloudflare R2, CF IPFS Gateway
   ipfs:
@@ -260,6 +320,7 @@ services:
     ports:
       - "3200:3200"   # HTTP query API
       - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
     networks:
       - tranc3-net
     labels:
@@ -767,6 +828,140 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8038/health"]
       <<: *healthcheck-default
 
+  # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
+  # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
+  # API-compatible with hvac Python client used by vault-service/openbao_client.py
+  openbao:
+    image: openbao/openbao:latest
+    container_name: trancendos-openbao
+    environment:
+      BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:-dev-root-token}"
+      BAO_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    ports:
+      - "8200:8200"
+    volumes:
+      - openbao-data:/openbao/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8200/v1/sys/health"]
+      <<: *healthcheck-default
+
+  # ── KrakenD — API Gateway (Apache 2.0, replaces CF trancendos-api-gateway) ──
+  # Stateless, no DB; routes /api/v1/* to backend workers with JWT + rate limiting.
+  # KrakenD API gateway — main API on :8080 (internal), :8099 (host), metrics on :8090
+  krakend:
+    image: devopsfaith/krakend:latest
+    container_name: trancendos-krakend
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "8099:8080"
+      - "8090:8090"
+    volumes:
+      - ./config/krakend/krakend.json:/etc/krakend/krakend.json:ro
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/__health"]
+      <<: *healthcheck-default
+
+  # ── Blender Worker — Headless 3D Rendering for TranceFlow (Port 8050) ───
+  blender-worker:
+    <<: *worker-common
+    build:
+      context: ./workers/blender-worker
+      dockerfile: Dockerfile
+    container_name: trancendos-blender-worker
+    ports:
+      - "8050:8050"
+    volumes:
+      - blender-renders:/app/renders
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
+      <<: *healthcheck-default
+
+  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8051) ──
+  triposr-worker:
+    <<: *worker-common
+    build:
+      context: ./workers/triposr-worker
+      dockerfile: Dockerfile
+    container_name: trancendos-triposr-worker
+    ports:
+      - "8051:8051"
+    volumes:
+      - triposr-models:/app/models
+      - triposr-outputs:/app/outputs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
+      <<: *healthcheck-default
+
+  # ── FFmpeg Worker — TateKing Video Processing (Port 8052) ──────────────
+  # Zero-cost self-hosted video transcoding, thumbnail extraction, compression.
+  # Provides non-blocking job queue via asyncio subprocesses.
+  ffmpeg-worker:
+    build:
+      context: ./workers/ffmpeg-worker
+    container_name: trancendos-ffmpeg-worker
+    ports:
+      - "8052:8052"
+    volumes:
+      - ffmpeg-workdir:/app/workdir
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8052/health"]
+      <<: *healthcheck-default
+
+  # ── Langfuse — AI Observability (Port 3002) ──────────────────────────
+  # MIT-licensed self-hosted LLM observability: traces, generations, evals.
+  # Unlimited spans self-hosted; integrates with The Observatory.
+  # SDK env vars: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=http://langfuse:3000
+  langfuse:
+    image: langfuse/langfuse:latest
+    container_name: trancendos-langfuse
+    ports:
+      - "3002:3000"
+    environment:
+      DATABASE_URL: "postgresql://langfuse:langfuse@langfuse-db:5432/langfuse"
+      NEXTAUTH_URL: "http://localhost:3002"
+      NEXTAUTH_SECRET: "${LANGFUSE_SECRET:-changeme-langfuse-secret}"
+      SALT: "${LANGFUSE_SALT:-changeme-langfuse-salt}"
+      TELEMETRY_ENABLED: "false"
+    depends_on:
+      - langfuse-db
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  langfuse-db:
+    image: postgres:16-alpine
+    container_name: trancendos-langfuse-db
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -781,6 +976,413 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8044/health"]
       <<: *healthcheck-default
+
+  # ── Qdrant — High-performance vector database (Apache 2.0) ─────────────
+  # Free: self-hosted with unlimited vectors
+  # Replaces Pinecone/paid vector services for The Spark RAG-MCP + knowledge search
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: trancendos-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: "6333"
+      QDRANT__SERVICE__GRPC_PORT: "6334"
+      QDRANT__LOG_LEVEL: INFO
+    networks:
+      - tranc3-net
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Penpot — Open-source design platform (MPL 2.0), Figma alternative ──
+  # Fabulousa: Baron Von Hilton — Styling, UX, UI & design center
+  penpot-frontend:
+    image: penpotapp/frontend:latest
+    container_name: trancendos-penpot-frontend
+    restart: unless-stopped
+    ports:
+      - "9001:80"
+    environment:
+      PENPOT_FLAGS: "enable-registration enable-login disable-demo-users"
+    depends_on:
+      - penpot-backend
+      - penpot-exporter
+    networks:
+      - tranc3-net
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.penpot.rule: "Host(`design.trancendos.com`)"
+      traefik.http.routers.penpot.entrypoints: "websecure"
+      traefik.http.routers.penpot.tls.certresolver: "letsencrypt"
+
+  penpot-backend:
+    image: penpotapp/backend:latest
+    container_name: trancendos-penpot-backend
+    restart: unless-stopped
+    environment:
+      PENPOT_FLAGS: "enable-registration enable-login disable-demo-users disable-secure-session-cookies"
+      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:-insecure-for-dev-only}"
+      PENPOT_DATABASE_URI: "postgresql://penpot:penpot@penpot-db/penpot"
+      PENPOT_REDIS_URI: "redis://valkey:6379/2"
+      PENPOT_STORAGE_BACKEND: "fs"
+      PENPOT_STORAGE_FS_DIRECTORY: "/opt/data/assets"
+      PENPOT_ASSETS_STORAGE_BACKEND: "assets-fs"
+      PENPOT_STORAGE_ASSETS_FS_DIRECTORY: "/opt/data/assets"
+    volumes:
+      - penpot-data:/opt/data
+    depends_on:
+      - penpot-db
+    networks:
+      - tranc3-net
+
+  penpot-exporter:
+    image: penpotapp/exporter:latest
+    container_name: trancendos-penpot-exporter
+    restart: unless-stopped
+    environment:
+      PENPOT_PUBLIC_URI: "http://penpot-frontend"
+    networks:
+      - tranc3-net
+
+  penpot-db:
+    image: postgres:15-alpine
+    container_name: trancendos-penpot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: penpot
+      POSTGRES_USER: penpot
+      POSTGRES_PASSWORD: penpot
+    volumes:
+      - penpot-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+
+  # ── OWASP Dependency-Track — SBOM vulnerability monitoring (Apache 2.0) ─
+  # Consumes CycloneDX SBOMs generated by syft in CI, tracks CVEs continuously
+  dependency-track-apiserver:
+    image: dependencytrack/apiserver:latest
+    container_name: trancendos-dtrack-api
+    restart: unless-stopped
+    environment:
+      ALPINE_DATABASE_MODE: internal
+      ALPINE_METRICS_ENABLED: "true"
+    volumes:
+      - dtrack-data:/data
+    ports:
+      - "8083:8080"
+    networks:
+      - tranc3-net
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/version"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  dependency-track-frontend:
+    image: dependencytrack/frontend:latest
+    container_name: trancendos-dtrack-frontend
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: "http://dependency-track-apiserver:8080"
+    ports:
+      - "8084:8080"
+    depends_on:
+      - dependency-track-apiserver
+    networks:
+      - tranc3-net
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dtrack.rule: "Host(`sbom.trancendos.com`)"
+      traefik.http.routers.dtrack.entrypoints: "websecure"
+      traefik.http.routers.dtrack.tls.certresolver: "letsencrypt"
+
+  # Falco — Runtime security monitoring (Apache 2.0, eBPF-based)
+  falco:
+    image: falcosecurity/falco-no-driver:latest
+    container_name: trancendos-falco
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - ./config/falco:/etc/falco:ro
+    environment:
+      HOST_ROOT: /host
+      FALCO_HOSTNAME: trancendos-falco
+    networks:
+      - tranc3-net
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # CI/CD LAYER — Woodpecker CI (alongside Forgejo / The Workshop)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ── Woodpecker Server — CI orchestrator (Port 8100) ──────────────────
+  # Apache 2.0 licensed self-hosted CI. Integrates with Forgejo (The Workshop).
+  # Dashboard: https://ci.trancendos.com  (Traefik routes Host ci.trancendos.com)
+  # Required env: WOODPECKER_FORGEJO_CLIENT, WOODPECKER_FORGEJO_SECRET,
+  #               WOODPECKER_SECRET, WOODPECKER_AGENT_TOKEN
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:latest
+    container_name: trancendos-woodpecker-server
+    restart: unless-stopped
+    ports:
+      - "8100:8000"
+    environment:
+      WOODPECKER_OPEN: "true"
+      WOODPECKER_FORGEJO: "true"
+      WOODPECKER_FORGEJO_URL: "${FORGEJO_URL:-http://forgejo:3000}"
+      WOODPECKER_FORGEJO_CLIENT: "${WOODPECKER_FORGEJO_CLIENT}"
+      WOODPECKER_FORGEJO_SECRET: "${WOODPECKER_FORGEJO_SECRET}"
+      WOODPECKER_SECRET: "${WOODPECKER_SECRET:-changeme-woodpecker-secret}"
+      WOODPECKER_DATABASE_DATASOURCE: "/var/lib/woodpecker/woodpecker.db"
+      WOODPECKER_DATABASE_DRIVER: "sqlite3"
+    volumes:
+      - woodpecker-data:/var/lib/woodpecker
+    networks:
+      - tranc3-net
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.woodpecker.rule: "Host(`ci.trancendos.com`)"
+      traefik.http.routers.woodpecker.entrypoints: "websecure"
+      traefik.http.routers.woodpecker.tls.certresolver: "letsencrypt"
+
+  # ── Woodpecker Agent — CI runner ─────────────────────────────────────
+  # Executes pipeline steps inside Docker containers (zero-cost, local).
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:latest
+    container_name: trancendos-woodpecker-agent
+    restart: unless-stopped
+    depends_on:
+      - woodpecker-server
+    environment:
+      WOODPECKER_SERVER: "woodpecker-server:9000"
+      WOODPECKER_TOKEN: "${WOODPECKER_AGENT_TOKEN:-changeme-agent-token}"
+      WOODPECKER_MAX_WORKFLOWS: "4"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - tranc3-net
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Cal.com — ChronosSphere / ArcStream (self-hosted scheduling, MIT)
+  # UI: http://localhost:3010  Env-set: http://scheduling.trancendos.com
+  # ─────────────────────────────────────────────────────────────────────────
+  calcom-db:
+    image: postgres:15-alpine
+    container_name: trancendos-calcom-db
+    environment:
+      POSTGRES_USER: calcom
+      POSTGRES_PASSWORD: "${CALCOM_DB_PASSWORD:-calcom-dev-password}"
+      POSTGRES_DB: calcom
+    volumes:
+      - calcom-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calcom -d calcom"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  calcom:
+    image: calcom/cal.com:latest
+    container_name: trancendos-calcom
+    ports:
+      - "3010:3000"
+    environment:
+      DATABASE_URL: "postgresql://calcom:${CALCOM_DB_PASSWORD:-calcom-dev-password}@calcom-db:5432/calcom"
+      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:-changeme-calcom-secret}"
+      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:-changeme-calcom-encryption-key}"
+      NEXT_PUBLIC_WEBAPP_URL: "${CALCOM_URL:-http://localhost:3010}"
+      EMAIL_FROM: "${CALCOM_EMAIL_FROM:-noreply@trancendos.com}"
+      NEXT_PUBLIC_LICENSE_CONSENT: "agree"
+    depends_on:
+      calcom-db:
+        condition: service_healthy
+    volumes:
+      - calcom-data:/app/.next
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.calcom.rule: "Host(`scheduling.trancendos.com`)"
+      traefik.http.routers.calcom.entrypoints: "websecure"
+      traefik.http.routers.calcom.tls.certresolver: "letsencrypt"
+      traefik.http.services.calcom.loadbalancer.server.port: "3000"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Outline — The Library / Zimik (self-hosted wiki, BSL)
+  # UI: http://localhost:3011  Env-set: http://wiki.trancendos.com
+  # ─────────────────────────────────────────────────────────────────────────
+  outline-db:
+    image: postgres:15-alpine
+    container_name: trancendos-outline-db
+    environment:
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: "${OUTLINE_DB_PASSWORD:-outline-dev-password}"
+      POSTGRES_DB: outline
+    volumes:
+      - outline-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline -d outline"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  outline-redis:
+    image: valkey/valkey:8-alpine
+    container_name: trancendos-outline-redis
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - outline-redis-data:/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+
+  outline:
+    image: outlinewiki/outline:latest
+    container_name: trancendos-outline
+    ports:
+      - "3011:3000"
+    environment:
+      DATABASE_URL: "postgres://outline:${OUTLINE_DB_PASSWORD:-outline-dev-password}@outline-db:5432/outline"
+      REDIS_URL: "redis://outline-redis:6379"
+      SECRET_KEY: "${OUTLINE_SECRET_KEY:-changeme-outline-secret-key-must-be-32char}"
+      UTILS_SECRET: "${OUTLINE_UTILS_SECRET:-changeme-outline-utils-secret}"
+      URL: "${OUTLINE_URL:-http://localhost:3011}"
+      PORT: "3000"
+      FILE_STORAGE: "local"
+      FILE_STORAGE_LOCAL_ROOT_DIR: "/var/lib/outline/data"
+      PGSSLMODE: "disable"
+    depends_on:
+      outline-db:
+        condition: service_healthy
+      outline-redis:
+        condition: service_started
+    volumes:
+      - outline-data:/var/lib/outline/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.outline.rule: "Host(`wiki.trancendos.com`)"
+      traefik.http.routers.outline.entrypoints: "websecure"
+      traefik.http.routers.outline.tls.certresolver: "letsencrypt"
+      traefik.http.services.outline.loadbalancer.server.port: "3000"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # SigNoz — The Observatory enhanced (OpenTelemetry-native APM, Apache 2.0)
+  # UI: http://localhost:3301  Backend: ClickHouse + query-service
+  # ─────────────────────────────────────────────────────────────────────────
+  signoz-clickhouse:
+    image: clickhouse/clickhouse-server:24.1.2-alpine
+    container_name: trancendos-signoz-clickhouse
+    environment:
+      CLICKHOUSE_DB: signoz_traces
+      CLICKHOUSE_USER: signoz
+      CLICKHOUSE_PASSWORD: "${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz-dev-password}"
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - signoz-clickhouse-data:/var/lib/clickhouse
+      - signoz-clickhouse-logs:/var/log/clickhouse-server
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  signoz-query-service:
+    image: signoz/query-service:latest
+    container_name: trancendos-signoz-query
+    command: ["-config=/root/config/prometheus.yml"]
+    environment:
+      ClickHouseUrl: "tcp://signoz:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz-dev-password}@signoz-clickhouse:9000/signoz_traces"
+      STORAGE: clickhouse
+      GODEBUG: netdns=go
+      TELEMETRY_ENABLED: "false"
+      DEPLOYMENT_TYPE: "docker-standalone"
+    volumes:
+      - signoz-query-data:/root/data
+      - ./monitoring/prometheus.yml:/root/config/prometheus.yml:ro
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+
+  signoz-frontend:
+    image: signoz/frontend:latest
+    container_name: trancendos-signoz-frontend
+    ports:
+      - "3301:3301"
+    environment:
+      FRONTEND_API_ENDPOINT: "http://signoz-query-service:8080"
+    depends_on:
+      - signoz-query-service
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.signoz.rule: "Host(`apm.trancendos.com`)"
+      traefik.http.routers.signoz.entrypoints: "websecure"
+      traefik.http.routers.signoz.tls.certresolver: "letsencrypt"
+      traefik.http.services.signoz.loadbalancer.server.port: "3301"
+
+  # SigNoz OpenTelemetry Collector (receives OTLP from all workers)
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:latest
+    container_name: trancendos-signoz-otel
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    environment:
+      OTEL_RESOURCE_ATTRIBUTES: "host.name=trancendos-production,os.type=linux"
+      LOW_CARDINAL_EXCEPTION_GROUPING: "false"
+    volumes:
+      - ./config/signoz/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - signoz-clickhouse
+    networks:
+      - tranc3-net
+    restart: unless-stopped
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
@@ -833,6 +1435,50 @@ volumes:
   nats-data:
     driver: local
   tempo-data:
+    driver: local
+  victoriametrics-data:
+    driver: local
+  valkey-data:
+    driver: local
+  zot-data:
+    driver: local
+  openbao-data:
+    driver: local
+  blender-renders:
+    driver: local
+  triposr-models:
+    driver: local
+  triposr-outputs:
+    driver: local
+  ffmpeg-workdir:
+    driver: local
+  langfuse-db-data:
+    driver: local
+  woodpecker-data:
+    driver: local
+  qdrant-data:
+    driver: local
+  penpot-data:
+    driver: local
+  penpot-db-data:
+    driver: local
+  dtrack-data:
+    driver: local
+  calcom-db-data:
+    driver: local
+  calcom-data:
+    driver: local
+  outline-db-data:
+    driver: local
+  outline-redis-data:
+    driver: local
+  outline-data:
+    driver: local
+  signoz-clickhouse-data:
+    driver: local
+  signoz-clickhouse-logs:
+    driver: local
+  signoz-query-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

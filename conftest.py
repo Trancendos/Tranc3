@@ -27,27 +27,6 @@ for _var, _default in (
 ):
     os.environ[_var] = os.environ.get(_var) or _default
 
-# ── Worker SQLite DB paths ───────────────────────────────────────────────────
-# Some workers default their SQLite path to `/data/<name>.db` (a volume mount in
-# production). Tests import these worker modules directly, which instantiates the
-# DB at import time — and `/data` is not writable in CI/dev. Point each
-# env-configurable path at a writable temp dir so collection never fails.
-_WORKER_DATA_DIR = os.environ.get("TRANC3_TEST_DATA_DIR") or tempfile.mkdtemp(
-    prefix="tranc3-test-data-"
-)
-os.environ["TRANC3_TEST_DATA_DIR"] = _WORKER_DATA_DIR
-for _var, _fname in (
-    ("USERS_DB_PATH", "users.db"),
-    ("AUTH_DATABASE_PATH", "auth.db"),
-):
-    os.environ[_var] = os.environ.get(_var) or os.path.join(_WORKER_DATA_DIR, _fname)
-
-# STORAGE_ROOT defaults to /mnt/data/tranc3 (a NAS mount in production) which is
-# not writable in CI/dev. Point it at the writable temp dir for tests.
-os.environ["STORAGE_ROOT"] = os.environ.get("STORAGE_ROOT") or os.path.join(
-    _WORKER_DATA_DIR, "storage"
-)
-
 # ── Configure root test logger ────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.DEBUG,

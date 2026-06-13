@@ -128,16 +128,6 @@ scrape_configs:
         labels:
           priority: 'P2'
 
-  - job_name: 'sentinel-station-service'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['sentinel-station-service:8041']
-        labels:
-          service: 'sentinel-station-service'
-          priority: 'P2'
-          named: 'Sentinel Station'
-
-  # ── P3 Workers (8016–8029) ───────────────────────────────────────────
   - job_name: 'p3-workers'
     metrics_path: '/metrics'
     static_configs:
@@ -159,8 +149,7 @@ scrape_configs:
         labels:
           priority: 'P3'
 
-  # ── P3 Intelligence / AI Layer (8030–8039) ───────────────────────────
-  - job_name: 'p3-intelligence'
+  - job_name: 'p3-bridge-workers'
     metrics_path: '/metrics'
     static_configs:
       - targets:
@@ -169,113 +158,12 @@ scrape_configs:
           - 'ledger-service:8032'
           - 'model-router-service:8033'
           - 'workflow-engine-service:8034'
-          - 'turings-hub-service:8035'
+          - 'skills-benchmark-service:8035'
           - 'langchain-integration-service:8036'
           - 'deepagents-orchestrator-service:8037'
           - 'vault-service:8038'
-          - 'mlflow-service:8039'
         labels:
           priority: 'P3'
-
-  # ── Creative Workers ─────────────────────────────────────────────────
-  - job_name: 'creative-workers'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets:
-          - 'blender-worker:8050'
-          - 'triposr-worker:8051'
-          - 'ffmpeg-worker:8052'
-        labels:
-          category: 'creative'
-          named: 'Imaginarium'
-
-  # ── KrakenD API Gateway Metrics ───────────────────────────────────────
-  - job_name: 'krakend'
-    metrics_path: '/__stats'
-    static_configs:
-      - targets: ['krakend:8090']
-        labels:
-          service: 'krakend'
-          category: 'gateway'
-
-  # ── Qdrant Vector Store Metrics ───────────────────────────────────────
-  - job_name: 'qdrant'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['qdrant:6333']
-        labels:
-          service: 'qdrant'
-          category: 'vector-db'
-          named: 'Vector Store'
-
-  # ── OpenBao / Vault Metrics ───────────────────────────────────────────
-  - job_name: 'openbao'
-    metrics_path: '/v1/sys/metrics'
-    params:
-      format: ['prometheus']
-    bearer_token_file: /etc/prometheus/vault-token
-    static_configs:
-      - targets: ['openbao:8200']
-        labels:
-          service: 'openbao'
-          category: 'secrets'
-          named: 'The Void'
-    # Note: create /etc/prometheus/vault-token with a Vault token that has
-    # sys/metrics capability. If not configured, this job will fail silently.
-
-  # ── Woodpecker CI Metrics ─────────────────────────────────────────────
-  - job_name: 'woodpecker'
-    static_configs:
-      - targets: ['woodpecker-server:9001']
-        labels:
-          service: 'woodpecker'
-          category: 'ci'
-
-  # ── Dependency-Track SBOM Monitoring ─────────────────────────────────
-  - job_name: 'dependency-track'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['dependency-track-apiserver:8080']
-        labels:
-          service: 'dependency-track'
-          category: 'sbom'
-
-  # ── Falco Runtime Security ────────────────────────────────────────────
-  - job_name: 'falco'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['falco:8765']
-        labels:
-          service: 'falco'
-          category: 'security'
-
-  # ── SigNoz OpenTelemetry Collector Metrics ───────────────────────────────
-  - job_name: 'signoz-otel-collector'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['signoz-otel-collector:8888']
-        labels:
-          service: 'signoz-otel-collector'
-          category: 'observability'
-
-  # ── SigNoz Query Service Metrics ──────────────────────────────────────────
-  - job_name: 'signoz-query-service'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ['signoz-query-service:8080']
-        labels:
-          service: 'signoz-query-service'
-          category: 'observability'
-
-  # ── Cal.com Scheduling Metrics ────────────────────────────────────────────
-  - job_name: 'calcom'
-    metrics_path: '/api/health'
-    static_configs:
-      - targets: ['calcom:3000']
-        labels:
-          service: 'calcom'
-          category: 'scheduling'
-          named: 'ChronosSphere'
 
   # ── Infrastructure Health Probes ─────────────────────────────────────
   - job_name: 'blackbox-http'

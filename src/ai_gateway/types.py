@@ -19,11 +19,16 @@ class ProviderName(str, enum.Enum):
     """Well-known AI provider names."""
 
     OLLAMA = "ollama"
+    GROQ = "groq"
+    GEMINI = "gemini"
+    CEREBRAS = "cerebras"
+    SAMBANOVA = "sambanova"
     OPENROUTER = "openrouter"
     HUGGINGFACE = "huggingface"
     OFFLINE = "offline"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    DEEPSEEK = "deepseek"
 
 
 # ── Data Models ──────────────────────────────────────────────
@@ -111,9 +116,14 @@ class GatewayMetrics(BaseModel):
 DEFAULT_TENANT_CONFIG = TenantAIConfig(
     tenant_id="default",
     routes=[
-        RouteRule(provider="ollama", priority=0),  # First: local, zero-cost
-        RouteRule(provider="openrouter", priority=1),  # Second: free cloud
-        RouteRule(provider="offline", priority=2),  # Last: deterministic fallback
+        RouteRule(provider="ollama", priority=0),      # Local, unlimited, zero-cost
+        RouteRule(provider="groq", priority=1),        # 14,400 req/day free, ultra-fast
+        RouteRule(provider="gemini", priority=2),      # 1,500 req/day free, 1M tok/min
+        RouteRule(provider="cerebras", priority=3),    # 1M tokens/day free
+        RouteRule(provider="sambanova", priority=4),   # Free tier, large models
+        RouteRule(provider="openrouter", priority=5),  # 20+ free models
+        RouteRule(provider="huggingface", priority=6), # Serverless free tier
+        RouteRule(provider="offline", priority=7),     # Deterministic fallback
     ],
     daily_token_budget=100000,
     cache_enabled=True,
@@ -123,7 +133,8 @@ FREE_TIER_CONFIG = TenantAIConfig(
     tenant_id="free",
     routes=[
         RouteRule(provider="ollama", priority=0),
-        RouteRule(provider="offline", priority=1),
+        RouteRule(provider="groq", priority=1),
+        RouteRule(provider="offline", priority=2),
     ],
     daily_token_budget=10000,
     cache_enabled=True,

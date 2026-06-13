@@ -26,8 +26,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from Dimensional.sanitize import sanitize_for_log
-
 WORKER_PORT = 8050
 WORKER_NAME = "blender-worker"
 
@@ -132,10 +130,7 @@ def _run_blender(script: str, timeout: int) -> dict[str, Any]:
         }
 
     with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".py",
-        delete=False,
-        dir="/tmp",
+        mode="w", suffix=".py", delete=False, dir="/tmp"
     ) as tmp:
         tmp.write(script)
         tmp_path = tmp.name
@@ -161,38 +156,14 @@ def _run_blender(script: str, timeout: int) -> dict[str, Any]:
             "returncode": -1,
         }
     except Exception as exc:
-        logger.exception("Blender subprocess failed")
         return {
             "success": False,
             "stdout": "",
-            "stderr": "Blender process failed",
+            "stderr": str(exc),
             "returncode": -1,
-            "_internal_error": repr(exc),
         }
     finally:
         Path(tmp_path).unlink(missing_ok=True)
-
-
-def _blender_response_body(result: dict[str, Any], **extra: Any) -> dict[str, Any]:
-    """Build a CWE-209-safe API payload from a Blender subprocess result."""
-    body: dict[str, Any] = {
-        "success": result["success"],
-        "returncode": result["returncode"],
-        **extra,
-    }
-    if result["success"]:
-        body["stdout"] = result["stdout"]
-        body["stderr"] = result["stderr"]
-        return body
-
-    if result.get("stderr"):
-        logger.warning(
-            "Blender process failed (rc=%s): %s",
-            sanitize_for_log(result["returncode"]),
-            sanitize_for_log(result["stderr"]),
-        )
-    body["message"] = "Blender process failed"
-    return body
 
 
 # ---------------------------------------------------------------------------
@@ -265,11 +236,11 @@ def _build_scene_script(
 async def lifespan(app: FastAPI):
     blender_path = blender_available()
     if blender_path:
-        logger.info("Blender found at: %s", sanitize_for_log(blender_path))
+        logger.info("Blender found at: %s", blender_path)
     else:
         logger.warning(
             "Blender not found in PATH or standard locations — "
-            "all render/scene endpoints will return 503.",
+            "all render/scene endpoints will return 503."
         )
     yield
 
@@ -326,13 +297,18 @@ async def render_script(req: RenderRequest):
     if not blender_available():
         return _unavailable_response()
 
-    logger.info("Running render script (timeout=%ds)", sanitize_for_log(req.timeout))
+    logger.info("Running render script (timeout=%ds)", req.timeout)
     result = _run_blender(req.script, req.timeout)
 
     status_code = 200 if result["success"] else 500
     return JSONResponse(
         status_code=status_code,
-        content=_blender_response_body(result),
+        content={
+            "success": result["success"],
+            "returncode": result["returncode"],
+            "stdout": result["stdout"],
+            "stderr": result["stderr"],
+        },
     )
 
 
@@ -363,17 +339,20 @@ async def create_scene(req: CreateSceneRequest):
 
     logger.info(
         "Creating scene: %d objects, render=%s, timeout=%ds",
-        sanitize_for_log(len(req.objects)),
-        sanitize_for_log(req.render),
-        sanitize_for_log(req.timeout),
+        len(req.objects),
+        req.render,
+        req.timeout,
     )
     result = _run_blender(script, req.timeout)
 
-    response_body = _blender_response_body(
-        result,
-        object_count=len(req.objects),
-        rendered=req.render and result["success"],
-    )
+    response_body: dict[str, Any] = {
+        "success": result["success"],
+        "object_count": len(req.objects),
+        "rendered": req.render and result["success"],
+        "returncode": result["returncode"],
+        "stdout": result["stdout"],
+        "stderr": result["stderr"],
+    }
 
     if req.render and result["success"]:
         # Blender appends the frame number, e.g. output0001.png
