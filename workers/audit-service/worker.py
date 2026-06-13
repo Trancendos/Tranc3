@@ -471,12 +471,14 @@ async def append_event(
             ) from exc
         row_id = cur.lastrowid
 
+    safe_action = re.sub(r"[\r\n\t]", " ", str(body.action))[:200]
+    safe_actor = re.sub(r"[\r\n\t]", " ", str(body.actor))[:200]
     logger.info(
         "audit event appended id=%d event_id=%s action=%s actor=%s",
         row_id,
         event_id,
-        re.sub(r"[\r\n\t]", " ", str(body.action))[:200],
-        re.sub(r"[\r\n\t]", " ", str(body.actor))[:200],
+        safe_action,
+        safe_actor,
     )
     return AuditEventCreated(
         id=row_id,

@@ -13,6 +13,7 @@ Zero-cost: uses stdlib json + optional lmformatenforcer (open-source).
 
 from __future__ import annotations
 
+import importlib.util as _importlib_util
 import json
 import logging
 import re
@@ -20,14 +21,9 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger("tranc3.inference.structured_output")
 
-# Optional: lmformatenforcer — only checking availability, not using the symbol
-try:
-    import lmformatenforcer as _lmfe_mod  # type: ignore[import]
-
-    del _lmfe_mod
-    _LMFE_AVAILABLE = True
-except ImportError:
-    _LMFE_AVAILABLE = False
+# Optional: lmformatenforcer — use find_spec to avoid importing an unused symbol
+_LMFE_AVAILABLE = _importlib_util.find_spec("lmformatenforcer") is not None
+del _importlib_util
 
 
 # ── Regex extraction ──────────────────────────────────────────────────────────
