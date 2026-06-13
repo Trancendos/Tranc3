@@ -1,12 +1,12 @@
 """
 Tests for src/core/intelligent_logger.py
 """
+
 import io
 import json
 import logging
-import sys
 import os
-import time
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -14,16 +14,14 @@ from src.core.intelligent_logger import (
     AnomalyDetector,
     IntelligentLogger,
     SeverityClassifier,
-    get_logger,
-    set_context,
-    get_context,
     _LokiJsonFormatter,
+    set_context,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_logger_with_capture() -> tuple:
     """Return (IntelligentLogger, StringIO buffer)."""
@@ -40,7 +38,8 @@ def _make_logger_with_capture() -> tuple:
     logger = IntelligentLogger.__new__(IntelligentLogger)
     logger._name = inner.name
     logger._service_name = "test-service"
-    from src.core.intelligent_logger import SeverityClassifier, AnomalyDetector
+    from src.core.intelligent_logger import AnomalyDetector, SeverityClassifier
+
     logger._classifier = SeverityClassifier()
     logger._anomaly = AnomalyDetector()
     logger._logger = inner
@@ -50,6 +49,7 @@ def _make_logger_with_capture() -> tuple:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_json_output_contains_context_fields():
     set_context(trace_id="trace-123", user_id="user-456", service_name="svc-test")
@@ -127,6 +127,6 @@ def test_error_sets_anomaly_alert_after_burst():
     for _ in range(5):
         logger.error("something failed")
 
-    lines = [l for l in buf.getvalue().splitlines() if l.strip()]
-    alert_seen = any(json.loads(l).get("anomaly_alert") for l in lines)
+    lines = [ln for ln in buf.getvalue().splitlines() if ln.strip()]
+    alert_seen = any(json.loads(ln).get("anomaly_alert") for ln in lines)
     assert alert_seen, "anomaly_alert should appear in JSON output after burst"

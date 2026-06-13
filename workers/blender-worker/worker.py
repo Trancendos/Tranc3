@@ -129,9 +129,7 @@ def _run_blender(script: str, timeout: int) -> dict[str, Any]:
             "returncode": -1,
         }
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False, dir="/tmp"
-    ) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir="/tmp") as tmp:
         tmp.write(script)
         tmp_path = tmp.name
 

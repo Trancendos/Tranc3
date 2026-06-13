@@ -19,10 +19,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import secrets
 import socket
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -63,6 +61,7 @@ def section(title: str) -> None:
 
 # ── Secret generation ─────────────────────────────────────────────────────────
 
+
 def gen_secret(n_bytes: int = 32) -> str:
     return secrets.token_hex(n_bytes)
 
@@ -72,6 +71,7 @@ def gen_secret_16() -> str:
 
 
 # ── Service detection ─────────────────────────────────────────────────────────
+
 
 def port_open(host: str, port: int, timeout: float = 0.5) -> bool:
     try:
@@ -138,6 +138,7 @@ def detect_vault() -> str | None:
 
 # ── Existing .env parser ───────────────────────────────────────────────────────
 
+
 def load_existing_env(path: Path) -> dict[str, str]:
     """Parse existing .env preserving all values (including comments)."""
     result: dict[str, str] = {}
@@ -169,6 +170,7 @@ def is_placeholder(value: str) -> bool:
 
 
 # ── Core env builder ──────────────────────────────────────────────────────────
+
 
 def build_env(
     existing: dict[str, str],
@@ -244,7 +246,9 @@ def build_env(
     # ── Database detection ────────────────────────────────────────────────────
     pg_url = detect_postgres()
     if prod:
-        if not pg_url and not (env.get("DATABASE_URL", "") and not is_placeholder(env["DATABASE_URL"])):
+        if not pg_url and not (
+            env.get("DATABASE_URL", "") and not is_placeholder(env["DATABASE_URL"])
+        ):
             warn("PostgreSQL not detected — DATABASE_URL must be set manually for production")
         get_or_detect("DATABASE_URL", pg_url, "postgresql://tranc3:tranc3dev@localhost:5432/tranc3")
         get_or_detect("SETTINGS_DB_URL", pg_url, env.get("DATABASE_URL", ""))
@@ -335,7 +339,9 @@ def build_env(
     # ── Service URLs ──────────────────────────────────────────────────────────
     env.setdefault("FRONTEND_URL", "http://localhost:3000")
     env.setdefault("VITE_API_URL", "http://localhost:8000")
-    env.setdefault("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:8071")
+    env.setdefault(
+        "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:8071"
+    )
     env.setdefault("INFINITY_ONE_URL", "http://localhost:8043")
     env.setdefault("USERS_SERVICE_URL", "http://localhost:8006")
     env.setdefault("PAYMENTS_SERVICE_URL", "http://localhost:8013")
@@ -394,35 +400,109 @@ _SECTION_ORDER = [
     ("# ── Database", ["DATABASE_URL", "SETTINGS_DB_URL", "SUPABASE"]),
     ("# ── Cache / Queue", ["REDIS_URL", "VALKEY_URL", "NATS_"]),
     ("# ── Vector DB", ["QDRANT_", "PGVECTOR_"]),
-    ("# ── AI / ML", ["OLLAMA_", "OPENROUTER_", "HF_", "GROQ_", "GOOGLE_", "CEREBRAS_",
-                       "SAMBANOVA_", "DEEPSEEK_", "EMBED_", "MODEL_", "TOKENIZER_", "CACHE_DIR",
-                       "VECTOR_STORE_DIR", "LANGFUSE_"]),
-    ("# ── JWT / Auth", ["JWT_", "ACCESS_TOKEN_", "REFRESH_EXPIRY_", "REQUIRE_AUTH",
-                          "RATE_LIMIT_", "SUPABASE_JWT_"]),
-    ("# ── Platform Features", ["PLATFORM_", "SYSTEM_MODE", "ADAPTIVE_", "PROACTIVE_",
-                                  "ENABLE_", "HEALTH_CHECK_"]),
+    (
+        "# ── AI / ML",
+        [
+            "OLLAMA_",
+            "OPENROUTER_",
+            "HF_",
+            "GROQ_",
+            "GOOGLE_",
+            "CEREBRAS_",
+            "SAMBANOVA_",
+            "DEEPSEEK_",
+            "EMBED_",
+            "MODEL_",
+            "TOKENIZER_",
+            "CACHE_DIR",
+            "VECTOR_STORE_DIR",
+            "LANGFUSE_",
+        ],
+    ),
+    (
+        "# ── JWT / Auth",
+        [
+            "JWT_",
+            "ACCESS_TOKEN_",
+            "REFRESH_EXPIRY_",
+            "REQUIRE_AUTH",
+            "RATE_LIMIT_",
+            "SUPABASE_JWT_",
+        ],
+    ),
+    (
+        "# ── Platform Features",
+        ["PLATFORM_", "SYSTEM_MODE", "ADAPTIVE_", "PROACTIVE_", "ENABLE_", "HEALTH_CHECK_"],
+    ),
     ("# ── Payments", ["STRIPE_"]),
     ("# ── Observability", ["OTEL_", "TEMPO_", "VICTORIA_", "DTRACK_"]),
-    ("# ── Security / Vault", ["INTERNAL_SECRET", "MASTER_KEY_SEED", "AUDIT_SIGNING_",
-                                 "IP_PROTECTION_", "BACKUP_API_", "CITADEL_",
-                                 "VAULT_", "OPENBAO_"]),
-    ("# ── Service URLs", ["FRONTEND_URL", "VITE_", "CORS_", "INFINITY_ONE_", "USERS_SERVICE_",
-                             "PAYMENTS_SERVICE_", "PRODUCTS_SERVICE_", "ORDERS_SERVICE_",
-                             "EMBED_URL"]),
-    ("# ── Workers / Storage", ["AUTH_DATABASE_", "VOID_DATA_", "NANO_PORT", "PRIMARY_CLUSTER",
-                                   "AWS_ENABLED", "AZURE_ENABLED", "GCP_ENABLED",
-                                   "BLENDER_PATH", "TRIPOSR_", "FFMPEG_PATH"]),
-    ("# ── CI/CD / Infrastructure", ["FORGEJO_", "WOODPECKER_", "KRAKEND_", "PENPOT_",
-                                       "CALCOM_", "OUTLINE_", "SIGNOZ_"]),
+    (
+        "# ── Security / Vault",
+        [
+            "INTERNAL_SECRET",
+            "MASTER_KEY_SEED",
+            "AUDIT_SIGNING_",
+            "IP_PROTECTION_",
+            "BACKUP_API_",
+            "CITADEL_",
+            "VAULT_",
+            "OPENBAO_",
+        ],
+    ),
+    (
+        "# ── Service URLs",
+        [
+            "FRONTEND_URL",
+            "VITE_",
+            "CORS_",
+            "INFINITY_ONE_",
+            "USERS_SERVICE_",
+            "PAYMENTS_SERVICE_",
+            "PRODUCTS_SERVICE_",
+            "ORDERS_SERVICE_",
+            "EMBED_URL",
+        ],
+    ),
+    (
+        "# ── Workers / Storage",
+        [
+            "AUTH_DATABASE_",
+            "VOID_DATA_",
+            "NANO_PORT",
+            "PRIMARY_CLUSTER",
+            "AWS_ENABLED",
+            "AZURE_ENABLED",
+            "GCP_ENABLED",
+            "BLENDER_PATH",
+            "TRIPOSR_",
+            "FFMPEG_PATH",
+        ],
+    ),
+    (
+        "# ── CI/CD / Infrastructure",
+        ["FORGEJO_", "WOODPECKER_", "KRAKEND_", "PENPOT_", "CALCOM_", "OUTLINE_", "SIGNOZ_"],
+    ),
     ("# ── Magna Carta / Town Hall (CranBania)", ["MAGNA_CARTA_", "CRANBANIA_"]),
-    ("# ── External API Keys (optional — leave blank if not using)", [
-        "OPENROUTER_API_KEY", "HF_API_KEY", "GROQ_API_KEY",
-        "GOOGLE_GEMINI_API_KEY", "CEREBRAS_API_KEY", "SAMBANOVA_API_KEY",
-        "DEEPSEEK_API_KEY", "DTRACK_API_KEY", "LANGFUSE_PUBLIC_KEY",
-        "LANGFUSE_SECRET_KEY", "WOODPECKER_FORGEJO_CLIENT",
-        "WOODPECKER_FORGEJO_SECRET", "WOODPECKER_AGENT_TOKEN",
-        "VAULT_TOKEN", "VAULT_NAMESPACE",
-    ]),
+    (
+        "# ── External API Keys (optional — leave blank if not using)",
+        [
+            "OPENROUTER_API_KEY",
+            "HF_API_KEY",
+            "GROQ_API_KEY",
+            "GOOGLE_GEMINI_API_KEY",
+            "CEREBRAS_API_KEY",
+            "SAMBANOVA_API_KEY",
+            "DEEPSEEK_API_KEY",
+            "DTRACK_API_KEY",
+            "LANGFUSE_PUBLIC_KEY",
+            "LANGFUSE_SECRET_KEY",
+            "WOODPECKER_FORGEJO_CLIENT",
+            "WOODPECKER_FORGEJO_SECRET",
+            "WOODPECKER_AGENT_TOKEN",
+            "VAULT_TOKEN",
+            "VAULT_NAMESPACE",
+        ],
+    ),
 ]
 
 
@@ -438,9 +518,7 @@ def render_env(env: dict[str, str]) -> str:
 
     for section_header, prefixes in _SECTION_ORDER:
         section_keys = [
-            k for k in env
-            if any(k.startswith(p) or k == p for p in prefixes)
-            and k not in written
+            k for k in env if any(k.startswith(p) or k == p for p in prefixes) and k not in written
         ]
         if not section_keys:
             continue
@@ -508,6 +586,7 @@ def validate_env(env: dict[str, str]) -> list[str]:
 
 # ── Data directory setup ──────────────────────────────────────────────────────
 
+
 def ensure_data_dirs() -> None:
     dirs = [
         REPO_ROOT / "data",
@@ -524,11 +603,20 @@ def ensure_data_dirs() -> None:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--force", action="store_true", help="Overwrite existing .env without prompting")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="Overwrite existing .env without prompting"
+    )
     parser.add_argument("--check", action="store_true", help="Validate .env only, no writes")
-    parser.add_argument("--prod", action="store_true", help="Production mode (stricter validation, no SQLite fallback)")
+    parser.add_argument(
+        "--prod",
+        action="store_true",
+        help="Production mode (stricter validation, no SQLite fallback)",
+    )
     parser.add_argument("--quiet", action="store_true", help="Suppress informational output")
     args = parser.parse_args()
 
@@ -559,20 +647,34 @@ def main() -> int:
     nats = detect_nats()
     vault = detect_vault()
 
-    ok(f"PostgreSQL: {'found at ' + pg if pg else 'not running → SQLite fallback'}") if not args.quiet else None
-    ok(f"Redis/Valkey: {'found at ' + redis if redis else 'not running → in-memory fallback'}") if not args.quiet else None
-    ok(f"Qdrant: {'found at ' + qdrant if qdrant else 'not running → in-memory fallback'}") if not args.quiet else None
-    info(f"Ollama: {'found at ' + ollama if ollama else 'not running (optional — zero-cost LLM)'}") if not args.quiet else None
-    info(f"NATS: {'found at ' + nats if nats else 'not running (optional)'}") if not args.quiet else None
-    info(f"Vault: {'found at ' + vault if vault else 'not running (optional)'}") if not args.quiet else None
+    ok(
+        f"PostgreSQL: {'found at ' + pg if pg else 'not running → SQLite fallback'}"
+    ) if not args.quiet else None
+    ok(
+        f"Redis/Valkey: {'found at ' + redis if redis else 'not running → in-memory fallback'}"
+    ) if not args.quiet else None
+    ok(
+        f"Qdrant: {'found at ' + qdrant if qdrant else 'not running → in-memory fallback'}"
+    ) if not args.quiet else None
+    info(
+        f"Ollama: {'found at ' + ollama if ollama else 'not running (optional — zero-cost LLM)'}"
+    ) if not args.quiet else None
+    info(
+        f"NATS: {'found at ' + nats if nats else 'not running (optional)'}"
+    ) if not args.quiet else None
+    info(
+        f"Vault: {'found at ' + vault if vault else 'not running (optional)'}"
+    ) if not args.quiet else None
 
     # ── Load or create ────────────────────────────────────────────────────────
     section("Generating secrets and configuration")
     existing = load_existing_env(ENV_FILE)
-    was_new = not ENV_FILE.exists()
+    _ = not ENV_FILE.exists()  # reserved for future "new file" detection
 
     if ENV_FILE.exists() and not args.force:
-        info(f"Found existing .env ({len(existing)} variables) — preserving secrets, filling blanks")
+        info(
+            f"Found existing .env ({len(existing)} variables) — preserving secrets, filling blanks"
+        )
     elif ENV_FILE.exists() and args.force:
         warn("--force: overwriting existing .env (secrets will be regenerated)")
         existing = {}
@@ -607,32 +709,39 @@ def main() -> int:
         ok(f"Database: PostgreSQL at {db.split('@')[-1] if '@' in db else db}")
 
     redis_val = env.get("REDIS_URL", "")
-    ok(f"Cache: {redis_val}") if redis else warn("Cache: Redis not running — some features may degrade")
+    ok(f"Cache: {redis_val}") if redis else warn(
+        "Cache: Redis not running — some features may degrade"
+    )
 
     qdrant_val = env.get("QDRANT_URL", "")
-    ok(f"Vector DB: {qdrant_val}") if qdrant else warn("Vector DB: Qdrant not running — vector search will use in-memory fallback")
+    ok(f"Vector DB: {qdrant_val}") if qdrant else warn(
+        "Vector DB: Qdrant not running — vector search will use in-memory fallback"
+    )
 
     mc = env.get("MAGNA_CARTA_ENABLED", "false")
     mc_path = REPO_ROOT / "compliance" / "magna-carta"
     if mc_path.exists():
-        ok(f"Magna Carta: {'ENABLED' if mc == 'true' else 'available (set MAGNA_CARTA_ENABLED=true to activate)'}")
+        ok(
+            f"Magna Carta: {'ENABLED' if mc == 'true' else 'available (set MAGNA_CARTA_ENABLED=true to activate)'}"
+        )
     else:
         warn("Magna Carta: submodule not cloned — run scripts/setup_external_repos.sh")
 
     print(f"\n{_GREEN}{_BOLD}✓ .env ready.{_RESET}")
-    print(f"\nNext steps:")
-    print(f"  make migrate       — apply database schema")
-    print(f"  make dev-api       — start FastAPI backend on :8000")
-    print(f"  make compliance-check — run compliance report")
+    print("\nNext steps:")
+    print("  make migrate       — apply database schema")
+    print("  make dev-api       — start FastAPI backend on :8000")
+    print("  make compliance-check — run compliance report")
     if not pg:
-        print(f"\n  Note: PostgreSQL not detected. SQLite is used for local dev.")
-        print(f"  For production, set DATABASE_URL to a real PostgreSQL instance.")
+        print("\n  Note: PostgreSQL not detected. SQLite is used for local dev.")
+        print("  For production, set DATABASE_URL to a real PostgreSQL instance.")
 
     # Audit key reminder
     import pathlib as _pl
+
     _key_file = _pl.Path("logs/audit/.audit_signing_key")
     if env.get("AUDIT_SIGNING_KEY") and not is_placeholder(env.get("AUDIT_SIGNING_KEY", "")):
-        ok(f"AUDIT_SIGNING_KEY written to .env — add to Forgejo secrets for CI verification")
+        ok("AUDIT_SIGNING_KEY written to .env — add to Forgejo secrets for CI verification")
     elif _key_file.exists():
         warn(
             f"AUDIT_SIGNING_KEY was generated from existing key file {_key_file}. "

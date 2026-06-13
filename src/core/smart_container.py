@@ -1,6 +1,7 @@
 """
 Smart DI container with lifetime management and auto-wiring.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -122,9 +123,7 @@ class SmartContainer:
     def register_instance(self, type_: Type[T], instance: T) -> None:
         """Register a pre-built singleton instance."""
         with self._lock:
-            self._registry[type_] = _Registration(
-                Lifetime.SINGLETON, lambda: instance
-            )
+            self._registry[type_] = _Registration(Lifetime.SINGLETON, lambda: instance)
             # Force singleton to be the instance
             reg = self._registry[type_]
             reg._singleton_instance = instance
@@ -138,9 +137,7 @@ class SmartContainer:
         with self._lock:
             reg = self._registry.get(type_)
         if reg is None:
-            raise DIError(
-                f"Type '{type_.__name__}' is not registered in the container."
-            )
+            raise DIError(f"Type '{type_.__name__}' is not registered in the container.")
         return reg.get(type_)  # type: ignore[return-value]
 
     def try_resolve(self, type_: Type[T]) -> Optional[T]:

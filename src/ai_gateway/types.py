@@ -116,14 +116,14 @@ class GatewayMetrics(BaseModel):
 DEFAULT_TENANT_CONFIG = TenantAIConfig(
     tenant_id="default",
     routes=[
-        RouteRule(provider="ollama", priority=0),      # Local, unlimited, zero-cost
-        RouteRule(provider="groq", priority=1),        # 14,400 req/day free, ultra-fast
-        RouteRule(provider="gemini", priority=2),      # 1,500 req/day free, 1M tok/min
-        RouteRule(provider="cerebras", priority=3),    # 1M tokens/day free
-        RouteRule(provider="sambanova", priority=4),   # Free tier, large models
+        RouteRule(provider="ollama", priority=0),  # Local, unlimited, zero-cost
+        RouteRule(provider="groq", priority=1),  # 14,400 req/day free, ultra-fast
+        RouteRule(provider="gemini", priority=2),  # 1,500 req/day free, 1M tok/min
+        RouteRule(provider="cerebras", priority=3),  # 1M tokens/day free
+        RouteRule(provider="sambanova", priority=4),  # Free tier, large models
         RouteRule(provider="openrouter", priority=5),  # 20+ free models
-        RouteRule(provider="huggingface", priority=6), # Serverless free tier
-        RouteRule(provider="offline", priority=7),     # Deterministic fallback
+        RouteRule(provider="huggingface", priority=6),  # Serverless free tier
+        RouteRule(provider="offline", priority=7),  # Deterministic fallback
     ],
     daily_token_budget=100000,
     cache_enabled=True,

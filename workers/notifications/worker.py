@@ -395,12 +395,12 @@ class NotificationDispatcher:
         host is derived from the allowlist (config-sourced), not from the
         user-supplied URL, so the outbound host is not attacker-controlled.
         """
-        import urllib.request
+        import http.client
         from urllib.parse import urlparse
 
         # SSRF validation — blocks private IPs, metadata endpoints, non-HTTPS
         try:
-            validate_webhook_url(url)
+            validated_url = validate_webhook_url(url)
         except SSRFError as e:
             logger.warning("Webhook URL blocked by SSRF protection: %s", e)
             return False

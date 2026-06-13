@@ -28,10 +28,8 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from shared_core.path_validation import (
-    PathTraversalError,
     existing_file_path_str,
 )
-from src.entities.health_metadata import health_entity_block
 
 # validate_existing_file is an alias for existing_file_path_str
 validate_existing_file = existing_file_path_str

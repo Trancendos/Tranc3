@@ -1,15 +1,15 @@
 """
 Tests for src/event_bus/reactive_stream.py
 """
-import sys
+
 import os
-import threading
-import time
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Import directly from the module file to avoid triggering src/event_bus/__init__.py
 import importlib.util as _ilu
+
 _spec = _ilu.spec_from_file_location(
     "reactive_stream",
     os.path.join(os.path.dirname(__file__), "..", "src", "event_bus", "reactive_stream.py"),
@@ -27,6 +27,7 @@ from_iterable = _mod.from_iterable
 # Tests
 # ---------------------------------------------------------------------------
 
+
 def test_observable_emits_values_to_observer():
     received = []
     obs = from_iterable([1, 2, 3])
@@ -42,9 +43,7 @@ def test_map_operator_transforms_values():
 
 def test_filter_operator_excludes_values():
     received = []
-    from_iterable([1, 2, 3, 4, 5]).filter(lambda x: x % 2 == 0).subscribe(
-        on_next=received.append
-    )
+    from_iterable([1, 2, 3, 4, 5]).filter(lambda x: x % 2 == 0).subscribe(on_next=received.append)
     assert received == [2, 4]
 
 

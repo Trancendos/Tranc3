@@ -11,12 +11,11 @@ Zero-cost: Pure Python stdlib only.
 from __future__ import annotations
 
 import logging
-import math
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass, field
-from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Deque, Dict, List, Tuple
 
 logger = logging.getLogger("tranc3.core.worker_intelligence")
 
@@ -27,6 +26,7 @@ logger = logging.getLogger("tranc3.core.worker_intelligence")
 @dataclass
 class HealthSample:
     """One health data point for a worker."""
+
     timestamp: float
     response_time_ms: float
     is_error: bool
@@ -36,17 +36,18 @@ class HealthSample:
 @dataclass
 class WorkerHealthReport:
     """Snapshot health report for a worker."""
+
     worker_id: str
-    health_score: float          # 0-100
-    trend: str                   # "stable" | "improving" | "degrading"
-    trend_slope: float           # positive = improving, negative = degrading
-    predicted_score_1m: float    # predicted score in 1 minute
-    warning: bool                # True if predicted failure within threshold
+    health_score: float  # 0-100
+    trend: str  # "stable" | "improving" | "degrading"
+    trend_slope: float  # positive = improving, negative = degrading
+    predicted_score_1m: float  # predicted score in 1 minute
+    warning: bool  # True if predicted failure within threshold
     error_rate: float
     avg_response_ms: float
     p95_response_ms: float
-    availability: float          # fraction 0..1
-    circuit_state: str           # "closed" | "open" | "half-open" | "unknown"
+    availability: float  # fraction 0..1
+    circuit_state: str  # "closed" | "open" | "half-open" | "unknown"
     sample_count: int
 
 
@@ -215,9 +216,7 @@ class WorkerIntelligence:
 
     def _get_state(self, worker_id: str) -> _WorkerState:
         if worker_id not in self._workers:
-            self._workers[worker_id] = _WorkerState(
-                worker_id, window_size=self._sample_window
-            )
+            self._workers[worker_id] = _WorkerState(worker_id, window_size=self._sample_window)
         return self._workers[worker_id]
 
     def _compute_score(
@@ -241,15 +240,9 @@ class WorkerIntelligence:
         elif avg_ms >= self._ceiling_ms:
             lat_score = 0.0
         else:
-            lat_score = 1.0 - (avg_ms - self._target_ms) / (
-                self._ceiling_ms - self._target_ms
-            )
+            lat_score = 1.0 - (avg_ms - self._target_ms) / (self._ceiling_ms - self._target_ms)
 
-        score = (
-            40.0 * availability
-            + 40.0 * (1.0 - error_rate)
-            + 20.0 * lat_score
-        )
+        score = 40.0 * availability + 40.0 * (1.0 - error_rate) + 20.0 * lat_score
         return max(0.0, min(100.0, score)), error_rate, avg_ms, p95_ms, availability
 
     def _compute_trend(self, state: _WorkerState) -> Tuple[str, float]:
@@ -296,7 +289,7 @@ class WorkerIntelligence:
         ys = [p[1] for p in points]
         mx = sum(xs) / n
         my = sum(ys) / n
-        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
         den = sum((x - mx) ** 2 for x in xs)
         return num / den if den != 0 else 0.0
 

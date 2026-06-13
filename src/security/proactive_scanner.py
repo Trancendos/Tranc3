@@ -1,12 +1,13 @@
 """
 Linux /proc-based proactive security scanner — stdlib only.
 """
+
 from __future__ import annotations
 
 import re
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -213,7 +214,7 @@ class ProactiveScanner:
         compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
         findings: List[AnomalyFinding] = []
         for proc in procs:
-            for pat, raw in zip(compiled, patterns):
+            for pat, raw in zip(compiled, patterns, strict=False):
                 if pat.search(proc.cmdline):
                     findings.append(
                         AnomalyFinding(

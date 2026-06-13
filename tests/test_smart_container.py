@@ -1,18 +1,20 @@
 """
 Tests for src/core/smart_container.py
 """
-import pytest
-import sys
+
 import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.core.smart_container import DIError, Lifetime, SmartContainer
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 class ServiceA:
     pass
@@ -32,6 +34,7 @@ class ServiceC:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_singleton_returns_same_instance():
     c = SmartContainer()

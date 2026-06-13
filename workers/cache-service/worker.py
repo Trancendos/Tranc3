@@ -25,8 +25,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from src.entities.health_metadata import health_entity_block
-
 WORKER_PORT = 8023
 WORKER_NAME = "cache-service"
 DB_PATH = Path(__file__).parent / "data" / "cache.db"

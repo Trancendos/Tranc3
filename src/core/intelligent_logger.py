@@ -2,6 +2,7 @@
 Structured logger with context propagation, severity classification,
 and anomaly detection — stdlib only.
 """
+
 from __future__ import annotations
 
 import collections
@@ -12,12 +13,12 @@ import re
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Deque, Dict, Optional, Tuple
-
+from typing import Any, Deque, Dict, Optional
 
 # ---------------------------------------------------------------------------
 # Context
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class LogContext:
@@ -27,8 +28,8 @@ class LogContext:
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
-_context_var: contextvars.ContextVar[LogContext] = contextvars.ContextVar(
-    "log_context", default=LogContext()
+_context_var: contextvars.ContextVar[Optional[LogContext]] = contextvars.ContextVar(
+    "log_context", default=None
 )
 
 
@@ -43,7 +44,8 @@ def set_context(
 
 
 def get_context() -> LogContext:
-    return _context_var.get()
+    ctx = _context_var.get()
+    return ctx if ctx is not None else LogContext()
 
 
 # ---------------------------------------------------------------------------
@@ -60,9 +62,7 @@ _WARNING_PATTERNS = re.compile(
     r"\b(warn(ing)?|deprecat|caution|slow|timeout|retry|retrying|high\s+latency)\b",
     re.IGNORECASE,
 )
-_DEBUG_PATTERNS = re.compile(
-    r"\b(debug|trace|verbose|dump|inspect)\b", re.IGNORECASE
-)
+_DEBUG_PATTERNS = re.compile(r"\b(debug|trace|verbose|dump|inspect)\b", re.IGNORECASE)
 
 
 class SeverityClassifier:
@@ -83,6 +83,7 @@ class SeverityClassifier:
 # ---------------------------------------------------------------------------
 # Anomaly detector (burst detection)
 # ---------------------------------------------------------------------------
+
 
 class AnomalyDetector:
     def __init__(self, window_secs: float = 60.0, burst_threshold: int = 10) -> None:
@@ -129,6 +130,7 @@ class AnomalyDetector:
 # JSON formatter for Loki ingestion
 # ---------------------------------------------------------------------------
 
+
 class _LokiJsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         ctx = get_context()
@@ -157,6 +159,7 @@ class _LokiJsonFormatter(logging.Formatter):
 # ---------------------------------------------------------------------------
 # IntelligentLogger
 # ---------------------------------------------------------------------------
+
 
 class IntelligentLogger:
     def __init__(
@@ -238,6 +241,7 @@ class IntelligentLogger:
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def get_logger(name: str, service_name: str = "") -> IntelligentLogger:
     return IntelligentLogger(name=name, service_name=service_name)

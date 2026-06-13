@@ -38,7 +38,6 @@ from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 
 load_dotenv()
-from src.core.startup_validator import validate_startup
 
 # ── Fail fast on missing critical secrets ────────────────────────────────────
 _SECRET_KEY = os.getenv("SECRET_KEY")
@@ -74,6 +73,9 @@ if not _REDIS_URL:
 from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
 from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
+from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
+from src.compliance.cab_gate import CABMiddleware  # noqa: F401
+from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
 from src.core.advanced_model import (
     AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
 )
@@ -116,9 +118,6 @@ from src.security.ip_protection import (  # noqa: F401  # intentional top-level 
     abuse_detector,
     watermarker,
 )
-from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
-from src.compliance.cab_gate import CABMiddleware  # noqa: F401
-from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
 from src.security.middleware import (  # noqa: F401  # intentional top-level import
     GovernanceMiddleware,
     RBACMiddleware,
@@ -250,6 +249,7 @@ _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
 _health_monitor = None
 _auto_evolve = None
+_bootstrap_complete = False
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -257,7 +257,7 @@ _auto_evolve = None
 async def lifespan(app: FastAPI):
     global model, tokenizer, personality_matrix, redis_client, feature_flags
     global quantum_core, consciousness_model, neuromorphic, evolution_engine
-    global db_manager, db_user_manager, _health_monitor, _auto_evolve
+    global db_manager, db_user_manager, _health_monitor, _auto_evolve, _bootstrap_complete
 
     logger.info("TRANC3 starting up...")
     _bootstrap_complete = False
@@ -268,6 +268,7 @@ async def lifespan(app: FastAPI):
     if not _audit_key:
         _key_file = "logs/audit/.audit_signing_key"
         import pathlib
+
         if pathlib.Path(_key_file).exists():
             logger.warning(
                 "AUDIT_SIGNING_KEY not set in environment — using persistent key file (%s). "
@@ -1950,3 +1951,85 @@ async def eval_score(
         token_f1=_tf1(body.hypothesis, body.reference)["f1"],
         hallucination=_hall(body.hypothesis, body.context or body.reference),
     )
+
+
+# ── Mesh + Routing Intelligence Endpoints ─────────────────────────────────────
+
+
+@app.get(
+    "/mesh/stats",
+    tags=["mesh"],
+    summary="Service mesh + routing statistics",
+)
+async def mesh_stats() -> dict:
+    """
+    Returns aggregated stats from all routing engines:
+    quantum, genetic, meta, fluid, quota enforcer, and zero-cost tracker.
+    """
+    out: dict = {}
+
+    try:
+        from src.mesh.meta_router import get_meta_router
+
+        out["meta_router"] = get_meta_router().stats
+    except Exception as exc:
+        out["meta_router"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.quantum_router import get_quantum_router
+
+        out["quantum_router"] = get_quantum_router().stats
+    except Exception as exc:
+        out["quantum_router"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.genetic_router import get_genetic_router
+
+        out["genetic_router"] = get_genetic_router().stats
+    except Exception as exc:
+        out["genetic_router"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.quota_enforcer import get_enforcer
+
+        out["quota_enforcer"] = get_enforcer().dashboard()
+    except Exception as exc:
+        out["quota_enforcer"] = {"error": str(exc)}
+
+    try:
+        from src.monitoring.zero_cost_tracker import tracker
+
+        out["zero_cost_tracker"] = tracker.get_summary()
+    except Exception as exc:
+        out["zero_cost_tracker"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.nano_mesh import get_nano_mesh
+
+        out["nano_mesh"] = get_nano_mesh().stats
+    except Exception as exc:
+        out["nano_mesh"] = {"error": str(exc)}
+
+    try:
+        from src.fluidic.fluid_router import fluid_router
+
+        out["fluid_router"] = fluid_router.stats
+    except Exception as exc:
+        out["fluid_router"] = {"error": str(exc)}
+
+    return out
+
+
+@app.get(
+    "/mesh/quota",
+    tags=["mesh"],
+    summary="Free-tier quota dashboard for all AI providers",
+)
+async def mesh_quota() -> dict:
+    """Returns quota usage and availability for all 8 free AI providers."""
+    try:
+        from src.mesh.quota_enforcer import get_enforcer
+
+        return get_enforcer().dashboard()
+    except Exception:
+        return {"error": "quota dashboard unavailable"}

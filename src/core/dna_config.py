@@ -15,14 +15,13 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import sqlite3
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.core.dna_config")
 
@@ -33,6 +32,7 @@ logger = logging.getLogger("tranc3.core.dna_config")
 @dataclass
 class Variant:
     """One configuration variant (base or mutation)."""
+
     variant_id: str
     config: Dict[str, Any]
     name: str = ""
@@ -54,8 +54,9 @@ class Variant:
 @dataclass
 class EvaluationResult:
     """Result of evaluating a variant."""
+
     variant_id: str
-    score: float            # higher = better
+    score: float  # higher = better
     metric_name: str = "performance"
     timestamp: float = field(default_factory=time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -184,10 +185,8 @@ class DNAConfig:
 
             # Exploration: pick a random variant occasionally
             import random
-            if (
-                len(active_variants) > 1
-                and random.random() < self._exploration_fraction
-            ):
+
+            if len(active_variants) > 1 and random.random() < self._exploration_fraction:
                 v = random.choice(active_variants)
             else:
                 if self._active_id and self._active_id in self._variants:
@@ -240,7 +239,8 @@ class DNAConfig:
         """
         with self._lock:
             candidates = [
-                v for v in self._variants.values()
+                v
+                for v in self._variants.values()
                 if v.is_active and v.sample_count >= self._promote_min_samples
             ]
             if not candidates:
@@ -287,7 +287,8 @@ class DNAConfig:
                 if self._active_id == variant_id:
                     # Fall back to best remaining
                     active = [
-                        v for v in self._variants.values()
+                        v
+                        for v in self._variants.values()
                         if v.is_active and v.variant_id != variant_id
                     ]
                     self._active_id = active[0].variant_id if active else None
@@ -332,9 +333,14 @@ class DNAConfig:
             conn.execute(
                 "INSERT OR REPLACE INTO variants VALUES (?,?,?,?,?,?,?,?)",
                 (
-                    v.variant_id, v.name, v.description,
-                    json.dumps(v.config), v.total_score,
-                    v.sample_count, int(v.is_active), v.created_at,
+                    v.variant_id,
+                    v.name,
+                    v.description,
+                    json.dumps(v.config),
+                    v.total_score,
+                    v.sample_count,
+                    int(v.is_active),
+                    v.created_at,
                 ),
             )
             conn.commit()

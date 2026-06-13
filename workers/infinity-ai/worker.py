@@ -32,6 +32,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.sanitize import sanitize_for_log
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------

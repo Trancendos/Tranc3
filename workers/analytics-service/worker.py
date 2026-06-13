@@ -24,7 +24,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-
 WORKER_PORT = 8016
 WORKER_NAME = "analytics-service"
 DB_PATH = Path(__file__).parent / "data" / "analytics.db"
@@ -173,6 +172,8 @@ async def health():
     with get_conn() as conn:
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
+        archive_count = event_count  # all events are retained; no archive column
+        parquet_total_bytes = 0
     return {
         "status": "healthy",
         "service": WORKER_NAME,

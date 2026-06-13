@@ -7,10 +7,8 @@ or use daemon threads (no stop needed — process cleanup handles it).
 """
 
 import time
-import threading
-import pytest
-from src.core.mape_k import MAPEKLoop
 
+from src.core.mape_k import MAPEKLoop
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -53,7 +51,7 @@ def test_mape_k_start_stop_fast():
     loop = MAPEKLoop(
         name="test-lifecycle-fast",
         monitor_fn=_simple_monitor,
-        interval_seconds=1,   # stop() waits interval+5 = 6s max, thread wakes in 1s
+        interval_seconds=1,  # stop() waits interval+5 = 6s max, thread wakes in 1s
     )
     loop.start()
     assert loop._running is True
@@ -83,12 +81,14 @@ def test_mape_k_default_analyze_detects_high_values():
     # Pre-populate history to build baseline
     baseline = {"latency_ms": 50.0, "error_rate": 0.01}
     for _ in range(10):
-        loop._history.append({
-            "metrics": baseline,
-            "analysis": {},
-            "plan": {},
-            "timestamp": time.time(),
-        })
+        loop._history.append(
+            {
+                "metrics": baseline,
+                "analysis": {},
+                "plan": {},
+                "timestamp": time.time(),
+            }
+        )
     metrics = loop._monitor_fn()
     analysis = loop._analyze_fn(metrics)
     assert isinstance(analysis, dict)
@@ -106,13 +106,15 @@ def test_mape_k_sqlite_persistence(tmp_path):
     metrics = loop._monitor_fn()
     analysis = loop._analyze_fn(metrics)
     plan = loop._plan_fn(analysis)
-    loop._persist_cycle({
-        "metrics": metrics,
-        "analysis": analysis,
-        "plan": plan,
-        "executed": True,
-        "timestamp": time.time(),
-    })
+    loop._persist_cycle(
+        {
+            "metrics": metrics,
+            "analysis": analysis,
+            "plan": plan,
+            "executed": True,
+            "timestamp": time.time(),
+        }
+    )
     history = loop.get_history()
     assert isinstance(history, list)
 

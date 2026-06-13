@@ -29,18 +29,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from shared_core.path_validation import (
-    PathTraversalError,
-    ensure_validated_directory,
-    existing_file_path_str,
-    remove_validated_file,
-    remove_validated_tree,
-    safe_join,
-    sanitize_filename,
-    validate_path,
-)
-from src.entities.health_metadata import health_entity_block
-
 WORKER_PORT = 8020
 WORKER_NAME = "storage-service"
 DB_PATH = Path(__file__).parent / "data" / "storage.db"

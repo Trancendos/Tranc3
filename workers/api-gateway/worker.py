@@ -59,9 +59,10 @@ PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "")
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "")
 PAYMENTS_SERVICE_URL = os.getenv("PAYMENTS_SERVICE_URL", "")
 TRANC3_AI_SERVICE_URL = os.getenv("TRANC3_AI_SERVICE_URL", "http://localhost:8001")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 _REQUIRED_PRODUCTION_UPSTREAMS = {
-    "AUTH_SERVICE_URL": AUTH_SERVICE_URL,
     "USERS_SERVICE_URL": USERS_SERVICE_URL,
     "PRODUCTS_SERVICE_URL": PRODUCTS_SERVICE_URL,
     "ORDERS_SERVICE_URL": ORDERS_SERVICE_URL,
@@ -285,7 +286,7 @@ async def gateway(request: Request, path: str):
 
     # Public routes (no auth)
     if path.startswith("api/auth"):
-        target_service = USERS_SERVICE_URL
+        target_service = AUTH_SERVICE_URL or USERS_SERVICE_URL
         target_path = "/" + path.replace("api/auth", "", 1).lstrip("/")
         breaker = circuit_breakers["users"]
     elif path.startswith("api/categories"):

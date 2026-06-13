@@ -65,8 +65,6 @@ from Dimensional.infinity.sentinel_station import (
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # Phase 22.4: Dimensional Services
-from Dimensional.sanitize import sanitize_for_log
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

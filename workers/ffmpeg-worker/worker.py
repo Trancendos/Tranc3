@@ -20,9 +20,6 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from shared_core.path_validation import PathTraversalError, existing_file_path_str
-from shared_core.sanitize import sanitize_for_log
-
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -410,9 +407,7 @@ async def thumbnail(req: ThumbnailRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    asyncio.create_task(
-        _run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds))
-    )
+    asyncio.create_task(_run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds)))
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 
@@ -424,9 +419,7 @@ async def compress(req: CompressRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    asyncio.create_task(
-        _run_job(job_id, _compress(req.input_path, req.target_mb))
-    )
+    asyncio.create_task(_run_job(job_id, _compress(req.input_path, req.target_mb)))
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 

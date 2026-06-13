@@ -19,13 +19,12 @@ from __future__ import annotations
 import enum
 import logging
 import os
-import signal
 import subprocess
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.core.cell_orchestrator")
 
@@ -45,18 +44,20 @@ class CellState(str, enum.Enum):
 @dataclass
 class CellSpec:
     """Blueprint for spawning a worker cell."""
-    cell_type: str           # e.g. "inference-worker", "mcp-worker"
-    command: List[str]       # e.g. ["python", "-m", "workers.inference"]
+
+    cell_type: str  # e.g. "inference-worker", "mcp-worker"
+    command: List[str]  # e.g. ["python", "-m", "workers.inference"]
     port: Optional[int] = None
     env_overrides: Dict[str, str] = field(default_factory=dict)
-    warmup_s: float = 5.0    # seconds to wait before marking mature
-    max_age_s: float = 0.0   # 0 = immortal; >0 = auto-apoptosis after N seconds
+    warmup_s: float = 5.0  # seconds to wait before marking mature
+    max_age_s: float = 0.0  # 0 = immortal; >0 = auto-apoptosis after N seconds
     health_check_url: str = ""  # optional URL to poll
 
 
 @dataclass
 class Cell:
     """A running worker instance."""
+
     cell_id: str
     spec: CellSpec
     state: CellState = CellState.SEED
@@ -155,7 +156,10 @@ class CellOrchestrator:
             cell.state = CellState.EMBRYO
             logger.info(
                 "cell_spawned: id=%s type=%s pid=%d replicate_from=%s",
-                cell_id, spec.cell_type, proc.pid, replicate_from,
+                cell_id,
+                spec.cell_type,
+                proc.pid,
+                replicate_from,
             )
         except Exception as exc:
             cell.state = CellState.DEAD
@@ -268,8 +272,7 @@ class CellOrchestrator:
 
     def _alive_count(self) -> int:
         return sum(
-            1 for c in self._cells.values()
-            if c.state not in (CellState.DEAD, CellState.APOPTOSIS)
+            1 for c in self._cells.values() if c.state not in (CellState.DEAD, CellState.APOPTOSIS)
         )
 
     def _transition(self, cell: Cell, new_state: CellState) -> None:
@@ -305,7 +308,7 @@ class CellOrchestrator:
             self._stop_event.wait(timeout=self._monitor_interval_s)
 
     def _check_cells(self) -> None:
-        now = time.monotonic()
+        time.monotonic()
         with self._lock:
             cells = list(self._cells.values())
 
@@ -318,16 +321,13 @@ class CellOrchestrator:
                     if cell.state not in (CellState.DEAD, CellState.APOPTOSIS):
                         logger.warning(
                             "cell_unexpectedly_dead: id=%s exit_code=%d",
-                            cell.cell_id, cell.process.returncode,
+                            cell.cell_id,
+                            cell.process.returncode,
                         )
                         self._transition(cell, CellState.DEAD)
                         cell.exit_code = cell.process.returncode
                 continue
             # Enforce max_age_s
             if cell.spec.max_age_s > 0 and cell.age_s() >= cell.spec.max_age_s:
-                logger.info(
-                    "cell_max_age_reached: id=%s age=%.1fs", cell.cell_id, cell.age_s()
-                )
-                threading.Thread(
-                    target=self.apoptosis, args=(cell.cell_id,), daemon=True
-                ).start()
+                logger.info("cell_max_age_reached: id=%s age=%.1fs", cell.cell_id, cell.age_s())
+                threading.Thread(target=self.apoptosis, args=(cell.cell_id,), daemon=True).start()

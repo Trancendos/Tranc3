@@ -1,7 +1,8 @@
 """Self-tuning rate limiter. Tightens on high error rates, loosens on low."""
-import time
+
 import threading
-from collections import defaultdict, deque
+import time
+from collections import deque
 from typing import Dict
 
 
@@ -21,7 +22,7 @@ class _TenantBucket:
         self._window: deque = deque()
 
         # Error/success tracking
-        self._errors: deque = deque()   # timestamps of errors
+        self._errors: deque = deque()  # timestamps of errors
         self._successes: deque = deque()  # timestamps of successes
 
         # Adjusted rate (can be tuned up/down)
@@ -120,9 +121,7 @@ class AdaptiveRateLimiter:
     def _get_bucket(self, tenant_id: str) -> _TenantBucket:
         with self._lock:
             if tenant_id not in self._buckets:
-                self._buckets[tenant_id] = _TenantBucket(
-                    self._base_rate, self._window, self._burst
-                )
+                self._buckets[tenant_id] = _TenantBucket(self._base_rate, self._window, self._burst)
             return self._buckets[tenant_id]
 
     def check(self, tenant_id: str = "global") -> bool:
@@ -149,10 +148,7 @@ class AdaptiveRateLimiter:
     def get_stats(self) -> Dict:
         """Return stats for all tracked tenants."""
         with self._lock:
-            return {
-                tenant_id: bucket.stats()
-                for tenant_id, bucket in self._buckets.items()
-            }
+            return {tenant_id: bucket.stats() for tenant_id, bucket in self._buckets.items()}
 
     def reset(self, tenant_id: str = "global"):
         """Remove a tenant bucket (resets to base_rate on next check)."""

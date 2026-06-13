@@ -2,16 +2,18 @@
 Tests for WorkerIntelligence — src/core/worker_intelligence.py
 """
 
-import time
-import pytest
-from src.core.worker_intelligence import WorkerIntelligence, WorkerHealthReport
-
+from src.core.worker_intelligence import WorkerHealthReport, WorkerIntelligence
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 
-def _populate(wi: WorkerIntelligence, worker_id: str, n: int = 30,
-              response_ms: float = 100.0, error: bool = False) -> None:
+def _populate(
+    wi: WorkerIntelligence,
+    worker_id: str,
+    n: int = 30,
+    response_ms: float = 100.0,
+    error: bool = False,
+) -> None:
     for _ in range(n):
         wi.record(worker_id, response_ms=response_ms, is_error=error)
 
@@ -111,6 +113,7 @@ def test_circuit_breaker_integration():
     class MockCB:
         class _state:
             value = "closed"
+
         state = _state()
 
     wi = WorkerIntelligence()

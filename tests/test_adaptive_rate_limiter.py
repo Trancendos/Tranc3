@@ -2,10 +2,7 @@
 Tests for AdaptiveRateLimiter — src/core/adaptive_rate_limiter.py
 """
 
-import time
-import pytest
 from src.core.adaptive_rate_limiter import AdaptiveRateLimiter
-
 
 # ── Basic token bucket ────────────────────────────────────────────────────
 
