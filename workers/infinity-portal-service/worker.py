@@ -430,6 +430,16 @@ async def call_auth_service(method: str, path: str, json_data: dict | None = Non
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.infinity-portal-service")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     """Startup/shutdown lifecycle for the Infinity Portal service."""
     # ── Startup ──
     logger.info("Infinity Portal starting on port %d", PORT)

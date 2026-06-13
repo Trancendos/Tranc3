@@ -121,6 +121,16 @@ class ObjectMetadataUpdate(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.storage-service")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     init_db()
     logger.info("storage-service DB ready, root=%s", STORAGE_ROOT)
     yield

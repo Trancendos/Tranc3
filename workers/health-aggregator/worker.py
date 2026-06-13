@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
@@ -32,6 +32,7 @@ from pydantic import BaseModel
 
 PORT: int = int(os.environ.get("PORT", 8029))
 WORKER_NAME = "health-aggregator"
+INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 DB_PATH = Path(os.environ.get("DB_PATH", "/data/health_aggregator.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -308,6 +309,16 @@ class HistoryPoint(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.health-aggregator")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     _init_db()
     task = asyncio.create_task(_poll_loop())
     logger.info("health-aggregator started on port %d", PORT)
@@ -375,8 +386,14 @@ async def health() -> Dict[str, Any]:
     }
 
 
+def _require_internal(x_internal_secret: Optional[str]) -> None:
+    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @app.get("/status", response_model=PlatformStatus, summary="Full platform status")
-async def status() -> PlatformStatus:
+async def status(x_internal_secret: Optional[str] = Header(None)) -> PlatformStatus:
+    _require_internal(x_internal_secret)
     services = []
     healthy = degraded = unreachable = 0
     for svc in SERVICE_REGISTRY:
@@ -414,7 +431,10 @@ async def status() -> PlatformStatus:
 
 
 @app.get("/status/{service}", summary="Single service detail with history")
-async def service_detail(service: str) -> Dict[str, Any]:
+async def service_detail(
+    service: str, x_internal_secret: Optional[str] = Header(None)
+) -> Dict[str, Any]:
+    _require_internal(x_internal_secret)
     if service not in _REGISTRY_BY_NAME:
         raise HTTPException(status_code=404, detail=f"Service '{service}' not in registry")
 
@@ -448,7 +468,9 @@ async def service_detail(service: str) -> Dict[str, Any]:
 async def history(
     service: Optional[str] = Query(None, description="Filter to a single service"),
     limit: int = Query(20, ge=1, le=500),
+    x_internal_secret: Optional[str] = Header(None),
 ) -> Dict[str, Any]:
+    _require_internal(x_internal_secret)
     with _conn() as c:
         if service:
             if service not in _REGISTRY_BY_NAME:
@@ -464,20 +486,23 @@ async def history(
                 (service, limit),
             ).fetchall()
         else:
-            # Return the last `limit` rows per service
+            # Return the last `limit` rows PER SERVICE using ROW_NUMBER window fn.
+            # A single LIMIT clause would give a globally-skewed subset biased
+            # toward whichever service has the highest IDs.
             rows = c.execute(
                 """
-                SELECT h.service, h.status, h.latency_ms, h.checked_at
-                FROM health_history h
-                INNER JOIN (
-                    SELECT service, MAX(id) AS max_id
+                SELECT service, status, latency_ms, checked_at
+                FROM (
+                    SELECT service, status, latency_ms, checked_at,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY service ORDER BY id DESC
+                           ) AS rn
                     FROM health_history
-                    GROUP BY service
-                ) latest ON h.service = latest.service
-                ORDER BY h.service, h.id DESC
-                LIMIT ?
+                )
+                WHERE rn <= ?
+                ORDER BY service, rn
                 """,
-                (limit * len(SERVICE_REGISTRY),),
+                (limit,),
             ).fetchall()
 
     by_service: Dict[str, List[Dict]] = defaultdict(list)

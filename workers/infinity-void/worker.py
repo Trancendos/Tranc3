@@ -242,6 +242,16 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
 
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.infinity-void")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     """Startup: initialize DB schema. Shutdown: cleanup (if needed)."""
     init_schema()
     yield

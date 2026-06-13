@@ -83,6 +83,72 @@ except Exception as exc:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 
+def init_otel(service_name: str | None = None) -> None:
+    """Initialise OpenTelemetry for the calling worker.
+
+    Call this once at startup, before ``FastAPIInstrumentor.instrument_app(app)``.
+    If ``service_name`` is provided it overrides the ``OTEL_SERVICE_NAME`` env var
+    for the lifetime of this process.  Safe to call multiple times — subsequent
+    calls are no-ops when OTel is already initialised.
+    """
+    global _tracer, _meter
+
+    if not _ENABLED:
+        return
+
+    effective_name = service_name or SERVICE_NAME
+
+    # Already initialised — nothing to do
+    if _tracer is not None:
+        return
+
+    try:
+        from opentelemetry import metrics as otel_metrics
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+        resource = Resource.create(
+            {
+                "service.name": effective_name,
+                "service.namespace": "tranc3",
+                "deployment.environment": os.getenv("ENVIRONMENT", "production"),
+            }
+        )
+
+        tp = TracerProvider(resource=resource)
+        tp.add_span_processor(
+            BatchSpanProcessor(
+                OTLPSpanExporter(endpoint=OTEL_ENDPOINT),
+                max_queue_size=2048,
+                max_export_batch_size=512,
+                export_timeout_millis=10_000,
+            )
+        )
+        trace.set_tracer_provider(tp)
+        _tracer = trace.get_tracer(effective_name)
+
+        reader = PeriodicExportingMetricReader(
+            OTLPMetricExporter(endpoint=OTEL_ENDPOINT),
+            export_interval_millis=60_000,
+        )
+        mp = MeterProvider(resource=resource, metric_readers=[reader])
+        otel_metrics.set_meter_provider(mp)
+        _meter = otel_metrics.get_meter(effective_name)
+
+        logger.info("OpenTelemetry SDK initialised for %s → %s", effective_name, OTEL_ENDPOINT)
+
+    except ImportError:
+        logger.debug("opentelemetry packages not installed — tracing disabled (no-op mode)")
+    except Exception as exc:
+        logger.warning("OpenTelemetry init_otel failed for %s: %s — no-op", effective_name, exc)
+
+
 def get_tracer():
     return _tracer
 

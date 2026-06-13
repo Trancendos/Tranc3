@@ -200,6 +200,16 @@ def _check_rbac(request: Request, endpoint: str, method: str) -> None:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.sentinel-station-service")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     global sse_generator
 
     _init_db()

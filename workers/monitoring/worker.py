@@ -35,6 +35,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from fastapi import (
     FastAPI,
+    Header,
     HTTPException,
     Query,
     WebSocket,
@@ -51,6 +52,7 @@ from pydantic import BaseModel, Field
 PORT = int(os.environ.get("PORT", 8007))
 WORKER_NAME = "the-observatory-monitoring"
 PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://prometheus:9091")
+INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 _data_dir = Path(os.environ.get("DATA_DIR", "/data"))
 _data_dir.mkdir(parents=True, exist_ok=True)
@@ -342,6 +344,16 @@ _background_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.monitoring")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     global _background_task
     _init_db()
     _background_task = asyncio.create_task(_scrape_prometheus())
@@ -380,6 +392,12 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+
+def _require_internal(x_internal_secret: Optional[str]) -> None:
+    """Enforce X-Internal-Secret on write/sensitive endpoints when INTERNAL_SECRET is set."""
+    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -443,8 +461,12 @@ async def list_alerts(
 
 
 @app.post("/alerts", status_code=201)
-async def ingest_alerts(body: AlertmanagerWebhook) -> Dict[str, Any]:
+async def ingest_alerts(
+    body: AlertmanagerWebhook,
+    x_internal_secret: Optional[str] = Header(None),
+) -> Dict[str, Any]:
     """Ingest alert(s) from Prometheus Alertmanager webhook."""
+    _require_internal(x_internal_secret)
     inserted_ids: List[str] = []
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -477,8 +499,12 @@ async def ingest_alerts(body: AlertmanagerWebhook) -> Dict[str, Any]:
                 )
             else:
                 conn.execute(
-                    "INSERT OR IGNORE INTO alerts (id, name, severity, message, fired_at, labels_json) "
-                    "VALUES (?,?,?,?,?,?)",
+                    "INSERT INTO alerts (id, name, severity, message, fired_at, resolved_at, labels_json) "
+                    "VALUES (?,?,?,?,?,NULL,?) "
+                    "ON CONFLICT(id) DO UPDATE SET "
+                    "name=excluded.name, severity=excluded.severity, "
+                    "message=excluded.message, fired_at=excluded.fired_at, "
+                    "resolved_at=NULL, labels_json=excluded.labels_json",
                     (alert_id, name, severity, message, fired_at, json.dumps(labels)),
                 )
                 inserted_ids.append(alert_id)
@@ -535,7 +561,11 @@ async def get_alert(alert_id: str) -> AlertOut:
 
 
 @app.patch("/alerts/{alert_id}/resolve", response_model=AlertResolveResponse)
-async def resolve_alert(alert_id: str) -> AlertResolveResponse:
+async def resolve_alert(
+    alert_id: str,
+    x_internal_secret: Optional[str] = Header(None),
+) -> AlertResolveResponse:
+    _require_internal(x_internal_secret)
     resolved_at = datetime.now(timezone.utc).isoformat()
     with _connect() as conn:
         result = conn.execute(
