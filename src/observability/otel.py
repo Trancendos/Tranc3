@@ -55,7 +55,7 @@ try:
         _tp = TracerProvider(resource=resource)
         _tp.add_span_processor(
             BatchSpanProcessor(
-                OTLPSpanExporter(endpoint=OTEL_ENDPOINT, insecure=True),
+                OTLPSpanExporter(endpoint=OTEL_ENDPOINT),
                 max_queue_size=2048,
                 max_export_batch_size=512,
                 export_timeout_millis=10_000,
@@ -65,7 +65,7 @@ try:
         _tracer = trace.get_tracer(SERVICE_NAME)
 
         _reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(endpoint=OTEL_ENDPOINT, insecure=True),
+            OTLPMetricExporter(endpoint=OTEL_ENDPOINT),
             export_interval_millis=60_000,
         )
         _mp = MeterProvider(resource=resource, metric_readers=[_reader])

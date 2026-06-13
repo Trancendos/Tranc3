@@ -140,14 +140,14 @@ services:
     ports:
       - "9093:9093"
     volumes:
-      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml.tmpl:ro
       - alertmanager-data:/alertmanager
     environment:
       - ALERTMANAGER_SLACK_WEBHOOK=${ALERTMANAGER_SLACK_WEBHOOK:-}
-    command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
-      - "--storage.path=/alertmanager"
-      - "--web.external-url=http://localhost:9093"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - "envsubst < /etc/alertmanager/alertmanager.yml.tmpl > /tmp/alertmanager.yml && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager --web.external-url=http://localhost:9093"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
       <<: *healthcheck-default

@@ -1,6 +1,7 @@
 global:
   resolve_timeout: 5m
-  # Slack webhook — set ALERTMANAGER_SLACK_WEBHOOK env var and inject via envsubst or docker secret
+  # Slack webhook injected at container start via envsubst entrypoint in docker-compose.production.yml.
+  # Set ALERTMANAGER_SLACK_WEBHOOK env var; if unset Slack receivers are silently skipped.
   slack_api_url: "${ALERTMANAGER_SLACK_WEBHOOK}"
 
 templates:
