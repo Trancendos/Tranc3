@@ -1,4 +1,0 @@
-# Tranc3 AI Worker dependencies
-fastapi>=0.110.0
-uvicorn[standard]>=0.29.0
-httpx>=0.27.0
