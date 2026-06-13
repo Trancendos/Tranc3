@@ -69,10 +69,17 @@ export function ConsistencyShield({ children, audit, className = '' }: Consisten
 
   useEffect(() => {
     if (!shouldAudit || !ref.current) return
-    const found: TokenViolation[] = []
-    auditNode(ref.current, found)
-    setViolations(found)
-  }, [shouldAudit, children])
+    const el = ref.current
+    const run = () => {
+      const found: TokenViolation[] = []
+      auditNode(el, found)
+      setViolations(found)
+    }
+    run()
+    const observer = new MutationObserver(run)
+    observer.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] })
+    return () => observer.disconnect()
+  }, [shouldAudit])
 
   return (
     <div ref={ref} className={`ux-consistency-shield ${className}`} style={{ position: 'relative' }}>

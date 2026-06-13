@@ -30,18 +30,21 @@ interface ErrorBoundaryCellProps {
   /** Plain-language label shown in error UI */
   label?: string
   className?: string
+  /** When any value in this array changes the boundary auto-resets */
+  resetKeys?: unknown[]
 }
 
 interface ErrorBoundaryCellState {
   error: Error | null
   retryCount: number
   errorKey: number
+  showFallback: boolean
 }
 
 export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, ErrorBoundaryCellState> {
   constructor(props: ErrorBoundaryCellProps) {
     super(props)
-    this.state = { error: null, retryCount: 0, errorKey: 0 }
+    this.state = { error: null, retryCount: 0, errorKey: 0, showFallback: false }
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryCellState> {
@@ -60,15 +63,29 @@ export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, E
   }
 
   private reset = () => {
-    this.setState({ error: null, retryCount: 0, errorKey: 0 })
+    this.setState({ error: null, retryCount: 0, errorKey: 0, showFallback: false })
+  }
+
+  override componentDidUpdate(prevProps: ErrorBoundaryCellProps, prevState: ErrorBoundaryCellState) {
+    if (this.state.error && this.props.resetKeys && prevProps.resetKeys) {
+      const changed = this.props.resetKeys.some((k, i) => k !== (prevProps.resetKeys ?? [])[i])
+      if (changed) this.reset()
+    }
+    if (prevState.error && !this.state.error && !this.state.showFallback && prevState.retryCount > 0) {
+      this.setState({ retryCount: 0 })
+    }
   }
 
   override render() {
     const { error, retryCount, errorKey } = this.state
     const { children, fallback, strategy = 'retry', maxRetries = 3, label = 'This section', className = '' } = this.props
 
-    if (!error) {
+    if (!error && !this.state.showFallback) {
       return <React.Fragment key={errorKey}>{children}</React.Fragment>
+    }
+
+    if (this.state.showFallback && fallback) {
+      return <div className={`ux-error-boundary-cell ${className}`}>{fallback}</div>
     }
 
     const exhausted = retryCount >= maxRetries
@@ -140,7 +157,7 @@ export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, E
           )}
           {exhausted && fallback && (
             <button
-              onClick={() => this.setState(s => ({ ...s, error: null }))}
+              onClick={() => this.setState({ error: null, retryCount: 0, errorKey: 0, showFallback: true })}
               style={{
                 padding: 'var(--ux-space-1) var(--ux-space-3)',
                 borderRadius: 'var(--ux-radius-sm)',

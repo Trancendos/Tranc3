@@ -114,7 +114,7 @@ export function ClosureIndicator({
           </span>
           {phase === 'success' && onDismiss && (
             <button
-              onClick={() => { setVisible(false); onDismiss() }}
+              onClick={() => { if (timerRef.current) clearTimeout(timerRef.current); setVisible(false); onDismiss() }}
               aria-label="Dismiss"
               style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ux-text-muted)', fontSize: 'var(--ux-text-sm)' }}
             >
@@ -126,6 +126,7 @@ export function ClosureIndicator({
         {phase === 'active' && progress !== undefined && (
           <div
             role="progressbar"
+            aria-label="Task progress"
             aria-valuenow={Math.round(progress * 100)}
             aria-valuemin={0}
             aria-valuemax={100}

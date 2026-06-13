@@ -25,15 +25,17 @@ interface UndoStackState {
 }
 
 type UndoStackEvent =
-  | { type: 'COMMIT'; action: UndoAction }
+  | { type: 'COMMIT'; action: UndoAction; maxDepth: number }
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'CLEAR' }
 
 function stackReducer(state: UndoStackState, event: UndoStackEvent): UndoStackState {
   switch (event.type) {
-    case 'COMMIT':
-      return { past: [...state.past, event.action], future: [] }
+    case 'COMMIT': {
+      const past = [...state.past, event.action]
+      return { past: past.length > event.maxDepth ? past.slice(-event.maxDepth) : past, future: [] }
+    }
     case 'UNDO': {
       if (!state.past.length) return state
       const [action, ...rest] = [...state.past].reverse()
@@ -90,7 +92,7 @@ export function UndoStack({ children, maxDepth = 50, keyboardShortcuts = true, c
       timestamp: Date.now(),
     }
     full.do()
-    dispatch({ type: 'COMMIT', action: full })
+    dispatch({ type: 'COMMIT', action: full, maxDepth })
   }, [])
 
   const undo = useCallback(() => {
@@ -117,7 +119,7 @@ export function UndoStack({ children, maxDepth = 50, keyboardShortcuts = true, c
     return () => window.removeEventListener('keydown', handler)
   }, [keyboardShortcuts, undo, redo])
 
-  const cappedPast = state.past.slice(-maxDepth)
+  const cappedPast = state.past
   const controls: UndoStackControls = {
     commit,
     undo,

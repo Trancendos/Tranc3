@@ -35,10 +35,10 @@ const ShortcutCtx = createContext<ShortcutLayerCtx | null>(null)
 
 function matchesShortcut(e: KeyboardEvent, s: Shortcut): boolean {
   const mods = s.modifiers ?? []
-  if (mods.includes('ctrl') && !e.ctrlKey) return false
-  if (mods.includes('meta') && !e.metaKey) return false
-  if (mods.includes('shift') && !e.shiftKey) return false
-  if (mods.includes('alt') && !e.altKey) return false
+  if (mods.includes('ctrl') !== e.ctrlKey) return false
+  if (mods.includes('meta') !== e.metaKey) return false
+  if (mods.includes('shift') !== e.shiftKey) return false
+  if (mods.includes('alt') !== e.altKey) return false
   return e.key.toLowerCase() === s.key.toLowerCase()
 }
 
@@ -65,6 +65,20 @@ export function ShortcutLayer({ children, showHelp = true, className = '' }: Sho
   const [showOverlay, setShowOverlay] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
   const overlayId = useId()
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+  const shortcutsRef = useRef<Shortcut[]>(shortcuts)
+  shortcutsRef.current = shortcuts
+
+  useEffect(() => {
+    if (showOverlay) {
+      previousFocusRef.current = document.activeElement as HTMLElement
+      const first = overlayRef.current?.querySelector<HTMLElement>('button, [tabindex]:not([tabindex="-1"])')
+      first?.focus()
+    } else {
+      previousFocusRef.current?.focus()
+    }
+  }, [showOverlay])
 
   const register = useCallback((shortcut: Shortcut) => {
     setShortcuts(prev => [...prev, shortcut])
@@ -81,9 +95,12 @@ export function ShortcutLayer({ children, showHelp = true, className = '' }: Sho
         return
       }
 
-      if (e.key === 'Escape') { setShowOverlay(false); return }
+      if (e.key === 'Escape') {
+        setShowOverlay(prev => { if (prev) { e.preventDefault(); return false } return prev })
+        if (!shortcutsRef.current.some(s => s.key.toLowerCase() === 'escape')) return
+      }
 
-      for (const s of shortcuts) {
+      for (const s of shortcutsRef.current) {
         if (matchesShortcut(e, s)) {
           e.preventDefault()
           s.handler(e)
@@ -95,7 +112,7 @@ export function ShortcutLayer({ children, showHelp = true, className = '' }: Sho
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [shortcuts, showHelp])
+  }, [showHelp])
 
   const groups = shortcuts.reduce<Record<string, Shortcut[]>>((acc, s) => {
     const g = s.group ?? 'General'
@@ -134,9 +151,21 @@ export function ShortcutLayer({ children, showHelp = true, className = '' }: Sho
         {showOverlay && (
           <div
             id={overlayId}
+            ref={overlayRef}
             role="dialog"
             aria-label="Keyboard shortcuts"
             aria-modal="true"
+            onKeyDown={e => {
+              if (e.key !== 'Tab') return
+              const focusable = overlayRef.current?.querySelectorAll<HTMLElement>(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+              )
+              if (!focusable?.length) return
+              const first = focusable[0]
+              const last = focusable[focusable.length - 1]
+              if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus() } }
+              else { if (document.activeElement === last) { e.preventDefault(); first.focus() } }
+            }}
             style={{
               position: 'fixed',
               inset: 0,

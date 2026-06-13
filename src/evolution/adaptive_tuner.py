@@ -196,16 +196,18 @@ class AdaptiveTuner:
             np.array([self._parameters[n].max_value for n in param_names]),
         )
 
+        if asyncio.iscoroutinefunction(self.fitness_fn):
+            raise RuntimeError(
+                "pso_optimize requires a synchronous fitness_fn; "
+                "use the async tuning path for coroutine fitness functions."
+            )
+
         def _cost(particles: np.ndarray, **kwargs) -> np.ndarray:
             costs = np.zeros(len(particles))
             for i, particle in enumerate(particles):
                 params = {n: float(v) for n, v in zip(param_names, particle, strict=False)}
                 try:
-                    fitness = (
-                        self.fitness_fn(params)
-                        if not asyncio.iscoroutinefunction(self.fitness_fn)
-                        else 0.0
-                    )
+                    fitness = self.fitness_fn(params)
                     costs[i] = -fitness  # PSO minimises; negate for fitness maximisation
                 except Exception:
                     costs[i] = 1e9

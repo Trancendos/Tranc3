@@ -47,9 +47,13 @@ function parseHex(hex: string): [number, number, number] | null {
 type WCAGLevel = 'AAA' | 'AA' | 'AA Large' | 'Fail'
 
 function wcagLevel(ratio: number, isLargeText: boolean): WCAGLevel {
-  if (ratio >= 7)            return 'AAA'
-  if (ratio >= 4.5)          return 'AA'
-  if (isLargeText && ratio >= 3) return 'AA Large'
+  if (ratio >= 7) return 'AAA'
+  if (isLargeText) {
+    if (ratio >= 4.5) return 'AAA'
+    if (ratio >= 3) return 'AA Large'
+    return 'Fail'
+  }
+  if (ratio >= 4.5) return 'AA'
   return 'Fail'
 }
 

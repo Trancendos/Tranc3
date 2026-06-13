@@ -120,7 +120,6 @@ export function SmartCard({
         padding: PAD_MAP[padding],
         transition: 'box-shadow var(--ux-dur-base) var(--ux-ease-out), transform var(--ux-dur-fast) var(--ux-ease-out)',
         cursor: interactive && onClick ? 'pointer' : 'default',
-        outline: 'none',
         overflow: 'hidden',
         ...VARIANT_STYLES[variant],
         ...style,
