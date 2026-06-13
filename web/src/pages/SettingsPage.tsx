@@ -125,8 +125,8 @@ export default function SettingsPage() {
   }
 
   // ── Clear a stored field ─────────────────────────────────────────────────────
-  async function clearField(key: string, label?: string) {
-    if (label && !window.confirm(`Are you sure you want to delete ${label}?`)) return
+  async function clearField(key: string, label: string) {
+    if (!window.confirm(`Are you sure you want to delete ${label}?`)) return
     setField(key, 'deleting')
     try {
       const res = await fetch(`${API}/user/settings/${encodeURIComponent(key)}`, {
@@ -287,8 +287,7 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => clearField(v.key, v.label)}
                             disabled={isBusy}
-                            aria-label={status === 'deleting' ? `Removing ${v.label}…` : `Clear stored ${v.label}`}
-                            aria-busy={status === 'deleting'}
+                            aria-label={`Clear stored ${v.label}`}
                             title={`Clear stored ${v.label}`}
                             className="text-gray-600 hover:text-red-400 disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400 rounded"
                           >

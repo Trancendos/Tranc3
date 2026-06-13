@@ -8,10 +8,6 @@
 ## 2026-06-05 - Icon-only Controls Navigation
 **Learning:** The Trancendos dashboard (master OS) contains a lot of dense operational metrics and several icon-only control buttons (e.g. settings, notifications, refresh, close panels) that lack critical accessibility context. It also has complex sidebar navigation elements that rely purely on visual hover cues rather than explicit focus states.
 **Action:** Audit and add explicit `aria-label` attributes to all icon-only interactions and ensure uniform keyboard navigation by applying `focus-visible:ring-2 focus-visible:ring-blue-500` to them so they are accessible and visually noticeable during tabbed navigation.
-## 2026-06-07 - Added focus-visible classes to Spark Dashboard
-**Learning:** Adding focus-visible classes to custom elements such as interactive tabs and buttons provides improved visual cues for keyboard navigation without relying on inline styling adjustments.
-**Action:** Always include focus-visible utility classes when writing custom, styled interactive elements to ensure full keyboard navigation support and WCAG compliance.
-
-## 2024-06-12 - Interactive Elements Without Focus and ARIA
-**Learning:** Custom components like dropdowns (`<select>`) and accordions in newly added dashboards often miss vital accessibility properties out of the box, such as keyboard focus indicators (`focus-visible:ring-2`) and states (`aria-expanded`, `aria-controls`, `aria-label`). Users relying on keyboards or screen readers will struggle to perceive or interact with them.
-**Action:** When adding or reviewing new UI dashboards or interactive components, explicitly check for `focus-visible` styling on buttons and inputs, and ensure ARIA bindings (`aria-label`, `aria-expanded`, `aria-controls`) are attached to custom interactive elements.
+## 2024-05-19 - Added confirmation to destructive actions
+**Learning:** Destructive actions without a confirmation prompt can easily result in accidental data loss for users when they click icon-only buttons like the trash can by mistake.
+**Action:** Always wrap destructive actions (like deleting API keys) in a confirmation dialogue (e.g. `window.confirm`) to prevent accidental deletion, and ensure icon-only buttons have descriptive `title` tooltips for clarity on hover.
