@@ -67,8 +67,8 @@ async def deep_health() -> dict[str, Any]:
                 }
                 if resp.status_code >= 300:
                     overall = "degraded"
-            except Exception as exc:
-                results[name] = {"status": "unreachable", "error": str(exc)}
+            except Exception:
+                results[name] = {"status": "unreachable", "error": "probe_failed"}
                 overall = "degraded"
 
     return {

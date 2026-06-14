@@ -135,6 +135,7 @@ func postAlertsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<16) // 64 KB limit
 	var incoming struct {
 		Status  string            `json:"status"`
 		Message string            `json:"message"`
@@ -161,7 +162,11 @@ func postAlertsHandler(w http.ResponseWriter, r *http.Request) {
 		Timestamp: time.Now().UTC(),
 	}
 	alerts.push(a)
-	alertsTotal.WithLabelValues(a.Status).Inc()
+	metricStatus := a.Status
+	if metricStatus != "firing" && metricStatus != "resolved" {
+		metricStatus = "unknown"
+	}
+	alertsTotal.WithLabelValues(metricStatus).Inc()
 	slog.Info("alert received", "id", a.ID, "status", a.Status, "message", a.Message)
 	httpRequestsTotal.WithLabelValues(r.Method, "/alerts", "201").Inc()
 	jsonResponse(w, http.StatusCreated, a)

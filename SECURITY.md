@@ -131,6 +131,7 @@ See `ARCHITECTURE_THREAT_MODEL.md` for full STRIDE analysis. Key mitigations:
 - **DoS:** Token-bucket rate limiter (Go, port 8028), circuit breakers per service
 - **Elevation:** `no-new-privileges:true` Docker security option, non-root `tranc3` user
 
-### CVE-2025-69872 (diskcache Local DoS) Mitigation
-Runtime check in `src/utils/security_checks.py` — verifies process runs as non-root (UID ≠ 0). 
-Applied at application startup. No upstream patch available; non-root deployment is the fix.
+### CVE-2025-69872 (diskcache Pickle Deserialization RCE — CVSS 9.8 Critical) Mitigation
+Runtime check in `src/utils/security_checks.py` — verifies process runs as non-root (UID ≠ 0).
+This CVE is a pickle deserialization RCE that allows arbitrary code execution via malicious cache payloads.
+Applied at application startup. No upstream patch available; non-root deployment and input sanitisation are the mitigations.

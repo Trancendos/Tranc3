@@ -86,6 +86,20 @@ func (q *priorityQueue) dequeue(priority string) (Task, bool) {
 	return Task{}, false
 }
 
+// contains returns true if a task with the given ID exists in any priority queue.
+func (q *priorityQueue) contains(taskID string) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	for _, p := range priorityOrder {
+		for _, t := range q.queues[p] {
+			if t.TaskID == taskID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // cancel removes a task by ID across all priorities.  Returns true if found.
 func (q *priorityQueue) cancel(taskID string) bool {
 	q.mu.Lock()
@@ -184,6 +198,7 @@ func enqueueHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	var req struct {
 		TaskID    string          `json:"task_id"`
 		Payload   json.RawMessage `json:"payload"`
@@ -210,6 +225,13 @@ func enqueueHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	q := reg.get(req.QueueName)
+	if q.contains(req.TaskID) {
+		jsonResponse(w, http.StatusConflict, map[string]string{
+			"error": fmt.Sprintf("task_id %q already exists in queue %q", req.TaskID, req.QueueName),
+		})
+		return
+	}
 	t := Task{
 		TaskID:     req.TaskID,
 		QueueName:  req.QueueName,
@@ -217,14 +239,14 @@ func enqueueHandler(w http.ResponseWriter, r *http.Request) {
 		Payload:    req.Payload,
 		EnqueuedAt: time.Now().UTC(),
 	}
-	reg.get(req.QueueName).enqueue(t)
+	q.enqueue(t)
 	slog.Info("task enqueued", "task_id", t.TaskID, "queue", t.QueueName, "priority", t.Priority)
 	jsonResponse(w, http.StatusCreated, t)
 }
 
-// GET /queue/dequeue?queue=<name>&priority=<p>
+// POST /queue/dequeue?queue=<name>&priority=<p>
 func dequeueHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}

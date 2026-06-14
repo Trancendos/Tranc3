@@ -72,8 +72,18 @@ def init_db() -> None:
         conn.commit()
 
 
-def _compute_hash(entry_id: int, actor: str, action: str, timestamp: float, prev_hash: str) -> str:
-    payload = f"{entry_id}:{actor}:{action}:{timestamp}:{prev_hash}"
+def _compute_hash(
+    entry_id: int,
+    actor: str,
+    action: str,
+    timestamp: float,
+    prev_hash: str,
+    resource: str = "",
+    details: str = "",
+    outcome: str = "",
+    ip_address: str = "",
+) -> str:
+    payload = f"{entry_id}:{actor}:{action}:{timestamp}:{prev_hash}:{resource}:{details}:{outcome}:{ip_address}"
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -190,7 +200,17 @@ async def append_entry(entry: AuditIn):
             ),
         )
         row_id = cur.lastrowid
-        chain_hash = _compute_hash(row_id, entry.actor, entry.action, ts, prev_hash)
+        chain_hash = _compute_hash(
+            row_id,
+            entry.actor,
+            entry.action,
+            ts,
+            prev_hash,
+            entry.resource or "",
+            json.dumps(entry.details),
+            entry.outcome,
+            entry.ip_address or "",
+        )
         conn.execute("UPDATE audit_log SET chain_hash = ? WHERE id = ?", (chain_hash, row_id))
         conn.commit()
     return {
@@ -229,7 +249,17 @@ async def append_batch(batch: AuditBatchIn):
                 ),
             )
             row_id = cur.lastrowid
-            chain_hash = _compute_hash(row_id, entry.actor, entry.action, ts, prev_hash)
+            chain_hash = _compute_hash(
+                row_id,
+                entry.actor,
+                entry.action,
+                ts,
+                prev_hash,
+                entry.resource or "",
+                json.dumps(entry.details),
+                entry.outcome,
+                entry.ip_address or "",
+            )
             conn.execute("UPDATE audit_log SET chain_hash = ? WHERE id = ?", (chain_hash, row_id))
             results.append({"id": row_id, "chain_hash": chain_hash})
         conn.commit()
@@ -292,7 +322,15 @@ async def verify_chain():
     broken_at = None
     for row in rows:
         expected = _compute_hash(
-            row["id"], row["actor"], row["action"], row["timestamp"], row["prev_hash"]
+            row["id"],
+            row["actor"],
+            row["action"],
+            row["timestamp"],
+            row["prev_hash"],
+            row["resource"] or "",
+            row["details"] or "",
+            row["outcome"] or "",
+            row["ip_address"] or "",
         )
         if row["chain_hash"] != expected or row["prev_hash"] != prev_hash:
             broken_at = row["id"]
