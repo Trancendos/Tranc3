@@ -18,7 +18,7 @@ except ImportError:
     _HTTPX_AVAILABLE = False
 
 try:
-    from api.models import DeepHealthResponse, HealthResponse  # noqa: F401
+    from api.models import DeepHealthResponse, HealthResponse
 except ImportError:
     HealthResponse = dict  # type: ignore[misc,assignment]
     DeepHealthResponse = dict  # type: ignore[misc,assignment]
@@ -34,7 +34,7 @@ _P0_WORKERS: dict[str, str] = {
 }
 
 
-@router.get("/health")
+@router.get("/health", response_model=HealthResponse)
 async def health() -> dict[str, Any]:
     """Shallow liveness probe."""
     return {
@@ -44,7 +44,7 @@ async def health() -> dict[str, Any]:
     }
 
 
-@router.get("/health/deep")
+@router.get("/health/deep", response_model=DeepHealthResponse)
 async def deep_health() -> dict[str, Any]:
     """Deep readiness probe — checks all P0 workers."""
     results: dict[str, Any] = {}
