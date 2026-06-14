@@ -16,12 +16,10 @@ Part of: The Void / Cryptex (Cyber Defence)
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
 import secrets
 import time
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +47,10 @@ except ImportError:
 # Attempt cryptography import (always available in Tranc3 venv)
 # ---------------------------------------------------------------------------
 try:
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    from cryptography.hazmat.primitives.asymmetric import rsa, padding
-    from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     _CRYPTO_AVAILABLE = True
 except ImportError:
     _CRYPTO_AVAILABLE = False

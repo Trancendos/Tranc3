@@ -10,7 +10,6 @@ Used by: The Void (vault unseal), Infinity (master key split)
 from __future__ import annotations
 
 import secrets
-from typing import List, Tuple
 
 # ---------------------------------------------------------------------------
 # Prime field: GF(p) where p = 2^521 - 1  (Mersenne prime, 521 bits)

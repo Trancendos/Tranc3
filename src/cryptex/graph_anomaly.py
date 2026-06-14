@@ -42,7 +42,7 @@ class ServiceCallGraph:
         nodes = self._adj_nodes(adj)
         n = len(nodes)
         if n <= 1:
-            return {node: 0.0 for node in nodes}
+            return dict.fromkeys(nodes, 0.0)
         return {node: self._degree(adj, node) / (n - 1) for node in nodes}
 
     def _find_paths_through_new_edges(self) -> list[list[str]]:

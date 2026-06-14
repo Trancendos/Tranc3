@@ -1,10 +1,9 @@
 """Genetic algorithm for evolving Cryptex threat detection rules."""
 
-import re
-import random
 import copy
-from dataclasses import dataclass, field
-from typing import Optional
+import random
+import re
+from dataclasses import dataclass
 
 # Attack token vocabulary for pattern generation
 _VOCAB: list[str] = [
