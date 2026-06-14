@@ -5,20 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 try:
-    from fastapi import APIRouter, Depends, HTTPException
+    from fastapi import APIRouter, Depends
     from fastapi.security import OAuth2PasswordBearer
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("fastapi required") from exc
-
-try:
-    import os
-
-    import jwt as pyjwt
-
-    _JWT_SECRET = os.getenv("JWT_SECRET", "changeme-in-production")
-    _JWT_ALGORITHM = "HS256"
-except ImportError:
-    pyjwt = None  # type: ignore[assignment]
 
 try:
     from src.database.models import User  # type: ignore[import]
@@ -34,19 +24,9 @@ _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 def _get_current_user(token: str = Depends(_oauth2_scheme)) -> dict[str, Any]:
     """Decode bearer token — delegates to api.auth to honour revocation list."""
-    try:
-        from api.auth import _decode_token  # type: ignore[import]
+    from api.auth import _decode_token  # type: ignore[import]
 
-        return _decode_token(token)
-    except ImportError:
-        pass
-    # Fallback if api.auth unavailable (standalone usage without full app)
-    if pyjwt is None:
-        raise HTTPException(status_code=500, detail="PyJWT not installed")
-    try:
-        return pyjwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    return _decode_token(token)
 
 
 @router.get("/me")

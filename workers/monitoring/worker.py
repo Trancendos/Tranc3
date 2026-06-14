@@ -373,20 +373,31 @@ class MonitoringDatabase:
         return alert
 
     def get_alerts(
-        self, state: Optional[AlertState] = None, hours: int = 168
+        self, state: Optional[AlertState] = None, hours: Optional[int] = 168
     ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
-        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
-        if state:
-            rows = conn.execute(
-                "SELECT * FROM alerts WHERE state=? AND fired_at>=? ORDER BY fired_at DESC",
-                (state.value, cutoff),
-            ).fetchall()
+        if hours is not None:
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+            if state:
+                rows = conn.execute(
+                    "SELECT * FROM alerts WHERE state=? AND fired_at>=? ORDER BY fired_at DESC",
+                    (state.value, cutoff),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM alerts WHERE fired_at>=? ORDER BY fired_at DESC",
+                    (cutoff,),
+                ).fetchall()
         else:
-            rows = conn.execute(
-                "SELECT * FROM alerts WHERE fired_at>=? ORDER BY fired_at DESC",
-                (cutoff,),
-            ).fetchall()
+            if state:
+                rows = conn.execute(
+                    "SELECT * FROM alerts WHERE state=? ORDER BY fired_at DESC",
+                    (state.value,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM alerts ORDER BY fired_at DESC",
+                ).fetchall()
         return [dict(r) for r in rows]
 
     def resolve_alert(self, alert_id: str) -> bool:
@@ -428,8 +439,8 @@ class AlertEngine:
         triggered = self._evaluate_condition(value, condition, threshold)
 
         if triggered:
-            # Check if there's already a firing alert for this rule
-            firing = self.db.get_alerts(state=AlertState.firing)
+            # Check if there's already a firing alert for this rule (no time limit for dedup)
+            firing = self.db.get_alerts(state=AlertState.firing, hours=None)
             existing = [a for a in firing if a["rule_id"] == rule["rule_id"]]
             if not existing:
                 alert = Alert(
@@ -442,8 +453,8 @@ class AlertEngine:
                 self.db.create_alert(alert)
                 logger.warning("🔔 Alert fired: %s — %s", alert.name, alert.message)
         else:
-            # Auto-resolve firing alerts for this rule if condition no longer met
-            firing = self.db.get_alerts(state=AlertState.firing)
+            # Auto-resolve firing alerts for this rule if condition no longer met (no time limit)
+            firing = self.db.get_alerts(state=AlertState.firing, hours=None)
             for a in firing:
                 if a["rule_id"] == rule["rule_id"]:
                     self.db.resolve_alert(a["alert_id"])
@@ -452,7 +463,11 @@ class AlertEngine:
     @staticmethod
     def _evaluate_condition(value: float, condition: str, threshold: float) -> bool:
         try:
-            if condition.startswith(">"):
+            if condition.startswith(">="):
+                return value >= threshold
+            elif condition.startswith("<="):
+                return value <= threshold
+            elif condition.startswith(">"):
                 return value > threshold
             elif condition.startswith("<"):
                 return value < threshold
@@ -460,10 +475,6 @@ class AlertEngine:
                 return value == threshold
             elif condition.startswith("!="):
                 return value != threshold
-            elif condition.startswith(">="):
-                return value >= threshold
-            elif condition.startswith("<="):
-                return value <= threshold
         except Exception:
             logger.debug("Graceful degradation in Exception")  # nosec B110
         return False
@@ -497,13 +508,16 @@ class DashboardWSManager:
         msg = json.dumps(
             {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()}
         )
-        stale = []
+        # Snapshot the connection list under the lock, then send outside to avoid
+        # awaiting while holding a threading.Lock (which would block the event loop).
         with self._lock:
-            for ws in self.connections:
-                try:
-                    await ws.send_text(msg)
-                except Exception:
-                    stale.append(ws)
+            conns = list(self.connections)
+        stale = []
+        for ws in conns:
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                stale.append(ws)
         for ws in stale:
             self.disconnect(ws)
 
@@ -573,18 +587,7 @@ async def health():
 @_router.get("/stats")
 async def stats():
     """Overview statistics for the monitoring system."""
-    services = db.get_latest_health()
-    firing_alerts = db.get_alerts(state=AlertState.firing)
-    metric_names = db.get_metric_names()
-    return {
-        "services_monitored": len(services),
-        "healthy_services": sum(1 for s in services if s.get("status") == "healthy"),
-        "degraded_services": sum(1 for s in services if s.get("status") == "degraded"),
-        "unhealthy_services": sum(1 for s in services if s.get("status") == "unhealthy"),
-        "firing_alerts": len(firing_alerts),
-        "total_metric_names": len(metric_names),
-        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-    }
+    return _get_stats_data()
 
 
 # ---------------------------------------------------------------------------
@@ -592,7 +595,7 @@ async def stats():
 # ---------------------------------------------------------------------------
 
 
-@app.post("/health/report")
+@_router.post("/health/report")
 async def submit_health_report(report: HealthReport):
     """Submit a health report for a service."""
     db.store_health(report)
@@ -714,9 +717,31 @@ async def resolve_alert(alert_id: str):
 # ---------------------------------------------------------------------------
 
 
+def _get_stats_data() -> dict:
+    """Internal helper returning stats payload — shared by HTTP and WebSocket handlers."""
+    services = db.get_latest_health()
+    firing_alerts = db.get_alerts(state=AlertState.firing)
+    metric_names = db.get_metric_names()
+    return {
+        "services_monitored": len(services),
+        "healthy_services": sum(1 for s in services if s.get("status") == "healthy"),
+        "degraded_services": sum(1 for s in services if s.get("status") == "degraded"),
+        "unhealthy_services": sum(1 for s in services if s.get("status") == "unhealthy"),
+        "firing_alerts": len(firing_alerts),
+        "total_metric_names": len(metric_names),
+        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+    }
+
+
 @app.websocket("/ws/dashboard")
-async def dashboard_websocket(ws: WebSocket):
+async def dashboard_websocket(
+    ws: WebSocket,
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+):
     """WebSocket endpoint for live dashboard updates."""
+    if _INTERNAL_SECRET and x_internal_secret != _INTERNAL_SECRET:
+        await ws.close(code=1008)
+        return
     await ws_manager.connect(ws)
     try:
         while True:
@@ -727,7 +752,7 @@ async def dashboard_websocket(ws: WebSocket):
                 if msg.get("type") == "ping":
                     await ws.send_text(json.dumps({"type": "pong"}))
                 elif msg.get("type") == "get_stats":
-                    stats_data = await stats()
+                    stats_data = _get_stats_data()
                     await ws.send_text(json.dumps({"type": "stats", "data": stats_data}))
             except json.JSONDecodeError:
                 logger.debug("Graceful degradation in json")  # nosec B110
@@ -754,23 +779,21 @@ KNOWN_SERVICES = [
 @_router.post("/monitoring/collect")
 async def collect_health():
     """Trigger health collection from all known services. Called by scheduler or manually."""
-    import urllib.error
-    import urllib.request
+    import httpx
 
     results = []
     for svc in KNOWN_SERVICES:
         try:
-            req = urllib.request.Request(svc["url"], method="GET")
-            req.add_header("Accept", "application/json")
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                body = json.loads(resp.read().decode())
-                report = HealthReport(
-                    service_name=svc["name"],
-                    status=HealthStatus.healthy,
-                    metadata=body,
-                )
-                db.store_health(report)
-                results.append({"service": svc["name"], "status": "healthy"})
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(svc["url"], headers={"Accept": "application/json"})
+                body = resp.json()
+            report = HealthReport(
+                service_name=svc["name"],
+                status=HealthStatus.healthy,
+                metadata=body,
+            )
+            db.store_health(report)
+            results.append({"service": svc["name"], "status": "healthy"})
         except Exception as e:
             report = HealthReport(
                 service_name=svc["name"],

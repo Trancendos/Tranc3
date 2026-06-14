@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 try:
     from fastapi import APIRouter, Depends, HTTPException, status
-    from fastapi.security import OAuth2PasswordRequestForm
+    from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("fastapi required") from exc
 
@@ -25,8 +25,11 @@ except ImportError:
     _BCRYPT_AVAILABLE = False
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
-_JWT_SECRET: str = os.getenv("JWT_SECRET", "changeme-in-production")
+_JWT_SECRET: str = os.environ.get("JWT_SECRET", "")
+if not _JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is required")
 _JWT_ALGORITHM = "HS256"
 # Short-lived access token; refresh token carries longer validity.
 _ACCESS_TTL = int(os.getenv("JWT_ACCESS_TTL_SECONDS", "3600"))
@@ -67,16 +70,20 @@ def _decode_token(token: str) -> dict[str, Any]:
 
 
 def _verify_password(plain: str, hashed: str) -> bool:
-    """Constant-time comparison via bcrypt; falls back to naive check in dev."""
-    if _BCRYPT_AVAILABLE:
+    """Constant-time comparison via bcrypt only; no plaintext fallback."""
+    if not _BCRYPT_AVAILABLE:
+        return False
+    try:
         return bcrypt.checkpw(plain.encode(), hashed.encode())
-    # Naive fallback — acceptable only when bcrypt is absent in dev environments.
-    return plain == hashed
+    except ValueError:
+        return False
 
 
 def _lookup_user(username: str) -> Optional[dict[str, Any]]:
     """Stub user lookup — replace with SQLAlchemy query in production."""
-    demo_hash = os.getenv("DEMO_USER_HASH", "demo")
+    # Default is bcrypt hash of "changeme" — override via DEMO_USER_HASH env var.
+    _DEMO_DEFAULT_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TgownFs9e1NmDOKWo2u4TbM6BVGU"
+    demo_hash = os.getenv("DEMO_USER_HASH", _DEMO_DEFAULT_HASH)
     if username == os.getenv("DEMO_USER", "admin"):
         return {"sub": username, "hashed_password": demo_hash}
     return None
@@ -102,8 +109,8 @@ async def login(form: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
 
 
 @router.post("/refresh")
-async def refresh(refresh_token: str) -> dict[str, str]:
-    """Exchange a valid refresh token for a new access token."""
+async def refresh(refresh_token: str = Depends(_oauth2_scheme)) -> dict[str, str]:
+    """Exchange a valid refresh token for a new access token (token in Authorization header)."""
     payload = _decode_token(refresh_token)
     if payload.get("kind") != "refresh":
         raise HTTPException(status_code=400, detail="Not a refresh token")
@@ -112,8 +119,8 @@ async def refresh(refresh_token: str) -> dict[str, str]:
 
 
 @router.post("/logout")
-async def logout(token: str) -> dict[str, str]:
-    """Revoke the supplied token by adding its jti to the in-memory set."""
+async def logout(token: str = Depends(_oauth2_scheme)) -> dict[str, str]:
+    """Revoke the supplied token (token in Authorization header)."""
     payload = _decode_token(token)
     _revoked_jti.add(payload["jti"])
     return {"detail": "logged out"}

@@ -45,9 +45,13 @@ def create_app(
     """Build and return the configured FastAPI application."""
     origins = allowed_origins or os.getenv("ALLOWED_ORIGINS", ",".join(_DEFAULT_ORIGINS)).split(",")
 
-    hosts = allowed_hosts or os.getenv(
-        "ALLOWED_HOSTS", "localhost,trancendos.com,api.trancendos.com"
-    ).split(",")
+    hosts = allowed_hosts or [
+        h.strip()
+        for h in os.environ.get(
+            "ALLOWED_HOSTS", "localhost,trancendos.com,api.trancendos.com"
+        ).split(",")
+        if h.strip()
+    ]
 
     app = FastAPI(
         title="Tranc3 API",
@@ -65,7 +69,8 @@ def create_app(
         allow_headers=["*"],
     )
     app.add_middleware(GZipMiddleware, minimum_size=1024)
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=[h.strip() for h in hosts])
+    if hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
 
     if health_router is not None:
         app.include_router(health_router)

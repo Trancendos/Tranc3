@@ -240,9 +240,13 @@ class NanoMesh:
                     fallback.name,
                 )
                 t0 = time.monotonic()
-                result = await fallback.fn(*args, **kwargs)
-                fallback.record_success((time.monotonic() - t0) * 1000)
-                return result
+                try:
+                    result = await fallback.fn(*args, **kwargs)
+                    fallback.record_success((time.monotonic() - t0) * 1000)
+                    return result
+                except Exception as fallback_exc:
+                    fallback.record_error(str(fallback_exc))
+                    raise fallback_exc
             raise
 
     # ── Stats ──────────────────────────────────────────────────────────────

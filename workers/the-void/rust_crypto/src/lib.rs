@@ -34,8 +34,13 @@ fn derive_key_internal(password: &[u8], salt: &[u8]) -> Zeroizing<[u8; KEY_LEN]>
 /// Returns: hex(salt[32] || iv[12] || tag[16] || ciphertext)
 #[pyfunction]
 fn encrypt(plaintext: &str, master_key_hex: &str) -> PyResult<String> {
-    let master_key_bytes =
-        hex::decode(master_key_hex).map_err(|e| PyValueError::new_err(format!("invalid master_key_hex: {e}")))?;
+    let master_key_bytes = Zeroizing::new(
+        hex::decode(master_key_hex)
+            .map_err(|e| PyValueError::new_err(format!("invalid master_key_hex: {e}")))?,
+    );
+    if master_key_bytes.is_empty() {
+        return Err(PyValueError::new_err("master_key_hex must not be empty"));
+    }
 
     // Random salt + IV
     let mut salt = [0u8; SALT_LEN];
@@ -44,7 +49,7 @@ fn encrypt(plaintext: &str, master_key_hex: &str) -> PyResult<String> {
     rand::thread_rng().fill_bytes(&mut iv_bytes);
 
     // Derive key
-    let key_material = derive_key_internal(&master_key_bytes, &salt);
+    let key_material = derive_key_internal(master_key_bytes.as_ref(), &salt);
     let key = Key::<Aes256Gcm>::from_slice(key_material.as_ref());
     let cipher = Aes256Gcm::new(key);
     let nonce = Nonce::from_slice(&iv_bytes);
@@ -73,8 +78,13 @@ fn encrypt(plaintext: &str, master_key_hex: &str) -> PyResult<String> {
 /// Expects the output format produced by `encrypt`.
 #[pyfunction]
 fn decrypt(ciphertext_hex: &str, master_key_hex: &str) -> PyResult<String> {
-    let master_key_bytes =
-        hex::decode(master_key_hex).map_err(|e| PyValueError::new_err(format!("invalid master_key_hex: {e}")))?;
+    let master_key_bytes = Zeroizing::new(
+        hex::decode(master_key_hex)
+            .map_err(|e| PyValueError::new_err(format!("invalid master_key_hex: {e}")))?,
+    );
+    if master_key_bytes.is_empty() {
+        return Err(PyValueError::new_err("master_key_hex must not be empty"));
+    }
     let blob =
         hex::decode(ciphertext_hex).map_err(|e| PyValueError::new_err(format!("invalid ciphertext_hex: {e}")))?;
 
@@ -92,7 +102,7 @@ fn decrypt(ciphertext_hex: &str, master_key_hex: &str) -> PyResult<String> {
     let ct = &blob[SALT_LEN + IV_LEN + TAG_LEN..];
 
     // Derive key
-    let key_material = derive_key_internal(&master_key_bytes, salt);
+    let key_material = derive_key_internal(master_key_bytes.as_ref(), salt);
     let key = Key::<Aes256Gcm>::from_slice(key_material.as_ref());
     let cipher = Aes256Gcm::new(key);
     let nonce = Nonce::from_slice(iv_bytes);

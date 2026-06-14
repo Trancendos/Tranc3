@@ -70,9 +70,13 @@ class Section7Scheduler:
         self._scheduler: Optional[object] = None
         self._task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
         self._running = False
+        self._started = False
 
     def start(self) -> None:
         """Start the scheduler using APScheduler if available, else asyncio fallback."""
+        if self._started:
+            return
+        self._started = True
         if _APSCHEDULER_AVAILABLE:
             self._scheduler = AsyncIOScheduler()
             self._scheduler.add_job(  # type: ignore[union-attr]
@@ -99,6 +103,7 @@ class Section7Scheduler:
             except Exception:  # noqa: BLE001 — ignore shutdown errors
                 pass
         self._running = False
+        self._started = False
         if self._task is not None:
             self._task.cancel()
         logger.info("Section 7: scheduler stopped")
