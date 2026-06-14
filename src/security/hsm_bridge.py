@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 # Attempt PKCS#11 import (python-pkcs11, BSD licence)
 # ---------------------------------------------------------------------------
 _PKCS11_AVAILABLE = False
-_pkcs11_lib = None
 
 _SOFTHSM_PATHS = [
     "/usr/lib/softhsm/libsofthsm2.so",
@@ -418,8 +417,8 @@ class HSMBridge:
                                     "backend": self._active_backend,
                                 }
                             )
-                        except Exception:
-                            pass
+                        except Exception as _exc:  # noqa: BLE001
+                            logger.debug("list_keys: skipping object: %s", _exc)
                     return result
             except Exception as exc:
                 logger.error("list_keys: %s", exc)

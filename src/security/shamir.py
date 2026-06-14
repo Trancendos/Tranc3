@@ -15,7 +15,6 @@ import secrets
 # Prime field: GF(p) where p = 2^521 - 1  (Mersenne prime, 521 bits)
 # ---------------------------------------------------------------------------
 _PRIME: int = (1 << 521) - 1
-_PRIME_BYTES: int = 66  # ceil(521/8)
 
 
 def _mod_inv(a: int, p: int) -> int:

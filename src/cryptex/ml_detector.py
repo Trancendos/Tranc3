@@ -137,8 +137,6 @@ class MLThreatDetector:
     def predict(self, f: RequestFeatures) -> dict:
         """Return anomaly verdict, score, and method used."""
         if not self._is_trained:
-            # Heuristic: flag obviously malicious features immediately
-            vec = self._features_to_vector(f)
             heuristic_score = (
                 float(f.has_sql_keywords) * 0.4
                 + float(f.has_xss_markers) * 0.4
