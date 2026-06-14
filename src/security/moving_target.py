@@ -25,9 +25,7 @@ class MovingTargetDefense:
 
     def _obfuscate_path(self, canonical: str, epoch: int) -> str:
         version = epoch % 9 + 1
-        digest = hashlib.sha256(
-            (canonical + str(epoch)).encode()
-        ).hexdigest()[:8]
+        digest = hashlib.sha256((canonical + str(epoch)).encode()).hexdigest()[:8]
         return f"/api/v{version}/{digest}"
 
     def _generate_decoy_paths(self, epoch: int) -> set[str]:

@@ -231,7 +231,7 @@ class MISPConnector:
         if data is None:
             return []
 
-        events = (data.get("response") or [])
+        events = data.get("response") or []
         result: List[Dict[str, Any]] = []
         for item in events[:limit]:
             ev = item.get("Event", item)
@@ -279,8 +279,7 @@ class MISPConnector:
             "type": attr_type,
             "value": value,
             "comment": comment,
-            "to_ids": attr_type
-            not in ("text", "comment", "other"),
+            "to_ids": attr_type not in ("text", "comment", "other"),
             "distribution": str(_DEFAULT_DISTRIBUTION),
         }
 
@@ -341,6 +340,7 @@ class MISPConnector:
             ctx = None
             if not self._verify_ssl:
                 import ssl
+
                 ctx = ssl.create_default_context()
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
@@ -371,6 +371,7 @@ class MISPConnector:
             ctx = None
             if not self._verify_ssl:
                 import ssl
+
                 ctx = ssl.create_default_context()
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE

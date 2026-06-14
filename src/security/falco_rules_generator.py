@@ -26,7 +26,31 @@ logger = logging.getLogger(__name__)
 def _yaml_str(value: str) -> str:
     """Minimal YAML scalar quoting for single-line strings."""
     # Quote if string contains special characters
-    specials = (":", "#", "{", "}", "[", "]", ",", "&", "*", "?", "|", "-", "<", ">", "=", "!", "%", "@", "`", "'", '"', "\n", "\\")
+    specials = (
+        ":",
+        "#",
+        "{",
+        "}",
+        "[",
+        "]",
+        ",",
+        "&",
+        "*",
+        "?",
+        "|",
+        "-",
+        "<",
+        ">",
+        "=",
+        "!",
+        "%",
+        "@",
+        "`",
+        "'",
+        '"',
+        "\n",
+        "\\",
+    )
     if any(c in value for c in specials) or not value:
         escaped = value.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
@@ -331,9 +355,7 @@ class FalcoRulesGenerator:
         str — Valid Falco YAML content.
         """
         try:
-            header = _FALCO_HEADER.format(
-                timestamp=datetime.now(timezone.utc).isoformat()
-            )
+            header = _FALCO_HEADER.format(timestamp=datetime.now(timezone.utc).isoformat())
             self._generated_rules = header + _BUILTIN_RULES
             return self._generated_rules
         except Exception as exc:  # noqa: BLE001
@@ -385,9 +407,7 @@ class FalcoRulesGenerator:
             logger.error("falco: generate_rules error: %s", exc)
             return self._generated_rules or ""
 
-    def save_rules(
-        self, output_path: str = "/etc/falco/rules.d/tranc3.yaml"
-    ) -> bool:
+    def save_rules(self, output_path: str = "/etc/falco/rules.d/tranc3.yaml") -> bool:
         """
         Write the most recently generated rules to ``output_path``.
 
@@ -407,7 +427,9 @@ class FalcoRulesGenerator:
             if not rules:
                 logger.warning("falco: no rules to write")
                 return False
-            os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
+            os.makedirs(
+                os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True
+            )
             with open(output_path, "w", encoding="utf-8") as fh:
                 fh.write(rules)
             logger.info("falco: rules written to %s (%d bytes)", output_path, len(rules))

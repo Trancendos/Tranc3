@@ -52,6 +52,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF  # noqa: E402
 # Algorithm info
 # ---------------------------------------------------------------------------
 
+
 def get_algorithm_info() -> dict:
     """Return metadata about the algorithms actually in use."""
     if _PQ_AVAILABLE:
@@ -77,6 +78,7 @@ def get_algorithm_info() -> dict:
 # ---------------------------------------------------------------------------
 # QuantumKEM
 # ---------------------------------------------------------------------------
+
 
 class QuantumKEM:
     """
@@ -163,6 +165,7 @@ class QuantumKEM:
         eph_pub = eph_priv.public_key()
 
         from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
+
         peer_pub = X25519PublicKey.from_public_bytes(peer_public_bytes)
         raw_ss = eph_priv.exchange(peer_pub)
 
@@ -184,6 +187,7 @@ class QuantumKEM:
 
     def _x25519_decapsulate(self, ciphertext: bytes, private_key_bytes: bytes) -> bytes:
         from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
+
         # ciphertext IS the ephemeral public key
         eph_pub = X25519PublicKey.from_public_bytes(ciphertext)
         priv = X25519PrivateKey.from_private_bytes(private_key_bytes)
@@ -201,6 +205,7 @@ class QuantumKEM:
 # ---------------------------------------------------------------------------
 # QuantumSignature
 # ---------------------------------------------------------------------------
+
 
 class QuantumSignature:
     """
@@ -274,9 +279,7 @@ class QuantumSignature:
         priv = _ed25519.Ed25519PrivateKey.from_private_bytes(private_key_bytes)
         return priv.sign(message)
 
-    def _ed25519_verify(
-        self, message: bytes, signature: bytes, public_key_bytes: bytes
-    ) -> bool:
+    def _ed25519_verify(self, message: bytes, signature: bytes, public_key_bytes: bytes) -> bool:
         try:
             pub = _ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
             pub.verify(signature, message)
@@ -288,6 +291,7 @@ class QuantumSignature:
 # ---------------------------------------------------------------------------
 # HybridEncryption
 # ---------------------------------------------------------------------------
+
 
 class HybridEncryption:
     """

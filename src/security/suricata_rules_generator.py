@@ -41,7 +41,7 @@ def _clean(text: str) -> str:
 def _metadata(rev: int = 1, tags: Optional[List[str]] = None) -> str:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     tag_str = ", ".join(tags or ["tranc3"])
-    return f'metadata:created_at {ts}, updated_at {ts}, tag {tag_str}; rev:{rev};'
+    return f"metadata:created_at {ts}, updated_at {ts}, tag {tag_str}; rev:{rev};"
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +118,7 @@ _BUILTIN_RULES: List[tuple[str, str]] = [
     ),
     # ── JWT manipulation ───────────────────────────────────────────────────
     (
-        'JWT — alg:none algorithm confusion',
+        "JWT — alg:none algorithm confusion",
         'alert http any any -> $HTTP_SERVERS any (msg:"TRANC3 JWT alg:none manipulation"; flow:established,to_server; http.header; content:"Authorization"; http.request_body; pcre:"/\\"alg\\"\\s*:\\s*\\"none\\"/i"; __META__ sid:__SID__;)',
     ),
     (
@@ -305,9 +305,7 @@ class SuricataRulesGenerator:
                 try:
                     rule = self._rule_from_pattern(pattern)
                     if rule:
-                        dynamic_lines.append(
-                            f"# Dynamic[{idx}]: {pattern.get('name', 'unknown')}"
-                        )
+                        dynamic_lines.append(f"# Dynamic[{idx}]: {pattern.get('name', 'unknown')}")
                         dynamic_lines.append(rule)
                         dynamic_lines.append("")
                         count += 1
@@ -353,19 +351,19 @@ class SuricataRulesGenerator:
                 safe_payload = _clean(payload_pattern)
                 # Match in both URI and body
                 rule = (
-                    f'alert http any any -> $HTTP_SERVERS any '
+                    f"alert http any any -> $HTTP_SERVERS any "
                     f'(msg:"{safe_msg}"; flow:established,to_server; '
                     f'http.request_body; content:"{safe_payload}"; nocase; '
-                    f'__META__ sid:__SID__;)'
+                    f"__META__ sid:__SID__;)"
                 )
             else:
                 # Generic: alert on any request referencing the CVE ID string
                 # (e.g., scanners that include CVE IDs in their probes)
                 rule = (
-                    f'alert http any any -> $HTTP_SERVERS any '
+                    f"alert http any any -> $HTTP_SERVERS any "
                     f'(msg:"{safe_msg} generic probe"; flow:established,to_server; '
                     f'http.uri; content:"{safe_cve}"; nocase; '
-                    f'__META__ sid:__SID__;)'
+                    f"__META__ sid:__SID__;)"
                 )
 
             rule = rule.replace("__META__", meta).replace("__SID__", str(sid))
@@ -375,9 +373,7 @@ class SuricataRulesGenerator:
             logger.error("suricata: rule_from_cve error [%s]: %s", cve_id, exc)
             return ""
 
-    def save_rules(
-        self, output_path: str = "/etc/suricata/rules/tranc3.rules"
-    ) -> bool:
+    def save_rules(self, output_path: str = "/etc/suricata/rules/tranc3.rules") -> bool:
         """
         Write the most recently generated rules to ``output_path``.
 
@@ -401,9 +397,7 @@ class SuricataRulesGenerator:
                 os.makedirs(dir_path, exist_ok=True)
             with open(output_path, "w", encoding="utf-8") as fh:
                 fh.write(rules)
-            logger.info(
-                "suricata: rules written to %s (%d bytes)", output_path, len(rules)
-            )
+            logger.info("suricata: rules written to %s (%d bytes)", output_path, len(rules))
             return True
         except Exception as exc:  # noqa: BLE001
             logger.error("suricata: save_rules error [%s]: %s", output_path, exc)
@@ -426,9 +420,9 @@ class SuricataRulesGenerator:
         msg = f"TRANC3 Dynamic: {name}"
 
         rule = (
-            f'{action} http any any -> $HTTP_SERVERS any '
+            f"{action} http any any -> $HTTP_SERVERS any "
             f'(msg:"{msg}"; flow:established,to_server; '
             f'http.request_body; content:"{raw}"; nocase; '
-            f'__META__ sid:__SID__;)'
+            f"__META__ sid:__SID__;)"
         )
         return rule.replace("__META__", meta).replace("__SID__", str(sid))

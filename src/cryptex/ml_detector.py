@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 try:
     from sklearn.ensemble import IsolationForest  # type: ignore
+
     _SKLEARN_AVAILABLE = True
 except ImportError:
     _SKLEARN_AVAILABLE = False
@@ -123,8 +124,7 @@ class MLThreatDetector:
         n = len(vectors)
         means = [sum(v[i] for v in vectors) / n for i in range(n_features)]
         variances = [
-            sum((v[i] - means[i]) ** 2 for v in vectors) / max(1, n)
-            for i in range(n_features)
+            sum((v[i] - means[i]) ** 2 for v in vectors) / max(1, n) for i in range(n_features)
         ]
         stds = [math.sqrt(var) for var in variances]
         self._zscore_means = means

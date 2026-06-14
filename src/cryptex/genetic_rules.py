@@ -8,22 +8,69 @@ from dataclasses import dataclass
 # Attack token vocabulary for pattern generation
 _VOCAB: list[str] = [
     # SQL injection
-    "union", "select", "insert", "drop", "delete", "update", "from", "where",
-    "or", "and", "1=1", "--", ";--", "sleep(", "benchmark(", "xp_cmdshell",
+    "union",
+    "select",
+    "insert",
+    "drop",
+    "delete",
+    "update",
+    "from",
+    "where",
+    "or",
+    "and",
+    "1=1",
+    "--",
+    ";--",
+    "sleep(",
+    "benchmark(",
+    "xp_cmdshell",
     # XSS
-    "<script", "alert(", "onerror=", "onload=", "javascript:", "eval(",
-    "document.cookie", "innerHTML", "<iframe", "src=",
+    "<script",
+    "alert(",
+    "onerror=",
+    "onload=",
+    "javascript:",
+    "eval(",
+    "document.cookie",
+    "innerHTML",
+    "<iframe",
+    "src=",
     # Path traversal
-    "../", "..\\", "%2e%2e", "%2f", "/etc/passwd", "c:\\windows",
-    "..%2f", "%252e",
+    "../",
+    "..\\",
+    "%2e%2e",
+    "%2f",
+    "/etc/passwd",
+    "c:\\windows",
+    "..%2f",
+    "%252e",
     # Command injection
-    ";ls", "|cat", "&&id", "`whoami`", "$(cmd)", "/bin/sh", "cmd.exe",
-    "ping -c", "wget http", "curl http",
+    ";ls",
+    "|cat",
+    "&&id",
+    "`whoami`",
+    "$(cmd)",
+    "/bin/sh",
+    "cmd.exe",
+    "ping -c",
+    "wget http",
+    "curl http",
     # JWT attacks
-    "alg:none", "hs256", "rs256", "eyj", "none\"", "algorithm\":\"none",
+    "alg:none",
+    "hs256",
+    "rs256",
+    "eyj",
+    'none"',
+    'algorithm":"none',
     # SSRF
-    "169.254.169.254", "metadata.google", "localhost:", "127.0.0.1:",
-    "file://", "dict://", "gopher://", "0x7f",
+    "169.254.169.254",
+    "metadata.google",
+    "localhost:",
+    "127.0.0.1:",
+    "file://",
+    "dict://",
+    "gopher://",
+    "0x7f",
 ]
 
 _MUTATE_OPS = ("insert", "delete", "replace")
@@ -103,15 +150,11 @@ class GeneticRuleEvolver:
         if op == "insert":
             new_token = re.escape(random.choice(tokens))
             pos = random.randint(0, len(mutated.pattern))
-            mutated.pattern = (
-                mutated.pattern[:pos] + new_token + mutated.pattern[pos:]
-            )
+            mutated.pattern = mutated.pattern[:pos] + new_token + mutated.pattern[pos:]
         elif op == "delete" and len(mutated.pattern) > 3:
             pos = random.randint(0, max(0, len(mutated.pattern) - 2))
             length = random.randint(1, min(5, len(mutated.pattern) - pos))
-            mutated.pattern = (
-                mutated.pattern[:pos] + mutated.pattern[pos + length:]
-            )
+            mutated.pattern = mutated.pattern[:pos] + mutated.pattern[pos + length :]
         elif op == "replace":
             new_pattern = self._random_pattern()
             mutated.pattern = new_pattern
@@ -128,9 +171,7 @@ class GeneticRuleEvolver:
                 ["sqli", "xss", "traversal", "cmdinj", "jwt", "ssrf"],
                 k=random.randint(1, 3),
             )
-            pop.append(
-                Rule(pattern=pattern, weight=weight, tags=tag_sample, generation=0)
-            )
+            pop.append(Rule(pattern=pattern, weight=weight, tags=tag_sample, generation=0))
         return pop
 
     def _select_parents(self, population: list[Rule]) -> tuple[Rule, Rule]:

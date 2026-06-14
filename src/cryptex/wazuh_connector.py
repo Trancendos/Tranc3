@@ -164,9 +164,7 @@ class WazuhConnector:
         try:
             import base64
 
-            credentials = base64.b64encode(
-                f"{self._username}:{self._password}".encode()
-            ).decode()
+            credentials = base64.b64encode(f"{self._username}:{self._password}".encode()).decode()
             req = Request(
                 f"{self._url}/security/user/authenticate",
                 method="GET",
@@ -439,9 +437,8 @@ class WazuhConnector:
             if resp.get("error", 1) != 0:
                 logger.warning("wazuh: register_agent error: %s", resp.get("message"))
                 return None
-            agent_id: Optional[str] = (
-                resp.get("data", {}).get("id")
-                or resp.get("data", {}).get("agent_id")
+            agent_id: Optional[str] = resp.get("data", {}).get("id") or resp.get("data", {}).get(
+                "agent_id"
             )
             if agent_id:
                 logger.info("wazuh: registered agent '%s' → id=%s", name, agent_id)
@@ -496,9 +493,7 @@ class WazuhConnector:
             return 0
         try:
             with self._buffer_lock:
-                row = self._buffer_conn.execute(
-                    "SELECT COUNT(*) FROM alert_buffer"
-                ).fetchone()
+                row = self._buffer_conn.execute("SELECT COUNT(*) FROM alert_buffer").fetchone()
             return row[0] if row else 0
         except Exception:  # noqa: BLE001
             return 0

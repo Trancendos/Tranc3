@@ -38,6 +38,7 @@ _SOFTHSM_PATHS = [
 
 try:
     import pkcs11  # type: ignore
+
     _PKCS11_AVAILABLE = True
     logger.debug("python-pkcs11 available")
 except ImportError:
@@ -51,6 +52,7 @@ try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
     _CRYPTO_AVAILABLE = True
 except ImportError:
     _CRYPTO_AVAILABLE = False
@@ -60,6 +62,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Helper: software key store entry
 # ---------------------------------------------------------------------------
+
 
 class _SoftwareKey:
     """In-process software-simulated HSM key."""
@@ -93,6 +96,7 @@ class _SoftwareKey:
 # ---------------------------------------------------------------------------
 # Main class
 # ---------------------------------------------------------------------------
+
 
 class HSMBridge:
     """
@@ -251,10 +255,14 @@ class HSMBridge:
 
     def _pkcs11_encrypt(self, key_id: str, plaintext: bytes) -> bytes:
         with self._pkcs11_token.open(user_pin=self._pin) as session:
-            keys = list(session.get_objects({
-                pkcs11.Attribute.LABEL: key_id,
-                pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
-            }))
+            keys = list(
+                session.get_objects(
+                    {
+                        pkcs11.Attribute.LABEL: key_id,
+                        pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
+                    }
+                )
+            )
             if not keys:
                 raise KeyError(f"PKCS#11: key '{key_id}' not found")
             iv = secrets.token_bytes(12)
@@ -284,14 +292,20 @@ class HSMBridge:
 
     def _pkcs11_decrypt(self, key_id: str, ciphertext: bytes) -> bytes:
         with self._pkcs11_token.open(user_pin=self._pin) as session:
-            keys = list(session.get_objects({
-                pkcs11.Attribute.LABEL: key_id,
-                pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
-            }))
+            keys = list(
+                session.get_objects(
+                    {
+                        pkcs11.Attribute.LABEL: key_id,
+                        pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
+                    }
+                )
+            )
             if not keys:
                 raise KeyError(f"PKCS#11: key '{key_id}' not found")
             iv, ct = ciphertext[:12], ciphertext[12:]
-            return bytes(keys[0].decrypt(ct, mechanism=pkcs11.Mechanism.AES_GCM, mechanism_param=iv))
+            return bytes(
+                keys[0].decrypt(ct, mechanism=pkcs11.Mechanism.AES_GCM, mechanism_param=iv)
+            )
 
     # ------------------------------------------------------------------
     # Sign / Verify
@@ -319,10 +333,14 @@ class HSMBridge:
 
     def _pkcs11_sign(self, key_id: str, data: bytes, mechanism: str) -> bytes:
         with self._pkcs11_token.open(user_pin=self._pin) as session:
-            keys = list(session.get_objects({
-                pkcs11.Attribute.LABEL: key_id,
-                pkcs11.Attribute.CLASS: pkcs11.ObjectClass.PRIVATE_KEY,
-            }))
+            keys = list(
+                session.get_objects(
+                    {
+                        pkcs11.Attribute.LABEL: key_id,
+                        pkcs11.Attribute.CLASS: pkcs11.ObjectClass.PRIVATE_KEY,
+                    }
+                )
+            )
             if not keys:
                 raise KeyError(f"PKCS#11: private key '{key_id}' not found")
             mech = getattr(pkcs11.Mechanism, mechanism, pkcs11.Mechanism.SHA256_RSA_PKCS)
@@ -353,10 +371,14 @@ class HSMBridge:
     def _pkcs11_verify(self, key_id: str, data: bytes, signature: bytes) -> bool:
         try:
             with self._pkcs11_token.open(user_pin=self._pin) as session:
-                keys = list(session.get_objects({
-                    pkcs11.Attribute.LABEL: key_id,
-                    pkcs11.Attribute.CLASS: pkcs11.ObjectClass.PUBLIC_KEY,
-                }))
+                keys = list(
+                    session.get_objects(
+                        {
+                            pkcs11.Attribute.LABEL: key_id,
+                            pkcs11.Attribute.CLASS: pkcs11.ObjectClass.PUBLIC_KEY,
+                        }
+                    )
+                )
                 if not keys:
                     return False
                 keys[0].verify(data, signature, mechanism=pkcs11.Mechanism.SHA256_RSA_PKCS)
@@ -389,7 +411,13 @@ class HSMBridge:
                         try:
                             label = obj[pkcs11.Attribute.LABEL]
                             cls = obj[pkcs11.Attribute.CLASS]
-                            result.append({"key_id": label, "class": str(cls), "backend": self._active_backend})
+                            result.append(
+                                {
+                                    "key_id": label,
+                                    "class": str(cls),
+                                    "backend": self._active_backend,
+                                }
+                            )
                         except Exception:
                             pass
                     return result
@@ -430,10 +458,14 @@ class HSMBridge:
                 return None
             if self._active_backend in ("softhsm2", "yubihsm2"):
                 with self._pkcs11_token.open(user_pin=self._pin) as session:
-                    keys = list(session.get_objects({
-                        pkcs11.Attribute.LABEL: key_id,
-                        pkcs11.Attribute.CLASS: pkcs11.ObjectClass.PUBLIC_KEY,
-                    }))
+                    keys = list(
+                        session.get_objects(
+                            {
+                                pkcs11.Attribute.LABEL: key_id,
+                                pkcs11.Attribute.CLASS: pkcs11.ObjectClass.PUBLIC_KEY,
+                            }
+                        )
+                    )
                     if keys:
                         # python-pkcs11 exposes DER via CKA_VALUE for RSA public keys
                         der = keys[0].get(pkcs11.Attribute.VALUE, None)

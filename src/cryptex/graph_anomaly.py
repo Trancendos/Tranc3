@@ -4,6 +4,7 @@ from __future__ import annotations
 
 try:
     import networkx as nx  # type: ignore
+
     _NX_AVAILABLE = True
 except ImportError:
     _NX_AVAILABLE = False
@@ -112,6 +113,7 @@ class ServiceCallGraph:
     def baseline(self) -> None:
         """Snapshot the current graph state as the normal baseline."""
         import copy
+
         self._baseline_adj = copy.deepcopy(self._graph)
 
         if self._nx_available:
@@ -126,9 +128,7 @@ class ServiceCallGraph:
 
         # New nodes
         for node in current_nodes - baseline_nodes:
-            anomalies.append(
-                {"type": "new_node", "src": node, "dst": "", "score": 1.0}
-            )
+            anomalies.append({"type": "new_node", "src": node, "dst": "", "score": 1.0})
 
         # Edge anomalies
         for src, dsts in self._graph.items():

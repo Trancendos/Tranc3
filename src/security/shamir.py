@@ -61,6 +61,7 @@ def _bytes_to_int(b: bytes) -> int:
 # Core class
 # ---------------------------------------------------------------------------
 
+
 class ShamirSecretSharing:
     """
     Shamir's Secret Sharing over GF(2^521 - 1).
@@ -134,8 +135,9 @@ class ShamirSecretSharing:
 
     def combine_hex(self, shares_hex: list[str]) -> str:
         """Combine '<x_hex>:<y_hex>' shares and return the hex-encoded secret."""
-        parsed = [(int(s.split(":", 1)[0], 16), bytes.fromhex(s.split(":", 1)[1]))
-                  for s in shares_hex]
+        parsed = [
+            (int(s.split(":", 1)[0], 16), bytes.fromhex(s.split(":", 1)[1])) for s in shares_hex
+        ]
         return self.combine(parsed).hex()
 
 
