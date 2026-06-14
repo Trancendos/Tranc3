@@ -1,0 +1,40 @@
+version: "3.8"
+# The Ice Box (CAPEv2 Sandbox) — Neonach — Port 8090
+# Zero-cost self-hosted malware sandbox + threat isolation.
+# Uses CAPEv2 (Community Automated Portable Executable Analysis) — modern Cuckoo fork.
+# WARNING: Run in an ISOLATED network segment. Never expose analysis VMs to the internet.
+
+services:
+  icebox-web:
+    image: python:3.11-slim
+    container_name: the-ice-box
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    working_dir: /app
+    volumes:
+      - ./init.py:/app/init.py:ro
+      - icebox-data:/app/data
+    command: python /app/init.py
+    environment:
+      ICEBOX_PORT: "8090"
+      ICEBOX_SECRET: "${ICEBOX_SECRET_KEY}"
+      # Integration points
+      WAZUH_URL: "${WAZUH_URL:-http://localhost:55000}"
+      MISP_URL: "${MISP_URL:-http://localhost:8888}"
+      MISP_KEY: "${MISP_API_KEY:-}"
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.icebox.rule=PathPrefix(`/sandbox`)"
+      - "traefik.http.routers.icebox.entrypoints=web"
+      - "traefik.http.services.icebox.loadbalancer.server.port=8090"
+
+volumes:
+  icebox-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network

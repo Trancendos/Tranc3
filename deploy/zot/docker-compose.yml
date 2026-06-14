@@ -1,0 +1,34 @@
+version: "3.8"
+# The Artifactory (Zot OCI Registry) — Lunascene — Port 5001
+# Zero-cost self-hosted OCI artifact registry (Docker images, Helm charts, WASM).
+
+services:
+  zot:
+    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    container_name: the-artifactory
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    volumes:
+      - zot-data:/var/lib/registry
+      - ./config.json:/etc/zot/config.json:ro
+    networks:
+      - tranc3-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/v2/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zot.rule=PathPrefix(`/registry`)"
+      - "traefik.http.routers.zot.entrypoints=web"
+      - "traefik.http.services.zot.loadbalancer.server.port=5000"
+
+volumes:
+  zot-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network

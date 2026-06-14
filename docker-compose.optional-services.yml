@@ -1,0 +1,587 @@
+version: "3.9"
+# Trancendos Optional Services — Unified Compose
+#
+# Start individual services with Docker profiles:
+#   docker compose -f docker-compose.optional-services.yml --profile library up -d
+#   docker compose -f docker-compose.optional-services.yml --profile documents up -d
+#   docker compose -f docker-compose.optional-services.yml --profile design up -d
+#   docker compose -f docker-compose.optional-services.yml --profile workshop up -d
+#   docker compose -f docker-compose.optional-services.yml --profile scheduling up -d
+#   docker compose -f docker-compose.optional-services.yml --profile registry up -d
+#   docker compose -f docker-compose.optional-services.yml --profile api-marketplace up -d
+#   docker compose -f docker-compose.optional-services.yml --profile sandbox up -d
+#   docker compose -f docker-compose.optional-services.yml --profile health up -d
+#   docker compose -f docker-compose.optional-services.yml --profile all up -d
+#
+# Or use the management script:
+#   bash scripts/optional-services.sh start all
+#   bash scripts/optional-services.sh status
+#   bash scripts/optional-services.sh stop library
+
+x-healthcheck: &default-healthcheck
+  interval: 15s
+  timeout: 5s
+  retries: 5
+  start_period: 30s
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+# ──────────────────────────────────────────────────────────────
+# The Library — Outline Wiki — Zimik — Port 3300
+# Profile: library
+# ──────────────────────────────────────────────────────────────
+services:
+  outline:
+    image: outlinewiki/outline:latest
+    container_name: the-library
+    <<: *default-restart
+    profiles: ["library", "all"]
+    ports:
+      - "3300:3000"
+    environment:
+      SECRET_KEY: "${OUTLINE_SECRET_KEY}"
+      UTILS_SECRET: "${OUTLINE_UTILS_SECRET}"
+      DATABASE_URL: "postgres://outline:${OUTLINE_DB_PASSWORD}@outline-db:5432/outline"
+      REDIS_URL: "redis://outline-redis:6379"
+      URL: "${OUTLINE_URL:-http://localhost:3300}"
+      PORT: "3000"
+      FILE_STORAGE: "local"
+      FILE_STORAGE_LOCAL_ROOT_DIR: "/var/lib/outline/data"
+      FILE_STORAGE_UPLOAD_MAX_SIZE: "26214400"
+      OIDC_CLIENT_ID: "${INFINITY_OIDC_CLIENT_ID:-outline}"
+      OIDC_CLIENT_SECRET: "${INFINITY_OIDC_CLIENT_SECRET}"
+      OIDC_AUTH_URI: "${INFINITY_URL:-http://localhost:8005}/oauth/authorize"
+      OIDC_TOKEN_URI: "${INFINITY_URL:-http://localhost:8005}/oauth/token"
+      OIDC_USERINFO_URI: "${INFINITY_URL:-http://localhost:8005}/oauth/userinfo"
+      OIDC_DISPLAY_NAME: "Trancendos Infinity"
+      OIDC_SCOPES: "openid profile email"
+      FORCE_HTTPS: "false"
+      ENABLE_UPDATES: "false"
+      LOG_LEVEL: "info"
+    volumes:
+      - outline-data:/var/lib/outline/data
+    depends_on:
+      outline-db:
+        condition: service_healthy
+      outline-redis:
+        condition: service_started
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.outline.rule=PathPrefix(`/library`)"
+      - "traefik.http.routers.outline.entrypoints=web"
+      - "traefik.http.services.outline.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/_health"]
+      <<: *default-healthcheck
+
+  outline-db:
+    image: postgres:15-alpine
+    container_name: outline-db
+    <<: *default-restart
+    profiles: ["library", "all"]
+    environment:
+      POSTGRES_DB: outline
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: "${OUTLINE_DB_PASSWORD}"
+    volumes:
+      - outline-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  outline-redis:
+    image: redis:7-alpine
+    container_name: outline-redis
+    <<: *default-restart
+    profiles: ["library", "all"]
+    networks:
+      - tranc3-network
+
+  # ──────────────────────────────────────────────────────────────
+  # DocUtari — Paperless-ngx — Port 8765
+  # Profile: documents
+  # ──────────────────────────────────────────────────────────────
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: docutari
+    <<: *default-restart
+    profiles: ["documents", "all"]
+    ports:
+      - "8765:8000"
+    environment:
+      PAPERLESS_REDIS: "redis://paperless-redis:6379"
+      PAPERLESS_DBHOST: "paperless-db"
+      PAPERLESS_DBNAME: "paperless"
+      PAPERLESS_DBUSER: "paperless"
+      PAPERLESS_DBPASS: "${PAPERLESS_DB_PASSWORD}"
+      PAPERLESS_SECRET_KEY: "${PAPERLESS_SECRET_KEY}"
+      PAPERLESS_URL: "${PAPERLESS_URL:-http://localhost:8765}"
+      PAPERLESS_ADMIN_USER: "${PAPERLESS_ADMIN_USER:-admin}"
+      PAPERLESS_ADMIN_PASSWORD: "${PAPERLESS_ADMIN_PASSWORD}"
+      PAPERLESS_ADMIN_MAIL: "${PAPERLESS_ADMIN_EMAIL:-ops@trancendos.com}"
+      PAPERLESS_OCR_LANGUAGE: "eng"
+      PAPERLESS_TIME_ZONE: "${TZ:-UTC}"
+      PAPERLESS_CONSUMER_POLLING: "60"
+      USERMAP_UID: "1000"
+      USERMAP_GID: "1000"
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - paperless-export:/usr/src/paperless/export
+      - paperless-consume:/usr/src/paperless/consume
+    depends_on:
+      paperless-db:
+        condition: service_healthy
+      paperless-redis:
+        condition: service_started
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.paperless.rule=PathPrefix(`/documents`)"
+      - "traefik.http.routers.paperless.entrypoints=web"
+      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/api/"]
+      <<: *default-healthcheck
+
+  paperless-db:
+    image: postgres:15-alpine
+    container_name: paperless-db
+    <<: *default-restart
+    profiles: ["documents", "all"]
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: "${PAPERLESS_DB_PASSWORD}"
+    volumes:
+      - paperless-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    <<: *default-restart
+    profiles: ["documents", "all"]
+    networks:
+      - tranc3-network
+
+  # ──────────────────────────────────────────────────────────────
+  # Fabulousa — Penpot Design — Baron Von Hilton — Port 9001
+  # Profile: design
+  # ──────────────────────────────────────────────────────────────
+  penpot-frontend:
+    image: penpotapp/frontend:latest
+    container_name: fabulousa-frontend
+    <<: *default-restart
+    profiles: ["design", "all"]
+    ports:
+      - "9001:80"
+    environment:
+      PENPOT_FLAGS: "${PENPOT_FLAGS:-enable-registration enable-login disable-email-verification}"
+    depends_on:
+      - penpot-backend
+      - penpot-exporter
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.penpot.rule=PathPrefix(`/design`)"
+      - "traefik.http.routers.penpot.entrypoints=web"
+      - "traefik.http.services.penpot.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      <<: *default-healthcheck
+
+  penpot-backend:
+    image: penpotapp/backend:latest
+    container_name: fabulousa-backend
+    <<: *default-restart
+    profiles: ["design", "all"]
+    environment:
+      PENPOT_FLAGS: "${PENPOT_FLAGS:-enable-registration enable-login disable-email-verification}"
+      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY}"
+      PENPOT_DATABASE_URI: "postgresql://penpot:${PENPOT_DB_PASSWORD}@penpot-db/penpot"
+      PENPOT_DATABASE_USERNAME: "penpot"
+      PENPOT_DATABASE_PASSWORD: "${PENPOT_DB_PASSWORD}"
+      PENPOT_REDIS_URI: "redis://penpot-redis/0"
+      PENPOT_ASSETS_STORAGE_BACKEND: "assets-fs"
+      PENPOT_STORAGE_ASSETS_FS_DIRECTORY: "/opt/data/assets"
+      PENPOT_TELEMETRY_ENABLED: "false"
+      PENPOT_PUBLIC_URI: "${PENPOT_PUBLIC_URI:-http://localhost:9001}"
+    volumes:
+      - penpot-data:/opt/data
+    depends_on:
+      penpot-db:
+        condition: service_healthy
+      penpot-redis:
+        condition: service_started
+    networks:
+      - tranc3-network
+
+  penpot-exporter:
+    image: penpotapp/exporter:latest
+    container_name: fabulousa-exporter
+    <<: *default-restart
+    profiles: ["design", "all"]
+    environment:
+      PENPOT_PUBLIC_URI: "http://penpot-frontend"
+      PENPOT_REDIS_URI: "redis://penpot-redis/0"
+    networks:
+      - tranc3-network
+
+  penpot-db:
+    image: postgres:15-alpine
+    container_name: penpot-db
+    <<: *default-restart
+    profiles: ["design", "all"]
+    stop_signal: SIGINT
+    environment:
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      POSTGRES_DB: penpot
+      POSTGRES_USER: penpot
+      POSTGRES_PASSWORD: "${PENPOT_DB_PASSWORD}"
+    volumes:
+      - penpot-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penpot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  penpot-redis:
+    image: redis:7-alpine
+    container_name: penpot-redis
+    <<: *default-restart
+    profiles: ["design", "all"]
+    networks:
+      - tranc3-network
+
+  # ──────────────────────────────────────────────────────────────
+  # The Workshop — Forgejo + act-runner — Port 3456
+  # Profile: workshop
+  # ──────────────────────────────────────────────────────────────
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:7
+    container_name: the-workshop
+    <<: *default-restart
+    profiles: ["workshop", "all"]
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      FORGEJO__server__ROOT_URL: "${FORGEJO_ROOT_URL:-https://trancendos.com/the-workshop}"
+      FORGEJO__server__APP_NAME: "The Workshop — Trancendos CI/CD"
+      FORGEJO__server__HTTP_PORT: "3000"
+      FORGEJO__server__DOMAIN: "${FORGEJO_DOMAIN:-trancendos.com}"
+      FORGEJO__server__SSH_DOMAIN: "${FORGEJO_DOMAIN:-trancendos.com}"
+      FORGEJO__server__SSH_PORT: "2222"
+      FORGEJO__server__LFS_START_SERVER: "true"
+      FORGEJO__database__DB_TYPE: "sqlite3"
+      FORGEJO__database__PATH: "/data/forgejo/forgejo.db"
+      FORGEJO__repository__DEFAULT_BRANCH: "main"
+      FORGEJO__service__DISABLE_REGISTRATION: "${FORGEJO_DISABLE_REGISTRATION:-false}"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "false"
+      FORGEJO__log__LEVEL: "Info"
+      FORGEJO__security__INSTALL_LOCK: "${INSTALL_LOCK:-false}"
+      FORGEJO__actions__ENABLED: "true"
+      FORGEJO__actions__DEFAULT_ACTIONS_URL: "https://code.forgejo.org"
+      FORGEJO__mailer__ENABLED: "false"
+    ports:
+      - "127.0.0.1:3456:3000"
+      - "2222:22"
+    volumes:
+      - forgejo-data:/data
+    networks:
+      - tranc3-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/-/health"]
+      <<: *default-healthcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.forgejo.rule=PathPrefix(`/the-workshop`)"
+      - "traefik.http.routers.forgejo.entrypoints=web"
+      - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+
+  act-runner:
+    image: "${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}"
+    container_name: the-workshop-runner
+    <<: *default-restart
+    profiles: ["workshop", "all"]
+    depends_on:
+      forgejo:
+        condition: service_healthy
+    environment:
+      FORGEJO_INSTANCE_URL: "http://forgejo:3000/the-workshop"
+      FORGEJO_RUNNER_REGISTRATION_TOKEN: "${RUNNER_REGISTRATION_TOKEN:-}"
+      FORGEJO_RUNNER_NAME: "trancendos-runner-1"
+      FORGEJO_RUNNER_LABELS: "self-hosted,linux,x64"
+      FLY_API_TOKEN: "${FLY_API_TOKEN:-}"
+      CLOUDFLARE_API_TOKEN: "${CF_API_TOKEN:-}"
+      CLOUDFLARE_ACCOUNT_ID: "e0214028cb64d31232f5662548a55e4e"
+    volumes:
+      - act-runner-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - tranc3-network
+
+  # ──────────────────────────────────────────────────────────────
+  # ChronosSphere / ArcStream — Cal.com — Chronos — Port 3001
+  # Profile: scheduling
+  # ──────────────────────────────────────────────────────────────
+  calcom:
+    image: calcom/cal.com:latest
+    container_name: chronossphere
+    <<: *default-restart
+    profiles: ["scheduling", "all"]
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: "postgresql://calcom:${CAL_DB_PASSWORD}@calcom-db:5432/calcom"
+      NEXTAUTH_SECRET: "${CAL_NEXTAUTH_SECRET}"
+      NEXTAUTH_URL: "${CAL_URL:-http://localhost:3001}"
+      NEXT_PUBLIC_WEBAPP_URL: "${CAL_URL:-http://localhost:3001}"
+      CALCOM_TELEMETRY_DISABLED: "1"
+      CALENDSO_ENCRYPTION_KEY: "${CAL_ENCRYPTION_KEY}"
+    depends_on:
+      calcom-db:
+        condition: service_healthy
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calcom.rule=PathPrefix(`/scheduling`)"
+      - "traefik.http.routers.calcom.entrypoints=web"
+      - "traefik.http.services.calcom.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      <<: *default-healthcheck
+
+  calcom-db:
+    image: postgres:15-alpine
+    container_name: calcom-db
+    <<: *default-restart
+    profiles: ["scheduling", "all"]
+    environment:
+      POSTGRES_DB: calcom
+      POSTGRES_USER: calcom
+      POSTGRES_PASSWORD: "${CAL_DB_PASSWORD}"
+    volumes:
+      - calcom-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calcom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  # ──────────────────────────────────────────────────────────────
+  # The Artifactory — Zot OCI Registry — Lunascene — Port 5001
+  # Profile: registry
+  # ──────────────────────────────────────────────────────────────
+  zot:
+    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    container_name: the-artifactory
+    <<: *default-restart
+    profiles: ["registry", "all"]
+    ports:
+      - "5001:5000"
+    volumes:
+      - zot-data:/var/lib/registry
+      - ./deploy/zot/config.json:/etc/zot/config.json:ro
+    networks:
+      - tranc3-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/v2/"]
+      <<: *default-healthcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zot.rule=PathPrefix(`/registry`)"
+      - "traefik.http.routers.zot.entrypoints=web"
+      - "traefik.http.services.zot.loadbalancer.server.port=5000"
+
+  # ──────────────────────────────────────────────────────────────
+  # API Marketplace — Gravitee.io — Solarscene — Port 8082
+  # Profile: api-marketplace
+  # ──────────────────────────────────────────────────────────────
+  gravitee-gateway:
+    image: graviteeio/apim-gateway:4
+    container_name: api-marketplace-gateway
+    <<: *default-restart
+    profiles: ["api-marketplace", "all"]
+    ports:
+      - "8082:8082"
+    environment:
+      gravitee_management_mongodb_uri: "mongodb://gravitee-mongo:27017/gravitee?serverSelectionTimeoutMS=5000"
+      gravitee_ratelimit_mongodb_uri: "mongodb://gravitee-mongo:27017/gravitee?serverSelectionTimeoutMS=5000"
+      gravitee_reporters_elasticsearch_enabled: "false"
+    depends_on:
+      gravitee-mongo:
+        condition: service_healthy
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gravitee-gw.rule=PathPrefix(`/gateway`)"
+      - "traefik.http.routers.gravitee-gw.entrypoints=web"
+      - "traefik.http.services.gravitee-gw.loadbalancer.server.port=8082"
+
+  gravitee-management-api:
+    image: graviteeio/apim-management-api:4
+    container_name: api-marketplace-mgmt
+    <<: *default-restart
+    profiles: ["api-marketplace", "all"]
+    ports:
+      - "8083:8083"
+    environment:
+      gravitee_management_mongodb_uri: "mongodb://gravitee-mongo:27017/gravitee?serverSelectionTimeoutMS=5000"
+      gravitee_analytics_elasticsearch_enabled: "false"
+    depends_on:
+      gravitee-mongo:
+        condition: service_healthy
+    networks:
+      - tranc3-network
+
+  gravitee-portal:
+    image: graviteeio/apim-portal-ui:4
+    container_name: api-marketplace-portal
+    <<: *default-restart
+    profiles: ["api-marketplace", "all"]
+    ports:
+      - "8084:8080"
+    environment:
+      PORTAL_API_URL: "${GRAVITEE_MGMT_URL:-http://localhost:8083}/portal/environments/DEFAULT"
+    depends_on:
+      - gravitee-management-api
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gravitee-portal.rule=PathPrefix(`/api-marketplace`)"
+      - "traefik.http.routers.gravitee-portal.entrypoints=web"
+      - "traefik.http.services.gravitee-portal.loadbalancer.server.port=8080"
+
+  gravitee-mongo:
+    image: mongo:6-jammy
+    container_name: gravitee-mongo
+    <<: *default-restart
+    profiles: ["api-marketplace", "all"]
+    volumes:
+      - gravitee-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  # ──────────────────────────────────────────────────────────────
+  # The Ice Box — Sandbox — Neonach — Port 8090
+  # Profile: sandbox
+  # ──────────────────────────────────────────────────────────────
+  icebox:
+    image: python:3.11-slim
+    container_name: the-ice-box
+    <<: *default-restart
+    profiles: ["sandbox", "all"]
+    ports:
+      - "8090:8090"
+    working_dir: /app
+    volumes:
+      - ./deploy/cuckoo/init.py:/app/init.py:ro
+      - icebox-data:/app/data
+    command: python /app/init.py
+    environment:
+      ICEBOX_PORT: "8090"
+      ICEBOX_SECRET: "${ICEBOX_SECRET_KEY}"
+      WAZUH_URL: "${WAZUH_URL:-http://localhost:55000}"
+      MISP_URL: "${MISP_URL:-http://localhost:8888}"
+      MISP_KEY: "${MISP_API_KEY:-}"
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.icebox.rule=PathPrefix(`/sandbox`)"
+      - "traefik.http.routers.icebox.entrypoints=web"
+      - "traefik.http.services.icebox.loadbalancer.server.port=8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')"]
+      <<: *default-healthcheck
+
+  # ──────────────────────────────────────────────────────────────
+  # Optional Services Health Monitor — Port 8039
+  # Profile: health (always recommended alongside any service)
+  # ──────────────────────────────────────────────────────────────
+  optional-services-health:
+    build:
+      context: ./workers/optional-services-health
+      dockerfile: Dockerfile
+    container_name: optional-services-health
+    <<: *default-restart
+    profiles: ["health", "all"]
+    ports:
+      - "8039:8039"
+    environment:
+      PORT: "8039"
+      OBSERVATORY_URL: "${OBSERVATORY_URL:-http://localhost:8007}"
+      SERVICES: >
+        library:http://the-library:3000/_health,
+        documents:http://docutari:8000/api/,
+        design:http://fabulousa-frontend/,
+        workshop:http://the-workshop:3000/-/health,
+        scheduling:http://chronossphere:3000/api/health,
+        registry:http://the-artifactory:5000/v2/,
+        sandbox:http://the-ice-box:8090/health
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.optional-health.rule=PathPrefix(`/optional-health`)"
+      - "traefik.http.routers.optional-health.entrypoints=web"
+      - "traefik.http.services.optional-health.loadbalancer.server.port=8039"
+
+# ──────────────────────────────────────────────────────────────
+# Volumes
+# ──────────────────────────────────────────────────────────────
+volumes:
+  outline-data:
+  outline-db-data:
+  paperless-data:
+  paperless-media:
+  paperless-export:
+  paperless-consume:
+  paperless-db-data:
+  penpot-data:
+  penpot-db-data:
+  forgejo-data:
+    name: forgejo-data
+  act-runner-data:
+    name: act-runner-data
+  calcom-db-data:
+  zot-data:
+  gravitee-mongo-data:
+  icebox-data:
+
+# ──────────────────────────────────────────────────────────────
+# Networks
+# ──────────────────────────────────────────────────────────────
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network
