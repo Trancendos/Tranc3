@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Send, Settings, Globe, Zap, LogOut, Brain, LayoutDashboard } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import LoginPage from './LoginPage'
+import { useNavigate } from 'react-router'
 import UpgradeModal from './UpgradeModal'
+import { useAuthStore } from './store/authStore'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -35,8 +35,8 @@ const EMOTIONS = [
 ]
 
 export default function ChatView() {
-  const [token, setToken] = useState(localStorage.getItem('tranc3_token') || '')
-  const [username, setUsername] = useState(localStorage.getItem('tranc3_user') || '')
+  const { token, user, logout: storeLogout } = useAuthStore()
+  const username = user?.name ?? user?.email ?? ''
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -83,16 +83,8 @@ export default function ChatView() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleLogin = (t: string, u: string) => {
-    setToken(t)
-    setUsername(u)
-  }
-
   const logout = () => {
-    localStorage.removeItem('tranc3_token')
-    localStorage.removeItem('tranc3_user')
-    setToken('')
-    setUsername('')
+    storeLogout()
     setMessages([])
   }
 
@@ -166,9 +158,8 @@ export default function ChatView() {
     }
   }
 
-  if (!token) return <LoginPage onLogin={handleLogin} />
-
   const navigate = useNavigate()
+  if (!token) { navigate('/login'); return null }
 
   const bg = dark ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'
   const sidebar = dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
