@@ -11,7 +11,7 @@
 #
 # External traffic:
 #   HTTPS via Let's Encrypt ACME (TLS challenge), no client cert required.
-
+#
 # Port reference (Trancendos platform):
 #   80/443    — Traefik ingress (HTTP/HTTPS)
 #   8000      — tranc3-backend (FastAPI main app)

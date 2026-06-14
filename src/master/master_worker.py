@@ -27,15 +27,6 @@ from .task_schema import RetryPolicy, TaskDefinition, TaskStep
 
 logger = logging.getLogger(__name__)
 
-# Service port constants (Trancendos platform)
-PORT_INFINITY_WS = 8004  # The Nexus WebSocket hub
-PORT_INFINITY_AUTH = 8005  # Infinity OAuth2/SSO/MFA
-PORT_USERS_SERVICE = 8006  # Users service
-PORT_MONITORING = 8007  # The Observatory monitoring
-PORT_NOTIFICATIONS = 8008  # Notifications service
-PORT_INFINITY_AI = 8009  # Infinity AI (Luminous)
-PORT_THE_GRID = 8010  # The Digital Grid
-
 
 class TaskExecution:
     """Tracks a single run of a TaskDefinition."""

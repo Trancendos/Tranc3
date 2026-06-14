@@ -52,9 +52,3 @@ steps:
       backoff_seconds: 2
       backoff_multiplier: 2.0
       max_backoff_seconds: 20
-
-retry: 3
-timeout: 300
-healthCheck:
-  enabled: true
-  interval: 60

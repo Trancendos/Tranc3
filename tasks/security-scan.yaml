@@ -68,9 +68,3 @@ steps:
     retry:
       max_attempts: 1
       backoff_seconds: 0
-
-retry: 3
-timeout: 300
-healthCheck:
-  enabled: true
-  interval: 60

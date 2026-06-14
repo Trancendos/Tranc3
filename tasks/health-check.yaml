@@ -1,10 +1,11 @@
 name: health-check
-description: Ping every worker and report status to The Observatory
-version: "1.0"
+description: Ping every P0/P1/P2 worker and report status to The Observatory (audit-service)
+version: "2.0"
 enabled: true
 tags:
   - monitoring
   - observability
+  - proactive
 
 schedule:
   type: interval
@@ -15,20 +16,64 @@ notify_on_failure: true
 notify_on_success: false
 
 steps:
-  - name: check-all-workers
+  - name: check-p0-workers
     bot: monitor
     action: health_check
     params:
+      priority: P0
       targets:
-        - "http://localhost:8004/health"
-        - "http://localhost:8005/health"
-        - "http://localhost:8006/health"
-        - "http://localhost:8007/health"
-        - "http://localhost:8008/health"
-        - "http://localhost:8009/health"
-        - "http://localhost:8010/health"
+        - { name: tranc3-backend,  url: "http://localhost:8000/health" }
+        - { name: infinity-ws,     url: "http://localhost:8004/health" }
+        - { name: infinity-auth,   url: "http://localhost:8005/health" }
       timeout_seconds: 5
+      fail_fast: true
     timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_seconds: 5
+      backoff_multiplier: 2.0
+      max_backoff_seconds: 20
+
+  - name: check-p1-workers
+    bot: monitor
+    action: health_check
+    params:
+      priority: P1
+      targets:
+        - { name: users-service,      url: "http://localhost:8006/health" }
+        - { name: monitoring,         url: "http://localhost:8007/health" }
+        - { name: notifications,      url: "http://localhost:8008/health" }
+        - { name: infinity-ai,        url: "http://localhost:8009/health" }
+        - { name: infinity-portal,    url: "http://localhost:8042/health" }
+        - { name: infinity-one,       url: "http://localhost:8043/health" }
+        - { name: infinity-admin,     url: "http://localhost:8044/health" }
+        - { name: infinity-shards,    url: "http://localhost:8045/health" }
+        - { name: infinity-bridge,    url: "http://localhost:8070/health" }
+        - { name: cranbania,          url: "http://localhost:8071/health" }
+      timeout_seconds: 5
+      fail_fast: false
+    timeout_seconds: 60
+    retry:
+      max_attempts: 2
+      backoff_seconds: 3
+      backoff_multiplier: 1.5
+      max_backoff_seconds: 10
+
+  - name: check-p2-workers
+    bot: monitor
+    action: health_check
+    params:
+      priority: P2
+      targets:
+        - { name: the-grid,           url: "http://localhost:8010/health" }
+        - { name: products-service,   url: "http://localhost:8011/health" }
+        - { name: orders-service,     url: "http://localhost:8012/health" }
+        - { name: payments-service,   url: "http://localhost:8013/health" }
+        - { name: files-service,      url: "http://localhost:8014/health" }
+        - { name: identity-service,   url: "http://localhost:8015/health" }
+      timeout_seconds: 5
+      fail_fast: false
+    timeout_seconds: 60
     retry:
       max_attempts: 2
       backoff_seconds: 3
@@ -39,15 +84,10 @@ steps:
     bot: monitor
     action: report_health
     params:
-      service: health-check-swarm
+      service: health-check-task
       include_timestamp: true
+      report_url: "http://localhost:8017/events"
     timeout_seconds: 10
     retry:
-      max_attempts: 1
-      backoff_seconds: 0
-
-retry: 3
-timeout: 300
-healthCheck:
-  enabled: true
-  interval: 60
+      max_attempts: 2
+      backoff_seconds: 2
