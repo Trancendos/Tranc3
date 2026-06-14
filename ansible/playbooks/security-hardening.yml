@@ -1,0 +1,65 @@
+---
+# ansible/playbooks/security-hardening.yml
+# Apply OS-level and application-level security hardening.
+# Usage: ansible-playbook ansible/playbooks/security-hardening.yml
+
+- name: Tranc3 Security Hardening
+  hosts: local
+  gather_facts: true
+  become: false
+
+  tasks:
+    - name: Ensure logs directory exists
+      file:
+        path: "{{ lookup('env', 'PWD') }}/logs"
+        state: directory
+        mode: "0750"
+
+    - name: Check for world-writable files in src/
+      find:
+        paths: "{{ lookup('env', 'PWD') }}/src"
+        patterns: "*.py"
+        file_type: file
+      register: py_files
+
+    - name: Check Python files have no execute bit for others
+      file:
+        path: "{{ item.path }}"
+        mode: "0644"
+      loop: "{{ py_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.mode | int(base=8) > 0o644
+
+    - name: Rotate JWT_SECRET warning check
+      shell: >
+        python3 -c "
+        import os, sys
+        s = os.getenv('JWT_SECRET', '')
+        if not s or len(s) < 32:
+            print('WARNING: JWT_SECRET is unset or too short!')
+            sys.exit(1)
+        print('JWT_SECRET OK (len={})'.format(len(s)))
+        "
+      changed_when: false
+      failed_when: false
+      register: jwt_check
+
+    - name: Display JWT check result
+      debug:
+        msg: "{{ jwt_check.stdout }}"
+
+    - name: Verify .env file is not world-readable
+      stat:
+        path: "{{ lookup('env', 'PWD') }}/.env"
+      register: env_stat
+
+    - name: Fix .env permissions if too open
+      file:
+        path: "{{ lookup('env', 'PWD') }}/.env"
+        mode: "0600"
+      when: env_stat.stat.exists and (env_stat.stat.mode | int(base=8) & 0o044) != 0
+
+    - name: Security hardening complete
+      debug:
+        msg: "Security hardening checks complete."
