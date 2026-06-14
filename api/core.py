@@ -43,9 +43,7 @@ def create_app(
     **kwargs: Any,
 ) -> FastAPI:
     """Build and return the configured FastAPI application."""
-    origins = allowed_origins or os.getenv(
-        "ALLOWED_ORIGINS", ",".join(_DEFAULT_ORIGINS)
-    ).split(",")
+    origins = allowed_origins or os.getenv("ALLOWED_ORIGINS", ",".join(_DEFAULT_ORIGINS)).split(",")
 
     hosts = allowed_hosts or os.getenv(
         "ALLOWED_HOSTS", "localhost,trancendos.com,api.trancendos.com"

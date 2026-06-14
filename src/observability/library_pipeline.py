@@ -1,4 +1,5 @@
 """Observatory → Library pipeline — wires audit events to KB article triggers."""
+
 from __future__ import annotations
 
 import asyncio
@@ -19,6 +20,7 @@ FLUSH_INTERVAL_SEC = float(os.getenv("LIBRARY_PIPELINE_FLUSH_INTERVAL", "30"))
 @dataclass
 class KBTrigger:
     """Payload sent to The Library when an audit event warrants KB article creation."""
+
     event_type: str
     actor: str
     resource: str
@@ -110,7 +112,10 @@ def start_pipeline(app: Any = None) -> None:
     try:
         loop = asyncio.get_event_loop()
         loop.create_task(flush_loop())
-        logger.info("Observatory→Library pipeline started (batch=%d, interval=%ss)",
-                    BATCH_SIZE, FLUSH_INTERVAL_SEC)
+        logger.info(
+            "Observatory→Library pipeline started (batch=%d, interval=%ss)",
+            BATCH_SIZE,
+            FLUSH_INTERVAL_SEC,
+        )
     except RuntimeError:
         logger.warning("No running event loop — Library pipeline deferred")

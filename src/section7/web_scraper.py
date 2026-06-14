@@ -38,7 +38,9 @@ def _sleep(seconds: float) -> None:
     time.sleep(seconds)
 
 
-def _fetch_url(url: str, *, headers: Optional[dict[str, str]] = None, timeout: float = 10.0) -> bytes:
+def _fetch_url(
+    url: str, *, headers: Optional[dict[str, str]] = None, timeout: float = 10.0
+) -> bytes:
     """Synchronous HTTP GET with exponential backoff; stdlib only."""
     import urllib.request
 
@@ -49,14 +51,16 @@ def _fetch_url(url: str, *, headers: Optional[dict[str, str]] = None, timeout: f
     last_exc: Exception = RuntimeError("no attempts made")
     for attempt in range(_MAX_RETRIES):
         if attempt > 0:
-            _sleep(_BACKOFF_BASE ** attempt)
+            _sleep(_BACKOFF_BASE**attempt)
         try:
             req = urllib.request.Request(url, headers=hdrs)
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return resp.read()
         except Exception as exc:
             last_exc = exc
-            logger.warning("fetch attempt %d/%d failed for %s: %s", attempt + 1, _MAX_RETRIES, url, exc)
+            logger.warning(
+                "fetch attempt %d/%d failed for %s: %s", attempt + 1, _MAX_RETRIES, url, exc
+            )
     raise last_exc
 
 

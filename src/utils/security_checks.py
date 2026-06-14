@@ -13,11 +13,12 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
 # CVE-2025-69872: diskcache allows arbitrary code execution when cache dir is
 # world-writable and the process runs as root. Hard-stop if both conditions hold.
 def check_diskcache_cve_2025_69872() -> None:
     """Abort if running as root — diskcache CVE-2025-69872 mitigation."""
-    if (hasattr(os, "getuid") and os.getuid() == 0):
+    if hasattr(os, "getuid") and os.getuid() == 0:
         logger.critical(
             "CVE-2025-69872: diskcache is unsafe when running as root. "
             "Restart the service as a non-privileged user."
@@ -27,13 +28,21 @@ def check_diskcache_cve_2025_69872() -> None:
 
 FREE_PROVIDERS: list[dict] = [
     {"name": "ollama", "url": "http://localhost:11434/api/tags", "daily_limit": None},
-    {"name": "huggingface", "url": "https://api-inference.huggingface.co/status", "daily_limit": 30_000},
+    {
+        "name": "huggingface",
+        "url": "https://api-inference.huggingface.co/status",
+        "daily_limit": 30_000,
+    },
     {"name": "openrouter", "url": "https://openrouter.ai/api/v1/models", "daily_limit": 50},
     {"name": "together_free", "url": "https://api.together.xyz/v1/models", "daily_limit": 60},
     {"name": "groq_free", "url": "https://api.groq.com/openai/v1/models", "daily_limit": 14_400},
     {"name": "mistral_free", "url": "https://api.mistral.ai/v1/models", "daily_limit": 1_000},
     {"name": "cohere_trial", "url": "https://api.cohere.ai/v1/check-api-key", "daily_limit": 100},
-    {"name": "cf_ai_workers", "url": "https://api.cloudflare.com/client/v4/accounts/me", "daily_limit": 10_000},
+    {
+        "name": "cf_ai_workers",
+        "url": "https://api.cloudflare.com/client/v4/accounts/me",
+        "daily_limit": 10_000,
+    },
 ]
 
 _USAGE_FILE = Path("/tmp/tranc3_provider_usage.json")
@@ -172,7 +181,9 @@ def run_startup_checks() -> None:
     healthy_count = sum(1 for p in report.providers if p.healthy)
     logger.info(
         "Provider health: %d/%d healthy, active=%s",
-        healthy_count, len(report.providers), active,
+        healthy_count,
+        len(report.providers),
+        active,
     )
     if healthy_count == 0:
         logger.warning("All AI providers degraded — falling back to offline stub")

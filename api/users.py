@@ -36,6 +36,7 @@ def _get_current_user(token: str = Depends(_oauth2_scheme)) -> dict[str, Any]:
     """Decode bearer token — delegates to api.auth to honour revocation list."""
     try:
         from api.auth import _decode_token  # type: ignore[import]
+
         return _decode_token(token)
     except ImportError:
         pass
@@ -63,7 +64,11 @@ async def get_me(current_user: dict[str, Any] = Depends(_get_current_user)) -> d
                 result = await db.execute(select(User).where(User.username == sub))
                 row = result.scalar_one_or_none()
                 if row:
-                    return {"id": str(row.id), "username": row.username, "email": getattr(row, "email", None)}
+                    return {
+                        "id": str(row.id),
+                        "username": row.username,
+                        "email": getattr(row, "email", None),
+                    }
         except Exception:  # noqa: BLE001 — DB unavailable, use token fallback
             pass
 
