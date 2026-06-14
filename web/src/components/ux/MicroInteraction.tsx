@@ -87,9 +87,11 @@ export function MicroInteraction({
   const animClass = effect !== 'ripple' && animKey > 0 ? KEYFRAMES[effect as keyof typeof KEYFRAMES] : ''
   const isContinuous = effect === 'breathe'
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const TagAny = Tag as any
   return (
-    <Tag
-      ref={ref as React.Ref<HTMLDivElement>}
+    <TagAny
+      ref={ref}
       className={`ux-micro-interaction ${className} ${isContinuous ? KEYFRAMES.breathe : animClass}`}
       key={effect !== 'ripple' && !isContinuous ? animKey : undefined}
       onClick={addRipple}
@@ -120,7 +122,7 @@ export function MicroInteraction({
           }}
         />
       ))}
-    </Tag>
+    </TagAny>
   )
 }
 
