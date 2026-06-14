@@ -176,6 +176,17 @@ async def require_internal_auth(
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="Trancendos Users Service", version="2.0.0")
+
+# OpenTelemetry instrumentation
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    from src.observability.otel import init_otel
+
+    init_otel(service_name="tranc3.users-service")
+    FastAPIInstrumentor.instrument_app(app)
+except Exception:
+    pass  # OTel is optional — never block startup
 _cors_origins = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")

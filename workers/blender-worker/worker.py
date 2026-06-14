@@ -232,6 +232,16 @@ def _build_scene_script(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.blender-worker")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     blender_path = blender_available()
     if blender_path:
         logger.info("Blender found at: %s", blender_path)

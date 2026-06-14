@@ -45,6 +45,17 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger(WORKER_NAME)
 
 app = FastAPI(title="Swarm Coordinator", version="1.0.0")
+
+# OpenTelemetry instrumentation
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    from src.observability.otel import init_otel
+
+    init_otel(service_name="tranc3.swarm-coordinator-service")
+    FastAPIInstrumentor.instrument_app(app)
+except Exception:
+    pass  # OTel is optional — never block startup
 STARTED_AT = datetime.now(timezone.utc)
 
 _run_lock = asyncio.Lock()

@@ -155,6 +155,16 @@ def _compute_hash(entry_id: str, prev_hash: str, actor: str, action: str, timest
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.ledger-service")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     _init_db()
     logger.info("ledger-service started — DB at %s", DB_PATH)
     yield

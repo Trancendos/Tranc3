@@ -142,6 +142,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# OpenTelemetry instrumentation
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    from src.observability.otel import init_otel
+
+    init_otel(service_name="tranc3.identity-service")
+    FastAPIInstrumentor.instrument_app(app)
+except Exception:
+    pass  # OTel is optional — never block startup
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
