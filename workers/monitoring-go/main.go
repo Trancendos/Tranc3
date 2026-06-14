@@ -259,6 +259,19 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
+	// -healthcheck flag: used by Docker HEALTHCHECK CMD — probe /health and exit.
+	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8007"
+		}
+		resp, err := http.Get("http://127.0.0.1:" + port + "/health")
+		if err != nil || resp.StatusCode >= 400 {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8007"
