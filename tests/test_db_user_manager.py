@@ -167,7 +167,7 @@ class TestDBUserManagerFallbackGetUser:
         mgr._fallback["legacy"] = {
             "id": "x",
             "username": "legacy",
-            "hashed_password": "hashed:secret",
+            "hashed_password": "hashed:placeholder",
             "tier": "pro",
             "is_active": True,
         }
@@ -178,7 +178,7 @@ class TestDBUserManagerFallbackGetUser:
         mgr._fallback["olduser"] = {
             "id": "y",
             "username": "olduser",
-            "hashed_password": "hashed:secret",
+            "hashed_password": "hashed:placeholder",
             "tier": "free",
             "is_active": True,
         }
