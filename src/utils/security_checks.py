@@ -146,3 +146,33 @@ def increment_usage(provider_name: str) -> None:
     usage = _load_usage()
     usage[provider_name] = usage.get(provider_name, 0) + 1
     _save_usage(usage)
+
+
+def check_non_root() -> bool:
+    """CVE-2025-69872 mitigation: assert process is not running as root (UID 0)."""
+    uid = os.getuid() if hasattr(os, "getuid") else -1
+    if uid == 0:
+        logger.critical(
+            "SECURITY: Process running as root (UID 0). "
+            "CVE-2025-69872 (diskcache local DoS) is exploitable. "
+            "Restart as non-root user (e.g. tranc3:tranc3)."
+        )
+        return False
+    return True
+
+
+def run_startup_checks() -> None:
+    """Run all startup security checks. Logs warnings; never raises."""
+    non_root = check_non_root()
+    if not non_root:
+        logger.warning("Security degraded: running as root violates zero-trust policy")
+
+    report = check_provider_health()
+    active = report.active_provider or "offline-stub"
+    healthy_count = sum(1 for p in report.providers if p.healthy)
+    logger.info(
+        "Provider health: %d/%d healthy, active=%s",
+        healthy_count, len(report.providers), active,
+    )
+    if healthy_count == 0:
+        logger.warning("All AI providers degraded — falling back to offline stub")

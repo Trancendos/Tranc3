@@ -538,6 +538,23 @@ async def lifespan(app: FastAPI):
     except Exception as _otel_exc:
         logger.warning("OpenTelemetry instrumentation failed: %s", sanitize_for_log(_otel_exc))
 
+    # Observatory→Library pipeline — wire audit events to KB article triggers
+    try:
+        from src.observability.library_pipeline import start_pipeline
+
+        start_pipeline()
+        logger.info("Observatory→Library pipeline started")
+    except Exception as _lib_exc:
+        logger.warning("Observatory→Library pipeline unavailable: %s", sanitize_for_log(_lib_exc))
+
+    # Runtime security checks — CVE-2025-69872, non-root assertion, provider health
+    try:
+        from src.utils.security_checks import run_startup_checks
+
+        run_startup_checks()
+    except Exception as _sec_exc:
+        logger.warning("Startup security checks failed: %s", sanitize_for_log(_sec_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
