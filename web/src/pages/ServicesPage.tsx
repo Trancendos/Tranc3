@@ -11,9 +11,10 @@ interface ServiceDef {
   status?: 'healthy' | 'degraded' | 'unreachable' | 'unknown'
   latency_ms?: number
   profile: string
+  tier: 'optional' | 'planned'
 }
 
-const SERVICES: ServiceDef[] = [
+const OPTIONAL_SERVICES: ServiceDef[] = [
   {
     id: 'library',
     name: 'The Library',
@@ -23,6 +24,7 @@ const SERVICES: ServiceDef[] = [
     port: 3300,
     icon: '📚',
     profile: 'library',
+    tier: 'optional',
   },
   {
     id: 'documents',
@@ -33,6 +35,7 @@ const SERVICES: ServiceDef[] = [
     port: 8765,
     icon: '🗂️',
     profile: 'documents',
+    tier: 'optional',
   },
   {
     id: 'design',
@@ -43,6 +46,7 @@ const SERVICES: ServiceDef[] = [
     port: 9001,
     icon: '🎨',
     profile: 'design',
+    tier: 'optional',
   },
   {
     id: 'workshop',
@@ -53,6 +57,7 @@ const SERVICES: ServiceDef[] = [
     port: 3456,
     icon: '🔧',
     profile: 'workshop',
+    tier: 'optional',
   },
   {
     id: 'scheduling',
@@ -63,6 +68,7 @@ const SERVICES: ServiceDef[] = [
     port: 3001,
     icon: '⏱️',
     profile: 'scheduling',
+    tier: 'optional',
   },
   {
     id: 'registry',
@@ -73,6 +79,7 @@ const SERVICES: ServiceDef[] = [
     port: 5001,
     icon: '📦',
     profile: 'registry',
+    tier: 'optional',
   },
   {
     id: 'api-marketplace',
@@ -83,6 +90,7 @@ const SERVICES: ServiceDef[] = [
     port: 8084,
     icon: '🌐',
     profile: 'api-marketplace',
+    tier: 'optional',
   },
   {
     id: 'sandbox',
@@ -93,8 +101,212 @@ const SERVICES: ServiceDef[] = [
     port: 8090,
     icon: '🧊',
     profile: 'sandbox',
+    tier: 'optional',
   },
 ]
+
+const PLANNED_SERVICES: ServiceDef[] = [
+  {
+    id: 'academy',
+    name: 'The Academy',
+    leadAI: 'Shimshi',
+    description: 'Learning management — education & skill training. Courses, lessons, progress tracking.',
+    path: '/academy',
+    port: 8040,
+    icon: '🎓',
+    profile: 'academy',
+    tier: 'planned',
+  },
+  {
+    id: 'basement',
+    name: 'The Basement',
+    leadAI: 'Gary Glowman',
+    description: 'Cold archive — compressed, indexed long-term storage from The Observatory.',
+    path: '/basement',
+    port: 8041,
+    icon: '🗄️',
+    profile: 'basement',
+    tier: 'planned',
+  },
+  {
+    id: 'studio',
+    name: 'The Studio',
+    leadAI: 'Voxx',
+    description: 'Central hub of the Creativity Center — orchestrates all creative sub-services.',
+    path: '/studio',
+    port: 8050,
+    icon: '🎬',
+    profile: 'studio',
+    tier: 'planned',
+  },
+  {
+    id: 'photo',
+    name: 'Sashas Photo Studio',
+    leadAI: 'Madam Krystal',
+    description: 'Photo & image generation — Stable Diffusion with adaptive free-tier rotation.',
+    path: '/photo',
+    port: 8051,
+    icon: '📸',
+    profile: 'photo',
+    tier: 'planned',
+  },
+  {
+    id: 'tranceflow',
+    name: 'TranceFlow',
+    leadAI: 'Junior Cesar',
+    description: '3D modeling & games — asset pipeline, GLTF export, Three.js scene builder.',
+    path: '/tranceflow',
+    port: 8052,
+    icon: '🎮',
+    profile: 'tranceflow',
+    tier: 'planned',
+  },
+  {
+    id: 'tateking',
+    name: 'TateKing',
+    leadAI: 'Benji Tate & Sam King',
+    description: 'Video creation & editing — FFmpeg transcoding, thumbnail extraction, job queue.',
+    path: '/video',
+    port: 8053,
+    icon: '🎥',
+    profile: 'tateking',
+    tier: 'planned',
+  },
+  {
+    id: 'imaginarium',
+    name: 'Imaginarium',
+    leadAI: 'Voxx',
+    description: 'Omni-creative wizard — routes to image, video, 3D, or design based on intent.',
+    path: '/imaginarium',
+    port: 8054,
+    icon: '✨',
+    profile: 'imaginarium',
+    tier: 'planned',
+  },
+  {
+    id: 'lab',
+    name: 'The Lab',
+    leadAI: 'The Dr. & Slime',
+    description: 'Code creation platform — generate, review, and manage code via The Spark MCP.',
+    path: '/lab',
+    port: 8055,
+    icon: '🔬',
+    profile: 'lab',
+    tier: 'planned',
+  },
+  {
+    id: 'warp-tunnel',
+    name: 'The Warp Tunnel',
+    leadAI: 'Rocking Ricki',
+    description: 'Cryptographic scanner & quarantine transport — ClamAV + YARA threat detection.',
+    path: '/warp-tunnel',
+    port: 8056,
+    icon: '🌀',
+    profile: 'warp-tunnel',
+    tier: 'planned',
+  },
+  {
+    id: 'radio',
+    name: 'Warp Radio',
+    leadAI: 'Rocking Ricki',
+    description: 'Music & audio streaming — Navidrome backend with library scanning.',
+    path: '/radio',
+    port: 8057,
+    icon: '📻',
+    profile: 'radio',
+    tier: 'planned',
+  },
+  {
+    id: 'dutchy',
+    name: 'The Dutchy',
+    leadAI: 'Predictive lore',
+    description: 'Intelligence & market analysis — RSS signals, keyword extraction, daily reports.',
+    path: '/dutchy',
+    port: 8058,
+    icon: '📊',
+    profile: 'dutchy',
+    tier: 'planned',
+  },
+  {
+    id: 'devocity',
+    name: 'DevOcity',
+    leadAI: 'Kitty',
+    description: 'Development operations hub — service topology graph and health matrix.',
+    path: '/devocity',
+    port: 8059,
+    icon: '🏙️',
+    profile: 'devocity',
+    tier: 'planned',
+  },
+  {
+    id: 'tranquility',
+    name: 'Tranquility',
+    leadAI: 'Savania',
+    description: 'Wellbeing central — habit tracker, mindfulness timer, mood journal.',
+    path: '/tranquility',
+    port: 8060,
+    icon: '🌿',
+    profile: 'tranquility',
+    tier: 'planned',
+  },
+  {
+    id: 'imind',
+    name: 'I-Mind',
+    leadAI: 'Elouise',
+    description: 'Emotion sensitivity engine — real-time sentiment analysis and emotional profiling.',
+    path: '/imind',
+    port: 8061,
+    icon: '🧠',
+    profile: 'imind',
+    tier: 'planned',
+  },
+  {
+    id: 'taimra',
+    name: 'tAimra',
+    leadAI: 'tAImra',
+    description: 'Opt-in digital twin & life assistant — personal context store and advisor.',
+    path: '/taimra',
+    port: 8062,
+    icon: '👤',
+    profile: 'taimra',
+    tier: 'planned',
+  },
+  {
+    id: 'vrar3d',
+    name: 'VRAR3D',
+    leadAI: 'Entari',
+    description: 'Standalone 3D / VR immersion — Three.js scene server with AR marker generation.',
+    path: '/vrar3d',
+    port: 8063,
+    icon: '🥽',
+    profile: 'vrar3d',
+    tier: 'planned',
+  },
+  {
+    id: 'resonate',
+    name: 'Resonate',
+    leadAI: 'Magdalena',
+    description: 'Empathy engine — scores and rewrites text for maximum empathetic resonance.',
+    path: '/resonate',
+    port: 8064,
+    icon: '💜',
+    profile: 'resonate',
+    tier: 'planned',
+  },
+  {
+    id: 'chaos',
+    name: 'The Chaos Party',
+    leadAI: 'The Mad Hatter',
+    description: 'Central testing platform — chaos testing, validation & compliance (Alice in Wonderland themed).',
+    path: '/chaos',
+    port: 8065,
+    icon: '🎩',
+    profile: 'chaos',
+    tier: 'planned',
+  },
+]
+
+const SERVICES = [...OPTIONAL_SERVICES, ...PLANNED_SERVICES]
 
 const STATUS_COLORS: Record<string, string> = {
   healthy: 'bg-emerald-500',
@@ -152,17 +364,19 @@ export default function ServicesPage() {
     return () => { cancelled = true }
   }, [])
 
+  const optional = services.filter(s => s.tier === 'optional')
+  const planned = services.filter(s => s.tier === 'planned')
   const healthy = services.filter(s => s.status === 'healthy').length
   const total = services.length
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6">
-      {/* Header */}
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-1">Platform Services</h1>
           <p className="text-gray-400 text-sm">
-            All optional Trancendos services — start any service with{' '}
+            All 26 Trancendos services across 43 entities — start any with{' '}
             <code className="bg-gray-800 px-1.5 py-0.5 rounded text-xs text-indigo-300">
               bash scripts/optional-services.sh start &lt;profile&gt;
             </code>
@@ -174,28 +388,58 @@ export default function ServicesPage() {
           )}
         </div>
 
-        {/* Service grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {services.map(svc => (
-            <ServiceCard key={svc.id} service={svc} loading={loading} />
-          ))}
-        </div>
+        {/* Optional services */}
+        <section className="mb-10">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+              Optional Services
+            </h2>
+            <span className="text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-700/50">
+              {optional.length} services
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {optional.map(svc => (
+              <ServiceCard key={svc.id} service={svc} loading={loading} />
+            ))}
+          </div>
+        </section>
 
-        {/* Start instructions */}
-        <div className="mt-10 p-5 bg-gray-900 border border-gray-700 rounded-xl">
+        {/* Planned entities */}
+        <section className="mb-10">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+              Planned Entities
+            </h2>
+            <span className="text-xs bg-violet-900/50 text-violet-300 px-2 py-0.5 rounded-full border border-violet-700/50">
+              {planned.length} services
+            </span>
+            <span className="text-xs text-gray-600">
+              — FastAPI workers ready, start with docker compose --profile &lt;name&gt;
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {planned.map(svc => (
+              <ServiceCard key={svc.id} service={svc} loading={loading} />
+            ))}
+          </div>
+        </section>
+
+        {/* Quick start */}
+        <div className="p-5 bg-gray-900 border border-gray-700 rounded-xl">
           <h2 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wider">
             Quick Start
           </h2>
           <div className="space-y-1.5">
             {[
-              ['Start all services', 'bash scripts/optional-services.sh start all'],
-              ['Start specific service', 'bash scripts/optional-services.sh start library'],
+              ['Start optional services', 'bash scripts/optional-services.sh start all'],
+              ['Start planned entities', 'docker compose -f docker-compose.planned-entities.yml --profile all up -d'],
               ['Generate secrets', 'bash scripts/optional-services.sh gen-secrets'],
               ['Check status', 'bash scripts/optional-services.sh status'],
             ].map(([label, cmd]) => (
               <div key={cmd} className="flex items-start gap-3">
-                <span className="text-xs text-gray-500 w-40 shrink-0 pt-0.5">{label}</span>
-                <code className="text-xs text-indigo-300 bg-gray-800 px-2 py-0.5 rounded font-mono">
+                <span className="text-xs text-gray-500 w-44 shrink-0 pt-0.5">{label}</span>
+                <code className="text-xs text-indigo-300 bg-gray-800 px-2 py-0.5 rounded font-mono break-all">
                   {cmd}
                 </code>
               </div>
@@ -209,9 +453,10 @@ export default function ServicesPage() {
 
 function ServiceCard({ service: svc, loading }: { service: ServiceDef; loading: boolean }) {
   const isOnline = svc.status === 'healthy'
+  const borderHover = svc.tier === 'planned' ? 'hover:border-violet-700' : 'hover:border-indigo-700'
 
   return (
-    <div className="flex flex-col bg-gray-900 border border-gray-700 rounded-xl p-4 hover:border-gray-500 transition-colors">
+    <div className={`flex flex-col bg-gray-900 border border-gray-700 rounded-xl p-4 transition-colors ${borderHover}`}>
       {/* Top row */}
       <div className="flex items-start justify-between mb-3">
         <span className="text-2xl" role="img" aria-label={svc.name}>
