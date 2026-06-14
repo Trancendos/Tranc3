@@ -11,11 +11,11 @@ const MAX_BACKOFF_MS = 30_000
 const BASE_BACKOFF_MS = 500
 
 function resolveUrl(url: string): string {
-  // Convert ws:// to wss:// when page is served over https
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    return url.replace(/^ws:\/\//, 'wss://')
-  }
-  return url
+  if (typeof window === 'undefined') return url
+  const secure = window.location.protocol === 'https:'
+  const wsScheme = secure ? 'wss:' : 'ws:'
+  // Replace any explicit scheme with the protocol-appropriate one
+  return url.replace(/^wss?:/, wsScheme)
 }
 
 export function useWebSocket(

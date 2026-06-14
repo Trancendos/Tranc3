@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useWebSocket } from '../../hooks/useWebSocket'
 
-const WS_URL = 'ws://localhost:8004'
+const WS_URL = (typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws') + '://localhost:8004'
 
 interface HeartbeatMessage {
   type?: string
@@ -64,7 +64,7 @@ export default function RealtimeStatusBar() {
         </>
       )}
 
-      <span className="ml-auto text-gray-700 font-mono">The Nexus · ws://localhost:8004</span>
+      <span className="ml-auto text-gray-700 font-mono">The Nexus · :8004</span>
     </div>
   )
 }

@@ -63,7 +63,7 @@ interface ConsistencyShieldProps {
 export function ConsistencyShield({ children, audit, className = '' }: ConsistencyShieldProps) {
   const ref = useRef<HTMLDivElement>(null)
   const id = useId()
-  const shouldAudit = audit ?? (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')
+  const shouldAudit = audit ?? import.meta.env.DEV
   const [violations, setViolations] = useState<TokenViolation[]>([])
   const [showPanel, setShowPanel] = useState(false)
 
