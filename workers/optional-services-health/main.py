@@ -4,6 +4,7 @@ Polls each optional service's health endpoint, aggregates status,
 and reports to The Observatory (port 8007). Exposes a unified
 /health endpoint for Traefik and Prometheus scraping.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -37,7 +38,9 @@ for entry in _raw.replace("\n", "").split(","):
     entry = entry.strip()
     if ":" in entry:
         name, _, url = entry.partition(":")
-        SERVICE_URLS[name.strip()] = url.strip() if url.startswith("http") else f"http:{url.strip()}"
+        SERVICE_URLS[name.strip()] = (
+            url.strip() if url.startswith("http") else f"http:{url.strip()}"
+        )
 
 _cache: dict[str, dict[str, Any]] = {}
 _last_poll: float = 0.0
@@ -135,8 +138,12 @@ async def metrics() -> JSONResponse:
     return JSONResponse(
         {
             "optional_services_total": len(_cache),
-            "optional_services_healthy": sum(1 for s in _cache.values() if s["status"] == "healthy"),
-            "optional_services_unreachable": sum(1 for s in _cache.values() if s["status"] == "unreachable"),
+            "optional_services_healthy": sum(
+                1 for s in _cache.values() if s["status"] == "healthy"
+            ),
+            "optional_services_unreachable": sum(
+                1 for s in _cache.values() if s["status"] == "unreachable"
+            ),
             "services": {
                 name: {
                     "status": info["status"],

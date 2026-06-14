@@ -4,6 +4,7 @@ Full CAPEv2 requires KVM/QEMU VMs with analyst setup. This stub provides
 the API surface so integrations can be built before the full sandbox is deployed.
 Follow https://capev2.readthedocs.io for the complete installation guide.
 """
+
 import json
 import os
 import uuid
