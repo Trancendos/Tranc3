@@ -296,11 +296,11 @@ class WazuhConnector:
         if ids_to_delete:
             try:
                 with self._buffer_lock:
-                    placeholders = ",".join("?" * len(ids_to_delete))
-                    self._buffer_conn.execute(
-                        f"DELETE FROM alert_buffer WHERE id IN ({placeholders})",
-                        ids_to_delete,
-                    )
+                    for row_id in ids_to_delete:
+                        self._buffer_conn.execute(
+                            "DELETE FROM alert_buffer WHERE id = ?",
+                            (row_id,),
+                        )
                     self._buffer_conn.commit()
             except Exception as exc:  # noqa: BLE001
                 logger.warning("wazuh: buffer cleanup failed: %s", exc)

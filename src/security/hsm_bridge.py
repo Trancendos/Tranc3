@@ -325,7 +325,7 @@ class HSMBridge:
             }))
             if not keys:
                 raise KeyError(f"PKCS#11: private key '{key_id}' not found")
-            mech = pkcs11.Mechanism.SHA256_RSA_PKCS
+            mech = getattr(pkcs11.Mechanism, mechanism, pkcs11.Mechanism.SHA256_RSA_PKCS)
             return bytes(keys[0].sign(data, mechanism=mech))
 
     def verify(self, key_id: str, data: bytes, signature: bytes) -> bool:

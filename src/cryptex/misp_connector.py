@@ -303,6 +303,9 @@ class MISPConnector:
         if data and "Event" in str(data):
             logger.debug("MISP event pushed successfully")
             return True
+
+        self._push_buffer.append(event)
+        logger.warning("MISP push failed — buffered event (%d in queue)", len(self._push_buffer))
         return False
 
     def _flush_buffer(self) -> int:

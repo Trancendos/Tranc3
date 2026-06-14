@@ -113,6 +113,12 @@ class ShamirSecretSharing:
         if len(shares) < 2:
             raise ValueError("Need at least 2 shares")
 
+        x_coords = [x for x, _ in shares]
+        if len(set(x_coords)) != len(x_coords):
+            raise ValueError("Duplicate shares detected")
+        if any(x <= 0 for x in x_coords):
+            raise ValueError("Invalid share coordinate: x must be > 0")
+
         int_shares = [(x, _bytes_to_int(y)) for x, y in shares]
         secret_int = _lagrange_interpolate(int_shares, self._prime)
 
