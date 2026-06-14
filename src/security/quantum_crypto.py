@@ -15,8 +15,6 @@ from __future__ import annotations
 
 import logging
 import os
-import struct
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -42,14 +40,13 @@ except ImportError:
         "Install `pip install pqcrypto` for true post-quantum security."
     )
 
-# Always-available classical crypto
-from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
-from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305, AESGCM
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519 as _ed25519
-from cryptography.exceptions import InvalidSignature
-
+# Always-available classical crypto  # noqa: E402
+from cryptography.exceptions import InvalidSignature  # noqa: E402
+from cryptography.hazmat.primitives import hashes, serialization  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric import ed25519 as _ed25519  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey  # noqa: E402
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305  # noqa: E402
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Algorithm info

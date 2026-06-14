@@ -13,8 +13,6 @@ from __future__ import annotations
 
 import logging
 import os
-import textwrap
-import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -370,6 +368,7 @@ class SuricataRulesGenerator:
                     f'__META__ sid:__SID__;)'
                 )
 
+            rule = rule.replace("__META__", meta).replace("__SID__", str(sid))
             logger.debug("suricata: generated rule for %s (SID %d)", cve_id, sid)
             return rule
         except Exception as exc:  # noqa: BLE001
@@ -416,22 +415,20 @@ class SuricataRulesGenerator:
         """Build a single Suricata rule from a Cryptex threat pattern dict."""
         name = _clean(pattern.get("name", "Unknown"))
         raw = _clean(pattern.get("pattern", ""))
-        severity = pattern.get("severity", "medium").lower()
         tags = pattern.get("tags", ["tranc3", "dynamic"])
 
         if not raw:
             return ""
 
-        # Map severity to Suricata action
-        action = "alert"  # Suricata default — log, don't drop
-
+        action = "alert"
         sid = self._next_sid()
         meta = _metadata(rev=1, tags=tags)
         msg = f"TRANC3 Dynamic: {name}"
 
-        return (
+        rule = (
             f'{action} http any any -> $HTTP_SERVERS any '
             f'(msg:"{msg}"; flow:established,to_server; '
             f'http.request_body; content:"{raw}"; nocase; '
             f'__META__ sid:__SID__;)'
         )
+        return rule.replace("__META__", meta).replace("__SID__", str(sid))
