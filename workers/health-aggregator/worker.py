@@ -1,305 +1,192 @@
 """
-Trancendos health-aggregator — Self-Hosted Worker (Port 8029)
-=============================================================
-Polls every registered Trancendos service /health endpoint every 30 s,
-persists check results to SQLite, and exposes a unified status dashboard.
+Trancendos health-aggregator — Self-Hosted Worker
+==================================================
+Polls all registered service /health endpoints on a configurable interval
+and maintains a live registry of service health states. Provides a unified
+status dashboard for the entire Trancendos platform.
 
-Zero-cost: FastAPI + SQLite + httpx — no paid external dependencies.
+Port: 8029
+Zero-cost: FastAPI + SQLite + httpx polling, no external deps.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import sqlite3
 import time
-from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
-
-PORT: int = int(os.environ.get("PORT", 8029))
+WORKER_PORT = 8029
 WORKER_NAME = "health-aggregator"
-INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-DB_PATH = Path(os.environ.get("DB_PATH", "/data/health_aggregator.db"))
+DB_PATH = Path(__file__).parent / "data" / "health.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-POLL_INTERVAL = 30  # seconds between full polls
-HTTP_TIMEOUT = 3.0  # per-service request timeout
-HISTORY_LIMIT = 500  # rolling history rows kept per service
+POLL_INTERVAL = 30  # seconds between polls
+TIMEOUT = 5  # seconds per HTTP check
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s | %(message)s",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
-# ---------------------------------------------------------------------------
-# Service registry — canonical Trancendos worker map (from CLAUDE.md)
-# ---------------------------------------------------------------------------
-
-SERVICE_REGISTRY: List[Dict[str, Any]] = [
-    # Core backend
-    {"name": "tranc3-backend", "port": 8000},
-    {"name": "nanoservices", "port": 8001},
-    # P0 — critical
-    {"name": "infinity-ws", "port": 8004},
-    {"name": "infinity-auth", "port": 8005},
-    # P1 — important
-    {"name": "users-service", "port": 8006},
-    {"name": "monitoring", "port": 8007},
-    {"name": "notifications", "port": 8008},
-    {"name": "infinity-ai", "port": 8009},
-    {"name": "the-grid", "port": 8010},
-    {"name": "products-service", "port": 8011},
-    {"name": "orders-service", "port": 8012},
-    {"name": "payments-service", "port": 8013},
-    {"name": "files-service", "port": 8014},
-    {"name": "identity-service", "port": 8015},
-    # P2
-    {"name": "analytics-service", "port": 8016},
-    {"name": "audit-service", "port": 8017},
-    {"name": "cache-service", "port": 8018},
-    {"name": "cdn-service", "port": 8019},
-    {"name": "config-service", "port": 8020},
-    {"name": "cron-service", "port": 8021},
-    {"name": "email-service", "port": 8022},
-    {"name": "geo-service", "port": 8023},
-    {"name": "search-service", "port": 8024},
-    {"name": "sms-service", "port": 8025},
-    {"name": "storage-service", "port": 8026},
-    {"name": "queue-service", "port": 8027},
-    {"name": "rate-limit-service", "port": 8028},
-    # self — skip polling ourselves to avoid infinite recursion
-    # {"name": "health-aggregator",         "port": 8029},
-    # P3
-    {"name": "gbrain-bridge", "port": 8030},
-    {"name": "topology-service", "port": 8031},
-    {"name": "ledger-service", "port": 8032},
-    {"name": "model-router-service", "port": 8033},
-    {"name": "workflow-engine-service", "port": 8034},
-    {"name": "skills-benchmark-service", "port": 8035},
-    {"name": "langchain-integration-service", "port": 8036},
-    {"name": "deepagents-orchestrator-service", "port": 8037},
-    {"name": "vault-service", "port": 8038},
-    # Infinity portal / admin cluster
-    {"name": "infinity-portal-service", "port": 8042},
-    {"name": "infinity-one-service", "port": 8043},
-    {"name": "infinity-admin-service", "port": 8044},
-    {"name": "infinity-shards-service", "port": 8045},
-    # Bridge + Town Hall
-    {"name": "infinity-bridge-service", "port": 8070},
-    {"name": "cranbania", "port": 8071},
-    # Bots
-    {"name": "tranc3-bots", "port": 8080},
+# Default services to monitor (Trancendos worker map)
+DEFAULT_SERVICES = [
+    {"name": "infinity-ws", "url": "http://localhost:8004/health"},
+    {"name": "infinity-auth", "url": "http://localhost:8005/health"},
+    {"name": "users-service", "url": "http://localhost:8006/health"},
+    {"name": "monitoring", "url": "http://localhost:8007/health"},
+    {"name": "notifications", "url": "http://localhost:8008/health"},
+    {"name": "infinity-ai", "url": "http://localhost:8009/health"},
+    {"name": "the-grid", "url": "http://localhost:8010/health"},
+    {"name": "products-service", "url": "http://localhost:8011/health"},
+    {"name": "orders-service", "url": "http://localhost:8012/health"},
+    {"name": "payments-service", "url": "http://localhost:8013/health"},
+    {"name": "files-service", "url": "http://localhost:8014/health"},
+    {"name": "identity-service", "url": "http://localhost:8015/health"},
+    {"name": "analytics-service", "url": "http://localhost:8016/health"},
+    {"name": "search-service", "url": "http://localhost:8017/health"},
+    {"name": "email-service", "url": "http://localhost:8018/health"},
+    {"name": "sms-service", "url": "http://localhost:8019/health"},
+    {"name": "storage-service", "url": "http://localhost:8020/health"},
+    {"name": "cron-service", "url": "http://localhost:8021/health"},
+    {"name": "queue-service", "url": "http://localhost:8022/health"},
+    {"name": "cache-service", "url": "http://localhost:8023/health"},
+    {"name": "config-service", "url": "http://localhost:8024/health"},
+    {"name": "audit-service", "url": "http://localhost:8025/health"},
+    {"name": "rate-limit-service", "url": "http://localhost:8026/health"},
+    {"name": "geo-service", "url": "http://localhost:8027/health"},
+    {"name": "cdn-service", "url": "http://localhost:8028/health"},
 ]
 
-# Materialise the health URL for each entry
-for _svc in SERVICE_REGISTRY:
-    _svc["health_url"] = f"http://localhost:{_svc['port']}/health"
-
-_REGISTRY_BY_NAME: Dict[str, Dict[str, Any]] = {s["name"]: s for s in SERVICE_REGISTRY}
-
-# ---------------------------------------------------------------------------
-# In-memory latest state
-# ---------------------------------------------------------------------------
-
-_latest: Dict[str, Dict[str, Any]] = {}
-_poll_count: int = 0
 
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
 
 
-def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    c.row_factory = sqlite3.Row
-    c.execute("PRAGMA journal_mode=WAL")
-    c.execute("PRAGMA synchronous=NORMAL")
-    return c
+def get_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
 
 
-def _init_db() -> None:
-    with _conn() as c:
-        c.executescript("""
+def init_db() -> None:
+    with get_conn() as conn:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS services (
+                name        TEXT PRIMARY KEY,
+                url         TEXT NOT NULL,
+                enabled     INTEGER NOT NULL DEFAULT 1,
+                added_at    REAL NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS health_checks (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                service     TEXT    NOT NULL,
-                port        INTEGER NOT NULL,
-                url         TEXT    NOT NULL,
-                status      TEXT    NOT NULL,
-                latency_ms  REAL,
-                checked_at  TEXT    NOT NULL,
-                error       TEXT
+                service     TEXT NOT NULL,
+                status      TEXT NOT NULL,
+                http_code   INTEGER,
+                response_ms REAL,
+                details     TEXT,
+                checked_at  REAL NOT NULL
             );
-            CREATE INDEX IF NOT EXISTS idx_hc_svc_time
-                ON health_checks (service, checked_at);
-
-            CREATE TABLE IF NOT EXISTS health_history (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                service     TEXT    NOT NULL,
-                status      TEXT    NOT NULL,
-                latency_ms  REAL,
-                checked_at  TEXT    NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_hh_svc_time
-                ON health_history (service, checked_at);
+            CREATE INDEX IF NOT EXISTS idx_hc_service ON health_checks(service, checked_at);
         """)
-        c.commit()
-    logger.info("health-aggregator DB initialised at %s", DB_PATH)
+        conn.commit()
+        # seed default services
+        for svc in DEFAULT_SERVICES:
+            conn.execute(
+                "INSERT OR IGNORE INTO services (name, url, added_at) VALUES (?,?,?)",
+                (svc["name"], svc["url"], time.time()),
+            )
+        conn.commit()
 
 
-def _persist_check(result: Dict[str, Any]) -> None:
-    now_iso = datetime.now(timezone.utc).isoformat()
-    svc = result["name"]
-    port = result["port"]
-    url = result["health_url"]
-    status = result["status"]
-    latency = result.get("latency_ms")
-    error = result.get("error")
-
-    with _conn() as c:
-        c.execute(
-            """
-            INSERT INTO health_checks (service, port, url, status, latency_ms, checked_at, error)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (svc, port, url, status, latency, now_iso, error),
-        )
-        c.execute(
-            """
-            INSERT INTO health_history (service, status, latency_ms, checked_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (svc, status, latency, now_iso),
-        )
-        # Rolling trim — keep last HISTORY_LIMIT rows per service
-        c.execute(
-            """
-            DELETE FROM health_history
-            WHERE service = ?
-              AND id NOT IN (
-                SELECT id FROM health_history
-                WHERE service = ?
-                ORDER BY id DESC
-                LIMIT ?
-              )
-            """,
-            (svc, svc, HISTORY_LIMIT),
-        )
-        c.commit()
+# In-memory latest status per service
+_latest: Dict[str, dict] = {}
 
 
-# ---------------------------------------------------------------------------
-# Health check logic
-# ---------------------------------------------------------------------------
+_http_client: httpx.AsyncClient | None = None
 
 
-async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
-    """Perform a single HTTP health check; return enriched result dict."""
-    url = svc["health_url"]
-    start = time.monotonic()
-    result: Dict[str, Any] = {
-        "name": svc["name"],
-        "port": svc["port"],
-        "health_url": url,
-        "last_checked": datetime.now(timezone.utc).isoformat(),
-    }
+def _get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=TIMEOUT)
+    return _http_client
+
+
+async def _check_one(name: str, url: str) -> dict:
+    start = time.time()
     try:
-        client = _http_client or httpx.AsyncClient(timeout=HTTP_TIMEOUT)
-        resp = await client.get(url)
-        latency = round((time.monotonic() - start) * 1000, 1)
-        if resp.status_code < 400:
-            result["status"] = "healthy"
-        elif resp.status_code < 500:
-            result["status"] = "degraded"
-        else:
-            result["status"] = "degraded"
-        result["latency_ms"] = latency
-        result["error"] = None
-    except httpx.TimeoutException:
-        result["status"] = "unreachable"
-        result["latency_ms"] = round((time.monotonic() - start) * 1000, 1)
-        result["error"] = "timeout"
-    except Exception as exc:
-        result["status"] = "unreachable"
-        result["latency_ms"] = round((time.monotonic() - start) * 1000, 1)
-        result["error"] = str(exc)[:200]
-    return result
-
-
-async def _poll_all() -> None:
-    """Poll every registered service concurrently."""
-    global _poll_count
-    results = await asyncio.gather(*[_check_one(s) for s in SERVICE_REGISTRY])
-    healthy = 0
-    for r in results:
-        _latest[r["name"]] = r
-        if r["status"] == "healthy":
-            healthy += 1
+        resp = await _get_http_client().get(url)
+        ms = (time.time() - start) * 1000
+        status = "healthy" if resp.status_code < 400 else "degraded"
         try:
-            _persist_check(r)
-        except Exception as exc:
-            logger.warning("DB persist failed for %s: %s", r["name"], exc)
-    _poll_count += 1
-    logger.info(
-        "Poll #%d: %d/%d healthy, %d unreachable",
-        _poll_count,
-        healthy,
-        len(results),
-        sum(1 for r in results if r["status"] == "unreachable"),
-    )
+            details = resp.json()
+        except Exception:
+            details = {"raw": resp.text[:200]}
+        return {
+            "service": name,
+            "status": status,
+            "http_code": resp.status_code,
+            "response_ms": round(ms, 1),
+            "details": details,
+        }
+    except Exception:
+        ms = (time.time() - start) * 1000
+        return {
+            "service": name,
+            "status": "down",
+            "http_code": None,
+            "response_ms": round(ms, 1),
+            "details": {"error": "probe_failed"},
+        }
 
 
 async def _poll_loop() -> None:
-    """Background task — poll on startup, then every POLL_INTERVAL seconds."""
-    await _poll_all()
     while True:
+        with get_conn() as conn:
+            services = conn.execute("SELECT name, url FROM services WHERE enabled=1").fetchall()
+        results = await asyncio.gather(*[_check_one(r["name"], r["url"]) for r in services])
+        now = time.time()
+        with get_conn() as conn:
+            for r in results:
+                _latest[r["service"]] = {**r, "checked_at": now}
+                conn.execute(
+                    "INSERT INTO health_checks (service, status, http_code, response_ms, details, checked_at) VALUES (?,?,?,?,?,?)",
+                    (
+                        r["service"],
+                        r["status"],
+                        r["http_code"],
+                        r["response_ms"],
+                        json.dumps(r["details"]),
+                        now,
+                    ),
+                )
+            conn.commit()
+        healthy = sum(1 for r in results if r["status"] == "healthy")
+        logger.info("Health poll: %d/%d healthy", healthy, len(results))
         await asyncio.sleep(POLL_INTERVAL)
-        await _poll_all()
 
 
 # ---------------------------------------------------------------------------
-# Pydantic response models
+# Models
 # ---------------------------------------------------------------------------
 
 
-class ServiceStatus(BaseModel):
+class ServiceRegister(BaseModel):
     name: str
-    port: int
-    status: str
-    latency_ms: Optional[float] = None
-    last_checked: Optional[str] = None
-    error: Optional[str] = None
-
-
-class PlatformStatus(BaseModel):
-    overall_status: str
-    healthy_count: int
-    degraded_count: int
-    unreachable_count: int
-    total_count: int
-    services: List[ServiceStatus]
-
-
-class HistoryPoint(BaseModel):
-    service: str
-    status: str
-    latency_ms: Optional[float]
-    checked_at: str
+    url: str
 
 
 # ---------------------------------------------------------------------------
@@ -307,35 +194,13 @@ class HistoryPoint(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-_http_client: Optional[httpx.AsyncClient] = None
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _http_client
-    # Shared HTTP client — reuses TCP connections across all health checks
-    _http_client = httpx.AsyncClient(timeout=HTTP_TIMEOUT)
-    # OpenTelemetry instrumentation
-    try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.health-aggregator")
-        FastAPIInstrumentor.instrument_app(app)
-    except Exception:
-        pass  # OTel is optional — never block startup
-    _init_db()
+    init_db()
+    logger.info("health-aggregator DB ready")
     task = asyncio.create_task(_poll_loop())
-    logger.info("health-aggregator started on port %d", PORT)
     yield
     task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass  # expected on graceful shutdown; task was intentionally cancelled
-    await _http_client.aclose()
-    logger.info("health-aggregator stopped")
 
 
 # ---------------------------------------------------------------------------
@@ -346,273 +211,133 @@ STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(
     title="health-aggregator",
-    description="Unified platform health dashboard — The Observatory sub-service",
-    version="2.0.0",
+    description="Unified service health dashboard (self-hosted)",
+    version="1.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-def _overall_status() -> str:
-    if not _latest:
-        return "unknown"
-    statuses = [v["status"] for v in _latest.values()]
-    if all(s == "healthy" for s in statuses):
-        return "healthy"
-    if any(s == "unreachable" for s in statuses):
-        return "degraded"
-    return "degraded"
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
 
-@app.get("/health", summary="Self health check")
-async def health() -> Dict[str, Any]:
-    uptime = (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
+@app.get("/health")
+async def health():
+    healthy = sum(1 for v in _latest.values() if v["status"] == "healthy")
     return {
         "status": "healthy",
         "service": WORKER_NAME,
-        "port": PORT,
-        "uptime_seconds": round(uptime, 1),
-        "poll_count": _poll_count,
-        "monitored_services": len(SERVICE_REGISTRY),
-        "polled_so_far": len(_latest),
+        "port": WORKER_PORT,
+        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "monitored_services": len(_latest),
+        "healthy": healthy,
+        "degraded_or_down": len(_latest) - healthy,
         "entity": {
-            "location": "The Observatory",
-            "lead_ai": "Norman Hawkins",
-            "primary_function": "Platform Health Aggregation",
+            "location": "DevOcity",
+            "pillar": "DevOps",
+            "lead_ai": "Kitty",
+            "primes": ["Trancendos"],
+            "primary_function": "Development Operations",
         },
     }
 
 
-def _require_internal(x_internal_secret: Optional[str]) -> None:
-    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+@_router.get("/status")
+async def status():
+    summary = {
+        "total": len(_latest),
+        "healthy": sum(1 for v in _latest.values() if v["status"] == "healthy"),
+        "degraded": sum(1 for v in _latest.values() if v["status"] == "degraded"),
+        "down": sum(1 for v in _latest.values() if v["status"] == "down"),
+    }
+    return {"summary": summary, "services": list(_latest.values())}
 
 
-@app.get("/status", response_model=PlatformStatus, summary="Full platform status")
-async def status(x_internal_secret: Optional[str] = Header(None)) -> PlatformStatus:
-    _require_internal(x_internal_secret)
-    services = []
-    healthy = degraded = unreachable = 0
-    for svc in SERVICE_REGISTRY:
-        name = svc["name"]
-        if name in _latest:
-            d = _latest[name]
-            st = d["status"]
-            entry = ServiceStatus(
-                name=name,
-                port=svc["port"],
-                status=st,
-                latency_ms=d.get("latency_ms"),
-                last_checked=d.get("last_checked"),
-                error=d.get("error"),
-            )
-        else:
-            st = "unknown"
-            entry = ServiceStatus(name=name, port=svc["port"], status="unknown")
-        services.append(entry)
-        if st == "healthy":
-            healthy += 1
-        elif st == "unreachable":
-            unreachable += 1
-        elif st in ("degraded", "unknown"):
-            degraded += 1
-
-    return PlatformStatus(
-        overall_status=_overall_status(),
-        healthy_count=healthy,
-        degraded_count=degraded,
-        unreachable_count=unreachable,
-        total_count=len(SERVICE_REGISTRY),
-        services=services,
-    )
+@_router.get("/status/{service}")
+async def service_status(service: str):
+    if service not in _latest:
+        raise HTTPException(status_code=404, detail="Service not found or not yet polled")
+    return _latest[service]
 
 
-@app.get("/status/{service}", summary="Single service detail with history")
-async def service_detail(
-    service: str, x_internal_secret: Optional[str] = Header(None)
-) -> Dict[str, Any]:
-    _require_internal(x_internal_secret)
-    if service not in _REGISTRY_BY_NAME:
-        raise HTTPException(status_code=404, detail=f"Service '{service}' not in registry")
+@_router.post("/check/{service}")
+async def force_check(service: str):
+    with get_conn() as conn:
+        row = conn.execute("SELECT url FROM services WHERE name = ?", (service,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Service not registered")
+    result = await _check_one(service, row["url"])
+    now = time.time()
+    _latest[service] = {**result, "checked_at": now}
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO health_checks (service, status, http_code, response_ms, details, checked_at) VALUES (?,?,?,?,?,?)",
+            (
+                service,
+                result["status"],
+                result["http_code"],
+                result["response_ms"],
+                json.dumps(result["details"]),
+                now,
+            ),
+        )
+        conn.commit()
+    return result
 
-    current = _latest.get(
-        service, {"status": "unknown", "port": _REGISTRY_BY_NAME[service]["port"]}
-    )
 
-    with _conn() as c:
-        rows = c.execute(
-            """
-            SELECT status, latency_ms, checked_at
-            FROM health_history
-            WHERE service = ?
-            ORDER BY id DESC
-            LIMIT 20
-            """,
-            (service,),
+@_router.get("/history/{service}")
+async def service_history(service: str, limit: int = 50):
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT status, http_code, response_ms, checked_at FROM health_checks WHERE service=? ORDER BY checked_at DESC LIMIT ?",
+            (service, limit),
         ).fetchall()
-
-    history = [dict(r) for r in rows]
-
-    return {
-        "service": service,
-        "port": _REGISTRY_BY_NAME[service]["port"],
-        "current": current,
-        "history_last_20": history,
-    }
+    return {"service": service, "history": [dict(r) for r in rows]}
 
 
-@app.get("/history", summary="History for all or one service")
-async def history(
-    service: Optional[str] = Query(None, description="Filter to a single service"),
-    limit: int = Query(20, ge=1, le=500),
-    x_internal_secret: Optional[str] = Header(None),
-) -> Dict[str, Any]:
-    _require_internal(x_internal_secret)
-    with _conn() as c:
-        if service:
-            if service not in _REGISTRY_BY_NAME:
-                raise HTTPException(status_code=404, detail=f"Service '{service}' not in registry")
-            rows = c.execute(
-                """
-                SELECT service, status, latency_ms, checked_at
-                FROM health_history
-                WHERE service = ?
-                ORDER BY id DESC
-                LIMIT ?
-                """,
-                (service, limit),
-            ).fetchall()
-        else:
-            # Return the last `limit` rows PER SERVICE using ROW_NUMBER window fn.
-            # A single LIMIT clause would give a globally-skewed subset biased
-            # toward whichever service has the highest IDs.
-            rows = c.execute(
-                """
-                SELECT service, status, latency_ms, checked_at
-                FROM (
-                    SELECT service, status, latency_ms, checked_at,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY service ORDER BY id DESC
-                           ) AS rn
-                    FROM health_history
-                )
-                WHERE rn <= ?
-                ORDER BY service, rn
-                """,
-                (limit,),
-            ).fetchall()
-
-    by_service: Dict[str, List[Dict]] = defaultdict(list)
-    for r in rows:
-        by_service[r["service"]].append(dict(r))
-
-    return {"history": dict(by_service), "limit_per_service": limit}
+@_router.get("/services")
+async def list_services():
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM services ORDER BY name").fetchall()
+    return {"services": [dict(r) for r in rows]}
 
 
-@app.get("/predict", summary="Degradation forecast: at-risk services")
-async def predict() -> Dict[str, Any]:
-    """
-    Services with more than 2 degraded or unreachable checks in the last
-    10 checks are flagged as 'at_risk'.
-    """
-    at_risk = []
-    stable = []
-
-    with _conn() as c:
-        for svc in SERVICE_REGISTRY:
-            name = svc["name"]
-            rows = c.execute(
-                """
-                SELECT status FROM health_history
-                WHERE service = ?
-                ORDER BY id DESC
-                LIMIT 10
-                """,
-                (name,),
-            ).fetchall()
-            if not rows:
-                continue
-            bad = sum(1 for r in rows if r["status"] in ("degraded", "unreachable"))
-            entry = {
-                "service": name,
-                "port": svc["port"],
-                "checks_sampled": len(rows),
-                "bad_checks": bad,
-                "current_status": _latest.get(name, {}).get("status", "unknown"),
-            }
-            if bad > 2:
-                at_risk.append(entry)
-            else:
-                stable.append(entry)
-
-    return {
-        "at_risk_count": len(at_risk),
-        "stable_count": len(stable),
-        "at_risk": at_risk,
-        "stable": stable,
-        "prediction_window": "last 10 checks per service",
-        "threshold": "more than 2 bad checks",
-    }
+@_router.post("/services", status_code=201)
+async def register_service(req: ServiceRegister):
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO services (name, url, added_at) VALUES (?,?,?)",
+            (req.name, req.url, time.time()),
+        )
+        conn.commit()
+    return {"registered": req.name, "url": req.url}
 
 
-@app.get("/metrics", response_class=PlainTextResponse, summary="Prometheus text metrics")
-async def metrics() -> str:
-    """
-    Expose service health as Prometheus gauge metrics.
-
-    service_health_status gauge:
-      1.0 = healthy, 0.5 = degraded, 0.0 = unreachable/unknown
-
-    service_latency_ms gauge: last observed latency in milliseconds.
-    """
-    lines: List[str] = [
-        "# HELP service_health_status Health status of each Trancendos service (1=healthy, 0.5=degraded, 0=unreachable)",
-        "# TYPE service_health_status gauge",
-    ]
-    for svc in SERVICE_REGISTRY:
-        name = svc["name"]
-        data = _latest.get(name, {})
-        st = data.get("status", "unknown")
-        value = {"healthy": 1.0, "degraded": 0.5}.get(st, 0.0)
-        lines.append(f'service_health_status{{service="{name}",port="{svc["port"]}"}} {value}')
-
-    lines += [
-        "",
-        "# HELP service_latency_ms Last observed health-check latency in milliseconds",
-        "# TYPE service_latency_ms gauge",
-    ]
-    for svc in SERVICE_REGISTRY:
-        name = svc["name"]
-        data = _latest.get(name, {})
-        latency = data.get("latency_ms")
-        if latency is not None:
-            lines.append(f'service_latency_ms{{service="{name}",port="{svc["port"]}"}} {latency}')
-
-    lines += [
-        "",
-        "# HELP health_aggregator_poll_total Total number of full poll cycles completed",
-        "# TYPE health_aggregator_poll_total counter",
-        f"health_aggregator_poll_total {_poll_count}",
-    ]
-
-    return "\n".join(lines) + "\n"
+@_router.delete("/services/{name}")
+async def unregister_service(name: str):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM services WHERE name = ?", (name,))
+        conn.commit()
+    _latest.pop(name, None)
+    return {"unregistered": name}
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
+app.include_router(_router)
+
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

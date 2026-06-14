@@ -1,0 +1,17 @@
+[package]
+name = "tranc3-vault-crypto"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "vault_crypto"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.29", features = ["extension-module"] }
+aes-gcm = "0.10"
+pbkdf2 = { version = "0.12", features = ["hmac"] }
+sha2 = "0.10"
+rand = "0.8"
+hex = "0.4"
+zeroize = { version = "1.7", features = ["derive"] }

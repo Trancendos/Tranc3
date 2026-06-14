@@ -89,3 +89,49 @@ See `docs/CVE_REMEDIATION_REPORT.md` for the complete list of 66 resolved CVEs.
 - **GDPR / UK-GDPR** — Data protection measures in place
 - **Magna Carta Digital Rights** — Constitutional compliance
 - **CycloneDX SBOM** — Software Bill of Materials for supply chain transparency
+
+## Zero-Cost Security Architecture (2026)
+
+### Provider Adaptive Rotation
+All AI inference runs zero-cost with automatic rotation across ≥8 free providers:
+
+| Priority | Provider | Limit | Hard Stop |
+|----------|----------|-------|-----------|
+| 1 | Ollama (local) | Unlimited | N/A |
+| 2 | Groq Free | 14,400 req/day | 80% = 11,520 |
+| 3 | Gemini Free | 1,500 req/day | 80% = 1,200 |
+| 4 | Cerebras Free | 1M tok/day | 80% = 800K tok |
+| 5 | SambaNova Free | Unlimited (rate-limited) | 80% |
+| 6 | OpenRouter Free | ~200 req/day | 80% = 160 |
+| 7 | HuggingFace Free | Rate-limited | 80% |
+| 8 | Offline Stub | Unlimited | N/A (deterministic) |
+
+Implemented in: `src/ai_gateway/zero_cost_config.py`, `src/utils/security_checks.py`
+
+### Vault Security (The Void)
+- **Canonical vault:** `workers/the-void/` (AES-256-GCM + PBKDF2-HMAC-SHA256)
+- **Rust crypto layer:** `workers/the-void/rust_crypto/` (PyO3 extension, Python fallback)
+- **Deprecated:** `workers/vault-service/` — see `workers/vault-service/DEPRECATED.md`
+- XOR encryption legacy shim in vault-service is migration-only and will be removed
+
+### Intelligence Pipeline (Section 7 → Cryptex → Library)
+- **Section 7** (`src/section7/`): 6-hour scheduled threat intel gathering
+  - NVD CVE feed (free), OpenCVE (free), GitHub Security Advisories (free unauthenticated)
+  - Rate-limited to 1 req/sec with exponential backoff
+- **Cryptex** (`src/cryptex/`): CVE scanning + threat detection
+- **Observatory→Library** (`src/observability/library_pipeline.py`): audit events
+  → KB article triggers in The Library (Outline) via async batched HTTP
+
+### Threat Model (STRIDE — updated 2026-06-14)
+See `ARCHITECTURE_THREAT_MODEL.md` for full STRIDE analysis. Key mitigations:
+- **Spoofing:** Zero Trust IAM (`src/auth/zero_trust.py`), device posture, MFA
+- **Tampering:** AES-256-GCM vault, HMAC message signing, read-only containers
+- **Repudiation:** Observatory audit log (append-only SQLite), W3C trace propagation
+- **Information Disclosure:** Non-root containers, secrets via The Void, no env secret logging
+- **DoS:** Token-bucket rate limiter (Go, port 8028), circuit breakers per service
+- **Elevation:** `no-new-privileges:true` Docker security option, non-root `tranc3` user
+
+### CVE-2025-69872 (diskcache Pickle Deserialization RCE — CVSS 9.8 Critical) Mitigation
+Runtime check in `src/utils/security_checks.py` — verifies process runs as non-root (UID ≠ 0).
+This CVE is a pickle deserialization RCE that allows arbitrary code execution via malicious cache payloads.
+Applied at application startup. No upstream patch available; non-root deployment and input sanitisation are the mitigations.
