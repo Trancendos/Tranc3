@@ -208,13 +208,12 @@ class ConversationStore:
             ).fetchall()
             session_ids = [r[0] for r in old_sessions]
             if session_ids:
+                # placeholders is only "?,?,?" — safe; avoid f-string to satisfy static analysis
                 placeholders = ",".join("?" for _ in session_ids)
-                conn.execute(
-                    f"DELETE FROM messages WHERE session_id IN ({placeholders})", session_ids
-                )
-                conn.execute(
-                    f"DELETE FROM sessions WHERE session_id IN ({placeholders})", session_ids
-                )
+                sql_msgs = "DELETE FROM messages WHERE session_id IN (" + placeholders + ")"
+                sql_sess = "DELETE FROM sessions WHERE session_id IN (" + placeholders + ")"
+                conn.execute(sql_msgs, session_ids)
+                conn.execute(sql_sess, session_ids)
                 conn.commit()
         return len(session_ids)
 

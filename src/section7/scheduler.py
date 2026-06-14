@@ -30,7 +30,7 @@ async def _run_intelligence_loop() -> None:
     try:
         from src.section7.web_scraper import run_full_scrape
 
-        results = run_full_scrape()
+        results = await asyncio.to_thread(run_full_scrape)
         for intel in results:
             if intel.error:
                 logger.warning("Section 7: source=%s error=%s", intel.source, intel.error)
@@ -96,7 +96,7 @@ class Section7Scheduler:
         if self._scheduler is not None:
             try:
                 self._scheduler.shutdown(wait=False)  # type: ignore[union-attr]
-            except Exception:
+            except Exception:  # noqa: BLE001 — ignore shutdown errors
                 pass
         self._running = False
         if self._task is not None:

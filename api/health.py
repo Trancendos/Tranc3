@@ -18,7 +18,7 @@ except ImportError:
     _HTTPX_AVAILABLE = False
 
 try:
-    from api.models import DeepHealthResponse, HealthResponse
+    from api.models import DeepHealthResponse, HealthResponse  # noqa: F401
 except ImportError:
     HealthResponse = dict  # type: ignore[misc,assignment]
     DeepHealthResponse = dict  # type: ignore[misc,assignment]

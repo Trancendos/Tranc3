@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # world-writable and the process runs as root. Hard-stop if both conditions hold.
 def check_diskcache_cve_2025_69872() -> None:
     """Abort if running as root — diskcache CVE-2025-69872 mitigation."""
-    if os.getuid() == 0:
+    if (hasattr(os, "getuid") and os.getuid() == 0):
         logger.critical(
             "CVE-2025-69872: diskcache is unsafe when running as root. "
             "Restart the service as a non-privileged user."
@@ -70,7 +70,7 @@ def _load_usage() -> dict[str, int]:
             today = time.strftime("%Y-%m-%d")
             if stored_day == today:
                 return {k: v for k, v in data.items() if not k.startswith("_")}
-    except Exception:
+    except Exception:  # noqa: BLE001 — missing/corrupt usage file, start fresh
         pass
     return {}
 
@@ -80,7 +80,7 @@ def _save_usage(usage: dict[str, int]) -> None:
         payload = dict(usage)
         payload["_day"] = time.strftime("%Y-%m-%d")
         _USAGE_FILE.write_text(json.dumps(payload))
-    except Exception:
+    except Exception:  # noqa: BLE001 — write failure is non-fatal
         pass
 
 

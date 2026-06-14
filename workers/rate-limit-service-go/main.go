@@ -56,7 +56,7 @@ func (b *bucket) check(cost int) (bool, int, time.Time) {
 	c := float64(cost)
 	if b.tokens >= c {
 		b.tokens -= c
-		resetAt := now.Add(time.Duration((b.maxTokens-b.tokens)/b.ratePerSec) * time.Second)
+		resetAt := now.Add(time.Duration((b.maxTokens-b.tokens)/b.ratePerSec * float64(time.Second)))
 		return true, int(b.tokens), resetAt
 	}
 	// Denied: tell caller when bucket will be full enough

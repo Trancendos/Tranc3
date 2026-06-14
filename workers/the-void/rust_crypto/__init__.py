@@ -27,7 +27,6 @@ try:
 except ImportError:
     # ── Pure-Python fallback ─────────────────────────────────────────────────
     import hashlib
-    import hmac
 
     try:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM

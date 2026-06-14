@@ -33,14 +33,19 @@ _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 def _get_current_user(token: str = Depends(_oauth2_scheme)) -> dict[str, Any]:
-    """Decode bearer token and return minimal user dict."""
+    """Decode bearer token — delegates to api.auth to honour revocation list."""
+    try:
+        from api.auth import _decode_token  # type: ignore[import]
+        return _decode_token(token)
+    except ImportError:
+        pass
+    # Fallback if api.auth unavailable (standalone usage without full app)
     if pyjwt is None:
         raise HTTPException(status_code=500, detail="PyJWT not installed")
     try:
-        payload = pyjwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
+        return pyjwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
     except Exception as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
-    return payload
 
 
 @router.get("/me")
@@ -59,7 +64,7 @@ async def get_me(current_user: dict[str, Any] = Depends(_get_current_user)) -> d
                 row = result.scalar_one_or_none()
                 if row:
                     return {"id": str(row.id), "username": row.username, "email": getattr(row, "email", None)}
-        except Exception:
+        except Exception:  # noqa: BLE001 — DB unavailable, use token fallback
             pass
 
     # Graceful fallback when DB is unavailable.
@@ -85,7 +90,7 @@ async def update_me(
                 await db.execute(update(User).where(User.username == sub).values(**filtered))
                 await db.commit()
                 return {"updated": list(filtered.keys()), "sub": sub}
-        except Exception:
+        except Exception:  # noqa: BLE001 — DB unavailable, dry-run
             pass
 
     return {"updated": list(filtered.keys()), "sub": sub, "source": "dry-run"}

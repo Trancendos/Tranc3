@@ -57,20 +57,19 @@ async def ingest(event: dict[str, Any]) -> None:
         tags=event.get("tags", []),
     )
 
+    batch: list[KBTrigger] = []
     async with _lock:
         _queue.append(trigger)
         if len(_queue) >= BATCH_SIZE:
-            await _flush()
+            batch = _queue.copy()
+            _queue.clear()
+    # Flush outside the lock so I/O doesn't block concurrent ingest() calls
+    if batch:
+        await _send_batch(batch)
 
 
-async def _flush() -> None:
-    """Send queued triggers to The Library (Outline). Must hold _lock."""
-    if not _queue:
-        return
-
-    batch = _queue.copy()
-    _queue.clear()
-
+async def _send_batch(batch: list[KBTrigger]) -> None:
+    """Send a pre-collected batch to The Library; called outside the lock."""
     try:
         import httpx  # type: ignore[import-not-found]
 
@@ -82,16 +81,25 @@ async def _flush() -> None:
             else:
                 logger.debug("Library pipeline flushed %d triggers", len(batch))
     except Exception as exc:  # noqa: BLE001
-        # Library unavailable — silently drop (observability must not cascade-fail)
         logger.debug("Library pipeline unavailable: %s", exc)
+
+
+async def _flush() -> None:
+    """Drain the queue under lock, then send outside it."""
+    batch: list[KBTrigger] = []
+    async with _lock:
+        if _queue:
+            batch = _queue.copy()
+            _queue.clear()
+    if batch:
+        await _send_batch(batch)
 
 
 async def flush_loop() -> None:
     """Background coroutine: flush the queue every FLUSH_INTERVAL_SEC seconds."""
     while True:
         await asyncio.sleep(FLUSH_INTERVAL_SEC)
-        async with _lock:
-            await _flush()
+        await _flush()
 
 
 def start_pipeline(app: Any = None) -> None:

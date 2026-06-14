@@ -1978,7 +1978,7 @@ async def eval_score(
     tags=["mesh"],
     summary="Service mesh + routing statistics",
 )
-async def mesh_stats() -> dict:
+async def mesh_stats(current_user: dict = Depends(get_current_user)) -> dict:
     """
     Returns aggregated stats from all routing engines:
     quantum, genetic, meta, fluid, quota enforcer, and zero-cost tracker.
@@ -2042,7 +2042,7 @@ async def mesh_stats() -> dict:
     tags=["mesh"],
     summary="Free-tier quota dashboard for all AI providers",
 )
-async def mesh_quota() -> dict:
+async def mesh_quota(current_user: dict = Depends(get_current_user)) -> dict:
     """Returns quota usage and availability for all 8 free AI providers."""
     try:
         from src.mesh.quota_enforcer import get_enforcer

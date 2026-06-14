@@ -109,9 +109,9 @@ def scrape_github_advisories(per_page: int = 30) -> ThreatIntel:
         raw = _fetch_url(url, headers={"Accept": "application/vnd.github+json"})
         items = json.loads(raw)
         for item in items if isinstance(items, list) else []:
-            for cve_id in item.get("cve_id", "") or []:
-                if cve_id:
-                    intel.cve_ids.append(cve_id)
+            cve_id = item.get("cve_id")
+            if cve_id and isinstance(cve_id, str):
+                intel.cve_ids.append(cve_id)
             intel.raw_items.append(item)
         _sleep(_MIN_INTERVAL)
     except Exception as exc:
