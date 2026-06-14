@@ -8,7 +8,7 @@ name = "vault_crypto"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.21", features = ["extension-module"] }
+pyo3 = { version = "0.29", features = ["extension-module"] }
 aes-gcm = "0.10"
 pbkdf2 = { version = "0.12", features = ["hmac"] }
 sha2 = "0.10"

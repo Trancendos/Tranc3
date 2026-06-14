@@ -133,7 +133,7 @@ fn derive_key(password: &str, salt_hex: &str) -> PyResult<String> {
 
 /// vault_crypto Python module
 #[pymodule]
-fn vault_crypto(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn vault_crypto(m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encrypt, m)?)?;
     m.add_function(wrap_pyfunction!(decrypt, m)?)?;
     m.add_function(wrap_pyfunction!(derive_key, m)?)?;
