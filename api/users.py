@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 try:
     from fastapi import APIRouter, Depends, HTTPException
@@ -11,8 +11,9 @@ except ImportError as exc:  # pragma: no cover
     raise RuntimeError("fastapi required") from exc
 
 try:
-    import jwt as pyjwt
     import os
+
+    import jwt as pyjwt
 
     _JWT_SECRET = os.getenv("JWT_SECRET", "changeme-in-production")
     _JWT_ALGORITHM = "HS256"
@@ -38,7 +39,7 @@ def _get_current_user(token: str = Depends(_oauth2_scheme)) -> dict[str, Any]:
     try:
         payload = pyjwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
     return payload
 
 
@@ -50,8 +51,8 @@ async def get_me(current_user: dict[str, Any] = Depends(_get_current_user)) -> d
     if _MODELS_AVAILABLE:
         # Hydrate from DB when the models layer is present.
         try:
-            from src.database.session import get_db  # type: ignore[import]
             from sqlalchemy import select
+            from src.database.session import get_db  # type: ignore[import]
 
             async for db in get_db():
                 result = await db.execute(select(User).where(User.username == sub))
@@ -77,8 +78,8 @@ async def update_me(
 
     if _MODELS_AVAILABLE:
         try:
+            from sqlalchemy import update
             from src.database.session import get_db  # type: ignore[import]
-            from sqlalchemy import select, update
 
             async for db in get_db():
                 await db.execute(update(User).where(User.username == sub).values(**filtered))

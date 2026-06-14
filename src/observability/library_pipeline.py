@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import time
-from dataclasses import dataclass, asdict
-from typing import Any, Optional
+from dataclasses import asdict, dataclass
+from typing import Any
 
 logger = logging.getLogger("tranc3.observability.library_pipeline")
 

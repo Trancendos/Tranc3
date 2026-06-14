@@ -19,9 +19,12 @@ FROM gcr.io/distroless/static-debian12:nonroot
 # Copy binary from builder
 COPY --from=builder /monitoring-go /monitoring-go
 
-# Non-root user is already the default in distroless/static-debian12:nonroot
-# (uid 65532 / gid 65532)
+# distroless:nonroot ships with uid 65532; declare it explicitly for Trivy DS-0002
+USER 65532:65532
 
 EXPOSE 8007
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD ["/monitoring-go", "-healthcheck"]
 
 ENTRYPOINT ["/monitoring-go"]

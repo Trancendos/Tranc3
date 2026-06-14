@@ -167,7 +167,7 @@ def run_startup_checks() -> None:
     if not non_root:
         logger.warning("Security degraded: running as root violates zero-trust policy")
 
-    report = check_provider_health()
+    report = get_provider_health()
     active = report.active_provider or "offline-stub"
     healthy_count = sum(1 for p in report.providers if p.healthy)
     logger.info(
