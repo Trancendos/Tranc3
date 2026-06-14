@@ -63,7 +63,7 @@ def _decode_token(token: str) -> dict[str, Any]:
     except pyjwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired") from None
     except pyjwt.InvalidTokenError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+        raise HTTPException(status_code=401, detail="Invalid token") from exc
     if payload.get("jti") in _revoked_jti:
         raise HTTPException(status_code=401, detail="Token revoked")
     return payload

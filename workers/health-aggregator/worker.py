@@ -115,11 +115,20 @@ def init_db() -> None:
 _latest: Dict[str, dict] = {}
 
 
+_http_client: httpx.AsyncClient | None = None
+
+
+def _get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=TIMEOUT)
+    return _http_client
+
+
 async def _check_one(name: str, url: str) -> dict:
     start = time.time()
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            resp = await client.get(url)
+        resp = await _get_http_client().get(url)
         ms = (time.time() - start) * 1000
         status = "healthy" if resp.status_code < 400 else "degraded"
         try:
@@ -133,14 +142,14 @@ async def _check_one(name: str, url: str) -> dict:
             "response_ms": round(ms, 1),
             "details": details,
         }
-    except Exception as exc:
+    except Exception:
         ms = (time.time() - start) * 1000
         return {
             "service": name,
             "status": "down",
             "http_code": None,
             "response_ms": round(ms, 1),
-            "details": {"error": str(exc)},
+            "details": {"error": "probe_failed"},
         }
 
 
