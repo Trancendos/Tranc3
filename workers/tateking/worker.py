@@ -321,8 +321,25 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
     start = time.time()
     cmd = None
 
+    # Sanitise all user-supplied FFmpeg params before use in subprocess argv.
+    # Timestamps must match HH:MM:SS or plain seconds; CRF and dimensions are ints.
+    import re as _re
+
+    _TS_RE = _re.compile(r"^[\d:.]+$")
+
+    def _safe_ts(val: str, default: str) -> str:
+        v = str(val)
+        return v if _TS_RE.match(v) else default
+
+    def _safe_int(val, default: int, lo: int, hi: int) -> int:
+        try:
+            v = int(val)
+            return max(lo, min(hi, v))
+        except (TypeError, ValueError):
+            return default
+
     if op == "thumbnail":
-        ts = params.get("timestamp", "00:00:01")
+        ts = _safe_ts(params.get("timestamp", "00:00:01"), "00:00:01")
         output_path += ".jpg"
         cmd = ["ffmpeg", "-y", "-i", input_path, "-ss", ts, "-vframes", "1", output_path]
     elif op == "extract_audio":
@@ -343,7 +360,7 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
         ]
     elif op == "compress":
         output_path += ".mp4"
-        crf = params.get("crf", "28")
+        crf = str(_safe_int(params.get("crf", 28), 28, 0, 51))
         cmd = [
             "ffmpeg",
             "-y",
@@ -352,12 +369,12 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
             "-vcodec",
             "libx264",
             "-crf",
-            str(crf),
+            crf,
             output_path,
         ]
     elif op == "trim":
-        start_t = params.get("start", "0")
-        end_t = params.get("end", "10")
+        start_t = _safe_ts(params.get("start", "0"), "0")
+        end_t = _safe_ts(params.get("end", "10"), "10")
         output_path += ".mp4"
         cmd = [
             "ffmpeg",
@@ -373,7 +390,8 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
             output_path,
         ]
     elif op == "resize":
-        w, h = params.get("width", 1280), params.get("height", 720)
+        w = _safe_int(params.get("width", 1280), 1280, 1, 7680)
+        h = _safe_int(params.get("height", 720), 720, 1, 4320)
         output_path += ".mp4"
         cmd = ["ffmpeg", "-y", "-i", input_path, "-vf", f"scale={w}:{h}", output_path]
     else:
