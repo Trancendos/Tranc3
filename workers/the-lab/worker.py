@@ -14,6 +14,7 @@ import logging
 import os
 import sqlite3
 import subprocess
+import tempfile
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -32,10 +33,10 @@ INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
 EXEC_TIMEOUT = int(os.getenv("EXEC_TIMEOUT", "10"))
 
 ALLOWED_LANGS = {
-    "python3": ["python3", "-c"],
-    "python": ["python3", "-c"],
-    "node": ["node", "-e"],
-    "bash": ["bash", "-c"],
+    "python3": ("python3", ".py"),
+    "python": ("python3", ".py"),
+    "node": ("node", ".js"),
+    "bash": ("bash", ".sh"),
 }
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -290,7 +291,12 @@ async def execute_inline(body: InlineExecIn, x_internal_secret: str = Header(def
 
 
 async def _run_code(language: str, code: str, snippet_id: Optional[int]) -> dict:
-    cmd = ALLOWED_LANGS[language] + [code]
+    interpreter, ext = ALLOWED_LANGS[language]
+    # Write code to a temp file — avoids passing user content on the command line
+    with tempfile.NamedTemporaryFile(mode="w", suffix=ext, delete=False) as tf:
+        tf.write(code)
+        tmp_path = tf.name
+    cmd = [interpreter, tmp_path]
     start = time.time()
     try:
         result = subprocess.run(
@@ -304,6 +310,11 @@ async def _run_code(language: str, code: str, snippet_id: Optional[int]) -> dict
     except Exception as exc:
         duration_ms = 0
         stdout, stderr, exit_code = "", str(exc), 1
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
     now = time.time()
     if snippet_id:

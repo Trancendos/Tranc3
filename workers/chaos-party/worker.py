@@ -253,8 +253,11 @@ async def record_run(body: TestRunIn, x_internal_secret: str = Header(default=""
         )
         conn.commit()
         if body.suite_id:
-            field = "pass_count" if body.status == "pass" else "fail_count"
-            conn.execute(f"UPDATE test_suites SET {field}={field}+1, last_run_at=? WHERE id=?", (now, body.suite_id))
+            # field is a hardcoded column name, never user input — not SQLi
+            if body.status == "pass":
+                conn.execute("UPDATE test_suites SET pass_count=pass_count+1, last_run_at=? WHERE id=?", (now, body.suite_id))
+            else:
+                conn.execute("UPDATE test_suites SET fail_count=fail_count+1, last_run_at=? WHERE id=?", (now, body.suite_id))
             conn.commit()
     return {"id": cur.lastrowid, "status": body.status, "ran_at": now}
 
