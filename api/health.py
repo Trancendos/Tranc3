@@ -57,18 +57,23 @@ async def deep_health() -> dict[str, Any]:
             "timestamp": time.time(),
         }
 
+    import asyncio
+
+    async def _probe(client: httpx.AsyncClient, name: str, url: str) -> tuple[str, dict]:
+        try:
+            resp = await client.get(url)
+            status = "ok" if resp.status_code < 300 else "degraded"
+            return name, {"status": status, "http_status": resp.status_code}
+        except Exception:
+            return name, {"status": "unreachable", "error": "probe_failed"}
+
     async with httpx.AsyncClient(timeout=3.0) as client:
-        for name, url in _P0_WORKERS.items():
-            try:
-                resp = await client.get(url)
-                results[name] = {
-                    "status": "ok" if resp.status_code < 300 else "degraded",
-                    "http_status": resp.status_code,
-                }
-                if resp.status_code >= 300:
-                    overall = "degraded"
-            except Exception:
-                results[name] = {"status": "unreachable", "error": "probe_failed"}
+        probes = await asyncio.gather(
+            *(_probe(client, name, url) for name, url in _P0_WORKERS.items())
+        )
+        for name, res in probes:
+            results[name] = res
+            if res["status"] != "ok":
                 overall = "degraded"
 
     return {

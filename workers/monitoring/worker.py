@@ -37,7 +37,6 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import safe_error_detail
 
 # ---------------------------------------------------------------------------
 # Configuration

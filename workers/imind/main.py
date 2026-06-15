@@ -47,13 +47,17 @@ async def analyse(body: dict) -> JSONResponse:
     text = body.get("text", "")
     if not text:
         return JSONResponse({"error": "text field required"}, status_code=422)
+    polarity = 0.0
+    subjectivity = 0.0
+    used_textblob = False
     if _TEXTBLOB_AVAILABLE:
-        blob = TextBlob(text)
-        polarity = blob.sentiment.polarity
-        subjectivity = blob.sentiment.subjectivity
-    else:
-        polarity = 0.0
-        subjectivity = 0.0
+        try:
+            blob = TextBlob(text)
+            polarity = blob.sentiment.polarity
+            subjectivity = blob.sentiment.subjectivity
+            used_textblob = True
+        except Exception:
+            pass
     return JSONResponse(
         {
             "text": text,
@@ -64,7 +68,7 @@ async def analyse(body: dict) -> JSONResponse:
                 if polarity > 0
                 else ("negative" if polarity < 0 else "neutral"),
             },
-            "engine": "textblob" if _TEXTBLOB_AVAILABLE else "stub",
+            "engine": "textblob" if used_textblob else "stub",
         }
     )
 

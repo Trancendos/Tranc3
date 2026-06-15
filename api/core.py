@@ -43,15 +43,23 @@ def create_app(
     **kwargs: Any,
 ) -> FastAPI:
     """Build and return the configured FastAPI application."""
-    origins = allowed_origins or os.getenv("ALLOWED_ORIGINS", ",".join(_DEFAULT_ORIGINS)).split(",")
+    origins = (
+        allowed_origins
+        if allowed_origins is not None
+        else os.getenv("ALLOWED_ORIGINS", ",".join(_DEFAULT_ORIGINS)).split(",")
+    )
 
-    hosts = allowed_hosts or [
-        h.strip()
-        for h in os.environ.get(
-            "ALLOWED_HOSTS", "localhost,trancendos.com,api.trancendos.com"
-        ).split(",")
-        if h.strip()
-    ]
+    hosts = (
+        allowed_hosts
+        if allowed_hosts is not None
+        else [
+            h.strip()
+            for h in os.environ.get(
+                "ALLOWED_HOSTS", "localhost,trancendos.com,api.trancendos.com"
+            ).split(",")
+            if h.strip()
+        ]
+    )
 
     app = FastAPI(
         title="Tranc3 API",

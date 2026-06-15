@@ -94,14 +94,18 @@ def _save_usage(usage: dict[str, int]) -> None:
 
 
 def _probe_provider(url: str, timeout: float = 2.0) -> bool:
-    """Return True if provider endpoint responds with HTTP 2xx."""
-    try:
-        import urllib.request
+    """Return True if provider endpoint responds (2xx or auth challenge means alive)."""
+    import urllib.error
+    import urllib.request
 
+    try:
         req = urllib.request.Request(url, method="GET")
         req.add_header("User-Agent", "tranc3-health-check/1.0")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return 200 <= resp.status < 300
+    except urllib.error.HTTPError as exc:
+        # 401/403 means the service is alive but requires auth — treat as healthy.
+        return exc.code in (401, 403)
     except Exception:
         return False
 

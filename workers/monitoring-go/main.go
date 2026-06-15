@@ -31,7 +31,7 @@ type Alert struct {
 type WorkerSnapshot struct {
 	URL     string        `json:"url"`
 	Healthy bool          `json:"healthy"`
-	Latency time.Duration `json:"latency_ms"`
+	LatencyMs int64  `json:"latency_ms"`
 	Error   string        `json:"error,omitempty"`
 }
 
@@ -230,7 +230,7 @@ func snapshotsHandler(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			resp, err := client.Get(u + "/health")
 			latency := time.Since(start)
-			snap := WorkerSnapshot{URL: u, Latency: latency / time.Millisecond}
+			snap := WorkerSnapshot{URL: u, LatencyMs: int64(latency / time.Millisecond)}
 			if err != nil {
 				snap.Healthy = false
 				snap.Error = err.Error()
