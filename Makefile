@@ -10,7 +10,8 @@
         security-scan security-install security-full pre-commit-install \
         gate-check zero-cost-status backup-status backup-all dr-drill dr-verify \
         perf-gate perf-gate-update sbom download-model dev-api dev-web \
-        submodules check-env
+        submodules check-env \
+        deploy-dev deploy-staging deploy-prod deploy-verify deploy-rollback
 
 # ── First-time setup (single command) ─────────────────────────────────────────
 # Recommended entry point for new developers or CI environments.
@@ -173,6 +174,50 @@ deploy:
 
 deploy-stop:
 	docker-compose down
+
+## ── Deployment modes ─────────────────────────────────────────────────────────
+# dev: local development stack (hot-reload, debug logging, no TLS)
+deploy-dev:
+	@echo "==> Starting dev stack (docker-compose.yml)..."
+	docker compose -f docker-compose.yml up -d --build --remove-orphans
+	@echo "==> Verifying P0 services..."
+	@python3 scripts/post_deploy_verify.py --tier P0 --base http://localhost --soft || true
+	@echo "==> Dev stack ready. API: http://localhost:8000"
+
+# staging: production-like stack on local machine (production compose, no live traffic)
+deploy-staging:
+	@echo "==> Starting staging stack (docker-compose.production.yml)..."
+	docker compose -f docker-compose.production.yml up -d --build --remove-orphans
+	@echo "==> Waiting 20s for services to initialise..."
+	@sleep 20
+	@python3 scripts/post_deploy_verify.py --tier P0 --retries 3
+	@echo "==> Staging stack ready."
+
+# prod: full production deploy with pre-deploy gate, deploy, post-deploy verify
+deploy-prod:
+	@echo "==> [1/4] Pre-deploy quality gate..."
+	@python3 scripts/pre_deploy_quality_gate.py || (echo "Quality gate failed — aborting"; exit 1)
+	@echo "==> [2/4] Pulling latest images..."
+	@docker compose -f docker-compose.production.yml pull --quiet
+	@echo "==> [3/4] Starting production stack..."
+	@docker compose -f docker-compose.production.yml up -d --remove-orphans
+	@echo "==> [4/4] Post-deploy verification..."
+	@python3 scripts/post_deploy_verify.py --retries 5 --report logs/deploy_verify.json
+	@echo "==> Production deploy complete."
+
+# verify: run post-deploy health check against running stack
+# Usage: make deploy-verify [TIER=P0] [BASE=http://localhost]
+deploy-verify:
+	@python3 scripts/post_deploy_verify.py \
+		--tier "$${TIER:-all}" \
+		--base "$${BASE:-http://localhost}" \
+		--retries "$${RETRIES:-3}" \
+		--report logs/deploy_verify.json
+
+# rollback: stop current stack and restore previous git-tagged compose snapshot
+# Usage: make deploy-rollback [TAG=v1.2.3]
+deploy-rollback:
+	@bash scripts/rollback.sh $${TAG:-}
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
 clean:

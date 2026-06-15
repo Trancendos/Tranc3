@@ -22,7 +22,7 @@ SQLite, with no external unsealing dependency.
    ```bash
    curl -H "X-Vault-Token: $TOKEN" http://localhost:8038/v1/secret/data/<path>
    ```
-2. Re-store each secret in The Void:
+2. Restore each secret in The Void:
    ```bash
    curl -X POST http://localhost:8038/secrets \
         -H "Content-Type: application/json" \

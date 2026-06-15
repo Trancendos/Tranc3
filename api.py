@@ -1990,49 +1990,56 @@ async def mesh_stats(current_user: dict = Depends(get_current_user)) -> dict:
 
         out["meta_router"] = get_meta_router().stats
     except Exception as exc:
-        out["meta_router"] = {"error": str(exc)}
+        logger.warning("mesh_stats: meta_router unavailable: %s", exc)
+        out["meta_router"] = {"error": "unavailable"}
 
     try:
         from src.mesh.quantum_router import get_quantum_router
 
         out["quantum_router"] = get_quantum_router().stats
     except Exception as exc:
-        out["quantum_router"] = {"error": str(exc)}
+        logger.warning("mesh_stats: quantum_router unavailable: %s", exc)
+        out["quantum_router"] = {"error": "unavailable"}
 
     try:
         from src.mesh.genetic_router import get_genetic_router
 
         out["genetic_router"] = get_genetic_router().stats
     except Exception as exc:
-        out["genetic_router"] = {"error": str(exc)}
+        logger.warning("mesh_stats: genetic_router unavailable: %s", exc)
+        out["genetic_router"] = {"error": "unavailable"}
 
     try:
         from src.mesh.quota_enforcer import get_enforcer
 
         out["quota_enforcer"] = get_enforcer().dashboard()
     except Exception as exc:
-        out["quota_enforcer"] = {"error": str(exc)}
+        logger.warning("mesh_stats: quota_enforcer unavailable: %s", exc)
+        out["quota_enforcer"] = {"error": "unavailable"}
 
     try:
         from src.monitoring.zero_cost_tracker import tracker
 
         out["zero_cost_tracker"] = tracker.get_summary()
     except Exception as exc:
-        out["zero_cost_tracker"] = {"error": str(exc)}
+        logger.warning("mesh_stats: zero_cost_tracker unavailable: %s", exc)
+        out["zero_cost_tracker"] = {"error": "unavailable"}
 
     try:
         from src.mesh.nano_mesh import get_nano_mesh
 
         out["nano_mesh"] = get_nano_mesh().stats
     except Exception as exc:
-        out["nano_mesh"] = {"error": str(exc)}
+        logger.warning("mesh_stats: nano_mesh unavailable: %s", exc)
+        out["nano_mesh"] = {"error": "unavailable"}
 
     try:
         from src.fluidic.fluid_router import fluid_router
 
         out["fluid_router"] = fluid_router.stats
     except Exception as exc:
-        out["fluid_router"] = {"error": str(exc)}
+        logger.warning("mesh_stats: fluid_router unavailable: %s", exc)
+        out["fluid_router"] = {"error": "unavailable"}
 
     return out
 

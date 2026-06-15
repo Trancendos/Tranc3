@@ -72,9 +72,13 @@ async def update_me(
             from src.database.session import get_db  # type: ignore[import]
 
             async for db in get_db():
-                await db.execute(update(User).where(User.username == sub).values(**filtered))
-                await db.commit()
-                return {"updated": list(filtered.keys()), "sub": sub}
+                try:
+                    await db.execute(update(User).where(User.username == sub).values(**filtered))
+                    await db.commit()
+                    return {"updated": list(filtered.keys()), "sub": sub}
+                except Exception:
+                    await db.rollback()
+                    raise
         except Exception:  # noqa: BLE001 — DB unavailable, dry-run
             pass
 

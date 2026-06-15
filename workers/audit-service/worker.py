@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import sqlite3
+import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -35,6 +36,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger(WORKER_NAME)
 
 GENESIS_HASH = "0" * 64
+
+# Serialises concurrent /audit POSTs so the hash chain cannot fork.
+_chain_lock = threading.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -182,8 +186,11 @@ async def health():
 @_router.post("/audit", status_code=201)
 async def append_entry(entry: AuditIn):
     ts = entry.timestamp or time.time()
-    prev_hash = _last_hash()
-    with get_conn() as conn:
+    with _chain_lock, get_conn() as conn:
+        prev_hash = conn.execute(
+            "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        prev_hash = prev_hash["chain_hash"] if prev_hash else GENESIS_HASH
         cur = conn.execute(
             "INSERT INTO audit_log (actor, action, resource, details, outcome, ip_address, chain_hash, prev_hash, timestamp) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
