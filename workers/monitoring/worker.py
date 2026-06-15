@@ -8,8 +8,9 @@ Port: 8007
 Maps to: The Observatory / monitoring
 Zero-cost: All data stored in SQLite, no external metrics services required.
 """
-
 from __future__ import annotations
+
+
 
 import json
 import logging
@@ -23,7 +24,6 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -36,8 +36,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-
+from shared_core.error_handlers import safe_error_detail
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -45,40 +44,28 @@ WORKER_PORT = 8007
 WORKER_NAME = "the-observatory"
 DB_PATH = Path(__file__).parent / "data" / "monitoring.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
-
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
-
-
 class HealthStatus(str, Enum):
     healthy = "healthy"
     degraded = "degraded"
     unhealthy = "unhealthy"
     unknown = "unknown"
-
-
 class MetricType(str, Enum):
     counter = "counter"
     gauge = "gauge"
     histogram = "histogram"
-
-
 class AlertSeverity(str, Enum):
     info = "info"
     warning = "warning"
     critical = "critical"
-
-
 class AlertState(str, Enum):
     firing = "firing"
     resolved = "resolved"
     silenced = "silenced"
-
-
 class HealthReport(BaseModel):
     service_name: str
     status: HealthStatus
@@ -87,16 +74,12 @@ class HealthReport(BaseModel):
     uptime_seconds: Optional[float] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
 class MetricPayload(BaseModel):
     name: str
     type: MetricType
     value: float
     labels: Dict[str, str] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
 class AlertRule(BaseModel):
     rule_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -107,8 +90,6 @@ class AlertRule(BaseModel):
     for_duration_seconds: int = 60
     labels: Dict[str, str] = Field(default_factory=dict)
     enabled: bool = True
-
-
 class Alert(BaseModel):
     alert_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     rule_id: str
@@ -119,8 +100,6 @@ class Alert(BaseModel):
     labels: Dict[str, str] = Field(default_factory=dict)
     fired_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     resolved_at: Optional[datetime] = None
-
-
 class DashboardPanel(BaseModel):
     panel_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
@@ -128,21 +107,15 @@ class DashboardPanel(BaseModel):
     metric_names: List[str]
     refresh_interval_seconds: int = 30
     labels_filter: Dict[str, str] = Field(default_factory=dict)
-
-
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-
-
 class MonitoringDatabase:
     """SQLite-backed storage for metrics, health reports, alerts, and rules."""
-
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._local = threading.local()
         self._init_db()
-
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
             self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
@@ -150,7 +123,6 @@ class MonitoringDatabase:
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
         return self._local.conn
-
     @contextmanager
     def _cursor(self):
         conn = self._get_conn()
@@ -161,7 +133,6 @@ class MonitoringDatabase:
         except Exception:
             conn.rollback()
             raise
-
     def _init_db(self):
         with self._cursor() as cur:
             cur.execute("""
@@ -222,9 +193,7 @@ class MonitoringDatabase:
             cur.execute("CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON metrics(timestamp)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_state ON alerts(state)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_fired ON alerts(fired_at)")
-
     # -- Health Reports --
-
     def store_health(self, report: HealthReport):
         with self._cursor() as cur:
             cur.execute(
@@ -239,7 +208,6 @@ class MonitoringDatabase:
                     report.timestamp.isoformat(),
                 ),
             )
-
     def get_latest_health(self, service_name: Optional[str] = None) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         if service_name:
@@ -252,7 +220,6 @@ class MonitoringDatabase:
                 "SELECT hr.* FROM health_reports hr INNER JOIN (SELECT service_name, MAX(timestamp) as max_ts FROM health_reports GROUP BY service_name) latest ON hr.service_name = latest.service_name AND hr.timestamp = latest.max_ts",
             ).fetchall()
         return [dict(r) for r in rows]
-
     def get_health_history(self, service_name: str, hours: int = 24) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
@@ -261,9 +228,7 @@ class MonitoringDatabase:
             (service_name, cutoff),
         ).fetchall()
         return [dict(r) for r in rows]
-
     # -- Metrics --
-
     def store_metric(self, metric: MetricPayload):
         with self._cursor() as cur:
             cur.execute(
@@ -276,7 +241,6 @@ class MonitoringDatabase:
                     metric.timestamp.isoformat(),
                 ),
             )
-
     def store_metrics_batch(self, metrics: List[MetricPayload]):
         with self._cursor() as cur:
             cur.executemany(
@@ -286,7 +250,6 @@ class MonitoringDatabase:
                     for m in metrics
                 ],
             )
-
     def query_metrics(
         self, name: str, hours: int = 1, labels: Optional[Dict[str, str]] = None
     ) -> List[Dict[str, Any]]:
@@ -310,14 +273,11 @@ class MonitoringDatabase:
             (name, cutoff),
         ).fetchall()
         return [dict(r) for r in rows]
-
     def get_metric_names(self) -> List[str]:
         conn = self._get_conn()
         rows = conn.execute("SELECT DISTINCT name FROM metrics ORDER BY name").fetchall()
         return [r["name"] for r in rows]
-
     # -- Alert Rules --
-
     def create_alert_rule(self, rule: AlertRule) -> AlertRule:
         with self._cursor() as cur:
             cur.execute(
@@ -335,7 +295,6 @@ class MonitoringDatabase:
                 ),
             )
         return rule
-
     def get_alert_rules(self, enabled_only: bool = False) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         if enabled_only:
@@ -345,14 +304,11 @@ class MonitoringDatabase:
         else:
             rows = conn.execute("SELECT * FROM alert_rules ORDER BY name").fetchall()
         return [dict(r) for r in rows]
-
     def delete_alert_rule(self, rule_id: str) -> bool:
         with self._cursor() as cur:
             cur.execute("DELETE FROM alert_rules WHERE rule_id=?", (rule_id,))
             return cur.rowcount > 0
-
     # -- Alerts --
-
     def create_alert(self, alert: Alert) -> Alert:
         with self._cursor() as cur:
             cur.execute(
@@ -370,7 +326,6 @@ class MonitoringDatabase:
                 ),
             )
         return alert
-
     def get_alerts(
         self, state: Optional[AlertState] = None, hours: Optional[int] = 168
     ) -> List[Dict[str, Any]]:
@@ -398,7 +353,6 @@ class MonitoringDatabase:
                     "SELECT * FROM alerts ORDER BY fired_at DESC",
                 ).fetchall()
         return [dict(r) for r in rows]
-
     def resolve_alert(self, alert_id: str) -> bool:
         with self._cursor() as cur:
             now = datetime.now(timezone.utc).isoformat()
@@ -407,22 +361,16 @@ class MonitoringDatabase:
                 (now, alert_id),
             )
             return cur.rowcount > 0
-
-
 # ---------------------------------------------------------------------------
 # Alert Engine
 # ---------------------------------------------------------------------------
-
-
 class AlertEngine:
     """Evaluates alert rules against incoming metrics and fires/resolves alerts."""
-
     def __init__(self, db: MonitoringDatabase):
         self.db = db
         self._metric_buffer: Dict[str, List[tuple]] = defaultdict(
             list
         )  # rule_id -> [(value, timestamp)]
-
     def evaluate(self, metric: MetricPayload):
         """Evaluate all enabled rules against a new metric."""
         rules = self.db.get_alert_rules(enabled_only=True)
@@ -430,13 +378,11 @@ class AlertEngine:
             if rule["metric_name"] != metric.name:
                 continue
             self._check_rule(rule, metric)
-
     def _check_rule(self, rule: Dict[str, Any], metric: MetricPayload):
         threshold = rule["threshold"]
         value = metric.value
         condition = rule["condition"]
         triggered = self._evaluate_condition(value, condition, threshold)
-
         if triggered:
             # Check if there's already a firing alert for this rule (no time limit for dedup)
             firing = self.db.get_alerts(state=AlertState.firing, hours=None)
@@ -458,7 +404,6 @@ class AlertEngine:
                 if a["rule_id"] == rule["rule_id"]:
                     self.db.resolve_alert(a["alert_id"])
                     logger.info("✅ Alert resolved: %s", a["name"])
-
     @staticmethod
     def _evaluate_condition(value: float, condition: str, threshold: float) -> bool:
         try:
@@ -477,32 +422,24 @@ class AlertEngine:
         except Exception:
             logger.debug("Graceful degradation in Exception")  # nosec B110
         return False
-
-
 # ---------------------------------------------------------------------------
 # WebSocket Manager for Live Dashboard
 # ---------------------------------------------------------------------------
-
-
 class DashboardWSManager:
     """Manages WebSocket connections for live dashboard updates."""
-
     def __init__(self):
         self.connections: List[WebSocket] = []
         self._lock = threading.Lock()
-
     async def connect(self, ws: WebSocket):
         await ws.accept()
         with self._lock:
             self.connections.append(ws)
         logger.info("Dashboard WebSocket connected. Total: %d", len(self.connections))
-
     def disconnect(self, ws: WebSocket):
         with self._lock:
             if ws in self.connections:
                 self.connections.remove(ws)
         logger.info("Dashboard WebSocket disconnected. Total: %d", len(self.connections))
-
     async def broadcast(self, event_type: str, data: Any):
         msg = json.dumps(
             {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()}
@@ -519,33 +456,24 @@ class DashboardWSManager:
                 stale.append(ws)
         for ws in stale:
             self.disconnect(ws)
-
-
 # ---------------------------------------------------------------------------
 # Application
 # ---------------------------------------------------------------------------
-
 db = MonitoringDatabase(DB_PATH)
 alert_engine = AlertEngine(db)
 ws_manager = DashboardWSManager()
-
 app = FastAPI(
     title="The Observatory — Monitoring Dashboard",
     description="Self-hosted monitoring, metrics, alerting, and dashboard API. Replaces CF infinity-monitoring-dashboard.",
     version="1.0.0",
 )
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
@@ -553,17 +481,11 @@ async def require_internal_auth(
         return
     if x_internal_secret != _INTERNAL_SECRET:
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
-
-
 # ---------------------------------------------------------------------------
 # Health & Info
 # ---------------------------------------------------------------------------
-
-
 @app.get("/health")
 async def health():
     uptime = (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
@@ -581,19 +503,13 @@ async def health():
             "primary_function": "Audit Log & Monitoring Platform",
         },
     }
-
-
 @_router.get("/stats")
 async def stats():
     """Overview statistics for the monitoring system."""
     return _get_stats_data()
-
-
 # ---------------------------------------------------------------------------
 # Health Reports
 # ---------------------------------------------------------------------------
-
-
 @_router.post("/health/report")
 async def submit_health_report(report: HealthReport):
     """Submit a health report for a service."""
@@ -602,14 +518,10 @@ async def submit_health_report(report: HealthReport):
         "health_update", {"service": report.service_name, "status": report.status.value}
     )
     return {"ok": True, "service": report.service_name, "status": report.status.value}
-
-
 @_router.get("/health/services")
 async def list_service_health():
     """Get latest health status for all services."""
     return {"services": db.get_latest_health()}
-
-
 @_router.get("/health/services/{service_name}")
 async def get_service_health(service_name: str, hours: int = Query(24, ge=1, le=168)):
     """Get health history for a specific service."""
@@ -617,13 +529,9 @@ async def get_service_health(service_name: str, hours: int = Query(24, ge=1, le=
     if not history:
         raise HTTPException(404, f"No health data for service: {service_name}")
     return {"service": service_name, "history": history}
-
-
 # ---------------------------------------------------------------------------
 # Metrics
 # ---------------------------------------------------------------------------
-
-
 @_router.post("/metrics")
 async def submit_metric(metric: MetricPayload):
     """Submit a single metric data point."""
@@ -631,8 +539,6 @@ async def submit_metric(metric: MetricPayload):
     alert_engine.evaluate(metric)
     await ws_manager.broadcast("metric_update", {"name": metric.name, "value": metric.value})
     return {"ok": True, "name": metric.name, "value": metric.value}
-
-
 @_router.post("/metrics/batch")
 async def submit_metrics_batch(metrics: List[MetricPayload]):
     """Submit multiple metric data points at once."""
@@ -641,14 +547,10 @@ async def submit_metrics_batch(metrics: List[MetricPayload]):
         alert_engine.evaluate(m)
     await ws_manager.broadcast("metrics_batch", {"count": len(metrics)})
     return {"ok": True, "count": len(metrics)}
-
-
 @_router.get("/metrics/names")
 async def list_metric_names():
     """List all distinct metric names."""
     return {"names": db.get_metric_names()}
-
-
 @_router.get("/metrics/query")
 async def query_metrics(
     name: str = Query(..., description="Metric name"),
@@ -659,40 +561,28 @@ async def query_metrics(
     labels_dict = json.loads(labels) if labels else None
     data = db.query_metrics(name, hours=hours, labels=labels_dict)
     return {"name": name, "data_points": len(data), "metrics": data}
-
-
 # ---------------------------------------------------------------------------
 # Alert Rules
 # ---------------------------------------------------------------------------
-
-
 @_router.post("/alerts/rules")
 async def create_alert_rule(rule: AlertRule):
     """Create a new alert rule."""
     created = db.create_alert_rule(rule)
     await ws_manager.broadcast("alert_rule_created", {"rule_id": rule.rule_id, "name": rule.name})
     return {"ok": True, "rule": created}
-
-
 @_router.get("/alerts/rules")
 async def list_alert_rules(enabled_only: bool = False):
     """List all alert rules."""
     return {"rules": db.get_alert_rules(enabled_only=enabled_only)}
-
-
 @_router.delete("/alerts/rules/{rule_id}")
 async def delete_alert_rule(rule_id: str):
     """Delete an alert rule."""
     if not db.delete_alert_rule(rule_id):
         raise HTTPException(404, f"Alert rule not found: {rule_id}")
     return {"ok": True, "deleted": rule_id}
-
-
 # ---------------------------------------------------------------------------
 # Alerts
 # ---------------------------------------------------------------------------
-
-
 @_router.get("/alerts")
 async def list_alerts(
     state: Optional[AlertState] = None,
@@ -700,8 +590,6 @@ async def list_alerts(
 ):
     """List alerts, optionally filtered by state."""
     return {"alerts": db.get_alerts(state=state, hours=hours)}
-
-
 @_router.post("/alerts/{alert_id}/resolve")
 async def resolve_alert(alert_id: str):
     """Manually resolve an alert."""
@@ -709,13 +597,9 @@ async def resolve_alert(alert_id: str):
         raise HTTPException(404, f"Alert not found: {alert_id}")
     await ws_manager.broadcast("alert_resolved", {"alert_id": alert_id})
     return {"ok": True, "resolved": alert_id}
-
-
 # ---------------------------------------------------------------------------
 # Dashboard WebSocket
 # ---------------------------------------------------------------------------
-
-
 def _get_stats_data() -> dict:
     """Internal helper returning stats payload — shared by HTTP and WebSocket handlers."""
     services = db.get_latest_health()
@@ -730,8 +614,6 @@ def _get_stats_data() -> dict:
         "total_metric_names": len(metric_names),
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
     }
-
-
 @app.websocket("/ws/dashboard")
 async def dashboard_websocket(
     ws: WebSocket,
@@ -757,12 +639,9 @@ async def dashboard_websocket(
                 logger.debug("Graceful degradation in json")  # nosec B110
     except WebSocketDisconnect:
         ws_manager.disconnect(ws)
-
-
 # ---------------------------------------------------------------------------
 # Self-Monitoring: Periodic health collection from known services
 # ---------------------------------------------------------------------------
-
 KNOWN_SERVICES = [
     {"name": "tranc3-ai", "url": "http://localhost:8001/health"},
     {"name": "infinity-void", "url": "http://localhost:8002/health"},
@@ -773,13 +652,10 @@ KNOWN_SERVICES = [
     {"name": "notifications-service", "url": "http://localhost:8008/health"},
     {"name": "infinity-ai", "url": "http://localhost:8009/health"},
 ]
-
-
 @_router.post("/monitoring/collect")
 async def collect_health():
     """Trigger health collection from all known services. Called by scheduler or manually."""
     import httpx
-
     results = []
     for svc in KNOWN_SERVICES:
         try:
@@ -803,19 +679,12 @@ async def collect_health():
             results.append(
                 {"service": svc["name"], "status": "unhealthy", "error": safe_error_detail(e, 500)},
             )
-
     await ws_manager.broadcast("health_collection", {"results": results})
     return {"collected": len(results), "results": results}
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-
 app.include_router(_router)
-
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)
