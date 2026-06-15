@@ -12,7 +12,7 @@ import {
   RadioTower, BrainCircuit, Loader2
 } from 'lucide-react'
 import { colors, pillars, hubIcons, type HubState, type SystemMode, type PillarDef } from './tokens'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import {
   fetchHubs, fetchCitadelOverview, fetchSecurityPosture,
   fetchNeuralBus, setSystemMode as apiSetSystemMode,

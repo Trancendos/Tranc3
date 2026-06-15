@@ -42,6 +42,7 @@ export default function DigitalGridPage() {
       id: `node-${makeId()}`,
       type,
       label: meta.label,
+      config: {},
       x,
       y,
     };
