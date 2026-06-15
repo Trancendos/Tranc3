@@ -28,6 +28,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sqlite3
 import time
 import uuid
@@ -846,6 +847,8 @@ async def switch_topology(body: TopologySwitch, request: Request):
 @app.post("/api/workflows/{workflow_id}/run")
 async def run_workflow(workflow_id: str, request: Request):
     """Execute a workflow run."""
+    if not re.match(r'^[A-Za-z0-9_-]+$', workflow_id):
+        raise HTTPException(400, detail="Invalid workflow_id")
     _check_rbac(request, "POST:/api/workflows/{id}/run", "POST")
     _check_abac(request, "workflow", resource_id=workflow_id, action="execute")
 

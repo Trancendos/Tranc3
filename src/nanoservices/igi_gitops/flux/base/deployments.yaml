@@ -47,11 +47,19 @@ spec:
               port: 7780
             initialDelaySeconds: 3
             periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
       volumes:
         - name: shm
-          hostPath:
-            path: /dev/shm
-            type: DirectoryOrCreate
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
 ---
 # SHI Gateway Deployment — Self-Hosted Inference
 apiVersion: apps/v1
@@ -103,11 +111,19 @@ spec:
               port: 7781
             initialDelaySeconds: 10
             periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
       volumes:
         - name: shm
-          hostPath:
-            path: /dev/shm
-            type: DirectoryOrCreate
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
         - name: models
           persistentVolumeClaim:
             claimName: models-pvc
@@ -132,7 +148,6 @@ spec:
         app: dnf-orchestrator
         tier: "2"
     spec:
-      hostIPC: true
       containers:
         - name: dnf-orchestrator
           image: dnf-orchestrator:latest
@@ -152,8 +167,16 @@ spec:
           volumeMounts:
             - name: shm
               mountPath: /dev/shm
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
       volumes:
         - name: shm
-          hostPath:
-            path: /dev/shm
-            type: DirectoryOrCreate
+          emptyDir:
+            medium: Memory
+            sizeLimit: 512Mi

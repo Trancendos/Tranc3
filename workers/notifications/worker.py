@@ -396,7 +396,7 @@ class NotificationDispatcher:
         user-supplied URL, so the outbound host is not attacker-controlled.
         """
         import http.client
-        from urllib.parse import urlparse
+        from urllib.parse import quote, urlparse
 
         # SSRF validation — blocks private IPs, metadata endpoints, non-HTTPS
         try:
@@ -429,11 +429,20 @@ class NotificationDispatcher:
 
         try:
             data = json.dumps(payload).encode()
-            _path = (_p.path or "/") + (f"?{_p.query}" if _p.query else "")
+            import urllib.parse
+            _decoded = urllib.parse.unquote(_p.path or "/")
+            if ".." in _decoded.split("/"):
+                logger.warning("Webhook dispatch blocked: path traversal in URL path")
+                return False
+            _safe_path = quote(_p.path or "/", safe="/-_.~")
+            if _p.query and not all(c.isalnum() or c in "=._-&%[]@" for c in _p.query):
+                logger.warning("Webhook dispatch blocked: suspicious query characters")
+                return False
+            _safe_path += _p.query or ""
             _conn = http.client.HTTPSConnection(_conn_host, 443, timeout=10)
             _conn.request(
                 "POST",
-                _path,
+                _safe_path,
                 body=data,
                 headers={"Content-Type": "application/json"},
             )

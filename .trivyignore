@@ -9,3 +9,8 @@
 # Trivy's vulnerability database may not yet reflect that 0.2.1 is the patched version.
 # This is a confirmed false positive — our pinned version IS the fix.
 CVE-2026-1260
+
+# KSV118 — Helm Tiller deployed (Trivy misidentifies `fmd-distiller` as Tiller)
+# Reason: pod name "fmd-distiller" contains the string "tiller"; there is no Helm Tiller
+# running in this cluster. Suppress on all pod spec templates.
+KSV118

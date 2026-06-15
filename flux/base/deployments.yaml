@@ -1,6 +1,6 @@
 # flux/base/deployments.yaml
 # Core nanoservice deployments — NSA Broker, SHI Gateway, DNF Orchestrator
-# All deployments use hostIPC for /dev/shm shared memory IPC
+# IPC via emptyDir volumes instead of hostIPC for security hardening
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -21,7 +21,6 @@ spec:
         app: nsa-broker
         tier: tier-1
     spec:
-      hostIPC: true  # Required for /dev/shm shared memory IPC
       containers:
         - name: nsa-broker
           image: forgejo.local/trancendos/nsa-broker:latest
@@ -62,6 +61,8 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             capabilities:
               drop: ["ALL"]
 ---
@@ -84,7 +85,6 @@ spec:
         app: shi-gateway
         tier: tier-1
     spec:
-      hostIPC: true
       containers:
         - name: shi-gateway
           image: forgejo.local/trancendos/shi-gateway:latest
@@ -120,14 +120,22 @@ spec:
           volumeMounts:
             - name: model-cache
               mountPath: /models
+            - name: dshm
+              mountPath: /dev/shm
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             capabilities:
               drop: ["ALL"]
       volumes:
         - name: model-cache
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+        - name: dshm
           emptyDir:
             medium: Memory
             sizeLimit: 2Gi
@@ -151,7 +159,6 @@ spec:
         app: dnf-orchestrator
         tier: tier-1
     spec:
-      hostIPC: true
       containers:
         - name: dnf-orchestrator
           image: forgejo.local/trancendos/dnf-orchestrator:latest
@@ -182,12 +189,22 @@ spec:
               value: "10"
             - name: STEP_TIMEOUT
               value: "60"
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             capabilities:
               drop: ["ALL"]
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -230,6 +247,8 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             capabilities:
               drop: ["ALL"]
 ---
@@ -274,5 +293,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             capabilities:
               drop: ["ALL"]
