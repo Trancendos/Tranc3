@@ -1,0 +1,81 @@
+version: "3.8"
+# API Marketplace (Gravitee.io) — Solarscene — Port 8082
+# Zero-cost self-hosted API management platform.
+# Provides: API gateway, developer portal, analytics, rate limiting, OAuth.
+
+services:
+  gravitee-gateway:
+    image: graviteeio/apim-gateway:4
+    container_name: api-marketplace-gateway
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      gravitee_management_mongodb_uri: "mongodb://gravitee-mongo:27017/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000"
+      gravitee_ratelimit_mongodb_uri: "mongodb://gravitee-mongo:27017/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000"
+      gravitee_reporters_elasticsearch_enabled: "false"
+    depends_on:
+      gravitee-mongo:
+        condition: service_healthy
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gravitee-gw.rule=PathPrefix(`/gateway`)"
+      - "traefik.http.routers.gravitee-gw.entrypoints=web"
+      - "traefik.http.services.gravitee-gw.loadbalancer.server.port=8082"
+
+  gravitee-management-api:
+    image: graviteeio/apim-management-api:4
+    container_name: api-marketplace-mgmt
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      gravitee_management_mongodb_uri: "mongodb://gravitee-mongo:27017/gravitee?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000"
+      gravitee_analytics_elasticsearch_enabled: "false"
+    depends_on:
+      gravitee-mongo:
+        condition: service_healthy
+    networks:
+      - tranc3-network
+
+  gravitee-portal:
+    image: graviteeio/apim-portal-ui:4
+    container_name: api-marketplace-portal
+    restart: unless-stopped
+    ports:
+      - "8084:8080"
+    environment:
+      PORTAL_API_URL: "${GRAVITEE_MGMT_URL:-http://localhost:8083}/portal/environments/DEFAULT"
+    depends_on:
+      - gravitee-management-api
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gravitee-portal.rule=PathPrefix(`/api-marketplace`)"
+      - "traefik.http.routers.gravitee-portal.entrypoints=web"
+      - "traefik.http.services.gravitee-portal.loadbalancer.server.port=8080"
+
+  gravitee-mongo:
+    image: mongo:6-jammy
+    container_name: gravitee-mongo
+    restart: unless-stopped
+    volumes:
+      - gravitee-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+volumes:
+  gravitee-mongo-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network

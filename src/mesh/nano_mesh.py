@@ -246,7 +246,7 @@ class NanoMesh:
                     return result
                 except Exception as fallback_exc:
                     fallback.record_error(str(fallback_exc))
-                    raise
+                    raise fallback_exc
             raise
 
     # ── Stats ──────────────────────────────────────────────────────────────

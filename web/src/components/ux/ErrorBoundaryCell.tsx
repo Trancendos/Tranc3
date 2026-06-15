@@ -121,7 +121,7 @@ export class ErrorBoundaryCell extends React.Component<ErrorBoundaryCellProps, E
               {label} couldn't load
             </div>
             <div style={{ fontSize: 'var(--ux-text-xs)', color: 'var(--ux-text-muted)', marginTop: '2px' }}>
-              {error.message || 'An unexpected error occurred'}
+              {error?.message || 'An unexpected error occurred'}
             </div>
           </div>
         </div>

@@ -192,11 +192,10 @@ class QuotaEnforcer:
 
     def get_usage(self, provider: str) -> dict[str, ProviderQuota]:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        with self._lock:
-            rows = self._db.execute(
-                "SELECT metric, value, window_start FROM provider_usage WHERE provider=?",
-                (provider,),
-            ).fetchall()
+        rows = self._db.execute(
+            "SELECT metric, value, window_start FROM provider_usage WHERE provider=?",
+            (provider,),
+        ).fetchall()
         recorded = {r[0]: (r[1], r[2]) for r in rows}
 
         quotas: dict[str, ProviderQuota] = {}

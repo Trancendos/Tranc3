@@ -1,0 +1,488 @@
+version: "3.9"
+# Trancendos Planned Entities — 18 services advancing from 0% → live
+#
+# Start with profiles:
+#   docker compose -f docker-compose.planned-entities.yml --profile academy up -d
+#   docker compose -f docker-compose.planned-entities.yml --profile all up -d
+#
+# Or: bash scripts/optional-services.sh start <profile>
+
+x-worker: &worker-defaults
+  restart: unless-stopped
+  networks:
+    - tranc3-network
+
+x-hc: &default-hc
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 20s
+
+services:
+
+  # ── The Academy — Shimshi — Port 8040 ─────────────────────────
+  the-academy:
+    build:
+      context: ./workers/the-academy
+      dockerfile: Dockerfile
+    container_name: the-academy
+    <<: *worker-defaults
+    profiles: ["academy", "all"]
+    ports: ["8040:8040"]
+    environment:
+      PORT: "8040"
+      DB_PATH: "/data/academy.db"
+    volumes:
+      - academy-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8040/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.academy.rule=PathPrefix(`/academy`)"
+      - "traefik.http.routers.academy.entrypoints=web"
+      - "traefik.http.services.academy.loadbalancer.server.port=8040"
+
+  # ── The Basement — Gary Glowman — Port 8041 ──────────────────
+  the-basement:
+    build:
+      context: ./workers/basement
+      dockerfile: Dockerfile
+    container_name: the-basement
+    <<: *worker-defaults
+    profiles: ["basement", "all"]
+    ports: ["8041:8041"]
+    environment:
+      PORT: "8041"
+      BASEMENT_DIR: "/data/archive"
+    volumes:
+      - basement-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8041/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.basement.rule=PathPrefix(`/basement`)"
+      - "traefik.http.routers.basement.entrypoints=web"
+      - "traefik.http.services.basement.loadbalancer.server.port=8041"
+
+  # ── The Studio — Voxx — Port 8050 ────────────────────────────
+  the-studio:
+    build:
+      context: ./workers/the-studio
+      dockerfile: Dockerfile
+    container_name: the-studio
+    <<: *worker-defaults
+    profiles: ["studio", "all"]
+    ports: ["8050:8050"]
+    environment:
+      PORT: "8050"
+      PENPOT_URL: "${PENPOT_URL:-http://fabulousa-frontend}"
+      SD_URL: "${SD_URL:-http://stable-diffusion:7860}"
+      TATEKING_URL: "http://tateking:8053"
+      TRANCEFLOW_URL: "http://tranceflow:8052"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.studio.rule=PathPrefix(`/studio`)"
+      - "traefik.http.routers.studio.entrypoints=web"
+      - "traefik.http.services.studio.loadbalancer.server.port=8050"
+
+  # ── Sashas Photo Studio — Madam Krystal — Port 8051 ──────────
+  sashas-photo-studio:
+    build:
+      context: ./workers/sashas-photo-studio
+      dockerfile: Dockerfile
+    container_name: sashas-photo-studio
+    <<: *worker-defaults
+    profiles: ["photo", "all"]
+    ports: ["8051:8051"]
+    environment:
+      PORT: "8051"
+      SD_URL: "${SD_URL:-http://localhost:7860}"
+      HF_API_KEY: "${HF_API_KEY:-}"
+      DAILY_LIMIT: "${PHOTO_DAILY_LIMIT:-200}"
+    volumes:
+      - photo-output:/data/output
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.photo.rule=PathPrefix(`/photo`)"
+      - "traefik.http.routers.photo.entrypoints=web"
+      - "traefik.http.services.photo.loadbalancer.server.port=8051"
+
+  # ── TranceFlow — Junior Cesar — Port 8052 ────────────────────
+  tranceflow:
+    build:
+      context: ./workers/tranceflow
+      dockerfile: Dockerfile
+    container_name: tranceflow
+    <<: *worker-defaults
+    profiles: ["tranceflow", "all"]
+    ports: ["8052:8052"]
+    environment:
+      PORT: "8052"
+      ASSET_DIR: "/data/assets"
+    volumes:
+      - tranceflow-assets:/data/assets
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8052/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
+      - "traefik.http.routers.tranceflow.entrypoints=web"
+      - "traefik.http.services.tranceflow.loadbalancer.server.port=8052"
+
+  # ── TateKing — Benji Tate & Sam King — Port 8053 ─────────────
+  tateking:
+    build:
+      context: ./workers/tateking
+      dockerfile: Dockerfile
+    container_name: tateking
+    <<: *worker-defaults
+    profiles: ["tateking", "all"]
+    ports: ["8053:8053"]
+    environment:
+      PORT: "8053"
+      DB_PATH: "/data/tateking.db"
+      OUTPUT_DIR: "/data/output"
+    volumes:
+      - tateking-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tateking.rule=PathPrefix(`/video`)"
+      - "traefik.http.routers.tateking.entrypoints=web"
+      - "traefik.http.services.tateking.loadbalancer.server.port=8053"
+
+  # ── Imaginarium — Voxx — Port 8054 ───────────────────────────
+  imaginarium:
+    build:
+      context: ./workers/imaginarium
+      dockerfile: Dockerfile
+    container_name: imaginarium
+    <<: *worker-defaults
+    profiles: ["imaginarium", "all"]
+    ports: ["8054:8054"]
+    environment:
+      PORT: "8054"
+      PHOTO_URL: "http://sashas-photo-studio:8051"
+      VIDEO_URL: "http://tateking:8053"
+      THREED_URL: "http://tranceflow:8052"
+      DESIGN_URL: "http://fabulousa-frontend:80"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8054/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.imaginarium.rule=PathPrefix(`/imaginarium`)"
+      - "traefik.http.routers.imaginarium.entrypoints=web"
+      - "traefik.http.services.imaginarium.loadbalancer.server.port=8054"
+
+  # ── The Lab — The Dr. & Slime — Port 8055 ────────────────────
+  the-lab:
+    build:
+      context: ./workers/the-lab
+      dockerfile: Dockerfile
+    container_name: the-lab
+    <<: *worker-defaults
+    profiles: ["lab", "all"]
+    ports: ["8055:8055"]
+    environment:
+      PORT: "8055"
+      MCP_URL: "${MCP_URL:-http://localhost:8000}"
+      DB_PATH: "/data/lab.db"
+    volumes:
+      - lab-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8055/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lab.rule=PathPrefix(`/lab`)"
+      - "traefik.http.routers.lab.entrypoints=web"
+      - "traefik.http.services.lab.loadbalancer.server.port=8055"
+
+  # ── The Warp Tunnel — Rocking Ricki — Port 8056 ──────────────
+  warp-tunnel:
+    build:
+      context: ./workers/warp-tunnel
+      dockerfile: Dockerfile
+    container_name: warp-tunnel
+    <<: *worker-defaults
+    profiles: ["warp-tunnel", "all"]
+    ports: ["8056:8056"]
+    environment:
+      PORT: "8056"
+      DB_PATH: "/data/warp_tunnel.db"
+      QUARANTINE_DIR: "/data/quarantine"
+    volumes:
+      - warp-tunnel-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8056/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.warp-tunnel.rule=PathPrefix(`/warp-tunnel`)"
+      - "traefik.http.routers.warp-tunnel.entrypoints=web"
+      - "traefik.http.services.warp-tunnel.loadbalancer.server.port=8056"
+
+  # ── Warp Radio — Rocking Ricki — Port 8057 ───────────────────
+  warp-radio:
+    build:
+      context: ./workers/warp-radio
+      dockerfile: Dockerfile
+    container_name: warp-radio
+    <<: *worker-defaults
+    profiles: ["radio", "all"]
+    ports: ["8057:8057"]
+    environment:
+      PORT: "8057"
+      NAVIDROME_URL: "${NAVIDROME_URL:-http://navidrome:4533}"
+      MUSIC_DIR: "/music"
+    volumes:
+      - "${MUSIC_DIR:-/tmp/music}:/music:ro"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8057/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radio.rule=PathPrefix(`/radio`)"
+      - "traefik.http.routers.radio.entrypoints=web"
+      - "traefik.http.services.radio.loadbalancer.server.port=8057"
+
+  # ── Navidrome (Warp Radio backend) ───────────────────────────
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    <<: *worker-defaults
+    profiles: ["radio", "all"]
+    ports: ["4533:4533"]
+    environment:
+      ND_SCANSCHEDULE: "1h"
+      ND_LOGLEVEL: "info"
+      ND_SESSIONTIMEOUT: "24h"
+      ND_BASEURL: "/navidrome"
+      ND_MUSICFOLDER: "/music"
+    volumes:
+      - navidrome-data:/data
+      - "${MUSIC_DIR:-/tmp/music}:/music:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.navidrome.rule=PathPrefix(`/navidrome`)"
+      - "traefik.http.routers.navidrome.entrypoints=web"
+      - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
+
+  # ── The Dutchy — Predictive lore — Port 8058 ─────────────────
+  the-dutchy:
+    build:
+      context: ./workers/the-dutchy
+      dockerfile: Dockerfile
+    container_name: the-dutchy
+    <<: *worker-defaults
+    profiles: ["dutchy", "all"]
+    ports: ["8058:8058"]
+    environment:
+      PORT: "8058"
+      DB_PATH: "/data/dutchy.db"
+    volumes:
+      - dutchy-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8058/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dutchy.rule=PathPrefix(`/dutchy`)"
+      - "traefik.http.routers.dutchy.entrypoints=web"
+      - "traefik.http.services.dutchy.loadbalancer.server.port=8058"
+
+  # ── DevOcity — Kitty — Port 8059 ─────────────────────────────
+  devocity:
+    build:
+      context: ./workers/devocity
+      dockerfile: Dockerfile
+    container_name: devocity
+    <<: *worker-defaults
+    profiles: ["devocity", "all"]
+    ports: ["8059:8059"]
+    environment:
+      PORT: "8059"
+      PLATFORM_BASE: "${PLATFORM_BASE:-http://localhost}"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8059/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.devocity.rule=PathPrefix(`/devocity`)"
+      - "traefik.http.routers.devocity.entrypoints=web"
+      - "traefik.http.services.devocity.loadbalancer.server.port=8059"
+
+  # ── Tranquility — Savania — Port 8060 ────────────────────────
+  tranquility:
+    build:
+      context: ./workers/tranquility
+      dockerfile: Dockerfile
+    container_name: tranquility
+    <<: *worker-defaults
+    profiles: ["tranquility", "all"]
+    ports: ["8060:8060"]
+    environment:
+      PORT: "8060"
+      DB_PATH: "/data/tranquility.db"
+    volumes:
+      - tranquility-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranquility.rule=PathPrefix(`/tranquility`)"
+      - "traefik.http.routers.tranquility.entrypoints=web"
+      - "traefik.http.services.tranquility.loadbalancer.server.port=8060"
+
+  # ── I-Mind — Elouise — Port 8061 ─────────────────────────────
+  imind:
+    build:
+      context: ./workers/imind
+      dockerfile: Dockerfile
+    container_name: imind
+    <<: *worker-defaults
+    profiles: ["imind", "all"]
+    ports: ["8061:8061"]
+    environment:
+      PORT: "8061"
+      DB_PATH: "/data/imind.db"
+    volumes:
+      - imind-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.imind.rule=PathPrefix(`/imind`)"
+      - "traefik.http.routers.imind.entrypoints=web"
+      - "traefik.http.services.imind.loadbalancer.server.port=8061"
+
+  # ── tAimra — tAImra — Port 8062 ──────────────────────────────
+  taimra:
+    build:
+      context: ./workers/taimra
+      dockerfile: Dockerfile
+    container_name: taimra
+    <<: *worker-defaults
+    profiles: ["taimra", "all"]
+    ports: ["8062:8062"]
+    environment:
+      PORT: "8062"
+      DB_PATH: "/data/taimra.db"
+    volumes:
+      - taimra-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8062/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.taimra.rule=PathPrefix(`/taimra`)"
+      - "traefik.http.routers.taimra.entrypoints=web"
+      - "traefik.http.services.taimra.loadbalancer.server.port=8062"
+
+  # ── VRAR3D — Entari — Port 8063 ──────────────────────────────
+  vrar3d:
+    build:
+      context: ./workers/vrar3d
+      dockerfile: Dockerfile
+    container_name: vrar3d
+    <<: *worker-defaults
+    profiles: ["vrar3d", "all"]
+    ports: ["8063:8063"]
+    environment:
+      PORT: "8063"
+      ASSET_DIR: "/data/scenes"
+    volumes:
+      - vrar3d-scenes:/data/scenes
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8063/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
+      - "traefik.http.routers.vrar3d.entrypoints=web"
+      - "traefik.http.services.vrar3d.loadbalancer.server.port=8063"
+
+  # ── Resonate — Magdalena — Port 8064 ─────────────────────────
+  resonate:
+    build:
+      context: ./workers/resonate
+      dockerfile: Dockerfile
+    container_name: resonate
+    <<: *worker-defaults
+    profiles: ["resonate", "all"]
+    ports: ["8064:8064"]
+    environment:
+      PORT: "8064"
+      DB_PATH: "/data/resonate.db"
+    volumes:
+      - resonate-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8064/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.resonate.rule=PathPrefix(`/resonate`)"
+      - "traefik.http.routers.resonate.entrypoints=web"
+      - "traefik.http.services.resonate.loadbalancer.server.port=8064"
+
+  # ── The Chaos Party — The Mad Hatter — Port 8065 ─────────────
+  chaos-party:
+    build:
+      context: ./workers/chaos-party
+      dockerfile: Dockerfile
+    container_name: chaos-party
+    <<: *worker-defaults
+    profiles: ["chaos", "all"]
+    ports: ["8065:8065"]
+    environment:
+      PORT: "8065"
+      DB_PATH: "/data/chaos.db"
+      PLATFORM_BASE: "${PLATFORM_BASE:-http://localhost}"
+    volumes:
+      - chaos-data:/data
+      - ./tests:/app/tests:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8065/health')"]
+      <<: *default-hc
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chaos.rule=PathPrefix(`/chaos`)"
+      - "traefik.http.routers.chaos.entrypoints=web"
+      - "traefik.http.services.chaos.loadbalancer.server.port=8065"
+
+# ── Volumes ────────────────────────────────────────────────────
+volumes:
+  academy-data:
+  basement-data:
+  photo-output:
+  tranceflow-assets:
+  tateking-data:
+  lab-data:
+  warp-tunnel-data:
+  navidrome-data:
+  dutchy-data:
+  tranquility-data:
+  imind-data:
+  taimra-data:
+  vrar3d-scenes:
+  resonate-data:
+  chaos-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network

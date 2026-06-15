@@ -8,9 +8,9 @@ import './ux-system.css'
 
 // Automated accessibility audits in development
 if (import.meta.env.DEV) {
-  import('@axe-core/react').then(({ default: axe }) => {
-    axe(React, ReactDOM, 1000)
-  })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  import('@axe-core/react').then(({ default: axe }) => { axe(React as any, ReactDOM as any, 1000) })
+    .catch(() => { /* axe-core optional — skip if not installed */ })
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

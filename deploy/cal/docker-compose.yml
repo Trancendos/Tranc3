@@ -1,0 +1,58 @@
+version: "3.8"
+# ChronosSphere / ArcStream (Cal.com) — Task, Time & Scheduling — Chronos — Port 3001
+# Zero-cost self-hosted scheduling platform.
+
+services:
+  calcom:
+    image: calcom/cal.com:latest
+    container_name: chronossphere
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: "postgresql://calcom:${CAL_DB_PASSWORD}@calcom-db:5432/calcom"
+      NEXTAUTH_SECRET: "${CAL_NEXTAUTH_SECRET}"
+      NEXTAUTH_URL: "${CAL_URL:-http://localhost:3001}"
+      NEXT_PUBLIC_WEBAPP_URL: "${CAL_URL:-http://localhost:3001}"
+      CALCOM_TELEMETRY_DISABLED: "1"
+      EMAIL_FROM: "${CAL_EMAIL_FROM:-noreply@trancendos.com}"
+      # Disable email verification for local use
+      NEXT_PUBLIC_IS_E2E: "false"
+      # App keys
+      CALENDSO_ENCRYPTION_KEY: "${CAL_ENCRYPTION_KEY}"
+    depends_on:
+      calcom-db:
+        condition: service_healthy
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calcom.rule=PathPrefix(`/scheduling`)"
+      - "traefik.http.routers.calcom.entrypoints=web"
+      - "traefik.http.services.calcom.loadbalancer.server.port=3000"
+
+  calcom-db:
+    image: postgres:15-alpine
+    container_name: calcom-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: calcom
+      POSTGRES_USER: calcom
+      POSTGRES_PASSWORD: "${CAL_DB_PASSWORD}"
+    volumes:
+      - calcom-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calcom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+volumes:
+  calcom-db-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network
