@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Any
 
 from Dimensional.path_validation import PathTraversalError, read_validated_file_text, validate_path
+
+_SAFE_PATH_RE = re.compile(r"[^A-Za-z0-9_./-]")
 
 _ROOT = Path(os.environ.get("ADMIN_OS_WORKSPACE_ROOT", "data/admin_os_workspace")).resolve()
 
@@ -20,8 +23,13 @@ def workspace_root() -> Path:
 
 def _safe_path(relative: str) -> Path:
     rel = (relative or "").strip().replace("\\", "/").lstrip("/")
+    if not rel or rel == "/":
+        rel = "."
+    sanitized = _SAFE_PATH_RE.sub("_", rel)
+    if sanitized != rel:
+        raise PermissionError("Path contains invalid characters")
     try:
-        return validate_path(rel, workspace_root(), allow_create=True)
+        return validate_path(sanitized, workspace_root(), allow_create=True)
     except PathTraversalError as exc:
         raise PermissionError("Path escapes workspace root") from exc
 

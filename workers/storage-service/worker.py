@@ -97,7 +97,7 @@ def _object_path(bucket: str, key: str) -> Path:
 
 
 def _etag(data: bytes) -> str:
-    return hashlib.md5(data).hexdigest()
+    return hashlib.md5(data, usedforsecurity=False).hexdigest()
 
 
 # ---------------------------------------------------------------------------

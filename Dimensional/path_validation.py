@@ -51,21 +51,23 @@ def validate_path(
         FileNotFoundError: If *must_exist* is True and path is missing.
         ValueError: If *path* contains obviously malicious components.
     """
+    base = Path(base_dir).resolve()
+
     if isinstance(path, Path):
         raw = str(path)
     else:
         raw = path
 
-    # Reject null bytes and ".." sequences in the raw input before resolution
+    if not raw or not isinstance(raw, str):
+        raise PathTraversalError(f"Invalid path input: {raw!r}")
+
     if _TRAVERSAL_PATTERN.search(raw):
         raise PathTraversalError(
             f"Path contains disallowed components (null byte or '..'): {raw!r}"
         )
 
-    base = Path(base_dir).resolve()
-    resolved = (base / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
+    resolved = (base / raw).resolve()
 
-    # Ensure the resolved path starts with the base directory
     try:
         resolved.relative_to(base)
     except ValueError:
@@ -73,11 +75,17 @@ def validate_path(
             f"Path escapes base directory: {resolved} is not under {base}"
         ) from None
 
-    if must_exist and not resolved.exists():
-        raise FileNotFoundError(f"Validated path does not exist: {resolved}")
+    try:
+        if must_exist and not resolved.exists():
+            raise FileNotFoundError(f"Validated path does not exist: {resolved}")
+    except OSError as exc:
+        raise PathTraversalError(f"Path resolution failed: {resolved}: {exc}") from exc
 
-    if not allow_create and not resolved.exists():
-        raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
+    try:
+        if not allow_create and not resolved.exists():
+            raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
+    except OSError as exc:
+        raise PathTraversalError(f"Path resolution failed: {resolved}: {exc}") from exc
 
     return resolved
 

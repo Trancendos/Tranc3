@@ -111,10 +111,14 @@ def _save_cache(ip: str, data: dict, source: str) -> None:
 
 
 async def _lookup_ip_api(ip: str) -> Optional[dict]:
-    url = f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org"
+    url = "http://ip-api.com/json/"
+    params = {
+        "fields": "status,country,countryCode,regionName,city,lat,lon,timezone,isp,org",
+        "ip": ip,
+    }
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(url)
+            resp = await client.get(url, params=params)
         if resp.status_code == 200:
             d = resp.json()
             if d.get("status") == "success":
@@ -135,10 +139,11 @@ async def _lookup_ip_api(ip: str) -> Optional[dict]:
 
 
 async def _lookup_ipapi_co(ip: str) -> Optional[dict]:
-    url = f"https://ipapi.co/{ip}/json/"
+    url = "https://ipapi.co/json/"
+    params = {"ip": ip}
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(url, headers={"User-Agent": "trancendos-geo-service/1.0"})
+            resp = await client.get(url, params=params, headers={"User-Agent": "trancendos-geo-service/1.0"})
         if resp.status_code == 200:
             d = resp.json()
             if "error" not in d:

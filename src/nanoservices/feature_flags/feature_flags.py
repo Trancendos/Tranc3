@@ -293,7 +293,7 @@ class FeatureFlagService:
         return None
 
     def _hash_bucket(self, key: str) -> float:
-        h = hashlib.md5(key.encode()).hexdigest()
+        h = hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()
         return int(h[:8], 16) / 0xFFFFFFFF
 
     def enable_flag(self, key: str, actor: str = "") -> bool:
