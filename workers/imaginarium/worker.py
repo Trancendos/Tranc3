@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -226,8 +226,12 @@ async def list_projects(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if status: clauses.append("status=?"); params.append(status)
-    if project_type: clauses.append("project_type=?"); params.append(project_type)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
+    if project_type:
+        clauses.append("project_type=?")
+        params.append(project_type)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM projects {where}", params).fetchone()[0]
@@ -243,7 +247,8 @@ async def get_project(project_id: int, x_internal_secret: str = Header(default="
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM projects WHERE id=?", (project_id,)).fetchone()
-    if not row: raise HTTPException(status_code=404, detail="Project not found")
+    if not row:
+        raise HTTPException(status_code=404, detail="Project not found")
     return dict(row)
 
 
@@ -268,8 +273,8 @@ async def create_template(body: TemplateIn, x_internal_secret: str = Header(defa
             conn.commit()
             row = conn.execute("SELECT * FROM templates WHERE id=?", (cur.lastrowid,)).fetchone()
             return dict(row)
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=409, detail="Template name already exists")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="Template name already exists") from exc
 
 
 @_router.get("/services/status")

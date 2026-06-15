@@ -2,15 +2,14 @@
 Trancendos sashas-photo-studio — Photo & Image Generation Centre
 ================================================================
 Image generation via Pollinations.ai (zero-cost, no API key required).
-Stores job metadata in SQLite; downloads and caches images locally.
+Stores job metadata in SQLite
+downloads and caches images locally.
 
 Port: 8051  Entity: Sashas Photo Studio  Lead AI: Madam Krystal
 """
 
 from __future__ import annotations
 
-import asyncio
-import json
 import logging
 import os
 import sqlite3
@@ -20,7 +19,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -218,7 +217,9 @@ async def list_jobs(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if status: clauses.append("status=?"); params.append(status)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM jobs {where}", params).fetchone()[0]
@@ -238,7 +239,9 @@ async def list_images(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if model: clauses.append("model=?"); params.append(model)
+    if model:
+        clauses.append("model=?")
+        params.append(model)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM images {where}", params).fetchone()[0]

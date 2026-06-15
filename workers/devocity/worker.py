@@ -203,8 +203,8 @@ async def create_project(body: ProjectIn, x_internal_secret: str = Header(defaul
             conn.commit()
             row = conn.execute("SELECT * FROM projects WHERE id=?", (cur.lastrowid,)).fetchone()
             return dict(row)
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=409, detail="Project name already exists")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="Project name already exists") from exc
 
 
 @_router.get("/projects")
@@ -218,9 +218,15 @@ async def list_projects(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if status: clauses.append("status=?"); params.append(status)
-    if language: clauses.append("language=?"); params.append(language)
-    if owner: clauses.append("owner=?"); params.append(owner)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
+    if language:
+        clauses.append("language=?")
+        params.append(language)
+    if owner:
+        clauses.append("owner=?")
+        params.append(owner)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM projects {where}", params).fetchone()[0]
@@ -236,7 +242,8 @@ async def get_project(project_id: int, x_internal_secret: str = Header(default="
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM projects WHERE id=?", (project_id,)).fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Project not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Project not found")
         envs = conn.execute("SELECT * FROM environments WHERE project_id=?", (project_id,)).fetchall()
         recent_deploys = conn.execute(
             "SELECT * FROM deploy_events WHERE project_id=? ORDER BY deployed_at DESC LIMIT 10",
@@ -266,8 +273,8 @@ async def add_environment(project_id: int, body: EnvironmentIn, x_internal_secre
             conn.commit()
             row = conn.execute("SELECT * FROM environments WHERE id=?", (cur.lastrowid,)).fetchone()
             return dict(row)
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=409, detail="Environment name already exists for project")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="Environment name already exists for project") from exc
 
 
 # --- Deploy Events ---
@@ -298,9 +305,15 @@ async def list_deploys(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if project_id: clauses.append("project_id=?"); params.append(project_id)
-    if environment: clauses.append("environment=?"); params.append(environment)
-    if status: clauses.append("status=?"); params.append(status)
+    if project_id:
+        clauses.append("project_id=?")
+        params.append(project_id)
+    if environment:
+        clauses.append("environment=?")
+        params.append(environment)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM deploy_events {where}", params).fetchone()[0]
@@ -328,8 +341,8 @@ async def register_service(body: ServiceIn, x_internal_secret: str = Header(defa
             conn.commit()
             row = conn.execute("SELECT * FROM service_catalogue WHERE id=?", (cur.lastrowid,)).fetchone()
             return dict(row)
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=409, detail="Service name already registered")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="Service name already registered") from exc
 
 
 @_router.get("/services")
@@ -340,7 +353,9 @@ async def list_services(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if status: clauses.append("status=?"); params.append(status)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM service_catalogue {where} ORDER BY name", params).fetchall()

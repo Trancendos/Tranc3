@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -253,8 +253,8 @@ async def add_feed(body: FeedIn, x_internal_secret: str = Header(default="")):
             )
             conn.commit()
             return {"id": cur.lastrowid, "name": body.name, "url": body.url}
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=409, detail="Feed URL already exists")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="Feed URL already exists") from exc
 
 
 @_router.post("/feeds/{feed_id}/fetch")
@@ -291,10 +291,18 @@ async def list_articles(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if category: clauses.append("category=?"); params.append(category)
-    if min_score is not None: clauses.append("trend_score>=?"); params.append(min_score)
-    if since: clauses.append("fetched_at>=?"); params.append(since)
-    if q: clauses.append("(title LIKE ? OR summary LIKE ?)"); params += [f"%{q}%", f"%{q}%"]
+    if category:
+        clauses.append("category=?")
+        params.append(category)
+    if min_score is not None:
+        clauses.append("trend_score>=?")
+        params.append(min_score)
+    if since:
+        clauses.append("fetched_at>=?")
+        params.append(since)
+    if q:
+        clauses.append("(title LIKE ? OR summary LIKE ?)")
+        params += [f"%{q}%", f"%{q}%"]
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM articles {where}", params).fetchone()[0]

@@ -223,8 +223,12 @@ async def list_suites(service: Optional[str] = None, test_type: Optional[str] = 
                        limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if service: clauses.append("service=?"); params.append(service)
-    if test_type: clauses.append("test_type=?"); params.append(test_type)
+    if service:
+        clauses.append("service=?")
+        params.append(service)
+    if test_type:
+        clauses.append("test_type=?")
+        params.append(test_type)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(
@@ -282,9 +286,15 @@ async def list_runs(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if suite_id: clauses.append("suite_id=?"); params.append(suite_id)
-    if status: clauses.append("status=?"); params.append(status)
-    if since: clauses.append("ran_at>=?"); params.append(since)
+    if suite_id:
+        clauses.append("suite_id=?")
+        params.append(suite_id)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
+    if since:
+        clauses.append("ran_at>=?")
+        params.append(since)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM test_runs {where}", params).fetchone()[0]
@@ -327,7 +337,8 @@ async def run_chaos(experiment_id: int, x_internal_secret: str = Header(default=
     now = time.time()
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM chaos_experiments WHERE id=?", (experiment_id,)).fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Experiment not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Experiment not found")
         conn.execute(
             "UPDATE chaos_experiments SET status='running', started_at=? WHERE id=?", (now, experiment_id)
         )

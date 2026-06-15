@@ -228,7 +228,9 @@ async def list_clips(project_id: Optional[int] = None, limit: int = Query(100, l
                       x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if project_id: clauses.append("project_id=?"); params.append(project_id)
+    if project_id:
+        clauses.append("project_id=?")
+        params.append(project_id)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM clips {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
@@ -243,7 +245,8 @@ async def create_ffmpeg_job(body: FFmpegJobIn, x_internal_secret: str = Header(d
     now = time.time()
     with get_conn() as conn:
         clip = conn.execute("SELECT * FROM clips WHERE id=?", (body.clip_id,)).fetchone()
-        if not clip: raise HTTPException(status_code=404, detail="Clip not found")
+        if not clip:
+            raise HTTPException(status_code=404, detail="Clip not found")
         cur = conn.execute(
             "INSERT INTO jobs (clip_id, project_id, operation, params, status, created_at) VALUES (?,?,?,?,?,?)",
             (body.clip_id, clip["project_id"], body.operation, json.dumps(body.params), "queued", now),
@@ -261,7 +264,8 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
         raise HTTPException(status_code=503, detail="FFmpeg not available — install ffmpeg")
     with get_conn() as conn:
         job = conn.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
-        if not job: raise HTTPException(status_code=404, detail="Job not found")
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
         clip = conn.execute("SELECT * FROM clips WHERE id=?", (job["clip_id"],)).fetchone()
 
     op = job["operation"]
@@ -319,11 +323,11 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
                 conn.execute("UPDATE jobs SET status='failed', error=? WHERE id=?", (err, job_id))
                 conn.commit()
             raise HTTPException(status_code=500, detail=f"FFmpeg failed: {err}")
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         with get_conn() as conn:
             conn.execute("UPDATE jobs SET status='failed', error='Timeout' WHERE id=?", (job_id,))
             conn.commit()
-        raise HTTPException(status_code=408, detail="FFmpeg job timed out")
+        raise HTTPException(status_code=408, detail="FFmpeg job timed out") from exc
 
 
 @_router.get("/jobs")
@@ -331,7 +335,9 @@ async def list_jobs(status: Optional[str] = None, limit: int = Query(50, le=500)
                      x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if status: clauses.append("status=?"); params.append(status)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM jobs {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()

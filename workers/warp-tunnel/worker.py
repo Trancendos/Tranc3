@@ -2,7 +2,8 @@
 Trancendos warp-tunnel — Cryptographic Scanner & Quarantine Transport
 =====================================================================
 File quarantine, threat scanning, safe transfer hub.
-Scans uploaded content for known threat patterns; quarantines suspicious files.
+Scans uploaded content for known threat patterns
+quarantines suspicious files.
 
 Port: 8040  Entity: The Warp Tunnel  Lead AI: Rocking Ricki
 """
@@ -20,9 +21,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, FastAPI, Header, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 WORKER_PORT = 8040
 WORKER_NAME = "warp-tunnel"
@@ -244,9 +244,11 @@ async def list_scans(
     _auth(x_internal_secret)
     clauses, params = [], []
     if threat_level:
-        clauses.append("threat_level = ?"); params.append(threat_level)
+        clauses.append("threat_level = ?")
+        params.append(threat_level)
     if quarantined is not None:
-        clauses.append("quarantined = ?"); params.append(int(quarantined))
+        clauses.append("quarantined = ?")
+        params.append(int(quarantined))
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM scan_jobs {where}", params).fetchone()[0]

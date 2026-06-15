@@ -9,7 +9,6 @@ Port: 8056  Entity: The Academy  Lead AI: Shimshi
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sqlite3
@@ -198,9 +197,15 @@ async def list_courses(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if category: clauses.append("category=?"); params.append(category)
-    if difficulty: clauses.append("difficulty=?"); params.append(difficulty)
-    if published is not None: clauses.append("published=?"); params.append(int(published))
+    if category:
+        clauses.append("category=?")
+        params.append(category)
+    if difficulty:
+        clauses.append("difficulty=?")
+        params.append(difficulty)
+    if published is not None:
+        clauses.append("published=?")
+        params.append(int(published))
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM courses {where}", params).fetchone()[0]
@@ -216,11 +221,12 @@ async def get_course(course_id: int, x_internal_secret: str = Header(default="")
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM courses WHERE id=?", (course_id,)).fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Course not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Course not found")
         lessons = conn.execute(
             "SELECT * FROM lessons WHERE course_id=? ORDER BY position", (course_id,)
         ).fetchall()
-    return {**dict(row), "lessons": [dict(l) for l in lessons]}
+    return {**dict(row), "lessons": [dict(ln) for ln in lessons]}
 
 
 @_router.patch("/courses/{course_id}/publish")
@@ -279,8 +285,12 @@ async def list_enrolments(user_id: Optional[str] = None, course_id: Optional[int
                            x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if user_id: clauses.append("user_id=?"); params.append(user_id)
-    if course_id: clauses.append("course_id=?"); params.append(course_id)
+    if user_id:
+        clauses.append("user_id=?")
+        params.append(user_id)
+    if course_id:
+        clauses.append("course_id=?")
+        params.append(course_id)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM enrolments {where} ORDER BY enrolled_at DESC", params).fetchall()
@@ -295,9 +305,10 @@ async def mark_progress(body: ProgressIn, x_internal_secret: str = Header(defaul
     now = time.time()
     with get_conn() as conn:
         lesson = conn.execute("SELECT * FROM lessons WHERE id=?", (body.lesson_id,)).fetchone()
-        if not lesson: raise HTTPException(status_code=404, detail="Lesson not found")
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not found")
         try:
-            cur = conn.execute(
+            conn.execute(
                 "INSERT INTO progress (user_id, lesson_id, course_id, completed, completed_at, score) VALUES (?,?,?,1,?,?)",
                 (body.user_id, body.lesson_id, lesson["course_id"], now, body.score),
             )
@@ -338,7 +349,9 @@ async def get_user_progress(user_id: str, course_id: Optional[int] = None,
     _auth(x_internal_secret)
     clauses = ["user_id=?"]
     params: list = [user_id]
-    if course_id: clauses.append("course_id=?"); params.append(course_id)
+    if course_id:
+        clauses.append("course_id=?")
+        params.append(course_id)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM progress {where}", params).fetchall()

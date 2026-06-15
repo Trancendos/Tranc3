@@ -9,16 +9,13 @@ Port: 8038  Entity: The Void  Lead AI: Prometheus
 
 from __future__ import annotations
 
-import base64
 import hashlib
-import json
 import logging
 import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -235,7 +232,7 @@ async def retrieve_secret(body: RetrieveIn, x_internal_secret: str = Header(defa
         try:
             plaintext = _decrypt(bytes(row["encrypted_val"]), bytes(row["iv"]), bytes(row["salt"]), MASTER_KEY_ENV)
         except Exception:
-            raise HTTPException(status_code=500, detail="Decryption failed — wrong master key?")
+            raise HTTPException(status_code=500, detail="Decryption failed — wrong master key?") from None
         conn.execute(
             "UPDATE secrets SET accessed_at=?, access_count=access_count+1 WHERE name=?",
             (now, body.name),

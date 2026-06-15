@@ -9,7 +9,6 @@ Port: 8060  Entity: Resonate  Lead AI: Magdalena
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
@@ -289,7 +288,8 @@ async def get_conversation(conversation_id: str, x_internal_secret: str = Header
     _auth(x_internal_secret)
     with get_conn() as conn:
         conv = conn.execute("SELECT * FROM conversations WHERE conversation_id=?", (conversation_id,)).fetchone()
-        if not conv: raise HTTPException(status_code=404, detail="Conversation not found")
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
         messages = conn.execute(
             "SELECT * FROM scores WHERE conversation_id=? ORDER BY analysed_at ASC",
             (conversation_id,),

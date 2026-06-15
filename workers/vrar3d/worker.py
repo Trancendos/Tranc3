@@ -197,8 +197,12 @@ async def list_experiences(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if experience_type: clauses.append("experience_type=?"); params.append(experience_type)
-    if public is not None: clauses.append("public=?"); params.append(int(public))
+    if experience_type:
+        clauses.append("experience_type=?")
+        params.append(experience_type)
+    if public is not None:
+        clauses.append("public=?")
+        params.append(int(public))
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM experiences {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
@@ -210,7 +214,8 @@ async def get_experience(exp_id: int, x_internal_secret: str = Header(default=""
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM experiences WHERE id=?", (exp_id,)).fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Experience not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Experience not found")
         objects = conn.execute("SELECT * FROM scene_objects WHERE experience_id=?", (exp_id,)).fetchall()
     return {**dict(row), "objects": [dict(o) for o in objects]}
 
@@ -265,7 +270,8 @@ async def end_session(session_id: int, x_internal_secret: str = Header(default="
     now = time.time()
     with get_conn() as conn:
         session = conn.execute("SELECT * FROM vr_sessions WHERE id=?", (session_id,)).fetchone()
-        if not session: raise HTTPException(status_code=404, detail="Session not found")
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
         duration_s = int(now - session["started_at"])
         conn.execute("UPDATE vr_sessions SET ended_at=?, duration_s=? WHERE id=?", (now, duration_s, session_id))
         conn.commit()
@@ -278,7 +284,8 @@ async def export_aframe(exp_id: int, x_internal_secret: str = Header(default="")
     _auth(x_internal_secret)
     with get_conn() as conn:
         exp = conn.execute("SELECT * FROM experiences WHERE id=?", (exp_id,)).fetchone()
-        if not exp: raise HTTPException(status_code=404, detail="Experience not found")
+        if not exp:
+            raise HTTPException(status_code=404, detail="Experience not found")
         objects = conn.execute("SELECT * FROM scene_objects WHERE experience_id=?", (exp_id,)).fetchall()
 
     entities = []
@@ -300,8 +307,9 @@ async def export_aframe(exp_id: int, x_internal_secret: str = Header(default="")
             text_val = json.loads(obj["properties"] or "{}").get("text", obj["name"])
             entities.append(f'<a-text value="{text_val}" position="{pos_str}" color="{color}"></a-text>')
 
+    separator = "\n  "
     html = f"""<a-scene>
-  {'\\n  '.join(entities)}
+  {separator.join(entities)}
   <a-camera position="0 1.6 0"></a-camera>
 </a-scene>"""
     return {"experience_id": exp_id, "title": exp["title"], "aframe_html": html}

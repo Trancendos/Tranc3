@@ -212,7 +212,8 @@ async def list_snippets(
     _auth(x_internal_secret)
     clauses, params = [], []
     if language:
-        clauses.append("language = ?"); params.append(language)
+        clauses.append("language = ?")
+        params.append(language)
     if q:
         clauses.append("(title LIKE ? OR description LIKE ? OR code LIKE ?)")
         params += [f"%{q}%", f"%{q}%", f"%{q}%"]
@@ -244,10 +245,14 @@ async def update_snippet(snippet_id: int, body: SnippetUpdate, x_internal_secret
         if not row:
             raise HTTPException(status_code=404, detail="Snippet not found")
         updates = {}
-        if body.title is not None: updates["title"] = body.title
-        if body.code is not None: updates["code"] = body.code
-        if body.description is not None: updates["description"] = body.description
-        if body.tags is not None: updates["tags"] = json.dumps(body.tags)
+        if body.title is not None:
+            updates["title"] = body.title
+        if body.code is not None:
+            updates["code"] = body.code
+        if body.description is not None:
+            updates["description"] = body.description
+        if body.tags is not None:
+            updates["tags"] = json.dumps(body.tags)
         if updates:
             set_clause = ", ".join(f"{k}=?" for k in updates)
             conn.execute(f"UPDATE snippets SET {set_clause} WHERE id=?", list(updates.values()) + [snippet_id])

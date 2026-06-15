@@ -200,8 +200,12 @@ async def list_playlists(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if genre: clauses.append("genre=?"); params.append(genre)
-    if owner: clauses.append("owner=?"); params.append(owner)
+    if genre:
+        clauses.append("genre=?")
+        params.append(genre)
+    if owner:
+        clauses.append("owner=?")
+        params.append(owner)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM playlists {where}", params).fetchone()[0]
@@ -217,7 +221,8 @@ async def get_playlist(playlist_id: int, x_internal_secret: str = Header(default
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM playlists WHERE id=?", (playlist_id,)).fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Playlist not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Playlist not found")
         tracks = conn.execute(
             "SELECT t.*, pt.position FROM tracks t "
             "JOIN playlist_tracks pt ON t.id=pt.track_id "
@@ -254,9 +259,15 @@ async def list_tracks(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if genre: clauses.append("genre=?"); params.append(genre)
-    if artist: clauses.append("artist=?"); params.append(artist)
-    if q: clauses.append("(title LIKE ? OR artist LIKE ?)"); params += [f"%{q}%", f"%{q}%"]
+    if genre:
+        clauses.append("genre=?")
+        params.append(genre)
+    if artist:
+        clauses.append("artist=?")
+        params.append(artist)
+    if q:
+        clauses.append("(title LIKE ? OR artist LIKE ?)")
+        params += [f"%{q}%", f"%{q}%"]
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM tracks {where}", params).fetchone()[0]
@@ -287,8 +298,8 @@ async def add_track_to_playlist(
             )
             conn.execute("UPDATE playlists SET updated_at=? WHERE id=?", (now, playlist_id))
             conn.commit()
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=409, detail="Track already in playlist")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="Track already in playlist") from exc
     return {"playlist_id": playlist_id, "track_id": track_id, "position": position}
 
 

@@ -17,7 +17,6 @@ import sqlite3
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -64,9 +63,7 @@ NEGATORS = {"not", "never", "no", "neither", "nor", "barely", "hardly", "scarcel
 def detect_emotions(text: str) -> dict:
     """Analyse text and return emotion scores + dominant emotion."""
     words = re.findall(r"\b\w+\b", text.lower())
-    word_set = set(words)
-
-    scores: dict[str, float] = {emotion: 0.0 for emotion in EMOTION_LEXICON}
+    scores: dict[str, float] = dict.fromkeys(EMOTION_LEXICON, 0.0)
     matched_words: dict[str, list[str]] = {emotion: [] for emotion in EMOTION_LEXICON}
 
     # Check negation context (simple window-based)
@@ -93,7 +90,7 @@ def detect_emotions(text: str) -> dict:
     total = sum(max(0, s) for s in scores.values())
     if total == 0:
         dominant = "neutral"
-        normalised = {e: 0.0 for e in scores}
+        normalised = dict.fromkeys(scores, 0.0)
         confidence = 0.0
     else:
         normalised = {e: round(max(0, s) / total, 4) for e, s in scores.items()}

@@ -9,7 +9,6 @@ Port: 8065  Entity: tAimra  Lead AI: tAImra
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sqlite3
@@ -18,7 +17,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -211,11 +210,13 @@ async def get_twin(user_id: str, x_internal_secret: str = Header(default="")):
 @_router.patch("/twin/{user_id}")
 async def update_twin(user_id: str, body: TwinUpdate, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
-    twin = _get_or_create_twin(user_id)
+    _get_or_create_twin(user_id)
     now = time.time()
     updates = {}
-    if body.display_name is not None: updates["display_name"] = body.display_name
-    if body.opted_in is not None: updates["opted_in"] = int(body.opted_in)
+    if body.display_name is not None:
+        updates["display_name"] = body.display_name
+    if body.opted_in is not None:
+        updates["opted_in"] = int(body.opted_in)
     if updates:
         updates["updated_at"] = now
         set_clause = ", ".join(f"{k}=?" for k in updates)
@@ -245,7 +246,9 @@ async def get_preferences(user_id: str, category: Optional[str] = None,
                            x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = ["user_id=?"], [user_id]
-    if category: clauses.append("category=?"); params.append(category)
+    if category:
+        clauses.append("category=?")
+        params.append(category)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM preferences {where} ORDER BY category, key", params).fetchall()
@@ -272,7 +275,9 @@ async def list_goals(user_id: str, status: Optional[str] = None,
                       x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = ["user_id=?"], [user_id]
-    if status: clauses.append("status=?"); params.append(status)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM goals {where} ORDER BY priority, created_at DESC", params).fetchall()
@@ -285,16 +290,20 @@ async def update_goal(user_id: str, goal_id: int, body: GoalUpdate,
     _auth(x_internal_secret)
     now = time.time()
     updates = {"updated_at": now}
-    if body.title is not None: updates["title"] = body.title
-    if body.status is not None: updates["status"] = body.status
-    if body.progress_pct is not None: updates["progress_pct"] = min(100, max(0, body.progress_pct))
+    if body.title is not None:
+        updates["title"] = body.title
+    if body.status is not None:
+        updates["status"] = body.status
+    if body.progress_pct is not None:
+        updates["progress_pct"] = min(100, max(0, body.progress_pct))
     set_clause = ", ".join(f"{k}=?" for k in updates)
     with get_conn() as conn:
         conn.execute(f"UPDATE goals SET {set_clause} WHERE id=? AND user_id=?",
                      list(updates.values()) + [goal_id, user_id])
         conn.commit()
         row = conn.execute("SELECT * FROM goals WHERE id=?", (goal_id,)).fetchone()
-    if not row: raise HTTPException(status_code=404, detail="Goal not found")
+    if not row:
+        raise HTTPException(status_code=404, detail="Goal not found")
     return dict(row)
 
 
@@ -319,7 +328,9 @@ async def recall(user_id: str, key: Optional[str] = None, x_internal_secret: str
     _auth(x_internal_secret)
     now = time.time()
     clauses, params = ["user_id=?", "(expires_at IS NULL OR expires_at > ?)"], [user_id, now]
-    if key: clauses.append("key LIKE ?"); params.append(f"%{key}%")
+    if key:
+        clauses.append("key LIKE ?")
+        params.append(f"%{key}%")
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         rows = conn.execute(

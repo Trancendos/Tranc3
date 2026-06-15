@@ -245,9 +245,15 @@ async def list_projects(
 ):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if project_type: clauses.append("project_type=?"); params.append(project_type)
-    if status: clauses.append("status=?"); params.append(status)
-    if client: clauses.append("client=?"); params.append(client)
+    if project_type:
+        clauses.append("project_type=?")
+        params.append(project_type)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
+    if client:
+        clauses.append("client=?")
+        params.append(client)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM studio_projects {where}", params).fetchone()[0]
@@ -263,7 +269,8 @@ async def get_project(project_id: int, x_internal_secret: str = Header(default="
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM studio_projects WHERE id=?", (project_id,)).fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Project not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Project not found")
         assets = conn.execute("SELECT * FROM creative_assets WHERE project_id=?", (project_id,)).fetchall()
         collabs = conn.execute("SELECT * FROM collaborators WHERE project_id=?", (project_id,)).fetchall()
         total_time = conn.execute(
@@ -320,8 +327,8 @@ async def add_collaborator(body: CollabIn, x_internal_secret: str = Header(defau
             )
             conn.commit()
             return {"id": cur.lastrowid, "project_id": body.project_id, "user_id": body.user_id, "role": body.role}
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=409, detail="User already a collaborator on this project")
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="User already a collaborator on this project") from exc
 
 
 @_router.post("/time", status_code=201)

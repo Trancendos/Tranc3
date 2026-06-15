@@ -233,8 +233,12 @@ async def list_games(engine: Optional[str] = None, status: Optional[str] = None,
                       limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if engine: clauses.append("engine=?"); params.append(engine)
-    if status: clauses.append("status=?"); params.append(status)
+    if engine:
+        clauses.append("engine=?")
+        params.append(engine)
+    if status:
+        clauses.append("status=?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM games {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
@@ -246,7 +250,8 @@ async def get_game(game_id: int, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM games WHERE id=?", (game_id,)).fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Game not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Game not found")
         scenes = conn.execute("SELECT * FROM scenes WHERE game_id=?", (game_id,)).fetchall()
         assets = conn.execute("SELECT id, name, asset_type, format FROM assets WHERE game_id=?", (game_id,)).fetchall()
     return {**dict(row), "scenes": [dict(s) for s in scenes], "assets": [dict(a) for a in assets]}
@@ -275,8 +280,12 @@ async def list_assets(game_id: Optional[int] = None, asset_type: Optional[str] =
                        limit: int = Query(100, le=1000), x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     clauses, params = [], []
-    if game_id: clauses.append("game_id=?"); params.append(game_id)
-    if asset_type: clauses.append("asset_type=?"); params.append(asset_type)
+    if game_id:
+        clauses.append("game_id=?")
+        params.append(game_id)
+    if asset_type:
+        clauses.append("asset_type=?")
+        params.append(asset_type)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM assets {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()

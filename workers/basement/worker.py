@@ -228,17 +228,23 @@ async def search_archive(
         else:
             clauses, params = [], []
             if actor:
-                clauses.append("actor = ?"); params.append(actor)
+                clauses.append("actor = ?")
+                params.append(actor)
             if action:
-                clauses.append("action = ?"); params.append(action)
+                clauses.append("action = ?")
+                params.append(action)
             if outcome:
-                clauses.append("outcome = ?"); params.append(outcome)
+                clauses.append("outcome = ?")
+                params.append(outcome)
             if source:
-                clauses.append("source = ?"); params.append(source)
+                clauses.append("source = ?")
+                params.append(source)
             if since:
-                clauses.append("archived_at >= ?"); params.append(since)
+                clauses.append("archived_at >= ?")
+                params.append(since)
             if until:
-                clauses.append("archived_at <= ?"); params.append(until)
+                clauses.append("archived_at <= ?")
+                params.append(until)
             where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
             total = conn.execute(f"SELECT COUNT(*) FROM archive {where}", params).fetchone()[0]
             rows = conn.execute(
@@ -273,7 +279,7 @@ async def pull_from_audit(x_internal_secret: str = Header(default="")):
             resp.raise_for_status()
             data = resp.json()
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Audit-service unreachable: {exc}")
+        raise HTTPException(status_code=502, detail=f"Audit-service unreachable: {exc}") from exc
 
     now = time.time()
     inserted = 0

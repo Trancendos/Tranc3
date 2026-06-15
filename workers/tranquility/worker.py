@@ -199,7 +199,9 @@ async def get_journal(
 ):
     _auth(x_internal_secret)
     clauses, params = ["user_id=?"], [user_id]
-    if since: clauses.append("created_at>=?"); params.append(since)
+    if since:
+        clauses.append("created_at>=?")
+        params.append(since)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM journal {where}", params).fetchone()[0]
@@ -237,7 +239,9 @@ async def get_mood_history(
 ):
     _auth(x_internal_secret)
     clauses, params = ["user_id=?"], [user_id]
-    if since: clauses.append("logged_at>=?"); params.append(since)
+    if since:
+        clauses.append("logged_at>=?")
+        params.append(since)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         rows = conn.execute(
