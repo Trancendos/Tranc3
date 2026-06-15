@@ -188,6 +188,7 @@ async def metrics():
 
 # --- Projects ---
 
+
 @_router.post("/projects", status_code=201)
 async def create_project(body: ProjectIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -197,8 +198,17 @@ async def create_project(body: ProjectIn, x_internal_secret: str = Header(defaul
             cur = conn.execute(
                 "INSERT INTO projects (name, description, repo_url, language, status, owner, tags, created_at, updated_at) "
                 "VALUES (?,?,?,?,?,?,?,?,?)",
-                (body.name, body.description, body.repo_url, body.language, body.status,
-                 body.owner, json.dumps(body.tags), now, now),
+                (
+                    body.name,
+                    body.description,
+                    body.repo_url,
+                    body.language,
+                    body.status,
+                    body.owner,
+                    json.dumps(body.tags),
+                    now,
+                    now,
+                ),
             )
             conn.commit()
             row = conn.execute("SELECT * FROM projects WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -244,7 +254,9 @@ async def get_project(project_id: int, x_internal_secret: str = Header(default="
         row = conn.execute("SELECT * FROM projects WHERE id=?", (project_id,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Project not found")
-        envs = conn.execute("SELECT * FROM environments WHERE project_id=?", (project_id,)).fetchall()
+        envs = conn.execute(
+            "SELECT * FROM environments WHERE project_id=?", (project_id,)
+        ).fetchall()
         recent_deploys = conn.execute(
             "SELECT * FROM deploy_events WHERE project_id=? ORDER BY deployed_at DESC LIMIT 10",
             (project_id,),
@@ -258,8 +270,11 @@ async def get_project(project_id: int, x_internal_secret: str = Header(default="
 
 # --- Environments ---
 
+
 @_router.post("/projects/{project_id}/environments", status_code=201)
-async def add_environment(project_id: int, body: EnvironmentIn, x_internal_secret: str = Header(default="")):
+async def add_environment(
+    project_id: int, body: EnvironmentIn, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     now = time.time()
     with get_conn() as conn:
@@ -274,10 +289,13 @@ async def add_environment(project_id: int, body: EnvironmentIn, x_internal_secre
             row = conn.execute("SELECT * FROM environments WHERE id=?", (cur.lastrowid,)).fetchone()
             return dict(row)
         except sqlite3.IntegrityError as exc:
-            raise HTTPException(status_code=409, detail="Environment name already exists for project") from exc
+            raise HTTPException(
+                status_code=409, detail="Environment name already exists for project"
+            ) from exc
 
 
 # --- Deploy Events ---
+
 
 @_router.post("/deploys", status_code=201)
 async def record_deploy(body: DeployEventIn, x_internal_secret: str = Header(default="")):
@@ -287,8 +305,16 @@ async def record_deploy(body: DeployEventIn, x_internal_secret: str = Header(def
         cur = conn.execute(
             "INSERT INTO deploy_events (project_id, environment, version, status, triggered_by, duration_s, logs, deployed_at) "
             "VALUES (?,?,?,?,?,?,?,?)",
-            (body.project_id, body.environment, body.version, body.status,
-             body.triggered_by, body.duration_s, body.logs, now),
+            (
+                body.project_id,
+                body.environment,
+                body.version,
+                body.status,
+                body.triggered_by,
+                body.duration_s,
+                body.logs,
+                now,
+            ),
         )
         conn.commit()
     return {"id": cur.lastrowid, "deployed_at": now, "status": body.status}
@@ -326,6 +352,7 @@ async def list_deploys(
 
 # --- Service Catalogue ---
 
+
 @_router.post("/services", status_code=201)
 async def register_service(body: ServiceIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -335,11 +362,21 @@ async def register_service(body: ServiceIn, x_internal_secret: str = Header(defa
             cur = conn.execute(
                 "INSERT INTO service_catalogue (name, description, owner, port, health_url, tags, status, created_at) "
                 "VALUES (?,?,?,?,?,?,?,?)",
-                (body.name, body.description, body.owner, body.port, body.health_url,
-                 json.dumps(body.tags), body.status, now),
+                (
+                    body.name,
+                    body.description,
+                    body.owner,
+                    body.port,
+                    body.health_url,
+                    json.dumps(body.tags),
+                    body.status,
+                    now,
+                ),
             )
             conn.commit()
-            row = conn.execute("SELECT * FROM service_catalogue WHERE id=?", (cur.lastrowid,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM service_catalogue WHERE id=?", (cur.lastrowid,)
+            ).fetchone()
             return dict(row)
         except sqlite3.IntegrityError as exc:
             raise HTTPException(status_code=409, detail="Service name already registered") from exc
@@ -358,7 +395,9 @@ async def list_services(
         params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM service_catalogue {where} ORDER BY name", params).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM service_catalogue {where} ORDER BY name", params
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -367,7 +406,9 @@ async def stats(x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     with get_conn() as conn:
         total_projects = conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
-        active_projects = conn.execute("SELECT COUNT(*) FROM projects WHERE status='active'").fetchone()[0]
+        active_projects = conn.execute(
+            "SELECT COUNT(*) FROM projects WHERE status='active'"
+        ).fetchone()[0]
         total_deploys = conn.execute("SELECT COUNT(*) FROM deploy_events").fetchone()[0]
         success_deploys = conn.execute(
             "SELECT COUNT(*) FROM deploy_events WHERE status='success'"
@@ -380,7 +421,9 @@ async def stats(x_internal_secret: str = Header(default="")):
         "active_projects": active_projects,
         "total_deploys": total_deploys,
         "successful_deploys": success_deploys,
-        "deploy_success_rate": round(success_deploys / total_deploys * 100, 1) if total_deploys else 0,
+        "deploy_success_rate": round(success_deploys / total_deploys * 100, 1)
+        if total_deploys
+        else 0,
         "by_environment": [dict(r) for r in by_env],
     }
 
@@ -389,4 +432,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

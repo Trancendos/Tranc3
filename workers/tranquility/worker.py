@@ -173,6 +173,7 @@ async def metrics():
 
 # --- Journal ---
 
+
 @_router.post("/journal", status_code=201)
 async def add_journal(body: JournalIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -183,7 +184,15 @@ async def add_journal(body: JournalIn, x_internal_secret: str = Header(default="
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO journal (user_id, content, mood_score, mood_label, tags, is_private, created_at) VALUES (?,?,?,?,?,?,?)",
-            (body.user_id, body.content, body.mood_score, label, json.dumps(body.tags), int(body.is_private), now),
+            (
+                body.user_id,
+                body.content,
+                body.mood_score,
+                label,
+                json.dumps(body.tags),
+                int(body.is_private),
+                now,
+            ),
         )
         conn.commit()
         return {"id": cur.lastrowid, "user_id": body.user_id, "created_at": now}
@@ -214,6 +223,7 @@ async def get_journal(
 
 # --- Mood ---
 
+
 @_router.post("/mood", status_code=201)
 async def log_mood(body: MoodIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -227,7 +237,13 @@ async def log_mood(body: MoodIn, x_internal_secret: str = Header(default="")):
             (body.user_id, body.score, label, body.notes, now),
         )
         conn.commit()
-    return {"id": cur.lastrowid, "user_id": body.user_id, "score": body.score, "label": label, "logged_at": now}
+    return {
+        "id": cur.lastrowid,
+        "user_id": body.user_id,
+        "score": body.score,
+        "label": label,
+        "logged_at": now,
+    }
 
 
 @_router.get("/mood/{user_id}")
@@ -249,10 +265,15 @@ async def get_mood_history(
             params + [limit],
         ).fetchall()
         avg = conn.execute(f"SELECT AVG(score) FROM mood_log {where}", params).fetchone()[0]
-    return {"user_id": user_id, "average_mood": round(avg, 2) if avg else None, "history": [dict(r) for r in rows]}
+    return {
+        "user_id": user_id,
+        "average_mood": round(avg, 2) if avg else None,
+        "history": [dict(r) for r in rows],
+    }
 
 
 # --- Sleep ---
+
 
 @_router.post("/sleep", status_code=201)
 async def log_sleep(body: SleepIn, x_internal_secret: str = Header(default="")):
@@ -267,12 +288,18 @@ async def log_sleep(body: SleepIn, x_internal_secret: str = Header(default="")):
             (body.user_id, body.bedtime, body.wake_time, duration_h, body.quality, body.notes, now),
         )
         conn.commit()
-    return {"id": cur.lastrowid, "user_id": body.user_id, "duration_h": duration_h, "logged_at": now}
+    return {
+        "id": cur.lastrowid,
+        "user_id": body.user_id,
+        "duration_h": duration_h,
+        "logged_at": now,
+    }
 
 
 @_router.get("/sleep/{user_id}")
-async def get_sleep_history(user_id: str, limit: int = Query(30, le=365),
-                             x_internal_secret: str = Header(default="")):
+async def get_sleep_history(
+    user_id: str, limit: int = Query(30, le=365), x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         rows = conn.execute(
@@ -282,10 +309,15 @@ async def get_sleep_history(user_id: str, limit: int = Query(30, le=365),
         avg_dur = conn.execute(
             "SELECT AVG(duration_h) FROM sleep_log WHERE user_id=?", (user_id,)
         ).fetchone()[0]
-    return {"user_id": user_id, "avg_duration_h": round(avg_dur, 2) if avg_dur else None, "history": [dict(r) for r in rows]}
+    return {
+        "user_id": user_id,
+        "avg_duration_h": round(avg_dur, 2) if avg_dur else None,
+        "history": [dict(r) for r in rows],
+    }
 
 
 # --- Mindfulness ---
+
 
 @_router.post("/mindfulness", status_code=201)
 async def log_mindfulness(body: MindfulnessIn, x_internal_secret: str = Header(default="")):
@@ -297,7 +329,12 @@ async def log_mindfulness(body: MindfulnessIn, x_internal_secret: str = Header(d
             (body.user_id, body.activity, body.duration_min, body.notes, now),
         )
         conn.commit()
-    return {"id": cur.lastrowid, "user_id": body.user_id, "activity": body.activity, "duration_min": body.duration_min}
+    return {
+        "id": cur.lastrowid,
+        "user_id": body.user_id,
+        "activity": body.activity,
+        "duration_min": body.duration_min,
+    }
 
 
 @_router.get("/summary/{user_id}")
@@ -309,10 +346,12 @@ async def wellbeing_summary(user_id: str, x_internal_secret: str = Header(defaul
             "SELECT AVG(score) FROM mood_log WHERE user_id=? AND logged_at>=?", (user_id, week_ago)
         ).fetchone()[0]
         sleep_avg = conn.execute(
-            "SELECT AVG(duration_h) FROM sleep_log WHERE user_id=? AND logged_at>=?", (user_id, week_ago)
+            "SELECT AVG(duration_h) FROM sleep_log WHERE user_id=? AND logged_at>=?",
+            (user_id, week_ago),
         ).fetchone()[0]
         mindfulness_mins = conn.execute(
-            "SELECT SUM(duration_min) FROM mindfulness WHERE user_id=? AND logged_at>=?", (user_id, week_ago)
+            "SELECT SUM(duration_min) FROM mindfulness WHERE user_id=? AND logged_at>=?",
+            (user_id, week_ago),
         ).fetchone()[0]
         journal_count = conn.execute(
             "SELECT COUNT(*) FROM journal WHERE user_id=? AND created_at>=?", (user_id, week_ago)
@@ -331,4 +370,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

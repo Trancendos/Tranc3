@@ -81,14 +81,34 @@ def init_db() -> None:
         """)
         # Seed default templates
         default_templates = [
-            ("Album Cover", "Music album artwork + playlist creation", "music_visual",
-             json.dumps({"image": {"width": 1000, "height": 1000, "model": "flux"}, "playlist": True})),
-            ("Video Thumbnail", "Video thumbnail + metadata", "video_image",
-             json.dumps({"image": {"width": 1280, "height": 720, "model": "flux"}, "video": True})),
-            ("Game Asset Pack", "3D models + textures + sound effects", "game_assets",
-             json.dumps({"tranceflow": True, "image": {"width": 512, "height": 512}})),
-            ("Brand Kit", "Logo + hero image + brand soundtrack", "brand",
-             json.dumps({"image": {"width": 800, "height": 800}, "playlist": True})),
+            (
+                "Album Cover",
+                "Music album artwork + playlist creation",
+                "music_visual",
+                json.dumps(
+                    {"image": {"width": 1000, "height": 1000, "model": "flux"}, "playlist": True}
+                ),
+            ),
+            (
+                "Video Thumbnail",
+                "Video thumbnail + metadata",
+                "video_image",
+                json.dumps(
+                    {"image": {"width": 1280, "height": 720, "model": "flux"}, "video": True}
+                ),
+            ),
+            (
+                "Game Asset Pack",
+                "3D models + textures + sound effects",
+                "game_assets",
+                json.dumps({"tranceflow": True, "image": {"width": 512, "height": 512}}),
+            ),
+            (
+                "Brand Kit",
+                "Logo + hero image + brand soundtrack",
+                "brand",
+                json.dumps({"image": {"width": 800, "height": 800}, "playlist": True}),
+            ),
         ]
         for tmpl in default_templates:
             try:
@@ -108,13 +128,19 @@ async def _fan_out_creation(project_id: int, brief: str, project_type: str) -> N
 
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=60) as client:
             # Always try image generation for visual projects
             if project_type in ("mixed", "music_visual", "video_image", "brand", "game_assets"):
                 try:
                     resp = await client.post(
                         f"{SERVICE_URLS['photo_studio']}/generate",
-                        json={"prompt": brief, "width": 512, "height": 512, "generated_by": "imaginarium"},
+                        json={
+                            "prompt": brief,
+                            "width": 512,
+                            "height": 512,
+                            "generated_by": "imaginarium",
+                        },
                         headers=headers,
                     )
                     if resp.status_code == 202:
@@ -173,7 +199,9 @@ class TemplateIn(BaseModel):
 async def health():
     with get_conn() as conn:
         projects = conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
-        completed = conn.execute("SELECT COUNT(*) FROM projects WHERE status='completed'").fetchone()[0]
+        completed = conn.execute(
+            "SELECT COUNT(*) FROM projects WHERE status='completed'"
+        ).fetchone()[0]
     return {
         "status": "healthy",
         "service": WORKER_NAME,
@@ -199,8 +227,9 @@ async def metrics():
 
 
 @_router.post("/create", status_code=202)
-async def create_project(body: ProjectIn, background_tasks: BackgroundTasks,
-                          x_internal_secret: str = Header(default="")):
+async def create_project(
+    body: ProjectIn, background_tasks: BackgroundTasks, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     if not body.brief.strip():
         raise HTTPException(status_code=400, detail="brief required")
@@ -208,7 +237,15 @@ async def create_project(body: ProjectIn, background_tasks: BackgroundTasks,
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO projects (title, brief, project_type, status, created_by, created_at, sub_tasks) VALUES (?,?,?,?,?,?,?)",
-            (body.title, body.brief, body.project_type, "pending", body.created_by, now, json.dumps(body.sub_tasks)),
+            (
+                body.title,
+                body.brief,
+                body.project_type,
+                "pending",
+                body.created_by,
+                now,
+                json.dumps(body.sub_tasks),
+            ),
         )
         conn.commit()
         project_id = cur.lastrowid
@@ -283,6 +320,7 @@ async def services_status(x_internal_secret: str = Header(default="")):
     statuses = {}
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=5) as client:
             for name, url in SERVICE_URLS.items():
                 try:
@@ -291,7 +329,9 @@ async def services_status(x_internal_secret: str = Header(default="")):
                 except Exception as exc:
                     statuses[name] = {"status": "down", "error": str(exc)[:100]}
     except ImportError:
-        statuses = {name: {"status": "unknown", "note": "httpx not installed"} for name in SERVICE_URLS}
+        statuses = {
+            name: {"status": "unknown", "note": "httpx not installed"} for name in SERVICE_URLS
+        }
     return {"services": statuses}
 
 
@@ -299,4 +339,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

@@ -172,6 +172,7 @@ async def metrics():
 
 # --- Courses ---
 
+
 @_router.post("/courses", status_code=201)
 async def create_course(body: CourseIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -240,6 +241,7 @@ async def publish_course(course_id: int, x_internal_secret: str = Header(default
 
 # --- Lessons ---
 
+
 @_router.post("/courses/{course_id}/lessons", status_code=201)
 async def add_lesson(course_id: int, body: LessonIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -249,7 +251,15 @@ async def add_lesson(course_id: int, body: LessonIn, x_internal_secret: str = He
             raise HTTPException(status_code=404, detail="Course not found")
         cur = conn.execute(
             "INSERT INTO lessons (course_id, title, content, position, duration_min, lesson_type, created_at) VALUES (?,?,?,?,?,?,?)",
-            (course_id, body.title, body.content, body.position, body.duration_min, body.lesson_type, now),
+            (
+                course_id,
+                body.title,
+                body.content,
+                body.position,
+                body.duration_min,
+                body.lesson_type,
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM lessons WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -257,6 +267,7 @@ async def add_lesson(course_id: int, body: LessonIn, x_internal_secret: str = He
 
 
 # --- Enrolments ---
+
 
 @_router.post("/enrolments", status_code=201)
 async def enrol(body: EnrolIn, x_internal_secret: str = Header(default="")):
@@ -271,7 +282,12 @@ async def enrol(body: EnrolIn, x_internal_secret: str = Header(default="")):
                 (body.user_id, body.course_id, now),
             )
             conn.commit()
-            return {"id": cur.lastrowid, "user_id": body.user_id, "course_id": body.course_id, "enrolled_at": now}
+            return {
+                "id": cur.lastrowid,
+                "user_id": body.user_id,
+                "course_id": body.course_id,
+                "enrolled_at": now,
+            }
         except sqlite3.IntegrityError:
             row = conn.execute(
                 "SELECT * FROM enrolments WHERE user_id=? AND course_id=?",
@@ -281,8 +297,11 @@ async def enrol(body: EnrolIn, x_internal_secret: str = Header(default="")):
 
 
 @_router.get("/enrolments")
-async def list_enrolments(user_id: Optional[str] = None, course_id: Optional[int] = None,
-                           x_internal_secret: str = Header(default="")):
+async def list_enrolments(
+    user_id: Optional[str] = None,
+    course_id: Optional[int] = None,
+    x_internal_secret: str = Header(default=""),
+):
     _auth(x_internal_secret)
     clauses, params = [], []
     if user_id:
@@ -293,11 +312,14 @@ async def list_enrolments(user_id: Optional[str] = None, course_id: Optional[int
         params.append(course_id)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM enrolments {where} ORDER BY enrolled_at DESC", params).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM enrolments {where} ORDER BY enrolled_at DESC", params
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
 # --- Progress ---
+
 
 @_router.post("/progress", status_code=201)
 async def mark_progress(body: ProgressIn, x_internal_secret: str = Header(default="")):
@@ -339,13 +361,16 @@ async def mark_progress(body: ProgressIn, x_internal_secret: str = Header(defaul
         "course_id": lesson["course_id"],
         "completed": True,
         "score": body.score,
-        "course_progress_pct": round(completed_lessons / total_lessons * 100, 1) if total_lessons else 0,
+        "course_progress_pct": round(completed_lessons / total_lessons * 100, 1)
+        if total_lessons
+        else 0,
     }
 
 
 @_router.get("/progress/{user_id}")
-async def get_user_progress(user_id: str, course_id: Optional[int] = None,
-                             x_internal_secret: str = Header(default="")):
+async def get_user_progress(
+    user_id: str, course_id: Optional[int] = None, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     clauses = ["user_id=?"]
     params: list = [user_id]
@@ -362,4 +387,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

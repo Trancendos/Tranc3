@@ -50,10 +50,22 @@ MAD_HATTER_QUOTES = [
 
 CHAOS_EXPERIMENTS = [
     {"name": "latency_injection", "description": "Add random 100-2000ms delay", "severity": "low"},
-    {"name": "error_injection", "description": "Return 500 errors at rate X%", "severity": "medium"},
-    {"name": "memory_pressure", "description": "Allocate large in-memory structures", "severity": "high"},
+    {
+        "name": "error_injection",
+        "description": "Return 500 errors at rate X%",
+        "severity": "medium",
+    },
+    {
+        "name": "memory_pressure",
+        "description": "Allocate large in-memory structures",
+        "severity": "high",
+    },
     {"name": "connection_drop", "description": "Drop connections mid-stream", "severity": "high"},
-    {"name": "data_corruption", "description": "Flip random bits in responses", "severity": "critical"},
+    {
+        "name": "data_corruption",
+        "description": "Flip random bits in responses",
+        "severity": "critical",
+    },
     {"name": "cpu_spike", "description": "CPU-intensive computation burst", "severity": "medium"},
 ]
 
@@ -204,6 +216,7 @@ async def mad_hatter_quote():
 
 # --- Test Suites ---
 
+
 @_router.post("/suites", status_code=201)
 async def create_suite(body: SuiteIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -219,8 +232,12 @@ async def create_suite(body: SuiteIn, x_internal_secret: str = Header(default=""
 
 
 @_router.get("/suites")
-async def list_suites(service: Optional[str] = None, test_type: Optional[str] = None,
-                       limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")):
+async def list_suites(
+    service: Optional[str] = None,
+    test_type: Optional[str] = None,
+    limit: int = Query(50, le=500),
+    x_internal_secret: str = Header(default=""),
+):
     _auth(x_internal_secret)
     clauses, params = [], []
     if service:
@@ -239,6 +256,7 @@ async def list_suites(service: Optional[str] = None, test_type: Optional[str] = 
 
 # --- Test Runs ---
 
+
 @_router.post("/runs", status_code=201)
 async def record_run(body: TestRunIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -248,16 +266,30 @@ async def record_run(body: TestRunIn, x_internal_secret: str = Header(default=""
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO test_runs (suite_id, name, status, duration_ms, error_msg, ran_by, ran_at, metadata) VALUES (?,?,?,?,?,?,?,?)",
-            (body.suite_id, body.name, body.status, body.duration_ms, body.error_msg,
-             body.ran_by, now, json.dumps(body.metadata)),
+            (
+                body.suite_id,
+                body.name,
+                body.status,
+                body.duration_ms,
+                body.error_msg,
+                body.ran_by,
+                now,
+                json.dumps(body.metadata),
+            ),
         )
         conn.commit()
         if body.suite_id:
             # field is a hardcoded column name, never user input — not SQLi
             if body.status == "pass":
-                conn.execute("UPDATE test_suites SET pass_count=pass_count+1, last_run_at=? WHERE id=?", (now, body.suite_id))
+                conn.execute(
+                    "UPDATE test_suites SET pass_count=pass_count+1, last_run_at=? WHERE id=?",
+                    (now, body.suite_id),
+                )
             else:
-                conn.execute("UPDATE test_suites SET fail_count=fail_count+1, last_run_at=? WHERE id=?", (now, body.suite_id))
+                conn.execute(
+                    "UPDATE test_suites SET fail_count=fail_count+1, last_run_at=? WHERE id=?",
+                    (now, body.suite_id),
+                )
             conn.commit()
     return {"id": cur.lastrowid, "status": body.status, "ran_at": now}
 
@@ -271,8 +303,16 @@ async def record_batch_runs(body: BatchRunIn, x_internal_secret: str = Header(de
         for run in body.runs:
             cur = conn.execute(
                 "INSERT INTO test_runs (suite_id, name, status, duration_ms, error_msg, ran_by, ran_at, metadata) VALUES (?,?,?,?,?,?,?,?)",
-                (body.suite_id or run.suite_id, run.name, run.status, run.duration_ms,
-                 run.error_msg, run.ran_by, now, json.dumps(run.metadata)),
+                (
+                    body.suite_id or run.suite_id,
+                    run.name,
+                    run.status,
+                    run.duration_ms,
+                    run.error_msg,
+                    run.ran_by,
+                    now,
+                    json.dumps(run.metadata),
+                ),
             )
             results.append({"id": cur.lastrowid, "name": run.name, "status": run.status})
         conn.commit()
@@ -310,6 +350,7 @@ async def list_runs(
 
 # --- Chaos Experiments ---
 
+
 @_router.get("/chaos/experiments")
 async def list_chaos_experiments(x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
@@ -317,18 +358,29 @@ async def list_chaos_experiments(x_internal_secret: str = Header(default="")):
 
 
 @_router.post("/chaos", status_code=201)
-async def create_chaos_experiment(body: ChaosExperimentIn, x_internal_secret: str = Header(default="")):
+async def create_chaos_experiment(
+    body: ChaosExperimentIn, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     known_types = [e["name"] for e in CHAOS_EXPERIMENTS]
     if body.experiment_type not in known_types:
-        raise HTTPException(status_code=400, detail=f"Unknown experiment type. Known: {known_types}")
+        raise HTTPException(
+            status_code=400, detail=f"Unknown experiment type. Known: {known_types}"
+        )
     now = time.time()
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO chaos_experiments (name, target_service, experiment_type, severity, config, status, created_at) "
             "VALUES (?,?,?,?,?,?,?)",
-            (body.name, body.target_service, body.experiment_type, body.severity,
-             json.dumps(body.config), "idle", now),
+            (
+                body.name,
+                body.target_service,
+                body.experiment_type,
+                body.severity,
+                json.dumps(body.config),
+                "idle",
+                now,
+            ),
         )
         conn.commit()
     return {"id": cur.lastrowid, "name": body.name, "status": "idle", "created_at": now}
@@ -339,15 +391,22 @@ async def run_chaos(experiment_id: int, x_internal_secret: str = Header(default=
     _auth(x_internal_secret)
     now = time.time()
     with get_conn() as conn:
-        row = conn.execute("SELECT * FROM chaos_experiments WHERE id=?", (experiment_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM chaos_experiments WHERE id=?", (experiment_id,)
+        ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Experiment not found")
         conn.execute(
-            "UPDATE chaos_experiments SET status='running', started_at=? WHERE id=?", (now, experiment_id)
+            "UPDATE chaos_experiments SET status='running', started_at=? WHERE id=?",
+            (now, experiment_id),
         )
         conn.commit()
-    return {"id": experiment_id, "status": "running", "started_at": now,
-            "note": "Chaos experiment marked as running — implement actual injection in target service"}
+    return {
+        "id": experiment_id,
+        "status": "running",
+        "started_at": now,
+        "note": "Chaos experiment marked as running — implement actual injection in target service",
+    }
 
 
 @_router.get("/stats")
@@ -358,7 +417,9 @@ async def stats(x_internal_secret: str = Header(default="")):
         by_status = conn.execute(
             "SELECT status, COUNT(*) c FROM test_runs GROUP BY status"
         ).fetchall()
-        avg_duration = conn.execute("SELECT AVG(duration_ms) FROM test_runs WHERE duration_ms IS NOT NULL").fetchone()[0]
+        avg_duration = conn.execute(
+            "SELECT AVG(duration_ms) FROM test_runs WHERE duration_ms IS NOT NULL"
+        ).fetchone()[0]
     pass_count = next((r["c"] for r in by_status if r["status"] == "pass"), 0)
     return {
         "total_runs": total,
@@ -372,4 +433,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

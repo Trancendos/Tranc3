@@ -38,22 +38,133 @@ _err_count = 0
 
 # Emotion keyword lexicon (zero-cost alternative to VADER/spaCy)
 EMOTION_LEXICON: dict[str, list[str]] = {
-    "joy": ["happy", "joyful", "elated", "excited", "delighted", "wonderful", "amazing", "great",
-            "fantastic", "love", "celebrate", "thrilled", "euphoric", "bliss", "cheerful"],
-    "sadness": ["sad", "unhappy", "depressed", "miserable", "grief", "sorrow", "cry", "tears",
-                "heartbroken", "lonely", "hopeless", "despair", "gloomy", "melancholy", "devastated"],
-    "anger": ["angry", "furious", "rage", "hate", "annoyed", "frustrated", "outraged", "livid",
-              "infuriated", "hostile", "bitter", "resent", "mad", "irate", "wrath"],
-    "fear": ["scared", "afraid", "terrified", "anxious", "worried", "nervous", "panic", "dread",
-             "phobia", "horror", "alarmed", "frightened", "uneasy", "apprehensive", "trembling"],
-    "surprise": ["surprised", "shocked", "astonished", "amazed", "unexpected", "stunned", "wow",
-                 "incredible", "unbelievable", "astounding", "startled", "taken aback"],
-    "disgust": ["disgusting", "revolting", "gross", "repulsive", "nauseating", "awful", "horrible",
-                "vile", "repugnant", "loathe", "detest", "abhor", "yuck", "sick"],
-    "trust": ["trust", "believe", "confident", "reliable", "honest", "loyal", "faithful", "secure",
-              "certain", "dependable", "genuine", "sincere", "authentic"],
-    "anticipation": ["excited", "looking forward", "eager", "hopeful", "expect", "anticipate",
-                     "await", "prospect", "upcoming", "soon", "ready", "prepared"],
+    "joy": [
+        "happy",
+        "joyful",
+        "elated",
+        "excited",
+        "delighted",
+        "wonderful",
+        "amazing",
+        "great",
+        "fantastic",
+        "love",
+        "celebrate",
+        "thrilled",
+        "euphoric",
+        "bliss",
+        "cheerful",
+    ],
+    "sadness": [
+        "sad",
+        "unhappy",
+        "depressed",
+        "miserable",
+        "grief",
+        "sorrow",
+        "cry",
+        "tears",
+        "heartbroken",
+        "lonely",
+        "hopeless",
+        "despair",
+        "gloomy",
+        "melancholy",
+        "devastated",
+    ],
+    "anger": [
+        "angry",
+        "furious",
+        "rage",
+        "hate",
+        "annoyed",
+        "frustrated",
+        "outraged",
+        "livid",
+        "infuriated",
+        "hostile",
+        "bitter",
+        "resent",
+        "mad",
+        "irate",
+        "wrath",
+    ],
+    "fear": [
+        "scared",
+        "afraid",
+        "terrified",
+        "anxious",
+        "worried",
+        "nervous",
+        "panic",
+        "dread",
+        "phobia",
+        "horror",
+        "alarmed",
+        "frightened",
+        "uneasy",
+        "apprehensive",
+        "trembling",
+    ],
+    "surprise": [
+        "surprised",
+        "shocked",
+        "astonished",
+        "amazed",
+        "unexpected",
+        "stunned",
+        "wow",
+        "incredible",
+        "unbelievable",
+        "astounding",
+        "startled",
+        "taken aback",
+    ],
+    "disgust": [
+        "disgusting",
+        "revolting",
+        "gross",
+        "repulsive",
+        "nauseating",
+        "awful",
+        "horrible",
+        "vile",
+        "repugnant",
+        "loathe",
+        "detest",
+        "abhor",
+        "yuck",
+        "sick",
+    ],
+    "trust": [
+        "trust",
+        "believe",
+        "confident",
+        "reliable",
+        "honest",
+        "loyal",
+        "faithful",
+        "secure",
+        "certain",
+        "dependable",
+        "genuine",
+        "sincere",
+        "authentic",
+    ],
+    "anticipation": [
+        "excited",
+        "looking forward",
+        "eager",
+        "hopeful",
+        "expect",
+        "anticipate",
+        "await",
+        "prospect",
+        "upcoming",
+        "soon",
+        "ready",
+        "prepared",
+    ],
 }
 
 INTENSIFIERS = {"very", "extremely", "incredibly", "absolutely", "totally", "completely", "deeply"}
@@ -229,8 +340,16 @@ async def analyse_text(body: AnalyseIn, x_internal_secret: str = Header(default=
             cur = conn.execute(
                 "INSERT INTO analyses (user_id, text_snippet, dominant_emotion, confidence, sentiment, polarity, emotion_scores, analysed_at) "
                 "VALUES (?,?,?,?,?,?,?,?)",
-                (body.user_id, body.text[:500], result["dominant_emotion"], result["confidence"],
-                 result["sentiment"], result["polarity"], json.dumps(result["emotion_scores"]), now),
+                (
+                    body.user_id,
+                    body.text[:500],
+                    result["dominant_emotion"],
+                    result["confidence"],
+                    result["sentiment"],
+                    result["polarity"],
+                    json.dumps(result["emotion_scores"]),
+                    now,
+                ),
             )
             conn.commit()
             analysis_id = cur.lastrowid
@@ -240,10 +359,18 @@ async def analyse_text(body: AnalyseIn, x_internal_secret: str = Header(default=
             ).fetchone()
             if profile:
                 new_total = profile["total_analyses"] + 1
-                new_polarity = (profile["avg_polarity"] * profile["total_analyses"] + result["polarity"]) / new_total
+                new_polarity = (
+                    profile["avg_polarity"] * profile["total_analyses"] + result["polarity"]
+                ) / new_total
                 conn.execute(
                     "UPDATE emotion_profiles SET avg_polarity=?, dominant_emotion=?, total_analyses=?, updated_at=? WHERE user_id=?",
-                    (round(new_polarity, 4), result["dominant_emotion"], new_total, now, body.user_id),
+                    (
+                        round(new_polarity, 4),
+                        result["dominant_emotion"],
+                        new_total,
+                        now,
+                        body.user_id,
+                    ),
                 )
             else:
                 conn.execute(
@@ -285,8 +412,9 @@ async def get_profile(user_id: str, x_internal_secret: str = Header(default=""))
 
 
 @_router.get("/history/{user_id}")
-async def get_history(user_id: str, limit: int = Query(50, le=500),
-                       x_internal_secret: str = Header(default="")):
+async def get_history(
+    user_id: str, limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         rows = conn.execute(
@@ -309,4 +437,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

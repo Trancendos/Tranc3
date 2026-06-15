@@ -219,15 +219,28 @@ async def metrics():
 async def create_project(body: ProjectIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     if body.project_type not in PROJECT_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid project_type. Must be: {PROJECT_TYPES}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid project_type. Must be: {PROJECT_TYPES}"
+        )
     now = time.time()
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO studio_projects (title, brief, project_type, client, priority, deadline, budget_hrs, created_by, created_at, updated_at, tags, metadata) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-            (body.title, body.brief, body.project_type, body.client, body.priority,
-             body.deadline, body.budget_hrs, body.created_by, now, now,
-             json.dumps(body.tags), json.dumps(body.metadata)),
+            (
+                body.title,
+                body.brief,
+                body.project_type,
+                body.client,
+                body.priority,
+                body.deadline,
+                body.budget_hrs,
+                body.created_by,
+                now,
+                now,
+                json.dumps(body.tags),
+                json.dumps(body.metadata),
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM studio_projects WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -271,11 +284,18 @@ async def get_project(project_id: int, x_internal_secret: str = Header(default="
         row = conn.execute("SELECT * FROM studio_projects WHERE id=?", (project_id,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Project not found")
-        assets = conn.execute("SELECT * FROM creative_assets WHERE project_id=?", (project_id,)).fetchall()
-        collabs = conn.execute("SELECT * FROM collaborators WHERE project_id=?", (project_id,)).fetchall()
-        total_time = conn.execute(
-            "SELECT SUM(hours) FROM time_entries WHERE project_id=?", (project_id,)
-        ).fetchone()[0] or 0
+        assets = conn.execute(
+            "SELECT * FROM creative_assets WHERE project_id=?", (project_id,)
+        ).fetchall()
+        collabs = conn.execute(
+            "SELECT * FROM collaborators WHERE project_id=?", (project_id,)
+        ).fetchall()
+        total_time = (
+            conn.execute(
+                "SELECT SUM(hours) FROM time_entries WHERE project_id=?", (project_id,)
+            ).fetchone()[0]
+            or 0
+        )
     return {
         **dict(row),
         "assets": [dict(a) for a in assets],
@@ -285,7 +305,9 @@ async def get_project(project_id: int, x_internal_secret: str = Header(default="
 
 
 @_router.patch("/projects/{project_id}/status")
-async def update_status(project_id: int, payload: dict, x_internal_secret: str = Header(default="")):
+async def update_status(
+    project_id: int, payload: dict, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     new_status = payload.get("status")
     if new_status not in ASSET_STATUSES:
@@ -307,8 +329,20 @@ async def add_asset(body: AssetIn, x_internal_secret: str = Header(default="")):
         cur = conn.execute(
             "INSERT INTO creative_assets (project_id, title, asset_type, status, source_service, source_id, file_path, url, notes, created_by, created_at, updated_at) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-            (body.project_id, body.title, body.asset_type, body.status, body.source_service,
-             body.source_id, body.file_path, body.url, body.notes, body.created_by, now, now),
+            (
+                body.project_id,
+                body.title,
+                body.asset_type,
+                body.status,
+                body.source_service,
+                body.source_id,
+                body.file_path,
+                body.url,
+                body.notes,
+                body.created_by,
+                now,
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM creative_assets WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -326,9 +360,16 @@ async def add_collaborator(body: CollabIn, x_internal_secret: str = Header(defau
                 (body.project_id, body.user_id, body.role, now),
             )
             conn.commit()
-            return {"id": cur.lastrowid, "project_id": body.project_id, "user_id": body.user_id, "role": body.role}
+            return {
+                "id": cur.lastrowid,
+                "project_id": body.project_id,
+                "user_id": body.user_id,
+                "role": body.role,
+            }
         except sqlite3.IntegrityError as exc:
-            raise HTTPException(status_code=409, detail="User already a collaborator on this project") from exc
+            raise HTTPException(
+                status_code=409, detail="User already a collaborator on this project"
+            ) from exc
 
 
 @_router.post("/time", status_code=201)
@@ -347,7 +388,12 @@ async def log_time(body: TimeIn, x_internal_secret: str = Header(default="")):
             (body.hours, now, body.project_id),
         )
         conn.commit()
-    return {"id": cur.lastrowid, "project_id": body.project_id, "hours": body.hours, "logged_at": now}
+    return {
+        "id": cur.lastrowid,
+        "project_id": body.project_id,
+        "hours": body.hours,
+        "logged_at": now,
+    }
 
 
 @_router.post("/feedback", status_code=201)
@@ -360,7 +406,12 @@ async def add_feedback(body: FeedbackIn, x_internal_secret: str = Header(default
             (body.project_id, body.asset_id, body.author, body.content, body.rating, now),
         )
         conn.commit()
-    return {"id": cur.lastrowid, "project_id": body.project_id, "author": body.author, "created_at": now}
+    return {
+        "id": cur.lastrowid,
+        "project_id": body.project_id,
+        "author": body.author,
+        "created_at": now,
+    }
 
 
 @_router.get("/stats")
@@ -387,4 +438,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

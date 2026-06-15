@@ -240,8 +240,20 @@ async def add_track(body: TrackIn, x_internal_secret: str = Header(default="")):
         cur = conn.execute(
             "INSERT INTO tracks (title, artist, album, duration_s, source_url, source_type, genre, bpm, key_sig, tags, added_by, added_at) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-            (body.title, body.artist, body.album, body.duration_s, body.source_url,
-             body.source_type, body.genre, body.bpm, body.key_sig, json.dumps(body.tags), body.added_by, now),
+            (
+                body.title,
+                body.artist,
+                body.album,
+                body.duration_s,
+                body.source_url,
+                body.source_type,
+                body.genre,
+                body.bpm,
+                body.key_sig,
+                json.dumps(body.tags),
+                body.added_by,
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM tracks WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -304,11 +316,15 @@ async def add_track_to_playlist(
 
 
 @_router.delete("/playlists/{playlist_id}/tracks/{track_id}", status_code=204)
-async def remove_track_from_playlist(playlist_id: int, track_id: int,
-                                      x_internal_secret: str = Header(default="")):
+async def remove_track_from_playlist(
+    playlist_id: int, track_id: int, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
-        conn.execute("DELETE FROM playlist_tracks WHERE playlist_id=? AND track_id=?", (playlist_id, track_id))
+        conn.execute(
+            "DELETE FROM playlist_tracks WHERE playlist_id=? AND track_id=?",
+            (playlist_id, track_id),
+        )
         conn.commit()
 
 
@@ -342,4 +358,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

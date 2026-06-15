@@ -49,7 +49,10 @@ THREAT_PATTERNS = [
     (re.compile(rb"cmd\.exe\s*/c\s+\S+", re.IGNORECASE), "cmd_injection"),
     (re.compile(rb"\x4d\x5a\x90\x00"), "pe_executable"),
     (re.compile(rb"EICAR-STANDARD-ANTIVIRUS-TEST-FILE"), "eicar_test"),
-    (re.compile(rb"(?:union\s+select|select\s+.*from\s+information_schema)", re.IGNORECASE), "sql_injection"),
+    (
+        re.compile(rb"(?:union\s+select|select\s+.*from\s+information_schema)", re.IGNORECASE),
+        "sql_injection",
+    ),
     (re.compile(rb"<script[^>]*>.*?alert\s*\(", re.IGNORECASE | re.DOTALL), "xss_payload"),
 ]
 
@@ -144,7 +147,9 @@ def _auth(x_internal_secret: str = Header(default="")) -> None:
 async def health():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM scan_jobs").fetchone()[0]
-        quarantined = conn.execute("SELECT COUNT(*) FROM scan_jobs WHERE quarantined=1").fetchone()[0]
+        quarantined = conn.execute("SELECT COUNT(*) FROM scan_jobs WHERE quarantined=1").fetchone()[
+            0
+        ]
     return {
         "status": "healthy",
         "service": WORKER_NAME,
@@ -198,8 +203,18 @@ async def scan_file(
         cur = conn.execute(
             "INSERT INTO scan_jobs (filename, sha256, file_size, status, threat_level, threats, scanned_at, created_at, quarantined, quarantine_path) "
             "VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (file.filename or "unknown", sha256, len(content), "scanned",
-             threat_level, json.dumps(threats), now, now, quarantined, quarantine_path),
+            (
+                file.filename or "unknown",
+                sha256,
+                len(content),
+                "scanned",
+                threat_level,
+                json.dumps(threats),
+                now,
+                now,
+                quarantined,
+                quarantine_path,
+            ),
         )
         conn.commit()
         job_id = cur.lastrowid
@@ -278,7 +293,9 @@ async def release_quarantine(scan_id: int, x_internal_secret: str = Header(defau
             raise HTTPException(status_code=404, detail="Scan not found")
         if row["quarantine_path"] and Path(row["quarantine_path"]).exists():
             Path(row["quarantine_path"]).unlink(missing_ok=True)
-        conn.execute("UPDATE scan_jobs SET quarantined=0, quarantine_path=NULL WHERE id=?", (scan_id,))
+        conn.execute(
+            "UPDATE scan_jobs SET quarantined=0, quarantine_path=NULL WHERE id=?", (scan_id,)
+        )
         conn.commit()
 
 
@@ -291,11 +308,16 @@ async def stats(x_internal_secret: str = Header(default="")):
             "SELECT threat_level, COUNT(*) c FROM scan_jobs GROUP BY threat_level"
         ).fetchall()
         q_count = conn.execute("SELECT COUNT(*) FROM scan_jobs WHERE quarantined=1").fetchone()[0]
-    return {"total_scanned": total, "quarantined": q_count, "by_threat_level": [dict(r) for r in by_level]}
+    return {
+        "total_scanned": total,
+        "quarantined": q_count,
+        "by_threat_level": [dict(r) for r in by_level],
+    }
 
 
 app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

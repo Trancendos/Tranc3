@@ -37,7 +37,18 @@ _req_count = 0
 _err_count = 0
 
 SCENE_TYPES = ["vr", "ar", "3d", "360_video", "interactive"]
-OBJECT_TYPES = ["mesh", "light", "camera", "audio", "particle", "text", "image", "video", "sky", "floor"]
+OBJECT_TYPES = [
+    "mesh",
+    "light",
+    "camera",
+    "audio",
+    "particle",
+    "text",
+    "image",
+    "video",
+    "sky",
+    "floor",
+]
 
 
 def get_conn() -> sqlite3.Connection:
@@ -174,14 +185,25 @@ async def metrics():
 async def create_experience(body: ExperienceIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     if body.experience_type not in SCENE_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid experience_type. Must be: {SCENE_TYPES}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid experience_type. Must be: {SCENE_TYPES}"
+        )
     now = time.time()
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO experiences (title, description, experience_type, renderer, public, created_by, created_at, updated_at, scene_data) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
-            (body.title, body.description, body.experience_type, body.renderer,
-             int(body.public), body.created_by, now, now, json.dumps(body.scene_data)),
+            (
+                body.title,
+                body.description,
+                body.experience_type,
+                body.renderer,
+                int(body.public),
+                body.created_by,
+                now,
+                now,
+                json.dumps(body.scene_data),
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM experiences WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -205,7 +227,9 @@ async def list_experiences(
         params.append(int(public))
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM experiences {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM experiences {where} ORDER BY id DESC LIMIT ?", params + [limit]
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -216,7 +240,9 @@ async def get_experience(exp_id: int, x_internal_secret: str = Header(default=""
         row = conn.execute("SELECT * FROM experiences WHERE id=?", (exp_id,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Experience not found")
-        objects = conn.execute("SELECT * FROM scene_objects WHERE experience_id=?", (exp_id,)).fetchall()
+        objects = conn.execute(
+            "SELECT * FROM scene_objects WHERE experience_id=?", (exp_id,)
+        ).fetchall()
     return {**dict(row), "objects": [dict(o) for o in objects]}
 
 
@@ -227,14 +253,25 @@ async def add_object(body: SceneObjectIn, x_internal_secret: str = Header(defaul
         raise HTTPException(status_code=400, detail=f"Invalid object_type. Must be: {OBJECT_TYPES}")
     now = time.time()
     with get_conn() as conn:
-        if not conn.execute("SELECT id FROM experiences WHERE id=?", (body.experience_id,)).fetchone():
+        if not conn.execute(
+            "SELECT id FROM experiences WHERE id=?", (body.experience_id,)
+        ).fetchone():
             raise HTTPException(status_code=404, detail="Experience not found")
         cur = conn.execute(
             "INSERT INTO scene_objects (experience_id, name, object_type, position, rotation, scale, color, src, properties, created_at) "
             "VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (body.experience_id, body.name, body.object_type, json.dumps(body.position),
-             json.dumps(body.rotation), json.dumps(body.scale), body.color,
-             body.src, json.dumps(body.properties), now),
+            (
+                body.experience_id,
+                body.name,
+                body.object_type,
+                json.dumps(body.position),
+                json.dumps(body.rotation),
+                json.dumps(body.scale),
+                body.color,
+                body.src,
+                json.dumps(body.properties),
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM scene_objects WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -273,7 +310,10 @@ async def end_session(session_id: int, x_internal_secret: str = Header(default="
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         duration_s = int(now - session["started_at"])
-        conn.execute("UPDATE vr_sessions SET ended_at=?, duration_s=? WHERE id=?", (now, duration_s, session_id))
+        conn.execute(
+            "UPDATE vr_sessions SET ended_at=?, duration_s=? WHERE id=?",
+            (now, duration_s, session_id),
+        )
         conn.commit()
     return {"session_id": session_id, "duration_s": duration_s, "ended_at": now}
 
@@ -286,26 +326,34 @@ async def export_aframe(exp_id: int, x_internal_secret: str = Header(default="")
         exp = conn.execute("SELECT * FROM experiences WHERE id=?", (exp_id,)).fetchone()
         if not exp:
             raise HTTPException(status_code=404, detail="Experience not found")
-        objects = conn.execute("SELECT * FROM scene_objects WHERE experience_id=?", (exp_id,)).fetchall()
+        objects = conn.execute(
+            "SELECT * FROM scene_objects WHERE experience_id=?", (exp_id,)
+        ).fetchall()
 
     entities = []
     for obj in objects:
         pos = json.loads(obj["position"])
         rot = json.loads(obj["rotation"])
         scale = json.loads(obj["scale"])
-        pos_str = f"{pos.get('x',0)} {pos.get('y',0)} {pos.get('z',0)}"
-        rot_str = f"{rot.get('x',0)} {rot.get('y',0)} {rot.get('z',0)}"
-        scale_str = f"{scale.get('x',1)} {scale.get('y',1)} {scale.get('z',1)}"
+        pos_str = f"{pos.get('x', 0)} {pos.get('y', 0)} {pos.get('z', 0)}"
+        rot_str = f"{rot.get('x', 0)} {rot.get('y', 0)} {rot.get('z', 0)}"
+        scale_str = f"{scale.get('x', 1)} {scale.get('y', 1)} {scale.get('z', 1)}"
         color = obj["color"] or "#ffffff"
         if obj["object_type"] == "mesh":
-            entities.append(f'<a-box position="{pos_str}" rotation="{rot_str}" scale="{scale_str}" color="{color}"></a-box>')
+            entities.append(
+                f'<a-box position="{pos_str}" rotation="{rot_str}" scale="{scale_str}" color="{color}"></a-box>'
+            )
         elif obj["object_type"] == "light":
-            entities.append(f'<a-light type="point" color="{color}" position="{pos_str}"></a-light>')
+            entities.append(
+                f'<a-light type="point" color="{color}" position="{pos_str}"></a-light>'
+            )
         elif obj["object_type"] == "sky":
             entities.append(f'<a-sky color="{color}"></a-sky>')
         elif obj["object_type"] == "text":
             text_val = json.loads(obj["properties"] or "{}").get("text", obj["name"])
-            entities.append(f'<a-text value="{text_val}" position="{pos_str}" color="{color}"></a-text>')
+            entities.append(
+                f'<a-text value="{text_val}" position="{pos_str}" color="{color}"></a-text>'
+            )
 
     separator = "\n  "
     html = f"""<a-scene>
@@ -319,4 +367,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

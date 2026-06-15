@@ -41,19 +41,43 @@ _err_count = 0
 DEFAULT_FEEDS = [
     {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "tech"},
     {"name": "Hacker News", "url": "https://news.ycombinator.com/rss", "category": "tech"},
-    {"name": "Reuters Business", "url": "https://feeds.reuters.com/reuters/businessNews", "category": "business"},
-    {"name": "BBC Technology", "url": "https://feeds.bbci.co.uk/news/technology/rss.xml", "category": "tech"},
+    {
+        "name": "Reuters Business",
+        "url": "https://feeds.reuters.com/reuters/businessNews",
+        "category": "business",
+    },
+    {
+        "name": "BBC Technology",
+        "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+        "category": "tech",
+    },
 ]
 
 # Trend keywords and weights for scoring
 TREND_KEYWORDS = {
-    "ai": 2.0, "machine learning": 1.8, "artificial intelligence": 2.0,
-    "blockchain": 1.5, "crypto": 1.3, "quantum": 1.7,
-    "startup": 1.2, "funding": 1.4, "acquisition": 1.5, "ipo": 1.6,
-    "gdpr": 1.2, "regulation": 1.1, "compliance": 1.0,
-    "cloud": 1.1, "saas": 1.2, "api": 1.0,
-    "security": 1.3, "breach": 1.5, "vulnerability": 1.4,
-    "market": 1.0, "revenue": 1.1, "growth": 1.2, "decline": 1.1,
+    "ai": 2.0,
+    "machine learning": 1.8,
+    "artificial intelligence": 2.0,
+    "blockchain": 1.5,
+    "crypto": 1.3,
+    "quantum": 1.7,
+    "startup": 1.2,
+    "funding": 1.4,
+    "acquisition": 1.5,
+    "ipo": 1.6,
+    "gdpr": 1.2,
+    "regulation": 1.1,
+    "compliance": 1.0,
+    "cloud": 1.1,
+    "saas": 1.2,
+    "api": 1.0,
+    "security": 1.3,
+    "breach": 1.5,
+    "vulnerability": 1.4,
+    "market": 1.0,
+    "revenue": 1.1,
+    "growth": 1.2,
+    "decline": 1.1,
 }
 
 
@@ -131,11 +155,13 @@ async def _fetch_feed(feed_id: int, feed_url: str, feed_category: str) -> dict:
     """Fetch and parse an RSS feed, store articles."""
     try:
         import feedparser
+
         parsed = feedparser.parse(feed_url)
     except ImportError:
         # Fallback: minimal HTTP fetch
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(feed_url)
                 resp.raise_for_status()
@@ -158,7 +184,17 @@ async def _fetch_feed(feed_id: int, feed_url: str, feed_category: str) -> dict:
                 conn.execute(
                     "INSERT OR IGNORE INTO articles (feed_id, title, url, summary, author, published_at, fetched_at, trend_score, category) "
                     "VALUES (?,?,?,?,?,?,?,?,?)",
-                    (feed_id, title, url or None, summary, author, pub_ts, now, trend, feed_category),
+                    (
+                        feed_id,
+                        title,
+                        url or None,
+                        summary,
+                        author,
+                        pub_ts,
+                        now,
+                        trend,
+                        feed_category,
+                    ),
                 )
                 inserted += 1
             except Exception:
@@ -258,8 +294,9 @@ async def add_feed(body: FeedIn, x_internal_secret: str = Header(default="")):
 
 
 @_router.post("/feeds/{feed_id}/fetch")
-async def fetch_feed(feed_id: int, background_tasks: BackgroundTasks,
-                     x_internal_secret: str = Header(default="")):
+async def fetch_feed(
+    feed_id: int, background_tasks: BackgroundTasks, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         feed = conn.execute("SELECT * FROM feeds WHERE id=?", (feed_id,)).fetchone()
@@ -270,7 +307,9 @@ async def fetch_feed(feed_id: int, background_tasks: BackgroundTasks,
 
 
 @_router.post("/fetch/all")
-async def fetch_all_feeds(background_tasks: BackgroundTasks, x_internal_secret: str = Header(default="")):
+async def fetch_all_feeds(
+    background_tasks: BackgroundTasks, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         feeds = conn.execute("SELECT * FROM feeds WHERE active=1").fetchall()
@@ -336,7 +375,14 @@ async def create_report(body: ReportIn, x_internal_secret: str = Header(default=
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO reports (title, category, content, article_ids, generated_at, generated_by) VALUES (?,?,?,?,?,?)",
-            (body.title, body.category, body.content, json.dumps(body.article_ids), now, body.generated_by),
+            (
+                body.title,
+                body.category,
+                body.content,
+                json.dumps(body.article_ids),
+                now,
+                body.generated_by,
+            ),
         )
         conn.commit()
     return {"id": cur.lastrowid, "title": body.title, "generated_at": now}
@@ -372,4 +418,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

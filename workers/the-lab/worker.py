@@ -190,12 +190,22 @@ async def metrics():
 async def create_snippet(body: SnippetIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     if body.language not in ALLOWED_LANGS:
-        raise HTTPException(status_code=400, detail=f"Language not supported. Allowed: {list(ALLOWED_LANGS)}")
+        raise HTTPException(
+            status_code=400, detail=f"Language not supported. Allowed: {list(ALLOWED_LANGS)}"
+        )
     now = time.time()
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO snippets (title, language, code, description, tags, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
-            (body.title, body.language, body.code, body.description, json.dumps(body.tags), body.created_by, now),
+            (
+                body.title,
+                body.language,
+                body.code,
+                body.description,
+                json.dumps(body.tags),
+                body.created_by,
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM snippets WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -239,7 +249,9 @@ async def get_snippet(snippet_id: int, x_internal_secret: str = Header(default="
 
 
 @_router.put("/snippets/{snippet_id}")
-async def update_snippet(snippet_id: int, body: SnippetUpdate, x_internal_secret: str = Header(default="")):
+async def update_snippet(
+    snippet_id: int, body: SnippetUpdate, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM snippets WHERE id=?", (snippet_id,)).fetchone()
@@ -256,7 +268,10 @@ async def update_snippet(snippet_id: int, body: SnippetUpdate, x_internal_secret
             updates["tags"] = json.dumps(body.tags)
         if updates:
             set_clause = ", ".join(f"{k}=?" for k in updates)
-            conn.execute(f"UPDATE snippets SET {set_clause} WHERE id=?", list(updates.values()) + [snippet_id])
+            conn.execute(
+                f"UPDATE snippets SET {set_clause} WHERE id=?",
+                list(updates.values()) + [snippet_id],
+            )
             conn.commit()
         row = conn.execute("SELECT * FROM snippets WHERE id=?", (snippet_id,)).fetchone()
     return dict(row)
@@ -286,7 +301,9 @@ async def execute_snippet(body: ExecIn, x_internal_secret: str = Header(default=
 async def execute_inline(body: InlineExecIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     if body.language not in ALLOWED_LANGS:
-        raise HTTPException(status_code=400, detail=f"Language not supported. Allowed: {list(ALLOWED_LANGS)}")
+        raise HTTPException(
+            status_code=400, detail=f"Language not supported. Allowed: {list(ALLOWED_LANGS)}"
+        )
     return await _run_code(body.language, body.code, None)
 
 
@@ -323,7 +340,9 @@ async def _run_code(language: str, code: str, snippet_id: Optional[int]) -> dict
                 "INSERT INTO executions (snippet_id, stdout, stderr, exit_code, duration_ms, ran_at) VALUES (?,?,?,?,?,?)",
                 (snippet_id, stdout, stderr, exit_code, duration_ms, now),
             )
-            conn.execute("UPDATE snippets SET runs=runs+1, last_run_at=? WHERE id=?", (now, snippet_id))
+            conn.execute(
+                "UPDATE snippets SET runs=runs+1, last_run_at=? WHERE id=?", (now, snippet_id)
+            )
             conn.commit()
 
     return {
@@ -338,7 +357,9 @@ async def _run_code(language: str, code: str, snippet_id: Optional[int]) -> dict
 
 
 @_router.get("/executions/{snippet_id}")
-async def list_executions(snippet_id: int, limit: int = 20, x_internal_secret: str = Header(default="")):
+async def list_executions(
+    snippet_id: int, limit: int = 20, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         rows = conn.execute(
@@ -352,4 +373,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

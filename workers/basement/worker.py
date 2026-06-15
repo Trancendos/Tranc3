@@ -177,8 +177,17 @@ async def archive_entry(body: ArchiveIn, x_internal_secret: str = Header(default
         cur = conn.execute(
             "INSERT INTO archive (source, ref_id, actor, action, resource, details, outcome, archived_at, original_ts) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
-            (body.source, body.ref_id, body.actor, body.action, body.resource,
-             json.dumps(body.details), body.outcome, now, body.original_ts or now),
+            (
+                body.source,
+                body.ref_id,
+                body.actor,
+                body.action,
+                body.resource,
+                json.dumps(body.details),
+                body.outcome,
+                now,
+                body.original_ts or now,
+            ),
         )
         conn.commit()
         return {"id": cur.lastrowid, "archived_at": now}
@@ -194,8 +203,17 @@ async def archive_bulk(body: BulkArchiveIn, x_internal_secret: str = Header(defa
             conn.execute(
                 "INSERT INTO archive (source, ref_id, actor, action, resource, details, outcome, archived_at, original_ts) "
                 "VALUES (?,?,?,?,?,?,?,?,?)",
-                (entry.source, entry.ref_id, entry.actor, entry.action, entry.resource,
-                 json.dumps(entry.details), entry.outcome, now, entry.original_ts or now),
+                (
+                    entry.source,
+                    entry.ref_id,
+                    entry.actor,
+                    entry.action,
+                    entry.resource,
+                    json.dumps(entry.details),
+                    entry.outcome,
+                    now,
+                    entry.original_ts or now,
+                ),
             )
             inserted += 1
         conn.commit()
@@ -270,6 +288,7 @@ async def pull_from_audit(x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
                 f"{AUDIT_SERVICE_URL}/audit",
@@ -289,9 +308,17 @@ async def pull_from_audit(x_internal_secret: str = Header(default="")):
                 conn.execute(
                     "INSERT OR IGNORE INTO archive (source, ref_id, actor, action, resource, details, outcome, archived_at, original_ts) "
                     "VALUES (?,?,?,?,?,?,?,?,?)",
-                    ("audit-service", str(entry["id"]), entry["actor"], entry["action"],
-                     entry.get("resource"), entry.get("details", "{}"), entry.get("outcome", "success"),
-                     now, entry.get("timestamp", now)),
+                    (
+                        "audit-service",
+                        str(entry["id"]),
+                        entry["actor"],
+                        entry["action"],
+                        entry.get("resource"),
+                        entry.get("details", "{}"),
+                        entry.get("outcome", "success"),
+                        now,
+                        entry.get("timestamp", now),
+                    ),
                 )
                 inserted += 1
             except Exception:
@@ -322,4 +349,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

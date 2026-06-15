@@ -41,6 +41,7 @@ _err_count = 0
 # Crypto helpers (stdlib only — no external deps required for basic AES-GCM)
 # ---------------------------------------------------------------------------
 
+
 def _derive_key(master: str, salt: bytes) -> bytes:
     """PBKDF2-HMAC-SHA256, 100k iterations → 32-byte key."""
     return hashlib.pbkdf2_hmac("sha256", master.encode(), salt, 100_000, dklen=32)
@@ -50,6 +51,7 @@ def _encrypt(plaintext: str, master: str) -> tuple[bytes, bytes, bytes]:
     """Return (ciphertext, iv, salt). Uses os.urandom for IV+salt."""
     try:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
         salt = os.urandom(16)
         iv = os.urandom(12)
         key = _derive_key(master, salt)
@@ -61,7 +63,7 @@ def _encrypt(plaintext: str, master: str) -> tuple[bytes, bytes, bytes]:
         iv = os.urandom(12)
         key = _derive_key(master, salt)
         data = plaintext.encode()
-        ct = bytes(b ^ key[i % 32] for i, b in enumerate(data)) + b"\xDE\xAD"  # sentinel
+        ct = bytes(b ^ key[i % 32] for i, b in enumerate(data)) + b"\xde\xad"  # sentinel
         return ct, iv, salt
 
 
@@ -69,6 +71,7 @@ def _decrypt(ct: bytes, iv: bytes, salt: bytes, master: str) -> str:
     """Decrypt and return plaintext."""
     try:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
         key = _derive_key(master, salt)
         return AESGCM(key).decrypt(iv, ct, None).decode()
     except ImportError:
@@ -230,9 +233,13 @@ async def retrieve_secret(body: RetrieveIn, x_internal_secret: str = Header(defa
         if not row:
             raise HTTPException(status_code=404, detail="Secret not found")
         try:
-            plaintext = _decrypt(bytes(row["encrypted_val"]), bytes(row["iv"]), bytes(row["salt"]), MASTER_KEY_ENV)
+            plaintext = _decrypt(
+                bytes(row["encrypted_val"]), bytes(row["iv"]), bytes(row["salt"]), MASTER_KEY_ENV
+            )
         except Exception:
-            raise HTTPException(status_code=500, detail="Decryption failed — wrong master key?") from None
+            raise HTTPException(
+                status_code=500, detail="Decryption failed — wrong master key?"
+            ) from None
         conn.execute(
             "UPDATE secrets SET accessed_at=?, access_count=access_count+1 WHERE name=?",
             (now, body.name),
@@ -278,4 +285,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

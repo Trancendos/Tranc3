@@ -116,7 +116,12 @@ def init_db() -> None:
 async def lifespan(app: FastAPI):
     init_db()
     ffmpeg_ok = _ffmpeg_available()
-    logger.info("%s starting on port %d — FFmpeg: %s", WORKER_NAME, WORKER_PORT, "available" if ffmpeg_ok else "NOT FOUND")
+    logger.info(
+        "%s starting on port %d — FFmpeg: %s",
+        WORKER_NAME,
+        WORKER_PORT,
+        "available" if ffmpeg_ok else "NOT FOUND",
+    )
     yield
 
 
@@ -200,7 +205,9 @@ async def create_project(body: ProjectIn, x_internal_secret: str = Header(defaul
 
 
 @_router.get("/projects")
-async def list_projects(limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")):
+async def list_projects(
+    limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM projects ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
@@ -215,8 +222,17 @@ async def add_clip(body: ClipIn, x_internal_secret: str = Header(default="")):
         cur = conn.execute(
             "INSERT INTO clips (project_id, title, source_url, file_path, duration_s, resolution, format, tags, added_at) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
-            (body.project_id, body.title, body.source_url, body.file_path,
-             body.duration_s, body.resolution, body.format, json.dumps(body.tags), now),
+            (
+                body.project_id,
+                body.title,
+                body.source_url,
+                body.file_path,
+                body.duration_s,
+                body.resolution,
+                body.format,
+                json.dumps(body.tags),
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM clips WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -224,8 +240,11 @@ async def add_clip(body: ClipIn, x_internal_secret: str = Header(default="")):
 
 
 @_router.get("/clips")
-async def list_clips(project_id: Optional[int] = None, limit: int = Query(100, le=1000),
-                      x_internal_secret: str = Header(default="")):
+async def list_clips(
+    project_id: Optional[int] = None,
+    limit: int = Query(100, le=1000),
+    x_internal_secret: str = Header(default=""),
+):
     _auth(x_internal_secret)
     clauses, params = [], []
     if project_id:
@@ -233,7 +252,9 @@ async def list_clips(project_id: Optional[int] = None, limit: int = Query(100, l
         params.append(project_id)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM clips {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM clips {where} ORDER BY id DESC LIMIT ?", params + [limit]
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -241,7 +262,9 @@ async def list_clips(project_id: Optional[int] = None, limit: int = Query(100, l
 async def create_ffmpeg_job(body: FFmpegJobIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     if body.operation not in ALLOWED_FFMPEG_OPS:
-        raise HTTPException(status_code=400, detail=f"Unknown operation. Allowed: {list(ALLOWED_FFMPEG_OPS)}")
+        raise HTTPException(
+            status_code=400, detail=f"Unknown operation. Allowed: {list(ALLOWED_FFMPEG_OPS)}"
+        )
     now = time.time()
     with get_conn() as conn:
         clip = conn.execute("SELECT * FROM clips WHERE id=?", (body.clip_id,)).fetchone()
@@ -249,12 +272,25 @@ async def create_ffmpeg_job(body: FFmpegJobIn, x_internal_secret: str = Header(d
             raise HTTPException(status_code=404, detail="Clip not found")
         cur = conn.execute(
             "INSERT INTO jobs (clip_id, project_id, operation, params, status, created_at) VALUES (?,?,?,?,?,?)",
-            (body.clip_id, clip["project_id"], body.operation, json.dumps(body.params), "queued", now),
+            (
+                body.clip_id,
+                clip["project_id"],
+                body.operation,
+                json.dumps(body.params),
+                "queued",
+                now,
+            ),
         )
         conn.commit()
         job_id = cur.lastrowid
-    return {"id": job_id, "clip_id": body.clip_id, "operation": body.operation, "status": "queued", "created_at": now,
-            "note": "FFmpeg job queued. Execute via POST /jobs/{id}/run"}
+    return {
+        "id": job_id,
+        "clip_id": body.clip_id,
+        "operation": body.operation,
+        "status": "queued",
+        "created_at": now,
+        "note": "FFmpeg job queued. Execute via POST /jobs/{id}/run",
+    }
 
 
 @_router.post("/jobs/{job_id}/run")
@@ -274,8 +310,10 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
 
     if not input_path or not Path(input_path).exists():
         with get_conn() as conn:
-            conn.execute("UPDATE jobs SET status='failed', error=? WHERE id=?",
-                         ("Input file not found", job_id))
+            conn.execute(
+                "UPDATE jobs SET status='failed', error=? WHERE id=?",
+                ("Input file not found", job_id),
+            )
             conn.commit()
         raise HTTPException(status_code=400, detail="Clip file_path not found on disk")
 
@@ -289,16 +327,51 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
         cmd = ["ffmpeg", "-y", "-i", input_path, "-ss", ts, "-vframes", "1", output_path]
     elif op == "extract_audio":
         output_path += ".mp3"
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", output_path]
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            input_path,
+            "-vn",
+            "-ar",
+            "44100",
+            "-ac",
+            "2",
+            "-b:a",
+            "192k",
+            output_path,
+        ]
     elif op == "compress":
         output_path += ".mp4"
         crf = params.get("crf", "28")
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-vcodec", "libx264", "-crf", str(crf), output_path]
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            input_path,
+            "-vcodec",
+            "libx264",
+            "-crf",
+            str(crf),
+            output_path,
+        ]
     elif op == "trim":
         start_t = params.get("start", "0")
         end_t = params.get("end", "10")
         output_path += ".mp4"
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-ss", start_t, "-to", end_t, "-c", "copy", output_path]
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            input_path,
+            "-ss",
+            start_t,
+            "-to",
+            end_t,
+            "-c",
+            "copy",
+            output_path,
+        ]
     elif op == "resize":
         w, h = params.get("width", 1280), params.get("height", 720)
         output_path += ".mp4"
@@ -316,7 +389,12 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
                     (output_path, duration_ms, time.time(), job_id),
                 )
                 conn.commit()
-            return {"job_id": job_id, "status": "completed", "output_path": output_path, "duration_ms": duration_ms}
+            return {
+                "job_id": job_id,
+                "status": "completed",
+                "output_path": output_path,
+                "duration_ms": duration_ms,
+            }
         else:
             err = result.stderr[-1000:]
             with get_conn() as conn:
@@ -331,8 +409,11 @@ async def run_ffmpeg_job(job_id: int, x_internal_secret: str = Header(default=""
 
 
 @_router.get("/jobs")
-async def list_jobs(status: Optional[str] = None, limit: int = Query(50, le=500),
-                     x_internal_secret: str = Header(default="")):
+async def list_jobs(
+    status: Optional[str] = None,
+    limit: int = Query(50, le=500),
+    x_internal_secret: str = Header(default=""),
+):
     _auth(x_internal_secret)
     clauses, params = [], []
     if status:
@@ -340,7 +421,9 @@ async def list_jobs(status: Optional[str] = None, limit: int = Query(50, le=500)
         params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM jobs {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM jobs {where} ORDER BY id DESC LIMIT ?", params + [limit]
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -354,4 +437,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

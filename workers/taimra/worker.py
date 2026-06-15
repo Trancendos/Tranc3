@@ -221,7 +221,9 @@ async def update_twin(user_id: str, body: TwinUpdate, x_internal_secret: str = H
         updates["updated_at"] = now
         set_clause = ", ".join(f"{k}=?" for k in updates)
         with get_conn() as conn:
-            conn.execute(f"UPDATE twins SET {set_clause} WHERE user_id=?", list(updates.values()) + [user_id])
+            conn.execute(
+                f"UPDATE twins SET {set_clause} WHERE user_id=?", list(updates.values()) + [user_id]
+            )
             conn.commit()
     return _get_or_create_twin(user_id)
 
@@ -242,8 +244,9 @@ async def set_preference(user_id: str, body: PrefIn, x_internal_secret: str = He
 
 
 @_router.get("/twin/{user_id}/preferences")
-async def get_preferences(user_id: str, category: Optional[str] = None,
-                           x_internal_secret: str = Header(default="")):
+async def get_preferences(
+    user_id: str, category: Optional[str] = None, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     clauses, params = ["user_id=?"], [user_id]
     if category:
@@ -251,7 +254,9 @@ async def get_preferences(user_id: str, category: Optional[str] = None,
         params.append(category)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM preferences {where} ORDER BY category, key", params).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM preferences {where} ORDER BY category, key", params
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -263,7 +268,16 @@ async def add_goal(user_id: str, body: GoalIn, x_internal_secret: str = Header(d
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO goals (user_id, title, description, category, priority, target_date, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
-            (user_id, body.title, body.description, body.category, body.priority, body.target_date, now, now),
+            (
+                user_id,
+                body.title,
+                body.description,
+                body.category,
+                body.priority,
+                body.target_date,
+                now,
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM goals WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -271,8 +285,9 @@ async def add_goal(user_id: str, body: GoalIn, x_internal_secret: str = Header(d
 
 
 @_router.get("/twin/{user_id}/goals")
-async def list_goals(user_id: str, status: Optional[str] = None,
-                      x_internal_secret: str = Header(default="")):
+async def list_goals(
+    user_id: str, status: Optional[str] = None, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     clauses, params = ["user_id=?"], [user_id]
     if status:
@@ -280,13 +295,16 @@ async def list_goals(user_id: str, status: Optional[str] = None,
         params.append(status)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM goals {where} ORDER BY priority, created_at DESC", params).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM goals {where} ORDER BY priority, created_at DESC", params
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
 @_router.patch("/twin/{user_id}/goals/{goal_id}")
-async def update_goal(user_id: str, goal_id: int, body: GoalUpdate,
-                       x_internal_secret: str = Header(default="")):
+async def update_goal(
+    user_id: str, goal_id: int, body: GoalUpdate, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     now = time.time()
     updates = {"updated_at": now}
@@ -298,8 +316,10 @@ async def update_goal(user_id: str, goal_id: int, body: GoalUpdate,
         updates["progress_pct"] = min(100, max(0, body.progress_pct))
     set_clause = ", ".join(f"{k}=?" for k in updates)
     with get_conn() as conn:
-        conn.execute(f"UPDATE goals SET {set_clause} WHERE id=? AND user_id=?",
-                     list(updates.values()) + [goal_id, user_id])
+        conn.execute(
+            f"UPDATE goals SET {set_clause} WHERE id=? AND user_id=?",
+            list(updates.values()) + [goal_id, user_id],
+        )
         conn.commit()
         row = conn.execute("SELECT * FROM goals WHERE id=?", (goal_id,)).fetchone()
     if not row:
@@ -324,7 +344,9 @@ async def remember(user_id: str, body: MemoryIn, x_internal_secret: str = Header
 
 
 @_router.get("/twin/{user_id}/memory")
-async def recall(user_id: str, key: Optional[str] = None, x_internal_secret: str = Header(default="")):
+async def recall(
+    user_id: str, key: Optional[str] = None, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     now = time.time()
     clauses, params = ["user_id=?", "(expires_at IS NULL OR expires_at > ?)"], [user_id, now]
@@ -345,7 +367,9 @@ async def twin_summary(user_id: str, x_internal_secret: str = Header(default="")
     _auth(x_internal_secret)
     twin = _get_or_create_twin(user_id)
     with get_conn() as conn:
-        pref_count = conn.execute("SELECT COUNT(*) FROM preferences WHERE user_id=?", (user_id,)).fetchone()[0]
+        pref_count = conn.execute(
+            "SELECT COUNT(*) FROM preferences WHERE user_id=?", (user_id,)
+        ).fetchone()[0]
         active_goals = conn.execute(
             "SELECT COUNT(*) FROM goals WHERE user_id=? AND status='active'", (user_id,)
         ).fetchone()[0]
@@ -353,7 +377,9 @@ async def twin_summary(user_id: str, x_internal_secret: str = Header(default="")
             "SELECT COUNT(*) FROM context_memory WHERE user_id=? AND (expires_at IS NULL OR expires_at>?)",
             (user_id, time.time()),
         ).fetchone()[0]
-        routines = conn.execute("SELECT COUNT(*) FROM routines WHERE user_id=? AND active=1", (user_id,)).fetchone()[0]
+        routines = conn.execute(
+            "SELECT COUNT(*) FROM routines WHERE user_id=? AND active=1", (user_id,)
+        ).fetchone()[0]
     return {
         "twin": twin,
         "preferences_set": pref_count,
@@ -367,4 +393,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

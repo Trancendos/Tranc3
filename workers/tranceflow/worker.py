@@ -216,7 +216,9 @@ async def metrics():
 async def create_game(body: GameIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     if body.engine not in GAME_ENGINES:
-        raise HTTPException(status_code=400, detail=f"Unsupported engine. Supported: {GAME_ENGINES}")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported engine. Supported: {GAME_ENGINES}"
+        )
     now = time.time()
     with get_conn() as conn:
         cur = conn.execute(
@@ -229,8 +231,12 @@ async def create_game(body: GameIn, x_internal_secret: str = Header(default=""))
 
 
 @_router.get("/games")
-async def list_games(engine: Optional[str] = None, status: Optional[str] = None,
-                      limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")):
+async def list_games(
+    engine: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = Query(50, le=500),
+    x_internal_secret: str = Header(default=""),
+):
     _auth(x_internal_secret)
     clauses, params = [], []
     if engine:
@@ -241,7 +247,9 @@ async def list_games(engine: Optional[str] = None, status: Optional[str] = None,
         params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM games {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM games {where} ORDER BY id DESC LIMIT ?", params + [limit]
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -253,7 +261,9 @@ async def get_game(game_id: int, x_internal_secret: str = Header(default="")):
         if not row:
             raise HTTPException(status_code=404, detail="Game not found")
         scenes = conn.execute("SELECT * FROM scenes WHERE game_id=?", (game_id,)).fetchall()
-        assets = conn.execute("SELECT id, name, asset_type, format FROM assets WHERE game_id=?", (game_id,)).fetchall()
+        assets = conn.execute(
+            "SELECT id, name, asset_type, format FROM assets WHERE game_id=?", (game_id,)
+        ).fetchall()
     return {**dict(row), "scenes": [dict(s) for s in scenes], "assets": [dict(a) for a in assets]}
 
 
@@ -261,14 +271,25 @@ async def get_game(game_id: int, x_internal_secret: str = Header(default="")):
 async def add_asset(body: AssetIn, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     if body.asset_type not in ASSET_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid asset_type. Must be one of: {ASSET_TYPES}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid asset_type. Must be one of: {ASSET_TYPES}"
+        )
     now = time.time()
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO assets (game_id, name, asset_type, file_path, format, tags, metadata, created_by, created_at) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
-            (body.game_id, body.name, body.asset_type, body.file_path, body.format,
-             json.dumps(body.tags), json.dumps(body.metadata), body.created_by, now),
+            (
+                body.game_id,
+                body.name,
+                body.asset_type,
+                body.file_path,
+                body.format,
+                json.dumps(body.tags),
+                json.dumps(body.metadata),
+                body.created_by,
+                now,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM assets WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -276,8 +297,12 @@ async def add_asset(body: AssetIn, x_internal_secret: str = Header(default="")):
 
 
 @_router.get("/assets")
-async def list_assets(game_id: Optional[int] = None, asset_type: Optional[str] = None,
-                       limit: int = Query(100, le=1000), x_internal_secret: str = Header(default="")):
+async def list_assets(
+    game_id: Optional[int] = None,
+    asset_type: Optional[str] = None,
+    limit: int = Query(100, le=1000),
+    x_internal_secret: str = Header(default=""),
+):
     _auth(x_internal_secret)
     clauses, params = [], []
     if game_id:
@@ -288,7 +313,9 @@ async def list_assets(game_id: Optional[int] = None, asset_type: Optional[str] =
         params.append(asset_type)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        rows = conn.execute(f"SELECT * FROM assets {where} ORDER BY id DESC LIMIT ?", params + [limit]).fetchall()
+        rows = conn.execute(
+            f"SELECT * FROM assets {where} ORDER BY id DESC LIMIT ?", params + [limit]
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -316,8 +343,16 @@ async def add_entity(body: EntityIn, x_internal_secret: str = Header(default="")
             raise HTTPException(status_code=404, detail="Scene not found")
         cur = conn.execute(
             "INSERT INTO entities (scene_id, name, entity_type, position, rotation, scale, properties, asset_id) VALUES (?,?,?,?,?,?,?,?)",
-            (body.scene_id, body.name, body.entity_type, json.dumps(body.position),
-             json.dumps(body.rotation), json.dumps(body.scale), json.dumps(body.properties), body.asset_id),
+            (
+                body.scene_id,
+                body.name,
+                body.entity_type,
+                json.dumps(body.position),
+                json.dumps(body.rotation),
+                json.dumps(body.scale),
+                json.dumps(body.properties),
+                body.asset_id,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM entities WHERE id=?", (cur.lastrowid,)).fetchone()
@@ -336,12 +371,18 @@ async def record_build(body: BuildIn, x_internal_secret: str = Header(default=""
             (body.game_id, body.platform, "queued", body.output_path, now),
         )
         conn.commit()
-    return {"id": cur.lastrowid, "game_id": body.game_id, "platform": body.platform, "status": "queued",
-            "note": "Build queued. Use Godot CLI or CI pipeline to execute."}
+    return {
+        "id": cur.lastrowid,
+        "game_id": body.game_id,
+        "platform": body.platform,
+        "status": "queued",
+        "note": "Build queued. Use Godot CLI or CI pipeline to execute.",
+    }
 
 
 app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

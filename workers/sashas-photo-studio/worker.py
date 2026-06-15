@@ -91,6 +91,7 @@ async def _generate_image(job_id: int, prompt: str, width: int, height: int, mod
     now = time.time()
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=60) as client:
             resp = await client.get(url)
             resp.raise_for_status()
@@ -179,8 +180,9 @@ async def metrics():
 
 
 @_router.post("/generate", status_code=202)
-async def generate_image(body: GenerateIn, background_tasks: BackgroundTasks,
-                          x_internal_secret: str = Header(default="")):
+async def generate_image(
+    body: GenerateIn, background_tasks: BackgroundTasks, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     if not body.prompt.strip():
         raise HTTPException(status_code=400, detail="prompt required")
@@ -194,7 +196,9 @@ async def generate_image(body: GenerateIn, background_tasks: BackgroundTasks,
         )
         conn.commit()
         job_id = cur.lastrowid
-    background_tasks.add_task(_generate_image, job_id, body.prompt, body.width, body.height, body.model)
+    background_tasks.add_task(
+        _generate_image, job_id, body.prompt, body.width, body.height, body.model
+    )
     return {"job_id": job_id, "status": "pending", "created_at": now}
 
 
@@ -283,4 +287,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

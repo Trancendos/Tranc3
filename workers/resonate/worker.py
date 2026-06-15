@@ -39,38 +39,95 @@ _err_count = 0
 # Empathy signal lexicon (positive/negative)
 EMPATHY_SIGNALS: dict[str, dict] = {
     "acknowledge": {
-        "keywords": ["understand", "hear you", "feel", "know how", "appreciate", "recognize",
-                     "see that", "i get it", "makes sense to me", "i hear"],
+        "keywords": [
+            "understand",
+            "hear you",
+            "feel",
+            "know how",
+            "appreciate",
+            "recognize",
+            "see that",
+            "i get it",
+            "makes sense to me",
+            "i hear",
+        ],
         "weight": 1.0,
         "polarity": "positive",
     },
     "validate": {
-        "keywords": ["valid", "makes sense", "reasonable", "of course", "naturally", "that's fair",
-                     "understandable", "totally fair", "i can see why", "legitimate"],
+        "keywords": [
+            "valid",
+            "makes sense",
+            "reasonable",
+            "of course",
+            "naturally",
+            "that's fair",
+            "understandable",
+            "totally fair",
+            "i can see why",
+            "legitimate",
+        ],
         "weight": 1.0,
         "polarity": "positive",
     },
     "support": {
-        "keywords": ["here for you", "support", "help", "together", "with you", "got you",
-                     "care", "concerned", "by your side", "not alone"],
+        "keywords": [
+            "here for you",
+            "support",
+            "help",
+            "together",
+            "with you",
+            "got you",
+            "care",
+            "concerned",
+            "by your side",
+            "not alone",
+        ],
         "weight": 1.0,
         "polarity": "positive",
     },
     "curiosity": {
-        "keywords": ["tell me more", "how are you", "what happened", "can you share",
-                     "would you like", "how do you feel", "what's going on", "how so"],
+        "keywords": [
+            "tell me more",
+            "how are you",
+            "what happened",
+            "can you share",
+            "would you like",
+            "how do you feel",
+            "what's going on",
+            "how so",
+        ],
         "weight": 0.8,
         "polarity": "positive",
     },
     "dismissal": {
-        "keywords": ["just", "simply", "calm down", "overreacting", "not a big deal", "move on",
-                     "forget it", "whatever", "get over it", "stop being"],
+        "keywords": [
+            "just",
+            "simply",
+            "calm down",
+            "overreacting",
+            "not a big deal",
+            "move on",
+            "forget it",
+            "whatever",
+            "get over it",
+            "stop being",
+        ],
         "weight": 1.5,
         "polarity": "negative",
     },
     "blame": {
-        "keywords": ["your fault", "you always", "you never", "because of you", "you made",
-                     "you should have", "you caused", "fault of yours", "your problem"],
+        "keywords": [
+            "your fault",
+            "you always",
+            "you never",
+            "because of you",
+            "you made",
+            "you should have",
+            "you caused",
+            "fault of yours",
+            "your problem",
+        ],
         "weight": 1.5,
         "polarity": "negative",
     },
@@ -242,9 +299,16 @@ async def score_text(body: ScoreIn, x_internal_secret: str = Header(default=""))
             cur = conn.execute(
                 "INSERT INTO scores (user_id, conversation_id, text_snippet, empathy_score, empathy_level, positive_score, negative_score, analysed_at) "
                 "VALUES (?,?,?,?,?,?,?,?)",
-                (body.user_id, body.conversation_id, body.text[:500],
-                 result["empathy_score"], result["empathy_level"],
-                 result["positive_score"], result["negative_score"], now),
+                (
+                    body.user_id,
+                    body.conversation_id,
+                    body.text[:500],
+                    result["empathy_score"],
+                    result["empathy_level"],
+                    result["positive_score"],
+                    result["negative_score"],
+                    now,
+                ),
             )
             score_id = cur.lastrowid
             if body.conversation_id:
@@ -253,7 +317,9 @@ async def score_text(body: ScoreIn, x_internal_secret: str = Header(default=""))
                 ).fetchone()
                 if conv:
                     new_count = conv["message_count"] + 1
-                    new_avg = (conv["avg_empathy"] * conv["message_count"] + result["empathy_score"]) / new_count
+                    new_avg = (
+                        conv["avg_empathy"] * conv["message_count"] + result["empathy_score"]
+                    ) / new_count
                     conn.execute(
                         "UPDATE conversations SET avg_empathy=?, message_count=?, updated_at=? WHERE conversation_id=?",
                         (round(new_avg, 2), new_count, now, body.conversation_id),
@@ -269,7 +335,9 @@ async def score_text(body: ScoreIn, x_internal_secret: str = Header(default=""))
 
 
 @_router.post("/score/conversation")
-async def score_conversation(body: ConversationScoreIn, x_internal_secret: str = Header(default="")):
+async def score_conversation(
+    body: ConversationScoreIn, x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     if not body.messages:
         raise HTTPException(status_code=400, detail="messages required")
@@ -287,7 +355,9 @@ async def score_conversation(body: ConversationScoreIn, x_internal_secret: str =
 async def get_conversation(conversation_id: str, x_internal_secret: str = Header(default="")):
     _auth(x_internal_secret)
     with get_conn() as conn:
-        conv = conn.execute("SELECT * FROM conversations WHERE conversation_id=?", (conversation_id,)).fetchone()
+        conv = conn.execute(
+            "SELECT * FROM conversations WHERE conversation_id=?", (conversation_id,)
+        ).fetchone()
         if not conv:
             raise HTTPException(status_code=404, detail="Conversation not found")
         messages = conn.execute(
@@ -298,8 +368,9 @@ async def get_conversation(conversation_id: str, x_internal_secret: str = Header
 
 
 @_router.get("/history/{user_id}")
-async def user_history(user_id: str, limit: int = Query(50, le=500),
-                        x_internal_secret: str = Header(default="")):
+async def user_history(
+    user_id: str, limit: int = Query(50, le=500), x_internal_secret: str = Header(default="")
+):
     _auth(x_internal_secret)
     with get_conn() as conn:
         rows = conn.execute(
@@ -313,4 +384,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)
