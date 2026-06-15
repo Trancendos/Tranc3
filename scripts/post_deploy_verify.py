@@ -156,7 +156,7 @@ def _probe(base: str, entity: dict, timeout: float = 5.0) -> tuple[str, int, int
         latency = int((time.monotonic() - t0) * 1000)
         status = "degraded" if exc.code < 500 else "unhealthy"
         return status, exc.code, latency
-    except Exception as exc:
+    except Exception:  # noqa: BLE001
         latency = int((time.monotonic() - t0) * 1000)
         return "unreachable", 0, latency
 
