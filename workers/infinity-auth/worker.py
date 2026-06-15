@@ -37,6 +37,7 @@ import secrets
 try:
     from argon2 import PasswordHasher as _ArgonPH
     from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
+
     _ph = _ArgonPH(time_cost=2, memory_cost=65536, parallelism=2)
     _ARGON2_AVAILABLE = True
 except ImportError:
@@ -241,7 +242,7 @@ def hash_password(password: str) -> str:
         return _ph.hash(password)
     # fallback: PBKDF2-HMAC-SHA256 (better than plain SHA-256)
     salt = os.urandom(32)
-    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 260000)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 260000)
     return f"pbkdf2:{salt.hex()}:{dk.hex()}"
 
 
@@ -256,7 +257,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
         try:
             _, salt_hex, dk_hex = stored_hash.split(":", 2)
             salt = bytes.fromhex(salt_hex)
-            dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 260000)
+            dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 260000)
             return hmac.compare_digest(dk.hex(), dk_hex)
         except (ValueError, AttributeError):
             return False
