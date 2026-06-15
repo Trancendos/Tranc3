@@ -701,6 +701,20 @@ if os.getenv("CAB_GATE_ENABLED", "false").lower() == "true":
     app.add_middleware(CABMiddleware)
 app.add_middleware(RBACMiddleware)
 
+# ── Additional middleware: GZip, TrustedHost, Idempotency, ContentNegotiation ─
+from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from api.middleware.idempotency import IdempotencyMiddleware
+from api.middleware.content_negotiation import ContentNegotiationMiddleware
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=os.getenv("ALLOWED_HOSTS", "*").split(","),
+)
+app.add_middleware(IdempotencyMiddleware)
+app.add_middleware(ContentNegotiationMiddleware)
+
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
 
@@ -2057,3 +2071,16 @@ async def mesh_quota(current_user: dict = Depends(get_current_user)) -> dict:
         return get_enforcer().dashboard()
     except Exception:
         return {"error": "quota dashboard unavailable"}
+
+
+@app.get("/version", tags=["system"], summary="API version info")
+async def api_version() -> dict:
+    """Return API version, canonical entrypoint, and platform metadata."""
+    return {
+        "version": "1.0.0",
+        "api_versions": ["v1"],
+        "canonical_entrypoint": "api.py",
+        "deprecated_entrypoints": ["api_ecosystem.py", "api_enhanced.py"],
+        "providers": 8,
+        "entities": 43,
+    }

@@ -146,6 +146,9 @@ watchdog==4.0.0
 qiskit==2.4.1
 qiskit-aer==0.17.2
 
+# === MessagePack (content negotiation) ===
+msgpack>=1.0.8
+
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt
 # See: requirements-security.txt for scanning toolchain
