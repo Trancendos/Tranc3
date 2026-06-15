@@ -17,6 +17,7 @@ import os
 import re
 import sqlite3
 import time
+import unicodedata
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -130,6 +131,16 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 _router = APIRouter()
 
 
+def _safe_filename(name: str | None) -> str:
+    """Sanitise filename to prevent path traversal (CWE-22)."""
+    if not name:
+        return "unknown"
+    name = unicodedata.normalize("NFKC", name)
+    name = Path(name).name
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name)
+    return name[:255] or "unknown"
+
+
 def _auth(x_internal_secret: str = Header(default="")) -> None:
     global _req_count, _err_count
     _req_count += 1
@@ -193,7 +204,7 @@ async def scan_file(
     quarantined = 0
     quarantine_path = None
     if threat_level in ("critical", "suspicious"):
-        q_path = QUARANTINE_DIR / f"{sha256[:16]}_{file.filename or 'unknown'}"
+        q_path = QUARANTINE_DIR / f"{sha256[:16]}_{_safe_filename(file.filename)}"
         q_path.write_bytes(content)
         quarantined = 1
         quarantine_path = str(q_path)
