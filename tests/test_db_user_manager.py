@@ -100,31 +100,31 @@ def mgr(monkeypatch):
 
 class TestDBUserManagerFallbackCreate:
     def test_create_user_returns_dict(self, mgr):
-        result = mgr.create_user("alice", "Password1")
+        result = mgr.create_user("alice", "T3st-pw-only!")
         assert isinstance(result, dict)
 
     def test_create_user_returns_username(self, mgr):
-        result = mgr.create_user("bob", "Password1")
+        result = mgr.create_user("bob", "T3st-pw-only!")
         assert result["username"] == "bob"
 
     def test_create_user_returns_user_id(self, mgr):
-        result = mgr.create_user("carol", "Password1")
+        result = mgr.create_user("carol", "T3st-pw-only!")
         assert "user_id" in result
 
     def test_create_user_default_tier_free(self, mgr):
-        result = mgr.create_user("dave", "Password1")
+        result = mgr.create_user("dave", "T3st-pw-only!")
         assert result["tier"] == "free"
 
     def test_create_user_duplicate_raises(self, mgr):
         from fastapi import HTTPException
 
-        mgr.create_user("eve", "Password1")
+        mgr.create_user("eve", "T3st-pw-only!")
         with pytest.raises(HTTPException) as exc_info:
-            mgr.create_user("eve", "Password1")
+            mgr.create_user("eve", "T3st-pw-only!")
         assert exc_info.value.status_code == 400
 
     def test_create_user_sets_roles(self, mgr):
-        mgr.create_user("frank", "Password1")
+        mgr.create_user("frank", "T3st-pw-only!")
         user = mgr.get_user("frank")
         assert "roles" in user
         assert user["roles"] == ["user"]  # free tier → user role
@@ -132,24 +132,24 @@ class TestDBUserManagerFallbackCreate:
 
 class TestDBUserManagerFallbackAuthenticate:
     def test_authenticate_valid(self, mgr):
-        mgr.create_user("grace", "Password1")
-        result = mgr.authenticate_user("grace", "Password1")
+        mgr.create_user("grace", "T3st-pw-only!")
+        result = mgr.authenticate_user("grace", "T3st-pw-only!")
         assert result is not None
         assert result["username"] == "grace"
 
     def test_authenticate_wrong_password_returns_none(self, mgr):
-        mgr.create_user("henry", "Password1")
+        mgr.create_user("henry", "T3st-pw-only!")
         result = mgr.authenticate_user("henry", "WrongPass9")
         assert result is None
 
     def test_authenticate_unknown_user_returns_none(self, mgr):
-        result = mgr.authenticate_user("nobody", "Password1")
+        result = mgr.authenticate_user("nobody", "T3st-pw-only!")
         assert result is None
 
 
 class TestDBUserManagerFallbackGetUser:
     def test_get_user_returns_user(self, mgr):
-        mgr.create_user("ida", "Password1")
+        mgr.create_user("ida", "T3st-pw-only!")
         user = mgr.get_user("ida")
         assert user is not None
         assert user["username"] == "ida"
@@ -158,7 +158,7 @@ class TestDBUserManagerFallbackGetUser:
         assert mgr.get_user("ghost") is None
 
     def test_get_user_includes_roles(self, mgr):
-        mgr.create_user("james", "Password1")
+        mgr.create_user("james", "T3st-pw-only!")
         user = mgr.get_user("james")
         assert "roles" in user
 
@@ -167,7 +167,7 @@ class TestDBUserManagerFallbackGetUser:
         mgr._fallback["legacy"] = {
             "id": "x",
             "username": "legacy",
-            "hashed_password": "hashed:placeholder",
+            "hashed_password": "hashed:test-placeholder",
             "tier": "pro",
             "is_active": True,
         }
@@ -178,7 +178,7 @@ class TestDBUserManagerFallbackGetUser:
         mgr._fallback["olduser"] = {
             "id": "y",
             "username": "olduser",
-            "hashed_password": "hashed:placeholder",
+            "hashed_password": "hashed:test-placeholder",
             "tier": "free",
             "is_active": True,
         }
@@ -193,7 +193,7 @@ class TestDBUserManagerFallbackGetUser:
 
 class TestUpdateTierRoleSync:
     def test_update_tier_returns_true_for_existing_user(self, mgr):
-        mgr.create_user("kate", "Password1")
+        mgr.create_user("kate", "T3st-pw-only!")
         result = mgr.update_tier("kate", "pro")
         assert result is True
 
@@ -202,13 +202,13 @@ class TestUpdateTierRoleSync:
         assert result is False
 
     def test_update_tier_updates_tier_field(self, mgr):
-        mgr.create_user("liam", "Password1")
+        mgr.create_user("liam", "T3st-pw-only!")
         mgr.update_tier("liam", "pro")
         user = mgr.get_user("liam")
         assert user["tier"] == "pro"
 
     def test_update_tier_syncs_roles_free_to_pro(self, mgr):
-        mgr.create_user("mia", "Password1")
+        mgr.create_user("mia", "T3st-pw-only!")
         user = mgr.get_user("mia")
         assert user["roles"] == ["user"]
         mgr.update_tier("mia", "pro")
@@ -216,26 +216,26 @@ class TestUpdateTierRoleSync:
         assert user["roles"] == ["operator"]
 
     def test_update_tier_syncs_roles_to_business(self, mgr):
-        mgr.create_user("noah", "Password1")
+        mgr.create_user("noah", "T3st-pw-only!")
         mgr.update_tier("noah", "business")
         user = mgr.get_user("noah")
         assert user["roles"] == ["operator"]
 
     def test_update_tier_syncs_roles_to_enterprise(self, mgr):
-        mgr.create_user("olivia", "Password1")
+        mgr.create_user("olivia", "T3st-pw-only!")
         mgr.update_tier("olivia", "enterprise")
         user = mgr.get_user("olivia")
         assert user["roles"] == ["admin"]
 
     def test_update_tier_syncs_roles_to_admin(self, mgr):
-        mgr.create_user("peter", "Password1")
+        mgr.create_user("peter", "T3st-pw-only!")
         mgr.update_tier("peter", "admin")
         user = mgr.get_user("peter")
         assert user["roles"] == ["admin"]
 
     def test_update_tier_downgrade_resets_roles(self, mgr):
         """Downgrading from enterprise to free must revoke admin role."""
-        mgr.create_user("quinn", "Password1")
+        mgr.create_user("quinn", "T3st-pw-only!")
         mgr.update_tier("quinn", "enterprise")
         user = mgr.get_user("quinn")
         assert user["roles"] == ["admin"]
@@ -244,14 +244,14 @@ class TestUpdateTierRoleSync:
         assert user["roles"] == ["user"]
 
     def test_update_tier_multiple_upgrades_idempotent(self, mgr):
-        mgr.create_user("rosa", "Password1")
+        mgr.create_user("rosa", "T3st-pw-only!")
         mgr.update_tier("rosa", "pro")
         mgr.update_tier("rosa", "pro")
         user = mgr.get_user("rosa")
         assert user["roles"] == ["operator"]
 
     def test_update_tier_unknown_new_tier_defaults_to_user_role(self, mgr):
-        mgr.create_user("sam", "Password1")
+        mgr.create_user("sam", "T3st-pw-only!")
         mgr.update_tier("sam", "mystery_tier")
         user = mgr.get_user("sam")
         assert user["roles"] == ["user"]
@@ -308,5 +308,5 @@ class TestPasswordValidation:
         fake_ctx = _make_fake_pwd_context()
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
-            result = mgr.create_user("u4", "Password1")
+            result = mgr.create_user("u4", "T3st-pw-only!")
         assert result["username"] == "u4"
