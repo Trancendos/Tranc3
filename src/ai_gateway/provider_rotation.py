@@ -14,6 +14,7 @@ Provider chain (priority order):
 Hard stops: each provider tracks daily/hourly usage.
 Rotation: when provider hits 80% of limit, rotate to next.
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,15 +25,16 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger("tranc3.ai_gateway.rotation")
 
+
 @dataclass
 class ProviderLimit:
     name: str
     base_url: str
     api_key_env: str
-    daily_req_limit: int      # -1 = unlimited
-    hourly_req_limit: int     # -1 = unlimited
-    daily_token_limit: int    # -1 = unlimited
-    stop_threshold: float = 0.80   # rotate at 80% of limit
+    daily_req_limit: int  # -1 = unlimited
+    hourly_req_limit: int  # -1 = unlimited
+    daily_token_limit: int  # -1 = unlimited
+    stop_threshold: float = 0.80  # rotate at 80% of limit
     hard_stop_threshold: float = 0.95  # refuse at 95%
 
     # Runtime counters (reset daily/hourly)
@@ -42,6 +44,7 @@ class ProviderLimit:
     _day_start: float = field(default_factory=time.time, init=False, repr=False)
     _hour_start: float = field(default_factory=time.time, init=False, repr=False)
     _consecutive_errors: int = field(default=0, init=False, repr=False)
+    _error_cooldown_until: float = field(default=0.0, init=False, repr=False)
 
     def _reset_if_needed(self) -> None:
         now = time.time()
@@ -55,8 +58,11 @@ class ProviderLimit:
 
     def is_available(self) -> bool:
         self._reset_if_needed()
-        if self._consecutive_errors >= 5:
+        if self._consecutive_errors >= 5 and time.time() < self._error_cooldown_until:
             return False
+        if self._consecutive_errors >= 5:
+            # Cooldown expired — allow a probe attempt
+            self._consecutive_errors = 0
         if self.daily_req_limit != -1:
             if self._daily_req >= int(self.daily_req_limit * self.hard_stop_threshold):
                 return False
@@ -87,6 +93,9 @@ class ProviderLimit:
 
     def record_error(self) -> None:
         self._consecutive_errors += 1
+        if self._consecutive_errors >= 5:
+            # 5-minute cooldown before allowing probe attempts
+            self._error_cooldown_until = time.time() + 300
 
     @property
     def usage_summary(self) -> dict:
@@ -163,7 +172,7 @@ PROVIDERS: List[ProviderLimit] = [
     ),
     ProviderLimit(
         name="cloudflare_ai",
-        base_url=f"https://api.cloudflare.com/client/v4/accounts/{os.getenv('CF_ACCOUNT_ID','')}/ai/v1",
+        base_url=f"https://api.cloudflare.com/client/v4/accounts/{os.getenv('CF_ACCOUNT_ID', '')}/ai/v1",
         api_key_env="CF_API_TOKEN",
         daily_req_limit=10000,
         hourly_req_limit=500,
@@ -171,7 +180,7 @@ PROVIDERS: List[ProviderLimit] = [
     ),
 ]
 
-_provider_index: Dict[str, ProviderLimit] = {p.name: p for p in PROVIDERS}
+PROVIDER_INDEX: Dict[str, ProviderLimit] = {p.name: p for p in PROVIDERS}
 
 
 def get_available_provider() -> Optional[ProviderLimit]:
@@ -192,4 +201,10 @@ def get_usage_dashboard() -> dict:
     return {p.name: p.usage_summary for p in PROVIDERS}
 
 
-__all__ = ["PROVIDERS", "ProviderLimit", "get_available_provider", "get_usage_dashboard"]
+__all__ = [
+    "PROVIDERS",
+    "PROVIDER_INDEX",
+    "ProviderLimit",
+    "get_available_provider",
+    "get_usage_dashboard",
+]

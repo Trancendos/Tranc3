@@ -707,13 +707,16 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from api.middleware.idempotency import IdempotencyMiddleware
 from api.middleware.content_negotiation import ContentNegotiationMiddleware
 
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+# Registration order (Starlette: last-added runs first on requests):
+# ContentNegotiation → Idempotency → TrustedHost → GZip
+# Execution order on responses: GZip compresses last so caches/negotiation see raw JSON.
+app.add_middleware(ContentNegotiationMiddleware)
+app.add_middleware(IdempotencyMiddleware)
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=os.getenv("ALLOWED_HOSTS", "*").split(","),
 )
-app.add_middleware(IdempotencyMiddleware)
-app.add_middleware(ContentNegotiationMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
