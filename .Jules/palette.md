@@ -11,3 +11,6 @@
 ## 2024-05-19 - Added confirmation to destructive actions
 **Learning:** Destructive actions without a confirmation prompt can easily result in accidental data loss for users when they click icon-only buttons like the trash can by mistake.
 **Action:** Always wrap destructive actions (like deleting API keys) in a confirmation dialogue (e.g. `window.confirm`) to prevent accidental deletion, and ensure icon-only buttons have descriptive `title` tooltips for clarity on hover.
+## 2024-05-15 - [Icon-only Buttons Accessibility]
+**Learning:** Icon-only buttons without explicit text fail `axe-core` accessibility tests.
+**Action:** Always add an `aria-label` attribute to icon-only buttons to provide an accessible name for screen readers, and add `aria-hidden="true"` to the inner SVG elements to avoid redundant announcements.
