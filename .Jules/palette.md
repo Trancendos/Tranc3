@@ -11,3 +11,6 @@
 ## 2024-05-19 - Added confirmation to destructive actions
 **Learning:** Destructive actions without a confirmation prompt can easily result in accidental data loss for users when they click icon-only buttons like the trash can by mistake.
 **Action:** Always wrap destructive actions (like deleting API keys) in a confirmation dialogue (e.g. `window.confirm`) to prevent accidental deletion, and ensure icon-only buttons have descriptive `title` tooltips for clarity on hover.
+## 2024-05-17 - Dynamic ARIA Labeling with Existing States
+**Learning:** Leveraging existing component states (like `refreshing` or `totalAlerts`) for dynamic `aria-label`s significantly improves the context provided to screen readers, turning static icons into highly informative interactive elements.
+**Action:** Always check if a component's state can be used to make `aria-label`s more descriptive (e.g., "Refreshing..." vs "Refresh dashboard") when modifying interactive elements.
