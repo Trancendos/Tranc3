@@ -5,12 +5,12 @@ the API surface so integrations can be built before the full sandbox is deployed
 Follow https://capev2.readthedocs.io for the complete installation guide.
 """
 
+import datetime
+import hashlib
 import json
 import os
 import uuid
-import hashlib
-import datetime
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 SECRET = os.getenv("ICEBOX_SECRET", "change-me")
 PORT = int(os.getenv("ICEBOX_PORT", "8090"))

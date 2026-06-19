@@ -25,11 +25,6 @@ logger = logging.getLogger("tranc3.ai_gateway.limit_monitor")
 _DB_PATH = Path(os.getenv("AI_GATEWAY_DB", "/tmp/ai_gateway_limits.db"))
 _lock = RLock()
 
-# Whitelist of columns that may appear in dynamic UPDATE clauses
-_ALLOWED_RESET_COLS = frozenset(
-    {"daily_req", "daily_tokens", "day_start", "hourly_req", "hour_start", "last_updated"}
-)
-
 
 @contextmanager
 def _db() -> Generator[sqlite3.Connection, None, None]:
@@ -132,23 +127,36 @@ class LimitMonitor:
 
     def _reset_if_needed(self, provider: str, row: dict) -> dict:
         now = time.time()
-        updates = {}
-        if now - row["day_start"] >= 86400:
-            updates.update(daily_req=0, daily_tokens=0, day_start=now)
-        if now - row["hour_start"] >= 3600:
-            updates.update(hourly_req=0, hour_start=now)
-        if updates:
-            updates["last_updated"] = now
-            # Only allow whitelisted column names to prevent SQL injection
-            safe_keys = [k for k in updates if k in _ALLOWED_RESET_COLS]
-            set_clause = ", ".join(f"{k} = ?" for k in safe_keys)
-            values = [updates[k] for k in safe_keys]
-            with _db() as conn:
+        reset_day = now - row["day_start"] >= 86400
+        reset_hour = now - row["hour_start"] >= 3600
+        if not reset_day and not reset_hour:
+            return row
+
+        # Use explicit parameterised queries — no dynamic SQL
+        with _db() as conn:
+            if reset_day and reset_hour:
                 conn.execute(
-                    f"UPDATE provider_usage SET {set_clause} WHERE provider = ?",  # noqa: S608
-                    (*values, provider),
+                    "UPDATE provider_usage SET daily_req=0, daily_tokens=0, day_start=?,"
+                    " hourly_req=0, hour_start=?, last_updated=? WHERE provider=?",
+                    (now, now, now, provider),
                 )
-            row = {**row, **updates}
+                row = {**row, "daily_req": 0, "daily_tokens": 0, "day_start": now,
+                       "hourly_req": 0, "hour_start": now, "last_updated": now}
+            elif reset_day:
+                conn.execute(
+                    "UPDATE provider_usage SET daily_req=0, daily_tokens=0,"
+                    " day_start=?, last_updated=? WHERE provider=?",
+                    (now, now, provider),
+                )
+                row = {**row, "daily_req": 0, "daily_tokens": 0, "day_start": now,
+                       "last_updated": now}
+            else:
+                conn.execute(
+                    "UPDATE provider_usage SET hourly_req=0, hour_start=?,"
+                    " last_updated=? WHERE provider=?",
+                    (now, now, provider),
+                )
+                row = {**row, "hourly_req": 0, "hour_start": now, "last_updated": now}
         return row
 
     def record_request(self, provider: str, tokens: int = 0) -> None:
