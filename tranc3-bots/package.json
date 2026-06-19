@@ -1,0 +1,7 @@
+{
+  "name": "tranc3-bots",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stub package so Forgejo npm audit step has a lockfile target (Python-only service).",
+  "dependencies": {}
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from src.adaptive import get_provider_rotator
 from src.adaptive.provider_rotator import AdaptiveProviderRotator
 
 
@@ -26,3 +27,13 @@ def test_active_provider_fallback_offline(monkeypatch: pytest.MonkeyPatch) -> No
     rotator = AdaptiveProviderRotator()
     rotator._state.providers = ["offline"]
     assert rotator.active_provider() == "offline"
+
+
+def test_get_provider_rotator_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
+    import src.adaptive.provider_rotator as mod
+
+    monkeypatch.setattr(mod, "_rotator", None)
+    a = get_provider_rotator()
+    b = get_provider_rotator()
+    assert a is b
+    assert isinstance(a, AdaptiveProviderRotator)

@@ -80,6 +80,7 @@ from src.core.advanced_model import (
     AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
 )
 from src.core.context_compressor import compressor  # noqa: F401  # intentional top-level import
+from src.core.security import safe_torch_load
 from src.core.feature_flags import (  # noqa: F401  # intentional top-level import
     FeatureFlag,
     FeatureFlagManager,
@@ -388,7 +389,7 @@ async def lifespan(app: FastAPI):
         model = AdvancedTransformerModel(cfg)
         if os.path.exists(cfg.model_path):
             if _TORCH_AVAILABLE and torch is not None:
-                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu"))
+                model.load_state_dict(safe_torch_load(cfg.model_path, device="cpu"))
             logger.info("Model weights loaded")
         else:
             logger.warning("No model weights — echo mode active")
@@ -1888,7 +1889,7 @@ async def _persist_conversation(
 if __name__ == "__main__":
     uvicorn.run(
         "api:app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # nosec B104 — container bind; not exposed without orchestrator port map
         port=int(os.getenv("PORT", 8000)),
         reload=os.getenv("ENVIRONMENT") == "development",
     )

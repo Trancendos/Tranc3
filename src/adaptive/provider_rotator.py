@@ -1,175 +1,140 @@
-"""
-Adaptive zero-cost provider rotation.
-
-Rotates among **approved free-tier** cloud providers when local Ollama is
-unavailable or rate-limited, without selecting paid tiers.
-
-Environment:
-  ADAPTIVE_ROTATION_ENABLED=true
-  ADAPTIVE_ROTATION_CHAIN=zero_cost_cloud | zero_cost_full | zero_cost_high_throughput
-  ADAPTIVE_COOLDOWN_SECONDS=300
-"""
+"""Adaptive provider rotation with zero-cost quota hard-stops."""
 
 from __future__ import annotations
 
-import logging
+import json
 import os
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-from src.ai_gateway.zero_cost_config import ROUTING_CHAINS, discover_available_providers
+from src.zero_cost.quota_tracker import get_quota_tracker
+from src.zero_cost.registry import assert_zero_cost, get_chain
 
-logger = logging.getLogger("tranc3.adaptive.rotator")
-
-# Only chains with $0.00 estimated cost
-_ZERO_COST_CHAINS = {
-    "zero_cost_full",
-    "zero_cost_cloud",
-    "zero_cost_reasoning",
-    "zero_cost_high_throughput",
-}
-
-# Paid chain excluded from automatic rotation
-_PAID_PROVIDERS = frozenset({"deepseek"})
-
-
-@dataclass
-class ProviderHealth:
-    name: str
-    available: bool
-    failures: int = 0
-    last_failure_at: float = 0.0
-    last_success_at: float = 0.0
-    cooldown_until: float = 0.0
+DEFAULT_STATE_PATH = Path("logs/adaptive_rotation_state.json")
+PAID_CHAINS = frozenset({"near_zero_high_quality", "paid_default"})
 
 
 @dataclass
 class RotationState:
     chain_name: str
     providers: list[str]
-    index: int = 0
-    health: dict[str, ProviderHealth] = field(default_factory=dict)
-    last_rotation_at: float = 0.0
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "chain_name": self.chain_name,
-            "providers": self.providers,
-            "active_index": self.index,
-            "active_provider": self.providers[self.index] if self.providers else None,
-            "last_rotation_at": self.last_rotation_at,
-            "health": {
-                k: {
-                    "available": v.available,
-                    "failures": v.failures,
-                    "cooldown_until": v.cooldown_until,
-                }
-                for k, v in self.health.items()
-            },
-        }
+    active_index: int = 0
+    last_switch_ts: float = 0.0
+    switch_count: int = 0
+    last_error: str = ""
 
 
+@dataclass
 class AdaptiveProviderRotator:
-    """Round-robin + cooldown rotation across zero-cost provider chains."""
+    """Rotate through zero-cost providers; skip exhausted entries via QuotaTracker."""
 
-    def __init__(self) -> None:
-        from src.platform.infrastructure_mode import default_rotation_chain, get_infrastructure_mode
+    state_path: Path = field(default_factory=lambda: DEFAULT_STATE_PATH)
+    chain_name: str = field(
+        default_factory=lambda: os.getenv("ADAPTIVE_ROTATION_CHAIN", "zero_cost_cloud")
+    )
+    _state: RotationState = field(init=False)
+    _quota: Any = field(init=False, repr=False)
 
-        self._cooldown = float(os.environ.get("ADAPTIVE_COOLDOWN_SECONDS", "300"))
-        chain = default_rotation_chain()
-        if chain not in ROUTING_CHAINS or chain not in _ZERO_COST_CHAINS:
-            chain = "zero_cost_cloud"
-        self._state = self._build_state(chain)
-        logger.info(
-            "Adaptive rotator mode=%s chain=%s providers=%s",
-            get_infrastructure_mode().value,
-            chain,
-            self._state.providers,
-        )
+    def __post_init__(self) -> None:
+        self._quota = get_quota_tracker()
+        self._state = self._load_state()
+        if not self._state.providers:
+            self._refresh_chain_from_registry()
+        self._persist()
 
-    def _build_state(self, chain_name: str) -> RotationState:
-        chain = ROUTING_CHAINS[chain_name]
-        discovered = discover_available_providers()
-        providers = [
-            p
-            for p in chain.providers
-            if p not in _PAID_PROVIDERS and (p == "offline" or discovered.get(p, False))
-        ]
-        if "offline" not in providers:
-            providers.append("offline")
-        health = {
-            p: ProviderHealth(name=p, available=discovered.get(p, p == "offline"))
-            for p in providers
+    def _load_state(self) -> RotationState:
+        if not self.state_path.exists():
+            return RotationState(chain_name=self.chain_name, providers=[])
+        try:
+            raw = json.loads(self.state_path.read_text(encoding="utf-8"))
+            return RotationState(
+                chain_name=str(raw.get("chain_name", self.chain_name)),
+                providers=list(raw.get("providers", [])),
+                active_index=int(raw.get("active_index", 0)),
+                last_switch_ts=float(raw.get("last_switch_ts", 0.0)),
+                switch_count=int(raw.get("switch_count", 0)),
+                last_error=str(raw.get("last_error", "")),
+            )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            return RotationState(chain_name=self.chain_name, providers=[])
+
+    def _persist(self) -> None:
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "chain_name": self._state.chain_name,
+            "providers": self._state.providers,
+            "active_index": self._state.active_index,
+            "last_switch_ts": self._state.last_switch_ts,
+            "switch_count": self._state.switch_count,
+            "last_error": self._state.last_error,
+            "updated_at": time.time(),
         }
-        return RotationState(chain_name=chain_name, providers=providers, health=health)
+        self.state_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    def refresh_availability(self) -> None:
-        discovered = discover_available_providers()
-        for name, h in self._state.health.items():
-            if name == "offline":
-                h.available = True
-            else:
-                h.available = discovered.get(name, False)
-            if h.cooldown_until and time.monotonic() >= h.cooldown_until:
-                h.cooldown_until = 0.0
-                h.failures = 0
+    def _refresh_chain_from_registry(self) -> None:
+        chain = get_chain(self._state.chain_name)
+        assert_zero_cost(chain)
+        available = self._quota.available_from_chain(chain)
+        self._state.providers = available
+        if self._state.active_index >= len(self._state.providers):
+            self._state.active_index = 0
 
-    def active_provider(self) -> str | None:
-        self.refresh_availability()
+    def _available_providers(self) -> list[str]:
         if not self._state.providers:
+            self._refresh_chain_from_registry()
+        return [p for p in self._state.providers if self._quota.is_available(p)]
+
+    def active_provider(self) -> str:
+        available = self._available_providers()
+        if not available:
+            self._state.last_error = "zero_cost_chain_exhausted"
+            self._persist()
             return "offline"
-        now = time.monotonic()
-        for _ in range(len(self._state.providers)):
-            name = self._state.providers[self._state.index]
-            h = self._state.health.get(name)
-            if h and h.available and now >= h.cooldown_until:
-                return name
-            self._rotate()
-        return "offline"
+        idx = min(self._state.active_index, len(available) - 1)
+        return available[idx]
 
-    def record_success(self, provider: str) -> None:
-        h = self._state.health.get(provider)
-        if h:
-            h.last_success_at = time.monotonic()
-            h.failures = 0
-            h.cooldown_until = 0.0
+    def record_success(self, provider_id: str | None = None) -> None:
+        pid = provider_id or self.active_provider()
+        if pid != "offline":
+            self._quota.record_success(pid)
 
-    def record_failure(self, provider: str, *, rate_limited: bool = False) -> None:
-        h = self._state.health.get(provider)
-        if not h:
-            return
-        h.failures += 1
-        h.last_failure_at = time.monotonic()
-        if rate_limited or h.failures >= 3:
-            h.cooldown_until = time.monotonic() + self._cooldown
-            h.available = False
-            logger.warning("Provider %s on cooldown %.0fs", provider, self._cooldown)
-        self._rotate()
-
-    def _rotate(self) -> None:
-        if not self._state.providers:
-            return
-        self._state.index = (self._state.index + 1) % len(self._state.providers)
-        self._state.last_rotation_at = time.monotonic()
+    def record_failure(self, provider_id: str, reason: str = "provider_error") -> str:
+        self._quota.mark_exhausted(provider_id, reason=reason)
+        self._state.last_error = reason
+        self._refresh_chain_from_registry()
+        return self.active_provider()
 
     def switch_chain(self, chain_name: str) -> bool:
-        if chain_name not in _ZERO_COST_CHAINS:
+        if chain_name in PAID_CHAINS:
             return False
-        self._state = self._build_state(chain_name)
+        try:
+            chain = get_chain(chain_name)
+            assert_zero_cost(chain)
+        except (ValueError, RuntimeError):
+            return False
+        self._state.chain_name = chain_name
+        self._state.active_index = 0
+        self._state.switch_count += 1
+        self._state.last_switch_ts = time.time()
+        self._refresh_chain_from_registry()
+        self._persist()
         return True
 
     def status(self) -> dict[str, Any]:
-        from src.platform.infrastructure_mode import infrastructure_status
-
-        self.refresh_availability()
+        available = self._available_providers()
         return {
-            "enabled": os.environ.get("ADAPTIVE_ROTATION_ENABLED", "true").lower()
-            in ("1", "true", "yes"),
-            "cooldown_seconds": self._cooldown,
-            "infrastructure": infrastructure_status(),
-            "state": self._state.to_dict(),
-            "discovered": discover_available_providers(),
+            "state": {
+                "chain_name": self._state.chain_name,
+                "providers": self._state.providers,
+                "available_providers": available,
+                "active_index": self._state.active_index,
+                "active_provider": self.active_provider(),
+                "switch_count": self._state.switch_count,
+                "last_error": self._state.last_error,
+            },
+            "quota": self._quota.status(),
         }
 
 
@@ -177,6 +142,7 @@ _rotator: AdaptiveProviderRotator | None = None
 
 
 def get_provider_rotator() -> AdaptiveProviderRotator:
+    """Process-wide singleton (mirrors get_proactive_orchestrator)."""
     global _rotator
     if _rotator is None:
         _rotator = AdaptiveProviderRotator()

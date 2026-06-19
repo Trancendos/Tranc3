@@ -1,0 +1,13 @@
+name: tranc3-codeql-config
+disable-default-queries: false
+queries:
+  - uses: security-and-quality
+paths-ignore:
+  - "**/node_modules/**"
+  - "**/.venv/**"
+  - "**/venv/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/__pycache__/**"
+  - "**/logs/**"
+  - "**/htmlcov/**"

@@ -17,28 +17,17 @@ import logging
 import os
 from typing import Any
 
+from psycopg2 import sql
+
 logger = logging.getLogger("tranc3.database.pgvector")
 
 _TABLE = os.environ.get("PGVECTOR_TABLE", "tranc3_embeddings")
 _DIM = int(os.environ.get("PGVECTOR_DIM", "384"))
 _DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-# DDL to bootstrap the table if it doesn't exist
-_BOOTSTRAP_SQL = f"""
-CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE IF NOT EXISTS {_TABLE} (
-    id          TEXT PRIMARY KEY,
-    embedding   vector({_DIM}),
-    payload     JSONB NOT NULL DEFAULT '{{}}',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS {_TABLE}_embedding_idx
-    ON {_TABLE} USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
-"""
+def _table_id() -> sql.Identifier:
+    return sql.Identifier(_TABLE)
 
 
 def _conn():
@@ -61,9 +50,31 @@ def bootstrap() -> bool:
     conn = _conn()
     if conn is None:
         return False
+    tbl = _table_id()
+    bootstrap_sql = sql.SQL(
+        """
+        CREATE EXTENSION IF NOT EXISTS vector;
+
+        CREATE TABLE IF NOT EXISTS {table} (
+            id          TEXT PRIMARY KEY,
+            embedding   vector({dim}),
+            payload     JSONB NOT NULL DEFAULT '{{}}',
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS {idx_name}
+            ON {table} USING ivfflat (embedding vector_cosine_ops)
+            WITH (lists = 100);
+        """
+    ).format(
+        table=tbl,
+        dim=sql.Literal(_DIM),
+        idx_name=sql.Identifier(f"{_TABLE}_embedding_idx"),
+    )
     try:
         with conn.cursor() as cur:
-            cur.execute(_BOOTSTRAP_SQL)
+            cur.execute(bootstrap_sql)
         logger.info("pgvector table %s bootstrapped", _TABLE)
         return True
     except Exception as e:
@@ -80,17 +91,19 @@ def upsert(doc_id: str, vector: list[float], payload: dict[str, Any]) -> bool:
     conn = _conn()
     if conn is None:
         return False
-    sql = f"""
-    INSERT INTO {_TABLE} (id, embedding, payload, updated_at)
+    query = sql.SQL(
+        """
+    INSERT INTO {table} (id, embedding, payload, updated_at)
     VALUES (%s, %s::vector, %s::jsonb, NOW())
     ON CONFLICT (id) DO UPDATE
         SET embedding  = EXCLUDED.embedding,
             payload    = EXCLUDED.payload,
             updated_at = NOW();
     """
+    ).format(table=_table_id())
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (doc_id, str(vector), json.dumps(payload)))
+            cur.execute(query, (doc_id, str(vector), json.dumps(payload)))
         return True
     except Exception as e:
         logger.warning("pgvector upsert failed: %s", e)
@@ -113,28 +126,39 @@ def search(
     if conn is None:
         return []
 
-    # Optional JSON payload filter (simple equality)
-    where_clause = ""
-    params: list[Any] = [str(query_vector), top_k]
+    tbl = _table_id()
     if filter_payload:
         import json
 
-        where_clause = "WHERE payload @> %s::jsonb"
-        params.insert(1, json.dumps(filter_payload))
-
-    sql = f"""
-    SELECT id, 1 - (embedding <=> %s::vector) AS score, payload
-    FROM {_TABLE}
-    {where_clause}
-    ORDER BY embedding <=> %s::vector
-    LIMIT %s;
-    """
-    # Insert a second copy of the vector for ORDER BY
-    params.insert(-1, str(query_vector))
+        query = sql.SQL(
+            """
+            SELECT id, 1 - (embedding <=> %s::vector) AS score, payload
+            FROM {table}
+            WHERE payload @> %s::jsonb
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s;
+            """
+        ).format(table=tbl)
+        params: list[Any] = [
+            str(query_vector),
+            json.dumps(filter_payload),
+            str(query_vector),
+            top_k,
+        ]
+    else:
+        query = sql.SQL(
+            """
+            SELECT id, 1 - (embedding <=> %s::vector) AS score, payload
+            FROM {table}
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s;
+            """
+        ).format(table=tbl)
+        params = [str(query_vector), str(query_vector), top_k]
 
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, params)
+            cur.execute(query, params)
             rows = cur.fetchall()
         results = []
         for row_id, score, payload in rows:
@@ -153,9 +177,10 @@ def delete(doc_id: str) -> bool:
     conn = _conn()
     if conn is None:
         return False
+    query = sql.SQL("DELETE FROM {table} WHERE id = %s;").format(table=_table_id())
     try:
         with conn.cursor() as cur:
-            cur.execute(f"DELETE FROM {_TABLE} WHERE id = %s;", (doc_id,))
+            cur.execute(query, (doc_id,))
         return True
     except Exception as e:
         logger.warning("pgvector delete failed: %s", e)
@@ -169,9 +194,10 @@ def count() -> int:
     conn = _conn()
     if conn is None:
         return -1
+    query = sql.SQL("SELECT COUNT(*) FROM {table};").format(table=_table_id())
     try:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT COUNT(*) FROM {_TABLE};")
+            cur.execute(query)
             result = cur.fetchone()
             return result[0] if result else 0
     except Exception as e:

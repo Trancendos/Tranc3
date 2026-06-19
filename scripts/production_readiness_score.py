@@ -35,6 +35,40 @@ def _count_worker_implementations() -> tuple[int, int]:
     return total - stubs, total
 
 
+def _load_security_dimension():
+    """Import compute_security_dimension without requiring scripts/ as a package."""
+    import importlib.util
+
+    path = ROOT / "scripts" / "security_score.py"
+    spec = importlib.util.spec_from_file_location("security_score", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.compute_security_dimension
+
+
+def _security_score_percent() -> tuple[float, list[str], list[str]]:
+    """Repo-weighted security dimension from scripts/security_score.py."""
+    try:
+        compute = _load_security_dimension()
+        dim = compute()
+        pct = float(dim["score_percent"])
+        blockers = [] if pct >= 90.0 else [f"Security score {pct}% < 90% target"]
+        actions = [
+            "Run: python scripts/security_score.py",
+            "Resolve SECURITY_ALERT_REGISTER.md open items",
+        ]
+        if pct < 90.0:
+            checks = dim.get("checks", {})
+            failed = [k for k, v in checks.items() if v is False]
+            if failed:
+                actions.insert(0, f"Fix security checks: {', '.join(failed)}")
+        return pct, blockers, actions if pct < 90.0 else ["Keep Forgejo security-scan green"]
+    except Exception as exc:
+        return 0.0, [f"security_score.py failed: {exc}"], ["Fix scripts/security_score.py"]
+
+
 def _pytest_gate_passed() -> bool:
     env = {
         **dict(os.environ),
@@ -53,6 +87,7 @@ def _pytest_gate_passed() -> bool:
         "tests/test_production_readiness_stack.py",
         "tests/test_penetration.py",
         "tests/test_zero_cost_registry.py",
+        "tests/test_url_validation.py",
         "tests/test_p0_health_syntax.py",
         "-q",
         "--tb=no",
@@ -67,7 +102,7 @@ def _compose_checks() -> tuple[float, list[str], list[str]]:
     compose = ROOT / "docker-compose.production.yml"
     vault_hcl = ROOT / "deploy" / "vault" / "vault.hcl"
     if compose.exists():
-        text = compose.read_text()
+        text = compose.read_text(encoding="utf-8")
         score += 25
         if "tranc3-backend:" in text:
             score += 20
@@ -110,6 +145,7 @@ def build_dimensions() -> list[Dimension]:
 
     tests_ok = _pytest_gate_passed()
     compose_pct, compose_blockers, compose_actions = _compose_checks()
+    security_pct, security_blockers, security_actions = _security_score_percent()
 
     env_prod = (ROOT / ".env.production").exists()
     # Honest live ops: scripts alone ≠ deployed stack (see forensic assessment).
@@ -169,13 +205,10 @@ def build_dimensions() -> list[Dimension]:
         Dimension(
             name="Security & dependencies",
             weight=0.10,
-            percent=75.0,
-            status="amber",
-            blockers=[],
-            next_actions=[
-                "Run make dependency-audit (pip-audit on Workshop runner)",
-                "Review Forgejo security-scan + dependency-audit workflows",
-            ],
+            percent=security_pct,
+            status="green" if security_pct >= 90 else ("amber" if security_pct >= 75 else "red"),
+            blockers=security_blockers,
+            next_actions=security_actions,
         ),
         Dimension(
             name="Observability (The Observatory)",

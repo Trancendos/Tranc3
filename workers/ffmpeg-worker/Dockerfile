@@ -1,4 +1,5 @@
-FROM python:3.11-slim
+# FFmpeg worker — non-root hardened (Forgejo #2127)
+FROM python:3.12-slim-bookworm
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
@@ -7,11 +8,12 @@ RUN apt-get update && \
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
 
-COPY worker.py .
+RUN chown -R tranc3:tranc3 /app
+USER tranc3
 
 RUN mkdir -p /app/workdir && chown -R worker:worker /app/workdir
 

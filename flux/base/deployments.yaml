@@ -2,6 +2,18 @@
 # Core nanoservice deployments — NSA Broker, SHI Gateway, DNF Orchestrator
 # IPC via emptyDir volumes instead of hostIPC for security hardening
 ---
+podSecurity: &podSecurity
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurity: &containerSecurity
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop: ["ALL"]
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,6 +36,8 @@ spec:
       containers:
         - name: nsa-broker
           image: forgejo.local/trancendos/nsa-broker:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 7780
               name: http
@@ -88,6 +102,8 @@ spec:
       containers:
         - name: shi-gateway
           image: forgejo.local/trancendos/shi-gateway:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8000
               name: http
@@ -162,6 +178,8 @@ spec:
       containers:
         - name: dnf-orchestrator
           image: forgejo.local/trancendos/dnf-orchestrator:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8080
               name: http
@@ -225,9 +243,13 @@ spec:
         app: daas-stream
         tier: tier-2
     spec:
+      securityContext:
+        <<: *podSecurity
       containers:
         - name: daas-stream
           image: forgejo.local/trancendos/daas-stream:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8090
               name: http
@@ -271,9 +293,13 @@ spec:
         app: fmd-distiller
         tier: tier-2
     spec:
+      securityContext:
+        <<: *podSecurity
       containers:
         - name: fmd-distiller
           image: forgejo.local/trancendos/fmd-distiller:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8070
               name: http

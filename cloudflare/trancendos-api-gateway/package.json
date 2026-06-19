@@ -1,0 +1,17 @@
+{
+  "name": "trancendos-api-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.93.1"
+  },
+  "overrides": {
+    "wrangler": "^4.93.1",
+    "esbuild": ">=0.25.0",
+    "ws": ">=8.17.1"
+  }
+}

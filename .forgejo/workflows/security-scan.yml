@@ -64,17 +64,20 @@ jobs:
 
       - name: bandit (SAST — medium+ severity GATE)
         run: |
-          bandit -r src/ \
+          mkdir -p logs
+          BANDIT_PATHS="src/ api.py workers/infinity-auth workers/infinity-ws workers/api-gateway"
+          bandit -r $BANDIT_PATHS \
             --severity-level medium \
             --confidence-level medium \
             --format json \
             --output logs/bandit-results.json || true
-          # Hard gate: no medium+ severity + medium+ confidence findings
-          bandit -r src/ \
+          # Hard gate: fail on medium+ severity with medium+ confidence (no --exit-zero)
+          bandit -r $BANDIT_PATHS \
             --severity-level medium \
-            --confidence-level medium \
-            --exit-zero
-        continue-on-error: true
+            --confidence-level medium
+
+      - name: Security dimension (repo-weighted)
+        run: python3 scripts/security_score.py --min-percent 90
 
       - name: ruff lint gate
         run: |
