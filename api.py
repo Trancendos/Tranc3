@@ -568,6 +568,9 @@ async def lifespan(app: FastAPI):
     _bootstrap_complete = True
     yield
 
+    if _quota_rotation_task is not None:
+        _quota_rotation_task.cancel()
+
     logger.info("TRANC3 shutting down")
     _bootstrap_complete = False
     if _mape_k_loop is not None:
@@ -1478,6 +1481,7 @@ async def chat(
 
 # ── Streaming chat endpoint ───────────────────────────────────────────────────
 
+
 @app.post(
     "/chat/stream",
     tags=["inference"],
@@ -1485,7 +1489,7 @@ async def chat(
     description=(
         "Streaming variant of `/chat`. Returns Server-Sent Events (SSE) with token-by-token "
         "output. Tries Ollama → llama.cpp → gateway simulation in order. "
-        "Each event: `data: {\"content\": \"token\"}`. Stream ends with `data: [DONE]`."
+        'Each event: `data: {"content": "token"}`. Stream ends with `data: [DONE]`.'
     ),
 )
 async def chat_stream(
@@ -1506,8 +1510,8 @@ async def chat_stream(
         raise HTTPException(status_code=400, detail=safe_error_detail(e, 400))
 
     try:
-        from src.inference.streaming import stream_sse
         from src.inference.conversation_store import get_conversation_store
+        from src.inference.streaming import stream_sse
 
         # Build message list from session history if session_id provided
         session_id = getattr(chat_req, "session_id", None) or f"stream-{user_id}"
@@ -1534,6 +1538,7 @@ async def chat_stream(
 
 # ── Conversation history endpoints ────────────────────────────────────────────
 
+
 @app.get(
     "/conversations/{session_id}",
     tags=["inference"],
@@ -1546,6 +1551,7 @@ async def get_conversation(
 ):
     try:
         from src.inference.conversation_store import get_conversation_store
+
         store = get_conversation_store()
         messages = store.get_messages(session_id)
         return {"session_id": session_id, "messages": messages, "count": len(messages)}
@@ -1564,6 +1570,7 @@ async def delete_conversation(
 ):
     try:
         from src.inference.conversation_store import get_conversation_store
+
         get_conversation_store().delete_session(session_id)
         return {"deleted": session_id}
     except Exception as exc:
@@ -1571,6 +1578,7 @@ async def delete_conversation(
 
 
 # ── Thompson sampler stats ────────────────────────────────────────────────────
+
 
 @app.get(
     "/luminous/providers",
@@ -1581,6 +1589,7 @@ async def delete_conversation(
 async def provider_stats(current_user: dict = Depends(get_current_user)):
     try:
         from src.inference.thompson_sampler import get_sampler
+
         return {"providers": get_sampler().stats(), "ranked": get_sampler().rank_all()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500))
