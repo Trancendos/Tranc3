@@ -209,7 +209,7 @@ _http_client: httpx.AsyncClient | None = None
 def _get_http_client() -> httpx.AsyncClient:
     global _http_client
     if _http_client is None or _http_client.is_closed:
-        _http_client = httpx.AsyncClient(timeout=TIMEOUT)
+        _http_client = httpx.AsyncClient(timeout=HTTP_TIMEOUT)
     return _http_client
 
 
@@ -222,12 +222,7 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
     """Perform a single HTTP health check; return enriched result dict."""
     url = svc["health_url"]
     start = time.monotonic()
-    result: Dict[str, Any] = {
-        "name": svc["name"],
-        "port": svc["port"],
-        "health_url": url,
-        "last_checked": datetime.now(timezone.utc).isoformat(),
-    }
+    svc_name = svc["name"]
     try:
         resp = await _get_http_client().get(url)
         ms = (time.time() - start) * 1000
@@ -237,7 +232,11 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             details = {"raw": resp.text[:200]}
         return {
-            "service": name,
+            "name": svc_name,
+            "port": svc["port"],
+            "health_url": url,
+            "last_checked": datetime.now(timezone.utc).isoformat(),
+            "service": svc_name,
             "status": status,
             "http_code": resp.status_code,
             "response_ms": round(ms, 1),
@@ -246,12 +245,31 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         ms = (time.time() - start) * 1000
         return {
-            "service": name,
+            "name": svc_name,
+            "port": svc["port"],
+            "health_url": url,
+            "last_checked": datetime.now(timezone.utc).isoformat(),
+            "service": svc_name,
             "status": "down",
             "http_code": None,
             "response_ms": round(ms, 1),
             "details": {"error": "probe_failed"},
         }
+
+
+async def _poll_all() -> None:
+    """Poll all registered services once and update _latest."""
+    global _poll_count
+    results = await asyncio.gather(*[_check_one(svc) for svc in SERVICE_REGISTRY], return_exceptions=True)
+    for svc, res in zip(SERVICE_REGISTRY, results, strict=False):
+        if isinstance(res, Exception):
+            res = {"name": svc["name"], "port": svc["port"], "status": "down", "error": str(res)}
+        _latest[svc["name"]] = res
+        try:
+            _persist_check(res)
+        except Exception:
+            pass
+    _poll_count += 1
 
 
 async def _poll_loop() -> None:
@@ -364,17 +382,14 @@ def _overall_status() -> str:
 # ---------------------------------------------------------------------------
 
 
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
-    healthy = sum(1 for v in _latest.values() if v["status"] == "healthy")
+    uptime_s = (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
     return {
         "status": "healthy",
         "service": WORKER_NAME,
         "port": PORT,
-        "uptime_seconds": round(uptime, 1),
+        "uptime_seconds": round(uptime_s, 1),
         "poll_count": _poll_count,
         "monitored_services": len(SERVICE_REGISTRY),
         "polled_so_far": len(_latest),
@@ -429,9 +444,6 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> PlatformSta
         services=services,
     )
 
-    current = _latest.get(
-        service, {"status": "unknown", "port": _REGISTRY_BY_NAME[service]["port"]}
-    )
 
 @app.get("/status/{service}", summary="Single service detail with history")
 async def service_detail(

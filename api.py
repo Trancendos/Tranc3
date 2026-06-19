@@ -70,7 +70,6 @@ if not _REDIS_URL:
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
-from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
 from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
 from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 
@@ -92,7 +91,7 @@ from src.core.feature_flags import (  # noqa: F401  # intentional top-level impo
 from src.core.multilingual_tokenizer import (
     MultilingualTokenizer,  # noqa: F401  # intentional top-level import
 )
-from src.core.startup_validator import validate_startup
+from src.core.startup_validator import validate_startup  # noqa: F401
 from src.database.schema import (  # noqa: F401  # intentional top-level import
     Conversation,
     DatabaseManager,
@@ -463,6 +462,7 @@ async def lifespan(app: FastAPI):
 
     # MAPE-K sovereign control loop (Master Worker — autonomic platform orchestration)
     _mape_k_loop = None
+    _quota_rotation_task = None
     try:
         from src.master_worker.mape_k import MapeKLoop
 

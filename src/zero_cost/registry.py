@@ -88,7 +88,6 @@ def load_registry() -> dict[str, Any]:
 
 def get_chain(chain_name: str) -> list[str]:
     """Return ordered provider IDs for a named rotation chain."""
-    resolved = _CHAIN_ALIASES.get(chain_name, chain_name)
     reg = load_registry()
     return {
         str(x["id"])
