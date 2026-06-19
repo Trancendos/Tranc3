@@ -34,73 +34,73 @@ LOGS.mkdir(exist_ok=True)
 
 ALL_ENTITIES: list[dict] = [
     # ── Core / always-on ────────────────────────────────────────────────────
-    {"name": "tranc3-backend",         "port": 8000, "tier": "core",  "path": "/health"},
-    {"name": "nanoservices",            "port": 8001, "tier": "core",  "path": "/health"},
+    {"name": "tranc3-backend", "port": 8000, "tier": "core", "path": "/health"},
+    {"name": "nanoservices", "port": 8001, "tier": "core", "path": "/health"},
     # ── P0 ──────────────────────────────────────────────────────────────────
-    {"name": "infinity-ws",             "port": 8004, "tier": "P0",   "path": "/health"},
-    {"name": "infinity-auth",           "port": 8005, "tier": "P0",   "path": "/health"},
+    {"name": "infinity-ws", "port": 8004, "tier": "P0", "path": "/health"},
+    {"name": "infinity-auth", "port": 8005, "tier": "P0", "path": "/health"},
     # ── P1 ──────────────────────────────────────────────────────────────────
-    {"name": "infinity-portal-service", "port": 8042, "tier": "P1",   "path": "/health"},
-    {"name": "infinity-one-service",    "port": 8043, "tier": "P1",   "path": "/health"},
-    {"name": "infinity-admin-service",  "port": 8044, "tier": "P1",   "path": "/health"},
-    {"name": "infinity-shards-service", "port": 8045, "tier": "P1",   "path": "/health"},
-    {"name": "infinity-bridge-service", "port": 8070, "tier": "P1",   "path": "/health"},
-    {"name": "cranbania",               "port": 8071, "tier": "P1",   "path": "/health"},
-    {"name": "users-service",           "port": 8006, "tier": "P1",   "path": "/health"},
-    {"name": "monitoring",              "port": 8007, "tier": "P1",   "path": "/health"},
-    {"name": "notifications",           "port": 8008, "tier": "P1",   "path": "/health"},
-    {"name": "infinity-ai",             "port": 8009, "tier": "P1",   "path": "/health"},
+    {"name": "infinity-portal-service", "port": 8042, "tier": "P1", "path": "/health"},
+    {"name": "infinity-one-service", "port": 8043, "tier": "P1", "path": "/health"},
+    {"name": "infinity-admin-service", "port": 8044, "tier": "P1", "path": "/health"},
+    {"name": "infinity-shards-service", "port": 8045, "tier": "P1", "path": "/health"},
+    {"name": "infinity-bridge-service", "port": 8070, "tier": "P1", "path": "/health"},
+    {"name": "cranbania", "port": 8071, "tier": "P1", "path": "/health"},
+    {"name": "users-service", "port": 8006, "tier": "P1", "path": "/health"},
+    {"name": "monitoring", "port": 8007, "tier": "P1", "path": "/health"},
+    {"name": "notifications", "port": 8008, "tier": "P1", "path": "/health"},
+    {"name": "infinity-ai", "port": 8009, "tier": "P1", "path": "/health"},
     # ── P2 ──────────────────────────────────────────────────────────────────
-    {"name": "the-grid",                "port": 8010, "tier": "P2",   "path": "/health"},
-    {"name": "products-service",        "port": 8011, "tier": "P2",   "path": "/health"},
-    {"name": "orders-service",          "port": 8012, "tier": "P2",   "path": "/health"},
-    {"name": "payments-service",        "port": 8013, "tier": "P2",   "path": "/health"},
-    {"name": "files-service",           "port": 8014, "tier": "P2",   "path": "/health"},
-    {"name": "identity-service",        "port": 8015, "tier": "P2",   "path": "/health"},
+    {"name": "the-grid", "port": 8010, "tier": "P2", "path": "/health"},
+    {"name": "products-service", "port": 8011, "tier": "P2", "path": "/health"},
+    {"name": "orders-service", "port": 8012, "tier": "P2", "path": "/health"},
+    {"name": "payments-service", "port": 8013, "tier": "P2", "path": "/health"},
+    {"name": "files-service", "port": 8014, "tier": "P2", "path": "/health"},
+    {"name": "identity-service", "port": 8015, "tier": "P2", "path": "/health"},
     # ── P3 ──────────────────────────────────────────────────────────────────
-    {"name": "analytics-service",       "port": 8016, "tier": "P3",   "path": "/health"},
-    {"name": "audit-service",           "port": 8017, "tier": "P3",   "path": "/health"},
-    {"name": "cache-service",           "port": 8018, "tier": "P3",   "path": "/health"},
-    {"name": "cdn-service",             "port": 8019, "tier": "P3",   "path": "/health"},
-    {"name": "config-service",          "port": 8020, "tier": "P3",   "path": "/health"},
-    {"name": "cron-service",            "port": 8021, "tier": "P3",   "path": "/health"},
-    {"name": "email-service",           "port": 8022, "tier": "P3",   "path": "/health"},
-    {"name": "geo-service",             "port": 8023, "tier": "P3",   "path": "/health"},
-    {"name": "search-service",          "port": 8024, "tier": "P3",   "path": "/health"},
-    {"name": "sms-service",             "port": 8025, "tier": "P3",   "path": "/health"},
-    {"name": "storage-service",         "port": 8026, "tier": "P3",   "path": "/health"},
-    {"name": "queue-service",           "port": 8027, "tier": "P3",   "path": "/health"},
-    {"name": "rate-limit-service",      "port": 8028, "tier": "P3",   "path": "/health"},
-    {"name": "health-aggregator",       "port": 8029, "tier": "P3",   "path": "/health"},
-    {"name": "gbrain-bridge",           "port": 8030, "tier": "P3",   "path": "/health"},
-    {"name": "topology-service",        "port": 8031, "tier": "P3",   "path": "/health"},
-    {"name": "ledger-service",          "port": 8032, "tier": "P3",   "path": "/health"},
-    {"name": "model-router-service",    "port": 8033, "tier": "P3",   "path": "/health"},
-    {"name": "workflow-engine-service", "port": 8034, "tier": "P3",   "path": "/health"},
-    {"name": "skills-benchmark-service","port": 8035, "tier": "P3",   "path": "/health"},
-    {"name": "langchain-integration",   "port": 8036, "tier": "P3",   "path": "/health"},
-    {"name": "deepagents-orchestrator", "port": 8037, "tier": "P3",   "path": "/health"},
-    {"name": "vault-service",           "port": 8038, "tier": "P3",   "path": "/health"},
-    {"name": "optional-services-health","port": 8039, "tier": "P3",   "path": "/health"},
+    {"name": "analytics-service", "port": 8016, "tier": "P3", "path": "/health"},
+    {"name": "audit-service", "port": 8017, "tier": "P3", "path": "/health"},
+    {"name": "cache-service", "port": 8018, "tier": "P3", "path": "/health"},
+    {"name": "cdn-service", "port": 8019, "tier": "P3", "path": "/health"},
+    {"name": "config-service", "port": 8020, "tier": "P3", "path": "/health"},
+    {"name": "cron-service", "port": 8021, "tier": "P3", "path": "/health"},
+    {"name": "email-service", "port": 8022, "tier": "P3", "path": "/health"},
+    {"name": "geo-service", "port": 8023, "tier": "P3", "path": "/health"},
+    {"name": "search-service", "port": 8024, "tier": "P3", "path": "/health"},
+    {"name": "sms-service", "port": 8025, "tier": "P3", "path": "/health"},
+    {"name": "storage-service", "port": 8026, "tier": "P3", "path": "/health"},
+    {"name": "queue-service", "port": 8027, "tier": "P3", "path": "/health"},
+    {"name": "rate-limit-service", "port": 8028, "tier": "P3", "path": "/health"},
+    {"name": "health-aggregator", "port": 8029, "tier": "P3", "path": "/health"},
+    {"name": "gbrain-bridge", "port": 8030, "tier": "P3", "path": "/health"},
+    {"name": "topology-service", "port": 8031, "tier": "P3", "path": "/health"},
+    {"name": "ledger-service", "port": 8032, "tier": "P3", "path": "/health"},
+    {"name": "model-router-service", "port": 8033, "tier": "P3", "path": "/health"},
+    {"name": "workflow-engine-service", "port": 8034, "tier": "P3", "path": "/health"},
+    {"name": "skills-benchmark-service", "port": 8035, "tier": "P3", "path": "/health"},
+    {"name": "langchain-integration", "port": 8036, "tier": "P3", "path": "/health"},
+    {"name": "deepagents-orchestrator", "port": 8037, "tier": "P3", "path": "/health"},
+    {"name": "vault-service", "port": 8038, "tier": "P3", "path": "/health"},
+    {"name": "optional-services-health", "port": 8039, "tier": "P3", "path": "/health"},
     # ── Planned entities (18) ───────────────────────────────────────────────
-    {"name": "the-academy",             "port": 8040, "tier": "planned", "path": "/health"},
-    {"name": "basement",                "port": 8041, "tier": "planned", "path": "/health"},
-    {"name": "the-studio",              "port": 8050, "tier": "planned", "path": "/health"},
-    {"name": "sashas-photo-studio",     "port": 8051, "tier": "planned", "path": "/health"},
-    {"name": "tranceflow",              "port": 8052, "tier": "planned", "path": "/health"},
-    {"name": "tateking",                "port": 8053, "tier": "planned", "path": "/health"},
-    {"name": "imaginarium",             "port": 8054, "tier": "planned", "path": "/health"},
-    {"name": "the-lab",                 "port": 8055, "tier": "planned", "path": "/health"},
-    {"name": "warp-tunnel",             "port": 8056, "tier": "planned", "path": "/health"},
-    {"name": "warp-radio",              "port": 8057, "tier": "planned", "path": "/health"},
-    {"name": "the-dutchy",              "port": 8058, "tier": "planned", "path": "/health"},
-    {"name": "devocity",                "port": 8059, "tier": "planned", "path": "/health"},
-    {"name": "tranquility",             "port": 8060, "tier": "planned", "path": "/health"},
-    {"name": "imind",                   "port": 8061, "tier": "planned", "path": "/health"},
-    {"name": "taimra",                  "port": 8062, "tier": "planned", "path": "/health"},
-    {"name": "vrar3d",                  "port": 8063, "tier": "planned", "path": "/health"},
-    {"name": "resonate",                "port": 8064, "tier": "planned", "path": "/health"},
-    {"name": "chaos-party",             "port": 8065, "tier": "planned", "path": "/health"},
+    {"name": "the-academy", "port": 8040, "tier": "planned", "path": "/health"},
+    {"name": "basement", "port": 8041, "tier": "planned", "path": "/health"},
+    {"name": "the-studio", "port": 8050, "tier": "planned", "path": "/health"},
+    {"name": "sashas-photo-studio", "port": 8051, "tier": "planned", "path": "/health"},
+    {"name": "tranceflow", "port": 8052, "tier": "planned", "path": "/health"},
+    {"name": "tateking", "port": 8053, "tier": "planned", "path": "/health"},
+    {"name": "imaginarium", "port": 8054, "tier": "planned", "path": "/health"},
+    {"name": "the-lab", "port": 8055, "tier": "planned", "path": "/health"},
+    {"name": "warp-tunnel", "port": 8056, "tier": "planned", "path": "/health"},
+    {"name": "warp-radio", "port": 8057, "tier": "planned", "path": "/health"},
+    {"name": "the-dutchy", "port": 8058, "tier": "planned", "path": "/health"},
+    {"name": "devocity", "port": 8059, "tier": "planned", "path": "/health"},
+    {"name": "tranquility", "port": 8060, "tier": "planned", "path": "/health"},
+    {"name": "imind", "port": 8061, "tier": "planned", "path": "/health"},
+    {"name": "taimra", "port": 8062, "tier": "planned", "path": "/health"},
+    {"name": "vrar3d", "port": 8063, "tier": "planned", "path": "/health"},
+    {"name": "resonate", "port": 8064, "tier": "planned", "path": "/health"},
+    {"name": "chaos-party", "port": 8065, "tier": "planned", "path": "/health"},
 ]
 
 CRITICAL_TIERS = {"core", "P0", "P1"}
@@ -117,7 +117,7 @@ class EntityResult:
     name: str
     port: int
     tier: str
-    status: str        # "healthy" | "degraded" | "unreachable"
+    status: str  # "healthy" | "degraded" | "unreachable"
     http_code: int = 0
     latency_ms: int = 0
     error: str = ""
@@ -201,15 +201,17 @@ def probe_with_retry(
 
 def _report_to_observatory(base: str, report: VerifyReport) -> None:
     try:
-        payload = json.dumps({
-            "source": "post-deploy-verify",
-            "event": "deployment_verified",
-            "overall": report.overall,
-            "critical_pass_rate": report.critical_pass_rate,
-            "total_pass_rate": report.total_pass_rate,
-            "duration_s": report.duration_s,
-            "timestamp": report.timestamp,
-        }).encode()
+        payload = json.dumps(
+            {
+                "source": "post-deploy-verify",
+                "event": "deployment_verified",
+                "overall": report.overall,
+                "critical_pass_rate": report.critical_pass_rate,
+                "total_pass_rate": report.total_pass_rate,
+                "duration_s": report.duration_s,
+                "timestamp": report.timestamp,
+            }
+        ).encode()
         req = urllib.request.Request(
             f"{base}:8007/events",
             data=payload,
@@ -231,12 +233,12 @@ _WARN = "~"
 
 _TIER_ORDER = ["core", "P0", "P1", "P2", "P3", "planned"]
 _TIER_COLOUR = {
-    "core":    "\033[96m",   # cyan
-    "P0":      "\033[91m",   # red
-    "P1":      "\033[93m",   # yellow
-    "P2":      "\033[94m",   # blue
-    "P3":      "\033[37m",   # light grey
-    "planned": "\033[35m",   # magenta
+    "core": "\033[96m",  # cyan
+    "P0": "\033[91m",  # red
+    "P1": "\033[93m",  # yellow
+    "P2": "\033[94m",  # blue
+    "P3": "\033[37m",  # light grey
+    "planned": "\033[35m",  # magenta
 }
 _RESET = "\033[0m"
 _GREEN = "\033[92m"
@@ -277,7 +279,9 @@ def print_scorecard(report: VerifyReport) -> None:
     cr_pct = int(report.critical_pass_rate * 100)
     tt_pct = int(report.total_pass_rate * 100)
     overall_colour = _GREEN if report.overall == "healthy" else _RED
-    print(f"  Critical (core+P0+P1): {cr_pct}%   Total: {tt_pct}%   Duration: {report.duration_s:.1f}s")
+    print(
+        f"  Critical (core+P0+P1): {cr_pct}%   Total: {tt_pct}%   Duration: {report.duration_s:.1f}s"
+    )
     print(f"  Overall: {overall_colour}{report.overall.upper()}{_RESET}")
     print("═" * 70)
     print()
@@ -290,22 +294,29 @@ def print_scorecard(report: VerifyReport) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Post-deploy health verifier")
-    parser.add_argument("--base", default=os.environ.get("TRANC3_BASE_URL", "http://127.0.0.1"),
-                        help="Base URL of the host (default: http://127.0.0.1)")
-    parser.add_argument("--tier", choices=["core", "P0", "P1", "P2", "P3", "planned", "all"],
-                        default="all", help="Filter to a single tier")
+    parser.add_argument(
+        "--base",
+        default=os.environ.get("TRANC3_BASE_URL", "http://127.0.0.1"),
+        help="Base URL of the host (default: http://127.0.0.1)",
+    )
+    parser.add_argument(
+        "--tier",
+        choices=["core", "P0", "P1", "P2", "P3", "planned", "all"],
+        default="all",
+        help="Filter to a single tier",
+    )
     parser.add_argument("--retries", type=int, default=3)
     parser.add_argument("--timeout", type=float, default=5.0)
     parser.add_argument("--report", default="", help="Write JSON report to this path")
-    parser.add_argument("--soft", action="store_true",
-                        help="Always exit 0 (warning-only mode, never blocks deploy)")
-    parser.add_argument("--no-observatory", action="store_true",
-                        help="Skip Observatory reporting")
+    parser.add_argument(
+        "--soft", action="store_true", help="Always exit 0 (warning-only mode, never blocks deploy)"
+    )
+    parser.add_argument("--no-observatory", action="store_true", help="Skip Observatory reporting")
     args = parser.parse_args()
 
-    entities = ALL_ENTITIES if args.tier == "all" else [
-        e for e in ALL_ENTITIES if e["tier"] == args.tier
-    ]
+    entities = (
+        ALL_ENTITIES if args.tier == "all" else [e for e in ALL_ENTITIES if e["tier"] == args.tier]
+    )
 
     print(f"\nProbing {len(entities)} entities against {args.base} …")
     t_start = time.monotonic()
@@ -344,18 +355,20 @@ def main() -> int:
 
     # Write JSON report
     out_path = args.report or str(LOGS / "deploy_verify.json")
-    Path(out_path).write_text(json.dumps(
-        {
-            "timestamp": report.timestamp,
-            "base_url": report.base_url,
-            "overall": report.overall,
-            "critical_pass_rate": report.critical_pass_rate,
-            "total_pass_rate": report.total_pass_rate,
-            "duration_s": report.duration_s,
-            "results": [asdict(r) for r in report.results],
-        },
-        indent=2,
-    ))
+    Path(out_path).write_text(
+        json.dumps(
+            {
+                "timestamp": report.timestamp,
+                "base_url": report.base_url,
+                "overall": report.overall,
+                "critical_pass_rate": report.critical_pass_rate,
+                "total_pass_rate": report.total_pass_rate,
+                "duration_s": report.duration_s,
+                "results": [asdict(r) for r in report.results],
+            },
+            indent=2,
+        )
+    )
     print(f"  Report saved → {out_path}\n")
 
     if args.soft:

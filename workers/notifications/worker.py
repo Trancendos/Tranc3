@@ -430,6 +430,7 @@ class NotificationDispatcher:
         try:
             data = json.dumps(payload).encode()
             import urllib.parse
+
             _decoded = urllib.parse.unquote(_p.path or "/")
             if ".." in _decoded.split("/"):
                 logger.warning("Webhook dispatch blocked: path traversal in URL path")
