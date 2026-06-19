@@ -88,7 +88,6 @@ def load_registry() -> dict[str, Any]:
 
 def get_chain(chain_name: str) -> list[str]:
     """Return ordered provider IDs for a named rotation chain."""
-    resolved = _CHAIN_ALIASES.get(chain_name, chain_name)
     reg = load_registry()
     return {
         str(x["id"])
@@ -114,7 +113,9 @@ def is_approved(provider_id: str) -> bool:
 
 def approved_ids() -> frozenset[str]:
     reg = load_registry()
-    ids: set[str] = set(reg.get("approved_self_hosted", [])) | set(reg.get("approved_free_tier", []))
+    ids: set[str] = set(reg.get("approved_self_hosted", [])) | set(
+        reg.get("approved_free_tier", [])
+    )
     for prov in _iter_capability_providers(reg):
         pid = prov.get("id")
         if pid and is_approved(str(pid)):

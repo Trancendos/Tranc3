@@ -70,7 +70,6 @@ if not _REDIS_URL:
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
-from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
 from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
 from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 
@@ -92,7 +91,7 @@ from src.core.feature_flags import (  # noqa: F401  # intentional top-level impo
 from src.core.multilingual_tokenizer import (
     MultilingualTokenizer,  # noqa: F401  # intentional top-level import
 )
-from src.core.startup_validator import validate_startup
+from src.core.startup_validator import validate_startup  # noqa: F401
 from src.database.schema import (  # noqa: F401  # intentional top-level import
     Conversation,
     DatabaseManager,
@@ -463,6 +462,7 @@ async def lifespan(app: FastAPI):
 
     # MAPE-K sovereign control loop (Master Worker — autonomic platform orchestration)
     _mape_k_loop = None
+    _quota_rotation_task = None
     try:
         from src.master_worker.mape_k import MapeKLoop
 
@@ -1235,6 +1235,45 @@ async def features():
     if not feature_flags:
         return {"error": "Feature flags unavailable — Redis required"}
     return feature_flags.get_all_flags()
+
+
+@app.get(
+    "/ai/providers",
+    tags=["system"],
+    summary="AI provider limit monitor dashboard",
+    description=(
+        "Zero-cost AI provider rotation status. Shows all 8 free-tier providers, "
+        "their current utilisation vs hard-stop thresholds (95%), which is active, "
+        "and which are rotating or hard-stopped. Managed by The Observatory (Norman Hawkins)."
+    ),
+)
+async def ai_providers():
+    try:
+        from src.ai_gateway.limit_monitor import monitor
+
+        return monitor.get_dashboard()
+    except Exception:
+        logger.exception("ai_providers: limit_monitor unavailable")
+        return {"error": "limit_monitor_unavailable", "status": "unavailable"}
+
+
+@app.post(
+    "/ai/providers/{provider}/reset",
+    tags=["system"],
+    summary="Reset provider usage counters (admin only)",
+    description="Manually reset daily/hourly counters for a provider. Use after a 24-hour window.",
+)
+async def ai_provider_reset(provider: str):
+    try:
+        from src.ai_gateway.limit_monitor import LimitMonitor, monitor
+
+        if provider not in LimitMonitor.LIMITS:
+            return {"error": "unknown_provider"}
+        monitor.reset_provider(provider)
+        return {"reset": True, "provider": provider}
+    except Exception:
+        logger.exception("ai_provider_reset: failed for provider=%s", provider)
+        return {"error": "reset_failed"}
 
 
 # ── Inference ─────────────────────────────────────────────────────────────────

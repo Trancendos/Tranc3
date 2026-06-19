@@ -147,7 +147,7 @@ def _compute_hash(
 
 
 def _last_hash() -> str:
-    with get_conn() as conn:
+    with _connect() as conn:
         row = conn.execute("SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
     return row["chain_hash"] if row else GENESIS_HASH
 
@@ -434,120 +434,43 @@ async def append_event(
     _require_internal(x_internal_secret)
 
     event_id = body.event_id or str(uuid.uuid4())
-
-@app.get("/health")
-async def health():
-    with get_conn() as conn:
-        count = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
-        last = conn.execute(
-            "SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1"
-        ).fetchone()
-    return {
-        "status": "healthy",
-        "service": WORKER_NAME,
-        "port": WORKER_PORT,
-        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "total_entries": count,
-        "chain_tip": last["chain_hash"] if last else GENESIS_HASH,
-        "entity": {
-            "location": "The Observatory",
-            "pillar": "Knowledge",
-            "lead_ai": "Norman Hawkins",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Audit Log & Monitoring Platform",
-            "layer": "supporting",
-        },
-    }
-
-
-@_router.post("/audit", status_code=201)
-async def append_entry(entry: AuditIn):
-    ts = entry.timestamp or time.time()
-    with _chain_lock, get_conn() as conn:
-        prev_hash = conn.execute(
-            "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1"
-        ).fetchone()
-        prev_hash = prev_hash["chain_hash"] if prev_hash else GENESIS_HASH
+    ts = body.timestamp or datetime.now(timezone.utc).isoformat()
+    with _chain_lock, _connect() as conn:
+        prev = _last_hash()
         cur = conn.execute(
-            "INSERT INTO audit_log (actor, action, resource, details, outcome, ip_address, chain_hash, prev_hash, timestamp) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO audit_log (event_id, timestamp, service, action, actor, resource,"
+            " outcome, severity, details, prev_hash, chain_hash)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
-                entry.actor,
-                entry.action,
-                entry.resource,
-                json.dumps(entry.details),
-                entry.outcome,
-                entry.ip_address,
-                "pending",
-                prev_hash,
+                event_id,
                 ts,
+                body.service,
+                body.action,
+                body.actor,
+                body.resource,
+                body.outcome,
+                body.severity,
+                json.dumps(body.details),
+                prev,
+                "pending",
             ),
         )
         row_id = cur.lastrowid
         chain_hash = _compute_hash(
             row_id,
-            entry.actor,
-            entry.action,
+            body.actor,
+            body.action,
             ts,
-            prev_hash,
-            entry.resource or "",
-            json.dumps(entry.details),
-            entry.outcome,
-            entry.ip_address or "",
+            prev,
+            body.resource,
+            json.dumps(body.details),
+            body.outcome,
+            "",
         )
-        conn.execute("UPDATE audit_log SET chain_hash = ? WHERE id = ?", (chain_hash, row_id))
-        conn.commit()
-    return {
-        "id": row_id,
-        "actor": entry.actor,
-        "action": entry.action,
-        "timestamp": ts,
-        "chain_hash": chain_hash,
-        "prev_hash": prev_hash,
-    }
-
-
-@_router.post("/audit/batch", status_code=201)
-async def append_batch(batch: AuditBatchIn):
-    results = []
-    with get_conn() as conn:
-        for entry in batch.entries:
-            ts = entry.timestamp or time.time()
-            row = conn.execute(
-                "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1"
-            ).fetchone()
-            prev_hash = row["chain_hash"] if row else GENESIS_HASH
-            cur = conn.execute(
-                "INSERT INTO audit_log (actor, action, resource, details, outcome, ip_address, chain_hash, prev_hash, timestamp) "
-                "VALUES (?,?,?,?,?,?,?,?,?)",
-                (
-                    entry.actor,
-                    entry.action,
-                    entry.resource,
-                    json.dumps(entry.details),
-                    entry.outcome,
-                    entry.ip_address,
-                    "pending",
-                    prev_hash,
-                    ts,
-                ),
-            )
-            row_id = cur.lastrowid
-            chain_hash = _compute_hash(
-                row_id,
-                entry.actor,
-                entry.action,
-                ts,
-                prev_hash,
-                entry.resource or "",
-                json.dumps(entry.details),
-                entry.outcome,
-                entry.ip_address or "",
-            )
-            conn.execute("UPDATE audit_log SET chain_hash = ? WHERE id = ?", (chain_hash, row_id))
-            results.append({"id": row_id, "chain_hash": chain_hash})
-        conn.commit()
-    return {"inserted": len(results), "entries": results}
+        conn.execute("UPDATE audit_log SET chain_hash=? WHERE id=?", (chain_hash, row_id))
+    return AuditEventCreated(
+        id=row_id, event_id=event_id, timestamp=ts, hash=chain_hash, prev_hash=prev
+    )
 
 
 @app.get("/events", response_model=List[AuditEventOut])

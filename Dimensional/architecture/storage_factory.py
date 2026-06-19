@@ -37,7 +37,6 @@ import asyncio
 import logging
 import os
 import shutil
-import tempfile
 import threading
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone

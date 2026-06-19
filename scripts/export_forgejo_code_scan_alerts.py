@@ -117,7 +117,9 @@ def _markdown_table(rows: list[dict]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--merge", action="store_true", help="Append export section to register")
-    parser.add_argument("--json-only", action="store_true", help="Write logs only, skip markdown merge")
+    parser.add_argument(
+        "--json-only", action="store_true", help="Write logs only, skip markdown merge"
+    )
     args = parser.parse_args()
 
     forgejo_url = os.environ.get("FORGEJO_URL", "https://trancendos.com/the-workshop")

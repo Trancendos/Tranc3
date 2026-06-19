@@ -92,7 +92,9 @@ def main() -> int:
         print(f"BLOCKED: {failures} step(s) failed", file=sys.stderr)
         return 1
     print("PASS — all security phase steps completed")
-    print(f"Artifacts: {ROOT / 'logs'}/security_score.json, pre_deploy_gate.json, phase0_baseline.json")
+    print(
+        f"Artifacts: {ROOT / 'logs'}/security_score.json, pre_deploy_gate.json, phase0_baseline.json"
+    )
     return 0
 
 
