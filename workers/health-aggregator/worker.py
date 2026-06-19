@@ -213,8 +213,21 @@ def _get_http_client() -> httpx.AsyncClient:
     return _http_client
 
 
-async def _check_one(name: str, url: str) -> dict:
-    start = time.time()
+# ---------------------------------------------------------------------------
+# Health check logic
+# ---------------------------------------------------------------------------
+
+
+async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
+    """Perform a single HTTP health check; return enriched result dict."""
+    url = svc["health_url"]
+    start = time.monotonic()
+    result: Dict[str, Any] = {
+        "name": svc["name"],
+        "port": svc["port"],
+        "health_url": url,
+        "last_checked": datetime.now(timezone.utc).isoformat(),
+    }
     try:
         resp = await _get_http_client().get(url)
         ms = (time.time() - start) * 1000
@@ -416,6 +429,9 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> PlatformSta
         services=services,
     )
 
+    current = _latest.get(
+        service, {"status": "unknown", "port": _REGISTRY_BY_NAME[service]["port"]}
+    )
 
 @app.get("/status/{service}", summary="Single service detail with history")
 async def service_detail(

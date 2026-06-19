@@ -35,7 +35,6 @@ from typing import Any, Dict, List, Optional
 from shared_core.error_handlers import safe_error_detail
 from fastapi import (
     FastAPI,
-    Header,
     HTTPException,
     Query,
     WebSocket,
