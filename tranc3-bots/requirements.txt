@@ -4,7 +4,7 @@
 # Fixes PYSEC-2026-161, CVE-2025-54121, CVE-2025-62727 (starlette Host-header
 # injection, multipart DoS, Range-header O(n²) DoS — requires starlette>=0.49.1)
 fastapi==0.136.3
-starlette==1.1.0
+starlette==1.3.1
 uvicorn[standard]==0.34.3
 httpx==0.28.1
 redis==5.2.1
