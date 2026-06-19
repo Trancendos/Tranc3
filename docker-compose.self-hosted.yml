@@ -48,8 +48,8 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - MASTER_KEY_SEED=${MASTER_KEY_SEED:-change-me-in-production}
-      - INTERNAL_SECRET=${INTERNAL_SECRET:-internal-dev-secret}
+      - MASTER_KEY_SEED=${MASTER_KEY_SEED}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
       - INFINITY_ONE_URL=${INFINITY_ONE_URL:-}
       - ENVIRONMENT=${ENVIRONMENT:-production}
     volumes:
@@ -72,7 +72,9 @@ services:
     ports:
       - "8003:8003"
     environment:
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-not-for-prod}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-}
       - USERS_SERVICE_URL=${USERS_SERVICE_URL:-}
       - PRODUCTS_SERVICE_URL=${PRODUCTS_SERVICE_URL:-}
       - ORDERS_SERVICE_URL=${ORDERS_SERVICE_URL:-}
