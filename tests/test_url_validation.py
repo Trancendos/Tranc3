@@ -22,7 +22,15 @@ class TestValidateUrlBasics:
     def test_allows_https_public_with_mock_dns(self) -> None:
         def fake_getaddrinfo(host, port, *args, **kwargs):
             if host == "hooks.example.com":
-                return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", port))]
+                return [
+                    (
+                        socket.AF_INET,
+                        socket.SOCK_STREAM,
+                        socket.IPPROTO_TCP,
+                        "",
+                        ("93.184.216.34", port),
+                    )
+                ]
             raise socket.gaierror("unknown")
 
         with patch("socket.getaddrinfo", side_effect=fake_getaddrinfo):
@@ -39,7 +47,9 @@ class TestValidateUrlBasics:
 
     def test_rejects_private_ip_resolution(self) -> None:
         def fake_getaddrinfo(host, port, *args, **kwargs):
-            return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("10.0.0.1", port))]
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("10.0.0.1", port))
+            ]
 
         with patch("socket.getaddrinfo", side_effect=fake_getaddrinfo):
             with pytest.raises(SSRFError, match="private"):
@@ -57,7 +67,15 @@ class TestValidateUrlBasics:
 
     def test_dev_http_allowed_with_override(self) -> None:
         def fake_getaddrinfo(host, port, *args, **kwargs):
-            return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", port))]
+            return [
+                (
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                    socket.IPPROTO_TCP,
+                    "",
+                    ("93.184.216.34", port),
+                )
+            ]
 
         with patch("socket.getaddrinfo", side_effect=fake_getaddrinfo):
             out = validate_url(

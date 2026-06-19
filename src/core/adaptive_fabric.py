@@ -32,16 +32,18 @@ logger = logging.getLogger("tranc3.adaptive_fabric")
 
 # ─── DNA / Genetic Traits ────────────────────────────────────────────────────
 
+
 class TraitExpression(Enum):
-    DOMINANT = auto()    # always expressed
-    RECESSIVE = auto()   # expressed only if no dominant present
+    DOMINANT = auto()  # always expressed
+    RECESSIVE = auto()  # expressed only if no dominant present
     CODOMINANT = auto()  # both expressed simultaneously
-    ADAPTIVE = auto()    # expressed based on environment
+    ADAPTIVE = auto()  # expressed based on environment
 
 
 @dataclass
 class Trait:
     """A single genetic trait — a named capability or behaviour modifier."""
+
     name: str
     value: Any
     expression: TraitExpression = TraitExpression.DOMINANT
@@ -51,6 +53,7 @@ class Trait:
 @dataclass
 class Genome:
     """The DNA of a Cell — defines its heritable configuration."""
+
     traits: Dict[str, Trait] = field(default_factory=dict)
     generation: int = 0
     lineage: List[str] = field(default_factory=list)
@@ -74,14 +77,20 @@ class Genome:
             b = other.traits.get(name)
             if a and b:
                 # Dominant wins; on tie pick higher fitness
-                if a.expression == TraitExpression.DOMINANT and b.expression != TraitExpression.DOMINANT:
+                if (
+                    a.expression == TraitExpression.DOMINANT
+                    and b.expression != TraitExpression.DOMINANT
+                ):
                     merged[name] = a
-                elif b.expression == TraitExpression.DOMINANT and a.expression != TraitExpression.DOMINANT:
+                elif (
+                    b.expression == TraitExpression.DOMINANT
+                    and a.expression != TraitExpression.DOMINANT
+                ):
                     merged[name] = b
                 else:
                     merged[name] = a if a.fitness >= b.fitness else b
             else:
-                merged[name] = (a or b)  # type: ignore[arg-type]
+                merged[name] = a or b  # type: ignore[arg-type]
         return Genome(
             traits=merged,
             generation=max(self.generation, other.generation) + 1,
@@ -91,11 +100,13 @@ class Genome:
 
 # ─── Nano Particle ───────────────────────────────────────────────────────────
 
+
 class Nano:
     """
     Ultra-lightweight callable micro-unit.
     Nanos are composable, chainable, and stateless.
     """
+
     def __init__(self, fn: Callable, name: str = "", ttl_ms: int = 0):
         self.fn = fn
         self.name = name or fn.__name__
@@ -108,7 +119,11 @@ class Nano:
             cached = self._cache.get(key)
             if cached and (time.time() * 1000 - cached[0]) < self.ttl_ms:
                 return cached[1]
-        result = await self.fn(*args, **kwargs) if asyncio.iscoroutinefunction(self.fn) else self.fn(*args, **kwargs)
+        result = (
+            await self.fn(*args, **kwargs)
+            if asyncio.iscoroutinefunction(self.fn)
+            else self.fn(*args, **kwargs)
+        )
         if self.ttl_ms:
             self._cache[key] = (time.time() * 1000, result)
         return result
@@ -117,6 +132,7 @@ class Nano:
         async def chained(*args: Any, **kwargs: Any) -> Any:
             result = await self(*args, **kwargs)
             return await other(result)
+
         return Nano(chained, name=f"{self.name}→{other.name}")
 
     def __or__(self, other: "Nano") -> "Nano":
@@ -125,11 +141,13 @@ class Nano:
 
 # ─── Reactive State ──────────────────────────────────────────────────────────
 
+
 class ReactiveState:
     """
     Observable state container.
     Subscribers are called synchronously when state changes.
     """
+
     def __init__(self, initial: Any = None):
         self._value = initial
         self._subscribers: List[Callable] = []
@@ -170,6 +188,7 @@ class ReactiveState:
 
 # ─── Cell ────────────────────────────────────────────────────────────────────
 
+
 class CellState(Enum):
     DORMANT = auto()
     ACTIVE = auto()
@@ -183,6 +202,7 @@ class Cell:
     Autonomous self-contained processing unit.
     Cells have a lifecycle, genome, reactive state, and can divide (spawn children).
     """
+
     def __init__(
         self,
         name: str,
@@ -211,7 +231,11 @@ class Cell:
         self._request_count += 1
         try:
             if self.handler:
-                result = await self.handler(payload, self) if asyncio.iscoroutinefunction(self.handler) else self.handler(payload, self)
+                result = (
+                    await self.handler(payload, self)
+                    if asyncio.iscoroutinefunction(self.handler)
+                    else self.handler(payload, self)
+                )
             else:
                 result = payload
             # Health recovery on success
@@ -262,11 +286,13 @@ class Cell:
 
 # ─── Cluster ─────────────────────────────────────────────────────────────────
 
+
 class Cluster:
     """
     A group of Cells that collectively handle a workload.
     Provides load balancing, health-based routing, and auto-scaling.
     """
+
     def __init__(self, name: str, min_cells: int = 1, max_cells: int = 8):
         self.name = name
         self.min_cells = min_cells
@@ -287,6 +313,7 @@ class Cluster:
             return None
         # Weighted random by health score
         import random
+
         weights = [c.health.value for c in healthy]
         return random.choices(healthy, weights=weights, k=1)[0]
 
@@ -304,8 +331,7 @@ class Cluster:
     def prune(self) -> int:
         before = len(self._cells)
         self._cells = [
-            c for c in self._cells
-            if not c.is_expired() and c.state.value != CellState.APOPTOSIS
+            c for c in self._cells if not c.is_expired() and c.state.value != CellState.APOPTOSIS
         ]
         # Maintain minimum
         while len(self._cells) < self.min_cells and before > 0:
@@ -324,6 +350,7 @@ class Cluster:
 
 # ─── Dimensional Context ─────────────────────────────────────────────────────
 
+
 class DimensionalContext:
     """
     Multi-dimensional awareness:
@@ -333,6 +360,7 @@ class DimensionalContext:
     - Intent: what the user is trying to accomplish
     - Social: collaborative context
     """
+
     def __init__(self):
         self.temporal = ReactiveState({"hour": 0, "day_of_week": 0, "is_peak": False})
         self.load = ReactiveState({"cpu": 0.0, "memory": 0.0, "queue_depth": 0})
@@ -341,6 +369,7 @@ class DimensionalContext:
 
     def refresh(self) -> None:
         import datetime
+
         now = datetime.datetime.utcnow()
         hour = now.hour
         peak_hours = set(range(9, 18))  # 9am–6pm UTC
@@ -380,6 +409,7 @@ class DimensionalContext:
 
 # ─── Quantum Router ──────────────────────────────────────────────────────────
 
+
 class QuantumRouter:
     """
     Superposition routing: dispatch to multiple providers simultaneously,
@@ -387,6 +417,7 @@ class QuantumRouter:
 
     This gives the reliability of redundancy with the latency of the fastest provider.
     """
+
     def __init__(self, timeout_s: float = 30.0):
         self.timeout_s = timeout_s
 
@@ -422,11 +453,13 @@ class QuantumRouter:
 
 # ─── Liquidic Interface ──────────────────────────────────────────────────────
 
+
 class LiquidicAdapter:
     """
     Shape-shifting interface that adapts to the caller's context.
     Transforms inputs/outputs based on detected format, language, and intent.
     """
+
     SUPPORTED_FORMATS = {"json", "text", "markdown", "html", "csv", "yaml"}
 
     def __init__(self, target_format: str = "json"):
@@ -467,11 +500,13 @@ class LiquidicAdapter:
 
 # ─── Proactive Prefetch ──────────────────────────────────────────────────────
 
+
 class ProactiveCache:
     """
     Anticipatory caching — prefetches resources before they're explicitly requested,
     based on access patterns and predictive scoring.
     """
+
     def __init__(self, capacity: int = 256):
         self.capacity = capacity
         self._cache: Dict[str, Tuple[float, Any, float]] = {}  # key → (ts, value, score)
@@ -513,7 +548,9 @@ class ProactiveCache:
         for key in keys:
             if key not in self._cache:
                 try:
-                    value = await fetcher(key) if asyncio.iscoroutinefunction(fetcher) else fetcher(key)
+                    value = (
+                        await fetcher(key) if asyncio.iscoroutinefunction(fetcher) else fetcher(key)
+                    )
                     self.put(key, value, score=0.5)
                 except Exception:  # noqa: BLE001 — prefetch errors are non-fatal by design
                     logger.debug("ProactiveCache.prefetch: key=%s fetch failed", key)
@@ -521,11 +558,13 @@ class ProactiveCache:
 
 # ─── Global Fabric ───────────────────────────────────────────────────────────
 
+
 class AdaptiveFabric:
     """
     Top-level adaptive fabric — wires together all subsystems:
     Cells + Clusters + Reactive + Quantum + Dimensional + Liquidic + Proactive
     """
+
     def __init__(self):
         self.clusters: Dict[str, Cluster] = {}
         self.context = DimensionalContext()
@@ -540,8 +579,10 @@ class AdaptiveFabric:
 
     def nano(self, fn: Callable = None, ttl_ms: int = 0) -> Callable:
         """Decorator to wrap any function as a Nano particle."""
+
         def decorator(f: Callable) -> Nano:
             return Nano(f, name=f.__name__, ttl_ms=ttl_ms)
+
         if fn:
             return decorator(fn)
         return decorator
@@ -551,10 +592,14 @@ class AdaptiveFabric:
         if not cluster:
             raise KeyError(f"Cluster '{cluster_name}' not registered in AdaptiveFabric")
         hints = self.context.get_routing_hints()
-        self._event_log.append({
-            "ts": time.time(), "event": "dispatch",
-            "cluster": cluster_name, "hints": hints,
-        })
+        self._event_log.append(
+            {
+                "ts": time.time(),
+                "event": "dispatch",
+                "cluster": cluster_name,
+                "hints": hints,
+            }
+        )
         return await cluster.process(payload)
 
     def status(self) -> dict:
@@ -574,10 +619,18 @@ class AdaptiveFabric:
 fabric = AdaptiveFabric()
 
 __all__ = [
-    "Trait", "TraitExpression", "Genome",
-    "Nano", "ReactiveState",
-    "Cell", "CellState", "Cluster",
-    "DimensionalContext", "QuantumRouter",
-    "LiquidicAdapter", "ProactiveCache",
-    "AdaptiveFabric", "fabric",
+    "Trait",
+    "TraitExpression",
+    "Genome",
+    "Nano",
+    "ReactiveState",
+    "Cell",
+    "CellState",
+    "Cluster",
+    "DimensionalContext",
+    "QuantumRouter",
+    "LiquidicAdapter",
+    "ProactiveCache",
+    "AdaptiveFabric",
+    "fabric",
 ]

@@ -442,20 +442,35 @@ async def append_event(
             " outcome, severity, details, prev_hash, chain_hash)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
-                event_id, ts, body.service, body.action, body.actor, body.resource,
-                body.outcome, body.severity, json.dumps(body.details), prev, "pending",
+                event_id,
+                ts,
+                body.service,
+                body.action,
+                body.actor,
+                body.resource,
+                body.outcome,
+                body.severity,
+                json.dumps(body.details),
+                prev,
+                "pending",
             ),
         )
         row_id = cur.lastrowid
         chain_hash = _compute_hash(
-            row_id, body.actor, body.action, ts, prev,
-            body.resource, json.dumps(body.details), body.outcome, "",
+            row_id,
+            body.actor,
+            body.action,
+            ts,
+            prev,
+            body.resource,
+            json.dumps(body.details),
+            body.outcome,
+            "",
         )
-        conn.execute(
-            "UPDATE audit_log SET chain_hash=? WHERE id=?", (chain_hash, row_id)
-        )
-    return AuditEventCreated(id=row_id, event_id=event_id, timestamp=ts,
-                             hash=chain_hash, prev_hash=prev)
+        conn.execute("UPDATE audit_log SET chain_hash=? WHERE id=?", (chain_hash, row_id))
+    return AuditEventCreated(
+        id=row_id, event_id=event_id, timestamp=ts, hash=chain_hash, prev_hash=prev
+    )
 
 
 @app.get("/events", response_model=List[AuditEventOut])

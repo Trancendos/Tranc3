@@ -1250,6 +1250,7 @@ async def features():
 async def ai_providers():
     try:
         from src.ai_gateway.limit_monitor import monitor
+
         return monitor.get_dashboard()
     except Exception:
         logger.exception("ai_providers: limit_monitor unavailable")
@@ -1265,6 +1266,7 @@ async def ai_providers():
 async def ai_provider_reset(provider: str):
     try:
         from src.ai_gateway.limit_monitor import LimitMonitor, monitor
+
         if provider not in LimitMonitor.LIMITS:
             return {"error": "unknown_provider"}
         monitor.reset_provider(provider)

@@ -260,14 +260,16 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
 async def _poll_all() -> None:
     """Poll all registered services once and update _latest."""
     global _poll_count
-    results = await asyncio.gather(*[_check_one(svc) for svc in SERVICE_REGISTRY], return_exceptions=True)
+    results = await asyncio.gather(
+        *[_check_one(svc) for svc in SERVICE_REGISTRY], return_exceptions=True
+    )
     for svc, res in zip(SERVICE_REGISTRY, results, strict=False):
         if isinstance(res, Exception):
             res = {"name": svc["name"], "port": svc["port"], "status": "down", "error": str(res)}
         _latest[svc["name"]] = res
         try:
             _persist_check(res)
-        except Exception:
+        except Exception:  # noqa: BLE001 — persist errors must not abort polling
             pass
     _poll_count += 1
 

@@ -119,9 +119,15 @@ class LimitMonitor:
                     (provider, now, now, now),
                 )
                 return {
-                    "provider": provider, "daily_req": 0, "hourly_req": 0,
-                    "daily_tokens": 0, "day_start": now, "hour_start": now,
-                    "consecutive_errors": 0, "cooldown_until": 0, "last_updated": now,
+                    "provider": provider,
+                    "daily_req": 0,
+                    "hourly_req": 0,
+                    "daily_tokens": 0,
+                    "day_start": now,
+                    "hour_start": now,
+                    "consecutive_errors": 0,
+                    "cooldown_until": 0,
+                    "last_updated": now,
                 }
             return dict(row)
 
@@ -140,16 +146,28 @@ class LimitMonitor:
                     " hourly_req=0, hour_start=?, last_updated=? WHERE provider=?",
                     (now, now, now, provider),
                 )
-                row = {**row, "daily_req": 0, "daily_tokens": 0, "day_start": now,
-                       "hourly_req": 0, "hour_start": now, "last_updated": now}
+                row = {
+                    **row,
+                    "daily_req": 0,
+                    "daily_tokens": 0,
+                    "day_start": now,
+                    "hourly_req": 0,
+                    "hour_start": now,
+                    "last_updated": now,
+                }
             elif reset_day:
                 conn.execute(
                     "UPDATE provider_usage SET daily_req=0, daily_tokens=0,"
                     " day_start=?, last_updated=? WHERE provider=?",
                     (now, now, provider),
                 )
-                row = {**row, "daily_req": 0, "daily_tokens": 0, "day_start": now,
-                       "last_updated": now}
+                row = {
+                    **row,
+                    "daily_req": 0,
+                    "daily_tokens": 0,
+                    "day_start": now,
+                    "last_updated": now,
+                }
             else:
                 conn.execute(
                     "UPDATE provider_usage SET hourly_req=0, hour_start=?,"
@@ -223,9 +241,8 @@ class LimitMonitor:
             or _over(row["hourly_req"], hourly_limit, self.HARD_STOP_THRESHOLD)
             or _over(row["daily_tokens"], token_limit, self.HARD_STOP_THRESHOLD)
         )
-        should_rotate = (
-            _over(row["daily_req"], daily_limit, self.ROTATE_THRESHOLD)
-            or _over(row["hourly_req"], hourly_limit, self.ROTATE_THRESHOLD)
+        should_rotate = _over(row["daily_req"], daily_limit, self.ROTATE_THRESHOLD) or _over(
+            row["hourly_req"], hourly_limit, self.ROTATE_THRESHOLD
         )
 
         available = not hard_stopped and not in_cooldown
@@ -274,13 +291,27 @@ class LimitMonitor:
 
         # Pick active provider (highest priority available not rotating)
         priority_order = [
-            "ollama", "groq", "gemini", "cerebras", "sambanova",
-            "openrouter", "huggingface", "together", "deepseek",
-            "cloudflare_ai", "offline",
+            "ollama",
+            "groq",
+            "gemini",
+            "cerebras",
+            "sambanova",
+            "openrouter",
+            "huggingface",
+            "together",
+            "deepseek",
+            "cloudflare_ai",
+            "offline",
         ]
         active = next(
-            (p for p in priority_order if statuses.get(p) and statuses[p].available and not statuses[p].should_rotate),
-            next((p for p in priority_order if statuses.get(p) and statuses[p].available), "offline"),
+            (
+                p
+                for p in priority_order
+                if statuses.get(p) and statuses[p].available and not statuses[p].should_rotate
+            ),
+            next(
+                (p for p in priority_order if statuses.get(p) and statuses[p].available), "offline"
+            ),
         )
 
         return {
@@ -304,9 +335,17 @@ class LimitMonitor:
 
     def get_optimal_provider(self) -> Optional[str]:
         priority_order = [
-            "ollama", "groq", "gemini", "cerebras", "sambanova",
-            "openrouter", "huggingface", "together", "deepseek",
-            "cloudflare_ai", "offline",
+            "ollama",
+            "groq",
+            "gemini",
+            "cerebras",
+            "sambanova",
+            "openrouter",
+            "huggingface",
+            "together",
+            "deepseek",
+            "cloudflare_ai",
+            "offline",
         ]
         # First: available and not rotating
         for p in priority_order:
