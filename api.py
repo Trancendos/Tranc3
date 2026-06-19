@@ -1467,6 +1467,116 @@ async def chat(
     return None
 
 
+# ── Streaming chat endpoint ───────────────────────────────────────────────────
+
+@app.post(
+    "/chat/stream",
+    tags=["inference"],
+    summary="Stream a chat response (SSE)",
+    description=(
+        "Streaming variant of `/chat`. Returns Server-Sent Events (SSE) with token-by-token "
+        "output. Tries Ollama → llama.cpp → gateway simulation in order. "
+        "Each event: `data: {\"content\": \"token\"}`. Stream ends with `data: [DONE]`."
+    ),
+)
+async def chat_stream(
+    chat_req: ChatRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    from fastapi.responses import StreamingResponse as _StreamingResponse
+
+    user_id = current_user["id"]
+    tier = current_user.get("tier", "free")
+
+    try:
+        InputSanitizer.sanitize(chat_req.message)
+        tier_enforcer.check_and_increment(user_id, tier)
+    except ValueError as e:
+        raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=safe_error_detail(e, 400))
+
+    try:
+        from src.inference.streaming import stream_sse
+        from src.inference.conversation_store import get_conversation_store
+
+        # Build message list from session history if session_id provided
+        session_id = getattr(chat_req, "session_id", None) or f"stream-{user_id}"
+        store = get_conversation_store()
+        messages = store.get_messages(session_id)
+        if not messages:
+            messages = [{"role": "user", "content": chat_req.message}]
+        else:
+            messages.append({"role": "user", "content": chat_req.message})
+            store.add_message(session_id, "user", chat_req.message, str(user_id))
+
+        return _StreamingResponse(
+            stream_sse(messages, max_tokens=512),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as exc:
+        logger.error("Stream endpoint error: %s", sanitize_for_log(exc))
+        raise HTTPException(status_code=500, detail="Streaming unavailable")
+
+
+# ── Conversation history endpoints ────────────────────────────────────────────
+
+@app.get(
+    "/conversations/{session_id}",
+    tags=["inference"],
+    summary="Get conversation history",
+    description="Retrieve the full message history for a session.",
+)
+async def get_conversation(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        from src.inference.conversation_store import get_conversation_store
+        store = get_conversation_store()
+        messages = store.get_messages(session_id)
+        return {"session_id": session_id, "messages": messages, "count": len(messages)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500))
+
+
+@app.delete(
+    "/conversations/{session_id}",
+    tags=["inference"],
+    summary="Delete conversation history",
+)
+async def delete_conversation(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        from src.inference.conversation_store import get_conversation_store
+        get_conversation_store().delete_session(session_id)
+        return {"deleted": session_id}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500))
+
+
+# ── Thompson sampler stats ────────────────────────────────────────────────────
+
+@app.get(
+    "/luminous/providers",
+    tags=["inference"],
+    summary="AI provider health and Thompson sampler stats",
+    description="Shows belief scores, success/failure counts, and average latency for all AI providers.",
+)
+async def provider_stats(current_user: dict = Depends(get_current_user)):
+    try:
+        from src.inference.thompson_sampler import get_sampler
+        return {"providers": get_sampler().stats(), "ranked": get_sampler().rank_all()}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500))
+
+
 @app.get(
     "/languages",
     tags=["info"],
