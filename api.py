@@ -1237,6 +1237,41 @@ async def features():
     return feature_flags.get_all_flags()
 
 
+@app.get(
+    "/ai/providers",
+    tags=["system"],
+    summary="AI provider limit monitor dashboard",
+    description=(
+        "Zero-cost AI provider rotation status. Shows all 8 free-tier providers, "
+        "their current utilisation vs hard-stop thresholds (95%), which is active, "
+        "and which are rotating or hard-stopped. Managed by The Observatory (Norman Hawkins)."
+    ),
+)
+async def ai_providers():
+    try:
+        from src.ai_gateway.limit_monitor import monitor
+        return monitor.get_dashboard()
+    except Exception as exc:
+        return {"error": str(exc), "status": "limit_monitor_unavailable"}
+
+
+@app.get(
+    "/ai/providers/{provider}/reset",
+    tags=["system"],
+    summary="Reset provider usage counters (admin only)",
+    description="Manually reset daily/hourly counters for a provider. Use after a 24-hour window.",
+)
+async def ai_provider_reset(provider: str):
+    try:
+        from src.ai_gateway.limit_monitor import monitor, LimitMonitor
+        if provider not in LimitMonitor.LIMITS:
+            return {"error": f"Unknown provider: {provider}"}
+        monitor.reset_provider(provider)
+        return {"reset": True, "provider": provider}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 # ── Inference ─────────────────────────────────────────────────────────────────
 @app.post(
     "/chat",
