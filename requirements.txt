@@ -68,6 +68,10 @@ pyasn1==0.6.3
 #        PYSEC-2025-183 (header injection via unvalidated kid/typ claims)
 # Transitive via multiple auth paths — pinned explicitly to prevent downgrade.
 PyJWT==2.13.0
+# bcrypt: required by auth.py password hashing/verification.
+bcrypt==5.0.0
+# pyotp: required by the self-hosted Infinity MFA worker and worker import tests.
+pyotp==2.9.0
 # idna: fixes CVE-2026-45409 (quadratic complexity ReDoS on crafted labels)
 # Transitive via anyio, httpx, email-validator, requests — explicit pin required.
 idna==3.16

@@ -627,6 +627,38 @@ class TestStartupValidator:
             with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
                 validate_startup()
 
+    def test_validate_startup_prod_wildcard_cors_in_list(self):
+        """In production, wildcard mixed into explicit origins should raise."""
+        import src.core.startup_validator as sv_mod
+        from src.core.startup_validator import validate_startup
+
+        env = {}
+        env["ENVIRONMENT"] = "production"
+        env["SECRET_KEY"] = "a" * 32
+        env["JWT_SECRET"] = "b" * 32
+        env["DATABASE_URL"] = "sqlite:///test.db"
+        env["REDIS_URL"] = "redis://localhost:6379"
+        env["CORS_ORIGINS"] = "https://example.com,*"
+        with patch.object(sv_mod, "_IS_PROD", True), patch.dict(os.environ, env, clear=True):
+            with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+                validate_startup()
+
+    def test_validate_startup_reads_environment_dynamically(self):
+        """Production validation should not depend on import-time ENVIRONMENT."""
+        import src.core.startup_validator as sv_mod
+        from src.core.startup_validator import validate_startup
+
+        env = {}
+        env["ENVIRONMENT"] = "production"
+        env["SECRET_KEY"] = "a" * 32
+        env["JWT_SECRET"] = "b" * 32
+        env["DATABASE_URL"] = "sqlite:///test.db"
+        env["REDIS_URL"] = "redis://localhost:6379"
+        env["CORS_ORIGINS"] = "*"
+        with patch.object(sv_mod, "_IS_PROD", False), patch.dict(os.environ, env, clear=True):
+            with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+                validate_startup()
+
     def test_validate_startup_prod_missing_database_url(self):
         """In production, missing DATABASE_URL should raise RuntimeError."""
         import src.core.startup_validator as sv_mod

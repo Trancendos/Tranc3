@@ -85,6 +85,21 @@ RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "10"))
 AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "https://auth.trancendos.com")
 AUTH_BASE_URL = os.environ.get("AUTH_BASE_URL", "http://localhost:8005")
 
+
+def _cors_origins() -> list[str]:
+    raw = os.environ.get("CORS_ORIGINS")
+    environment = os.environ.get("ENVIRONMENT", "development").lower()
+    if not raw:
+        if environment == "production":
+            raise RuntimeError("CORS_ORIGINS must be set for Infinity in production.")
+        return ["http://localhost:3000", "http://localhost:8000"]
+
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if environment == "production" and (not origins or "*" in origins):
+        raise RuntimeError("CORS_ORIGINS cannot be '*' for Infinity in production.")
+    return origins
+
+
 # ── Models ─────────────────────────────────────────────────────────────────────
 
 

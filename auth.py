@@ -2,7 +2,9 @@
 # JWT token management + FastAPI dependency for current user
 
 import datetime
+import logging
 import os
+import secrets
 from typing import Optional
 
 import bcrypt
@@ -10,13 +12,30 @@ import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-# SECRET_KEY — defaults to a stable key if not set; set in production for security
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "tranc3-dev-secret-key-change-in-production-0a1b2c3d4e5f",
-)
+logger = logging.getLogger(__name__)
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+
+def _get_jwt_secret() -> str:
+    """Return the JWT signing secret, failing closed for production."""
+    secret = os.getenv("JWT_SECRET")
+    if secret:
+        return secret
+
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        raise RuntimeError(
+            "JWT_SECRET is not set. Set a strong random secret before issuing tokens."
+        )
+
+    generated = os.environ.setdefault("JWT_SECRET", secrets.token_hex(32))
+    logger.warning(
+        "JWT_SECRET not set — generated ephemeral JWT secret %s...; "
+        "tokens will not survive process restarts.",
+        generated[:8],
+    )
+    return generated
 
 
 class _BcryptContext:
@@ -77,16 +96,17 @@ class TokenManager:
         expires_delta: Optional[datetime.timedelta] = None,
     ) -> str:
         payload = data.copy()
-        expire = datetime.datetime.utcnow() + (
+        issued_at = datetime.datetime.now(datetime.timezone.utc)
+        expire = issued_at + (
             expires_delta or datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
-        payload.update({"exp": expire, "iat": datetime.datetime.utcnow(), "type": "access"})
-        return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        payload.update({"exp": expire, "iat": issued_at, "type": "access"})
+        return jwt.encode(payload, _get_jwt_secret(), algorithm=ALGORITHM)
 
     @staticmethod
     def decode_token(token: str) -> dict:
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=[ALGORITHM])
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token has expired") from None
         except jwt.InvalidTokenError:

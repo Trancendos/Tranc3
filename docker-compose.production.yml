@@ -395,7 +395,7 @@ services:
       - "traefik.http.routers.tranc3-ai.entrypoints=web"
       - "traefik.http.services.tranc3-ai.loadbalancer.server.port=8001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── The Void — Secrets Vault (Port 8002) ────────────────────────────
@@ -418,7 +418,7 @@ services:
       - "traefik.http.routers.infinity-void.rule=PathPrefix(`/api/void`)"
       - "traefik.http.routers.infinity-void.entrypoints=web"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── API Gateway (Port 8003) ─────────────────────────────────────────
@@ -442,7 +442,7 @@ services:
       - "traefik.http.routers.api-gateway.entrypoints=web"
       - "traefik.http.routers.api-gateway.priority=1"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── The Nexus — WebSocket API (Port 8004) ──────────────────────────
@@ -462,7 +462,7 @@ services:
       - "traefik.http.routers.infinity-ws.rule=PathPrefix(`/ws/`)"
       - "traefik.http.routers.infinity-ws.entrypoints=web"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8004/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Infinity Auth — OAuth2/SSO (Port 8005) ──────────────────────────
@@ -485,7 +485,7 @@ services:
       - "traefik.http.routers.infinity-auth.rule=PathPrefix(`/auth/`)"
       - "traefik.http.routers.infinity-auth.entrypoints=web"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8005/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ═══════════════════════════════════════════════════════════════════════
@@ -504,7 +504,7 @@ services:
     volumes:
       - users-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8006/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── The Observatory — Monitoring Dashboard (Port 8007) ──────────────
@@ -519,7 +519,7 @@ services:
     volumes:
       - monitoring-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8007/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Notifications Service (Port 8008) ───────────────────────────────
@@ -534,7 +534,7 @@ services:
     volumes:
       - notifications-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8008/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Infinity AI — AI API Gateway (Port 8009) ────────────────────────
@@ -554,7 +554,7 @@ services:
     volumes:
       - ai-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8009/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ═══════════════════════════════════════════════════════════════════════
@@ -573,7 +573,7 @@ services:
     volumes:
       - grid-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8010/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Products Service (Port 8011) ─────────────────────────────────────
@@ -588,7 +588,7 @@ services:
     volumes:
       - products-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8011/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Orders Service (Port 8012) ───────────────────────────────────────
@@ -603,7 +603,7 @@ services:
     volumes:
       - orders-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8012/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Payments Service (Port 8013) ─────────────────────────────────────
@@ -618,7 +618,7 @@ services:
     volumes:
       - payments-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8013/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8013/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Files Service (Port 8014) ────────────────────────────────────────
@@ -633,7 +633,7 @@ services:
     volumes:
       - files-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8014/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8014/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Identity Service (Port 8015) ─────────────────────────────────────
@@ -648,7 +648,7 @@ services:
     volumes:
       - identity-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8015/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8015/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ═══════════════════════════════════════════════════════════════════════
@@ -661,7 +661,7 @@ services:
     container_name: analytics-service-worker
     ports: ["8016:8016"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8016/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8016/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   search-service:
@@ -670,7 +670,7 @@ services:
     container_name: search-service-worker
     ports: ["8017:8017"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8017/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8017/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   email-service:
@@ -679,7 +679,7 @@ services:
     container_name: email-service-worker
     ports: ["8018:8018"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8018/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8018/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   sms-service:
@@ -688,7 +688,7 @@ services:
     container_name: sms-service-worker
     ports: ["8019:8019"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8019/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8019/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   storage-service:
@@ -697,7 +697,7 @@ services:
     container_name: storage-service-worker
     ports: ["8020:8020"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8020/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   cron-service:
@@ -706,7 +706,7 @@ services:
     container_name: cron-service-worker
     ports: ["8021:8021"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8021/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8021/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   queue-service:
@@ -715,7 +715,7 @@ services:
     container_name: queue-service-worker
     ports: ["8022:8022"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8022/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8022/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   cache-service:
@@ -724,7 +724,7 @@ services:
     container_name: cache-service-worker
     ports: ["8023:8023"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8023/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8023/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   config-service:
@@ -733,7 +733,7 @@ services:
     container_name: config-service-worker
     ports: ["8024:8024"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8024/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8024/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   audit-service:
@@ -742,7 +742,7 @@ services:
     container_name: audit-service-worker
     ports: ["8025:8025"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8025/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8025/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   rate-limit-service:
@@ -751,7 +751,7 @@ services:
     container_name: rate-limit-service-worker
     ports: ["8026:8026"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8026/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8026/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   geo-service:
@@ -760,7 +760,7 @@ services:
     container_name: geo-service-worker
     ports: ["8027:8027"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8027/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8027/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   cdn-service:
@@ -769,7 +769,7 @@ services:
     container_name: cdn-service-worker
     ports: ["8028:8028"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8028/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8028/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   health-aggregator:
@@ -778,7 +778,7 @@ services:
     container_name: health-aggregator-worker
     ports: ["8029:8029"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8029/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8029/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── P3 — Intelligence / AI Layer (8030–8038) ─────────────────────────────
@@ -789,7 +789,7 @@ services:
     container_name: gbrain-bridge-worker
     ports: ["8030:8030"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8030/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8030/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   topology-service:
@@ -798,7 +798,7 @@ services:
     container_name: topology-service-worker
     ports: ["8031:8031"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8031/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8031/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   ledger-service:
@@ -807,7 +807,7 @@ services:
     container_name: ledger-service-worker
     ports: ["8032:8032"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8032/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8032/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   model-router-service:
@@ -816,7 +816,7 @@ services:
     container_name: model-router-service-worker
     ports: ["8033:8033"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8033/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8033/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   workflow-engine-service:
@@ -825,7 +825,7 @@ services:
     container_name: workflow-engine-service-worker
     ports: ["8034:8034"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8034/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8034/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   skills-benchmark-service:
@@ -834,7 +834,7 @@ services:
     container_name: skills-benchmark-service-worker
     ports: ["8035:8035"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8035/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   langchain-integration-service:
@@ -843,7 +843,7 @@ services:
     container_name: langchain-integration-service-worker
     ports: ["8036:8036"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8036/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8036/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   deepagents-orchestrator-service:
@@ -852,7 +852,7 @@ services:
     container_name: deepagents-orchestrator-service-worker
     ports: ["8037:8037"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8037/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8037/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   vault-service:
@@ -865,7 +865,7 @@ services:
     volumes:
       - vault-service-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8038/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8038/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
@@ -1014,7 +1014,7 @@ services:
     volumes:
       - admin-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8044/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8044/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Infinity Shards — Pluggable Entity Power-Ups (Port 8045) ─────────────

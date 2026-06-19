@@ -13,6 +13,6 @@ USER worker
 
 EXPOSE 8025
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:8025/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8025/health', timeout=5).read()" || exit 1
 
 CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8025"]
