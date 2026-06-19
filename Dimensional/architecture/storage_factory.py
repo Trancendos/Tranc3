@@ -177,7 +177,24 @@ class LocalStorageProvider(StorageProvider):
 
     def __init__(self, root: Optional[Path] = None):
         self._root = root or _get_storage_root()
-        self._root.mkdir(parents=True, exist_ok=True)
+        try:
+            self._root.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            # The configured STORAGE_ROOT (e.g. a NAS mount such as
+            # /mnt/data/tranc3) may not exist or be writable in this
+            # environment. Fall back to a user-writable directory rather than
+            # crashing at construction time.
+            import tempfile
+
+            fallback = Path(tempfile.gettempdir()) / "tranc3-storage"
+            logger.warning(
+                "STORAGE_ROOT %s is not usable (%s); falling back to %s",
+                self._root,
+                exc,
+                fallback,
+            )
+            fallback.mkdir(parents=True, exist_ok=True)
+            self._root = fallback
         self._mode = SystemMode.TRUE_NAS
 
     async def read(self, path: str) -> bytes:

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 import time
 
 import pytest
@@ -25,6 +26,37 @@ for _var, _default in (
     ("INTERNAL_SECRET", "tranc3-test-internal-secret-do-not-use-in-prod"),
 ):
     os.environ[_var] = os.environ.get(_var) or _default
+
+# ── Redirect worker SQLite databases to a writable temp dir ──────────────────
+# Several workers default their DB path to "/data/..." (the production Docker
+# volume mount). That directory does not exist / is not writable in CI or local
+# test runs, so module-level `db = SomeDatabase()` instantiation would crash at
+# import time. Point every known worker DB-path env var at a per-run temp dir.
+_WORKER_DATA_DIR = os.environ.get("TRANC3_TEST_DATA_DIR") or tempfile.mkdtemp(
+    prefix="tranc3-test-data-"
+)
+os.makedirs(_WORKER_DATA_DIR, exist_ok=True)
+os.environ.setdefault("TRANC3_TEST_DATA_DIR", _WORKER_DATA_DIR)
+
+for _db_var, _db_file in (
+    ("AUTH_DATABASE_PATH", "auth.db"),
+    ("USERS_DATABASE_PATH", "users.db"),
+    ("BENCHMARK_DB_PATH", "benchmark.db"),
+    ("GATEWAY_DB_PATH", "gateway.db"),
+    ("INFINITY_ADMIN_DB_PATH", "infinity_admin.db"),
+    ("INFINITY_ONE_DB_PATH", "infinity_one.db"),
+    ("INFINITY_PORTAL_DB_PATH", "infinity_portal.db"),
+    ("LANGCHAIN_DB_PATH", "langchain.db"),
+    ("LEDGER_DB_PATH", "ledger.db"),
+    ("MODEL_ROUTER_DB_PATH", "model_router.db"),
+    ("SENTINEL_DB_PATH", "sentinel.db"),
+    ("TOPOLOGY_DB_PATH", "topology.db"),
+    ("VAULT_DB_PATH", "vault.db"),
+    ("WORKFLOW_DB_PATH", "workflow.db"),
+    ("GBRAIN_DB_PATH", "gbrain.db"),
+    ("KNOWLEDGE_DB_PATH", "knowledge.db"),
+):
+    os.environ[_db_var] = os.environ.get(_db_var) or os.path.join(_WORKER_DATA_DIR, _db_file)
 
 # ── Configure root test logger ────────────────────────────────────────────────
 logging.basicConfig(
