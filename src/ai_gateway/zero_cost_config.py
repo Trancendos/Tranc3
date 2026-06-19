@@ -449,7 +449,7 @@ def _check_ollama_available(host: str) -> bool:
     try:
         import urllib.request
 
-        urllib.request.urlopen(f"{host}/api/tags", timeout=2)
+        urllib.request.urlopen(f"{host}/api/tags", timeout=2)  # nosec B310 — Ollama health on configured localhost host
         return True
     except Exception:
         return False

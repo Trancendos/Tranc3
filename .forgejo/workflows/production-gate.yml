@@ -34,6 +34,7 @@ jobs:
             tests/test_health_metadata.py \
             tests/test_orchestrator_effective.py \
             tests/test_zero_cost_registry.py \
+            tests/test_url_validation.py \
             tests/test_adaptive_rotator.py \
             tests/test_api_startup_readiness.py \
             tests/test_production_readiness_stack.py \
@@ -79,6 +80,9 @@ jobs:
 
       - name: Pre-deploy quality gate (critical only)
         run: python3 scripts/pre_deploy_quality_gate.py
+
+      - name: Security dimension score
+        run: python3 scripts/security_score.py --min-percent 90
 
       - name: Production readiness scorecard
         run: python3 scripts/production_readiness_score.py

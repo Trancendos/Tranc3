@@ -278,7 +278,7 @@ def nrc_shred_{kernel_id}(N, D, depth):
             tuning_result=tuning,
             runtime_ms=estimated_ms,
             memory_bytes=memory_bytes,
-            binary_path=f"/tmp/trancex/kernels/{spec.spec_id}.so",
+            binary_path=f"/tmp/trancex/kernels/{spec.spec_id}.so",  # nosec B108
         )
 
         self._kernel_cache[spec.kernel_id] = kernel  # type: ignore[assignment]

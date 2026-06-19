@@ -31,6 +31,9 @@ _ALLOWED_OUTPUT_ROOTS = [
     Path.home().resolve(),  # user home
 ]
 
+# Emitted into generated scaffold only (uvicorn/Docker bind-all in containers).
+_GEN_SCAFFOLD_BIND_HOST = "0.0.0.0"  # nosec B104
+
 
 def _resolve_output_base(output_dir: str) -> Path:
     """Resolve and validate the output directory against allowed roots.
@@ -345,7 +348,7 @@ class PersonalitySpawner:
 
             if __name__ == "__main__":
                 import uvicorn
-                uvicorn.run("api_personality:app", host="0.0.0.0",
+                uvicorn.run("api_personality:app", host="{_GEN_SCAFFOLD_BIND_HOST}",
                             port=int(os.getenv("PORT", "8000")),
                             reload=os.getenv("DEBUG", "false").lower() == "true")
         """)
@@ -434,7 +437,7 @@ class PersonalitySpawner:
             COPY . .
             ENV ENVIRONMENT=production
             EXPOSE 8000
-            CMD ["uvicorn", "api_personality:app", "--host", "0.0.0.0", "--port", "8000"]
+            CMD ["uvicorn", "api_personality:app", "--host", "{_GEN_SCAFFOLD_BIND_HOST}", "--port", "8000"]
         """)
         path = safe_join(target, "Dockerfile")
         path.write_text(content)

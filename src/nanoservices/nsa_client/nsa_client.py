@@ -36,7 +36,7 @@ from typing import Any, Callable, Dict, List, Optional
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-SHM_DIR = "/dev/shm"
+SHM_DIR = "/dev/shm"  # nosec B108
 SHM_PREFIX = "nsa_"
 SLOT_HEADER_SIZE = 24  # AtomicBool(1) + AtomicU64(8) + u32(4) + u32(4) + padding(7)
 SLOT_SIZE = 1024

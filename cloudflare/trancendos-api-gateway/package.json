@@ -1,14 +1,12 @@
 {
-  "name": "infinity-void",
-  "version": "2.1.0",
+  "name": "trancendos-api-gateway",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240909.0",
-    "typescript": "^5.5.2",
     "wrangler": "^4.93.1"
   },
   "overrides": {

@@ -263,7 +263,7 @@ class HealthChecker:
         try:
             req = urllib.request.Request(url, method="GET")
             req.add_header("Accept", "application/json")
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 — static localhost SERVICE_REGISTRY URLs
                 body = json.loads(resp.read().decode())
                 result = {
                     "service": name,

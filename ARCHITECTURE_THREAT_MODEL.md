@@ -342,6 +342,7 @@ Each worker owns its own SQLite database. This micro-database-per-service patter
 | RR10 | Log storage exhaustion | Low | Medium | 4 | Mitigated (rotation + alerts) | SRE |
 | RR11 | Forgejo CI compromise | High | Low | 6 | Mitigated (isolated runners) | Security |
 | RR12 | Cross-service data inconsistency | Medium | Medium | 8 | Accepted (eventual consistency) | Architecture |
+| RR13 | Nanoservice POSIX shm via hostIPC | Medium | Low | 4 | Accepted (documented) | Platform — see `docs/HOSTIPC_RISK_ACCEPTANCE.md` |
 
 ---
 

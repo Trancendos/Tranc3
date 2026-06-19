@@ -1,7 +1,19 @@
 # flux/base/deployments.yaml
 # Core nanoservice deployments — NSA Broker, SHI Gateway, DNF Orchestrator
-# All deployments use hostIPC for /dev/shm shared memory IPC
+# hostIPC on Tier-1 pods: required for /dev/shm POSIX IPC (see docs/HOSTIPC_RISK_ACCEPTANCE.md)
 ---
+podSecurity: &podSecurity
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurity: &containerSecurity
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop: ["ALL"]
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,9 +34,13 @@ spec:
         tier: tier-1
     spec:
       hostIPC: true  # Required for /dev/shm shared memory IPC
+      securityContext:
+        <<: *podSecurity
       containers:
         - name: nsa-broker
           image: forgejo.local/trancendos/nsa-broker:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 7780
               name: http
@@ -58,12 +74,6 @@ spec:
               value: "64"
             - name: SLOT_SIZE
               value: "1024"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -85,9 +95,13 @@ spec:
         tier: tier-1
     spec:
       hostIPC: true
+      securityContext:
+        <<: *podSecurity
       containers:
         - name: shi-gateway
           image: forgejo.local/trancendos/shi-gateway:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8000
               name: http
@@ -120,12 +134,6 @@ spec:
           volumeMounts:
             - name: model-cache
               mountPath: /models
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: model-cache
           emptyDir:
@@ -152,9 +160,13 @@ spec:
         tier: tier-1
     spec:
       hostIPC: true
+      securityContext:
+        <<: *podSecurity
       containers:
         - name: dnf-orchestrator
           image: forgejo.local/trancendos/dnf-orchestrator:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8080
               name: http
@@ -182,12 +194,6 @@ spec:
               value: "10"
             - name: STEP_TIMEOUT
               value: "60"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -208,9 +214,13 @@ spec:
         app: daas-stream
         tier: tier-2
     spec:
+      securityContext:
+        <<: *podSecurity
       containers:
         - name: daas-stream
           image: forgejo.local/trancendos/daas-stream:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8090
               name: http
@@ -226,12 +236,6 @@ spec:
               value: "redpanda:9092"
             - name: OPA_URL
               value: "http://opa:8181"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -252,9 +256,13 @@ spec:
         app: fmd-distiller
         tier: tier-2
     spec:
+      securityContext:
+        <<: *podSecurity
       containers:
         - name: fmd-distiller
           image: forgejo.local/trancendos/fmd-distiller:latest
+          securityContext:
+            <<: *containerSecurity
           ports:
             - containerPort: 8070
               name: http
@@ -270,9 +278,3 @@ spec:
               value: "4.0"
             - name: ALPHA
               value: "0.7"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            capabilities:
-              drop: ["ALL"]

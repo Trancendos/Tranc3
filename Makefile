@@ -211,3 +211,9 @@ pre-commit-install:
 	pre-commit install --hook-type commit-msg
 
 security-full: security-install security-scan
+
+security-score:
+	@python3 scripts/security_score.py
+
+security-phases:
+	@python3 scripts/run_security_phases.py --cloud-only

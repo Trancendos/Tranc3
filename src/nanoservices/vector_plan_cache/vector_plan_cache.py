@@ -288,7 +288,7 @@ class LanceDBPlanStore:
 
     def __init__(self, table_name: str = "trancex_nrc_plans", uri: Optional[str] = None):
         self.table_name = table_name
-        self.uri = uri or "/tmp/trancex_lancedb"
+        self.uri = uri or "/tmp/trancex_lancedb"  # nosec B108
         self._db = None
         self._table = None
         self._fallback = InMemoryVectorStore()

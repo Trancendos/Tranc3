@@ -97,7 +97,7 @@ class NvdFeedIngestor:
                 self._url,
                 headers={"User-Agent": "Tranc3-Section7-CVEIngestor/1.0 (security-research)"},
             )
-            with urlopen(req, timeout=_DEFAULT_TIMEOUT) as resp:
+            with urlopen(req, timeout=_DEFAULT_TIMEOUT) as resp:  # nosec B310 — NVD HTTPS feed
                 raw_bytes = resp.read()
 
             if self._url.endswith(".gz"):
@@ -212,7 +212,7 @@ class CisaKevIngestor:
                 self._url,
                 headers={"User-Agent": "Tranc3-Section7-CVEIngestor/1.0"},
             )
-            with urlopen(req, timeout=_DEFAULT_TIMEOUT) as resp:
+            with urlopen(req, timeout=_DEFAULT_TIMEOUT) as resp:  # nosec B310 — CISA KEV HTTPS feed
                 data = json.loads(resp.read())
 
             vulns = data.get("vulnerabilities", [])
@@ -316,7 +316,7 @@ class OpenCveCompatIngestor:
                 headers["Authorization"] = f"Bearer {self._api_key}"
 
             req = Request(url, headers=headers)
-            with urlopen(req, timeout=_DEFAULT_TIMEOUT) as resp:
+            with urlopen(req, timeout=_DEFAULT_TIMEOUT) as resp:  # nosec B310 — CIRCL/NVD HTTPS API
                 data = json.loads(resp.read())
 
             results = data.get("results", data) if isinstance(data, dict) else data

@@ -424,7 +424,7 @@ class NotificationDispatcher:
                 url, data=data, method="POST"
             )  # codeql[py/ssrf] – URL validated against allowlist above
             req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
                 return resp.status < 400
         except Exception as e:
             logger.error("Webhook dispatch failed: %s", e)

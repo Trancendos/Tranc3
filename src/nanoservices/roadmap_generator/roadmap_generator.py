@@ -219,7 +219,7 @@ class SHIRoadmapAdvisor:
                 import urllib.request
 
                 req = urllib.request.Request(f"{self.shi_url}/health", method="GET")
-                with urllib.request.urlopen(req, timeout=3) as resp:
+                with urllib.request.urlopen(req, timeout=3) as resp:  # nosec B310 — SHI URL from env config
                     self._available = resp.status == 200
             except Exception:
                 self._available = False
@@ -239,7 +239,7 @@ class SHIRoadmapAdvisor:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310 — SHI URL from env config
                 result = json.loads(resp.read().decode())
                 text = result.get("choices", [{}])[0].get("text", "")
                 return self._parse_subtasks(text, task)
