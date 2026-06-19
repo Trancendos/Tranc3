@@ -8,3 +8,4 @@ python-jose[cryptography]==3.5.0
 pyasn1==0.6.3
 email-validator==2.2.0
 pyotp==2.9.0
+argon2-cffi>=23.1.0

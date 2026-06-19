@@ -33,6 +33,15 @@ import json
 import logging
 import os
 import secrets
+
+try:
+    from argon2 import PasswordHasher as _ArgonPH
+    from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
+
+    _ph = _ArgonPH(time_cost=2, memory_cost=65536, parallelism=2)
+    _ARGON2_AVAILABLE = True
+except ImportError:
+    _ARGON2_AVAILABLE = False
 import sqlite3
 import time
 import uuid
@@ -228,20 +237,38 @@ class AuthDatabase:
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using SHA-256 with salt (argon2 in production)."""
-    salt = secrets.token_hex(16)
-    hash_val = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
-    return f"{salt}:{hash_val}"
+    """Hash a password using argon2id (preferred) or PBKDF2-HMAC-SHA256 fallback."""
+    if _ARGON2_AVAILABLE:
+        return _ph.hash(password)
+    # fallback: PBKDF2-HMAC-SHA256 (better than plain SHA-256)
+    salt = os.urandom(32)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 260000)
+    return f"pbkdf2:{salt.hex()}:{dk.hex()}"
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify a password against stored hash."""
-    try:
-        salt, hash_val = stored_hash.split(":", 1)
-        computed = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
-        return hmac.compare_digest(hash_val, computed)
-    except (ValueError, AttributeError):
-        return False
+    """Verify a password against stored hash (supports argon2, pbkdf2, and legacy formats)."""
+    if stored_hash.startswith("$argon2") and _ARGON2_AVAILABLE:
+        try:
+            return _ph.verify(stored_hash, password)
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            return False
+    elif stored_hash.startswith("pbkdf2:"):
+        try:
+            _, salt_hex, dk_hex = stored_hash.split(":", 2)
+            salt = bytes.fromhex(salt_hex)
+            dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 260000)
+            return hmac.compare_digest(dk.hex(), dk_hex)
+        except (ValueError, AttributeError):
+            return False
+    else:
+        # legacy salt:hash format (PBKDF2-SHA256 with string salt, 100k iterations)
+        try:
+            salt, hash_val = stored_hash.split(":", 1)
+            computed = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
+            return hmac.compare_digest(hash_val, computed)
+        except (ValueError, AttributeError):
+            return False
 
 
 def hash_backup_code(code: str) -> str:

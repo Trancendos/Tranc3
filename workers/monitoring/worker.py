@@ -797,11 +797,11 @@ async def collect_health():
             report = HealthReport(
                 service_name=svc["name"],
                 status=HealthStatus.unhealthy,
-                metadata={"error": safe_error_detail(e, 500)},
+                metadata={"error": str(e)},
             )
             db.store_health(report)
             results.append(
-                {"service": svc["name"], "status": "unhealthy", "error": safe_error_detail(e, 500)},
+                {"service": svc["name"], "status": "unhealthy", "error": str(e)},
             )
 
     await ws_manager.broadcast("health_collection", {"results": results})
