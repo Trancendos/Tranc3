@@ -43,6 +43,7 @@ try:
 except ImportError:
     _ARGON2_AVAILABLE = False
 import sqlite3
+import tempfile
 import time
 import uuid
 from contextlib import asynccontextmanager, contextmanager

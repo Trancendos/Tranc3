@@ -37,6 +37,7 @@ import asyncio
 import logging
 import os
 import shutil
+import tempfile
 import threading
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
@@ -73,9 +74,20 @@ def _get_system_mode() -> SystemMode:
 
 
 def _get_storage_root() -> Path:
-    """Get the local storage root directory."""
-    raw = os.getenv("STORAGE_ROOT", "/mnt/data/tranc3")
-    return Path(raw)
+    """Get the local storage root directory.
+
+    Honours ``STORAGE_ROOT``; falls back to ``/mnt/data/tranc3`` when its
+    parent is writable (production), otherwise to ``$TRANC3_DATA_DIR`` or the
+    system temp directory so local/CI usage never trips on a read-only mount.
+    """
+    raw = os.getenv("STORAGE_ROOT")
+    if raw:
+        return Path(raw)
+    default = Path("/mnt/data/tranc3")
+    if default.parent.is_dir() and os.access(default.parent, os.W_OK):
+        return default
+    fallback = os.getenv("TRANC3_DATA_DIR") or tempfile.gettempdir()
+    return Path(fallback) / "tranc3-storage"
 
 
 # ---------------------------------------------------------------------------

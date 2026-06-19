@@ -66,9 +66,9 @@
     "rule_id": "PY-008",
     "directory": "src/master/adapters",
     "file_glob": "src/master/adapters/*.py",
-    "observation_count": 90,
+    "observation_count": 98,
     "false_positive_count": 0,
-    "last_seen": "2026-05-29T10:57:42.653698+00:00",
+    "last_seen": "2026-05-31T17:13:02.738328+00:00",
     "notes": ""
   },
   "CWE-117:src/gateway": {
@@ -93,9 +93,9 @@
     "rule_id": "CWE-022",
     "directory": "src/evaluation",
     "file_glob": "src/evaluation/*.py",
-    "observation_count": 45,
+    "observation_count": 49,
     "false_positive_count": 0,
-    "last_seen": "2026-05-29T10:57:42.653730+00:00",
+    "last_seen": "2026-05-31T17:13:02.737717+00:00",
     "notes": ""
   },
   "CWE-022:src/training": {
@@ -111,9 +111,9 @@
     "rule_id": "PY-008",
     "directory": "src/training",
     "file_glob": "src/training/*.py",
-    "observation_count": 45,
+    "observation_count": 49,
     "false_positive_count": 0,
-    "last_seen": "2026-05-29T10:57:42.653750+00:00",
+    "last_seen": "2026-05-31T17:13:02.738206+00:00",
     "notes": ""
   },
   "CWE-117:src/research": {
