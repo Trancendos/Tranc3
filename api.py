@@ -1251,11 +1251,12 @@ async def ai_providers():
     try:
         from src.ai_gateway.limit_monitor import monitor
         return monitor.get_dashboard()
-    except Exception as exc:
-        return {"error": str(exc), "status": "limit_monitor_unavailable"}
+    except Exception:
+        logger.exception("ai_providers: limit_monitor unavailable")
+        return {"error": "limit_monitor_unavailable", "status": "unavailable"}
 
 
-@app.get(
+@app.post(
     "/ai/providers/{provider}/reset",
     tags=["system"],
     summary="Reset provider usage counters (admin only)",
@@ -1263,13 +1264,14 @@ async def ai_providers():
 )
 async def ai_provider_reset(provider: str):
     try:
-        from src.ai_gateway.limit_monitor import monitor, LimitMonitor
+        from src.ai_gateway.limit_monitor import LimitMonitor, monitor
         if provider not in LimitMonitor.LIMITS:
-            return {"error": f"Unknown provider: {provider}"}
+            return {"error": "unknown_provider"}
         monitor.reset_provider(provider)
         return {"reset": True, "provider": provider}
-    except Exception as exc:
-        return {"error": str(exc)}
+    except Exception:
+        logger.exception("ai_provider_reset: failed for provider=%s", provider)
+        return {"error": "reset_failed"}
 
 
 # ── Inference ─────────────────────────────────────────────────────────────────

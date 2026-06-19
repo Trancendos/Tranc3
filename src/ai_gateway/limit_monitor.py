@@ -10,7 +10,6 @@ the system enters OFFLINE mode (deterministic stub) rather than paying.
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sqlite3
@@ -18,13 +17,18 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Lock
+from threading import RLock
 from typing import Dict, Generator, Optional
 
 logger = logging.getLogger("tranc3.ai_gateway.limit_monitor")
 
 _DB_PATH = Path(os.getenv("AI_GATEWAY_DB", "/tmp/ai_gateway_limits.db"))
-_lock = Lock()
+_lock = RLock()
+
+# Whitelist of columns that may appear in dynamic UPDATE clauses
+_ALLOWED_RESET_COLS = frozenset(
+    {"daily_req", "daily_tokens", "day_start", "hourly_req", "hour_start", "last_updated"}
+)
 
 
 @contextmanager
@@ -135,11 +139,14 @@ class LimitMonitor:
             updates.update(hourly_req=0, hour_start=now)
         if updates:
             updates["last_updated"] = now
-            set_clause = ", ".join(f"{k} = ?" for k in updates)
+            # Only allow whitelisted column names to prevent SQL injection
+            safe_keys = [k for k in updates if k in _ALLOWED_RESET_COLS]
+            set_clause = ", ".join(f"{k} = ?" for k in safe_keys)
+            values = [updates[k] for k in safe_keys]
             with _db() as conn:
                 conn.execute(
-                    f"UPDATE provider_usage SET {set_clause} WHERE provider = ?",
-                    (*updates.values(), provider),
+                    f"UPDATE provider_usage SET {set_clause} WHERE provider = ?",  # noqa: S608
+                    (*values, provider),
                 )
             row = {**row, **updates}
         return row
@@ -175,8 +182,12 @@ class LimitMonitor:
                        WHERE provider = ?""",
                     (now, provider),
                 )
-                row = self._get_row(provider)
-                if row["consecutive_errors"] >= 5:
+                # Read consecutive_errors from the same connection to avoid stale reads
+                row = conn.execute(
+                    "SELECT consecutive_errors FROM provider_usage WHERE provider = ?",
+                    (provider,),
+                ).fetchone()
+                if row and row["consecutive_errors"] >= 5:
                     cooldown_until = now + 300  # 5-min cooldown
                     conn.execute(
                         "UPDATE provider_usage SET cooldown_until = ? WHERE provider = ?",

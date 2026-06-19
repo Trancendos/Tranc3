@@ -24,7 +24,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 logger = logging.getLogger("tranc3.adaptive_fabric")
@@ -395,25 +395,29 @@ class QuantumRouter:
         if not callables:
             raise ValueError("QuantumRouter.race: no callables provided")
 
-        tasks = [asyncio.create_task(fn(*args, **kwargs)) for fn in callables]
-        try:
+        pending = {asyncio.create_task(fn(*args, **kwargs)) for fn in callables}
+        end_time = time.time() + self.timeout_s
+        while pending:
+            remaining = end_time - time.time()
+            if remaining <= 0:
+                break
             done, pending = await asyncio.wait(
-                tasks,
+                pending,
                 return_when=asyncio.FIRST_COMPLETED,
-                timeout=self.timeout_s,
+                timeout=remaining,
             )
-            for task in pending:
-                task.cancel()
+            if not done:
+                break
             for task in done:
-                exc = task.exception()
-                if exc is None:
+                if task.exception() is None:
+                    for p in pending:
+                        p.cancel()
                     return task.result()
-            # All done tasks failed — try pending (shouldn't happen but defensive)
-            raise RuntimeError("QuantumRouter: all providers failed")
-        except asyncio.TimeoutError:
-            for task in tasks:
-                task.cancel()
-            raise TimeoutError(f"QuantumRouter: timeout after {self.timeout_s}s")
+                # Task failed — log and continue racing remaining tasks
+                logger.debug("QuantumRouter: provider task failed: %s", task.exception())
+        for p in pending:
+            p.cancel()
+        raise RuntimeError("QuantumRouter: all providers failed or timed out")
 
 
 # ─── Liquidic Interface ──────────────────────────────────────────────────────
@@ -511,8 +515,8 @@ class ProactiveCache:
                 try:
                     value = await fetcher(key) if asyncio.iscoroutinefunction(fetcher) else fetcher(key)
                     self.put(key, value, score=0.5)
-                except Exception:
-                    pass
+                except Exception:  # noqa: BLE001 — prefetch errors are non-fatal by design
+                    logger.debug("ProactiveCache.prefetch: key=%s fetch failed", key)
 
 
 # ─── Global Fabric ───────────────────────────────────────────────────────────

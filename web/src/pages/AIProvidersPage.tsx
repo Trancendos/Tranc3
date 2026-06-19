@@ -69,22 +69,28 @@ export function AIProvidersPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch(`${API}/ai/providers`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setData(await res.json())
-      setLastUpdate(new Date())
-      setError(null)
-    } catch (e) {
-      setError(String(e))
-    }
-  }
-
   useEffect(() => {
+    let active = true
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${API}/ai/providers`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json()
+        if (active) {
+          setData(json)
+          setLastUpdate(new Date())
+          setError(null)
+        }
+      } catch (e) {
+        if (active) setError(String(e))
+      }
+    }
     fetchData()
     const t = setInterval(fetchData, 15000)
-    return () => clearInterval(t)
+    return () => {
+      active = false
+      clearInterval(t)
+    }
   }, [])
 
   return (

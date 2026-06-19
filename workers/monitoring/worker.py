@@ -44,7 +44,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -70,6 +69,12 @@ _LOG_HANDLER.setFormatter(
 )
 logging.basicConfig(level=logging.INFO, handlers=[_LOG_HANDLER])
 logger = logging.getLogger(WORKER_NAME)
+
+
+def safe_error_detail(exc: Exception, _status: int = 500) -> str:
+    """Return a safe, non-leaking error string (type name only) for API responses."""
+    return type(exc).__name__
+
 
 # ---------------------------------------------------------------------------
 # Prometheus metrics (self-instrumentation)

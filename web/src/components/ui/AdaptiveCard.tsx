@@ -73,22 +73,29 @@ export function AdaptiveCard({
 
   useEffect(() => {
     if (!liveUrl) return
+    let active = true
     const fetch_ = async () => {
       setLoading(true)
       try {
         const res = await fetch(liveUrl)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        setLiveData(await res.json() as object)
-        setLiveError(null)
+        const data = await res.json() as object
+        if (active) {
+          setLiveData(data)
+          setLiveError(null)
+        }
       } catch (e) {
-        setLiveError(String(e))
+        if (active) setLiveError(String(e))
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
     fetch_()
     timerRef.current = setInterval(fetch_, pollInterval)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+    return () => {
+      active = false
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
   }, [liveUrl, pollInterval])
 
   return (
