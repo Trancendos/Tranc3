@@ -145,8 +145,11 @@ def _validate_jwt_token(
     except ImportError:
         logger.error("python-jose not installed — JWT validation unavailable")
         return None
-    except Exception as e:
+    except JWTError as e:
         logger.warning("JWT validation failed: %s", str(e)[:200])
+        return None
+    except Exception as e:
+        logger.exception("Unexpected JWT validation error: %s", str(e)[:200])
         return None
 
 

@@ -241,6 +241,9 @@ download-model:
 security-scan:
 	bash scripts/security_scan.sh
 
+pr-audit:
+	python3 scripts/pr_readiness_audit.py --state open --limit 100 --fail-on-unstable
+
 security-install:
 	$(PIP) install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.100.0 pre-commit==3.7.1 --quiet
 
