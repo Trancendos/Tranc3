@@ -77,7 +77,10 @@ JWT_SECRET: str = _jwt_secret_raw
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_MINUTES = int(os.environ.get("JWT_EXPIRY_MINUTES", "60"))
 REFRESH_EXPIRY_DAYS = int(os.environ.get("REFRESH_EXPIRY_DAYS", "30"))
-DATABASE_PATH = os.environ.get("AUTH_DATABASE_PATH", "/data/auth.db")
+DATABASE_PATH = os.environ.get(
+    "AUTH_DATABASE_PATH",
+    str(Path(__file__).parent / "data" / "auth.db"),
+)
 RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "10"))
 AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "https://auth.trancendos.com")
 AUTH_BASE_URL = os.environ.get("AUTH_BASE_URL", "http://localhost:8005")

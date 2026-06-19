@@ -74,7 +74,8 @@ def _get_system_mode() -> SystemMode:
 
 def _get_storage_root() -> Path:
     """Get the local storage root directory."""
-    raw = os.getenv("STORAGE_ROOT", "/mnt/data/tranc3")
+    default = str(Path(__file__).parent.parent.parent / "data" / "tranc3")
+    raw = os.getenv("STORAGE_ROOT", default)
     return Path(raw)
 
 
