@@ -52,7 +52,7 @@ export default function ExecutionPanel({ executionId, onClose }: Props) {
     <div className="w-72 bg-gray-900 border-l border-gray-700 flex flex-col flex-shrink-0">
       <div className="p-3 border-b border-gray-700 flex items-center justify-between">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Execution</p>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-xs">✕</button>
+        <button onClick={onClose} aria-label="Close execution panel" className="text-gray-500 hover:text-gray-300 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded px-1">✕</button>
       </div>
 
       {!status ? (
