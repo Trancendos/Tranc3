@@ -240,6 +240,12 @@ class MonitoringDatabase:
                 ),
             )
 
+    @staticmethod
+    def _parse_health_row(r: sqlite3.Row) -> Dict[str, Any]:
+        d = dict(r)
+        d["metadata"] = json.loads(d.get("metadata") or "{}")
+        return d
+
     def get_latest_health(self, service_name: Optional[str] = None) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         if service_name:
@@ -251,7 +257,7 @@ class MonitoringDatabase:
             rows = conn.execute(
                 "SELECT hr.* FROM health_reports hr INNER JOIN (SELECT service_name, MAX(timestamp) as max_ts FROM health_reports GROUP BY service_name) latest ON hr.service_name = latest.service_name AND hr.timestamp = latest.max_ts",
             ).fetchall()
-        return [dict(r) for r in rows]
+        return [self._parse_health_row(r) for r in rows]
 
     def get_health_history(self, service_name: str, hours: int = 24) -> List[Dict[str, Any]]:
         conn = self._get_conn()
@@ -260,7 +266,7 @@ class MonitoringDatabase:
             "SELECT * FROM health_reports WHERE service_name=? AND timestamp>=? ORDER BY timestamp ASC",
             (service_name, cutoff),
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [self._parse_health_row(r) for r in rows]
 
     # -- Metrics --
 
@@ -344,7 +350,12 @@ class MonitoringDatabase:
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM alert_rules ORDER BY name").fetchall()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["labels"] = json.loads(d.get("labels") or "{}")
+            result.append(d)
+        return result
 
     def delete_alert_rule(self, rule_id: str) -> bool:
         with self._cursor() as cur:
@@ -397,7 +408,12 @@ class MonitoringDatabase:
                 rows = conn.execute(
                     "SELECT * FROM alerts ORDER BY fired_at DESC",
                 ).fetchall()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["labels"] = json.loads(d.get("labels") or "{}")
+            result.append(d)
+        return result
 
     def resolve_alert(self, alert_id: str) -> bool:
         with self._cursor() as cur:
@@ -541,6 +557,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    from src.observability.otel import init_otel
+
+    init_otel(service_name="tranc3.monitoring")
+    FastAPIInstrumentor.instrument_app(app)
+except Exception as _otel_exc:  # noqa: BLE001
+    logger.warning("OTel instrumentation unavailable: %s", _otel_exc)
 
 
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
@@ -785,10 +811,12 @@ async def collect_health():
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.get(svc["url"], headers={"Accept": "application/json"})
-                body = resp.json()
+            body = resp.json() if "application/json" in resp.headers.get("content-type", "") else {}
+            status = HealthStatus.healthy if resp.is_success else HealthStatus.unhealthy
             report = HealthReport(
                 service_name=svc["name"],
-                status=HealthStatus.healthy,
+                status=status,
+                response_time_ms=resp.elapsed.total_seconds() * 1000 if resp.elapsed else None,
                 metadata=body,
             )
             db.store_health(report)
