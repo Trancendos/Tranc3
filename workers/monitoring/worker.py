@@ -24,6 +24,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from shared_core.error_handlers import safe_error_detail
 from fastapi import (
     APIRouter,
     Depends,

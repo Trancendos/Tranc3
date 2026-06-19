@@ -11,3 +11,6 @@
 ## 2024-05-19 - Added confirmation to destructive actions
 **Learning:** Destructive actions without a confirmation prompt can easily result in accidental data loss for users when they click icon-only buttons like the trash can by mistake.
 **Action:** Always wrap destructive actions (like deleting API keys) in a confirmation dialogue (e.g. `window.confirm`) to prevent accidental deletion, and ensure icon-only buttons have descriptive `title` tooltips for clarity on hover.
+## 2024-05-18 - Missing ARIA labels pattern in modal dismiss buttons
+**Learning:** Found an accessibility pattern specific to this app's components: various custom implementation of modal/panel components (`DigitalGridPage.tsx`, `ExecutionPanel.tsx`, `Dashboard.tsx`) have icon-only "✕" dismiss/close buttons without `aria-label`s or keyboard focus rings, leading to accessibility violations with screen readers.
+**Action:** Always verify newly created floating panels or sidebars include proper keyboard-navigable and screen-reader compliant close buttons with `focus-visible` utilities.

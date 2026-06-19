@@ -143,7 +143,9 @@ async def _lookup_ipapi_co(ip: str) -> Optional[dict]:
     params = {"ip": ip}
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(url, params=params, headers={"User-Agent": "trancendos-geo-service/1.0"})
+            resp = await client.get(
+                url, params=params, headers={"User-Agent": "trancendos-geo-service/1.0"}
+            )
         if resp.status_code == 200:
             d = resp.json()
             if "error" not in d:

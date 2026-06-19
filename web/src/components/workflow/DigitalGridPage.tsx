@@ -165,7 +165,7 @@ export default function DigitalGridPage() {
               <div className="w-64 bg-gray-900 border-l border-gray-700 flex-shrink-0 p-3 overflow-y-auto">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Properties</p>
-                  <button onClick={() => setSelectedId(null)} className="text-gray-500 hover:text-gray-300 text-xs">✕</button>
+                  <button onClick={() => setSelectedId(null)} aria-label="Close properties panel" className="text-gray-500 hover:text-gray-300 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded px-1">✕</button>
                 </div>
                 <div className="space-y-3">
                   <div>
