@@ -22,7 +22,10 @@ from typing import Dict, Generator, Optional
 
 logger = logging.getLogger("tranc3.ai_gateway.limit_monitor")
 
-_DB_PATH = Path(os.getenv("AI_GATEWAY_DB", "/tmp/ai_gateway_limits.db"))
+_DB_PATH = Path(
+    os.getenv("AI_GATEWAY_DB", str(Path(__file__).parent / "data" / "ai_gateway_limits.db"))
+)
+_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 _lock = RLock()
 
 
@@ -90,14 +93,11 @@ class LimitMonitor:
     LIMITS: Dict[str, tuple] = {
         "ollama": (-1, -1, -1),
         "groq": (14400, 250, 500000),
-        "gemini": (1500, 60, -1),
         "cerebras": (1440, 30, 1000000),
-        "sambanova": (500, 60, -1),
         "openrouter": (200, 50, -1),
         "huggingface": (1000, 100, -1),
         "together": (500, 60, 100000),
         "deepseek": (500, 60, -1),
-        "cloudflare_ai": (10000, 500, -1),
         "offline": (-1, -1, -1),
     }
 
@@ -105,31 +105,19 @@ class LimitMonitor:
     HARD_STOP_THRESHOLD = 0.95
 
     def _get_row(self, provider: str) -> dict:
+        now = time.time()
         with _db() as conn:
+            conn.execute(
+                """INSERT OR IGNORE INTO provider_usage
+                   (provider, daily_req, hourly_req, daily_tokens,
+                    day_start, hour_start, consecutive_errors, cooldown_until, last_updated)
+                   VALUES (?, 0, 0, 0, ?, ?, 0, 0, ?)""",
+                (provider, now, now, now),
+            )
             row = conn.execute(
                 "SELECT * FROM provider_usage WHERE provider = ?", (provider,)
             ).fetchone()
-            if not row:
-                now = time.time()
-                conn.execute(
-                    """INSERT INTO provider_usage
-                       (provider, daily_req, hourly_req, daily_tokens,
-                        day_start, hour_start, consecutive_errors, cooldown_until, last_updated)
-                       VALUES (?, 0, 0, 0, ?, ?, 0, 0, ?)""",
-                    (provider, now, now, now),
-                )
-                return {
-                    "provider": provider,
-                    "daily_req": 0,
-                    "hourly_req": 0,
-                    "daily_tokens": 0,
-                    "day_start": now,
-                    "hour_start": now,
-                    "consecutive_errors": 0,
-                    "cooldown_until": 0,
-                    "last_updated": now,
-                }
-            return dict(row)
+        return dict(row)
 
     def _reset_if_needed(self, provider: str, row: dict) -> dict:
         now = time.time()
@@ -293,14 +281,11 @@ class LimitMonitor:
         priority_order = [
             "ollama",
             "groq",
-            "gemini",
             "cerebras",
-            "sambanova",
             "openrouter",
             "huggingface",
             "together",
             "deepseek",
-            "cloudflare_ai",
             "offline",
         ]
         active = next(
@@ -337,14 +322,11 @@ class LimitMonitor:
         priority_order = [
             "ollama",
             "groq",
-            "gemini",
             "cerebras",
-            "sambanova",
             "openrouter",
             "huggingface",
             "together",
             "deepseek",
-            "cloudflare_ai",
             "offline",
         ]
         # First: available and not rotating
