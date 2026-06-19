@@ -8,6 +8,7 @@ import DigitalGridPage from './components/workflow/DigitalGridPage'
 import LoginPage from './LoginPage'
 import NotificationsPage from './pages/NotificationsPage'
 import ServicesPage from './pages/ServicesPage'
+import AIProvidersPage from './pages/AIProvidersPage'
 import AuthGuard from './components/AuthGuard'
 import RealtimeStatusBar from './components/ui/RealtimeStatusBar'
 
@@ -28,6 +29,7 @@ export default function AppRouter() {
         <Route path="/grid" element={<AuthGuard><DigitalGridPage /></AuthGuard>} />
         <Route path="/notifications" element={<AuthGuard><NotificationsPage /></AuthGuard>} />
         <Route path="/services" element={<AuthGuard><ServicesPage /></AuthGuard>} />
+        <Route path="/ai-providers" element={<AuthGuard><AIProvidersPage /></AuthGuard>} />
         {isDev && (
           <Route path="/ux-showcase" element={<AuthGuard><UxShowcasePage /></AuthGuard>} />
         )}
