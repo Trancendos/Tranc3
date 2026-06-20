@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { ListTodo, RefreshCw, Play, Pause, Trash2, CheckCircle, Clock, XCircle } from 'lucide-react'
 
-const CF_QUEUE_URL = 'https://tranc3-queue.luminous-aimastermind.workers.dev'
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+const QUEUE_API = API.replace(':8000', ':8027')
 
 interface QueueStats {
   name: string
@@ -57,7 +57,7 @@ export default function QueuePage() {
   const fetchStatus = useCallback(async () => {
     setLoading(true)
     const endpoints = [
-      `${CF_QUEUE_URL}/health`,
+      `${QUEUE_API}/health`,
       `${API.replace(':8000', ':8027')}/health`,
     ]
 

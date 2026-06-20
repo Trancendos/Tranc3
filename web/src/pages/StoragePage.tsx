@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Database, RefreshCw, HardDrive, Cloud, Server, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 
-const CF_STORAGE_URL = 'https://tranc3-storage.luminous-aimastermind.workers.dev'
+const _API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+const STORAGE_API = _API.replace(':8000', ':8026')
 
 interface StoreBucket {
   id: string
@@ -72,7 +73,7 @@ export default function StoragePage() {
   const fetchStatus = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch(`${CF_STORAGE_URL}/health`, { signal: AbortSignal.timeout(5000) })
+      const r = await fetch(`${STORAGE_API}/health`, { signal: AbortSignal.timeout(5000) })
       if (r.ok) {
         const body = await r.json().catch(() => ({}))
         if (body.buckets) {
