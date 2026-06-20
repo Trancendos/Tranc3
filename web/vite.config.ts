@@ -56,6 +56,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/dagents/, ''),
             },
+            // Audit service (The Observatory trail) — Port 8017
+            '/audit': {
+                target: 'http://localhost:8017',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/audit/, ''),
+            },
             '/api': {
                 target: process.env.VITE_API_URL || 'http://localhost:8000',
                 changeOrigin: true,
