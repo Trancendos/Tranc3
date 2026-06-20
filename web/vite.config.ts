@@ -98,6 +98,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/audit/, ''),
             },
+            // Email service — Port 8018
+            '/email-svc': {
+                target: 'http://localhost:8018',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/email-svc/, ''),
+            },
             // Geo service — Port 8027
             '/geo-svc': {
                 target: 'http://localhost:8027',

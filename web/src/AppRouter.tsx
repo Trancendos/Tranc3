@@ -33,6 +33,7 @@ import CronPage from './pages/CronPage'
 import CachePage from './pages/CachePage'
 import RateLimitPage from './pages/RateLimitPage'
 import GeoPage from './pages/GeoPage'
+import EmailServicePage from './pages/EmailServicePage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -83,6 +84,7 @@ export default function AppRouter() {
         <Route path="/cache"        element={<Protected><CachePage /></Protected>} />
         <Route path="/rate-limit"   element={<Protected><RateLimitPage /></Protected>} />
         <Route path="/geo"          element={<Protected><GeoPage /></Protected>} />
+        <Route path="/email-svc"    element={<Protected><EmailServicePage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

@@ -72,6 +72,7 @@ const ENTITY_GRID = [
   { name: 'Cache Service',    icon: Database,     path: '/cache',        status: 'partial', color: '#0ea5e9' },
   { name: 'Rate Limiter',     icon: Shield,       path: '/rate-limit',   status: 'partial', color: '#f43f5e' },
   { name: 'Geo Service',      icon: Globe,        path: '/geo',          status: 'partial', color: '#22d3ee' },
+  { name: 'Arcadia Email',    icon: Mail,         path: '/email-svc',    status: 'partial', color: '#8b5cf6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

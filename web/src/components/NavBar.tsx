@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import {
-  MessageSquare, LayoutDashboard, Zap, Activity, Bell,
+  MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
   CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock
@@ -28,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   // Ops
   { path: '/status',        label: 'Status',        icon: <Activity size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/notifications', label: 'Alerts',        icon: <Bell size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/email-svc',     label: 'Email Service', icon: <Mail size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/queue',         label: 'Queue',         icon: <ListTodo size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/compliance',    label: 'Compliance',    icon: <CheckSquare size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/audit',         label: 'Audit Log',     icon: <Shield size={18} aria-hidden="true" />, group: 'ops' },
