@@ -104,6 +104,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/sms-svc/, ''),
             },
+            // Backup service — Port 8039
+            '/backup-svc': {
+                target: 'http://localhost:8039',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/backup-svc/, ''),
+            },
             // DevOcity (dev portal) — Port 8062
             '/devocity-svc': {
                 target: 'http://localhost:8062',

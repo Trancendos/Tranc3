@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive
 } from 'lucide-react'
 
 interface NavItem {
@@ -35,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/hive',          label: 'The HIVE',      icon: <Layers size={18} aria-hidden="true" />,   group: 'ops' },
   { path: '/compliance',    label: 'Compliance',    icon: <CheckSquare size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/audit',         label: 'Audit Log',     icon: <Shield size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/backup',       label: 'Backup',         icon: <Archive size={18} aria-hidden="true" />, group: 'ops' },
   // Data
   { path: '/storage',       label: 'Storage',       icon: <Database size={18} aria-hidden="true" />, group: 'data' },
   { path: '/search',        label: 'Search',        icon: <Search size={18} aria-hidden="true" />, group: 'data' },
