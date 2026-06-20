@@ -104,6 +104,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/sms-svc/, ''),
             },
+            // DevOcity (dev portal) — Port 8062
+            '/devocity-svc': {
+                target: 'http://localhost:8062',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/devocity-svc/, ''),
+            },
             // GBrain Bridge (knowledge graph) — Port 8030
             '/gbrain-svc': {
                 target: 'http://localhost:8030',

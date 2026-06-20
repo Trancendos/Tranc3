@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes
 } from 'lucide-react'
 
 interface NavItem {
@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/grid',          label: 'Digital Grid',  icon: <GitBranch size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/ai-providers',  label: 'AI Providers',  icon: <Bot size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/workers',       label: 'Workers',       icon: <Cpu size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/devocity',     label: 'DevOcity',      icon: <Boxes size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/services',      label: 'Services',      icon: <Globe size={18} aria-hidden="true" />, group: 'platform' },
   // Ops
   { path: '/status',        label: 'Status',        icon: <Activity size={18} aria-hidden="true" />, group: 'ops' },

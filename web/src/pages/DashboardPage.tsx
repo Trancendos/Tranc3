@@ -61,7 +61,7 @@ const ENTITY_GRID = [
   { name: 'Arcadia Email',     icon: Mail,         path: '/notifications', status: 'partial', color: '#8b5cf6' },
   { name: 'Search',            icon: Search,       path: '/search',      status: 'live',    color: '#10b981' },
   { name: 'The Dutchy',        icon: BarChart3,     path: '/the-dutchy',  status: 'partial', color: '#10b981' },
-  { name: 'DevOcity',          icon: Boxes,        path: '/workers',     status: 'planned', color: '#64748b' },
+  { name: 'DevOcity',          icon: Boxes,        path: '/devocity',    status: 'partial', color: '#94a3b8' },
   { name: 'Model Router',      icon: Cpu,          path: '/model-router', status: 'partial', color: '#818cf8' },
   { name: 'Royal Bank Ledger', icon: ScrollText,   path: '/ledger',       status: 'partial', color: '#22c55e' },
   { name: 'Service Topology',  icon: Network,      path: '/topology',     status: 'partial', color: '#3b82f6' },
