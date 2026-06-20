@@ -56,6 +56,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/dagents/, ''),
             },
+            // Topology service — Port 8031
+            '/topo': {
+                target: 'http://localhost:8031',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/topo/, ''),
+            },
             // Ledger service (Royal Bank) — Port 8032
             '/ledger': {
                 target: 'http://localhost:8032',

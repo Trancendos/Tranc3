@@ -25,6 +25,7 @@ import AuditPage from './pages/AuditPage'
 import LangChainPage from './pages/LangChainPage'
 import ModelRouterPage from './pages/ModelRouterPage'
 import LedgerPage from './pages/LedgerPage'
+import TopologyPage from './pages/TopologyPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -67,6 +68,7 @@ export default function AppRouter() {
         <Route path="/langchain"    element={<Protected><LangChainPage /></Protected>} />
         <Route path="/model-router" element={<Protected><ModelRouterPage /></Protected>} />
         <Route path="/ledger"       element={<Protected><LedgerPage /></Protected>} />
+        <Route path="/topology"     element={<Protected><TopologyPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

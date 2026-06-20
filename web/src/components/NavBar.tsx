@@ -43,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/model-router', label: 'Model Router',  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
   // Config
   { path: '/ledger',        label: 'Ledger',        icon: <BookOpen size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/topology',      label: 'Topology',      icon: <Network size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/admin',         label: 'Admin',         icon: <Shield size={18} aria-hidden="true" />, group: 'config' },
   { path: '/settings',      label: 'Settings',      icon: <Settings size={18} aria-hidden="true" />, group: 'config' },
 ]

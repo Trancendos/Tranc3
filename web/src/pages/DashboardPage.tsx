@@ -64,6 +64,7 @@ const ENTITY_GRID = [
   { name: 'DevOcity',          icon: Boxes,        path: '/workers',     status: 'planned', color: '#64748b' },
   { name: 'Model Router',      icon: Cpu,          path: '/model-router', status: 'partial', color: '#818cf8' },
   { name: 'Royal Bank Ledger', icon: ScrollText,   path: '/ledger',       status: 'partial', color: '#22c55e' },
+  { name: 'Service Topology',  icon: Network,      path: '/topology',     status: 'partial', color: '#3b82f6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
