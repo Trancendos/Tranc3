@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Server, RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -64,6 +65,7 @@ export default function WorkersPage() {
   const [checking, setChecking] = useState(false)
   const [lastRun, setLastRun] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
+  const { trackWorkerRefresh } = useAnalytics()
 
   const checkAll = useCallback(async () => {
     setChecking(true)
@@ -87,7 +89,8 @@ export default function WorkersPage() {
     setWorkers(results)
     setLastRun(new Date().toLocaleTimeString())
     setChecking(false)
-  }, [])
+    trackWorkerRefresh(results.length)
+  }, [trackWorkerRefresh])
 
   useEffect(() => {
     checkAll()

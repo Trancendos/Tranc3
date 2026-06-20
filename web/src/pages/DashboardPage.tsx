@@ -5,7 +5,7 @@
  * entity grid (all 43 platform entities), and quick-action links.
  * Fluidic layout: cluster grid, adaptive cards, reactive polling.
  */
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
 
@@ -111,6 +112,15 @@ export default function DashboardPage() {
     intervalMs: 30_000,
     transform: (raw) => raw as ProviderDashboard,
   })
+  const { trackProviderSwitch } = useAnalytics()
+  const prevProvider = useRef<string | null>(null)
+  useEffect(() => {
+    if (!providers?.active_provider) return
+    if (prevProvider.current && prevProvider.current !== providers.active_provider) {
+      trackProviderSwitch(prevProvider.current, providers.active_provider)
+    }
+    prevProvider.current = providers.active_provider
+  }, [providers?.active_provider, trackProviderSwitch])
 
   const liveCt  = ENTITY_GRID.filter(e => e.status === 'live').length
   const partCt  = ENTITY_GRID.filter(e => e.status === 'partial').length
