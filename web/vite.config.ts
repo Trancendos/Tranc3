@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // TateKing video creation — Port 8066
+            '/tateking-svc': {
+                target: 'http://localhost:8066',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/tateking-svc/, ''),
+            },
             // VRAR3D immersion — Port 8068
             '/vrar3d-svc': {
                 target: 'http://localhost:8068',

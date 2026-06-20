@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap, Clapperboard
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -89,6 +89,7 @@ const ENTITY_GRID = [
   { name: 'The Academy',       icon: GraduationCap, path: '/the-academy',   status: 'planned', color: '#7c3aed' },
   { name: 'Warp Radio',        icon: Music,    path: '/warp-radio',         status: 'planned', color: '#f59e0b' },
   { name: 'VRAR3D',           icon: Eye,      path: '/vrar3d',             status: 'planned', color: '#6366f1' },
+  { name: 'TateKing',         icon: Clapperboard, path: '/tateking',       status: 'partial', color: '#3b82f6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
