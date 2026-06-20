@@ -1023,6 +1023,13 @@ async def providers_dashboard():
 
     ollama_ok = await router.ollama.health_check()
 
+    # Return live dashboard from LimitMonitor when available (has real utilisation data)
+    try:
+        from src.ai_gateway.limit_monitor import monitor as _lm
+        return _lm.get_dashboard()
+    except Exception:
+        pass
+
     provider_info: dict = {}
     for pname, client in router.providers:
         name = pname.value
