@@ -228,6 +228,9 @@ async def health():
         processing = conn.execute(
             "SELECT COUNT(*) FROM messages WHERE status='processing'"
         ).fetchone()[0]
+        acknowledged = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE status='acknowledged'"
+        ).fetchone()[0]
         dlq = conn.execute("SELECT COUNT(*) FROM dead_letters").fetchone()[0]
     return {
         "status": "healthy",
@@ -236,7 +239,20 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "pending": pending,
         "processing": processing,
+        "acknowledged": acknowledged,
         "dead_letters": dlq,
+        # Shape expected by QueuePage UI (index 0 = Task Queue)
+        "queues": [
+            {
+                "name": "Task Queue",
+                "provider": "self-hosted-sqlite",
+                "depth": pending,
+                "inFlight": processing,
+                "processed": acknowledged,
+                "failed": dlq,
+                "status": "ok",
+            }
+        ],
         "entity": {
             "location": "The HIVE",
             "pillar": "Architectural",

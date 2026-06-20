@@ -187,14 +187,32 @@ async def health():
         bucket_count = conn.execute("SELECT COUNT(*) FROM buckets").fetchone()[0]
         obj_count = conn.execute("SELECT COUNT(*) FROM objects").fetchone()[0]
         total_size = conn.execute("SELECT COALESCE(SUM(size), 0) FROM objects").fetchone()[0]
+        # Per-bucket stats keyed by bucket name for the UI
+        rows = conn.execute(
+            "SELECT b.name, COUNT(o.id) as files, COALESCE(SUM(o.size), 0) as used "
+            "FROM buckets b LEFT JOIN objects o ON o.bucket = b.name GROUP BY b.name"
+        ).fetchall()
+    bucket_detail = {
+        r["name"]: {"status": "ok", "files": r["files"], "usedBytes": r["used"]}
+        for r in rows
+    }
+    # Inject well-known self-hosted bucket IDs expected by StoragePage
+    health_buckets: dict = {}
+    if "local" in bucket_detail:
+        health_buckets["local"] = bucket_detail["local"]
+    else:
+        health_buckets["local"] = {"status": "ok", "files": obj_count, "usedBytes": total_size}
+    health_buckets["ipfs"] = bucket_detail.get("ipfs", {"status": "unknown"})
+    health_buckets["oracle"] = bucket_detail.get("oracle", {"status": "unknown"})
     return {
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "buckets": bucket_count,
+        "bucket_count": bucket_count,
         "objects": obj_count,
         "total_bytes": total_size,
+        "buckets": health_buckets,
         "entity": {
             "location": "DocUtari",
             "pillar": "Knowledge",
