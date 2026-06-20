@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Sasha's Photo Studio — Port 8051
+            '/photo-svc': {
+                target: 'http://localhost:8051',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/photo-svc/, ''),
+            },
             // Dimensional Nexus service — Port 8050
             '/dnexus-svc': {
                 target: 'http://localhost:8050',
