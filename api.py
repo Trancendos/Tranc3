@@ -564,12 +564,25 @@ async def lifespan(app: FastAPI):
     except Exception as _sec_exc:
         logger.warning("Startup security checks failed: %s", sanitize_for_log(_sec_exc))
 
+    # Platform cell regeneration monitor (SelfHealer) — probes P0/P1 workers
+    _healer_task = None
+    try:
+        from src.observability.self_healer import get_healer
+
+        _platform_healer = get_healer()
+        _healer_task = asyncio.ensure_future(_platform_healer.run_forever())
+        logger.info("Platform SelfHealer started — monitoring P0/P1 cells")
+    except Exception as _sh_exc:
+        logger.warning("SelfHealer unavailable: %s", sanitize_for_log(_sh_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
 
     if _quota_rotation_task is not None:
         _quota_rotation_task.cancel()
+    if _healer_task is not None:
+        _healer_task.cancel()
 
     logger.info("TRANC3 shutting down")
     _bootstrap_complete = False

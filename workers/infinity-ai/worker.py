@@ -34,6 +34,16 @@ from pydantic import BaseModel, Field
 
 from Dimensional.sanitize import sanitize_for_log
 
+# Smart semantic cache (optional — falls back to built-in LRU if unavailable)
+_SMART_CACHE = None
+try:
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from src.ai_gateway.smart_cache import get_cache as _get_smart_cache
+    _SMART_CACHE = _get_smart_cache(capacity=2000, ttl_s=3600.0)
+except Exception:
+    pass
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -58,6 +68,8 @@ logger = logging.getLogger(WORKER_NAME)
 
 class ProviderName(str, Enum):
     ollama = "ollama"
+    groq = "groq"
+    cerebras = "cerebras"
     openrouter = "openrouter"
     huggingface = "huggingface"
     offline = "offline"
@@ -448,6 +460,89 @@ class HuggingFaceClient:
             return None
 
 
+class GroqClient:
+    """Groq free-tier client — ultra-low latency LLaMA/Mixtral inference."""
+
+    FREE_MODELS = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+    ]
+    BASE_URL = "https://api.groq.com/openai/v1"
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("GROQ_API_KEY", "")
+
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Optional[Dict[str, Any]]:
+        if not self.api_key:
+            return None
+        import urllib.error
+        import urllib.request
+
+        try:
+            actual_model = model if model in self.FREE_MODELS else self.FREE_MODELS[0]
+            payload = {
+                "model": actual_model,
+                "messages": [{"role": m.role, "content": m.content} for m in messages],
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+            data = json.dumps(payload).encode()
+            req = urllib.request.Request(f"{self.BASE_URL}/chat/completions", data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            logger.warning("Groq HTTP %s: %s", e.code, e.reason)
+            return None
+        except Exception as e:
+            logger.warning("Groq request failed: %s", sanitize_for_log(e))
+            return None
+
+
+class CerebrasClient:
+    """Cerebras free-tier client — high-speed inference via Cerebras AI Cloud."""
+
+    FREE_MODELS = ["llama3.1-8b", "llama3.3-70b"]
+    BASE_URL = "https://api.cerebras.ai/v1"
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("CEREBRAS_API_KEY", "")
+
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Optional[Dict[str, Any]]:
+        if not self.api_key:
+            return None
+        import urllib.error
+        import urllib.request
+
+        try:
+            actual_model = model if model in self.FREE_MODELS else self.FREE_MODELS[0]
+            payload = {
+                "model": actual_model,
+                "messages": [{"role": m.role, "content": m.content} for m in messages],
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+            data = json.dumps(payload).encode()
+            req = urllib.request.Request(f"{self.BASE_URL}/chat/completions", data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            logger.warning("Cerebras HTTP %s: %s", e.code, e.reason)
+            return None
+        except Exception as e:
+            logger.warning("Cerebras request failed: %s", sanitize_for_log(e))
+            return None
+
+
 class OfflineClient:
     """Offline fallback — deterministic responses when no provider is available."""
 
@@ -482,13 +577,19 @@ class AIGatewayRouter:
     def __init__(self, db: AIDatabase):
         self.db = db
         self.cache = LRUCache(max_size=500)
+        self._smart_cache = _SMART_CACHE
         self.ollama = OllamaClient()
+        self.groq = GroqClient()
+        self.cerebras = CerebrasClient()
         self.openrouter = OpenRouterClient()
         self.huggingface = HuggingFaceClient()
         self.offline = OfflineClient()
-        # Provider priority: Ollama first (free+local), then free-tier cloud, then offline
+        # Provider priority: local first → fast cloud free tiers → offline fallback
+        # Matches LimitMonitor rotation chain: ollama→groq→cerebras→openrouter→huggingface→offline
         self.providers = [
             (ProviderName.ollama, self.ollama),
+            (ProviderName.groq, self.groq),
+            (ProviderName.cerebras, self.cerebras),
             (ProviderName.openrouter, self.openrouter),
             (ProviderName.huggingface, self.huggingface),
             (ProviderName.offline, self.offline),
@@ -520,7 +621,15 @@ class AIGatewayRouter:
                 429, "Token budget exceeded for today. Try again tomorrow or contact admin."
             )
 
-        # Check cache
+        # Check smart semantic cache first (near-duplicate detection), then basic LRU
+        prompt_text = " ".join(m.content for m in request.messages)
+        cache_tags = {"tenant": tenant_id, "model": request.model}
+        if self._smart_cache is not None:
+            smart_hit = self._smart_cache.get(prompt_text, tags=cache_tags)
+            if smart_hit is not None:
+                smart_hit.provider = "smart-cache"
+                return smart_hit
+
         cache_key = self._make_cache_key(
             request.model, request.messages, request.max_tokens, request.temperature, tenant_id
         )
@@ -588,8 +697,10 @@ class AIGatewayRouter:
                     success=True,
                 )
 
-                # Cache successful responses
+                # Cache successful responses (both basic LRU and smart semantic cache)
                 self.cache.put(cache_key, response)
+                if self._smart_cache is not None:
+                    self._smart_cache.put(prompt_text, response, tags=cache_tags)
 
                 return response
 
