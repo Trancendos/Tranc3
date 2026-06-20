@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // tAimra digital twin — Port 8065
+            '/taimra-svc': {
+                target: 'http://localhost:8065',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/taimra-svc/, ''),
+            },
             // Tranquility wellbeing hub — Port 8058
             '/tranquility-svc': {
                 target: 'http://localhost:8058',

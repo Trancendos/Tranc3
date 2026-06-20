@@ -47,6 +47,7 @@ import SashasPhotoStudioPage from './pages/SashasPhotoStudioPage'
 import IMindPage from './pages/IMindPage'
 import ResonatePage from './pages/ResonatePage'
 import TranquilityPage from './pages/TranquilityPage'
+import TAimraPage from './pages/TAimraPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -111,6 +112,7 @@ export default function AppRouter() {
         <Route path="/imind"                 element={<Protected><IMindPage /></Protected>} />
         <Route path="/resonate"              element={<Protected><ResonatePage /></Protected>} />
         <Route path="/tranquility"           element={<Protected><TranquilityPage /></Protected>} />
+        <Route path="/taimra"               element={<Protected><TAimraPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

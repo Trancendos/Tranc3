@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -84,6 +84,7 @@ const ENTITY_GRID = [
   { name: 'I-Mind',             icon: Brain,    path: '/imind',              status: 'partial', color: '#f472b6' },
   { name: 'Resonate',           icon: Heart,    path: '/resonate',           status: 'partial', color: '#fb7185' },
   { name: 'Tranquility',        icon: Heart,    path: '/tranquility',        status: 'partial', color: '#f9a8d4' },
+  { name: 'tAimra',            icon: User,     path: '/taimra',             status: 'planned', color: '#8b5cf6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

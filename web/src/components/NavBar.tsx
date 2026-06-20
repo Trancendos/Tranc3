@@ -61,6 +61,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/imind',               label: 'I-Mind',           icon: <Brain size={18} aria-hidden="true" />,  group: 'ai' },
   { path: '/resonate',            label: 'Resonate',         icon: <Heart size={18} aria-hidden="true" />,  group: 'ai' },
   { path: '/tranquility',         label: 'Tranquility',      icon: <Heart size={18} aria-hidden="true" />,  group: 'ai' },
+  { path: '/taimra',             label: 'tAimra',           icon: <User size={18} aria-hidden="true" />,   group: 'ai' },
   { path: '/analytics',    label: 'Analytics',     icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
   { path: '/cron',          label: 'ChronosSphere', icon: <Clock size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/cache',         label: 'Cache',         icon: <Database size={18} aria-hidden="true" />, group: 'data' },
