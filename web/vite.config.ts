@@ -98,6 +98,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/audit/, ''),
             },
+            // Rate limit service — Port 8026
+            '/rlimit': {
+                target: 'http://localhost:8026',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/rlimit/, ''),
+            },
             // Cache service — Port 8023
             '/cache-svc': {
                 target: 'http://localhost:8023',
