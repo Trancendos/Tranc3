@@ -69,6 +69,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/infinity-admin',    label: 'Infinity Admin',   icon: <ShieldCheck size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/infinity-shards',   label: 'Infinity Shards',  icon: <Sparkles size={18} aria-hidden="true" />,    group: 'platform' },
   { path: '/infinity-bridge',   label: 'Infinity Bridge',  icon: <ArrowLeftRight size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/users-service',     label: 'Users Service',    icon: <Users size={18} aria-hidden="true" />,           group: 'platform' },
   { path: '/gateway',           label: 'Gateway',          icon: <GitMerge size={18} aria-hidden="true" />,    group: 'platform' },
   { path: '/sentinel-station',  label: 'Sentinel Station', icon: <Radio size={18} aria-hidden="true" />,        group: 'ops' },
   { path: '/ice-box',           label: 'The Ice Box',      icon: <Snowflake size={18} aria-hidden="true" />,    group: 'ops' },

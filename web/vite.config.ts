@@ -236,6 +236,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/swarm-svc/, ''),
             },
+            // Users service — Port 8006
+            '/users-svc': {
+                target: 'http://localhost:8006',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/users-svc/, ''),
+            },
             // Infinity Bridge service — Port 8070
             '/infinity-bridge-svc': {
                 target: 'http://localhost:8070',

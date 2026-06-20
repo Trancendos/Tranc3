@@ -98,6 +98,7 @@ const ENTITY_GRID = [
   { name: 'Infinity Admin',   icon: ShieldCheck,  path: '/infinity-admin',   status: 'partial', color: '#7c3aed' },
   { name: 'Infinity Shards',  icon: Puzzle,       path: '/infinity-shards',  status: 'partial', color: '#a855f7' },
   { name: 'Infinity Bridge',  icon: ArrowLeftRight, path: '/infinity-bridge', status: 'partial', color: '#14b8a6' },
+  { name: 'Users Service',    icon: Users,          path: '/users-service',   status: 'partial', color: '#3b82f6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

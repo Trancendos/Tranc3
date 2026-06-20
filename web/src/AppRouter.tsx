@@ -61,6 +61,7 @@ import InfinityOnePage from './pages/InfinityOnePage'
 import InfinityAdminPage from './pages/InfinityAdminPage'
 import InfinityShardsPage from './pages/InfinityShardsPage'
 import InfinityBridgePage from './pages/InfinityBridgePage'
+import UsersServicePage from './pages/UsersServicePage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -139,6 +140,7 @@ export default function AppRouter() {
         <Route path="/infinity-admin"       element={<Protected><InfinityAdminPage /></Protected>} />
         <Route path="/infinity-shards"      element={<Protected><InfinityShardsPage /></Protected>} />
         <Route path="/infinity-bridge"      element={<Protected><InfinityBridgePage /></Protected>} />
+        <Route path="/users-service"        element={<Protected><UsersServicePage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />
