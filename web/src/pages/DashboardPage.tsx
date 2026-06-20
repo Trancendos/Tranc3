@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -73,6 +73,7 @@ const ENTITY_GRID = [
   { name: 'Rate Limiter',     icon: Shield,       path: '/rate-limit',   status: 'partial', color: '#f43f5e' },
   { name: 'Geo Service',      icon: Globe,        path: '/geo',          status: 'partial', color: '#22d3ee' },
   { name: 'Arcadia Email',    icon: Mail,         path: '/email-svc',    status: 'partial', color: '#8b5cf6' },
+  { name: 'SMS Gateway',      icon: MessageSquare, path: '/sms',          status: 'partial', color: '#10b981' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

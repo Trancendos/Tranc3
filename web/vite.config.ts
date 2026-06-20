@@ -98,6 +98,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/audit/, ''),
             },
+            // SMS service — Port 8019
+            '/sms-svc': {
+                target: 'http://localhost:8019',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/sms-svc/, ''),
+            },
             // Email service — Port 8018
             '/email-svc': {
                 target: 'http://localhost:8018',
