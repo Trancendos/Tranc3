@@ -36,6 +36,7 @@ INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 DB_PATH = Path(os.environ.get("DB_PATH", "/data/health_aggregator.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+_INTERNAL_SECRET = INTERNAL_SECRET  # alias for test fixtures
 
 POLL_INTERVAL = 30  # seconds between full polls
 HTTP_TIMEOUT = 3.0  # per-service request timeout
