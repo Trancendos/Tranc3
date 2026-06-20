@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Database, RefreshCw, HardDrive, Cloud, Server, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 const _API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 const STORAGE_API = _API.replace(':8000', ':8026')
@@ -7,7 +8,7 @@ const STORAGE_API = _API.replace(':8000', ':8026')
 interface StoreBucket {
   id: string
   name: string
-  provider: 'cloudflare-r2' | 'backblaze-b2' | 'oracle-storage' | 'ipfs' | 'local'
+  provider: 'local' | 'ipfs' | 'oracle-storage'
   usedBytes?: number
   limitBytes?: number
   files?: number
@@ -17,32 +18,25 @@ interface StoreBucket {
 
 const BUCKETS: StoreBucket[] = [
   {
-    id: 'cf-r2',
-    name: 'Cloudflare R2',
-    provider: 'cloudflare-r2',
+    id: 'local',
+    name: 'Local Volume (primary)',
+    provider: 'local',
     status: 'unknown',
-    note: '10 GB free, 1M Class-B ops/month — no egress fees',
+    note: 'Docker-managed volume · zero-cost · The Citadel self-hosted stack',
   },
   {
-    id: 'b2',
-    name: 'Backblaze B2',
-    provider: 'backblaze-b2',
+    id: 'ipfs',
+    name: 'IPFS (content-addressed)',
+    provider: 'ipfs',
     status: 'unknown',
-    note: '10 GB free, 2,500 download ops/day',
+    note: 'Distributed · content-addressed · zero-cost on self-hosted node',
   },
   {
     id: 'oracle',
     name: 'Oracle Object Storage',
     provider: 'oracle-storage',
     status: 'unknown',
-    note: '20 GB Always Free — permanent (card required)',
-  },
-  {
-    id: 'ipfs',
-    name: 'IPFS (self-hosted)',
-    provider: 'ipfs',
-    status: 'unknown',
-    note: 'Docker volume — content-addressed, zero-cost on Oracle VM',
+    note: '20 GB Always Free cloud tier — overflow / off-site backup',
   },
 ]
 
@@ -54,9 +48,9 @@ const STATUS_META: Record<StoreBucket['status'], { label: string; icon: React.Re
 }
 
 function providerIcon(p: StoreBucket['provider']) {
-  if (p === 'cloudflare-r2') return <Cloud     size={16} aria-hidden="true" className="text-orange-400" />
   if (p === 'ipfs')          return <Server    size={16} aria-hidden="true" className="text-indigo-400" />
-  return                            <Database  size={16} aria-hidden="true" className="text-blue-400" />
+  if (p === 'oracle-storage') return <Cloud    size={16} aria-hidden="true" className="text-blue-400" />
+  return                             <HardDrive size={16} aria-hidden="true" className="text-emerald-400" />
 }
 
 function fmtBytes(b: number) {
@@ -69,6 +63,9 @@ export default function StoragePage() {
   const [buckets, setBuckets] = useState<StoreBucket[]>(BUCKETS)
   const [loading, setLoading] = useState(false)
   const [lastRun, setLastRun] = useState<string | null>(null)
+  const { trackPageView } = useAnalytics()
+
+  useEffect(() => { trackPageView('/storage') }, [trackPageView])
 
   const fetchStatus = useCallback(async () => {
     setLoading(true)

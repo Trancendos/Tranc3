@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 interface ServiceDef {
   id: string
@@ -334,6 +335,9 @@ function StatusDot({ status = 'unknown' }: { status?: string }) {
 export default function ServicesPage() {
   const [services, setServices] = useState<ServiceDef[]>(SERVICES)
   const [loading, setLoading] = useState(true)
+  const { trackPageView } = useAnalytics()
+
+  useEffect(() => { trackPageView('/services') }, [trackPageView])
 
   useEffect(() => {
     let cancelled = false

@@ -13,7 +13,8 @@ export interface SSEHookResult {
 }
 
 const MAX_EVENTS = 100
-const RECONNECT_DELAY_MS = 3_000
+const RECONNECT_BASE_MS = 2_000
+const RECONNECT_MAX_MS = 60_000
 
 let _eventCounter = 0
 function nextId(): string {
@@ -28,6 +29,7 @@ export function useSSE(url: string = '/api/mcp/sse'): SSEHookResult {
   const esRef = useRef<EventSource | null>(null)
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const unmountedRef = useRef(false)
+  const retryAttemptRef = useRef(0)
 
   const clearRetry = () => {
     if (retryTimerRef.current !== null) {
@@ -47,6 +49,7 @@ export function useSSE(url: string = '/api/mcp/sse'): SSEHookResult {
 
       es.onopen = () => {
         if (unmountedRef.current) return
+        retryAttemptRef.current = 0
         setConnected(true)
       }
 
@@ -56,7 +59,9 @@ export function useSSE(url: string = '/api/mcp/sse'): SSEHookResult {
         es.close()
         esRef.current = null
         clearRetry()
-        retryTimerRef.current = setTimeout(connect, RECONNECT_DELAY_MS)
+        const delay = Math.min(RECONNECT_BASE_MS * 2 ** retryAttemptRef.current, RECONNECT_MAX_MS)
+        retryAttemptRef.current += 1
+        retryTimerRef.current = setTimeout(connect, delay)
       }
 
       es.onmessage = (event: MessageEvent) => {
@@ -72,7 +77,10 @@ export function useSSE(url: string = '/api/mcp/sse'): SSEHookResult {
       }
 
       // Listen for named event types the platform emits
-      const namedTypes = ['mcp_tool_call', 'workflow_complete', 'alert', 'health_change']
+      const namedTypes = [
+        'mcp_tool_call', 'workflow_complete', 'alert', 'health_change',
+        'queue_job', 'provider_switch', 'dag_step', 'notification',
+      ]
       for (const evtType of namedTypes) {
         es.addEventListener(evtType, (event: Event) => {
           if (unmountedRef.current) return
@@ -101,6 +109,7 @@ export function useSSE(url: string = '/api/mcp/sse'): SSEHookResult {
 
     return () => {
       unmountedRef.current = true
+      retryAttemptRef.current = 0
       clearRetry()
       if (esRef.current) {
         esRef.current.close()

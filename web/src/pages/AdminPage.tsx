@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Shield, Users, Key, Database, Activity, ChevronRight, AlertTriangle } from 'lucide-react'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -61,6 +62,9 @@ interface SystemStat {
 }
 
 export default function AdminPage() {
+  const { trackPageView } = useAnalytics()
+  useEffect(() => { trackPageView('/admin') }, [trackPageView])
+
   const [stats] = useState<SystemStat[]>([
     { label: 'Platform', value: 'Trancendos v1' },
     { label: 'Architecture', value: 'Zero-Cost Self-Hosted' },
