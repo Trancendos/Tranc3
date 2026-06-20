@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain
 } from 'lucide-react'
 
 interface NavItem {
@@ -44,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/deep-agents',  label: 'Deep Agents',   icon: <Network size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/langchain',    label: 'LangChain',     icon: <Layers size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/model-router', label: 'Model Router',  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
+  { path: '/gbrain',      label: 'GBrain',         icon: <Brain size={18} aria-hidden="true" />, group: 'ai' },
   // Config
   { path: '/ledger',        label: 'Ledger',        icon: <BookOpen size={18} aria-hidden="true" />, group: 'data' },
   { path: '/topology',      label: 'Topology',      icon: <Network size={18} aria-hidden="true" />, group: 'platform' },

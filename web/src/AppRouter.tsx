@@ -36,6 +36,7 @@ import GeoPage from './pages/GeoPage'
 import EmailServicePage from './pages/EmailServicePage'
 import SmsPage from './pages/SmsPage'
 import HivePage from './pages/HivePage'
+import GBrainPage from './pages/GBrainPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -89,6 +90,7 @@ export default function AppRouter() {
         <Route path="/email-svc"    element={<Protected><EmailServicePage /></Protected>} />
         <Route path="/sms"          element={<Protected><SmsPage /></Protected>} />
         <Route path="/hive"         element={<Protected><HivePage /></Protected>} />
+        <Route path="/gbrain"       element={<Protected><GBrainPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

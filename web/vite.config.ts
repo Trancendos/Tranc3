@@ -104,6 +104,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/sms-svc/, ''),
             },
+            // GBrain Bridge (knowledge graph) — Port 8030
+            '/gbrain-svc': {
+                target: 'http://localhost:8030',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/gbrain-svc/, ''),
+            },
             // The HIVE (data movement & swarm coordination) — Port 8060
             '/hive-svc': {
                 target: 'http://localhost:8060',
