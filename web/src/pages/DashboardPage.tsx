@@ -85,6 +85,7 @@ const ENTITY_GRID = [
   { name: 'Resonate',           icon: Heart,    path: '/resonate',           status: 'partial', color: '#fb7185' },
   { name: 'Tranquility',        icon: Heart,    path: '/tranquility',        status: 'partial', color: '#f9a8d4' },
   { name: 'tAimra',            icon: User,     path: '/taimra',             status: 'planned', color: '#8b5cf6' },
+  { name: 'The Studio',        icon: Palette,  path: '/the-studio',         status: 'partial', color: '#ec4899' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

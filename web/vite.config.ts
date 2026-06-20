@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // The Studio creativity hub — Port 8069
+            '/studio-svc': {
+                target: 'http://localhost:8069',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/studio-svc/, ''),
+            },
             // tAimra digital twin — Port 8065
             '/taimra-svc': {
                 target: 'http://localhost:8065',
