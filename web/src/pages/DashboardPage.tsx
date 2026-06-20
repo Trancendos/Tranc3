@@ -79,6 +79,7 @@ const ENTITY_GRID = [
   { name: 'CDN Service',      icon: Globe,   path: '/cdn',             status: 'partial', color: '#3b82f6' },
   { name: 'Infinity Portal',    icon: Shield,   path: '/infinity-portal',   status: 'partial', color: '#6366f1' },
   { name: 'Swarm Coordinator',  icon: Network,  path: '/swarm-coordinator', status: 'partial', color: '#7c3aed' },
+  { name: 'Dimensional Nexus',  icon: Network,  path: '/dimensional-nexus', status: 'partial', color: '#8b5cf6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

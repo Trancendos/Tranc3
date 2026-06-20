@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Dimensional Nexus service — Port 8050
+            '/dnexus-svc': {
+                target: 'http://localhost:8050',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/dnexus-svc/, ''),
+            },
             // Swarm Coordinator service — Port 8053
             '/swarm-svc': {
                 target: 'http://localhost:8053',

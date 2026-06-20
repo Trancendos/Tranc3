@@ -56,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/cdn',             label: 'CDN',             icon: <Globe size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/infinity-portal',   label: 'Infinity Portal',   icon: <Shield size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/swarm-coordinator', label: 'Swarm Coordinator', icon: <Network size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/dimensional-nexus', label: 'Dimensional Nexus', icon: <Network size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/analytics',    label: 'Analytics',     icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
   { path: '/cron',          label: 'ChronosSphere', icon: <Clock size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/cache',         label: 'Cache',         icon: <Database size={18} aria-hidden="true" />, group: 'data' },
