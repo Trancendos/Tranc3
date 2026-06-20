@@ -742,6 +742,7 @@ app.include_router(_router)
 # ---------------------------------------------------------------------------
 
 import asyncio  # noqa: E402
+
 from fastapi.responses import StreamingResponse  # noqa: E402
 
 # In-process fan-out bus: user_id → list of asyncio.Queue

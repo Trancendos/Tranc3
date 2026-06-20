@@ -70,9 +70,6 @@ if not _REDIS_URL:
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
-from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
-from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
-
 from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
 from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
@@ -83,7 +80,6 @@ from src.core.advanced_model import (
     AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
 )
 from src.core.context_compressor import compressor  # noqa: F401  # intentional top-level import
-from src.core.security import safe_torch_load
 from src.core.feature_flags import (  # noqa: F401  # intentional top-level import
     FeatureFlag,
     FeatureFlagManager,
@@ -91,6 +87,7 @@ from src.core.feature_flags import (  # noqa: F401  # intentional top-level impo
 from src.core.multilingual_tokenizer import (
     MultilingualTokenizer,  # noqa: F401  # intentional top-level import
 )
+from src.core.security import safe_torch_load
 from src.core.startup_validator import validate_startup  # noqa: F401
 from src.database.schema import (  # noqa: F401  # intentional top-level import
     Conversation,
@@ -102,6 +99,8 @@ from src.errors.error_catalog import (  # noqa: F401  # intentional top-level im
     ErrorCode,
     format_error_response,
 )
+from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
+from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-level import
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
@@ -729,8 +728,9 @@ app.add_middleware(RBACMiddleware)
 # ── Additional middleware: GZip, TrustedHost, Idempotency, ContentNegotiation ─
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from api.middleware.idempotency import IdempotencyMiddleware
+
 from api.middleware.content_negotiation import ContentNegotiationMiddleware
+from api.middleware.idempotency import IdempotencyMiddleware
 
 # Registration order (Starlette: last-added runs first on requests):
 # ContentNegotiation → Idempotency → TrustedHost → GZip

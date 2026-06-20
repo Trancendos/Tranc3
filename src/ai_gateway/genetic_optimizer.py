@@ -14,12 +14,12 @@ Architecture:
   - Runs synchronously on demand (call evolve() after each generation period)
 """
 
+import os
 import random
+import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Tuple
-import sqlite3
-import os
 
 _DB_PATH = Path(
     os.getenv("AI_GATEWAY_DB", str(Path(__file__).parent / "data" / "ai_gateway_limits.db"))
