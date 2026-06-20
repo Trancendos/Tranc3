@@ -56,6 +56,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/dagents/, ''),
             },
+            // Vault service (The Void) — Port 8038
+            '/vault': {
+                target: 'http://localhost:8038',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/vault/, ''),
+            },
             // Topology service — Port 8031
             '/topo': {
                 target: 'http://localhost:8031',
