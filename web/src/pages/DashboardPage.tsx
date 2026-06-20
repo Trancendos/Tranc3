@@ -44,7 +44,7 @@ const ENTITY_GRID = [
   { name: 'The Academy',       icon: Sparkles,     path: '/services',    status: 'planned', color: '#64748b' },
   { name: 'The Studio',        icon: Palette,      path: '/services',    status: 'planned', color: '#64748b' },
   { name: 'Warp Radio',        icon: Music,        path: '/services',    status: 'planned', color: '#64748b' },
-  { name: 'The Lab',           icon: FlaskConical, path: '/services',    status: 'planned', color: '#64748b' },
+  { name: 'The Lab',           icon: FlaskConical, path: '/the-lab',     status: 'partial', color: '#a855f7' },
   { name: 'Think Tank',        icon: Brain,        path: '/services',    status: 'partial', color: '#a78bfa' },
   { name: 'The Void',          icon: Lock,         path: '/services',    status: 'live',    color: '#ef4444' },
   { name: 'The HIVE',          icon: Layers,       path: '/queue',       status: 'live',    color: '#f59e0b' },
@@ -59,6 +59,7 @@ const ENTITY_GRID = [
   { name: 'Arcadian Exchange', icon: BarChart3,    path: '/services',    status: 'live',    color: '#06b6d4' },
   { name: 'Arcadia Email',     icon: Mail,         path: '/notifications', status: 'partial', color: '#8b5cf6' },
   { name: 'Search',            icon: Search,       path: '/search',      status: 'live',    color: '#10b981' },
+  { name: 'The Dutchy',        icon: BarChart3,     path: '/the-dutchy',  status: 'partial', color: '#10b981' },
   { name: 'DevOcity',          icon: Boxes,        path: '/workers',     status: 'planned', color: '#64748b' },
 ]
 

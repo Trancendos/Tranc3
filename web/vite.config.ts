@@ -32,6 +32,18 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/optional-health/, ''),
             },
+            // The Lab (code platform) — Port 8055
+            '/lab': {
+                target: 'http://localhost:8055',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/lab/, ''),
+            },
+            // The Dutchy (market intelligence) — Port 8061
+            '/dutchy': {
+                target: 'http://localhost:8061',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/dutchy/, ''),
+            },
             '/api': {
                 target: process.env.VITE_API_URL || 'http://localhost:8000',
                 changeOrigin: true,

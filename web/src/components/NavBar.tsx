@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3
 } from 'lucide-react'
 
 interface NavItem {
@@ -33,6 +33,8 @@ const NAV_ITEMS: NavItem[] = [
   // Data
   { path: '/storage',       label: 'Storage',       icon: <Database size={18} aria-hidden="true" />, group: 'data' },
   { path: '/search',        label: 'Search',        icon: <Search size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/the-lab',       label: 'The Lab',       icon: <FlaskConical size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/the-dutchy',    label: 'The Dutchy',    icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
   // Config
   { path: '/admin',         label: 'Admin',         icon: <Shield size={18} aria-hidden="true" />, group: 'config' },
   { path: '/settings',      label: 'Settings',      icon: <Settings size={18} aria-hidden="true" />, group: 'config' },
