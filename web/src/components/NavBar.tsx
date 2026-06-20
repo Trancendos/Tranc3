@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive, Palette, Heart, GraduationCap, Radio, Music, Eye, Clapperboard, Box, Gamepad2, Snowflake, GitMerge
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive, Palette, Heart, GraduationCap, Radio, Music, Eye, Clapperboard, Box, Gamepad2, Snowflake, GitMerge, Fingerprint, Users
 } from 'lucide-react'
 
 interface NavItem {
@@ -65,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/the-studio',        label: 'The Studio',       icon: <Palette size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/the-academy',       label: 'The Academy',      icon: <GraduationCap size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/warp-radio',        label: 'Warp Radio',       icon: <Radio size={18} aria-hidden="true" />,        group: 'platform' },
+  { path: '/infinity-one',      label: 'Infinity One',     icon: <Fingerprint size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/gateway',           label: 'Gateway',          icon: <GitMerge size={18} aria-hidden="true" />,    group: 'platform' },
   { path: '/sentinel-station',  label: 'Sentinel Station', icon: <Radio size={18} aria-hidden="true" />,        group: 'ops' },
   { path: '/ice-box',           label: 'The Ice Box',      icon: <Snowflake size={18} aria-hidden="true" />,    group: 'ops' },

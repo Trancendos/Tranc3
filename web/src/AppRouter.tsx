@@ -57,6 +57,7 @@ import IceBoxPage from './pages/IceBoxPage'
 import TranceFlowPage from './pages/TranceFlowPage'
 import TateKingPage from './pages/TateKingPage'
 import VRAR3DPage from './pages/VRAR3DPage'
+import InfinityOnePage from './pages/InfinityOnePage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -131,6 +132,7 @@ export default function AppRouter() {
         <Route path="/tranceflow"           element={<Protected><TranceFlowPage /></Protected>} />
         <Route path="/tateking"             element={<Protected><TateKingPage /></Protected>} />
         <Route path="/vrar3d"               element={<Protected><VRAR3DPage /></Protected>} />
+        <Route path="/infinity-one"         element={<Protected><InfinityOnePage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

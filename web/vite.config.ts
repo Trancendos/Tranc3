@@ -236,6 +236,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/swarm-svc/, ''),
             },
+            // Infinity One service — Port 8043
+            '/infinity-one-svc': {
+                target: 'http://localhost:8043',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/infinity-one-svc/, ''),
+            },
             // Infinity Portal service — Port 8042
             '/iportal-svc': {
                 target: 'http://localhost:8042',
