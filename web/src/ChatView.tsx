@@ -3,6 +3,7 @@ import { Send, Settings, Globe, Zap, LogOut, Brain, LayoutDashboard } from 'luci
 import { useNavigate } from 'react-router'
 import UpgradeModal from './UpgradeModal'
 import { useAuthStore } from './store/authStore'
+import { useAnalytics } from './hooks/useAnalytics'
 
 const API = import.meta.env.VITE_API_URL || ''
 
@@ -37,6 +38,7 @@ const EMOTIONS = [
 export default function ChatView() {
   const { token, user, logout: storeLogout } = useAuthStore()
   const username = user?.name ?? user?.email ?? ''
+  const { trackChat } = useAnalytics()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -112,6 +114,7 @@ export default function ChatView() {
     const text = input
     setInput('')
     setLoading(true)
+    trackChat({ personality, language, emotion })
 
     try {
       const r = await fetch(`${API}/chat`, {

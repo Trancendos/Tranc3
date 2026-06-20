@@ -1,5 +1,6 @@
 import React, { useState, useRef, useId } from 'react'
 import { Search, Loader, ExternalLink, AlertCircle } from 'lucide-react'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const SEARCH_API = API.replace(':8000', ':8024')
@@ -30,6 +31,7 @@ export default function SearchPage() {
   const inputRef              = useRef<HTMLInputElement>(null)
   const errorId               = useId()
   const resultsStatusId       = useId()
+  const { trackSearch, trackError } = useAnalytics()
 
   async function runSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -50,20 +52,24 @@ export default function SearchPage() {
         const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
         if (r.ok) {
           const body: SearchResponse = await r.json()
+          const total = body.total ?? body.results?.length ?? 0
           setResults(body.results ?? [])
           setMeta({
-            total:    body.total ?? body.results?.length ?? 0,
+            total,
             query:    body.query ?? query,
             took_ms:  body.took_ms ?? Math.round(performance.now() - t0),
             provider: body.provider,
           })
+          trackSearch(query, total, body.provider)
           setLoading(false)
           return
         }
       } catch { /* try next endpoint */ }
     }
 
-    setError('Search service unavailable. Make sure tranc3-search worker is running.')
+    const errMsg = 'Search service unavailable. Make sure tranc3-search worker is running.'
+    setError(errMsg)
+    trackError('search_unavailable', query)
     setLoading(false)
   }
 

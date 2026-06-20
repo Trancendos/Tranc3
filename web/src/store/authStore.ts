@@ -49,6 +49,14 @@ export const useAuthStore = create<AuthState>()(
           expiresAt,
           user: data.user ?? null,
         })
+        // PostHog identity
+        try {
+          const u = data.user
+          if (u) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            import('posthog-js').then(m => m.default?.identify?.(u.id, { email: u.email, name: u.name, role: u.role })).catch(() => {})
+          }
+        } catch { /* ignore */ }
       },
 
       logout: () => {
