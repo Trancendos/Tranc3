@@ -1,18 +1,23 @@
 """
-Zero-cost AI provider rotation — x8 free-tier providers with hard stops.
+Zero-cost AI provider rotation — x11 free-tier providers with hard stops.
 
-Provider chain (priority order):
-1. Ollama (local, truly zero-cost, no limits)
-2. Groq (free tier: 14,400 req/day, 6,000 tokens/min)
-3. OpenRouter :free models (free tier: 200 req/day per model)
-4. HuggingFace Inference API (free tier: rate-limited)
-5. Together AI (free tier: $25 credit, then stops)
-6. DeepSeek API (free tier: limited RPM)
-7. Cerebras Cloud (free tier: 30 req/min)
-8. Cloudflare Workers AI (free tier: 10,000 neurons/day)
+Provider chain (priority order — rotate at 80%, hard-stop at 95%):
+ 0. LiteLLM proxy   (local aggregator — delegates to all below)
+ 1. Ollama          (local, truly zero-cost, no limits)
+ 2. Groq            (free: 14,400 req/day, 6,000 tokens/min)
+ 3. Cerebras        (free: 30 req/min, fast inference)
+ 4. SambaNova       (free: 50K tokens/req, generous limits)
+ 5. Gemini Flash    (free: 1,500 req/day, 1M tokens/min)
+ 6. OpenRouter :free (free: 200 req/day per model, 50+ models)
+ 7. Mistral         (free: Le Chat API, no hard limit documented)
+ 8. DeepSeek        (free tier: limited RPM)
+ 9. HuggingFace     (free: rate-limited serverless inference)
+10. Together AI     (free: $25 credit, then paid)
+11. Cloudflare AI   (free: 10,000 neurons/day)
 
-Hard stops: each provider tracks daily/hourly usage.
-Rotation: when provider hits 80% of limit, rotate to next.
+Hard stops: each provider tracks daily/hourly usage via SQLite (limit_monitor).
+Rotation: when provider hits 80% of limit, rotate to next available.
+x11 ensures continuous operation even if 8 providers are exhausted.
 """
 
 from __future__ import annotations
@@ -114,6 +119,16 @@ class ProviderLimit:
 
 
 PROVIDERS: List[ProviderLimit] = [
+    # ── Tier 0: Local aggregator — delegates to all other providers ──────
+    ProviderLimit(
+        name="litellm",
+        base_url=os.getenv("LITELLM_URL", "http://litellm:4000"),
+        api_key_env="LITELLM_MASTER_KEY",
+        daily_req_limit=-1,
+        hourly_req_limit=-1,
+        daily_token_limit=-1,
+    ),
+    # ── Tier 1: Local self-hosted (truly unlimited) ──────────────────────
     ProviderLimit(
         name="ollama",
         base_url=os.getenv("OLLAMA_URL", "http://localhost:11434"),
@@ -122,6 +137,7 @@ PROVIDERS: List[ProviderLimit] = [
         hourly_req_limit=-1,
         daily_token_limit=-1,
     ),
+    # ── Tier 2: Free cloud providers (no credit card required) ───────────
     ProviderLimit(
         name="groq",
         base_url="https://api.groq.com/openai/v1",
@@ -131,11 +147,51 @@ PROVIDERS: List[ProviderLimit] = [
         daily_token_limit=500000,
     ),
     ProviderLimit(
+        name="cerebras",
+        base_url="https://api.cerebras.ai/v1",
+        api_key_env="CEREBRAS_API_KEY",
+        daily_req_limit=1440,
+        hourly_req_limit=30,
+        daily_token_limit=-1,
+    ),
+    ProviderLimit(
+        name="sambanova",
+        base_url="https://fast-api.snova.ai/v1",
+        api_key_env="SAMBANOVA_API_KEY",
+        daily_req_limit=5000,
+        hourly_req_limit=200,
+        daily_token_limit=10_000_000,
+    ),
+    ProviderLimit(
+        name="gemini",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        api_key_env="GEMINI_API_KEY",
+        daily_req_limit=1500,
+        hourly_req_limit=60,
+        daily_token_limit=1_000_000,
+    ),
+    ProviderLimit(
         name="openrouter",
         base_url="https://openrouter.ai/api/v1",
         api_key_env="OPENROUTER_API_KEY",
         daily_req_limit=200,
         hourly_req_limit=50,
+        daily_token_limit=-1,
+    ),
+    ProviderLimit(
+        name="mistral",
+        base_url="https://api.mistral.ai/v1",
+        api_key_env="MISTRAL_API_KEY",
+        daily_req_limit=2000,
+        hourly_req_limit=100,
+        daily_token_limit=-1,
+    ),
+    ProviderLimit(
+        name="deepseek",
+        base_url="https://api.deepseek.com/v1",
+        api_key_env="DEEPSEEK_API_KEY",
+        daily_req_limit=500,
+        hourly_req_limit=60,
         daily_token_limit=-1,
     ),
     ProviderLimit(
@@ -153,22 +209,6 @@ PROVIDERS: List[ProviderLimit] = [
         daily_req_limit=500,
         hourly_req_limit=60,
         daily_token_limit=100000,
-    ),
-    ProviderLimit(
-        name="deepseek",
-        base_url="https://api.deepseek.com/v1",
-        api_key_env="DEEPSEEK_API_KEY",
-        daily_req_limit=500,
-        hourly_req_limit=60,
-        daily_token_limit=-1,
-    ),
-    ProviderLimit(
-        name="cerebras",
-        base_url="https://api.cerebras.ai/v1",
-        api_key_env="CEREBRAS_API_KEY",
-        daily_req_limit=1440,
-        hourly_req_limit=30,
-        daily_token_limit=-1,
     ),
     ProviderLimit(
         name="cloudflare_ai",

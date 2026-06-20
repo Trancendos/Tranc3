@@ -1546,6 +1546,276 @@ services:
       - tranc3-net
     restart: unless-stopped
 
+  # ══════════════════════════════════════════════════════════════════════════
+  # ADAPTIVE AI LAYER — LiteLLM Proxy (Apache 2.0, zero-cost)
+  # Unified OpenAI-compatible endpoint over x8 free provider backends.
+  # Port 4000. Route: ai.trancendos.com/litellm
+  # Providers: ollama → groq → cerebras → sambanova → gemini → openrouter
+  #            → mistral → huggingface (x8 rotation with hard stops)
+  # ══════════════════════════════════════════════════════════════════════════
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: trancendos-litellm
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "4"]
+    volumes:
+      - ./config/litellm/config.yaml:/app/config.yaml:ro
+      - litellm-data:/app/data
+    ports:
+      - "4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY:-sk-tranc3-litellm-master}"
+      LITELLM_SALT_KEY: "${LITELLM_SALT_KEY:-sk-tranc3-salt}"
+      DATABASE_URL: "sqlite:////app/data/litellm.db"
+      STORE_MODEL_IN_DB: "True"
+      # Provider API keys (all free tiers)
+      GROQ_API_KEY: "${GROQ_API_KEY:-}"
+      CEREBRAS_API_KEY: "${CEREBRAS_API_KEY:-}"
+      SAMBANOVA_API_KEY: "${SAMBANOVA_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      MISTRAL_API_KEY: "${MISTRAL_API_KEY:-}"
+      HUGGINGFACE_API_KEY: "${HUGGINGFACE_API_KEY:-}"
+      OLLAMA_URL: "http://ollama:11434"
+      # Langfuse observability integration
+      LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PUBLIC_KEY:-}"
+      LANGFUSE_SECRET_KEY: "${LANGFUSE_SECRET_KEY:-}"
+      LANGFUSE_HOST: "http://langfuse:3000"
+    depends_on:
+      - langfuse
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.litellm.rule: "Host(`ai.trancendos.com`)"
+      traefik.http.routers.litellm.entrypoints: "websecure"
+      traefik.http.routers.litellm.tls.certresolver: "letsencrypt"
+      traefik.http.services.litellm.loadbalancer.server.port: "4000"
+
+  # Ollama — local self-hosted LLM inference (zero-cost, tier 0)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: trancendos-ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_ORIGINS: "*"
+      OLLAMA_HOST: "0.0.0.0"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    # GPU support: add 'deploy: resources: reservations: devices: [{driver: nvidia, ...}]'
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # SEARCH — Meilisearch (MIT, zero-cost, self-hosted)
+  # Full-text search for all platform content. Port 7700.
+  # Route: search.trancendos.com
+  # Used by: The Library, DocUtari, API Marketplace, The Lab
+  # ══════════════════════════════════════════════════════════════════════════
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: trancendos-meilisearch
+    volumes:
+      - meilisearch-data:/meili_data
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:-tranc3-meili-master-key-change-me}"
+      MEILI_ENV: "production"
+      MEILI_DB_PATH: "/meili_data"
+      MEILI_LOG_LEVEL: "INFO"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.meilisearch.rule: "Host(`search.trancendos.com`)"
+      traefik.http.routers.meilisearch.entrypoints: "websecure"
+      traefik.http.routers.meilisearch.tls.certresolver: "letsencrypt"
+      traefik.http.services.meilisearch.loadbalancer.server.port: "7700"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # OBJECT STORAGE — MinIO (AGPL-3.0, zero-cost, S3-compatible)
+  # Replaces Cloudflare R2 / IPFS for blob storage. Port 9000 (API), 9001 (console).
+  # Route: s3.trancendos.com (API), s3-console.trancendos.com (console)
+  # ══════════════════════════════════════════════════════════════════════════
+  minio:
+    image: minio/minio:latest
+    container_name: trancendos-minio
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-tranc3admin}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-tranc3minio-change-me}"
+      MINIO_BROWSER_REDIRECT_URL: "https://s3-console.trancendos.com"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      # S3 API
+      traefik.http.routers.minio-api.rule: "Host(`s3.trancendos.com`)"
+      traefik.http.routers.minio-api.entrypoints: "websecure"
+      traefik.http.routers.minio-api.tls.certresolver: "letsencrypt"
+      traefik.http.routers.minio-api.service: "minio-api-svc"
+      traefik.http.services.minio-api-svc.loadbalancer.server.port: "9000"
+      # Console
+      traefik.http.routers.minio-console.rule: "Host(`s3-console.trancendos.com`)"
+      traefik.http.routers.minio-console.entrypoints: "websecure"
+      traefik.http.routers.minio-console.tls.certresolver: "letsencrypt"
+      traefik.http.routers.minio-console.service: "minio-console-svc"
+      traefik.http.services.minio-console-svc.loadbalancer.server.port: "9001"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # IDENTITY & SSO — Authentik (MIT, zero-cost)
+  # Replaces Keycloak (heavier) — OAuth2/OIDC/SAML SSO for all services.
+  # Complements workers/infinity-auth/ (which handles Trancendos-native auth).
+  # Authentik = external SSO bridge (Google, GitHub, enterprise SAML).
+  # Port 9300 (HTTP), 9443 (HTTPS). Route: sso.trancendos.com
+  # ══════════════════════════════════════════════════════════════════════════
+  authentik-server:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: trancendos-authentik-server
+    command: server
+    volumes:
+      - authentik-media:/media
+      - authentik-templates:/templates
+    ports:
+      - "9300:9000"
+      - "9443:9443"
+    environment:
+      AUTHENTIK_REDIS__HOST: "authentik-redis"
+      AUTHENTIK_POSTGRESQL__HOST: "authentik-db"
+      AUTHENTIK_POSTGRESQL__USER: "authentik"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "${AUTHENTIK_DB_PASSWORD:-authentik-change-me}"
+      AUTHENTIK_POSTGRESQL__NAME: "authentik"
+      AUTHENTIK_SECRET_KEY: "${AUTHENTIK_SECRET_KEY:-authentik-secret-change-me}"
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_BOOTSTRAP_EMAIL: "${ADMIN_EMAIL:-admin@trancendos.com}"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "${AUTHENTIK_ADMIN_PASSWORD:-admin-change-me}"
+      AUTHENTIK_BOOTSTRAP_TOKEN: "${AUTHENTIK_BOOTSTRAP_TOKEN:-}"
+    depends_on:
+      - authentik-db
+      - authentik-redis
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.authentik.rule: "Host(`sso.trancendos.com`)"
+      traefik.http.routers.authentik.entrypoints: "websecure"
+      traefik.http.routers.authentik.tls.certresolver: "letsencrypt"
+      traefik.http.services.authentik.loadbalancer.server.port: "9000"
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: trancendos-authentik-worker
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: "authentik-redis"
+      AUTHENTIK_POSTGRESQL__HOST: "authentik-db"
+      AUTHENTIK_POSTGRESQL__USER: "authentik"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "${AUTHENTIK_DB_PASSWORD:-authentik-change-me}"
+      AUTHENTIK_POSTGRESQL__NAME: "authentik"
+      AUTHENTIK_SECRET_KEY: "${AUTHENTIK_SECRET_KEY:-authentik-secret-change-me}"
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    volumes:
+      - authentik-media:/media
+      - authentik-certs:/certs
+    depends_on:
+      - authentik-db
+      - authentik-redis
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+
+  authentik-db:
+    image: postgres:15-alpine
+    container_name: trancendos-authentik-db
+    volumes:
+      - authentik-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "authentik"
+      POSTGRES_PASSWORD: "${AUTHENTIK_DB_PASSWORD:-authentik-change-me}"
+      POSTGRES_DB: "authentik"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authentik -d authentik"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  authentik-redis:
+    image: redis:7-alpine
+    container_name: trancendos-authentik-redis
+    volumes:
+      - authentik-redis-data:/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CONTAINER LOGS UI — Dozzle (MIT, zero-cost)
+  # Real-time Docker log viewer for all containers. Port 8888.
+  # Route: logs.trancendos.com
+  # ══════════════════════════════════════════════════════════════════════════
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: trancendos-dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8080"
+    environment:
+      DOZZLE_AUTH_PROVIDER: "simple"
+      DOZZLE_ENABLE_ACTIONS: "true"
+      DOZZLE_LEVEL: "info"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dozzle.rule: "Host(`logs.trancendos.com`)"
+      traefik.http.routers.dozzle.entrypoints: "websecure"
+      traefik.http.routers.dozzle.tls.certresolver: "letsencrypt"
+      traefik.http.services.dozzle.loadbalancer.server.port: "8080"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # COLLABORATIVE WHITEBOARD — Excalidraw (MIT, zero-cost)
+  # Infinite canvas for design brainstorming, architecture diagrams.
+  # Complements Penpot (Fabulousa) for freeform collaboration.
+  # Port 3800. Route: draw.trancendos.com
+  # ══════════════════════════════════════════════════════════════════════════
+  excalidraw:
+    image: excalidraw/excalidraw:latest
+    container_name: trancendos-excalidraw
+    ports:
+      - "3800:80"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.excalidraw.rule: "Host(`draw.trancendos.com`)"
+      traefik.http.routers.excalidraw.entrypoints: "websecure"
+      traefik.http.routers.excalidraw.tls.certresolver: "letsencrypt"
+      traefik.http.services.excalidraw.loadbalancer.server.port: "80"
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1653,6 +1923,24 @@ volumes:
   signoz-clickhouse-logs:
     driver: local
   signoz-query-data:
+    driver: local
+  litellm-data:
+    driver: local
+  ollama-data:
+    driver: local
+  meilisearch-data:
+    driver: local
+  minio-data:
+    driver: local
+  authentik-media:
+    driver: local
+  authentik-templates:
+    driver: local
+  authentik-certs:
+    driver: local
+  authentik-db-data:
+    driver: local
+  authentik-redis-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════
