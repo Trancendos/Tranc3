@@ -6,8 +6,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { RefreshCw, CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-react'
 
-const API    = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-const CF_BASE = 'https://luminous-aimastermind.workers.dev'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 type HealthStatus = 'ok' | 'degraded' | 'down' | 'unknown'
 
@@ -40,14 +39,14 @@ const SERVICES: Pick<ServiceHealth, 'name' | 'url'>[] = [
   { name: 'Search Service',      url: `${API.replace(':8000', ':8024')}/health` },
   { name: 'Queue Service',       url: `${API.replace(':8000', ':8027')}/health` },
   { name: 'Vault Service',       url: `${API.replace(':8000', ':8038')}/health` },
-  { name: 'CF: tranc3-ai',           url: `https://tranc3-ai.${CF_BASE.split('workers.dev')[0].replace('https://', '')}workers.dev/health` },
-  { name: 'CF: tranc3-notifications', url: `https://tranc3-notifications.luminous-aimastermind.workers.dev/health` },
-  { name: 'CF: tranc3-storage',      url: `https://tranc3-storage.luminous-aimastermind.workers.dev/health` },
-  { name: 'CF: tranc3-search',       url: `https://tranc3-search.luminous-aimastermind.workers.dev/health` },
-  { name: 'CF: tranc3-queue',        url: `https://tranc3-queue.luminous-aimastermind.workers.dev/health` },
+  { name: 'Storage Service',     url: `${API.replace(':8000', ':8026')}/health` },
+  { name: 'Audit Service',       url: `${API.replace(':8000', ':8017')}/health` },
+  { name: 'Cron Service',        url: `${API.replace(':8000', ':8021')}/health` },
+  { name: 'Ledger Service',      url: `${API.replace(':8000', ':8032')}/health` },
+  { name: 'Model Router',        url: `${API.replace(':8000', ':8033')}/health` },
 ]
 
-const CF_AI_STATUS_URL = 'https://tranc3-ai.luminous-aimastermind.workers.dev/api/v1/ai/status'
+const AI_STATUS_URL = `${API.replace(':8000', ':8009')}/providers/dashboard`
 
 async function checkHealth(url: string): Promise<{ status: HealthStatus; latencyMs: number; details?: string }> {
   const t0 = performance.now()
@@ -121,7 +120,7 @@ export default function StatusPage() {
     setServices(results)
 
     try {
-      const r = await fetch(CF_AI_STATUS_URL, { signal: AbortSignal.timeout(5000) })
+      const r = await fetch(AI_STATUS_URL, { signal: AbortSignal.timeout(5000) })
       if (r.ok) setAiProviders(await r.json())
     } catch { /* ignore */ }
 
@@ -232,7 +231,7 @@ export default function StatusPage() {
           <div className="bg-gray-900 rounded-lg border border-gray-700 p-4">
             <h2 id="ai-providers-heading" className="text-white font-semibold mb-3 flex items-center gap-2">
               AI Provider Rotation
-              <span className="text-xs text-gray-500 font-normal">tranc3-ai Cloudflare Worker</span>
+              <span className="text-xs text-gray-500 font-normal">infinity-ai · :8009</span>
             </h2>
             <div
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"

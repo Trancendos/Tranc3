@@ -1,8 +1,8 @@
 import React, { useState, useRef, useId } from 'react'
 import { Search, Loader, ExternalLink, AlertCircle } from 'lucide-react'
 
-const API           = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-const CF_SEARCH_URL = 'https://tranc3-search.luminous-aimastermind.workers.dev'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const SEARCH_API = API.replace(':8000', ':8024')
 
 interface SearchResult {
   id: string
@@ -41,7 +41,7 @@ export default function SearchPage() {
 
     const t0 = performance.now()
     const endpoints = [
-      `${CF_SEARCH_URL}/search?q=${encodeURIComponent(query)}`,
+      `${SEARCH_API}/search?q=${encodeURIComponent(query)}`,
       `${API}/search?q=${encodeURIComponent(query)}`,
     ]
 
