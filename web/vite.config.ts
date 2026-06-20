@@ -56,6 +56,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/dagents/, ''),
             },
+            // Analytics service — Port 8016
+            '/analytics': {
+                target: 'http://localhost:8016',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/analytics/, ''),
+            },
             // Vault service (The Void) — Port 8038
             '/vault': {
                 target: 'http://localhost:8038',

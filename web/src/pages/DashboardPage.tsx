@@ -66,6 +66,7 @@ const ENTITY_GRID = [
   { name: 'Royal Bank Ledger', icon: ScrollText,   path: '/ledger',       status: 'partial', color: '#22c55e' },
   { name: 'Service Topology',  icon: Network,      path: '/topology',     status: 'partial', color: '#3b82f6' },
   { name: 'The Void (Vault)',  icon: Lock,         path: '/vault',        status: 'partial', color: '#ef4444' },
+  { name: 'Analytics',         icon: BarChart3,    path: '/analytics',    status: 'partial', color: '#6366f1' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
