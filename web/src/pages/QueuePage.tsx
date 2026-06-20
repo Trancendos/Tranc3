@@ -16,9 +16,9 @@ interface QueueStats {
 }
 
 const QUEUES: QueueStats[] = [
-  { name: 'CF Queues', provider: 'cloudflare-queues', depth: 0, inFlight: 0, processed: 0, failed: 0, status: 'unknown', note: '100K operations/day free' },
-  { name: 'Upstash Redis', provider: 'upstash', depth: 0, inFlight: 0, processed: 0, failed: 0, status: 'unknown', note: '10K requests/day free tier' },
-  { name: 'KV Queue', provider: 'cf-kv', depth: 0, inFlight: 0, processed: 0, failed: 0, status: 'unknown', note: '100K reads + 1K writes/day free' },
+  { name: 'Task Queue', provider: 'self-hosted-sqlite', depth: 0, inFlight: 0, processed: 0, failed: 0, status: 'unknown', note: 'SQLite-backed · zero-cost · The HIVE' },
+  { name: 'Inference Queue', provider: 'in-memory', depth: 0, inFlight: 0, processed: 0, failed: 0, status: 'unknown', note: 'In-memory priority queue · infinity-ai' },
+  { name: 'Workflow Queue', provider: 'sqlite-dag', depth: 0, inFlight: 0, processed: 0, failed: 0, status: 'unknown', note: 'DAG executor queue · The Digital Grid' },
 ]
 
 interface Job {
