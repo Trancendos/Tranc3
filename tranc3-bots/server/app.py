@@ -118,7 +118,6 @@ class SummariseRequest(BaseModel):
 
 
 def _register_routes(app: FastAPI):
-
     @app.get("/health")
     async def health():
         return await _reg().health()
