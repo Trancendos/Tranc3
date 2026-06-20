@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Resonate empathy engine — Port 8060 (note: shares port with hive-service)
+            '/resonate-svc': {
+                target: 'http://localhost:8060',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/resonate-svc/, ''),
+            },
             // I-Mind emotion engine — Port 8059
             '/imind-svc': {
                 target: 'http://localhost:8059',

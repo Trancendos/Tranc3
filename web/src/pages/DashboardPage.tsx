@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -82,6 +82,7 @@ const ENTITY_GRID = [
   { name: 'Dimensional Nexus',   icon: Network,  path: '/dimensional-nexus',  status: 'partial', color: '#8b5cf6' },
   { name: 'Sashas Photo Studio', icon: Palette,  path: '/sashas-photo-studio', status: 'planned', color: '#ec4899' },
   { name: 'I-Mind',             icon: Brain,    path: '/imind',              status: 'partial', color: '#f472b6' },
+  { name: 'Resonate',           icon: Heart,    path: '/resonate',           status: 'partial', color: '#fb7185' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

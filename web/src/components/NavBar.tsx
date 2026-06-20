@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive, Palette
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive, Palette, Heart
 } from 'lucide-react'
 
 interface NavItem {
@@ -59,6 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/dimensional-nexus',   label: 'Dimensional Nexus', icon: <Network size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/sashas-photo-studio', label: "Sasha's Studio",   icon: <Palette size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/imind',               label: 'I-Mind',           icon: <Brain size={18} aria-hidden="true" />,  group: 'ai' },
+  { path: '/resonate',            label: 'Resonate',         icon: <Heart size={18} aria-hidden="true" />,  group: 'ai' },
   { path: '/analytics',    label: 'Analytics',     icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
   { path: '/cron',          label: 'ChronosSphere', icon: <Clock size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/cache',         label: 'Cache',         icon: <Database size={18} aria-hidden="true" />, group: 'data' },
