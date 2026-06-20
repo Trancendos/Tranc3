@@ -12,7 +12,7 @@ Usage:
 
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import HTTPException, Request, status
 
 # Tier → permission sets (additive, business > pro > free)
 _TIER_PERMISSIONS: dict[str, set[str]] = {
