@@ -87,6 +87,7 @@ const ENTITY_GRID = [
   { name: 'tAimra',            icon: User,     path: '/taimra',             status: 'planned', color: '#8b5cf6' },
   { name: 'The Studio',        icon: Palette,  path: '/the-studio',         status: 'partial', color: '#ec4899' },
   { name: 'The Academy',       icon: GraduationCap, path: '/the-academy',   status: 'planned', color: '#7c3aed' },
+  { name: 'Warp Radio',        icon: Music,    path: '/warp-radio',         status: 'planned', color: '#f59e0b' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

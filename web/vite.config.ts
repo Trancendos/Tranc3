@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Warp Radio music streaming — Port 8057
+            '/warp-radio-svc': {
+                target: 'http://localhost:8057',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/warp-radio-svc/, ''),
+            },
             // The Academy LMS — Port 8056
             '/academy-svc': {
                 target: 'http://localhost:8056',
