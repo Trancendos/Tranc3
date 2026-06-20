@@ -51,6 +51,7 @@ import TAimraPage from './pages/TAimraPage'
 import TheStudioPage from './pages/TheStudioPage'
 import TheAcademyPage from './pages/TheAcademyPage'
 import WarpRadioPage from './pages/WarpRadioPage'
+import VRAR3DPage from './pages/VRAR3DPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -119,6 +120,7 @@ export default function AppRouter() {
         <Route path="/the-studio"           element={<Protected><TheStudioPage /></Protected>} />
         <Route path="/the-academy"          element={<Protected><TheAcademyPage /></Protected>} />
         <Route path="/warp-radio"           element={<Protected><WarpRadioPage /></Protected>} />
+        <Route path="/vrar3d"               element={<Protected><VRAR3DPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

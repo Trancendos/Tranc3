@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive, Palette, Heart, GraduationCap, Radio, Music
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive, Palette, Heart, GraduationCap, Radio, Music, Eye
 } from 'lucide-react'
 
 interface NavItem {
@@ -65,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/the-studio',        label: 'The Studio',       icon: <Palette size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/the-academy',       label: 'The Academy',      icon: <GraduationCap size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/warp-radio',        label: 'Warp Radio',       icon: <Radio size={18} aria-hidden="true" />,        group: 'platform' },
+  { path: '/vrar3d',            label: 'VRAR3D',           icon: <Eye size={18} aria-hidden="true" />,          group: 'platform' },
   { path: '/analytics',    label: 'Analytics',     icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
   { path: '/cron',          label: 'ChronosSphere', icon: <Clock size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/cache',         label: 'Cache',         icon: <Database size={18} aria-hidden="true" />, group: 'data' },
