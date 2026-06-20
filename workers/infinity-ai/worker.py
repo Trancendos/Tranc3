@@ -1030,9 +1030,10 @@ async def providers_dashboard():
         status = "ok"
         if name == "ollama":
             available = ollama_ok
-            status = "ok" if ollama_ok else "down"
+            status = "unlimited" if ollama_ok else "hard_stop"
         elif name == "offline":
-            status = "fallback"
+            status = "ok"
+            available = True
         else:
             # Check if API key is set for keyed providers
             key_map = {
@@ -1045,14 +1046,17 @@ async def providers_dashboard():
             }
             env_key = key_map.get(name)
             available = bool(env_key and os.environ.get(env_key))
-            status = "ok" if available else "no_key"
+            status = "ok" if available else "cooling_down"
 
+        daily_limit = _PROVIDER_DAILY_LIMITS.get(name, -1)
         provider_info[name] = {
             "status": status,
             "available": available,
-            "daily_limit": _PROVIDER_DAILY_LIMITS.get(name, -1),
+            "daily_limit": daily_limit,
             "utilisation_pct": 0,
-            "daily_req": "0/∞" if _PROVIDER_DAILY_LIMITS.get(name, -1) == -1 else f"0/{_PROVIDER_DAILY_LIMITS.get(name)}",
+            "daily_req": "0/∞" if daily_limit == -1 else f"0/{daily_limit}",
+            "hourly_req": "0/∞" if daily_limit == -1 else f"0/{max(1, daily_limit // 24)}",
+            "consecutive_errors": 0,
         }
 
     available_names = [n for n, info in provider_info.items() if info["available"] and n != "offline"]
