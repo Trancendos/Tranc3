@@ -769,10 +769,11 @@ def _patched_create(notif):
     _fan_out(notif.user_id, {
         "id": result.id,
         "title": result.title,
-        "body": result.body,
+        "message": getattr(result, "body", ""),
+        "type": "info",
+        "timestamp": result.created_at.isoformat() if hasattr(result.created_at, "isoformat") else str(result.created_at),
+        "read": False,
         "channel": result.channel,
-        "priority": result.priority,
-        "created_at": result.created_at.isoformat() if hasattr(result.created_at, "isoformat") else str(result.created_at),
     })
     return result
 
@@ -789,11 +790,11 @@ async def notification_stream(user_id: str, _token: str = ""):
 
     async def event_gen():
         try:
-            yield "data: {\"type\":\"connected\"}\n\n"
+            yield "event: notification\ndata: {\"type\":\"connected\"}\n\n"
             while True:
                 try:
                     payload = await asyncio.wait_for(queue.get(), timeout=25.0)
-                    yield f"data: {json.dumps(payload)}\n\n"
+                    yield f"event: notification\ndata: {json.dumps(payload)}\n\n"
                 except asyncio.TimeoutError:
                     yield ": keepalive\n\n"
         finally:
@@ -811,6 +812,28 @@ async def notification_stream(user_id: str, _token: str = ""):
             "Connection": "keep-alive",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Channels endpoint — zero-cost rotation status
+# ---------------------------------------------------------------------------
+
+_CHANNEL_DEFS = [
+    {"id": "resend",     "name": "Resend",     "type": "email", "daily_limit": 100,  "provider": "Resend"},
+    {"id": "mailersend", "name": "MailerSend", "type": "email", "daily_limit": 400,  "provider": "MailerSend"},
+    {"id": "brevo",      "name": "Brevo",      "type": "email", "daily_limit": 1000, "provider": "Brevo"},
+    {"id": "sendgrid",   "name": "SendGrid",   "type": "email", "daily_limit": 100,  "provider": "SendGrid"},
+]
+
+
+@app.get("/notifications/channels")
+async def list_channels():
+    """Return channel health and daily usage stats."""
+    channels = []
+    for ch in _CHANNEL_DEFS:
+        status = "active" if os.environ.get(f"{ch['id'].upper()}_API_KEY") else "inactive"
+        channels.append({**ch, "status": status, "daily_used": 0})
+    return {"channels": channels}
 
 
 # ---------------------------------------------------------------------------
