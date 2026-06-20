@@ -236,6 +236,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/swarm-svc/, ''),
             },
+            // Infinity Shards service — Port 8045
+            '/infinity-shards-svc': {
+                target: 'http://localhost:8045',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/infinity-shards-svc/, ''),
+            },
             // Infinity Admin service — Port 8044
             '/infinity-admin-svc': {
                 target: 'http://localhost:8044',

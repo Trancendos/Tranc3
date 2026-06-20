@@ -59,6 +59,7 @@ import TateKingPage from './pages/TateKingPage'
 import VRAR3DPage from './pages/VRAR3DPage'
 import InfinityOnePage from './pages/InfinityOnePage'
 import InfinityAdminPage from './pages/InfinityAdminPage'
+import InfinityShardsPage from './pages/InfinityShardsPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -135,6 +136,7 @@ export default function AppRouter() {
         <Route path="/vrar3d"               element={<Protected><VRAR3DPage /></Protected>} />
         <Route path="/infinity-one"         element={<Protected><InfinityOnePage /></Protected>} />
         <Route path="/infinity-admin"       element={<Protected><InfinityAdminPage /></Protected>} />
+        <Route path="/infinity-shards"      element={<Protected><InfinityShardsPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />
