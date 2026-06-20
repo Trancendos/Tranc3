@@ -178,6 +178,18 @@ class Library:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
+        try:
+            from src.event_bus import get_event_bus
+
+            bus = get_event_bus()
+            bus.emit_async(
+                event_type=event_type,
+                data={"id": art.id, "title": art.title, "author": art.author, "tags": art.tags},
+                source="library",
+            )
+        except Exception:
+            pass  # nosec B110 — graceful degradation
+
     def _seed_platform_articles(self) -> None:
         """Seed initial platform documentation articles."""
         seed_articles = [

@@ -296,7 +296,6 @@ def test_router_stats(isolated_router):
 
 
 def test_router_route_many(isolated_router):
-
     items = [
         {
             "id": f"item-{i}",

@@ -38,8 +38,10 @@ from Dimensional.sanitize import sanitize_for_log
 _SMART_CACHE = None
 try:
     import sys as _sys
+
     _sys.path.insert(0, str(Path(__file__).parent.parent.parent))
     from src.ai_gateway.smart_cache import get_cache as _get_smart_cache
+
     _SMART_CACHE = _get_smart_cache(capacity=2000, ttl_s=3600.0)
 except Exception:
     pass
@@ -493,7 +495,9 @@ class GroqClient:
                 "temperature": temperature,
             }
             data = json.dumps(payload).encode()
-            req = urllib.request.Request(f"{self.BASE_URL}/chat/completions", data=data, method="POST")
+            req = urllib.request.Request(
+                f"{self.BASE_URL}/chat/completions", data=data, method="POST"
+            )
             req.add_header("Content-Type", "application/json")
             req.add_header("Authorization", f"Bearer {self.api_key}")
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -532,7 +536,9 @@ class CerebrasClient:
                 "temperature": temperature,
             }
             data = json.dumps(payload).encode()
-            req = urllib.request.Request(f"{self.BASE_URL}/chat/completions", data=data, method="POST")
+            req = urllib.request.Request(
+                f"{self.BASE_URL}/chat/completions", data=data, method="POST"
+            )
             req.add_header("Content-Type", "application/json")
             req.add_header("Authorization", f"Bearer {self.api_key}")
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -794,7 +800,10 @@ class AIGatewayRouter:
                 # Feed outcome to genetic optimizer for evolutionary provider ranking
                 try:
                     from src.ai_gateway.limit_monitor import monitor as _lm
-                    _lm.record_provider_outcome(provider_name.value, success=True, latency_ms=float(latency_ms))
+
+                    _lm.record_provider_outcome(
+                        provider_name.value, success=True, latency_ms=float(latency_ms)
+                    )
                 except Exception:
                     pass
 
@@ -817,6 +826,7 @@ class AIGatewayRouter:
                     pass
                 try:
                     from src.ai_gateway.limit_monitor import monitor as _lm
+
                     _lm.record_provider_outcome(provider_name.value, success=False, latency_ms=0.0)
                 except Exception:
                     pass
@@ -912,7 +922,16 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "ollama_available": ollama_ok,
-        "providers": ["ollama", "groq", "cerebras", "openrouter", "huggingface", "together", "deepseek", "offline"],
+        "providers": [
+            "ollama",
+            "groq",
+            "cerebras",
+            "openrouter",
+            "huggingface",
+            "together",
+            "deepseek",
+            "offline",
+        ],
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
     }
 
@@ -1011,14 +1030,14 @@ async def clear_cache():
 async def providers_dashboard():
     """Live provider status dashboard — which providers are active and their availability."""
     _PROVIDER_DAILY_LIMITS = {
-        "ollama":      -1,      # unlimited (local)
-        "groq":        14_400,  # free tier
-        "cerebras":    1_000,   # free tier
-        "openrouter":  200,     # free tier (varies by model)
-        "huggingface": 1_000,   # free tier inference API
-        "together":    500,     # credit-based approximation
-        "deepseek":    1_000,   # generous free tier
-        "offline":     -1,      # always available
+        "ollama": -1,  # unlimited (local)
+        "groq": 14_400,  # free tier
+        "cerebras": 1_000,  # free tier
+        "openrouter": 200,  # free tier (varies by model)
+        "huggingface": 1_000,  # free tier inference API
+        "together": 500,  # credit-based approximation
+        "deepseek": 1_000,  # generous free tier
+        "offline": -1,  # always available
     }
 
     ollama_ok = await router.ollama.health_check()
@@ -1026,12 +1045,13 @@ async def providers_dashboard():
     # Return live dashboard from LimitMonitor when available (has real utilisation data)
     try:
         from src.ai_gateway.limit_monitor import monitor as _lm
+
         return _lm.get_dashboard()
     except Exception:
         pass
 
     provider_info: dict = {}
-    for pname, client in router.providers:
+    for pname, _client in router.providers:
         name = pname.value
         available = True
         status = "ok"
@@ -1066,7 +1086,9 @@ async def providers_dashboard():
             "consecutive_errors": 0,
         }
 
-    available_names = [n for n, info in provider_info.items() if info["available"] and n != "offline"]
+    available_names = [
+        n for n, info in provider_info.items() if info["available"] and n != "offline"
+    ]
     active = available_names[0] if available_names else "offline"
 
     return {

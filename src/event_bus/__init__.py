@@ -31,8 +31,19 @@ from src.event_bus.types import (
     PlatformEventType,
 )
 
+_singleton: "EventBus | None" = None
+
+
+def get_event_bus() -> "EventBus":
+    global _singleton
+    if _singleton is None:
+        _singleton = EventBus()
+    return _singleton
+
+
 __all__ = [
     "EventBus",
+    "get_event_bus",
     "NATSTransport",
     "make_nats_transport",
     "DeliveryResult",

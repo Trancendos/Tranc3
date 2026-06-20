@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import {
-  MessageSquare, LayoutDashboard, Zap, Activity, Bell,
+  MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers, BookOpen, Lock, Settings2, Clock, Brain, Boxes, Archive, Palette, Heart, GraduationCap, Radio, Music, Eye, Clapperboard, Box, Gamepad2, Snowflake, GitMerge, Fingerprint, Users, ShieldCheck, Sparkles, Puzzle, ArrowLeftRight
 } from 'lucide-react'
 
 interface NavItem {
@@ -24,13 +24,18 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/grid',          label: 'Digital Grid',  icon: <GitBranch size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/ai-providers',  label: 'AI Providers',  icon: <Bot size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/workers',       label: 'Workers',       icon: <Cpu size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/devocity',     label: 'DevOcity',      icon: <Boxes size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/services',      label: 'Services',      icon: <Globe size={18} aria-hidden="true" />, group: 'platform' },
   // Ops
   { path: '/status',        label: 'Status',        icon: <Activity size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/notifications', label: 'Alerts',        icon: <Bell size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/email-svc',     label: 'Email Service', icon: <Mail size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/sms',           label: 'SMS Gateway',   icon: <MessageSquare size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/queue',         label: 'Queue',         icon: <ListTodo size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/hive',          label: 'The HIVE',      icon: <Layers size={18} aria-hidden="true" />,   group: 'ops' },
   { path: '/compliance',    label: 'Compliance',    icon: <CheckSquare size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/audit',         label: 'Audit Log',     icon: <Shield size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/backup',       label: 'Backup',         icon: <Archive size={18} aria-hidden="true" />, group: 'ops' },
   // Data
   { path: '/storage',       label: 'Storage',       icon: <Database size={18} aria-hidden="true" />, group: 'data' },
   { path: '/search',        label: 'Search',        icon: <Search size={18} aria-hidden="true" />, group: 'data' },
@@ -40,7 +45,41 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/turings-hub',  label: "Turing's Hub",  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/deep-agents',  label: 'Deep Agents',   icon: <Network size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/langchain',    label: 'LangChain',     icon: <Layers size={18} aria-hidden="true" />, group: 'ai' },
+  { path: '/model-router', label: 'Model Router',  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
+  { path: '/gbrain',      label: 'GBrain',         icon: <Brain size={18} aria-hidden="true" />, group: 'ai' },
   // Config
+  { path: '/ledger',        label: 'Ledger',        icon: <BookOpen size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/topology',      label: 'Topology',      icon: <Network size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/vault',         label: 'The Void',      icon: <Lock size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/rate-limit',    label: 'Rate Limiter',  icon: <Shield size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/geo',           label: 'Geo Service',   icon: <Globe size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/cdn',             label: 'CDN',             icon: <Globe size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/infinity-portal',   label: 'Infinity Portal',   icon: <Shield size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/swarm-coordinator', label: 'Swarm Coordinator', icon: <Network size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/dimensional-nexus',   label: 'Dimensional Nexus', icon: <Network size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/sashas-photo-studio', label: "Sasha's Studio",   icon: <Palette size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/imind',               label: 'I-Mind',           icon: <Brain size={18} aria-hidden="true" />,  group: 'ai' },
+  { path: '/resonate',            label: 'Resonate',         icon: <Heart size={18} aria-hidden="true" />,  group: 'ai' },
+  { path: '/tranquility',         label: 'Tranquility',      icon: <Heart size={18} aria-hidden="true" />,  group: 'ai' },
+  { path: '/taimra',             label: 'tAimra',           icon: <User size={18} aria-hidden="true" />,   group: 'ai' },
+  { path: '/the-studio',        label: 'The Studio',       icon: <Palette size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/the-academy',       label: 'The Academy',      icon: <GraduationCap size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/warp-radio',        label: 'Warp Radio',       icon: <Radio size={18} aria-hidden="true" />,        group: 'platform' },
+  { path: '/infinity-one',      label: 'Infinity One',     icon: <Fingerprint size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/infinity-admin',    label: 'Infinity Admin',   icon: <ShieldCheck size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/infinity-shards',   label: 'Infinity Shards',  icon: <Sparkles size={18} aria-hidden="true" />,    group: 'platform' },
+  { path: '/infinity-bridge',   label: 'Infinity Bridge',  icon: <ArrowLeftRight size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/users-service',     label: 'Users Service',    icon: <Users size={18} aria-hidden="true" />,           group: 'platform' },
+  { path: '/gateway',           label: 'Gateway',          icon: <GitMerge size={18} aria-hidden="true" />,    group: 'platform' },
+  { path: '/sentinel-station',  label: 'Sentinel Station', icon: <Radio size={18} aria-hidden="true" />,        group: 'ops' },
+  { path: '/ice-box',           label: 'The Ice Box',      icon: <Snowflake size={18} aria-hidden="true" />,    group: 'ops' },
+  { path: '/tranceflow',        label: 'TranceFlow',       icon: <Box size={18} aria-hidden="true" />,          group: 'platform' },
+  { path: '/tateking',          label: 'TateKing',         icon: <Clapperboard size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/vrar3d',            label: 'VRAR3D',           icon: <Eye size={18} aria-hidden="true" />,          group: 'platform' },
+  { path: '/analytics',    label: 'Analytics',     icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/cron',          label: 'ChronosSphere', icon: <Clock size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/cache',         label: 'Cache',         icon: <Database size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/config',        label: 'Config Store',  icon: <Settings2 size={18} aria-hidden="true" />, group: 'config' },
   { path: '/admin',         label: 'Admin',         icon: <Shield size={18} aria-hidden="true" />, group: 'config' },
   { path: '/settings',      label: 'Settings',      icon: <Settings size={18} aria-hidden="true" />, group: 'config' },
 ]
