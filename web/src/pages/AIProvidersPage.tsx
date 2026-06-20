@@ -4,8 +4,9 @@
  * Polls /ai/providers every 15s.
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { AdaptiveCard } from '../components/ui/AdaptiveCard'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 interface ProviderInfo {
   status: 'ok' | 'rotating' | 'hard_stop' | 'cooling_down' | 'unlimited'
@@ -65,6 +66,8 @@ export function AIProvidersPage() {
   const [data, setData] = useState<Dashboard | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  const { trackProviderSwitch } = useAnalytics()
+  const prevProvider = useRef<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -81,6 +84,10 @@ export function AIProvidersPage() {
           throw new Error('Unexpected response shape from /ai/providers')
         }
         if (active) {
+          if (prevProvider.current && prevProvider.current !== json.active_provider) {
+            trackProviderSwitch(prevProvider.current, json.active_provider)
+          }
+          prevProvider.current = json.active_provider
           setData(json as Dashboard)
           setLastUpdate(new Date())
           setError(null)
