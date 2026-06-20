@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -63,6 +63,7 @@ const ENTITY_GRID = [
   { name: 'The Dutchy',        icon: BarChart3,     path: '/the-dutchy',  status: 'partial', color: '#10b981' },
   { name: 'DevOcity',          icon: Boxes,        path: '/workers',     status: 'planned', color: '#64748b' },
   { name: 'Model Router',      icon: Cpu,          path: '/model-router', status: 'partial', color: '#818cf8' },
+  { name: 'Royal Bank Ledger', icon: ScrollText,   path: '/ledger',       status: 'partial', color: '#22c55e' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

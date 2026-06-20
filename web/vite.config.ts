@@ -56,6 +56,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/dagents/, ''),
             },
+            // Ledger service (Royal Bank) — Port 8032
+            '/ledger': {
+                target: 'http://localhost:8032',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/ledger/, ''),
+            },
             // Model Router service — Port 8033
             '/mrouter': {
                 target: 'http://localhost:8033',
