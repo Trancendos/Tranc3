@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // The Academy LMS — Port 8056
+            '/academy-svc': {
+                target: 'http://localhost:8056',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/academy-svc/, ''),
+            },
             // The Studio creativity hub — Port 8069
             '/studio-svc': {
                 target: 'http://localhost:8069',

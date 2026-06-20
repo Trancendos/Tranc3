@@ -49,6 +49,7 @@ import ResonatePage from './pages/ResonatePage'
 import TranquilityPage from './pages/TranquilityPage'
 import TAimraPage from './pages/TAimraPage'
 import TheStudioPage from './pages/TheStudioPage'
+import TheAcademyPage from './pages/TheAcademyPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -115,6 +116,7 @@ export default function AppRouter() {
         <Route path="/tranquility"           element={<Protected><TranquilityPage /></Protected>} />
         <Route path="/taimra"               element={<Protected><TAimraPage /></Protected>} />
         <Route path="/the-studio"           element={<Protected><TheStudioPage /></Protected>} />
+        <Route path="/the-academy"          element={<Protected><TheAcademyPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />
