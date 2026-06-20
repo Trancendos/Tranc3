@@ -92,6 +92,7 @@ const ENTITY_GRID = [
   { name: 'TateKing',         icon: Clapperboard, path: '/tateking',       status: 'partial', color: '#3b82f6' },
   { name: 'TranceFlow',       icon: Box,          path: '/tranceflow',     status: 'partial', color: '#a855f7' },
   { name: 'The Ice Box',      icon: Snowflake,    path: '/ice-box',        status: 'partial', color: '#06b6d4' },
+  { name: 'Sentinel Station', icon: Radio,        path: '/sentinel-station', status: 'partial', color: '#7c3aed' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

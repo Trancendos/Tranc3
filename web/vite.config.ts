@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Sentinel Station event bus — Port 8041
+            '/sentinel-svc': {
+                target: 'http://localhost:8041',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/sentinel-svc/, ''),
+            },
             // Ice Box sandbox isolation — Port 8046
             '/ice-box-svc': {
                 target: 'http://localhost:8046',

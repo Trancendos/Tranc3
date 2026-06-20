@@ -65,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/the-studio',        label: 'The Studio',       icon: <Palette size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/the-academy',       label: 'The Academy',      icon: <GraduationCap size={18} aria-hidden="true" />, group: 'platform' },
   { path: '/warp-radio',        label: 'Warp Radio',       icon: <Radio size={18} aria-hidden="true" />,        group: 'platform' },
+  { path: '/sentinel-station',  label: 'Sentinel Station', icon: <Radio size={18} aria-hidden="true" />,        group: 'ops' },
   { path: '/ice-box',           label: 'The Ice Box',      icon: <Snowflake size={18} aria-hidden="true" />,    group: 'ops' },
   { path: '/tranceflow',        label: 'TranceFlow',       icon: <Box size={18} aria-hidden="true" />,          group: 'platform' },
   { path: '/tateking',          label: 'TateKing',         icon: <Clapperboard size={18} aria-hidden="true" />, group: 'platform' },

@@ -51,6 +51,7 @@ import TAimraPage from './pages/TAimraPage'
 import TheStudioPage from './pages/TheStudioPage'
 import TheAcademyPage from './pages/TheAcademyPage'
 import WarpRadioPage from './pages/WarpRadioPage'
+import SentinelStationPage from './pages/SentinelStationPage'
 import IceBoxPage from './pages/IceBoxPage'
 import TranceFlowPage from './pages/TranceFlowPage'
 import TateKingPage from './pages/TateKingPage'
@@ -123,6 +124,7 @@ export default function AppRouter() {
         <Route path="/the-studio"           element={<Protected><TheStudioPage /></Protected>} />
         <Route path="/the-academy"          element={<Protected><TheAcademyPage /></Protected>} />
         <Route path="/warp-radio"           element={<Protected><WarpRadioPage /></Protected>} />
+        <Route path="/sentinel-station"     element={<Protected><SentinelStationPage /></Protected>} />
         <Route path="/ice-box"              element={<Protected><IceBoxPage /></Protected>} />
         <Route path="/tranceflow"           element={<Protected><TranceFlowPage /></Protected>} />
         <Route path="/tateking"             element={<Protected><TateKingPage /></Protected>} />
