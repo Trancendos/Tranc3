@@ -68,6 +68,7 @@ const ENTITY_GRID = [
   { name: 'The Void (Vault)',  icon: Lock,         path: '/vault',        status: 'partial', color: '#ef4444' },
   { name: 'Analytics',         icon: BarChart3,    path: '/analytics',    status: 'partial', color: '#6366f1' },
   { name: 'Config Store',      icon: Settings,     path: '/config',       status: 'partial', color: '#94a3b8' },
+  { name: 'ChronosSphere',    icon: Clock,        path: '/cron',         status: 'partial', color: '#a78bfa' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
