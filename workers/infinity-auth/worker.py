@@ -36,7 +36,7 @@ import secrets
 
 try:
     from argon2 import PasswordHasher as _ArgonPH
-    from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
+    from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
     _ph = _ArgonPH(time_cost=2, memory_cost=65536, parallelism=2)
     _ARGON2_AVAILABLE = True

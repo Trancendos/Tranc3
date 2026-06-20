@@ -416,7 +416,7 @@ class NexusBridge(IBridge):
     def scan_and_cleanup(self) -> List[str]:
         """Clean up stale channels and discovered agents."""
         actions = []
-        # _now = time.time()  # noqa: assigned but unused
+        # _now = time.time()
         # Clean channels with no recent activity
         stale_channels = [ch for ch, msgs in self._channels.items() if len(msgs) == 0]
         for ch in stale_channels:
@@ -639,7 +639,7 @@ class SentinelStation:
         #     requires_escalation=False,
         # )
 
-        # _result_packet = to_bridge.process_packet(packet)  # noqa: assigned but unused
+        # _result_packet = to_bridge.process_packet(packet)
 
         result = EscalationResult(
             success=True,

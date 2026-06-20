@@ -38,6 +38,7 @@ async def get_me(current_user: dict[str, Any] = Depends(_get_current_user)) -> d
         # Hydrate from DB when the models layer is present.
         try:
             from sqlalchemy import select
+
             from src.database.session import get_db  # type: ignore[import]
 
             async for db in get_db():
@@ -69,6 +70,7 @@ async def update_me(
     if _MODELS_AVAILABLE:
         try:
             from sqlalchemy import update
+
             from src.database.session import get_db  # type: ignore[import]
 
             async for db in get_db():

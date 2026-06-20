@@ -31,7 +31,7 @@ def _pytest_url_validation() -> tuple[bool, str]:
     if not test_file.is_file():
         return False, "missing test_url_validation.py"
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # nosec B603 — list args, no shell=True
             [sys.executable, "-m", "pytest", str(test_file), "-q", "--tb=no"],
             cwd=ROOT,
             capture_output=True,

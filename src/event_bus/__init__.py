@@ -17,6 +17,8 @@ Usage:
     await bus.emit(event_type="user.created", data={"user_id": "123"})
 """
 
+import threading
+
 from src.event_bus.bus import EventBus
 from src.event_bus.nats_transport import NATSTransport, make_nats_transport
 from src.event_bus.types import (
@@ -32,12 +34,15 @@ from src.event_bus.types import (
 )
 
 _singleton: "EventBus | None" = None
+_lock = threading.Lock()
 
 
 def get_event_bus() -> "EventBus":
     global _singleton
     if _singleton is None:
-        _singleton = EventBus()
+        with _lock:
+            if _singleton is None:
+                _singleton = EventBus()
     return _singleton
 
 

@@ -51,7 +51,7 @@ def bootstrap() -> bool:
     if conn is None:
         return False
     tbl = _table_id()
-    bootstrap_sql = sql.SQL(
+    bootstrap_sql = sql.SQL(  # nosec B608 — psycopg2.sql parameterization, not string concat
         """
         CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -91,7 +91,7 @@ def upsert(doc_id: str, vector: list[float], payload: dict[str, Any]) -> bool:
     conn = _conn()
     if conn is None:
         return False
-    query = sql.SQL(
+    query = sql.SQL(  # nosec B608 — psycopg2.sql parameterization, no string concat
         """
     INSERT INTO {table} (id, embedding, payload, updated_at)
     VALUES (%s, %s::vector, %s::jsonb, NOW())
@@ -130,7 +130,7 @@ def search(
     if filter_payload:
         import json
 
-        query = sql.SQL(
+        query = sql.SQL(  # nosec B608 — psycopg2.sql parameterization, no string concat
             """
             SELECT id, 1 - (embedding <=> %s::vector) AS score, payload
             FROM {table}
@@ -146,7 +146,7 @@ def search(
             top_k,
         ]
     else:
-        query = sql.SQL(
+        query = sql.SQL(  # nosec B608 — psycopg2.sql parameterization, no string concat
             """
             SELECT id, 1 - (embedding <=> %s::vector) AS score, payload
             FROM {table}
@@ -177,7 +177,7 @@ def delete(doc_id: str) -> bool:
     conn = _conn()
     if conn is None:
         return False
-    query = sql.SQL("DELETE FROM {table} WHERE id = %s;").format(table=_table_id())
+    query = sql.SQL("DELETE FROM {table} WHERE id = %s;").format(table=_table_id())  # nosec B608
     try:
         with conn.cursor() as cur:
             cur.execute(query, (doc_id,))
@@ -194,7 +194,7 @@ def count() -> int:
     conn = _conn()
     if conn is None:
         return -1
-    query = sql.SQL("SELECT COUNT(*) FROM {table};").format(table=_table_id())
+    query = sql.SQL("SELECT COUNT(*) FROM {table};").format(table=_table_id())  # nosec B608
     try:
         with conn.cursor() as cur:
             cur.execute(query)
