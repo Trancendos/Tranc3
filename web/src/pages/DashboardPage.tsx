@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap, Clapperboard, Box, Snowflake, GitMerge, Fingerprint, Users, ShieldCheck, Puzzle
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap, Clapperboard, Box, Snowflake, GitMerge, Fingerprint, Users, ShieldCheck, Puzzle, ArrowLeftRight
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -97,6 +97,7 @@ const ENTITY_GRID = [
   { name: 'Infinity One',     icon: Fingerprint,  path: '/infinity-one',     status: 'partial', color: '#6366f1' },
   { name: 'Infinity Admin',   icon: ShieldCheck,  path: '/infinity-admin',   status: 'partial', color: '#7c3aed' },
   { name: 'Infinity Shards',  icon: Puzzle,       path: '/infinity-shards',  status: 'partial', color: '#a855f7' },
+  { name: 'Infinity Bridge',  icon: ArrowLeftRight, path: '/infinity-bridge', status: 'partial', color: '#14b8a6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

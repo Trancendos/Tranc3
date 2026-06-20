@@ -236,6 +236,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/swarm-svc/, ''),
             },
+            // Infinity Bridge service — Port 8070
+            '/infinity-bridge-svc': {
+                target: 'http://localhost:8070',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/infinity-bridge-svc/, ''),
+            },
             // Infinity Shards service — Port 8045
             '/infinity-shards-svc': {
                 target: 'http://localhost:8045',
