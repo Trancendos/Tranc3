@@ -83,6 +83,7 @@ const ENTITY_GRID = [
   { name: 'Sashas Photo Studio', icon: Palette,  path: '/sashas-photo-studio', status: 'planned', color: '#ec4899' },
   { name: 'I-Mind',             icon: Brain,    path: '/imind',              status: 'partial', color: '#f472b6' },
   { name: 'Resonate',           icon: Heart,    path: '/resonate',           status: 'partial', color: '#fb7185' },
+  { name: 'Tranquility',        icon: Heart,    path: '/tranquility',        status: 'partial', color: '#f9a8d4' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

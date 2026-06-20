@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Tranquility wellbeing hub — Port 8058
+            '/tranquility-svc': {
+                target: 'http://localhost:8058',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/tranquility-svc/, ''),
+            },
             // Resonate empathy engine — Port 8060 (note: shares port with hive-service)
             '/resonate-svc': {
                 target: 'http://localhost:8060',
