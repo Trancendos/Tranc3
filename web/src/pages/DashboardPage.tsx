@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap, Clapperboard, Box, Snowflake
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap, Clapperboard, Box, Snowflake, GitMerge
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -93,6 +93,7 @@ const ENTITY_GRID = [
   { name: 'TranceFlow',       icon: Box,          path: '/tranceflow',     status: 'partial', color: '#a855f7' },
   { name: 'The Ice Box',      icon: Snowflake,    path: '/ice-box',        status: 'partial', color: '#06b6d4' },
   { name: 'Sentinel Station', icon: Radio,        path: '/sentinel-station', status: 'partial', color: '#7c3aed' },
+  { name: 'Gateway Service',  icon: GitMerge,     path: '/gateway',          status: 'partial', color: '#14b8a6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Gateway Service aggregator — Port 8040
+            '/gateway-svc': {
+                target: 'http://localhost:8040',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/gateway-svc/, ''),
+            },
             // Sentinel Station event bus — Port 8041
             '/sentinel-svc': {
                 target: 'http://localhost:8041',
