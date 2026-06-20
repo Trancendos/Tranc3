@@ -30,6 +30,7 @@ import VaultPage from './pages/VaultPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import ConfigPage from './pages/ConfigPage'
 import CronPage from './pages/CronPage'
+import CachePage from './pages/CachePage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -77,6 +78,7 @@ export default function AppRouter() {
         <Route path="/analytics"    element={<Protected><AnalyticsPage /></Protected>} />
         <Route path="/config"       element={<Protected><ConfigPage /></Protected>} />
         <Route path="/cron"         element={<Protected><CronPage /></Protected>} />
+        <Route path="/cache"        element={<Protected><CachePage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

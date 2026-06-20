@@ -47,6 +47,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/vault',         label: 'The Void',      icon: <Lock size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/analytics',    label: 'Analytics',     icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
   { path: '/cron',          label: 'ChronosSphere', icon: <Clock size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/cache',         label: 'Cache',         icon: <Database size={18} aria-hidden="true" />, group: 'data' },
   { path: '/config',        label: 'Config Store',  icon: <Settings2 size={18} aria-hidden="true" />, group: 'config' },
   { path: '/admin',         label: 'Admin',         icon: <Shield size={18} aria-hidden="true" />, group: 'config' },
   { path: '/settings',      label: 'Settings',      icon: <Settings size={18} aria-hidden="true" />, group: 'config' },

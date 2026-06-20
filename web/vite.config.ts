@@ -98,6 +98,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/audit/, ''),
             },
+            // Cache service — Port 8023
+            '/cache-svc': {
+                target: 'http://localhost:8023',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/cache-svc/, ''),
+            },
             // Cron service (ChronosSphere) — Port 8021
             '/cron-svc': {
                 target: 'http://localhost:8021',

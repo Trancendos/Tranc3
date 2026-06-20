@@ -69,6 +69,7 @@ const ENTITY_GRID = [
   { name: 'Analytics',         icon: BarChart3,    path: '/analytics',    status: 'partial', color: '#6366f1' },
   { name: 'Config Store',      icon: Settings,     path: '/config',       status: 'partial', color: '#94a3b8' },
   { name: 'ChronosSphere',    icon: Clock,        path: '/cron',         status: 'partial', color: '#a78bfa' },
+  { name: 'Cache Service',    icon: Database,     path: '/cache',        status: 'partial', color: '#0ea5e9' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
