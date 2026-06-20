@@ -1199,20 +1199,43 @@ async def platform_health():
     import httpx
 
     WORKERS = {
-        "infinity-ws":      8004,
-        "infinity-auth":    8005,
-        "users-service":    8006,
-        "monitoring":       8007,
-        "notifications":    8008,
-        "infinity-ai":      8009,
-        "the-grid":         8010,
-        "products-service": 8011,
-        "orders-service":   8012,
-        "payments-service": 8013,
-        "files-service":    8014,
-        "identity-service": 8015,
-        "audit-service":    8017,
-        "vault-service":    8038,
+        # P0 — critical path
+        "infinity-ws":             8004,
+        "infinity-auth":           8005,
+        # P1 — core services
+        "users-service":           8006,
+        "monitoring":              8007,
+        "notifications":           8008,
+        "infinity-ai":             8009,
+        "the-grid":                8010,
+        "infinity-portal":         8042,
+        "infinity-one":            8043,
+        "infinity-admin":          8044,
+        "infinity-shards":         8045,
+        "infinity-bridge":         8070,
+        # P2 — extended services
+        "products-service":        8011,
+        "orders-service":          8012,
+        "payments-service":        8013,
+        "files-service":           8014,
+        "identity-service":        8015,
+        # P3 — platform services
+        "analytics-service":       8016,
+        "audit-service":           8017,
+        "cache-service":           8018,
+        "config-service":          8020,
+        "cron-service":            8021,
+        "email-service":           8022,
+        "search-service":          8024,
+        "storage-service":         8026,
+        "queue-service":           8027,
+        "rate-limit-service":      8028,
+        "health-aggregator":       8029,
+        "topology-service":        8031,
+        "ledger-service":          8032,
+        "model-router-service":    8033,
+        "workflow-engine-service": 8034,
+        "vault-service":           8038,
     }
 
     services = []

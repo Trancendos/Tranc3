@@ -738,6 +738,82 @@ app.include_router(_router)
 
 
 # ---------------------------------------------------------------------------
+# SSE — real-time notification stream for the frontend
+# ---------------------------------------------------------------------------
+
+import asyncio  # noqa: E402
+from fastapi.responses import StreamingResponse  # noqa: E402
+
+# In-process fan-out bus: user_id → list of asyncio.Queue
+_sse_subscribers: dict[str, list[asyncio.Queue]] = {}  # type: ignore[type-arg]
+_sse_lock = threading.Lock()
+
+
+def _fan_out(user_id: str, payload: dict) -> None:
+    """Push a notification payload to all active SSE queues for *user_id*."""
+    with _sse_lock:
+        queues = list(_sse_subscribers.get(user_id, []) + _sse_subscribers.get("*", []))
+    for q in queues:
+        try:
+            q.put_nowait(payload)
+        except asyncio.QueueFull:
+            pass
+
+
+# Patch create_notification to also fan-out to SSE
+_orig_create = db.create_notification
+
+
+def _patched_create(notif):
+    result = _orig_create(notif)
+    _fan_out(notif.user_id, {
+        "id": result.id,
+        "title": result.title,
+        "body": result.body,
+        "channel": result.channel,
+        "priority": result.priority,
+        "created_at": result.created_at.isoformat() if hasattr(result.created_at, "isoformat") else str(result.created_at),
+    })
+    return result
+
+
+db.create_notification = _patched_create  # type: ignore[method-assign]
+
+
+@app.get("/stream/{user_id}")
+async def notification_stream(user_id: str, _token: str = ""):
+    """SSE stream — delivers real-time notifications for *user_id*. Use '*' for broadcast."""
+    queue: asyncio.Queue = asyncio.Queue(maxsize=50)  # type: ignore[type-arg]
+    with _sse_lock:
+        _sse_subscribers.setdefault(user_id, []).append(queue)
+
+    async def event_gen():
+        try:
+            yield "data: {\"type\":\"connected\"}\n\n"
+            while True:
+                try:
+                    payload = await asyncio.wait_for(queue.get(), timeout=25.0)
+                    yield f"data: {json.dumps(payload)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            with _sse_lock:
+                lst = _sse_subscribers.get(user_id, [])
+                if queue in lst:
+                    lst.remove(queue)
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 

@@ -702,6 +702,13 @@ class AIGatewayRouter:
                 if self._smart_cache is not None:
                     self._smart_cache.put(prompt_text, response, tags=cache_tags)
 
+                # Feed outcome to genetic optimizer for evolutionary provider ranking
+                try:
+                    from src.ai_gateway.limit_monitor import monitor as _lm
+                    _lm.record_provider_outcome(provider_name.value, success=True, latency_ms=float(latency_ms))
+                except Exception:
+                    pass
+
                 return response
 
             except Exception as e:
@@ -717,6 +724,11 @@ class AIGatewayRouter:
                         provider_name.value,
                         rate_limited=rate_limited,
                     )
+                except Exception:
+                    pass
+                try:
+                    from src.ai_gateway.limit_monitor import monitor as _lm
+                    _lm.record_provider_outcome(provider_name.value, success=False, latency_ms=0.0)
                 except Exception:
                     pass
                 continue
