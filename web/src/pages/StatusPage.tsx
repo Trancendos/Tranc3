@@ -46,7 +46,7 @@ const SERVICES: Pick<ServiceHealth, 'name' | 'url'>[] = [
   { name: 'Model Router',        url: `${API.replace(':8000', ':8033')}/health` },
 ]
 
-const AI_STATUS_URL = `${API.replace(':8000', ':8009')}/providers/dashboard`
+const AI_STATUS_URL = `${API.replace(':8000', ':8009')}/providers`
 
 async function checkHealth(url: string): Promise<{ status: HealthStatus; latencyMs: number; details?: string }> {
   const t0 = performance.now()
@@ -105,7 +105,9 @@ export default function StatusPage() {
   const [services, setServices]     = useState<ServiceHealth[]>(
     SERVICES.map(s => ({ ...s, status: 'unknown' as HealthStatus }))
   )
-  const [aiProviders, setAiProviders] = useState<Record<string, unknown> | null>(null)
+  interface AiProviderInfo { status: string; available: boolean; utilisation_pct: number; daily_req: string }
+  interface AiDashboard { active_provider: string; zero_cost_operational: boolean; providers: Record<string, AiProviderInfo> }
+  const [aiProviders, setAiProviders] = useState<AiDashboard | null>(null)
   const [checking, setChecking]     = useState(false)
   const [lastRun, setLastRun]       = useState<string | null>(null)
 
@@ -232,32 +234,33 @@ export default function StatusPage() {
             <h2 id="ai-providers-heading" className="text-white font-semibold mb-3 flex items-center gap-2">
               AI Provider Rotation
               <span className="text-xs text-gray-500 font-normal">infinity-ai · :8009</span>
+              {aiProviders.zero_cost_operational
+                ? <span className="text-xs text-emerald-400">● operational</span>
+                : <span className="text-xs text-red-400">● offline mode</span>}
             </h2>
             <div
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
               role="list"
               aria-label="AI provider usage"
             >
-              {Object.entries(aiProviders as Record<string, unknown>).map(([id, info]) => {
-                const p = info as { name?: string; used?: number; limit?: number; pct?: number; active?: boolean }
-                const pct = p.pct ?? 0
-                const used  = p.used ?? 0
-                const limit = p.limit ?? '?'
+              {Object.entries(aiProviders.providers).map(([id, info]) => {
+                const pct = info.utilisation_pct ?? 0
+                const isActive = id === aiProviders.active_provider
                 const barColor = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-yellow-500' : 'bg-indigo-500'
                 return (
                   <div
                     key={id}
                     role="listitem"
-                    aria-label={`${p.name || id}: ${used} of ${limit} requests used today${p.active ? ', currently active' : ''}`}
-                    className="bg-gray-800 rounded p-3"
+                    aria-label={`${id}: ${info.daily_req} today, ${Math.round(pct)}% capacity${isActive ? ', currently active' : ''}`}
+                    className={`bg-gray-800 rounded p-3 ${isActive ? 'ring-1 ring-indigo-500/50' : ''}`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-gray-200 text-xs font-medium">{p.name || id}</span>
+                      <span className="text-gray-200 text-xs font-medium capitalize">{id}</span>
                       <span
                         aria-hidden="true"
-                        className={`text-xs ${p.active ? 'text-green-400' : 'text-gray-500'}`}
+                        className={`text-xs ${isActive ? 'text-green-400' : info.available ? 'text-gray-400' : 'text-red-400'}`}
                       >
-                        {p.active ? 'active' : 'full'}
+                        {isActive ? 'active' : info.available ? 'ready' : info.status}
                       </span>
                     </div>
                     <div
@@ -275,7 +278,7 @@ export default function StatusPage() {
                       />
                     </div>
                     <div className="text-gray-500 text-xs mt-1" aria-hidden="true">
-                      {used} / {limit} today
+                      {info.daily_req} today
                     </div>
                   </div>
                 )
