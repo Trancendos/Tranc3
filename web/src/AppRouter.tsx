@@ -28,6 +28,7 @@ import LedgerPage from './pages/LedgerPage'
 import TopologyPage from './pages/TopologyPage'
 import VaultPage from './pages/VaultPage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import ConfigPage from './pages/ConfigPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -73,6 +74,7 @@ export default function AppRouter() {
         <Route path="/topology"     element={<Protected><TopologyPage /></Protected>} />
         <Route path="/vault"        element={<Protected><VaultPage /></Protected>} />
         <Route path="/analytics"    element={<Protected><AnalyticsPage /></Protected>} />
+        <Route path="/config"       element={<Protected><ConfigPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

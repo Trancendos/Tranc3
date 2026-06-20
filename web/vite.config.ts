@@ -98,6 +98,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/audit/, ''),
             },
+            // Config service — Port 8024
+            '/config-svc': {
+                target: 'http://localhost:8024',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/config-svc/, ''),
+            },
             '/api': {
                 target: process.env.VITE_API_URL || 'http://localhost:8000',
                 changeOrigin: true,
