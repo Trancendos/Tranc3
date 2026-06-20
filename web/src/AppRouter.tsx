@@ -51,6 +51,7 @@ import TAimraPage from './pages/TAimraPage'
 import TheStudioPage from './pages/TheStudioPage'
 import TheAcademyPage from './pages/TheAcademyPage'
 import WarpRadioPage from './pages/WarpRadioPage'
+import TranceFlowPage from './pages/TranceFlowPage'
 import TateKingPage from './pages/TateKingPage'
 import VRAR3DPage from './pages/VRAR3DPage'
 import SparkDashboard from './components/spark/SparkDashboard'
@@ -121,6 +122,7 @@ export default function AppRouter() {
         <Route path="/the-studio"           element={<Protected><TheStudioPage /></Protected>} />
         <Route path="/the-academy"          element={<Protected><TheAcademyPage /></Protected>} />
         <Route path="/warp-radio"           element={<Protected><WarpRadioPage /></Protected>} />
+        <Route path="/tranceflow"           element={<Protected><TranceFlowPage /></Protected>} />
         <Route path="/tateking"             element={<Protected><TateKingPage /></Protected>} />
         <Route path="/vrar3d"               element={<Protected><VRAR3DPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />

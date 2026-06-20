@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // TranceFlow 3D/games studio — Port 8067
+            '/tranceflow-svc': {
+                target: 'http://localhost:8067',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/tranceflow-svc/, ''),
+            },
             // TateKing video creation — Port 8066
             '/tateking-svc': {
                 target: 'http://localhost:8066',
