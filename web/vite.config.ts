@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Infinity Portal service — Port 8042
+            '/iportal-svc': {
+                target: 'http://localhost:8042',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/iportal-svc/, ''),
+            },
             // CDN service — Port 8028
             '/cdn-svc': {
                 target: 'http://localhost:8028',

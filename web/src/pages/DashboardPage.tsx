@@ -76,7 +76,8 @@ const ENTITY_GRID = [
   { name: 'SMS Gateway',      icon: MessageSquare, path: '/sms',          status: 'partial', color: '#10b981' },
   { name: 'GBrain Bridge',   icon: Brain,         path: '/gbrain',       status: 'partial', color: '#a855f7' },
   { name: 'The HIVE (Data)', icon: Layers,        path: '/hive',         status: 'partial', color: '#f59e0b' },
-  { name: 'CDN Service',    icon: Globe,         path: '/cdn',          status: 'partial', color: '#3b82f6' },
+  { name: 'CDN Service',      icon: Globe,   path: '/cdn',             status: 'partial', color: '#3b82f6' },
+  { name: 'Infinity Portal',  icon: Shield,  path: '/infinity-portal', status: 'partial', color: '#6366f1' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
