@@ -45,6 +45,7 @@ const ENTITY_GRID = [
   { name: 'The Studio',        icon: Palette,      path: '/services',    status: 'planned', color: '#64748b' },
   { name: 'Warp Radio',        icon: Music,        path: '/services',    status: 'planned', color: '#64748b' },
   { name: 'The Lab',           icon: FlaskConical, path: '/the-lab',     status: 'partial', color: '#a855f7' },
+  { name: 'LangChain',         icon: Layers,       path: '/langchain',   status: 'partial', color: '#7c3aed' },
   { name: 'Think Tank',        icon: Brain,        path: '/services',    status: 'partial', color: '#a78bfa' },
   { name: 'The Void',          icon: Lock,         path: '/services',    status: 'live',    color: '#ef4444' },
   { name: 'The HIVE',          icon: Layers,       path: '/queue',       status: 'live',    color: '#f59e0b' },

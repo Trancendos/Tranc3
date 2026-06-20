@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell,
   Database, Search, ListTodo, Settings, ChevronLeft,
   ChevronRight, LogOut, User, Shield, Server, GitBranch,
-  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network
+  CheckSquare, Cpu, Bot, Globe, FlaskConical, BarChart3, Network, Layers
 } from 'lucide-react'
 
 interface NavItem {
@@ -39,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   // AI
   { path: '/turings-hub',  label: "Turing's Hub",  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/deep-agents',  label: 'Deep Agents',   icon: <Network size={18} aria-hidden="true" />, group: 'ai' },
+  { path: '/langchain',    label: 'LangChain',     icon: <Layers size={18} aria-hidden="true" />, group: 'ai' },
   // Config
   { path: '/admin',         label: 'Admin',         icon: <Shield size={18} aria-hidden="true" />, group: 'config' },
   { path: '/settings',      label: 'Settings',      icon: <Settings size={18} aria-hidden="true" />, group: 'config' },

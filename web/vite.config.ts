@@ -56,6 +56,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/dagents/, ''),
             },
+            // LangChain integration service — Port 8036
+            '/lchain': {
+                target: 'http://localhost:8036',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/lchain/, ''),
+            },
             // Audit service (The Observatory trail) — Port 8017
             '/audit': {
                 target: 'http://localhost:8017',

@@ -22,6 +22,7 @@ import TheDutchyPage from './pages/TheDutchyPage'
 import TuringsHubPage from './pages/TuringsHubPage'
 import DeepAgentsPage from './pages/DeepAgentsPage'
 import AuditPage from './pages/AuditPage'
+import LangChainPage from './pages/LangChainPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -61,6 +62,7 @@ export default function AppRouter() {
         <Route path="/turings-hub"  element={<Protected><TuringsHubPage /></Protected>} />
         <Route path="/deep-agents"  element={<Protected><DeepAgentsPage /></Protected>} />
         <Route path="/audit"        element={<Protected><AuditPage /></Protected>} />
+        <Route path="/langchain"    element={<Protected><LangChainPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />
