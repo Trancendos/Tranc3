@@ -20,6 +20,18 @@ export default defineConfig({
                 ws: true,
                 changeOrigin: true,
             },
+            // Health-aggregator (The Observatory) — used by WorkersPage + StatusPage
+            '/health-agg': {
+                target: 'http://localhost:8029',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/health-agg/, ''),
+            },
+            // Optional/external services proxy — used by ServicesPage
+            '/optional-health': {
+                target: 'http://localhost:8029',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/optional-health/, ''),
+            },
             '/api': {
                 target: process.env.VITE_API_URL || 'http://localhost:8000',
                 changeOrigin: true,

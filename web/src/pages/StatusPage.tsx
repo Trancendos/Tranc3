@@ -1,73 +1,26 @@
 /**
- * StatusPage — real-time health of all Trancendos workers and CF services.
- * Polls /health on each service, falls back to graceful "unknown" state.
+ * StatusPage — real-time health of all Trancendos workers.
+ * Uses the health-aggregator (port 8029) for a single bulk status call,
+ * eliminating 23 individual cross-origin requests.
  */
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { RefreshCw, CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 type HealthStatus = 'ok' | 'degraded' | 'down' | 'unknown'
 
 interface ServiceHealth {
   name: string
-  url: string
+  port: number
   status: HealthStatus
   latencyMs?: number
-  provider?: string
   details?: string
   lastChecked?: string
 }
 
-const SERVICES: Pick<ServiceHealth, 'name' | 'url'>[] = [
-  { name: 'API Gateway',         url: `${API}/health` },
-  { name: 'AI Gateway',          url: `${API.replace(':8000', ':8009')}/health` },
-  { name: 'Infinity Auth',       url: `${API.replace(':8000', ':8005')}/health` },
-  { name: 'Infinity Portal',     url: `${API.replace(':8000', ':8042')}/health` },
-  { name: 'Infinity One',        url: `${API.replace(':8000', ':8043')}/health` },
-  { name: 'Infinity Admin',      url: `${API.replace(':8000', ':8044')}/health` },
-  { name: 'Infinity Bridge',     url: `${API.replace(':8000', ':8070')}/health` },
-  { name: 'Infinity WebSocket',  url: `${API.replace(':8000', ':8004')}/health` },
-  { name: 'Users Service',       url: `${API.replace(':8000', ':8006')}/health` },
-  { name: 'Monitoring',          url: `${API.replace(':8000', ':8007')}/health` },
-  { name: 'Notifications',       url: `${API.replace(':8000', ':8008')}/health` },
-  { name: 'The Digital Grid',    url: `${API.replace(':8000', ':8010')}/health` },
-  { name: 'Products Service',    url: `${API.replace(':8000', ':8011')}/health` },
-  { name: 'Orders Service',      url: `${API.replace(':8000', ':8012')}/health` },
-  { name: 'Payments Service',    url: `${API.replace(':8000', ':8013')}/health` },
-  { name: 'Search Service',      url: `${API.replace(':8000', ':8024')}/health` },
-  { name: 'Queue Service',       url: `${API.replace(':8000', ':8027')}/health` },
-  { name: 'Vault Service',       url: `${API.replace(':8000', ':8038')}/health` },
-  { name: 'Storage Service',     url: `${API.replace(':8000', ':8026')}/health` },
-  { name: 'Audit Service',       url: `${API.replace(':8000', ':8017')}/health` },
-  { name: 'Cron Service',        url: `${API.replace(':8000', ':8021')}/health` },
-  { name: 'Ledger Service',      url: `${API.replace(':8000', ':8032')}/health` },
-  { name: 'Model Router',        url: `${API.replace(':8000', ':8033')}/health` },
-]
-
-const AI_STATUS_URL = `${API.replace(':8000', ':8009')}/providers`
-
-async function checkHealth(url: string): Promise<{ status: HealthStatus; latencyMs: number; details?: string }> {
-  const t0 = performance.now()
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
-    const latencyMs = Math.round(performance.now() - t0)
-    if (res.ok) {
-      const body = await res.json().catch(() => ({}))
-      return {
-        status: body.status === 'degraded' ? 'degraded' : 'ok',
-        latencyMs,
-        details: body.provider || body.version || undefined,
-      }
-    }
-    return { status: 'down', latencyMs, details: `HTTP ${res.status}` }
-  } catch (e: unknown) {
-    const latencyMs = Math.round(performance.now() - t0)
-    const msg = e instanceof Error ? e.message : 'unreachable'
-    return { status: 'unknown', latencyMs, details: msg.includes('timeout') ? 'timeout' : 'unreachable' }
-  }
-}
+interface AiProviderInfo { status: string; available: boolean; utilisation_pct: number; daily_req: string }
+interface AiDashboard { active_provider: string; zero_cost_operational: boolean; providers: Record<string, AiProviderInfo> }
 
 const STATUS_CONFIG: Record<HealthStatus, { icon: React.ReactNode; label: string; color: string }> = {
   ok:       { icon: <CheckCircle size={16} aria-hidden="true" />, label: 'Online',   color: 'text-green-400' },
@@ -81,7 +34,7 @@ function StatusBadge({ status, checking }: { status: HealthStatus; checking?: bo
     return (
       <span className="inline-flex items-center gap-1.5 text-gray-400" aria-label="Checking">
         <Loader size={16} aria-hidden="true" className="animate-spin" />
-        <span className="capitalize">Checking</span>
+        <span>Checking</span>
       </span>
     )
   }
@@ -89,42 +42,71 @@ function StatusBadge({ status, checking }: { status: HealthStatus; checking?: bo
   return (
     <span className={`inline-flex items-center gap-1.5 ${color}`} aria-label={label}>
       {icon}
-      <span className="capitalize">{label}</span>
+      <span>{label}</span>
     </span>
   )
 }
 
 const SUMMARY_ITEMS = [
-  { key: 'ok'      as HealthStatus, label: 'Online',   border: 'border-green-500',  text: 'text-green-400' },
-  { key: 'degraded'as HealthStatus, label: 'Degraded', border: 'border-yellow-500', text: 'text-yellow-400' },
-  { key: 'down'    as HealthStatus, label: 'Down',     border: 'border-red-500',    text: 'text-red-400' },
-  { key: 'unknown' as HealthStatus, label: 'Unknown',  border: 'border-gray-600',   text: 'text-gray-400' },
+  { key: 'ok'       as HealthStatus, label: 'Online',   border: 'border-green-500',  text: 'text-green-400' },
+  { key: 'degraded' as HealthStatus, label: 'Degraded', border: 'border-yellow-500', text: 'text-yellow-400' },
+  { key: 'down'     as HealthStatus, label: 'Down',     border: 'border-red-500',    text: 'text-red-400' },
+  { key: 'unknown'  as HealthStatus, label: 'Unknown',  border: 'border-gray-600',   text: 'text-gray-400' },
 ]
 
 export default function StatusPage() {
-  const [services, setServices]     = useState<ServiceHealth[]>(
-    SERVICES.map(s => ({ ...s, status: 'unknown' as HealthStatus }))
-  )
-  interface AiProviderInfo { status: string; available: boolean; utilisation_pct: number; daily_req: string }
-  interface AiDashboard { active_provider: string; zero_cost_operational: boolean; providers: Record<string, AiProviderInfo> }
+  const [services, setServices]       = useState<ServiceHealth[]>([])
   const [aiProviders, setAiProviders] = useState<AiDashboard | null>(null)
-  const [checking, setChecking]     = useState(false)
-  const [lastRun, setLastRun]       = useState<string | null>(null)
+  const [checking, setChecking]       = useState(false)
+  const [lastRun, setLastRun]         = useState<string | null>(null)
+  const [aggDown, setAggDown]         = useState(false)
+  const { trackPageView } = useAnalytics()
+
+  useEffect(() => { trackPageView('/status') }, [trackPageView])
 
   const runChecks = useCallback(async () => {
     setChecking(true)
-    const results = await Promise.all(
-      SERVICES.map(async svc => {
-        const { status, latencyMs, details } = await checkHealth(svc.url)
-        return { ...svc, status, latencyMs, details, lastChecked: new Date().toISOString() }
-      })
-    )
-    setServices(results)
-
+    setAggDown(false)
     try {
-      const r = await fetch(AI_STATUS_URL, { signal: AbortSignal.timeout(5000) })
-      if (r.ok) setAiProviders(await r.json())
-    } catch { /* ignore */ }
+      const resp = await fetch('/health-agg/status', { signal: AbortSignal.timeout(6000) })
+      if (resp.ok) {
+        const body = await resp.json() as {
+          services?: Array<{ name: string; port: number; status: string; latency_ms?: number }>
+        }
+        const svcs: ServiceHealth[] = (body.services ?? []).map((s) => ({
+          name: s.name,
+          port: s.port,
+          status: (
+            s.status === 'healthy'  ? 'ok' :
+            s.status === 'degraded' ? 'degraded' :
+            s.status === 'down'     ? 'down' : 'unknown'
+          ) as HealthStatus,
+          latencyMs: s.latency_ms != null ? Math.round(s.latency_ms) : undefined,
+          lastChecked: new Date().toISOString(),
+        }))
+        setServices(svcs)
+      } else {
+        setAggDown(true)
+      }
+    } catch {
+      setAggDown(true)
+    }
+
+    // Fetch AI provider data separately (proxied via /api → :8000 or direct aggregator response)
+    try {
+      const r = await fetch('/health-agg/status/infinity-ai', { signal: AbortSignal.timeout(4000) })
+      if (r.ok) {
+        const detail = await r.json()
+        const providers = detail?.current?.details?.providers
+        if (providers) {
+          setAiProviders({
+            active_provider: detail?.current?.details?.active_provider ?? '',
+            zero_cost_operational: detail?.current?.details?.zero_cost_operational ?? true,
+            providers,
+          })
+        }
+      }
+    } catch { /* AI provider detail optional */ }
 
     setLastRun(new Date().toLocaleTimeString())
     setChecking(false)
@@ -143,19 +125,17 @@ export default function StatusPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* Live status announcer */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {lastRun
-          ? `Health check complete at ${lastRun}. ${counts['ok']} online, ${counts['down']} down, ${counts['degraded']} degraded.`
+          ? `Health check complete at ${lastRun}. ${counts['ok'] ?? 0} online, ${counts['down'] ?? 0} down.`
           : 'Checking service health…'}
       </div>
 
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Platform Status</h1>
           <p className="text-gray-400 text-sm mt-1" aria-live="polite">
-            {lastRun ? `Last checked: ${lastRun}` : 'Checking…'}
+            {lastRun ? `Last checked: ${lastRun} · via health-aggregator` : 'Checking…'}
           </p>
         </div>
         <button
@@ -170,7 +150,15 @@ export default function StatusPage() {
         </button>
       </div>
 
-      {/* Summary stats */}
+      {aggDown && (
+        <div role="alert" className="mb-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg text-yellow-300 text-sm">
+          Health-aggregator (port 8029) is unreachable. Start the stack with{' '}
+          <code className="font-mono bg-gray-800 px-1 rounded">docker compose up health-aggregator</code>{' '}
+          or{' '}
+          <code className="font-mono bg-gray-800 px-1 rounded">make dev-api</code>.
+        </div>
+      )}
+
       <div
         className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6"
         role="list"
@@ -180,54 +168,56 @@ export default function StatusPage() {
           <div
             key={key}
             role="listitem"
-            aria-label={`${counts[key]} ${label}`}
+            aria-label={`${counts[key] ?? 0} ${label}`}
             className={`bg-gray-900 border ${border} rounded-lg p-4`}
           >
             <div className={`text-3xl font-bold tabular-nums ${text}`} aria-hidden="true">
-              {counts[key]}
+              {counts[key] ?? 0}
             </div>
             <div className="text-gray-400 text-sm mt-1">{label}</div>
           </div>
         ))}
       </div>
 
-      {/* Service table */}
-      <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden mb-6">
-        <table
-          className="w-full text-sm"
-          aria-label="Individual service health checks"
-          aria-busy={checking}
-        >
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Service</th>
-              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
-              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Latency</th>
-              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {services.map(svc => (
-              <tr key={svc.name} className="border-b border-gray-800 hover:bg-gray-800/50">
-                <td className="px-4 py-3 text-gray-200 font-medium">{svc.name}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={svc.status} checking={checking} />
-                </td>
-                <td className="px-4 py-3 text-gray-400 tabular-nums">
-                  {svc.latencyMs != null
-                    ? <span aria-label={`${svc.latencyMs} milliseconds`}>{svc.latencyMs}ms</span>
-                    : <span aria-label="Not yet measured">—</span>}
-                </td>
-                <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-xs">
-                  {svc.details || '—'}
-                </td>
+      {services.length > 0 ? (
+        <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden mb-6">
+          <table
+            className="w-full text-sm"
+            aria-label="Individual service health checks"
+            aria-busy={checking}
+          >
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Service</th>
+                <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Port</th>
+                <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
+                <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Latency</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {services.map(svc => (
+                <tr key={`${svc.name}-${svc.port}`} className="border-b border-gray-800 hover:bg-gray-800/50">
+                  <td className="px-4 py-3 text-gray-200 font-medium">{svc.name}</td>
+                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{svc.port}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={svc.status} checking={checking} />
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 tabular-nums text-xs">
+                    {svc.latencyMs != null
+                      ? <span aria-label={`${svc.latencyMs} milliseconds`}>{svc.latencyMs}ms</span>
+                      : <span aria-label="Not yet measured">—</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : !aggDown && (
+        <div className="bg-gray-900 rounded-lg border border-gray-700 p-8 text-center text-gray-500 mb-6">
+          {checking ? 'Polling health-aggregator…' : 'No services reported yet.'}
+        </div>
+      )}
 
-      {/* AI Provider Rotation */}
       {aiProviders && (
         <section aria-labelledby="ai-providers-heading">
           <div className="bg-gray-900 rounded-lg border border-gray-700 p-4">
@@ -238,11 +228,7 @@ export default function StatusPage() {
                 ? <span className="text-xs text-emerald-400">● operational</span>
                 : <span className="text-xs text-red-400">● offline mode</span>}
             </h2>
-            <div
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
-              role="list"
-              aria-label="AI provider usage"
-            >
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" role="list">
               {Object.entries(aiProviders.providers).map(([id, info]) => {
                 const pct = info.utilisation_pct ?? 0
                 const isActive = id === aiProviders.active_provider
@@ -251,15 +237,11 @@ export default function StatusPage() {
                   <div
                     key={id}
                     role="listitem"
-                    aria-label={`${id}: ${info.daily_req} today, ${Math.round(pct)}% capacity${isActive ? ', currently active' : ''}`}
                     className={`bg-gray-800 rounded p-3 ${isActive ? 'ring-1 ring-indigo-500/50' : ''}`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-gray-200 text-xs font-medium capitalize">{id}</span>
-                      <span
-                        aria-hidden="true"
-                        className={`text-xs ${isActive ? 'text-green-400' : info.available ? 'text-gray-400' : 'text-red-400'}`}
-                      >
+                      <span className={`text-xs ${isActive ? 'text-green-400' : info.available ? 'text-gray-400' : 'text-red-400'}`}>
                         {isActive ? 'active' : info.available ? 'ready' : info.status}
                       </span>
                     </div>
@@ -268,18 +250,11 @@ export default function StatusPage() {
                       aria-valuenow={Math.round(pct)}
                       aria-valuemin={0}
                       aria-valuemax={100}
-                      aria-label={`${Math.round(pct)}% capacity used`}
                       className="h-1.5 bg-gray-700 rounded-full overflow-hidden"
                     >
-                      <div
-                        className={`h-full rounded-full transition-all ${barColor}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                        aria-hidden="true"
-                      />
+                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                     </div>
-                    <div className="text-gray-500 text-xs mt-1" aria-hidden="true">
-                      {info.daily_req} today
-                    </div>
+                    <div className="text-gray-500 text-xs mt-1">{info.daily_req} today</div>
                   </div>
                 )
               })}

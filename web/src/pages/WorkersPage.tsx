@@ -2,8 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Server, RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { useAnalytics } from '../hooks/useAnalytics'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-
 interface Worker {
   name: string
   port: number
@@ -65,31 +63,43 @@ export default function WorkersPage() {
   const [checking, setChecking] = useState(false)
   const [lastRun, setLastRun] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
-  const { trackWorkerRefresh } = useAnalytics()
+  const { trackWorkerRefresh, trackPageView } = useAnalytics()
+
+  useEffect(() => { trackPageView('/workers') }, [trackPageView])
 
   const checkAll = useCallback(async () => {
     setChecking(true)
-    const results = await Promise.all(
-      WORKERS.map(async (w) => {
-        const t0 = performance.now()
-        const url = `${API.replace(':8000', `:${w.port}`)}/health`
-        try {
-          const r = await fetch(url, { signal: AbortSignal.timeout(4000) })
-          const latencyMs = Math.round(performance.now() - t0)
-          if (r.ok) {
-            const body = await r.json().catch(() => ({}))
-            return { ...w, status: (body.status === 'degraded' ? 'degraded' : 'ok') as Worker['status'], latencyMs }
-          }
-          return { ...w, status: 'down' as Worker['status'], latencyMs }
-        } catch {
-          return { ...w, status: 'unknown' as Worker['status'], latencyMs: Math.round(performance.now() - t0) }
+    try {
+      // Use health-aggregator for a single bulk status call (proxied via vite → :8029)
+      const t0 = performance.now()
+      const resp = await fetch('/health-agg/status', { signal: AbortSignal.timeout(6000) })
+      const totalMs = Math.round(performance.now() - t0)
+      if (resp.ok) {
+        const body = await resp.json() as {
+          services?: Array<{ name: string; port: number; status: string; latency_ms?: number }>
         }
-      })
-    )
-    setWorkers(results)
+        const byPort = new Map(
+          (body.services ?? []).map((s) => [s.port, s])
+        )
+        const results = WORKERS.map((w) => {
+          const s = byPort.get(w.port)
+          if (!s) return { ...w, status: 'unknown' as Worker['status'] }
+          const status: Worker['status'] =
+            s.status === 'healthy' ? 'ok' :
+            s.status === 'degraded' ? 'degraded' : 'down'
+          return { ...w, status, latencyMs: s.latency_ms != null ? Math.round(s.latency_ms) : undefined }
+        })
+        setWorkers(results)
+        trackWorkerRefresh(results.length)
+      } else {
+        // Aggregator down — mark all unknown with a shared latency
+        setWorkers(WORKERS.map((w) => ({ ...w, status: 'unknown' as Worker['status'], latencyMs: totalMs })))
+      }
+    } catch {
+      setWorkers(WORKERS.map((w) => ({ ...w, status: 'unknown' as Worker['status'] })))
+    }
     setLastRun(new Date().toLocaleTimeString())
     setChecking(false)
-    trackWorkerRefresh(results.length)
   }, [trackWorkerRefresh])
 
   useEffect(() => {

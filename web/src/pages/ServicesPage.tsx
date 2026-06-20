@@ -341,13 +341,16 @@ export default function ServicesPage() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/optional-health/health')
+    // /optional-health proxies to health-aggregator :8029; /status returns bulk service list
+    fetch('/optional-health/status')
       .then(r => r.json())
       .then((data: { services?: Array<{ name: string; status: string; latency_ms?: number }> }) => {
         if (cancelled) return
         const statusMap: Record<string, { status: string; latency_ms?: number }> = {}
         for (const s of data.services ?? []) {
-          statusMap[s.name] = { status: s.status, latency_ms: s.latency_ms }
+          // health-aggregator uses "healthy" not "ok"
+          const mappedStatus = s.status === 'healthy' ? 'healthy' : s.status
+          statusMap[s.name] = { status: mappedStatus, latency_ms: s.latency_ms }
         }
         setServices(prev =>
           prev.map(svc => ({
