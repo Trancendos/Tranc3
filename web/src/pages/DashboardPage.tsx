@@ -62,6 +62,7 @@ const ENTITY_GRID = [
   { name: 'Search',            icon: Search,       path: '/search',      status: 'live',    color: '#10b981' },
   { name: 'The Dutchy',        icon: BarChart3,     path: '/the-dutchy',  status: 'partial', color: '#10b981' },
   { name: 'DevOcity',          icon: Boxes,        path: '/workers',     status: 'planned', color: '#64748b' },
+  { name: 'Model Router',      icon: Cpu,          path: '/model-router', status: 'partial', color: '#818cf8' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

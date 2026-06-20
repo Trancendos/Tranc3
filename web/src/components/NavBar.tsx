@@ -40,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/turings-hub',  label: "Turing's Hub",  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/deep-agents',  label: 'Deep Agents',   icon: <Network size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/langchain',    label: 'LangChain',     icon: <Layers size={18} aria-hidden="true" />, group: 'ai' },
+  { path: '/model-router', label: 'Model Router',  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
   // Config
   { path: '/admin',         label: 'Admin',         icon: <Shield size={18} aria-hidden="true" />, group: 'config' },
   { path: '/settings',      label: 'Settings',      icon: <Settings size={18} aria-hidden="true" />, group: 'config' },

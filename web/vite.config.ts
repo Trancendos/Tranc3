@@ -56,6 +56,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/dagents/, ''),
             },
+            // Model Router service — Port 8033
+            '/mrouter': {
+                target: 'http://localhost:8033',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/mrouter/, ''),
+            },
             // LangChain integration service — Port 8036
             '/lchain': {
                 target: 'http://localhost:8036',
