@@ -1,5 +1,6 @@
 import React, { useState, useRef, useId, useEffect, useCallback } from 'react'
 import { Settings, Save, Eye, EyeOff, CheckCircle, Lock, Trash2, RefreshCw, AlertCircle } from 'lucide-react'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -50,6 +51,9 @@ function authHeaders(): HeadersInit {
 }
 
 export default function SettingsPage() {
+  const { trackPageView } = useAnalytics()
+  useEffect(() => { trackPageView('/settings') }, [trackPageView])
+
   // Draft values the user is typing — empty = not changed / will keep server value
   const [drafts, setDrafts]   = useState<Record<string, string>>({})
   // Server-side status for each key

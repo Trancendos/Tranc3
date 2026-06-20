@@ -15,6 +15,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { useAnalytics } from '../hooks/useAnalytics'
 import {
   ShieldCheck,
   AlertTriangle,
@@ -164,6 +165,9 @@ function ScoreBar({ score }: { score: number }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ComplianceDashboard() {
+  const { trackPageView } = useAnalytics()
+  useEffect(() => { trackPageView('/compliance') }, [trackPageView])
+
   const [status, setStatus] = useState<ComplianceStatus | null>(null)
   const [report, setReport] = useState<ComplianceReport | null>(null)
   const [loading, setLoading] = useState(true)
