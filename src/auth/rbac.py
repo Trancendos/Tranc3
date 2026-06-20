@@ -71,6 +71,7 @@ def require_permission(permission: str):
     Reads user from request.state.user (set by auth middleware).
     Raises 401 if no user present, 403 if permission denied.
     """
+
     async def _guard(request: Request) -> None:
         user = getattr(request.state, "user", None)
         if user is None:

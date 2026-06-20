@@ -162,10 +162,10 @@ def read_validated_file_text(
     resolved = validate_path(rel, base_dir, must_exist=True)
     size = resolved.stat().st_size  # lgtm[py/path-injection] - path validated by validate_path()
     if size > max_bytes:
-        raise ValueError(
-            f"File too large: {size} bytes > {max_bytes} bytes limit: {resolved}"
-        )
-    text = resolved.read_text(encoding=encoding, errors="replace")  # lgtm[py/path-injection] - path validated by validate_path()
+        raise ValueError(f"File too large: {size} bytes > {max_bytes} bytes limit: {resolved}")
+    text = resolved.read_text(
+        encoding=encoding, errors="replace"
+    )  # lgtm[py/path-injection] - path validated by validate_path()
     return text, size
 
 
