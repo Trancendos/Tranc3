@@ -1242,7 +1242,7 @@ async def features():
     tags=["system"],
     summary="AI provider limit monitor dashboard",
     description=(
-        "Zero-cost AI provider rotation status. Shows all 8 free-tier providers, "
+        "Zero-cost AI provider rotation status. Shows all free-tier providers, "
         "their current utilisation vs hard-stop thresholds (95%), which is active, "
         "and which are rotating or hard-stopped. Managed by The Observatory (Norman Hawkins)."
     ),
@@ -1254,7 +1254,7 @@ async def ai_providers():
         return monitor.get_dashboard()
     except Exception:
         logger.exception("ai_providers: limit_monitor unavailable")
-        return {"error": "limit_monitor_unavailable", "status": "unavailable"}
+        raise HTTPException(status_code=503, detail="limit_monitor_unavailable")
 
 
 @app.post(
@@ -1268,12 +1268,12 @@ async def ai_provider_reset(provider: str):
         from src.ai_gateway.limit_monitor import LimitMonitor, monitor
 
         if provider not in LimitMonitor.LIMITS:
-            return {"error": "unknown_provider"}
+            raise HTTPException(status_code=404, detail=f"Unknown provider: {provider!r}")
         monitor.reset_provider(provider)
         return {"reset": True, "provider": provider}
     except Exception:
         logger.exception("ai_provider_reset: failed for provider=%s", provider)
-        return {"error": "reset_failed"}
+        raise HTTPException(status_code=500, detail="reset_failed")
 
 
 # ── Inference ─────────────────────────────────────────────────────────────────

@@ -38,14 +38,11 @@ const STATUS_EMOJI: Record<string, string> = {
 const PROVIDER_LABELS: Record<string, string> = {
   ollama: 'Ollama (local)',
   groq: 'Groq LPU',
-  gemini: 'Gemini Flash',
   cerebras: 'Cerebras RDU',
-  sambanova: 'SambaNova',
   openrouter: 'OpenRouter',
   huggingface: 'HuggingFace',
   together: 'Together AI',
   deepseek: 'DeepSeek',
-  cloudflare_ai: 'Cloudflare AI',
   offline: 'Offline (stub)',
 }
 
@@ -76,8 +73,15 @@ export function AIProvidersPage() {
         const res = await fetch(`${API}/ai/providers`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const json = await res.json()
+        if (
+          !json ||
+          typeof json.active_provider !== 'string' ||
+          typeof json.providers !== 'object'
+        ) {
+          throw new Error('Unexpected response shape from /ai/providers')
+        }
         if (active) {
-          setData(json)
+          setData(json as Dashboard)
           setLastUpdate(new Date())
           setError(null)
         }
@@ -100,7 +104,7 @@ export function AIProvidersPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">AI Provider Rotation</h1>
           <p className="text-slate-400 text-sm mt-1">
-            Zero-cost adaptive rotation · x11 free providers · hard stops at 95%
+            Zero-cost adaptive rotation · x8 free providers · hard stops at 95%
           </p>
         </div>
         <div className="text-right">
