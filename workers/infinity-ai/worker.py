@@ -1031,7 +1031,7 @@ async def providers_dashboard():
         pass
 
     provider_info: dict = {}
-    for pname, client in router.providers:
+    for pname, _client in router.providers:
         name = pname.value
         available = True
         status = "ok"

@@ -22,7 +22,7 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from threading import RLock
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 
 def _fingerprint(text: str, n: int = 3) -> str:
