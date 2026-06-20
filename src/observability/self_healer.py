@@ -69,7 +69,11 @@ class SelfHealer:
         cell.last_checked = time.monotonic()
         if alive:
             if not cell.healthy:
-                logger.info("Cell '%s' recovered (was down for %d probes)", cell.name, cell.consecutive_failures)
+                logger.info(
+                    "Cell '%s' recovered (was down for %d probes)",
+                    cell.name,
+                    cell.consecutive_failures,
+                )
             cell.healthy = True
             cell.consecutive_failures = 0
         else:
@@ -93,7 +97,11 @@ class SelfHealer:
 
     async def run_forever(self) -> None:
         self._running = True
-        logger.info("SelfHealer started — monitoring %d cells every %.0fs", len(self._cells), self.poll_interval_s)
+        logger.info(
+            "SelfHealer started — monitoring %d cells every %.0fs",
+            len(self._cells),
+            self.poll_interval_s,
+        )
         while self._running:
             await self.run_once()
             await asyncio.sleep(self.poll_interval_s)
@@ -118,16 +126,16 @@ class SelfHealer:
 _healer: Optional[SelfHealer] = None
 
 P0_CELLS = {
-    "infinity-ws":   "http://localhost:8004/health",
+    "infinity-ws": "http://localhost:8004/health",
     "infinity-auth": "http://localhost:8005/health",
 }
 
 P1_CELLS = {
-    "users-service":    "http://localhost:8006/health",
-    "monitoring":       "http://localhost:8007/health",
-    "notifications":    "http://localhost:8008/health",
-    "infinity-ai":      "http://localhost:8009/health",
-    "the-grid":         "http://localhost:8010/health",
+    "users-service": "http://localhost:8006/health",
+    "monitoring": "http://localhost:8007/health",
+    "notifications": "http://localhost:8008/health",
+    "infinity-ai": "http://localhost:8009/health",
+    "the-grid": "http://localhost:8010/health",
 }
 
 
@@ -141,7 +149,8 @@ def get_healer() -> SelfHealer:
         def _default_recovery(cell: CellState) -> None:
             logger.error(
                 "AUTO-RECOVERY: cell '%s' degraded (failures=%d). Manual restart may be required.",
-                cell.name, cell.consecutive_failures,
+                cell.name,
+                cell.consecutive_failures,
             )
 
         _healer.on_recovery_needed(_default_recovery)

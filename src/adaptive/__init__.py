@@ -12,8 +12,11 @@ from .predictive_scaler import (
     ScalingReason,
     predictive_scaler,
 )
+from .provider_rotator import AdaptiveProviderRotator, get_provider_rotator
 
 __all__ = [
+    "AdaptiveProviderRotator",
+    "get_provider_rotator",
     "PredictiveAutoscaler",
     "LoadForecaster",
     "LoadForecast",

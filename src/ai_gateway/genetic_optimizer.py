@@ -14,22 +14,22 @@ Architecture:
   - Runs synchronously on demand (call evolve() after each generation period)
 """
 
-import math
+import os
 import random
-import time
+import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Tuple
-import sqlite3
-import os
 
-_DB_PATH = Path(os.getenv("AI_GATEWAY_DB", str(Path(__file__).parent / "data" / "ai_gateway_limits.db")))
+_DB_PATH = Path(
+    os.getenv("AI_GATEWAY_DB", str(Path(__file__).parent / "data" / "ai_gateway_limits.db"))
+)
 
 
 @dataclass
 class ProviderGene:
     name: str
-    weight: float = 1.0          # selection probability multiplier
+    weight: float = 1.0  # selection probability multiplier
     success_count: int = 0
     failure_count: int = 0
     total_latency_ms: float = 0.0
@@ -117,7 +117,8 @@ class GeneticOptimizer:
     def _mutate(self, chromosome: Dict[str, float]) -> Dict[str, float]:
         return {
             k: max(0.01, v + random.gauss(0, self.mutation_sigma))
-            if random.random() < self.mutation_rate else v
+            if random.random() < self.mutation_rate
+            else v
             for k, v in chromosome.items()
         }
 
@@ -126,10 +127,7 @@ class GeneticOptimizer:
         self.generation += 1
         fitness_scores: List[Tuple[float, Dict[str, float]]] = []
         for chrom in self._population:
-            score = sum(
-                chrom.get(p, 0.01) * self._genes[p].fitness()
-                for p in self.providers
-            )
+            score = sum(chrom.get(p, 0.01) * self._genes[p].fitness() for p in self.providers)
             fitness_scores.append((score, chrom))
 
         fitness_scores.sort(key=lambda x: x[0], reverse=True)

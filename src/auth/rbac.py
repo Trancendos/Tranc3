@@ -12,45 +12,77 @@ Usage:
 
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, Request, status
 
-# Permission → minimum role mapping
-_PERMISSION_ROLES: dict[str, set[str]] = {
-    "admin:audit": {"admin"},
-    "admin:config": {"admin"},
-    "admin:users": {"admin"},
-    "admin:billing": {"admin"},
-    "operator:read": {"admin", "operator"},
-    "operator:write": {"admin", "operator"},
-    "user:read": {"admin", "operator", "user"},
-    "user:write": {"admin", "operator", "user"},
+# Tier → permission sets (additive, business > pro > free)
+_TIER_PERMISSIONS: dict[str, set[str]] = {
+    "free": {
+        "eval:score",
+        "user:read",
+        "user:write",
+    },
+    "pro": {
+        "eval:score",
+        "user:read",
+        "user:write",
+        "operator:read",
+        "operator:write",
+    },
+    "business": {
+        "eval:score",
+        "user:read",
+        "user:write",
+        "operator:read",
+        "operator:write",
+        "admin:audit",
+        "admin:config",
+        "admin:users",
+        "admin:billing",
+    },
 }
+
+# Role → wildcards (admin gets everything)
+_ROLE_WILDCARDS: set[str] = {"admin"}
+
+
+def get_permissions_for_user(user: dict) -> set[str]:
+    """Return the full set of permissions for a user dict."""
+    role = (user.get("role") or "").lower()
+    if role in _ROLE_WILDCARDS:
+        return set(_TIER_PERMISSIONS["business"]) | {"*"}
+    tier = (user.get("tier") or "free").lower()
+    return set(_TIER_PERMISSIONS.get(tier, _TIER_PERMISSIONS["free"]))
+
+
+def user_has_permission(user: dict, permission: str) -> bool:
+    """Return True if the user holds the given permission."""
+    perms = get_permissions_for_user(user)
+    return "*" in perms or permission in perms
 
 
 def _has_permission(user: dict, permission: str) -> bool:
-    user_role = (user.get("role") or user.get("tier") or "user").lower()
-    allowed_roles = _PERMISSION_ROLES.get(permission, {"admin"})
-    return user_role in allowed_roles
+    return user_has_permission(user, permission)
 
 
 def require_permission(permission: str):
     """
     FastAPI dependency factory that enforces an RBAC permission check.
 
-    Returns a Depends-compatible callable that raises 403 if the current
-    user does not hold the required permission.
+    Reads user from request.state.user (set by auth middleware).
+    Raises 401 if no user present, 403 if permission denied.
     """
-    # Deferred import breaks the circular dependency between rbac ↔ auth.dependencies.
-    try:
-        from auth import get_current_user  # type: ignore[import]
-    except ImportError:
-        from src.auth.dependencies import get_current_user  # type: ignore[no-redef]
 
-    async def _guard(current_user: dict = Depends(get_current_user)) -> None:
-        if not _has_permission(current_user, permission):
+    async def _guard(request: Request) -> None:
+        user = getattr(request.state, "user", None)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+            )
+        if not user_has_permission(user, permission):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission denied: '{permission}' required.",
+                detail=f"Missing permission: {permission}",
             )
 
-    return Depends(_guard)
+    return _guard

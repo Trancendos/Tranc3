@@ -23,6 +23,45 @@ import TuringsHubPage from './pages/TuringsHubPage'
 import DeepAgentsPage from './pages/DeepAgentsPage'
 import AuditPage from './pages/AuditPage'
 import LangChainPage from './pages/LangChainPage'
+import ModelRouterPage from './pages/ModelRouterPage'
+import LedgerPage from './pages/LedgerPage'
+import TopologyPage from './pages/TopologyPage'
+import VaultPage from './pages/VaultPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import ConfigPage from './pages/ConfigPage'
+import CronPage from './pages/CronPage'
+import CachePage from './pages/CachePage'
+import RateLimitPage from './pages/RateLimitPage'
+import GeoPage from './pages/GeoPage'
+import EmailServicePage from './pages/EmailServicePage'
+import SmsPage from './pages/SmsPage'
+import HivePage from './pages/HivePage'
+import GBrainPage from './pages/GBrainPage'
+import DevOcityPage from './pages/DevOcityPage'
+import BackupPage from './pages/BackupPage'
+import CdnPage from './pages/CdnPage'
+import InfinityPortalPage from './pages/InfinityPortalPage'
+import SwarmCoordinatorPage from './pages/SwarmCoordinatorPage'
+import DimensionalNexusPage from './pages/DimensionalNexusPage'
+import SashasPhotoStudioPage from './pages/SashasPhotoStudioPage'
+import IMindPage from './pages/IMindPage'
+import ResonatePage from './pages/ResonatePage'
+import TranquilityPage from './pages/TranquilityPage'
+import TAimraPage from './pages/TAimraPage'
+import TheStudioPage from './pages/TheStudioPage'
+import TheAcademyPage from './pages/TheAcademyPage'
+import WarpRadioPage from './pages/WarpRadioPage'
+import GatewayPage from './pages/GatewayPage'
+import SentinelStationPage from './pages/SentinelStationPage'
+import IceBoxPage from './pages/IceBoxPage'
+import TranceFlowPage from './pages/TranceFlowPage'
+import TateKingPage from './pages/TateKingPage'
+import VRAR3DPage from './pages/VRAR3DPage'
+import InfinityOnePage from './pages/InfinityOnePage'
+import InfinityAdminPage from './pages/InfinityAdminPage'
+import InfinityShardsPage from './pages/InfinityShardsPage'
+import InfinityBridgePage from './pages/InfinityBridgePage'
+import UsersServicePage from './pages/UsersServicePage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -63,6 +102,45 @@ export default function AppRouter() {
         <Route path="/deep-agents"  element={<Protected><DeepAgentsPage /></Protected>} />
         <Route path="/audit"        element={<Protected><AuditPage /></Protected>} />
         <Route path="/langchain"    element={<Protected><LangChainPage /></Protected>} />
+        <Route path="/model-router" element={<Protected><ModelRouterPage /></Protected>} />
+        <Route path="/ledger"       element={<Protected><LedgerPage /></Protected>} />
+        <Route path="/topology"     element={<Protected><TopologyPage /></Protected>} />
+        <Route path="/vault"        element={<Protected><VaultPage /></Protected>} />
+        <Route path="/analytics"    element={<Protected><AnalyticsPage /></Protected>} />
+        <Route path="/config"       element={<Protected><ConfigPage /></Protected>} />
+        <Route path="/cron"         element={<Protected><CronPage /></Protected>} />
+        <Route path="/cache"        element={<Protected><CachePage /></Protected>} />
+        <Route path="/rate-limit"   element={<Protected><RateLimitPage /></Protected>} />
+        <Route path="/geo"          element={<Protected><GeoPage /></Protected>} />
+        <Route path="/email-svc"    element={<Protected><EmailServicePage /></Protected>} />
+        <Route path="/sms"          element={<Protected><SmsPage /></Protected>} />
+        <Route path="/hive"         element={<Protected><HivePage /></Protected>} />
+        <Route path="/gbrain"       element={<Protected><GBrainPage /></Protected>} />
+        <Route path="/devocity"     element={<Protected><DevOcityPage /></Protected>} />
+        <Route path="/backup"       element={<Protected><BackupPage /></Protected>} />
+        <Route path="/cdn"              element={<Protected><CdnPage /></Protected>} />
+        <Route path="/infinity-portal"    element={<Protected><InfinityPortalPage /></Protected>} />
+        <Route path="/swarm-coordinator"   element={<Protected><SwarmCoordinatorPage /></Protected>} />
+        <Route path="/dimensional-nexus"     element={<Protected><DimensionalNexusPage /></Protected>} />
+        <Route path="/sashas-photo-studio"   element={<Protected><SashasPhotoStudioPage /></Protected>} />
+        <Route path="/imind"                 element={<Protected><IMindPage /></Protected>} />
+        <Route path="/resonate"              element={<Protected><ResonatePage /></Protected>} />
+        <Route path="/tranquility"           element={<Protected><TranquilityPage /></Protected>} />
+        <Route path="/taimra"               element={<Protected><TAimraPage /></Protected>} />
+        <Route path="/the-studio"           element={<Protected><TheStudioPage /></Protected>} />
+        <Route path="/the-academy"          element={<Protected><TheAcademyPage /></Protected>} />
+        <Route path="/warp-radio"           element={<Protected><WarpRadioPage /></Protected>} />
+        <Route path="/gateway"              element={<Protected><GatewayPage /></Protected>} />
+        <Route path="/sentinel-station"     element={<Protected><SentinelStationPage /></Protected>} />
+        <Route path="/ice-box"              element={<Protected><IceBoxPage /></Protected>} />
+        <Route path="/tranceflow"           element={<Protected><TranceFlowPage /></Protected>} />
+        <Route path="/tateking"             element={<Protected><TateKingPage /></Protected>} />
+        <Route path="/vrar3d"               element={<Protected><VRAR3DPage /></Protected>} />
+        <Route path="/infinity-one"         element={<Protected><InfinityOnePage /></Protected>} />
+        <Route path="/infinity-admin"       element={<Protected><InfinityAdminPage /></Protected>} />
+        <Route path="/infinity-shards"      element={<Protected><InfinityShardsPage /></Protected>} />
+        <Route path="/infinity-bridge"      element={<Protected><InfinityBridgePage /></Protected>} />
+        <Route path="/users-service"        element={<Protected><UsersServicePage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />
