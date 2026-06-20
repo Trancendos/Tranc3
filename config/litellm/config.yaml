@@ -1,0 +1,323 @@
+# config/litellm/config.yaml
+# LiteLLM unified proxy — OpenAI-compatible API over all free providers.
+# Resolves the AI gateway duplication (workers/infinity-ai vs src/ai_gateway).
+#
+# Priority chain (x8 free providers + self-hosted):
+#   ollama → groq → cerebras → sambanova → gemini → openrouter → mistral
+#   → cohere → github_models → huggingface → cloudflare_ai → offline
+#
+# Run: litellm --config config/litellm/config.yaml --port 4000
+# Or:  docker compose -f docker-compose.production.yml up litellm
+
+model_list:
+  # ── Tier 0: Self-hosted (unlimited, zero-cost) ──────────────────────
+  - model_name: "ollama/llama3.2"
+    litellm_params:
+      model: "ollama/llama3.2"
+      api_base: "${OLLAMA_URL:-http://ollama:11434}"
+    model_info:
+      id: ollama-llama32
+      mode: chat
+      tier: self_hosted
+      cost_per_token: 0
+
+  - model_name: "ollama/qwen2.5"
+    litellm_params:
+      model: "ollama/qwen2.5"
+      api_base: "${OLLAMA_URL:-http://ollama:11434}"
+    model_info:
+      id: ollama-qwen25
+      mode: chat
+      tier: self_hosted
+      cost_per_token: 0
+
+  - model_name: "ollama/mistral"
+    litellm_params:
+      model: "ollama/mistral"
+      api_base: "${OLLAMA_URL:-http://ollama:11434}"
+    model_info:
+      id: ollama-mistral
+      mode: chat
+      tier: self_hosted
+      cost_per_token: 0
+
+  # ── Tier 1: Fast inference free tiers ──────────────────────────────
+  - model_name: "groq/llama-3.3-70b-versatile"
+    litellm_params:
+      model: "groq/llama-3.3-70b-versatile"
+      api_key: "${GROQ_API_KEY}"
+    model_info:
+      id: groq-llama33-70b
+      mode: chat
+      tier: free
+      rpm: 30
+      tpm: 6000
+      cost_per_token: 0
+
+  - model_name: "groq/llama-3.1-8b-instant"
+    litellm_params:
+      model: "groq/llama-3.1-8b-instant"
+      api_key: "${GROQ_API_KEY}"
+    model_info:
+      id: groq-llama31-8b
+      mode: chat
+      tier: free
+      rpm: 30
+      cost_per_token: 0
+
+  - model_name: "groq/mixtral-8x7b-32768"
+    litellm_params:
+      model: "groq/mixtral-8x7b-32768"
+      api_key: "${GROQ_API_KEY}"
+    model_info:
+      id: groq-mixtral
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "cerebras/llama3.1-70b"
+    litellm_params:
+      model: "cerebras/llama3.1-70b"
+      api_key: "${CEREBRAS_API_KEY}"
+      api_base: "https://api.cerebras.ai/v1"
+    model_info:
+      id: cerebras-llama31-70b
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "sambanova/Meta-Llama-3.3-70B-Instruct"
+    litellm_params:
+      model: "openai/Meta-Llama-3.3-70B-Instruct"
+      api_key: "${SAMBANOVA_API_KEY}"
+      api_base: "https://api.sambanova.ai/v1"
+    model_info:
+      id: sambanova-llama33-70b
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "sambanova/Qwen2.5-72B-Instruct"
+    litellm_params:
+      model: "openai/Qwen2.5-72B-Instruct"
+      api_key: "${SAMBANOVA_API_KEY}"
+      api_base: "https://api.sambanova.ai/v1"
+    model_info:
+      id: sambanova-qwen25-72b
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  # ── Tier 2: Cloud free tiers ────────────────────────────────────────
+  - model_name: "gemini/gemini-2.0-flash"
+    litellm_params:
+      model: "gemini/gemini-2.0-flash"
+      api_key: "${GOOGLE_GEMINI_API_KEY}"
+    model_info:
+      id: gemini-2-flash
+      mode: chat
+      tier: free
+      rpm: 15
+      tpm: 1000000
+      cost_per_token: 0
+
+  - model_name: "gemini/gemini-1.5-flash"
+    litellm_params:
+      model: "gemini/gemini-1.5-flash"
+      api_key: "${GOOGLE_GEMINI_API_KEY}"
+    model_info:
+      id: gemini-15-flash
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "openrouter/deepseek/deepseek-r1:free"
+    litellm_params:
+      model: "openrouter/deepseek/deepseek-r1:free"
+      api_key: "${OPENROUTER_API_KEY}"
+    model_info:
+      id: openrouter-deepseek-r1-free
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "openrouter/meta-llama/llama-3.3-70b-instruct:free"
+    litellm_params:
+      model: "openrouter/meta-llama/llama-3.3-70b-instruct:free"
+      api_key: "${OPENROUTER_API_KEY}"
+    model_info:
+      id: openrouter-llama33-70b-free
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "openrouter/google/gemma-3-27b-it:free"
+    litellm_params:
+      model: "openrouter/google/gemma-3-27b-it:free"
+      api_key: "${OPENROUTER_API_KEY}"
+    model_info:
+      id: openrouter-gemma3-27b-free
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "openrouter/qwen/qwen3-235b-a22b:free"
+    litellm_params:
+      model: "openrouter/qwen/qwen3-235b-a22b:free"
+      api_key: "${OPENROUTER_API_KEY}"
+    model_info:
+      id: openrouter-qwen3-235b-free
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "mistral/mistral-small-latest"
+    litellm_params:
+      model: "mistral/mistral-small-latest"
+      api_key: "${MISTRAL_API_KEY}"
+    model_info:
+      id: mistral-small
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "cohere/command-r"
+    litellm_params:
+      model: "cohere/command-r"
+      api_key: "${COHERE_API_KEY}"
+    model_info:
+      id: cohere-command-r
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "github_models/gpt-4o-mini"
+    litellm_params:
+      model: "azure/gpt-4o-mini"
+      api_key: "${GITHUB_TOKEN}"
+      api_base: "https://models.inference.ai.azure.com"
+    model_info:
+      id: github-gpt4o-mini
+      mode: chat
+      tier: free
+      rpm: 15
+      cost_per_token: 0
+
+  - model_name: "github_models/meta-llama-3.1-70b-instruct"
+    litellm_params:
+      model: "azure/Meta-Llama-3.1-70B-Instruct"
+      api_key: "${GITHUB_TOKEN}"
+      api_base: "https://models.inference.ai.azure.com"
+    model_info:
+      id: github-llama31-70b
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "together/meta-llama/Llama-3-70b-chat-hf"
+    litellm_params:
+      model: "together_ai/meta-llama/Llama-3-70b-chat-hf"
+      api_key: "${TOGETHER_API_KEY}"
+    model_info:
+      id: together-llama3-70b
+      mode: chat
+      tier: free_credit
+      cost_per_token: 0
+
+  - model_name: "deepseek/deepseek-chat"
+    litellm_params:
+      model: "deepseek/deepseek-chat"
+      api_key: "${DEEPSEEK_API_KEY}"
+    model_info:
+      id: deepseek-chat
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  # ── Tier 3: HuggingFace free serverless inference ───────────────────
+  - model_name: "huggingface/microsoft/Phi-3-mini-4k-instruct"
+    litellm_params:
+      model: "huggingface/microsoft/Phi-3-mini-4k-instruct"
+      api_key: "${HUGGINGFACE_API_KEY}"
+    model_info:
+      id: hf-phi3-mini
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  - model_name: "huggingface/HuggingFaceH4/zephyr-7b-beta"
+    litellm_params:
+      model: "huggingface/HuggingFaceH4/zephyr-7b-beta"
+      api_key: "${HUGGINGFACE_API_KEY}"
+    model_info:
+      id: hf-zephyr-7b
+      mode: chat
+      tier: free
+      cost_per_token: 0
+
+  # ── Virtual: Rotation aliases ────────────────────────────────────────
+  # These aliases trigger automatic failover across all models in the group.
+  - model_name: "auto"
+    litellm_params:
+      model: "ollama/llama3.2"
+    model_info:
+      id: auto-primary
+      mode: chat
+
+router_settings:
+  routing_strategy: "latency-based-routing"
+  model_group_alias:
+    "gpt-4": "groq/llama-3.3-70b-versatile"
+    "gpt-3.5-turbo": "groq/llama-3.1-8b-instant"
+    "claude-3-haiku": "gemini/gemini-2.0-flash"
+    "text-davinci-003": "ollama/llama3.2"
+
+  # Fallback chain: if primary fails, try in order
+  fallbacks:
+    - "ollama/llama3.2":
+        - "groq/llama-3.3-70b-versatile"
+        - "groq/llama-3.1-8b-instant"
+        - "cerebras/llama3.1-70b"
+        - "sambanova/Meta-Llama-3.3-70B-Instruct"
+        - "gemini/gemini-2.0-flash"
+        - "openrouter/meta-llama/llama-3.3-70b-instruct:free"
+        - "mistral/mistral-small-latest"
+        - "huggingface/microsoft/Phi-3-mini-4k-instruct"
+    - "groq/llama-3.3-70b-versatile":
+        - "cerebras/llama3.1-70b"
+        - "sambanova/Meta-Llama-3.3-70B-Instruct"
+        - "gemini/gemini-2.0-flash"
+        - "openrouter/deepseek/deepseek-r1:free"
+        - "mistral/mistral-small-latest"
+        - "huggingface/microsoft/Phi-3-mini-4k-instruct"
+
+  num_retries: 3
+  request_timeout: 30
+  retry_after: 2
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+  cache: true
+  cache_params:
+    type: "redis"
+    host: "${REDIS_HOST:-valkey}"
+    port: 6379
+    ttl: 3600
+
+  # Cost tracking — enforce zero-cost mandate
+  max_budget: 0.0
+  budget_duration: "1d"
+
+general_settings:
+  master_key: "${LITELLM_MASTER_KEY:-sk-tranc3-local}"
+  database_url: "${LITELLM_DB_URL:-sqlite:////data/litellm.db}"
+  store_model_in_db: true
+
+  # Rate limiting — aligned with provider free-tier limits
+  rate_limit_per_user: true
+  rpm_limit_per_model:
+    "groq/llama-3.3-70b-versatile": 30
+    "cerebras/llama3.1-70b": 30
+    "gemini/gemini-2.0-flash": 15
+    "github_models/gpt-4o-mini": 15

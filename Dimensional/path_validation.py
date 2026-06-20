@@ -162,7 +162,7 @@ def read_validated_file_text(
     """
     resolved = validate_path(rel, base_dir, must_exist=True)
     if not resolved.is_file():
-        raise ValueError(f"Path is not a regular file: {resolved}")
+        raise FileNotFoundError(f"Validated path is not a regular file: {resolved}")
     # Open via file descriptor to keep the validated path object out of the
     # taint flow that static analyzers (CodeQL) track from user-supplied input.
     fd = os.open(str(resolved), os.O_RDONLY)
