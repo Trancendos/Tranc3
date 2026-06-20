@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _run(label: str, cmd: list[str], *, env: dict | None = None) -> int:
     print(f"\n=== {label} ===", flush=True)
-    proc = subprocess.run(cmd, cwd=ROOT, env=env)
+    proc = subprocess.run(cmd, cwd=ROOT, env=env)  # nosec B603 — list args, no shell=True
     if proc.returncode != 0:
         print(f"FAILED: {label} (exit {proc.returncode})", file=sys.stderr)
     return proc.returncode

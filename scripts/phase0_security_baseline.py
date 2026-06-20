@@ -15,7 +15,7 @@ REGISTER = ROOT / "SECURITY_ALERT_REGISTER.md"
 
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(
+    return subprocess.run(  # nosec B603 — list args, no shell=True; caller controls cmd
         cmd,
         cwd=cwd or ROOT,
         capture_output=True,

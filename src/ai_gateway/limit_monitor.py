@@ -93,27 +93,27 @@ class LimitMonitor:
     # x8+ free-tier providers with hard stops at 95% and rotation at 80%.
     LIMITS: Dict[str, tuple] = {
         # ── Tier 0: Self-hosted (truly zero-cost, unlimited) ──────────────
-        "ollama": (-1, -1, -1),          # Local Ollama — zero cost, unlimited
-        "litellm": (-1, -1, -1),         # LiteLLM proxy — routes internally
-        "offline": (-1, -1, -1),         # Deterministic stub fallback
+        "ollama": (-1, -1, -1),  # Local Ollama — zero cost, unlimited
+        "litellm": (-1, -1, -1),  # LiteLLM proxy — routes internally
+        "offline": (-1, -1, -1),  # Deterministic stub fallback
         # ── Tier 1: Fast inference free tiers ─────────────────────────────
-        "groq": (14400, 250, 500000),     # Groq free: 14,400 req/day, 500K tok/day
+        "groq": (14400, 250, 500000),  # Groq free: 14,400 req/day, 500K tok/day
         "cerebras": (1440, 30, 1000000),  # Cerebras free: 1,440 req/day, 1M tok/day
-        "sambanova": (1440, 60, 2000000), # SambaNova free: 2M tok/day, 405B models
+        "sambanova": (1440, 60, 2000000),  # SambaNova free: 2M tok/day, 405B models
         # ── Tier 2: Cloud free tiers ──────────────────────────────────────
-        "gemini": (1500, 60, 1000000),    # Google Gemini free: 1,500 req/day via AI Studio
-        "openrouter": (200, 50, -1),      # OpenRouter :free models — 200 req/day
-        "mistral": (1000, 60, 500000),    # Mistral free: 500K tok/month (~16K/day)
-        "cohere": (1000, 100, 100000),    # Cohere free: 100K tok/month (~3.3K/day)
-        "github_models": (150, 10, -1),   # GitHub Models free: 150 req/day GPT-4o class
-        "together": (500, 60, 100000),    # Together AI free: $1 credit on signup
-        "fireworks": (600, 60, -1),       # Fireworks AI free: $1/month credit
-        "deepseek": (500, 60, -1),        # DeepSeek free tier (soft limits)
+        "gemini": (1500, 60, 1000000),  # Google Gemini free: 1,500 req/day via AI Studio
+        "openrouter": (200, 50, -1),  # OpenRouter :free models — 200 req/day
+        "mistral": (1000, 60, 500000),  # Mistral free: 500K tok/month (~16K/day)
+        "cohere": (1000, 100, 100000),  # Cohere free: 100K tok/month (~3.3K/day)
+        "github_models": (150, 10, -1),  # GitHub Models free: 150 req/day GPT-4o class
+        "together": (500, 60, 100000),  # Together AI free: $1 credit on signup
+        "fireworks": (600, 60, -1),  # Fireworks AI free: $1/month credit
+        "deepseek": (500, 60, -1),  # DeepSeek free tier (soft limits)
         # ── Tier 3: General inference free ────────────────────────────────
-        "huggingface": (1000, 100, -1),   # HuggingFace Serverless Inference free tier
-        "cloudflare_ai": (10000, 500, -1), # CF Workers AI free: 10K neurons/day
-        "novita": (200, 30, -1),          # Novita AI free tier
-        "lepton": (200, 30, -1),          # Lepton AI free tier
+        "huggingface": (1000, 100, -1),  # HuggingFace Serverless Inference free tier
+        "cloudflare_ai": (10000, 500, -1),  # CF Workers AI free: 10K neurons/day
+        "novita": (200, 30, -1),  # Novita AI free tier
+        "lepton": (200, 30, -1),  # Lepton AI free tier
     }
 
     ROTATE_THRESHOLD = 0.80
@@ -294,11 +294,23 @@ class LimitMonitor:
 
         # Pick active provider (highest priority available not rotating)
         priority_order = [
-            "ollama", "litellm",
-            "groq", "cerebras", "sambanova", "gemini",
-            "openrouter", "mistral", "cohere", "github_models",
-            "together", "fireworks", "deepseek",
-            "huggingface", "cloudflare_ai", "novita", "lepton",
+            "ollama",
+            "litellm",
+            "groq",
+            "cerebras",
+            "sambanova",
+            "gemini",
+            "openrouter",
+            "mistral",
+            "cohere",
+            "github_models",
+            "together",
+            "fireworks",
+            "deepseek",
+            "huggingface",
+            "cloudflare_ai",
+            "novita",
+            "lepton",
             "offline",
         ]
         active = next(
@@ -344,11 +356,23 @@ class LimitMonitor:
             priority_order = _opt.ranked_providers() + ["offline"]
         except Exception:  # noqa: BLE001
             priority_order = [
-                "ollama", "litellm",
-                "groq", "cerebras", "sambanova", "gemini",
-                "openrouter", "mistral", "cohere", "github_models",
-                "together", "fireworks", "deepseek",
-                "huggingface", "cloudflare_ai", "novita", "lepton",
+                "ollama",
+                "litellm",
+                "groq",
+                "cerebras",
+                "sambanova",
+                "gemini",
+                "openrouter",
+                "mistral",
+                "cohere",
+                "github_models",
+                "together",
+                "fireworks",
+                "deepseek",
+                "huggingface",
+                "cloudflare_ai",
+                "novita",
+                "lepton",
                 "offline",
             ]
         # First: available and not rotating

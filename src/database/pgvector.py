@@ -51,7 +51,7 @@ def bootstrap() -> bool:
     if conn is None:
         return False
     tbl = _table_id()
-    bootstrap_sql = sql.SQL(
+    bootstrap_sql = sql.SQL(  # nosec B608 — psycopg2.sql parameterization, not string concat
         """
         CREATE EXTENSION IF NOT EXISTS vector;
 
