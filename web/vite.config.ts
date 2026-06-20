@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Swarm Coordinator service — Port 8053
+            '/swarm-svc': {
+                target: 'http://localhost:8053',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/swarm-svc/, ''),
+            },
             // Infinity Portal service — Port 8042
             '/iportal-svc': {
                 target: 'http://localhost:8042',

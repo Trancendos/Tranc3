@@ -77,7 +77,8 @@ const ENTITY_GRID = [
   { name: 'GBrain Bridge',   icon: Brain,         path: '/gbrain',       status: 'partial', color: '#a855f7' },
   { name: 'The HIVE (Data)', icon: Layers,        path: '/hive',         status: 'partial', color: '#f59e0b' },
   { name: 'CDN Service',      icon: Globe,   path: '/cdn',             status: 'partial', color: '#3b82f6' },
-  { name: 'Infinity Portal',  icon: Shield,  path: '/infinity-portal', status: 'partial', color: '#6366f1' },
+  { name: 'Infinity Portal',    icon: Shield,   path: '/infinity-portal',   status: 'partial', color: '#6366f1' },
+  { name: 'Swarm Coordinator',  icon: Network,  path: '/swarm-coordinator', status: 'partial', color: '#7c3aed' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
