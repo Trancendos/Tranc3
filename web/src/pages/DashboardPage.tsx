@@ -71,6 +71,7 @@ const ENTITY_GRID = [
   { name: 'ChronosSphere',    icon: Clock,        path: '/cron',         status: 'partial', color: '#a78bfa' },
   { name: 'Cache Service',    icon: Database,     path: '/cache',        status: 'partial', color: '#0ea5e9' },
   { name: 'Rate Limiter',     icon: Shield,       path: '/rate-limit',   status: 'partial', color: '#f43f5e' },
+  { name: 'Geo Service',      icon: Globe,        path: '/geo',          status: 'partial', color: '#22d3ee' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

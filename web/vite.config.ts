@@ -98,6 +98,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/audit/, ''),
             },
+            // Geo service — Port 8027
+            '/geo-svc': {
+                target: 'http://localhost:8027',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/geo-svc/, ''),
+            },
             // Rate limit service — Port 8026
             '/rlimit': {
                 target: 'http://localhost:8026',
