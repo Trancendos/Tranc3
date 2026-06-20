@@ -19,6 +19,8 @@ import SettingsPage from './pages/SettingsPage'
 import StatusPage from './pages/StatusPage'
 import TheLabPage from './pages/TheLabPage'
 import TheDutchyPage from './pages/TheDutchyPage'
+import TuringsHubPage from './pages/TuringsHubPage'
+import DeepAgentsPage from './pages/DeepAgentsPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -53,8 +55,10 @@ export default function AppRouter() {
         <Route path="/queue"        element={<Protected><QueuePage /></Protected>} />
         <Route path="/admin"        element={<Protected><AdminPage /></Protected>} />
         <Route path="/workers"      element={<Protected><WorkersPage /></Protected>} />
-        <Route path="/the-lab"      element={<Protected><TheLabPage /></Protected>} />
+        <Route path="/the-lab"       element={<Protected><TheLabPage /></Protected>} />
         <Route path="/the-dutchy"   element={<Protected><TheDutchyPage /></Protected>} />
+        <Route path="/turings-hub"  element={<Protected><TuringsHubPage /></Protected>} />
+        <Route path="/deep-agents"  element={<Protected><DeepAgentsPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />

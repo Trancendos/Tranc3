@@ -38,7 +38,7 @@ const ENTITY_GRID = [
   { name: 'The Nexus',         icon: Radio,        path: '/services',    status: 'live',    color: '#8b5cf6' },
   { name: 'The Town Hall',     icon: Crown,        path: '/services',    status: 'live',    color: '#f97316' },
   { name: 'Luminous',          icon: Brain,        path: '/services',    status: 'partial', color: '#ec4899' },
-  { name: "Turing's Hub",      icon: Cpu,          path: '/services',    status: 'partial', color: '#14b8a6' },
+  { name: "Turing's Hub",      icon: Cpu,          path: '/turings-hub', status: 'partial', color: '#14b8a6' },
   { name: 'Arcadia',           icon: Globe,        path: '/services',    status: 'partial', color: '#84cc16' },
   { name: 'The Library',       icon: BookOpen,     path: '/services',    status: 'planned', color: '#64748b' },
   { name: 'The Academy',       icon: Sparkles,     path: '/services',    status: 'planned', color: '#64748b' },
