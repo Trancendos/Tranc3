@@ -88,12 +88,12 @@ def load_registry() -> dict[str, Any]:
 
 def get_chain(chain_name: str) -> list[str]:
     """Return ordered provider IDs for a named rotation chain."""
+    canonical = _CHAIN_ALIASES.get(chain_name, chain_name)
     reg = load_registry()
-    return {
-        str(x["id"])
-        for x in reg.get("approved_self_hosted", [])
-        if isinstance(x, dict) and x.get("id")
-    }
+    chains_map = reg.get("rotation_chains_map") or {}
+    if canonical in chains_map:
+        return chains_map[canonical]
+    raise ValueError(f"Unknown rotation chain: {chain_name!r}. Available: {sorted(chains_map)}")
 
 
 def is_approved(provider_id: str) -> bool:

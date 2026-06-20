@@ -142,6 +142,33 @@ def safe_join(
     return resolved
 
 
+def read_validated_file_text(
+    rel: Union[str, Path],
+    base_dir: Union[str, Path],
+    *,
+    max_bytes: int = 10 * 1024 * 1024,
+    encoding: str = "utf-8",
+) -> tuple[str, int]:
+    """Read a file after validating it stays within *base_dir*.
+
+    Returns:
+        (text, size_in_bytes) tuple.
+
+    Raises:
+        PathTraversalError: If the path escapes *base_dir*.
+        FileNotFoundError: If the file does not exist.
+        ValueError: If the file exceeds *max_bytes*.
+    """
+    resolved = validate_path(rel, base_dir, must_exist=True)
+    size = resolved.stat().st_size
+    if size > max_bytes:
+        raise ValueError(
+            f"File too large: {size} bytes > {max_bytes} bytes limit: {resolved}"
+        )
+    text = resolved.read_text(encoding=encoding, errors="replace")
+    return text, size
+
+
 def sanitize_filename(name: str, max_length: int = 255) -> str:
     """Sanitize a filename to prevent traversal and injection attacks.
 

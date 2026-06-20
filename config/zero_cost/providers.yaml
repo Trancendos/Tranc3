@@ -1,6 +1,7 @@
 # Zero-cost provider registry — 6–8 providers per capability with rotation chains.
 # Paid providers are listed for documentation only; runtime must reject them unless explicitly enabled.
-version: "2.0"
+version: "2026-06"
+model: zero_cost_first
 policy:
   max_paid_providers: 0
   require_self_hosted_first: true
@@ -10,9 +11,7 @@ policy:
   daily_request_limit_per_provider: 5000
   cooldown_seconds_on_exhaust: 3600
 
-version: "2026-06"
-model: zero_cost_first
-
+capabilities:
   embeddings:
     description: "Embedding vectors — local sentence-transformers first"
     providers:
@@ -117,6 +116,53 @@ model: zero_cost_first
     rotation_chains:
       - name: image_default
         providers: [comfyui_local, stable_diffusion_local, huggingface_inference, replicate_free, pollinations, leonardo_free, offline_image]
+
+  ai_inference:
+    description: "LLM inference — local Ollama first, then 8 free cloud tiers"
+    providers:
+      - id: ollama
+        cost: zero
+        self_hosted: true
+        priority: 1
+      - id: huggingface
+        cost: zero
+        self_hosted: false
+        priority: 2
+      - id: openrouter_free
+        cost: zero
+        self_hosted: false
+        priority: 3
+      - id: groq_free
+        cost: zero
+        self_hosted: false
+        priority: 4
+      - id: cerebras_free
+        cost: zero
+        self_hosted: false
+        priority: 5
+      - id: sambanova_free
+        cost: zero
+        self_hosted: false
+        priority: 6
+      - id: mistral_free
+        cost: zero
+        self_hosted: false
+        priority: 7
+      - id: github_models_free
+        cost: zero
+        self_hosted: false
+        priority: 8
+      - id: offline
+        cost: zero
+        self_hosted: true
+        priority: 99
+    rotation_chains:
+      - name: zero_cost_cloud
+        providers: [huggingface, openrouter_free, groq_free, cerebras_free, sambanova_free, mistral_free, github_models_free, offline]
+      - name: zero_cost_local
+        providers: [ollama, offline]
+      - name: zero_cost_full
+        providers: [ollama, huggingface, openrouter_free, groq_free, cerebras_free, sambanova_free, mistral_free, github_models_free, offline]
 
 # Legacy flat list (backward compatible with is_approved())
 approved_self_hosted:
@@ -254,6 +300,13 @@ conditional_cloud:
     category: ai_inference
     limits: "$1/month credit — refreshes monthly, NOT guaranteed"
     risk: credits_expire
+
+blocked_paid:
+  - openai
+  - anthropic
+  - azure-openai
+  - gpt4
+  - claude-api-paid
 
 avoid_paid_default:
   - id: replicate
