@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // I-Mind emotion engine — Port 8059
+            '/imind-svc': {
+                target: 'http://localhost:8059',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/imind-svc/, ''),
+            },
             // Sasha's Photo Studio — Port 8051
             '/photo-svc': {
                 target: 'http://localhost:8051',

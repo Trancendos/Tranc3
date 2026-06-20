@@ -81,6 +81,7 @@ const ENTITY_GRID = [
   { name: 'Swarm Coordinator',  icon: Network,  path: '/swarm-coordinator', status: 'partial', color: '#7c3aed' },
   { name: 'Dimensional Nexus',   icon: Network,  path: '/dimensional-nexus',  status: 'partial', color: '#8b5cf6' },
   { name: 'Sashas Photo Studio', icon: Palette,  path: '/sashas-photo-studio', status: 'planned', color: '#ec4899' },
+  { name: 'I-Mind',             icon: Brain,    path: '/imind',              status: 'partial', color: '#f472b6' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
