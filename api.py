@@ -1354,7 +1354,12 @@ async def ai_providers():
     summary="Reset provider usage counters (admin only)",
     description="Manually reset daily/hourly counters for a provider. Use after a 24-hour window.",
 )
-async def ai_provider_reset(provider: str):
+async def ai_provider_reset(
+    provider: str,
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="admin_required")
     try:
         from src.ai_gateway.limit_monitor import LimitMonitor, monitor
 
@@ -1362,6 +1367,8 @@ async def ai_provider_reset(provider: str):
             raise HTTPException(status_code=404, detail=f"Unknown provider: {provider!r}")
         monitor.reset_provider(provider)
         return {"reset": True, "provider": provider}
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("ai_provider_reset: failed for provider=%s", provider)
         raise HTTPException(status_code=500, detail="reset_failed")

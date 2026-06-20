@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Bell, RefreshCw, CheckCircle, XCircle, Mail, Zap, Radio } from 'lucide-react'
 import useReactiveQuery from '../hooks/useReactiveQuery'
 import { useNotificationsSSE, type LiveNotification } from '../hooks/useNotificationsSSE'
+import { useAnalytics } from '../hooks/useAnalytics'
 
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
 const NOTIFICATIONS_API = `${API}/notifications`
@@ -70,6 +71,12 @@ export default function NotificationsPage() {
   const channels = channelData?.channels ?? FALLBACK_CHANNELS
 
   const { connected, notifications, unreadCount, markRead, markAllRead, clearAll } = useNotificationsSSE()
+  const { trackNotificationRead } = useAnalytics()
+
+  const handleMarkAllRead = useCallback(() => {
+    trackNotificationRead(unreadCount)
+    markAllRead()
+  }, [markAllRead, trackNotificationRead, unreadCount])
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -90,7 +97,7 @@ export default function NotificationsPage() {
         <div className="flex gap-2">
           {unreadCount > 0 && (
             <button
-              onClick={markAllRead}
+              onClick={handleMarkAllRead}
               className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-300 transition-colors"
             >
               Mark all read
