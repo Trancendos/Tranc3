@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // CDN service — Port 8028
+            '/cdn-svc': {
+                target: 'http://localhost:8028',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/cdn-svc/, ''),
+            },
             // Rate limit service — Port 8026
             '/rlimit': {
                 target: 'http://localhost:8026',

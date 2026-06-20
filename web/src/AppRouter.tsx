@@ -39,6 +39,7 @@ import HivePage from './pages/HivePage'
 import GBrainPage from './pages/GBrainPage'
 import DevOcityPage from './pages/DevOcityPage'
 import BackupPage from './pages/BackupPage'
+import CdnPage from './pages/CdnPage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
@@ -95,6 +96,7 @@ export default function AppRouter() {
         <Route path="/gbrain"       element={<Protected><GBrainPage /></Protected>} />
         <Route path="/devocity"     element={<Protected><DevOcityPage /></Protected>} />
         <Route path="/backup"       element={<Protected><BackupPage /></Protected>} />
+        <Route path="/cdn"          element={<Protected><CdnPage /></Protected>} />
         <Route path="/settings"     element={<Protected><SettingsPage /></Protected>} />
         {isDev && (
           <Route path="/ux-showcase" element={<Protected><UxShowcasePage /></Protected>} />
