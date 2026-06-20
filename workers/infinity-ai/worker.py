@@ -72,6 +72,8 @@ class ProviderName(str, Enum):
     cerebras = "cerebras"
     openrouter = "openrouter"
     huggingface = "huggingface"
+    together = "together"
+    deepseek = "deepseek"
     offline = "offline"
 
 
@@ -543,6 +545,89 @@ class CerebrasClient:
             return None
 
 
+class TogetherClient:
+    """Together AI client — free-tier with $25 credit, generous open-source models."""
+
+    BASE_URL = "https://api.together.xyz/v1"
+    FREE_MODELS = [
+        "meta-llama/Llama-3.2-3B-Instruct-Turbo",
+        "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "togethercomputer/RedPajama-INCITE-Chat-3B-v1",
+    ]
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.environ.get("TOGETHER_API_KEY", "")
+
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Optional[Dict[str, Any]]:
+        if not self.api_key:
+            return None
+        import urllib.error
+        import urllib.request
+
+        try:
+            actual_model = model if "/" in model else self.FREE_MODELS[0]
+            payload = {
+                "model": actual_model,
+                "messages": [{"role": m.role, "content": m.content} for m in messages],
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+            data = json.dumps(payload).encode()
+            req = urllib.request.Request(
+                f"{self.BASE_URL}/chat/completions", data=data, method="POST"
+            )
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode())
+                content = result["choices"][0]["message"]["content"]
+                return {"content": content, "model": actual_model, "provider": "together"}
+        except Exception as e:
+            logger.warning("Together request failed: %s", sanitize_for_log(e))
+            return None
+
+
+class DeepSeekClient:
+    """DeepSeek client — free API with generous limits, OpenAI-compatible."""
+
+    BASE_URL = "https://api.deepseek.com/v1"
+    FREE_MODEL = "deepseek-chat"
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.environ.get("DEEPSEEK_API_KEY", "")
+
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Optional[Dict[str, Any]]:
+        if not self.api_key:
+            return None
+        import urllib.error
+        import urllib.request
+
+        try:
+            payload = {
+                "model": self.FREE_MODEL,
+                "messages": [{"role": m.role, "content": m.content} for m in messages],
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+            data = json.dumps(payload).encode()
+            req = urllib.request.Request(
+                f"{self.BASE_URL}/chat/completions", data=data, method="POST"
+            )
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode())
+                content = result["choices"][0]["message"]["content"]
+                return {"content": content, "model": self.FREE_MODEL, "provider": "deepseek"}
+        except Exception as e:
+            logger.warning("DeepSeek request failed: %s", sanitize_for_log(e))
+            return None
+
+
 class OfflineClient:
     """Offline fallback — deterministic responses when no provider is available."""
 
@@ -583,15 +668,19 @@ class AIGatewayRouter:
         self.cerebras = CerebrasClient()
         self.openrouter = OpenRouterClient()
         self.huggingface = HuggingFaceClient()
+        self.together = TogetherClient()
+        self.deepseek = DeepSeekClient()
         self.offline = OfflineClient()
         # Provider priority: local first → fast cloud free tiers → offline fallback
-        # Matches LimitMonitor rotation chain: ollama→groq→cerebras→openrouter→huggingface→offline
+        # Matches LimitMonitor x8 rotation: ollama→groq→cerebras→openrouter→huggingface→together→deepseek→offline
         self.providers = [
             (ProviderName.ollama, self.ollama),
             (ProviderName.groq, self.groq),
             (ProviderName.cerebras, self.cerebras),
             (ProviderName.openrouter, self.openrouter),
             (ProviderName.huggingface, self.huggingface),
+            (ProviderName.together, self.together),
+            (ProviderName.deepseek, self.deepseek),
             (ProviderName.offline, self.offline),
         ]
 
@@ -823,7 +912,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "ollama_available": ollama_ok,
-        "providers": ["ollama", "openrouter", "huggingface", "offline"],
+        "providers": ["ollama", "groq", "cerebras", "openrouter", "huggingface", "together", "deepseek", "offline"],
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
     }
 
@@ -911,6 +1000,72 @@ async def clear_cache():
     """Clear the response cache."""
     router.cache.clear()
     return {"ok": True, "message": "Cache cleared"}
+
+
+# ---------------------------------------------------------------------------
+# Providers Dashboard
+# ---------------------------------------------------------------------------
+
+
+@_router.get("/providers")
+async def providers_dashboard():
+    """Live provider status dashboard — which providers are active and their availability."""
+    _PROVIDER_DAILY_LIMITS = {
+        "ollama":      -1,      # unlimited (local)
+        "groq":        14_400,  # free tier
+        "cerebras":    1_000,   # free tier
+        "openrouter":  200,     # free tier (varies by model)
+        "huggingface": 1_000,   # free tier inference API
+        "together":    500,     # credit-based approximation
+        "deepseek":    1_000,   # generous free tier
+        "offline":     -1,      # always available
+    }
+
+    ollama_ok = await router.ollama.health_check()
+
+    provider_info: dict = {}
+    for pname, client in router.providers:
+        name = pname.value
+        available = True
+        status = "ok"
+        if name == "ollama":
+            available = ollama_ok
+            status = "ok" if ollama_ok else "down"
+        elif name == "offline":
+            status = "fallback"
+        else:
+            # Check if API key is set for keyed providers
+            key_map = {
+                "groq": "GROQ_API_KEY",
+                "cerebras": "CEREBRAS_API_KEY",
+                "openrouter": "OPENROUTER_API_KEY",
+                "huggingface": "HUGGINGFACE_API_KEY",
+                "together": "TOGETHER_API_KEY",
+                "deepseek": "DEEPSEEK_API_KEY",
+            }
+            env_key = key_map.get(name)
+            available = bool(env_key and os.environ.get(env_key))
+            status = "ok" if available else "no_key"
+
+        provider_info[name] = {
+            "status": status,
+            "available": available,
+            "daily_limit": _PROVIDER_DAILY_LIMITS.get(name, -1),
+            "utilisation_pct": 0,
+            "daily_req": "0/∞" if _PROVIDER_DAILY_LIMITS.get(name, -1) == -1 else f"0/{_PROVIDER_DAILY_LIMITS.get(name)}",
+        }
+
+    available_names = [n for n, info in provider_info.items() if info["available"] and n != "offline"]
+    active = available_names[0] if available_names else "offline"
+
+    return {
+        "active_provider": active,
+        "available_providers": available_names,
+        "rotating_providers": [],
+        "hard_stopped_providers": [],
+        "zero_cost_operational": len(available_names) > 0,
+        "providers": provider_info,
+    }
 
 
 # ---------------------------------------------------------------------------
