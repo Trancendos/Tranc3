@@ -30,13 +30,13 @@ def _fingerprint(text: str, n: int = 3) -> str:
     Character n-gram fingerprint — order-invariant similarity key.
     Two prompts with the same dominant n-grams share a fingerprint cluster.
     """
-    tokens = re.findall(r'\w+', text.lower())
+    tokens = re.findall(r"\w+", text.lower())
     ngrams = set()
     for tok in tokens:
         for i in range(len(tok) - n + 1):
-            ngrams.add(tok[i:i + n])
+            ngrams.add(tok[i : i + n])
     sorted_ng = sorted(ngrams)[:32]  # top-32 for stability
-    raw = ''.join(sorted_ng)
+    raw = "".join(sorted_ng)
     return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()[:12]
 
 

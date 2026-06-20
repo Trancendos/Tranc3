@@ -193,8 +193,7 @@ async def health():
             "FROM buckets b LEFT JOIN objects o ON o.bucket = b.name GROUP BY b.name"
         ).fetchall()
     bucket_detail = {
-        r["name"]: {"status": "ok", "files": r["files"], "usedBytes": r["used"]}
-        for r in rows
+        r["name"]: {"status": "ok", "files": r["files"], "usedBytes": r["used"]} for r in rows
     }
     # Inject well-known self-hosted bucket IDs expected by StoragePage
     health_buckets: dict = {}

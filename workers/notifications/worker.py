@@ -766,15 +766,20 @@ _orig_create = db.create_notification
 
 def _patched_create(notif):
     result = _orig_create(notif)
-    _fan_out(notif.user_id, {
-        "id": result.id,
-        "title": result.title,
-        "message": getattr(result, "body", ""),
-        "type": "info",
-        "timestamp": result.created_at.isoformat() if hasattr(result.created_at, "isoformat") else str(result.created_at),
-        "read": False,
-        "channel": result.channel,
-    })
+    _fan_out(
+        notif.user_id,
+        {
+            "id": result.id,
+            "title": result.title,
+            "message": getattr(result, "body", ""),
+            "type": "info",
+            "timestamp": result.created_at.isoformat()
+            if hasattr(result.created_at, "isoformat")
+            else str(result.created_at),
+            "read": False,
+            "channel": result.channel,
+        },
+    )
     return result
 
 
@@ -790,7 +795,7 @@ async def notification_stream(user_id: str, _token: str = ""):
 
     async def event_gen():
         try:
-            yield "event: notification\ndata: {\"type\":\"connected\"}\n\n"
+            yield 'event: notification\ndata: {"type":"connected"}\n\n'
             while True:
                 try:
                     payload = await asyncio.wait_for(queue.get(), timeout=25.0)
@@ -819,10 +824,22 @@ async def notification_stream(user_id: str, _token: str = ""):
 # ---------------------------------------------------------------------------
 
 _CHANNEL_DEFS = [
-    {"id": "resend",     "name": "Resend",     "type": "email", "daily_limit": 100,  "provider": "Resend"},
-    {"id": "mailersend", "name": "MailerSend", "type": "email", "daily_limit": 400,  "provider": "MailerSend"},
-    {"id": "brevo",      "name": "Brevo",      "type": "email", "daily_limit": 1000, "provider": "Brevo"},
-    {"id": "sendgrid",   "name": "SendGrid",   "type": "email", "daily_limit": 100,  "provider": "SendGrid"},
+    {"id": "resend", "name": "Resend", "type": "email", "daily_limit": 100, "provider": "Resend"},
+    {
+        "id": "mailersend",
+        "name": "MailerSend",
+        "type": "email",
+        "daily_limit": 400,
+        "provider": "MailerSend",
+    },
+    {"id": "brevo", "name": "Brevo", "type": "email", "daily_limit": 1000, "provider": "Brevo"},
+    {
+        "id": "sendgrid",
+        "name": "SendGrid",
+        "type": "email",
+        "daily_limit": 100,
+        "provider": "SendGrid",
+    },
 ]
 
 
