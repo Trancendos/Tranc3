@@ -11,7 +11,7 @@ import {
   Brain, Zap, GitBranch, Shield, Eye, Crown, Cpu, Globe,
   BookOpen, Palette, Music, FlaskConical, Layers, Archive,
   Lock, Boxes, Radio, Clock, Mail, Search, Database,
-  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap, Clapperboard, Box
+  Server, Network, Activity, Settings, BarChart3, Sparkles, ScrollText, MessageSquare, Heart, User, GraduationCap, Clapperboard, Box, Snowflake
 } from 'lucide-react'
 import PlatformPulse from '../components/ui/PlatformPulse'
 import useReactiveQuery from '../hooks/useReactiveQuery'
@@ -91,6 +91,7 @@ const ENTITY_GRID = [
   { name: 'VRAR3D',           icon: Eye,      path: '/vrar3d',             status: 'planned', color: '#6366f1' },
   { name: 'TateKing',         icon: Clapperboard, path: '/tateking',       status: 'partial', color: '#3b82f6' },
   { name: 'TranceFlow',       icon: Box,          path: '/tranceflow',     status: 'partial', color: '#a855f7' },
+  { name: 'The Ice Box',      icon: Snowflake,    path: '/ice-box',        status: 'partial', color: '#06b6d4' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

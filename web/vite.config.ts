@@ -140,6 +140,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/geo-svc/, ''),
             },
+            // Ice Box sandbox isolation — Port 8046
+            '/ice-box-svc': {
+                target: 'http://localhost:8046',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/ice-box-svc/, ''),
+            },
             // TranceFlow 3D/games studio — Port 8067
             '/tranceflow-svc': {
                 target: 'http://localhost:8067',
