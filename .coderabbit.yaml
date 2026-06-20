@@ -1,0 +1,29 @@
+language: "en-US"
+early_access: false
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/*.lock"
+    - "!**/node_modules/**"
+    - "!**/*.min.js"
+    - "!**/dist/**"
+    - "!**/build/**"
+chat:
+  auto_reply: true
+code_generation:
+  docstrings:
+    # Project standard: comments only when WHY is non-obvious (CLAUDE.md).
+    # Docstring coverage threshold is intentionally low — do not flag.
+    language_settings:
+      python:
+        docstring_style: "google"
+  unit_tests:
+    enabled: false

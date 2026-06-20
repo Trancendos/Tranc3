@@ -319,16 +319,20 @@ class LimitMonitor:
         }
 
     def get_optimal_provider(self) -> Optional[str]:
-        priority_order = [
-            "ollama",
-            "groq",
-            "cerebras",
-            "openrouter",
-            "huggingface",
-            "together",
-            "deepseek",
-            "offline",
-        ]
+        # Use genetic optimizer ranking when available, fall back to static order
+        try:
+            from src.ai_gateway.genetic_optimizer import GeneticOptimizer
+            _opt = getattr(self, "_genetic_optimizer", None)
+            if _opt is None:
+                _providers = [p for p in self.LIMITS if p != "offline"]
+                self._genetic_optimizer = GeneticOptimizer(providers=_providers)
+                _opt = self._genetic_optimizer
+            priority_order = _opt.ranked_providers() + ["offline"]
+        except Exception:  # noqa: BLE001
+            priority_order = [
+                "ollama", "groq", "cerebras", "openrouter",
+                "huggingface", "together", "deepseek", "offline",
+            ]
         # First: available and not rotating
         for p in priority_order:
             s = self.get_status(p)
@@ -342,6 +346,12 @@ class LimitMonitor:
                 return p
         logger.error("ALL providers hard-stopped — entering offline mode")
         return "offline"
+
+    def record_provider_outcome(self, provider: str, success: bool, latency_ms: float = 0.0) -> None:
+        """Feed real-world outcome to the genetic optimizer for evolution."""
+        _opt = getattr(self, "_genetic_optimizer", None)
+        if _opt is not None:
+            _opt.record_outcome(provider, success, latency_ms)
 
     def reset_provider(self, provider: str) -> None:
         """Manual reset (admin use only)."""

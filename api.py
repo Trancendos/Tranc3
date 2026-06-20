@@ -1177,6 +1177,61 @@ async def health():
 
 
 @app.get(
+    "/health/platform",
+    tags=["system"],
+    summary="Platform-wide service health for PlatformPulse widget",
+)
+async def platform_health():
+    """Probe all known self-hosted workers and return aggregate health map."""
+    import httpx
+
+    WORKERS = {
+        "infinity-ws":      8004,
+        "infinity-auth":    8005,
+        "users-service":    8006,
+        "monitoring":       8007,
+        "notifications":    8008,
+        "infinity-ai":      8009,
+        "the-grid":         8010,
+        "products-service": 8011,
+        "orders-service":   8012,
+        "payments-service": 8013,
+        "files-service":    8014,
+        "identity-service": 8015,
+        "audit-service":    8017,
+        "vault-service":    8038,
+    }
+
+    services = []
+    async with httpx.AsyncClient(timeout=2.0) as client:
+        async def _probe(name: str, port: int):
+            import time as _time
+            t0 = _time.monotonic()
+            try:
+                resp = await client.get(f"http://localhost:{port}/health")
+                latency_ms = (_time.monotonic() - t0) * 1000
+                status = "ok" if resp.is_success else "degraded"
+            except Exception:  # noqa: BLE001
+                latency_ms = None
+                status = "unreachable"
+            services.append({"name": name, "status": status, "latency_ms": latency_ms, "port": port})
+
+        await asyncio.gather(*[_probe(n, p) for n, p in WORKERS.items()])
+
+    ok_count = sum(1 for s in services if s["status"] == "ok")
+    total = len(services)
+    overall = "healthy" if ok_count == total else "degraded" if ok_count >= total // 2 else "critical"
+
+    return {
+        "overall": overall,
+        "services": sorted(services, key=lambda s: s["name"]),
+        "ok_count": ok_count,
+        "total": total,
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+    }
+
+
+@app.get(
     "/ready",
     tags=["system"],
     response_model=ReadyResponse,

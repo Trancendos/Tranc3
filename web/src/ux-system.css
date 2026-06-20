@@ -760,3 +760,114 @@ html {
 .ux-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ux-rounded { border-radius: var(--ux-radius-md); }
 .ux-rounded-lg { border-radius: var(--ux-radius-lg); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYER 9 — FLUIDIC MOTION + ADAPTIVE TRANSITIONS
+   Liquidic morphing, genetic pulse animations, quantum fade effects.
+   All motion respects prefers-reduced-motion.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Route transition — fluidic page swap */
+@keyframes ux-slide-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.995); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@keyframes ux-slide-out {
+  from { opacity: 1; transform: translateY(0)   scale(1); }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.995); }
+}
+
+.ux-page-enter  { animation: ux-slide-in  200ms var(--ux-ease-spring) forwards; }
+.ux-page-exit   { animation: ux-slide-out 150ms var(--ux-ease-out)    forwards; }
+
+/* Genetic pulse — living indicator for active services */
+@keyframes ux-pulse-dna {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.12); }
+}
+.ux-pulse-dna {
+  animation: ux-pulse-dna 2.4s ease-in-out infinite;
+}
+
+/* Liquidic morph on hover — border-radius flows */
+.ux-liquid {
+  transition:
+    border-radius var(--ux-motion-standard),
+    box-shadow    var(--ux-motion-standard),
+    transform     var(--ux-motion-standard);
+}
+.ux-liquid:hover {
+  border-radius: 1.5rem 0.75rem 1.5rem 0.75rem;
+  transform: translateY(-1px);
+}
+
+/* Quantum shimmer — loading skeleton with iridescent sweep */
+@keyframes ux-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.ux-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--ux-surface-raised) 25%,
+    rgba(99,102,241,0.15)    50%,
+    var(--ux-surface-raised) 75%
+  );
+  background-size: 200% 100%;
+  animation: ux-shimmer 1.6s linear infinite;
+}
+
+/* Adaptive card elevation tiers (DNA inheritance) */
+.ux-card-flat     { box-shadow: none; border: 1px solid var(--ux-border-subtle); }
+.ux-card-raised   { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.ux-card-floating { box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(99,102,241,0.15); }
+
+/* Cluster layout — auto-grid that reflows like a gas */
+.ux-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ux-space-3);
+  align-items: flex-start;
+}
+.ux-cluster > * { flex: 1 1 var(--ux-cluster-min, 280px); }
+
+/* Smart reactive badge — glows when status changes */
+.ux-badge-reactive {
+  transition: background-color 400ms ease, color 400ms ease, box-shadow 400ms ease;
+}
+.ux-badge-reactive[data-status="ok"]       { background: rgba(34,197,94,0.15);  color: #4ade80; }
+.ux-badge-reactive[data-status="warn"]     { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.ux-badge-reactive[data-status="critical"] { background: rgba(239,68,68,0.15);  color: #f87171; box-shadow: 0 0 8px rgba(239,68,68,0.3); }
+
+/* Dimensional depth layer for modular containers */
+.ux-depth-0 { z-index: 0;  background: var(--ux-surface-sunken); }
+.ux-depth-1 { z-index: 1;  background: var(--ux-surface); }
+.ux-depth-2 { z-index: 2;  background: var(--ux-surface-raised); }
+.ux-depth-3 { z-index: 3;  background: color-mix(in srgb, var(--ux-brand-primary) 8%, var(--ux-surface-raised)); }
+
+/* Proactive notification ring */
+@keyframes ux-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(99,102,241,0.6); }
+  70%  { box-shadow: 0 0 0 10px rgba(99,102,241,0);   }
+  100% { box-shadow: 0 0 0 0   rgba(99,102,241,0);   }
+}
+.ux-ring { animation: ux-ring 1.5s cubic-bezier(0.215,0.61,0.355,1) infinite; }
+
+/* Nano-dot status indicator */
+.ux-nano-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ux-nano-dot--ok       { background: var(--ux-success); }
+.ux-nano-dot--warn     { background: var(--ux-warning); }
+.ux-nano-dot--critical { background: var(--ux-danger);  animation: ux-pulse-dna 1.2s ease-in-out infinite; }
+.ux-nano-dot--unknown  { background: var(--ux-text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ux-page-enter, .ux-page-exit,
+  .ux-pulse-dna, .ux-shimmer, .ux-ring,
+  .ux-nano-dot--critical { animation: none; }
+  .ux-liquid:hover { transform: none; }
+}

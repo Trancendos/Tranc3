@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router'
 import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell,
   Database, Search, ListTodo, Settings, ChevronLeft,
-  ChevronRight, LogOut, User, Shield, Server
+  ChevronRight, LogOut, User, Shield, Server, GitBranch,
+  CheckSquare, Cpu, Bot, Globe
 } from 'lucide-react'
 
 interface NavItem {
@@ -11,21 +12,39 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   badge?: string
+  group?: string
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/',              label: 'Chat',         icon: <MessageSquare size={18} aria-hidden="true" /> },
-  { path: '/dashboard',    label: 'Dashboard',    icon: <LayoutDashboard size={18} aria-hidden="true" /> },
-  { path: '/spark',        label: 'The Spark',    icon: <Zap size={18} aria-hidden="true" /> },
-  { path: '/status',       label: 'Status',       icon: <Activity size={18} aria-hidden="true" /> },
-  { path: '/notifications',label: 'Alerts',       icon: <Bell size={18} aria-hidden="true" /> },
-  { path: '/storage',      label: 'Storage',      icon: <Database size={18} aria-hidden="true" /> },
-  { path: '/search',       label: 'Search',       icon: <Search size={18} aria-hidden="true" /> },
-  { path: '/queue',        label: 'Queue',        icon: <ListTodo size={18} aria-hidden="true" /> },
-  { path: '/admin',        label: 'Admin',        icon: <Shield size={18} aria-hidden="true" /> },
-  { path: '/workers',      label: 'Workers',      icon: <Server size={18} aria-hidden="true" /> },
-  { path: '/settings',     label: 'Settings',     icon: <Settings size={18} aria-hidden="true" /> },
+  // Core
+  { path: '/',               label: 'Chat',          icon: <MessageSquare size={18} aria-hidden="true" />, group: 'core' },
+  { path: '/dashboard',     label: 'Dashboard',     icon: <LayoutDashboard size={18} aria-hidden="true" />, group: 'core' },
+  { path: '/spark',         label: 'The Spark',     icon: <Zap size={18} aria-hidden="true" />, group: 'core' },
+  // Platform
+  { path: '/grid',          label: 'Digital Grid',  icon: <GitBranch size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/ai-providers',  label: 'AI Providers',  icon: <Bot size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/workers',       label: 'Workers',       icon: <Cpu size={18} aria-hidden="true" />, group: 'platform' },
+  { path: '/services',      label: 'Services',      icon: <Globe size={18} aria-hidden="true" />, group: 'platform' },
+  // Ops
+  { path: '/status',        label: 'Status',        icon: <Activity size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/notifications', label: 'Alerts',        icon: <Bell size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/queue',         label: 'Queue',         icon: <ListTodo size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/compliance',    label: 'Compliance',    icon: <CheckSquare size={18} aria-hidden="true" />, group: 'ops' },
+  // Data
+  { path: '/storage',       label: 'Storage',       icon: <Database size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/search',        label: 'Search',        icon: <Search size={18} aria-hidden="true" />, group: 'data' },
+  // Config
+  { path: '/admin',         label: 'Admin',         icon: <Shield size={18} aria-hidden="true" />, group: 'config' },
+  { path: '/settings',      label: 'Settings',      icon: <Settings size={18} aria-hidden="true" />, group: 'config' },
 ]
+
+const GROUP_LABELS: Record<string, string> = {
+  core: 'Core',
+  platform: 'Platform',
+  ops: 'Operations',
+  data: 'Data',
+  config: 'Config',
+}
 
 interface NavBarProps {
   username?: string
@@ -65,36 +84,50 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
       </div>
 
       {/* Nav items */}
-      <ul id="sidebar-nav-list" role="list" className="flex-1 py-2 overflow-y-auto space-y-0.5 px-1">
-        {NAV_ITEMS.map((item) => {
-          const active = location.pathname === item.path
-          return (
-            <li key={item.path}>
-              <button
-                onClick={() => navigate(item.path)}
-                aria-current={active ? 'page' : undefined}
-                aria-label={collapsed ? item.label : undefined}
-                title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3 px-2 py-2.5 text-sm rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                  active
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                }`}
-              >
-                <span className="flex-shrink-0" aria-hidden="true">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
-                {!collapsed && item.badge && (
-                  <span
-                    aria-label={`${item.badge} unread`}
-                    className="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 tabular-nums"
-                  >
-                    {item.badge}
-                  </span>
+      <ul id="sidebar-nav-list" role="list" className="flex-1 py-2 overflow-y-auto px-1">
+        {(() => {
+          let lastGroup = ''
+          return NAV_ITEMS.map((item) => {
+            const active = location.pathname === item.path
+            const showGroupHeader = !collapsed && item.group && item.group !== lastGroup
+            if (item.group) lastGroup = item.group
+            return (
+              <React.Fragment key={item.path}>
+                {showGroupHeader && (
+                  <li aria-hidden="true">
+                    <p className="px-2 pt-3 pb-1 text-xs font-semibold uppercase tracking-widest text-gray-600 select-none">
+                      {GROUP_LABELS[item.group!] ?? item.group}
+                    </p>
+                  </li>
                 )}
-              </button>
-            </li>
-          )
-        })}
+                <li>
+                  <button
+                    onClick={() => navigate(item.path)}
+                    aria-current={active ? 'page' : undefined}
+                    aria-label={collapsed ? item.label : undefined}
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                      active
+                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-900/50'
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex-shrink-0" aria-hidden="true">{item.icon}</span>
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    {!collapsed && item.badge && (
+                      <span
+                        aria-label={`${item.badge} unread`}
+                        className="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 tabular-nums"
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              </React.Fragment>
+            )
+          })
+        })()}
       </ul>
 
       {/* User footer */}
