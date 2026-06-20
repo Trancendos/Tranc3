@@ -48,7 +48,7 @@ const ENTITY_GRID = [
   { name: 'LangChain',         icon: Layers,       path: '/langchain',   status: 'partial', color: '#7c3aed' },
   { name: 'Think Tank',        icon: Brain,        path: '/services',    status: 'partial', color: '#a78bfa' },
   { name: 'The Void',          icon: Lock,         path: '/services',    status: 'live',    color: '#ef4444' },
-  { name: 'The HIVE',          icon: Layers,       path: '/queue',       status: 'live',    color: '#f59e0b' },
+  { name: 'The HIVE',          icon: Layers,       path: '/hive',        status: 'live',    color: '#f59e0b' },
   { name: 'The Basement',      icon: Archive,      path: '/services',    status: 'planned', color: '#64748b' },
   { name: 'DocUtari',          icon: Database,     path: '/storage',     status: 'partial', color: '#0ea5e9' },
   { name: 'Cryptex',           icon: Shield,       path: '/services',    status: 'planned', color: '#64748b' },

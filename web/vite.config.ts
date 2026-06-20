@@ -104,6 +104,12 @@ export default defineConfig({
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/sms-svc/, ''),
             },
+            // The HIVE (data movement & swarm coordination) — Port 8060
+            '/hive-svc': {
+                target: 'http://localhost:8060',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/hive-svc/, ''),
+            },
             // Email service — Port 8018
             '/email-svc': {
                 target: 'http://localhost:8018',

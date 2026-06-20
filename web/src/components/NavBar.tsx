@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/email-svc',     label: 'Email Service', icon: <Mail size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/sms',           label: 'SMS Gateway',   icon: <MessageSquare size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/queue',         label: 'Queue',         icon: <ListTodo size={18} aria-hidden="true" />, group: 'ops' },
+  { path: '/hive',          label: 'The HIVE',      icon: <Layers size={18} aria-hidden="true" />,   group: 'ops' },
   { path: '/compliance',    label: 'Compliance',    icon: <CheckSquare size={18} aria-hidden="true" />, group: 'ops' },
   { path: '/audit',         label: 'Audit Log',     icon: <Shield size={18} aria-hidden="true" />, group: 'ops' },
   // Data
