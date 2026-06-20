@@ -4,7 +4,6 @@ import { useAnalytics } from '../hooks/useAnalytics'
 
 const GEO_API = '/geo-svc'
 const INTERNAL = { 'X-Internal-Secret': 'dev-secret' }
-const JSON_INTERNAL = { ...INTERNAL, 'Content-Type': 'application/json' }
 
 interface GeoResult {
   ip: string

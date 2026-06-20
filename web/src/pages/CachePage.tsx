@@ -4,7 +4,6 @@ import { useAnalytics } from '../hooks/useAnalytics'
 
 const CACHE_API = '/cache-svc'
 const INTERNAL = { 'X-Internal-Secret': 'dev-secret' }
-const JSON_INTERNAL = { ...INTERNAL, 'Content-Type': 'application/json' }
 
 interface CacheKey {
   key: string
@@ -71,7 +70,8 @@ export default function CachePage() {
 
   const deleteKey = async (key: string) => {
     try {
-      await fetch(`${CACHE_API}/cache/${encodeURIComponent(key)}`, { method: 'DELETE', headers: INTERNAL })
+      const res = await fetch(`${CACHE_API}/cache/${encodeURIComponent(key)}`, { method: 'DELETE', headers: INTERNAL })
+      if (!res.ok) throw new Error('Failed to delete key')
       setSelectedKey(null)
       setKeyValue(null)
       loadData()

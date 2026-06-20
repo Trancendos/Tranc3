@@ -14,7 +14,6 @@ Architecture:
   - Runs synchronously on demand (call evolve() after each generation period)
 """
 
-import math
 import random
 from dataclasses import dataclass, field
 from pathlib import Path

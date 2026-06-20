@@ -85,11 +85,12 @@ export default function DevOcityPage() {
     setLoading(true)
     setError(null)
     try {
-      const params = statusFilter ? `?status=${statusFilter}` : ''
+      const search = new URLSearchParams({ limit: '50' })
+      if (statusFilter) search.set('status', statusFilter)
       const [hRes, stRes, pRes, dRes, svcRes] = await Promise.all([
         fetch(`${DEV_API}/health`),
         fetch(`${DEV_API}/stats`, { headers: INTERNAL }),
-        fetch(`${DEV_API}/projects${params}&limit=50`, { headers: INTERNAL }),
+        fetch(`${DEV_API}/projects?${search.toString()}`, { headers: INTERNAL }),
         fetch(`${DEV_API}/deploys?limit=30`, { headers: INTERNAL }),
         fetch(`${DEV_API}/services`, { headers: INTERNAL }),
       ])

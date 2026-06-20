@@ -56,6 +56,12 @@ export default function BackupPage() {
 
   useEffect(() => { trackPageView('/backup') }, [trackPageView])
 
+  useEffect(() => {
+    if (!runMsg) return
+    const timer = setTimeout(() => setRunMsg(''), 5000)
+    return () => clearTimeout(timer)
+  }, [runMsg])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -92,7 +98,6 @@ export default function BackupPage() {
       if (res.ok) {
         const d = await res.json()
         setRunMsg(`Backup complete: ${d.success}/${d.total} succeeded`)
-        setTimeout(() => setRunMsg(''), 5000)
         loadData()
       }
     } catch { /* ignore */ }
