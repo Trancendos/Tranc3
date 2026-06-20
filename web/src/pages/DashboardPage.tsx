@@ -107,7 +107,7 @@ function ProviderBar({ dashboard }: { dashboard: ProviderDashboard }) {
 
 export default function DashboardPage() {
   const { data: providers } = useReactiveQuery<ProviderDashboard>({
-    url: `${API}/ai/providers/dashboard`,
+    url: `${API}/ai/providers`,
     intervalMs: 30_000,
     transform: (raw) => raw as ProviderDashboard,
   })
