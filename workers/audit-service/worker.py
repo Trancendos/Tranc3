@@ -47,6 +47,7 @@ from pydantic import BaseModel, Field
 PORT = int(os.environ.get("PORT", 8017))
 WORKER_NAME = "audit-service"
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+_INTERNAL_SECRET = INTERNAL_SECRET  # alias for test fixtures
 
 _data_dir = Path(os.environ.get("DATA_DIR", "/data"))
 _data_dir.mkdir(parents=True, exist_ok=True)
@@ -131,25 +132,7 @@ def _init_db() -> None:
         conn.commit()
 
 
-def _compute_hash(
-    entry_id: int,
-    actor: str,
-    action: str,
-    timestamp: float,
-    prev_hash: str,
-    resource: str = "",
-    details: str = "",
-    outcome: str = "",
-    ip_address: str = "",
-) -> str:
-    payload = f"{entry_id}:{actor}:{action}:{timestamp}:{prev_hash}:{resource}:{details}:{outcome}:{ip_address}"
-    return hashlib.sha256(payload.encode()).hexdigest()
-
-
-def _last_hash() -> str:
-    with _connect() as conn:
-        row = conn.execute("SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
-    return row["chain_hash"] if row else GENESIS_HASH
+init_db = _init_db  # public alias for tests
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +165,11 @@ def _tail_hash(conn: sqlite3.Connection) -> str:
     """
     row = conn.execute("SELECT hash FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
     return row["hash"] if row else GENESIS_HASH
+
+
+def _last_hash() -> str:
+    with _connect() as conn:
+        return _tail_hash(conn)
 
 
 # ---------------------------------------------------------------------------
@@ -316,6 +304,7 @@ def _spot_check_chain(n: int = 100) -> bool:
             cur_row["prev_hash"],
             cur_row["event_id"],
             cur_row["timestamp"],
+            cur_row["service"],
             cur_row["action"],
             cur_row["actor"],
             cur_row["resource"],
@@ -403,20 +392,21 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 
-@app.get("/health", response_model=HealthResponse)
-async def health() -> HealthResponse:
+@app.get("/health")
+async def health() -> dict:
     with _connect() as conn:
         total = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
     chain_valid = _spot_check_chain(100)
-    return HealthResponse(
-        status="healthy",
-        service=WORKER_NAME,
-        port=PORT,
-        db_path=str(DB_PATH),
-        total_events=total,
-        chain_valid=chain_valid,
-        uptime_s=round(time.monotonic() - _START_TIME, 2),
-    )
+    return {
+        "status": "healthy",
+        "service": WORKER_NAME,
+        "port": PORT,
+        "db_path": str(DB_PATH),
+        "total_events": total,
+        "chain_valid": chain_valid,
+        "chain_tip": _last_hash(),
+        "uptime_s": round(time.monotonic() - _START_TIME, 2),
+    }
 
 
 def _require_internal(x_internal_secret: Optional[str] = Header(None)) -> None:
@@ -436,10 +426,10 @@ async def append_event(
     event_id = body.event_id or str(uuid.uuid4())
     ts = body.timestamp or datetime.now(timezone.utc).isoformat()
     with _chain_lock, _connect() as conn:
-        prev = _last_hash()
+        prev = _tail_hash(conn)
         cur = conn.execute(
             "INSERT INTO audit_log (event_id, timestamp, service, action, actor, resource,"
-            " outcome, severity, details, prev_hash, chain_hash)"
+            " outcome, severity, details_json, prev_hash, hash)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
                 event_id,
@@ -457,17 +447,16 @@ async def append_event(
         )
         row_id = cur.lastrowid
         chain_hash = _compute_hash(
-            row_id,
-            body.actor,
-            body.action,
-            ts,
             prev,
+            event_id,
+            ts,
+            body.service,
+            body.action,
+            body.actor,
             body.resource,
-            json.dumps(body.details),
             body.outcome,
-            "",
         )
-        conn.execute("UPDATE audit_log SET chain_hash=? WHERE id=?", (chain_hash, row_id))
+        conn.execute("UPDATE audit_log SET hash=? WHERE id=?", (chain_hash, row_id))
     return AuditEventCreated(
         id=row_id, event_id=event_id, timestamp=ts, hash=chain_hash, prev_hash=prev
     )
@@ -549,15 +538,14 @@ async def verify_chain() -> VerifyResponse:
             return VerifyResponse(valid=False, checked=checked, first_break_at=row["event_id"])
         # Hash integrity check
         expected = _compute_hash(
-            row["id"],
-            row["actor"],
-            row["action"],
-            row["timestamp"],
             row["prev_hash"],
+            row["event_id"],
+            row["timestamp"],
+            row["service"],
+            row["action"],
+            row["actor"],
             row["resource"] or "",
-            row["details"] or "",
             row["outcome"] or "",
-            row["ip_address"] or "",
         )
         if row["hash"] != expected:
             return VerifyResponse(valid=False, checked=checked, first_break_at=row["event_id"])
@@ -616,19 +604,93 @@ async def export_ndjson(
     )
 
 
-@app.get("/stats", response_model=StatsResponse)
-async def stats() -> StatsResponse:
+@app.get("/stats")
+async def stats() -> dict:
     """Return event counts grouped by service, action, severity, and outcome for 24h/7d/30d."""
     now = datetime.now(timezone.utc)
     iso_24h = (now - timedelta(hours=24)).isoformat()
     iso_7d = (now - timedelta(days=7)).isoformat()
     iso_30d = (now - timedelta(days=30)).isoformat()
 
-    return StatsResponse(
-        last_24h=_build_stats_window(iso_24h),
-        last_7d=_build_stats_window(iso_7d),
-        last_30d=_build_stats_window(iso_30d),
-    )
+    w24 = _build_stats_window(iso_24h)
+    w7d = _build_stats_window(iso_7d)
+    w30d = _build_stats_window(iso_30d)
+    return {
+        "last_24h": w24.model_dump(),
+        "last_7d": w7d.model_dump(),
+        "last_30d": w30d.model_dump(),
+        "total_entries": w30d.total,
+    }
+
+
+# ---------------------------------------------------------------------------
+# /audit compat aliases (tests and older callers use /audit/* routes)
+# ---------------------------------------------------------------------------
+
+
+@app.post("/audit", status_code=201)
+async def audit_compat_post(
+    body: AuditEventIn,
+    x_internal_secret: Optional[str] = Header(None),
+) -> dict:
+    _require_internal(x_internal_secret)
+    result = await append_event(body, x_internal_secret)
+    return {"id": result.id, "chain_hash": result.hash, "prev_hash": result.prev_hash}
+
+
+@app.get("/audit")
+async def audit_compat_list(
+    actor: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM audit_log WHERE"
+            " (? IS NULL OR actor = ?)"
+            " AND (? IS NULL OR action = ?)"
+            " ORDER BY id DESC LIMIT ? OFFSET ?",
+            (actor, actor, action, action, limit, offset),
+        ).fetchall()
+    return {"entries": [_row_to_out(r).model_dump() for r in rows], "total": len(rows)}
+
+
+@app.get("/audit/verify/chain")
+async def audit_compat_verify() -> dict:
+    result = await verify_chain()
+    return {"valid": result.valid, "checked": result.checked}
+
+
+@app.get("/audit/{entry_id}")
+async def audit_compat_get(entry_id: str) -> dict:
+    with _connect() as conn:
+        try:
+            row = conn.execute(
+                "SELECT * FROM audit_log WHERE id = ?", (int(entry_id),)
+            ).fetchone()
+        except ValueError:
+            row = conn.execute(
+                "SELECT * FROM audit_log WHERE event_id = ?", (entry_id,)
+            ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Entry {entry_id!r} not found")
+    return _row_to_out(row).model_dump()
+
+
+@app.post("/audit/batch", status_code=201)
+async def audit_compat_batch(
+    body: dict,
+    x_internal_secret: Optional[str] = Header(None),
+) -> dict:
+    _require_internal(x_internal_secret)
+    entries = body.get("entries", [])
+    count = 0
+    for e in entries:
+        ev = AuditEventIn(**{k: v for k, v in e.items() if k in AuditEventIn.model_fields})
+        await append_event(ev, x_internal_secret)
+        count += 1
+    return {"inserted": count}
 
 
 # ---------------------------------------------------------------------------

@@ -36,6 +36,8 @@ INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 DB_PATH = Path(os.environ.get("DB_PATH", "/data/health_aggregator.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+_INTERNAL_SECRET = INTERNAL_SECRET  # alias for test fixtures
+
 POLL_INTERVAL = 30  # seconds between full polls
 HTTP_TIMEOUT = 3.0  # per-service request timeout
 HISTORY_LIMIT = 500  # rolling history rows kept per service
@@ -112,6 +114,9 @@ for _svc in SERVICE_REGISTRY:
 
 _REGISTRY_BY_NAME: Dict[str, Dict[str, Any]] = {s["name"]: s for s in SERVICE_REGISTRY}
 
+# Dynamic services registered via POST /services
+_dynamic_services: Dict[str, Dict[str, Any]] = {}
+
 # ---------------------------------------------------------------------------
 # In-memory latest state
 # ---------------------------------------------------------------------------
@@ -160,6 +165,9 @@ def _init_db() -> None:
         """)
         c.commit()
     logger.info("health-aggregator DB initialised at %s", DB_PATH)
+
+
+init_db = _init_db  # public alias for tests
 
 
 def _persist_check(result: Dict[str, Any]) -> None:
@@ -305,6 +313,12 @@ class PlatformStatus(BaseModel):
     services: List[ServiceStatus]
 
 
+class ServiceRegisterIn(BaseModel):
+    name: str
+    url: str
+    interval_seconds: int = 30
+
+
 class HistoryPoint(BaseModel):
     service: str
     status: str
@@ -408,8 +422,58 @@ def _require_internal(x_internal_secret: Optional[str]) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-@app.get("/status", response_model=PlatformStatus, summary="Full platform status")
-async def status(x_internal_secret: Optional[str] = Header(None)) -> PlatformStatus:
+@app.post("/services", status_code=201, summary="Dynamically register a service to monitor")
+async def register_service(
+    body: ServiceRegisterIn,
+    x_internal_secret: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _require_internal(x_internal_secret)
+    _dynamic_services[body.name] = {
+        "name": body.name,
+        "url": body.url,
+        "interval_seconds": body.interval_seconds,
+    }
+    return {"registered": body.name, "url": body.url}
+
+
+@app.get("/services", summary="List dynamically registered services")
+async def list_services(x_internal_secret: Optional[str] = Header(None)) -> Dict[str, Any]:
+    _require_internal(x_internal_secret)
+    return {"services": list(_dynamic_services.values())}
+
+
+@app.delete("/services/{name}", summary="Remove a dynamically registered service")
+async def delete_service(
+    name: str, x_internal_secret: Optional[str] = Header(None)
+) -> Dict[str, Any]:
+    _require_internal(x_internal_secret)
+    _dynamic_services.pop(name, None)
+    return {"deleted": name}
+
+
+@app.get("/history/{name}", summary="Health check history for a named service")
+async def service_history(
+    name: str,
+    limit: int = Query(20, ge=1, le=500),
+    x_internal_secret: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    _require_internal(x_internal_secret)
+    with _conn() as c:
+        rows = c.execute(
+            """
+            SELECT service, status, latency_ms, checked_at
+            FROM health_history
+            WHERE service = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (name, limit),
+        ).fetchall()
+    return {"history": [dict(r) for r in rows], "service": name}
+
+
+@app.get("/status", summary="Full platform status")
+async def status(x_internal_secret: Optional[str] = Header(None)) -> Dict[str, Any]:
     _require_internal(x_internal_secret)
     services = []
     healthy = degraded = unreachable = 0
@@ -418,17 +482,17 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> PlatformSta
         if name in _latest:
             d = _latest[name]
             st = d["status"]
-            entry = ServiceStatus(
-                name=name,
-                port=svc["port"],
-                status=st,
-                latency_ms=d.get("latency_ms"),
-                last_checked=d.get("last_checked"),
-                error=d.get("error"),
-            )
+            entry = {
+                "name": name,
+                "port": svc["port"],
+                "status": st,
+                "latency_ms": d.get("latency_ms"),
+                "last_checked": d.get("last_checked"),
+                "error": d.get("error"),
+            }
         else:
             st = "unknown"
-            entry = ServiceStatus(name=name, port=svc["port"], status="unknown")
+            entry = {"name": name, "port": svc["port"], "status": "unknown"}
         services.append(entry)
         if st == "healthy":
             healthy += 1
@@ -437,14 +501,16 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> PlatformSta
         elif st in ("degraded", "unknown"):
             degraded += 1
 
-    return PlatformStatus(
-        overall_status=_overall_status(),
-        healthy_count=healthy,
-        degraded_count=degraded,
-        unreachable_count=unreachable,
-        total_count=len(SERVICE_REGISTRY),
-        services=services,
-    )
+    overall = _overall_status()
+    return {
+        "summary": overall,
+        "overall_status": overall,
+        "healthy_count": healthy,
+        "degraded_count": degraded,
+        "unreachable_count": unreachable,
+        "total_count": len(SERVICE_REGISTRY),
+        "services": services,
+    }
 
 
 @app.get("/status/{service}", summary="Single service detail with history")
@@ -452,12 +518,12 @@ async def service_detail(
     service: str, x_internal_secret: Optional[str] = Header(None)
 ) -> Dict[str, Any]:
     _require_internal(x_internal_secret)
-    if service not in _REGISTRY_BY_NAME:
-        raise HTTPException(status_code=404, detail=f"Service '{service}' not in registry")
+    # Must have been polled (in _latest) to return data; 404 otherwise
+    if service not in _latest:
+        raise HTTPException(status_code=404, detail=f"Service '{service}' not yet polled")
 
-    current = _latest.get(
-        service, {"status": "unknown", "port": _REGISTRY_BY_NAME[service]["port"]}
-    )
+    current = _latest[service]
+    svc_meta = _REGISTRY_BY_NAME.get(service) or _dynamic_services.get(service) or {}
 
     with _conn() as c:
         rows = c.execute(
@@ -475,7 +541,7 @@ async def service_detail(
 
     return {
         "service": service,
-        "port": _REGISTRY_BY_NAME[service]["port"],
+        "port": svc_meta.get("port"),
         "current": current,
         "history_last_20": history,
     }
@@ -490,8 +556,6 @@ async def history(
     _require_internal(x_internal_secret)
     with _conn() as c:
         if service:
-            if service not in _REGISTRY_BY_NAME:
-                raise HTTPException(status_code=404, detail=f"Service '{service}' not in registry")
             rows = c.execute(
                 """
                 SELECT service, status, latency_ms, checked_at
