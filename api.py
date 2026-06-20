@@ -1116,7 +1116,6 @@ async def refresh_token(current_user: dict = Depends(get_current_user)):
     ),
 )
 async def health():
-
     components: dict = {
         "api": "healthy",
         "model": "healthy" if model else "echo_mode",
@@ -1200,48 +1199,50 @@ async def platform_health():
 
     WORKERS = {
         # P0 — critical path
-        "infinity-ws":             8004,
-        "infinity-auth":           8005,
+        "infinity-ws": 8004,
+        "infinity-auth": 8005,
         # P1 — core services
-        "users-service":           8006,
-        "monitoring":              8007,
-        "notifications":           8008,
-        "infinity-ai":             8009,
-        "the-grid":                8010,
-        "infinity-portal":         8042,
-        "infinity-one":            8043,
-        "infinity-admin":          8044,
-        "infinity-shards":         8045,
-        "infinity-bridge":         8070,
+        "users-service": 8006,
+        "monitoring": 8007,
+        "notifications": 8008,
+        "infinity-ai": 8009,
+        "the-grid": 8010,
+        "infinity-portal": 8042,
+        "infinity-one": 8043,
+        "infinity-admin": 8044,
+        "infinity-shards": 8045,
+        "infinity-bridge": 8070,
         # P2 — extended services
-        "products-service":        8011,
-        "orders-service":          8012,
-        "payments-service":        8013,
-        "files-service":           8014,
-        "identity-service":        8015,
+        "products-service": 8011,
+        "orders-service": 8012,
+        "payments-service": 8013,
+        "files-service": 8014,
+        "identity-service": 8015,
         # P3 — platform services
-        "analytics-service":       8016,
-        "audit-service":           8017,
-        "cache-service":           8018,
-        "config-service":          8020,
-        "cron-service":            8021,
-        "email-service":           8022,
-        "search-service":          8024,
-        "storage-service":         8026,
-        "queue-service":           8027,
-        "rate-limit-service":      8028,
-        "health-aggregator":       8029,
-        "topology-service":        8031,
-        "ledger-service":          8032,
-        "model-router-service":    8033,
+        "analytics-service": 8016,
+        "audit-service": 8017,
+        "cache-service": 8018,
+        "config-service": 8020,
+        "cron-service": 8021,
+        "email-service": 8022,
+        "search-service": 8024,
+        "storage-service": 8026,
+        "queue-service": 8027,
+        "rate-limit-service": 8028,
+        "health-aggregator": 8029,
+        "topology-service": 8031,
+        "ledger-service": 8032,
+        "model-router-service": 8033,
         "workflow-engine-service": 8034,
-        "vault-service":           8038,
+        "vault-service": 8038,
     }
 
     services = []
     async with httpx.AsyncClient(timeout=2.0) as client:
+
         async def _probe(name: str, port: int):
             import time as _time
+
             t0 = _time.monotonic()
             try:
                 resp = await client.get(f"http://localhost:{port}/health")
@@ -1250,13 +1251,17 @@ async def platform_health():
             except Exception:  # noqa: BLE001
                 latency_ms = None
                 status = "unreachable"
-            services.append({"name": name, "status": status, "latency_ms": latency_ms, "port": port})
+            services.append(
+                {"name": name, "status": status, "latency_ms": latency_ms, "port": port}
+            )
 
         await asyncio.gather(*[_probe(n, p) for n, p in WORKERS.items()])
 
     ok_count = sum(1 for s in services if s["status"] == "ok")
     total = len(services)
-    overall = "healthy" if ok_count == total else "degraded" if ok_count >= total // 2 else "critical"
+    overall = (
+        "healthy" if ok_count == total else "degraded" if ok_count >= total // 2 else "critical"
+    )
 
     return {
         "overall": overall,
