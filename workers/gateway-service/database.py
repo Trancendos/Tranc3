@@ -75,6 +75,7 @@ def init_db() -> None:
 
 def log_access_audit(audit: dict[str, Any]) -> None:
     """Persist an access-audit entry (OWASP A09)."""
+    conn = None
     try:
         conn = get_db()
         eid = uuid.uuid4().hex[:16]
@@ -96,9 +97,11 @@ def log_access_audit(audit: dict[str, Any]) -> None:
             ),
         )
         conn.commit()
-        conn.close()
     except Exception:
         logger.debug("Failed to write access audit", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
 
 
 def insert_event(source: str, event_type: str, payload_json: str) -> str:

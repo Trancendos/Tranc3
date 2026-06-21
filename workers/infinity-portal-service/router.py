@@ -277,6 +277,7 @@ async def portal_register(request: Request, registration: PortalRegister):
         "email": registration.email,
         "password": registration.password,
         "display_name": registration.display_name,
+        "role": registration.role,
     }
 
     auth_result = await call_auth_service("POST", "/auth/register", auth_data)

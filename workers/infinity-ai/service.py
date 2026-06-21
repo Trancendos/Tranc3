@@ -21,6 +21,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import httpx
 from fastapi import HTTPException
 from models import (
     ChatCompletionChoice,
@@ -123,9 +124,6 @@ class OllamaClient:
         max_tokens: int,
         temperature: float,
     ) -> Optional[Dict[str, Any]]:
-        import urllib.error
-        import urllib.request
-
         try:
             payload = {
                 "model": model,
@@ -133,28 +131,25 @@ class OllamaClient:
                 "stream": False,
                 "options": {"num_predict": max_tokens, "temperature": temperature},
             }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                f"{self.base_url}/api/chat",
-                data=data,
-                method="POST",
-            )
-            req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                result = json.loads(resp.read().decode())
-                return result
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.base_url}/api/chat",
+                    json=payload,
+                    timeout=120.0,
+                )
+                if resp.status_code == 200:
+                    return resp.json()
+                return None
         except Exception as e:
             logger.warning("Ollama request failed: %s", e)
             self._available = False
             return None
 
     async def health_check(self) -> bool:
-        import urllib.request
-
         try:
-            req = urllib.request.Request(f"{self.base_url}/api/tags", method="GET")
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                return resp.status == 200
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"{self.base_url}/api/tags", timeout=5.0)
+                return resp.status_code == 200
         except Exception:
             self._available = False
             return False

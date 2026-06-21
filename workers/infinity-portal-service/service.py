@@ -7,6 +7,7 @@ and database helper functions.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -238,7 +239,7 @@ def _create_portal_session(
             tier.value,
             infinity_role.value,
             routed_to,
-            access_token,
+            hashlib.sha256(access_token.encode()).hexdigest(),
             now,
             expires_at,
             ip_address,
