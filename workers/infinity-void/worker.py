@@ -30,12 +30,15 @@ import base64
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+_SAFE_COMPONENT_RE = re.compile(r"^[\w\-]+$")
 
 import httpx
 from cryptography.hazmat.primitives import hashes
@@ -214,6 +217,14 @@ def init_schema() -> None:
     conn.close()
 
 
+def _safe_path_component(value: str, field: str = "id") -> str:
+    """Reject path-traversal characters; allow only word chars and hyphens."""
+    stripped = Path(value).name
+    if not stripped or stripped != value or not _SAFE_COMPONENT_RE.match(stripped):
+        raise HTTPException(status_code=400, detail=f"Invalid {field} format")
+    return stripped
+
+
 # ── Auth ────────────────────────────────────────────────────────
 
 
@@ -369,11 +380,11 @@ async def store_secret(request: Request, authorization: str | None = Header(None
     payload_hash = hash_value(plaintext)
     encrypted = encrypt_secret(plaintext, MASTER_KEY_SEED)
 
-    # Store payload in R2-like file storage.
-    # secret_id is a server-generated UUID4 (not user-controlled), so using it
-    # directly as the path component is safe and not tainted by user input.
-    r2_key = secret_id  # UUID4, server-generated
-    r2_path = R2_DIR / secret_id
+    # Store payload in R2-like file storage
+    safe_uid = _safe_path_component(user_id, "user_id")
+    safe_sid = _safe_path_component(secret_id, "secret_id")
+    r2_key = f"secrets/{safe_uid}/{safe_sid}"
+    r2_path = R2_DIR / safe_uid / safe_sid
     r2_path.mkdir(parents=True, exist_ok=True)
     with open(r2_path / "payload.json", "w") as f:
         json.dump({"ciphertext": encrypted["ciphertext"]}, f)
@@ -445,10 +456,10 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
         conn.close()
         raise HTTPException(status_code=410, detail="Secret is not active")
 
-    # Read payload from R2-like storage using the DB-stored r2_key.
-    # row["r2_key"] comes from the database (not directly from user input),
-    # so CodeQL's taint analysis does not flag this path construction.
-    r2_path = R2_DIR / row["r2_key"] / "payload.json"
+    # Read payload from R2-like storage
+    safe_uid = _safe_path_component(user_id, "user_id")
+    safe_sid = _safe_path_component(secret_id, "secret_id")
+    r2_path = R2_DIR / safe_uid / safe_sid / "payload.json"
     if r2_path.exists():
         with open(r2_path) as f:
             payload = json.load(f)
@@ -528,10 +539,10 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
         conn.close()
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # Crypto-shred: delete R2 payload using DB-stored r2_key.
-    # row["r2_key"] is sourced from the database, not from user-controlled input,
-    # so CodeQL's taint analysis does not flag this path construction.
-    r2_path = R2_DIR / row["r2_key"]
+    # Crypto-shred: delete R2 payload
+    safe_uid = _safe_path_component(user_id, "user_id")
+    safe_sid = _safe_path_component(secret_id, "secret_id")
+    r2_path = R2_DIR / safe_uid / safe_sid
     if r2_path.exists():
         import shutil
 
