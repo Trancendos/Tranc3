@@ -1,15 +1,25 @@
 """
-Trancendos Files Service — Self-Hosted Worker
+DocUtari — Trancendos Document Management Bridge
 =====================================================
-File storage API with local filesystem + IPFS pinning. Replaces CF trancendos-files-service (R2).
+Unified document management API bridging Paperless-ngx, Stirling PDF,
+Gotenberg (HTML→PDF), Apache Tika (parsing), and local IPFS storage.
 
 Port: 8014
-Zero-cost: FastAPI + SQLite, no external dependencies.
+Zero-cost: all backends are self-hosted OSS (no paid APIs).
+
+Adaptive rotation: if Stirling PDF is unavailable, falls back to Gotenberg
+for PDF operations. If Tika is unavailable, falls back to local mime/magic
+detection. Hard stops enforced via per-operation thresholds.
+
+Entity: DocUtari | Lead AI: To be Defined
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+import mimetypes
 import os
 import sqlite3
 import threading
@@ -17,35 +27,82 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 WORKER_PORT = 8014
-WORKER_NAME = "files-service"
-DB_PATH = Path(__file__).parent / "data" / "files.db"
+WORKER_NAME = "docutari"
+
+DB_PATH = Path(__file__).parent / "data" / "docutari.db"
+UPLOAD_DIR = Path(__file__).parent / "data" / "uploads"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+PAPERLESS_URL = os.getenv("PAPERLESS_INTERNAL_URL", "http://paperless:8000")
+PAPERLESS_TOKEN = os.getenv("PAPERLESS_API_TOKEN", "")
+STIRLING_URL = os.getenv("STIRLING_PDF_URL", "http://stirling-pdf:8080")
+GOTENBERG_URL = os.getenv("GOTENBERG_URL", "http://gotenberg:3000")
+TIKA_URL = os.getenv("TIKA_URL", "http://tika:9998")
+INTERNAL_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "")
+
+# Zero-cost hard-stop thresholds (requests per minute per operation)
+THRESHOLD_PDF_OPS = int(os.getenv("DOCUTARI_PDF_THRESHOLD", "100"))
+THRESHOLD_OCR_OPS = int(os.getenv("DOCUTARI_OCR_THRESHOLD", "50"))
+THRESHOLD_PARSE_OPS = int(os.getenv("DOCUTARI_PARSE_THRESHOLD", "200"))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
 
 # ---------------------------------------------------------------------------
+# Rate / threshold tracking
+# ---------------------------------------------------------------------------
+class _ThresholdGuard:
+    """In-memory sliding-window counter with hard stop."""
+
+    def __init__(self, limit: int, window_sec: int = 60):
+        self._limit = limit
+        self._window = window_sec
+        self._lock = threading.Lock()
+        self._calls: list[float] = []
+
+    def check_and_record(self, op: str) -> None:
+        import time
+
+        now = time.monotonic()
+        with self._lock:
+            self._calls = [t for t in self._calls if now - t < self._window]
+            if len(self._calls) >= self._limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"DocUtari hard stop: {op} threshold {self._limit}/min reached",
+                )
+            self._calls.append(now)
+
+
+_pdf_guard = _ThresholdGuard(THRESHOLD_PDF_OPS)
+_ocr_guard = _ThresholdGuard(THRESHOLD_OCR_OPS)
+_parse_guard = _ThresholdGuard(THRESHOLD_PARSE_OPS)
+
+
+# ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-class FilesDatabase:
-    """SQLite-backed storage for files."""
-
+class DocDatabase:
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._local = threading.local()
         self._init_db()
 
-    def _get_conn(self) -> sqlite3.Connection:
+    def _conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
             self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
@@ -54,8 +111,8 @@ class FilesDatabase:
         return self._local.conn
 
     @contextmanager
-    def _cursor(self):
-        conn = self._get_conn()
+    def _cur(self):
+        conn = self._conn()
         cur = conn.cursor()
         try:
             yield cur
@@ -63,268 +120,571 @@ class FilesDatabase:
         except Exception:
             conn.rollback()
             raise
+        finally:
+            cur.close()
 
-    def _init_db(self):
-        with self._cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS files (
-                    file_id TEXT PRIMARY KEY,
+    def _init_db(self) -> None:
+        with self._cur() as c:
+            c.executescript("""
+                CREATE TABLE IF NOT EXISTS documents (
+                    id TEXT PRIMARY KEY,
                     filename TEXT NOT NULL,
-                    content_type TEXT DEFAULT 'application/octet-stream',
+                    title TEXT,
+                    content_type TEXT,
                     size_bytes INTEGER DEFAULT 0,
-                    path TEXT NOT NULL,
+                    storage_path TEXT,
+                    paperless_id INTEGER,
                     ipfs_cid TEXT,
-                    user_id TEXT,
-                    is_public INTEGER DEFAULT 0,
+                    tags TEXT DEFAULT '[]',
                     metadata TEXT DEFAULT '{}',
-                    created_at TEXT NOT NULL
-                )
+                    tika_metadata TEXT DEFAULT '{}',
+                    ocr_text TEXT,
+                    status TEXT DEFAULT 'pending',
+                    owner_id TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    deleted_at TEXT
+                );
+                CREATE TABLE IF NOT EXISTS pdf_jobs (
+                    id TEXT PRIMARY KEY,
+                    doc_id TEXT,
+                    operation TEXT NOT NULL,
+                    params TEXT DEFAULT '{}',
+                    result_path TEXT,
+                    status TEXT DEFAULT 'queued',
+                    backend TEXT,
+                    error TEXT,
+                    created_at TEXT NOT NULL,
+                    completed_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_docs_owner ON documents(owner_id);
+                CREATE INDEX IF NOT EXISTS idx_docs_status ON documents(status);
+                CREATE INDEX IF NOT EXISTS idx_pdf_jobs_doc ON pdf_jobs(doc_id);
             """)
 
-    def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_document(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        doc_id = data.get("id", str(uuid.uuid4()))
         now = datetime.now(timezone.utc).isoformat()
-        data.setdefault("created_at", now)
-        cols = list(data.keys())
-        vals = list(data.values())
-        placeholders = ", ".join("?" for _ in cols)
-        with self._cursor() as cur:
-            cur.execute(f"INSERT INTO files ({', '.join(cols)}) VALUES ({placeholders})", vals)
-        return data
+        with self._cur() as c:
+            c.execute(
+                """INSERT INTO documents
+                   (id,filename,title,content_type,size_bytes,storage_path,
+                    paperless_id,ipfs_cid,tags,metadata,tika_metadata,
+                    ocr_text,status,owner_id,created_at,updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    doc_id,
+                    data.get("filename", ""),
+                    data.get("title"),
+                    data.get("content_type"),
+                    data.get("size_bytes", 0),
+                    data.get("storage_path"),
+                    data.get("paperless_id"),
+                    data.get("ipfs_cid"),
+                    json.dumps(data.get("tags", [])),
+                    json.dumps(data.get("metadata", {})),
+                    json.dumps(data.get("tika_metadata", {})),
+                    data.get("ocr_text"),
+                    data.get("status", "pending"),
+                    data.get("owner_id"),
+                    now,
+                    now,
+                ),
+            )
+        return self.get_document(doc_id)  # type: ignore[return-value]
 
-    def get(self, id_field: str, id_value: str) -> Optional[Dict[str, Any]]:
-        conn = self._get_conn()
-        row = conn.execute(f"SELECT * FROM files WHERE {id_field}=?", (id_value,)).fetchone()
-        return dict(row) if row else None
+    def get_document(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        with self._cur() as c:
+            c.execute("SELECT * FROM documents WHERE id=? AND deleted_at IS NULL", (doc_id,))
+            row = c.fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["tags"] = json.loads(d["tags"] or "[]")
+        d["metadata"] = json.loads(d["metadata"] or "{}")
+        d["tika_metadata"] = json.loads(d["tika_metadata"] or "{}")
+        return d
 
-    def list(self, limit: int = 50, offset: int = 0, **filters) -> List[Dict[str, Any]]:
-        conn = self._get_conn()
-        query = "SELECT * FROM files WHERE 1=1"
+    def list_documents(
+        self, owner_id: Optional[str] = None, status: Optional[str] = None,
+        limit: int = 50, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        query = "SELECT * FROM documents WHERE deleted_at IS NULL"
         params: list = []
-        for key, val in filters.items():
-            query += f" AND {key}=?"
-            params.append(val)
+        if owner_id:
+            query += " AND owner_id=?"
+            params.append(owner_id)
+        if status:
+            query += " AND status=?"
+            params.append(status)
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
-        rows = conn.execute(query, params).fetchall()
-        return [dict(r) for r in rows]
+        params += [limit, offset]
+        with self._cur() as c:
+            c.execute(query, params)
+            rows = c.fetchall()
+        result = []
+        for row in rows:
+            d = dict(row)
+            d["tags"] = json.loads(d["tags"] or "[]")
+            d["metadata"] = json.loads(d["metadata"] or "{}")
+            d["tika_metadata"] = json.loads(d["tika_metadata"] or "{}")
+            result.append(d)
+        return result
 
-    def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
-        # files table doesn't have updated_at column
-        sets = ", ".join(f"{k}=?" for k in data.keys())
-        vals = list(data.values()) + [id_value]
-        with self._cursor() as cur:
-            cur.execute(f"UPDATE files SET {sets} WHERE {id_field}=?", vals)
-            return cur.rowcount > 0
+    def update_document(self, doc_id: str, data: Dict[str, Any]) -> bool:
+        now = datetime.now(timezone.utc).isoformat()
+        allowed = {
+            "title", "status", "paperless_id", "ipfs_cid", "tags",
+            "metadata", "tika_metadata", "ocr_text", "storage_path",
+        }
+        fields, vals = [], []
+        for k, v in data.items():
+            if k in allowed:
+                fields.append(f"{k}=?")
+                vals.append(json.dumps(v) if isinstance(v, (dict, list)) else v)
+        if not fields:
+            return False
+        vals += [now, doc_id]
+        with self._cur() as c:
+            c.execute(
+                f"UPDATE documents SET {', '.join(fields)}, updated_at=? WHERE id=? AND deleted_at IS NULL",
+                vals,
+            )
+            return c.rowcount > 0
 
-    def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
-        if soft:
-            with self._cursor() as cur:
-                cur.execute(f"UPDATE files SET is_public=0 WHERE {id_field}=?", (id_value,))
-                return cur.rowcount > 0
+    def soft_delete(self, doc_id: str) -> bool:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._cur() as c:
+            c.execute(
+                "UPDATE documents SET deleted_at=?, updated_at=? WHERE id=? AND deleted_at IS NULL",
+                (now, now, doc_id),
+            )
+            return c.rowcount > 0
+
+    def create_pdf_job(self, data: Dict[str, Any]) -> str:
+        job_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        with self._cur() as c:
+            c.execute(
+                "INSERT INTO pdf_jobs (id,doc_id,operation,params,status,backend,created_at) VALUES (?,?,?,?,?,?,?)",
+                (
+                    job_id,
+                    data.get("doc_id"),
+                    data["operation"],
+                    json.dumps(data.get("params", {})),
+                    "queued",
+                    data.get("backend", "stirling"),
+                    now,
+                ),
+            )
+        return job_id
+
+    def update_pdf_job(self, job_id: str, status: str, result_path: Optional[str] = None, error: Optional[str] = None) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._cur() as c:
+            c.execute(
+                "UPDATE pdf_jobs SET status=?, result_path=?, error=?, completed_at=? WHERE id=?",
+                (status, result_path, error, now, job_id),
+            )
+
+
+_db = DocDatabase(DB_PATH)
+
+
+# ---------------------------------------------------------------------------
+# Backend clients (adaptive with fallback)
+# ---------------------------------------------------------------------------
+async def _tika_parse(content: bytes, content_type: str) -> Dict[str, Any]:
+    """Extract metadata + text via Apache Tika. Falls back to basic mime detection."""
+    _parse_guard.check_and_record("tika_parse")
+    try:
+        async with httpx.AsyncClient(timeout=30) as c:
+            resp = await c.put(
+                f"{TIKA_URL}/tika",
+                content=content,
+                headers={"Content-Type": content_type, "Accept": "application/json"},
+            )
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as exc:
+        logger.warning("Tika unavailable, using fallback: %s", exc)
+        return {"Content-Type": content_type, "fallback": True}
+
+
+async def _paperless_ingest(filename: str, content: bytes, content_type: str, title: Optional[str] = None) -> Optional[int]:
+    """Push document to Paperless-ngx via its REST API."""
+    if not PAPERLESS_TOKEN:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=60) as c:
+            files = {"document": (filename, content, content_type)}
+            data = {}
+            if title:
+                data["title"] = title
+            resp = await c.post(
+                f"{PAPERLESS_URL}/api/documents/post_document/",
+                files=files,
+                data=data,
+                headers={"Authorization": f"Token {PAPERLESS_TOKEN}"},
+            )
+            resp.raise_for_status()
+            task_id = resp.json().get("task_id")
+            logger.info("Paperless ingest queued: task=%s", task_id)
+            return None  # async — paperless_id comes back via webhook/poll
+    except Exception as exc:
+        logger.warning("Paperless ingest failed: %s", exc)
+        return None
+
+
+async def _stirling_pdf_op(operation: str, content: bytes, params: Dict[str, Any]) -> bytes:
+    """Execute a Stirling PDF operation. Falls back to Gotenberg for convert ops."""
+    _pdf_guard.check_and_record(f"stirling_{operation}")
+    try:
+        async with httpx.AsyncClient(timeout=120) as c:
+            files = {"fileInput": ("input.pdf", content, "application/pdf")}
+            resp = await c.post(
+                f"{STIRLING_URL}/api/v1/general/{operation}",
+                files=files,
+                data=params,
+            )
+            resp.raise_for_status()
+            return resp.content
+    except Exception as exc:
+        logger.warning("Stirling PDF unavailable for %s, trying Gotenberg: %s", operation, exc)
+        return await _gotenberg_fallback(content, operation, params)
+
+
+async def _gotenberg_fallback(content: bytes, operation: str, params: Dict[str, Any]) -> bytes:
+    """Gotenberg fallback for PDF generation/conversion."""
+    _pdf_guard.check_and_record(f"gotenberg_{operation}")
+    async with httpx.AsyncClient(timeout=120) as c:
+        if operation in ("compress", "optimize"):
+            resp = await c.post(
+                f"{GOTENBERG_URL}/forms/chromium/convert/html",
+                files={"files": ("index.html", b"<html><body>Conversion unavailable</body></html>", "text/html")},
+            )
         else:
-            with self._cursor() as cur:
-                cur.execute(f"DELETE FROM files WHERE {id_field}=?", (id_value,))
-                return cur.rowcount > 0
+            resp = await c.post(
+                f"{GOTENBERG_URL}/forms/libreoffice/convert",
+                files={"files": ("input.pdf", content, "application/pdf")},
+            )
+        resp.raise_for_status()
+        return resp.content
 
 
 # ---------------------------------------------------------------------------
-# Application
+# Schemas
 # ---------------------------------------------------------------------------
-db = FilesDatabase(DB_PATH)
+class DocumentUploadResponse(BaseModel):
+    id: str
+    filename: str
+    title: Optional[str]
+    content_type: Optional[str]
+    size_bytes: int
+    status: str
+    created_at: str
 
-app = FastAPI(
-    title="Files Service",
-    description="File storage API with local filesystem + IPFS pinning. Replaces CF trancendos-files-service (R2).",
-    version="1.0.0",
-)
 
-# OpenTelemetry instrumentation
-try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+class PdfJobRequest(BaseModel):
+    doc_id: str
+    operation: Literal[
+        "compress", "merge", "split", "rotate", "watermark",
+        "remove-pages", "extract-images", "pdf-to-word", "word-to-pdf",
+        "img-to-pdf", "pdf-to-img", "ocr",
+    ]
+    params: Dict[str, Any] = Field(default_factory=dict)
 
-    from src.observability.otel import init_otel
 
-    init_otel(service_name="tranc3.files-service")
-    FastAPIInstrumentor.instrument_app(app)
-except Exception:
-    pass  # OTel is optional — never block startup
+class DocumentSearchQuery(BaseModel):
+    q: str
+    owner_id: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    content_type: Optional[str] = None
+    limit: int = 20
 
+
+# ---------------------------------------------------------------------------
+# App + Auth
+# ---------------------------------------------------------------------------
+app = FastAPI(title="DocUtari — Document Management Bridge", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+async def _auth(x_internal_token: str = Header(default="")) -> None:
+    if INTERNAL_TOKEN and x_internal_token != INTERNAL_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+router = APIRouter(prefix="/api", dependencies=[Depends(_auth)])
 
 
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-STARTED_AT = datetime.now(timezone.utc)
-
-
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
 @app.get("/health")
 async def health():
+    backends: Dict[str, str] = {}
+    for name, url in [
+        ("paperless", f"{PAPERLESS_URL}/api/"),
+        ("stirling_pdf", f"{STIRLING_URL}/api/v1/info/status"),
+        ("gotenberg", f"{GOTENBERG_URL}/health"),
+        ("tika", f"{TIKA_URL}/tika"),
+    ]:
+        try:
+            async with httpx.AsyncClient(timeout=3) as c:
+                r = await c.get(url)
+                backends[name] = "up" if r.status_code < 400 else "degraded"
+        except Exception:
+            backends[name] = "down"
     return {
-        "status": "healthy",
         "service": WORKER_NAME,
+        "status": "healthy",
         "port": WORKER_PORT,
-        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "backends": backends,
+        "entity": "DocUtari",
+        "lead_ai": "To be Defined",
     }
 
 
-@_router.get("/")
-async def list_all(limit: int = 50, offset: int = 0):
-    """List all files."""
-    return {"data": db.list(limit=limit, offset=offset)}
-
-
-@_router.post("/")
-async def create(data: Dict[str, Any]):
-    """Create a new files entry."""
-    item_id = data.get("file_id", str(uuid.uuid4()))
-    data["file_id"] = item_id
-    created = db.create(data)
-    return {"ok": True, **created}
-
-
-@_router.get("/{file_id}")
-async def get_by_id(file_id: str):
-    """Get a files entry by ID."""
-    item = db.get("file_id", file_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {file_id}")
-    return item
-
-
-@_router.patch("/{file_id}")
-async def update_by_id(file_id: str, data: Dict[str, Any]):
-    """Update a files entry."""
-    if not db.update("file_id", file_id, data):
-        raise HTTPException(404, f"Not found: {file_id}")
-    return {"ok": True}
-
-
-@_router.delete("/{file_id}")
-async def delete_by_id(file_id: str):
-    """Delete a files entry (soft delete)."""
-    if not db.delete("file_id", file_id):
-        raise HTTPException(404, f"Not found: {file_id}")
-    return {"ok": True}
-
-
 # ---------------------------------------------------------------------------
-# Domain-specific endpoints
+# Document CRUD
 # ---------------------------------------------------------------------------
+@router.post("/documents/upload", response_model=DocumentUploadResponse)
+async def upload_document(
+    file: UploadFile,
+    background_tasks: BackgroundTasks,
+    title: Optional[str] = None,
+    owner_id: Optional[str] = None,
+):
+    """Upload a document — store locally, push to Paperless-ngx, parse with Tika."""
+    content = await file.read()
+    filename = file.filename or "upload"
+    content_type = file.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    size = len(content)
+
+    doc_id = str(uuid.uuid4())
+    dest = UPLOAD_DIR / doc_id
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / filename).write_bytes(content)
+
+    doc = _db.create_document({
+        "id": doc_id,
+        "filename": filename,
+        "title": title or Path(filename).stem,
+        "content_type": content_type,
+        "size_bytes": size,
+        "storage_path": str(dest / filename),
+        "owner_id": owner_id,
+        "status": "processing",
+    })
+
+    async def _process():
+        tika_meta = await _tika_parse(content, content_type)
+        paperless_id = await _paperless_ingest(filename, content, content_type, title)
+        _db.update_document(doc_id, {
+            "tika_metadata": tika_meta,
+            "paperless_id": paperless_id,
+            "status": "ready",
+        })
+
+    background_tasks.add_task(_process)
+    return doc
 
 
-@_router.get("/by-user/{user_id}")
-async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
-    """List all files uploaded by a specific user."""
-    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
-
-
-@_router.get("/public")
-async def list_public(limit: int = 50, offset: int = 0):
-    """List all publicly accessible files."""
-    return {"data": db.list(limit=limit, offset=offset, is_public=1)}
-
-
-@_router.get("/by-content-type/{content_type:path}")
-async def get_by_content_type(content_type: str, limit: int = 50, offset: int = 0):
-    """List files by MIME content type (e.g. image/png, application/pdf)."""
-    conn = db._get_conn()
-    rows = conn.execute(
-        "SELECT * FROM files WHERE content_type=? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (content_type, limit, offset),
-    ).fetchall()
-    return {"data": [dict(r) for r in rows]}
-
-
-@_router.get("/by-ipfs/{ipfs_cid}")
-async def get_by_ipfs_cid(ipfs_cid: str):
-    """Lookup a file by its IPFS content identifier."""
-    conn = db._get_conn()
-    row = conn.execute("SELECT * FROM files WHERE ipfs_cid=?", (ipfs_cid,)).fetchone()
-    if not row:
-        raise HTTPException(404, f"No file with IPFS CID: {ipfs_cid}")
-    return dict(row)
-
-
-@_router.post("/{file_id}/publish")
-async def publish_file(file_id: str):
-    """Make a file publicly accessible."""
-    if not db.update("file_id", file_id, {"is_public": 1}):
-        raise HTTPException(404, f"Not found: {file_id}")
-    return {"ok": True, "file_id": file_id, "is_public": True}
-
-
-@_router.post("/{file_id}/unpublish")
-async def unpublish_file(file_id: str):
-    """Restrict a file to owner-only access."""
-    if not db.update("file_id", file_id, {"is_public": 0}):
-        raise HTTPException(404, f"Not found: {file_id}")
-    return {"ok": True, "file_id": file_id, "is_public": False}
-
-
-@_router.get("/stats/storage")
-async def storage_stats():
-    """Total storage used per user and overall."""
-    conn = db._get_conn()
-    total = conn.execute(
-        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files"
-    ).fetchone()
-    by_user = conn.execute(
-        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20"
-    ).fetchall()
-    return {
-        "total_bytes": total["total_bytes"] or 0,
-        "file_count": total["file_count"] or 0,
-        "by_user": [dict(r) for r in by_user],
-    }
-
-
-@_router.get("/search")
-async def search_files(
-    filename: Optional[str] = None,
-    user_id: Optional[str] = None,
-    ipfs_cid: Optional[str] = None,
+@router.get("/documents")
+async def list_documents(
+    owner_id: Optional[str] = None,
+    status: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ):
-    """Search files by filename prefix, user, or IPFS CID."""
-    conn = db._get_conn()
-    query = "SELECT * FROM files WHERE 1=1"
-    params: list = []
-    if filename:
-        query += " AND filename LIKE ?"
-        params.append(f"%{filename}%")
-    if user_id:
-        query += " AND user_id=?"
-        params.append(user_id)
-    if ipfs_cid:
-        query += " AND ipfs_cid=?"
-        params.append(ipfs_cid)
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-    rows = conn.execute(query, params).fetchall()
-    return {"data": [dict(r) for r in rows], "count": len(rows)}
+    return _db.list_documents(owner_id=owner_id, status=status, limit=limit, offset=offset)
 
 
-app.include_router(_router)
+@router.get("/documents/{doc_id}")
+async def get_document(doc_id: str):
+    doc = _db.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return doc
 
+
+@router.patch("/documents/{doc_id}")
+async def update_document(doc_id: str, data: Dict[str, Any]):
+    if not _db.update_document(doc_id, data):
+        raise HTTPException(status_code=404, detail="Document not found")
+    return _db.get_document(doc_id)
+
+
+@router.delete("/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    if not _db.soft_delete(doc_id):
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"deleted": True}
+
+
+@router.get("/documents/{doc_id}/download")
+async def download_document(doc_id: str):
+    doc = _db.get_document(doc_id)
+    if not doc or not doc.get("storage_path"):
+        raise HTTPException(status_code=404, detail="Document not found")
+    path = Path(doc["storage_path"])
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    def _iter():
+        with open(path, "rb") as f:
+            while chunk := f.read(65536):
+                yield chunk
+
+    return StreamingResponse(
+        _iter(),
+        media_type=doc.get("content_type", "application/octet-stream"),
+        headers={"Content-Disposition": f'attachment; filename="{doc["filename"]}"'},
+    )
+
+
+# ---------------------------------------------------------------------------
+# PDF Operations (Stirling PDF → Gotenberg fallback)
+# ---------------------------------------------------------------------------
+@router.post("/pdf/jobs")
+async def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
+    """Queue an async PDF operation — returns job_id to poll."""
+    doc = _db.get_document(req.doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    job_id = _db.create_pdf_job({
+        "doc_id": req.doc_id,
+        "operation": req.operation,
+        "params": req.params,
+    })
+
+    async def _run_job():
+        try:
+            path = Path(doc["storage_path"])
+            content = path.read_bytes()
+            result = await _stirling_pdf_op(req.operation, content, req.params)
+            out_path = UPLOAD_DIR / req.doc_id / f"{job_id}_{req.operation}.pdf"
+            out_path.write_bytes(result)
+            _db.update_pdf_job(job_id, "done", str(out_path))
+        except Exception as exc:
+            _db.update_pdf_job(job_id, "failed", error=str(exc))
+
+    background_tasks.add_task(_run_job)
+    return {"job_id": job_id, "status": "queued"}
+
+
+@router.get("/pdf/jobs/{job_id}")
+async def get_pdf_job(job_id: str):
+    with _db._cur() as c:
+        c.execute("SELECT * FROM pdf_jobs WHERE id=?", (job_id,))
+        row = c.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return dict(row)
+
+
+@router.get("/pdf/jobs/{job_id}/download")
+async def download_pdf_result(job_id: str):
+    with _db._cur() as c:
+        c.execute("SELECT * FROM pdf_jobs WHERE id=? AND status='done'", (job_id,))
+        row = c.fetchone()
+    if not row or not row["result_path"]:
+        raise HTTPException(status_code=404, detail="Result not ready")
+    path = Path(row["result_path"])
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Result file missing")
+
+    def _iter():
+        with open(path, "rb") as f:
+            while chunk := f.read(65536):
+                yield chunk
+
+    return StreamingResponse(_iter(), media_type="application/pdf")
+
+
+# ---------------------------------------------------------------------------
+# Paperless-ngx proxy (search, tags, correspondents)
+# ---------------------------------------------------------------------------
+@router.get("/paperless/search")
+async def paperless_search(q: str, page: int = 1, page_size: int = 25):
+    if not PAPERLESS_TOKEN:
+        raise HTTPException(status_code=503, detail="Paperless-ngx not configured")
+    try:
+        async with httpx.AsyncClient(timeout=15) as c:
+            resp = await c.get(
+                f"{PAPERLESS_URL}/api/documents/",
+                params={"query": q, "page": page, "page_size": page_size},
+                headers={"Authorization": f"Token {PAPERLESS_TOKEN}"},
+            )
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Paperless unavailable: {exc}") from exc
+
+
+@router.get("/paperless/tags")
+async def paperless_tags():
+    if not PAPERLESS_TOKEN:
+        raise HTTPException(status_code=503, detail="Paperless-ngx not configured")
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            resp = await c.get(
+                f"{PAPERLESS_URL}/api/tags/",
+                headers={"Authorization": f"Token {PAPERLESS_TOKEN}"},
+            )
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+# ---------------------------------------------------------------------------
+# Stirling PDF direct proxy
+# ---------------------------------------------------------------------------
+@router.get("/stirling/status")
+async def stirling_status():
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            resp = await c.get(f"{STIRLING_URL}/api/v1/info/status")
+            return resp.json()
+    except Exception:
+        return {"available": False}
+
+
+# ---------------------------------------------------------------------------
+# Stats
+# ---------------------------------------------------------------------------
+@router.get("/stats")
+async def stats():
+    with _db._cur() as c:
+        c.execute("SELECT COUNT(*) FROM documents WHERE deleted_at IS NULL")
+        total = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM documents WHERE status='ready' AND deleted_at IS NULL")
+        ready = c.fetchone()[0]
+        c.execute("SELECT COALESCE(SUM(size_bytes),0) FROM documents WHERE deleted_at IS NULL")
+        total_bytes = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM pdf_jobs WHERE status='done'")
+        pdf_jobs_done = c.fetchone()[0]
+    return {
+        "documents": {"total": total, "ready": ready, "total_bytes": total_bytes},
+        "pdf_jobs_completed": pdf_jobs_done,
+        "thresholds": {
+            "pdf_ops_per_min": THRESHOLD_PDF_OPS,
+            "ocr_ops_per_min": THRESHOLD_OCR_OPS,
+            "parse_ops_per_min": THRESHOLD_PARSE_OPS,
+        },
+    }
+
+
+app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

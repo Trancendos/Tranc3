@@ -128,6 +128,23 @@ PROVIDERS: List[ProviderLimit] = [
         hourly_req_limit=-1,
         daily_token_limit=-1,
     ),
+    # ── Tier 0b: Self-hosted inference engines (unlimited, zero-cost) ────
+    ProviderLimit(
+        name="llamacpp",
+        base_url=os.getenv("LLAMACPP_BASE_URL", "http://localhost:8091"),
+        api_key_env="",
+        daily_req_limit=-1,
+        hourly_req_limit=-1,
+        daily_token_limit=-1,
+    ),
+    ProviderLimit(
+        name="vllm",
+        base_url=os.getenv("VLLM_BASE_URL", "http://localhost:8090/v1"),
+        api_key_env="",
+        daily_req_limit=-1,
+        hourly_req_limit=-1,
+        daily_token_limit=-1,
+    ),
     # ── Tier 1: Local self-hosted (truly unlimited) ──────────────────────
     ProviderLimit(
         name="ollama",
@@ -223,22 +240,62 @@ PROVIDERS: List[ProviderLimit] = [
 PROVIDER_INDEX: Dict[str, ProviderLimit] = {p.name: p for p in PROVIDERS}
 
 
-def get_available_provider() -> Optional[ProviderLimit]:
-    """Return the highest-priority available provider that hasn't hit rotation threshold."""
-    for p in PROVIDERS:
-        if p.is_available() and not p.should_rotate():
-            return p
-    # All at rotation threshold — return first still available (hard stop not hit)
-    for p in PROVIDERS:
-        if p.is_available():
-            logger.warning("All providers at rotation threshold — using %s at capacity", p.name)
-            return p
-    logger.error("ALL providers have hit hard-stop limits — refusing request")
-    return None
+try:
+    from Dimensional.swarm.ant_colony import AntColonyRouter as _AntColonyRouter
+
+    _aco_router: Optional[_AntColonyRouter] = _AntColonyRouter(
+        providers=[p.name for p in PROVIDERS]
+    )
+except Exception:
+    _aco_router = None
+
+
+def get_available_provider(use_aco: bool = True) -> Optional[ProviderLimit]:
+    """Return the highest-priority available provider that hasn't hit rotation threshold.
+
+    When use_aco=True and the ACO router is available, uses pheromone-based selection
+    (biased toward historically successful, low-latency providers) rather than strict
+    priority order. Falls back to priority order if ACO is unavailable.
+    """
+    available = [p for p in PROVIDERS if p.is_available() and not p.should_rotate()]
+    if not available:
+        # All at rotation threshold — try providers at capacity before giving up
+        available = [p for p in PROVIDERS if p.is_available()]
+        if available:
+            logger.warning(
+                "All providers at rotation threshold — using %s at capacity", available[0].name
+            )
+
+    if not available:
+        logger.error("ALL providers have hit hard-stop limits — refusing request")
+        return None
+
+    if use_aco and _aco_router is not None:
+        available_names = {p.name for p in available}
+        candidates = _aco_router.select(n=len(PROVIDERS))
+        # pick first ACO candidate that is actually available
+        for name in candidates:
+            if name in available_names:
+                return PROVIDER_INDEX[name]
+
+    return available[0]
+
+
+def record_provider_outcome(provider_name: str, success: bool, latency_ms: float = 0.0) -> None:
+    """Feed ACO pheromone update after a request completes."""
+    if _aco_router is None or provider_name not in PROVIDER_INDEX:
+        return
+    if success:
+        _aco_router.record_success(provider_name, latency_ms)
+    else:
+        _aco_router.record_failure(provider_name)
 
 
 def get_usage_dashboard() -> dict:
-    return {p.name: p.usage_summary for p in PROVIDERS}
+    dashboard = {p.name: p.usage_summary for p in PROVIDERS}
+    if _aco_router is not None:
+        dashboard["_aco_stats"] = _aco_router.stats()
+    return dashboard
 
 
 __all__ = [
@@ -247,4 +304,5 @@ __all__ = [
     "ProviderLimit",
     "get_available_provider",
     "get_usage_dashboard",
+    "record_provider_outcome",
 ]

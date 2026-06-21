@@ -25,9 +25,11 @@ logger = logging.getLogger(__name__)
 # Availability probes
 # ---------------------------------------------------------------------------
 
+
 def _probe_aeonmind() -> bool:
     try:
         import aeonmind  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -40,6 +42,7 @@ def aeonmind_status() -> dict[str, Any]:
     if not _AEONMIND_AVAILABLE:
         return {"available": False, "rust_bindings": False, "version": None}
     from aeonmind.core.rust_bridge import has_rust_bindings, rust_version
+
     return {
         "available": True,
         "rust_bindings": has_rust_bindings(),
@@ -51,6 +54,7 @@ def aeonmind_status() -> dict[str, Any]:
 def _safe_version() -> str | None:
     try:
         import aeonmind
+
         return aeonmind.__version__
     except Exception:
         return None
@@ -60,6 +64,7 @@ def _safe_version() -> str | None:
 # Singletons
 # ---------------------------------------------------------------------------
 
+
 @lru_cache(maxsize=1)
 def get_orchestrator():
     """Return the LogicalOrchestrator singleton (aeonmind systems layer)."""
@@ -67,6 +72,7 @@ def get_orchestrator():
         logger.warning("aeonmind unavailable — orchestrator stub returned")
         return _StubOrchestrator()
     from aeonmind.systems.orchestrator import LogicalOrchestrator
+
     return LogicalOrchestrator()
 
 
@@ -75,8 +81,9 @@ def get_evolution_engine(population_size: int = 50, dna_length: int = 64):
     """Return the best available DNA evolution engine."""
     if not _AEONMIND_AVAILABLE:
         return None
-    from aeonmind.core.rust_bridge import RustEvolutionEngine
     from aeonmind.core.genetic_dna import GeneticConfig
+    from aeonmind.core.rust_bridge import RustEvolutionEngine
+
     cfg = GeneticConfig(population_size=population_size, dna_length=dna_length)
     return RustEvolutionEngine(cfg)
 
@@ -86,8 +93,9 @@ def get_liquid_reservoir(input_size: int = 32, reservoir_size: int = 128):
     """Return the best available liquid neural reservoir."""
     if not _AEONMIND_AVAILABLE:
         return None
-    from aeonmind.core.rust_bridge import RustLiquidReservoir
     from aeonmind.core.fluidic_liquidic import ReservoirConfig
+    from aeonmind.core.rust_bridge import RustLiquidReservoir
+
     cfg = ReservoirConfig(input_size=input_size, reservoir_size=reservoir_size)
     return RustLiquidReservoir(cfg)
 
@@ -97,8 +105,9 @@ def get_quantum_circuit(n_qubits: int = 4):
     """Return the best available quantum decision circuit."""
     if not _AEONMIND_AVAILABLE:
         return None
-    from aeonmind.core.rust_bridge import RustQuantumCircuit
     from aeonmind.core.quantum import QuantumCircuitConfig
+    from aeonmind.core.rust_bridge import RustQuantumCircuit
+
     cfg = QuantumCircuitConfig(n_qubits=n_qubits)
     return RustQuantumCircuit(cfg)
 
@@ -109,12 +118,14 @@ def get_adaptive_learner(n_params: int = 32):
     if not _AEONMIND_AVAILABLE:
         return None
     from aeonmind.core.rust_bridge import RustAdaptiveLearner
+
     return RustAdaptiveLearner(n_params=n_params)
 
 
 # ---------------------------------------------------------------------------
 # Adaptive decision loop — wires aeonmind engines to provider rotation
 # ---------------------------------------------------------------------------
+
 
 def adaptive_provider_score(provider_name: str, latency_ms: float, error_rate: float) -> float:
     """
@@ -125,6 +136,7 @@ def adaptive_provider_score(provider_name: str, latency_ms: float, error_rate: f
     # Try Dimensional genetic fitness evaluator first (zero-cost, always available)
     try:
         from Dimensional.genetics.fitness import LatencyThroughputFitness
+
         fitness = LatencyThroughputFitness()
         return fitness.evaluate(latency_ms=latency_ms, error_rate=error_rate)
     except Exception:
@@ -135,6 +147,7 @@ def adaptive_provider_score(provider_name: str, latency_ms: float, error_rate: f
     if learner is not None:
         try:
             import numpy as np
+
             signal = np.array([latency_ms / 5000.0, error_rate], dtype=float)
             pred = learner.predict(signal)
             return float(max(0.0, min(1.0, 1.0 - float(pred.mean()))))
@@ -171,6 +184,7 @@ def quantum_rotation_decision(provider_scores: dict[str, float]) -> str | None:
 # ---------------------------------------------------------------------------
 # Stub (graceful degradation when aeonmind is not installed)
 # ---------------------------------------------------------------------------
+
 
 class _StubOrchestrator:
     """Minimal no-op orchestrator used when aeonmind is unavailable."""

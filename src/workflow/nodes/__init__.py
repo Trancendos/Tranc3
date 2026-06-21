@@ -5,34 +5,34 @@ Public API re-exported for backward compatibility with:
   from src.workflow.nodes import NodeType, NodeConfig, NodeResult, BaseNode, create_node
 """
 
-from .base import NodeType, NodeConfig, NodeResult, BaseNode, _deep_get
+from .agents import (
+    AgentCreateNode,
+    AgentDecomposeNode,
+    AgentGoalNode,
+    AgentReflectNode,
+    AgentRunStepNode,
+)
+from .ai import LLMNode, MLPredictNode
+from .base import BaseNode, NodeConfig, NodeResult, NodeType, _deep_get
+from .code import CodeExecNode
+from .data import OutputNode, TransformNode, TriggerNode
+from .flow import ConditionNode, LoopNode, MergeNode, ParallelNode
+from .http import HTTPNode, VectorSearchNode
+from .neural import CollectiveMemoryNode, MetaLearnNode, NeuralMeshNode
+from .reasoning import AttentionRouteNode, CausalReasonNode, ForesightNode, KnowledgeGraphNode
 from .registry import (
-    NODE_REGISTRY,
     _PHASE4_NODE_REGISTRY,
+    NODE_REGISTRY,
     _ensure_phase4_nodes_loaded,
     create_node,
 )
-from .ai import LLMNode, MLPredictNode
-from .code import CodeExecNode
-from .http import HTTPNode, VectorSearchNode
-from .flow import ConditionNode, ParallelNode, LoopNode, MergeNode
-from .data import TransformNode, OutputNode, TriggerNode
 from .tools import (
-    SparkToolNode,
-    SkillCallNode,
-    register_spark_tool,
-    register_skill,
-    _SPARK_TOOL_REGISTRY,
     _SKILL_REGISTRY,
-)
-from .neural import NeuralMeshNode, CollectiveMemoryNode, MetaLearnNode
-from .reasoning import AttentionRouteNode, CausalReasonNode, KnowledgeGraphNode, ForesightNode
-from .agents import (
-    AgentCreateNode,
-    AgentRunStepNode,
-    AgentGoalNode,
-    AgentReflectNode,
-    AgentDecomposeNode,
+    _SPARK_TOOL_REGISTRY,
+    SkillCallNode,
+    SparkToolNode,
+    register_skill,
+    register_spark_tool,
 )
 
 __all__ = [

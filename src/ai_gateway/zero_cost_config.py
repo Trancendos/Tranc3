@@ -2,12 +2,15 @@
 # Auto-discovers and configures free-tier AI providers with optimal routing.
 #
 # Zero-Cost AI Provider Stack (ranked by capability/cost):
-#   1. Ollama (local)      — Free, unlimited, offline-capable
+#   0. llama.cpp server    — Free, unlimited, CPU-only, minimal RAM (self-hosted)
+#   0. vLLM                — Free, unlimited, GPU-accelerated (self-hosted)
+#   1. Ollama (local)      — Free, unlimited, offline-capable (self-hosted)
 #   2. Groq (cloud-free)   — Free tier (14,400 req/day), ultra-low latency LPU
 #   3. Gemini (cloud-free) — Free tier (1,500 req/day), 1M tok/min, also embeds
 #   4. Cerebras (free)     — Free tier (1M tok/day), fast RDU inference
 #   5. SambaNova (free)    — Free tier, large models up to 405B
-#   6. OpenRouter (free)   — 20+ free models including DeepSeek R1, Llama, Qwen
+#   6. Cloudflare AI       — Free tier (10,000 neurons/day), no API key complexity
+#   7. OpenRouter (free)   — 20+ free models including DeepSeek R1, Llama, Qwen
 #   7. HuggingFace (free)  — Serverless Inference API free tier
 #   8. DeepSeek (cheap)    — Not free but extremely cheap ($0.14/M input)
 #   9. Offline             — Fallback, deterministic responses, zero cost
@@ -32,9 +35,10 @@ logger = logging.getLogger("tranc3.ai_gateway.zero_cost")
 class ProviderTier(str, Enum):
     """Cost tier for AI providers."""
 
-    FREE_UNLIMITED = "free_unlimited"  # Ollama (local)
-    FREE_TIER = "free_tier"  # Groq, Gemini, Cerebras, SambaNova, OpenRouter free models
-    CHEAP = "cheap"  # DeepSeek ($0.14/M input)
+    SELF_HOSTED = "self_hosted"  # vLLM, llama.cpp (self-hosted, unlimited, zero cost)
+    FREE_UNLIMITED = "free_unlimited"  # Ollama (local, unlimited)
+    FREE_TIER = "free_tier"  # Groq, Gemini, Cerebras, SambaNova, OpenRouter, Cloudflare AI
+    CHEAP = "cheap"  # DeepSeek ($0.14/M input), Together AI ($5 trial then paid)
     FREEMIUM = "freemium"  # HuggingFace (rate-limited free)
     OFFLINE = "offline"  # OfflineProvider (deterministic)
 
@@ -57,6 +61,86 @@ class FreeModelInfo:
 # Updated based on research (2025).
 
 FREE_MODELS: Dict[str, List[FreeModelInfo]] = {
+    "vllm": [
+        FreeModelInfo(
+            name="meta-llama/Llama-3.2-3B-Instruct",
+            provider="vllm",
+            tier=ProviderTier.SELF_HOSTED,
+            context_window=131072,
+            capabilities=["chat", "code"],
+            rate_limit="unlimited",
+            notes="vLLM self-hosted GPU inference — set VLLM_BASE_URL to enable",
+        ),
+        FreeModelInfo(
+            name="Qwen/Qwen2.5-7B-Instruct",
+            provider="vllm",
+            tier=ProviderTier.SELF_HOSTED,
+            context_window=32768,
+            capabilities=["chat", "code", "multilingual"],
+            rate_limit="unlimited",
+            notes="vLLM + Qwen 2.5 7B, any HuggingFace model supported",
+        ),
+    ],
+    "llamacpp": [
+        FreeModelInfo(
+            name="local",
+            provider="llamacpp",
+            tier=ProviderTier.SELF_HOSTED,
+            context_window=8192,
+            capabilities=["chat", "code"],
+            rate_limit="unlimited",
+            notes="llama.cpp server — CPU-only, minimal RAM, set LLAMACPP_BASE_URL",
+        ),
+    ],
+    "cloudflare_ai": [
+        FreeModelInfo(
+            name="@cf/meta/llama-3.1-8b-instruct",
+            provider="cloudflare_ai",
+            tier=ProviderTier.FREE_TIER,
+            context_window=8192,
+            capabilities=["chat", "code"],
+            rate_limit="10,000 neurons/day",
+            notes="Cloudflare Workers AI free tier — requires CF_ACCOUNT_ID + CF_AI_API_TOKEN",
+        ),
+        FreeModelInfo(
+            name="@cf/meta/llama-3.2-3b-instruct",
+            provider="cloudflare_ai",
+            tier=ProviderTier.FREE_TIER,
+            context_window=4096,
+            capabilities=["chat"],
+            rate_limit="10,000 neurons/day",
+            notes="Cloudflare Workers AI Llama 3.2 3B",
+        ),
+        FreeModelInfo(
+            name="@cf/mistral/mistral-7b-instruct-v0.1",
+            provider="cloudflare_ai",
+            tier=ProviderTier.FREE_TIER,
+            context_window=4096,
+            capabilities=["chat", "code"],
+            rate_limit="10,000 neurons/day",
+            notes="Cloudflare Workers AI Mistral 7B",
+        ),
+        FreeModelInfo(
+            name="@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+            provider="cloudflare_ai",
+            tier=ProviderTier.FREE_TIER,
+            context_window=32768,
+            capabilities=["chat", "reasoning"],
+            rate_limit="10,000 neurons/day",
+            notes="Cloudflare Workers AI DeepSeek R1 distill",
+        ),
+    ],
+    "together": [
+        FreeModelInfo(
+            name="meta-llama/Llama-3.2-3B-Instruct-Turbo",
+            provider="together",
+            tier=ProviderTier.CHEAP,
+            context_window=131072,
+            capabilities=["chat", "code"],
+            rate_limit="$5 trial credit then ~$0.1/M tokens",
+            notes="HONEST: Together AI is NOT permanently free. $5 trial only.",
+        ),
+    ],
     "gemini": [
         FreeModelInfo(
             name="gemini-2.0-flash",
@@ -305,20 +389,66 @@ class ZeroCostRoutingChain:
 # ─── Pre-configured Routing Chains ───────────────────────────────────────────
 
 ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
-    "zero_cost_full": ZeroCostRoutingChain(
-        name="Zero-Cost Full Stack",
+    "zero_cost_self_hosted_first": ZeroCostRoutingChain(
+        name="Zero-Cost Self-Hosted First (10 providers)",
         description=(
-            "Maximum capability at zero cost. "
-            "Ollama → Groq → Gemini → Cerebras → SambaNova → OpenRouter → Offline"
+            "Prioritises self-hosted inference — fully unlimited. "
+            "llama.cpp → vLLM → Ollama → Groq → Gemini → Cerebras → Cloudflare AI "
+            "→ SambaNova → OpenRouter → Offline"
         ),
-        providers=["ollama", "groq", "gemini", "cerebras", "sambanova", "openrouter", "offline"],
+        providers=[
+            "llamacpp",
+            "vllm",
+            "ollama",
+            "groq",
+            "gemini",
+            "cerebras",
+            "cloudflare_ai",
+            "sambanova",
+            "openrouter",
+            "offline",
+        ],
+        models={
+            "llamacpp": "local",
+            "vllm": "meta-llama/Llama-3.2-3B-Instruct",
+            "ollama": "llama3.2",
+            "groq": "llama-3.3-70b-versatile",
+            "gemini": "gemini-2.0-flash",
+            "cerebras": "llama3.3-70b",
+            "cloudflare_ai": "@cf/meta/llama-3.1-8b-instruct",
+            "sambanova": "Meta-Llama-3.3-70B-Instruct",
+            "openrouter": "deepseek/deepseek-r1:free",
+            "offline": "tranc3-offline",
+        },
+        estimated_cost_per_1k_requests="$0.00",
+    ),
+    "zero_cost_full": ZeroCostRoutingChain(
+        name="Zero-Cost Full Stack (8 providers)",
+        description=(
+            "Maximum capability at zero cost — 8 distinct free providers. "
+            "Ollama → Groq → Gemini → Cerebras → Cloudflare AI → SambaNova "
+            "→ OpenRouter → HuggingFace → Offline"
+        ),
+        providers=[
+            "ollama",
+            "groq",
+            "gemini",
+            "cerebras",
+            "cloudflare_ai",
+            "sambanova",
+            "openrouter",
+            "huggingface",
+            "offline",
+        ],
         models={
             "ollama": "llama3.2",
             "groq": "llama-3.3-70b-versatile",
             "gemini": "gemini-2.0-flash",
             "cerebras": "llama3.3-70b",
+            "cloudflare_ai": "@cf/meta/llama-3.1-8b-instruct",
             "sambanova": "Meta-Llama-3.3-70B-Instruct",
             "openrouter": "deepseek/deepseek-r1:free",
+            "huggingface": "meta-llama/Llama-3.2-3B-Instruct",
             "offline": "tranc3-offline",
         },
         estimated_cost_per_1k_requests="$0.00",
@@ -409,6 +539,18 @@ def discover_available_providers() -> Dict[str, bool]:
     """
     available = {}
 
+    # llama.cpp server — self-hosted, check LLAMACPP_BASE_URL or probe default
+    llamacpp_url = os.getenv("LLAMACPP_BASE_URL", "http://localhost:8091")
+    available["llamacpp"] = bool(os.getenv("LLAMACPP_BASE_URL")) or _check_http_available(
+        f"{llamacpp_url}/health"
+    )
+
+    # vLLM — self-hosted GPU inference, check VLLM_BASE_URL or probe default
+    vllm_url = os.getenv("VLLM_BASE_URL", "http://localhost:8090/v1")
+    available["vllm"] = bool(os.getenv("VLLM_BASE_URL")) or _check_http_available(
+        f"{vllm_url}/models"
+    )
+
     # Ollama — check if OLLAMA_HOST is set or default localhost is reachable
     ollama_host = os.getenv("OLLAMA_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
     available["ollama"] = bool(
@@ -427,11 +569,17 @@ def discover_available_providers() -> Dict[str, bool]:
     # SambaNova — free tier, requires SAMBANOVA_API_KEY
     available["sambanova"] = bool(os.getenv("SAMBANOVA_API_KEY"))
 
+    # Cloudflare Workers AI — 10K neurons/day free, requires CF_ACCOUNT_ID + CF_AI_API_TOKEN
+    available["cloudflare_ai"] = bool(os.getenv("CF_ACCOUNT_ID") and os.getenv("CF_AI_API_TOKEN"))
+
     # OpenRouter — free models available, requires OPENROUTER_API_KEY
     available["openrouter"] = bool(os.getenv("OPENROUTER_API_KEY"))
 
     # HuggingFace — serverless inference free tier, requires HF_API_TOKEN
     available["huggingface"] = bool(os.getenv("HUGGINGFACE_API_TOKEN") or os.getenv("HF_API_TOKEN"))
+
+    # Together AI — $5 trial credit then paid; requires TOGETHER_API_KEY
+    available["together"] = bool(os.getenv("TOGETHER_API_KEY"))
 
     # DeepSeek — requires API key (not free but cheap)
     available["deepseek"] = bool(os.getenv("DEEPSEEK_API_KEY"))
@@ -450,6 +598,17 @@ def _check_ollama_available(host: str) -> bool:
         import urllib.request
 
         urllib.request.urlopen(f"{host}/api/tags", timeout=2)  # nosec B310 — Ollama health on configured localhost host
+        return True
+    except Exception:
+        return False
+
+
+def _check_http_available(url: str) -> bool:
+    """Quick HTTP probe to check if a local service is running."""
+    try:
+        import urllib.request
+
+        urllib.request.urlopen(url, timeout=2)  # nosec B310 — probing configured local service URL
         return True
     except Exception:
         return False

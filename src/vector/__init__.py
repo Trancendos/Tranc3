@@ -16,6 +16,6 @@ Usage:
     results = vs.search([0.1, 0.2, ...], top_k=5)
 """
 
-from .adapter import VectorStore, get_vector_store, SearchResult
+from .adapter import SearchResult, VectorStore, get_vector_store
 
 __all__ = ["VectorStore", "get_vector_store", "SearchResult"]
