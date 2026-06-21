@@ -33,9 +33,7 @@ def _validated_base_url() -> str:
     raw = raw.strip().replace("\n", "").replace("\r", "")
     parsed = urllib.parse.urlparse(raw)
     if parsed.scheme not in ("http", "https"):
-        raise ValueError(
-            f"MEILISEARCH_URL must use http or https, got scheme: {parsed.scheme!r}"
-        )
+        raise ValueError(f"MEILISEARCH_URL must use http or https, got scheme: {parsed.scheme!r}")
     # Reconstruct from parsed parts — result is not the original env-var string.
     safe = urllib.parse.urlunparse(
         (parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", "", "")
