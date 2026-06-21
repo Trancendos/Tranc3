@@ -14,7 +14,7 @@ import logging
 import os
 import urllib.error
 import urllib.request
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.ai_gateway.providers.vllm")
 

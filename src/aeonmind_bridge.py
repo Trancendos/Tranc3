@@ -75,8 +75,8 @@ def get_evolution_engine(population_size: int = 50, dna_length: int = 64):
     """Return the best available DNA evolution engine."""
     if not _AEONMIND_AVAILABLE:
         return None
-    from aeonmind.core.rust_bridge import RustEvolutionEngine
     from aeonmind.core.genetic_dna import GeneticConfig
+    from aeonmind.core.rust_bridge import RustEvolutionEngine
     cfg = GeneticConfig(population_size=population_size, dna_length=dna_length)
     return RustEvolutionEngine(cfg)
 
@@ -86,8 +86,8 @@ def get_liquid_reservoir(input_size: int = 32, reservoir_size: int = 128):
     """Return the best available liquid neural reservoir."""
     if not _AEONMIND_AVAILABLE:
         return None
-    from aeonmind.core.rust_bridge import RustLiquidReservoir
     from aeonmind.core.fluidic_liquidic import ReservoirConfig
+    from aeonmind.core.rust_bridge import RustLiquidReservoir
     cfg = ReservoirConfig(input_size=input_size, reservoir_size=reservoir_size)
     return RustLiquidReservoir(cfg)
 
@@ -97,8 +97,8 @@ def get_quantum_circuit(n_qubits: int = 4):
     """Return the best available quantum decision circuit."""
     if not _AEONMIND_AVAILABLE:
         return None
-    from aeonmind.core.rust_bridge import RustQuantumCircuit
     from aeonmind.core.quantum import QuantumCircuitConfig
+    from aeonmind.core.rust_bridge import RustQuantumCircuit
     cfg = QuantumCircuitConfig(n_qubits=n_qubits)
     return RustQuantumCircuit(cfg)
 

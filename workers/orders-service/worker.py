@@ -10,7 +10,6 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sqlite3
@@ -18,7 +17,7 @@ import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -108,6 +107,7 @@ def init_db() -> None:
 async def lifespan(app: FastAPI):
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
         from src.observability.otel import init_otel
         init_otel(service_name="tranc3.arcadian-exchange")
         FastAPIInstrumentor.instrument_app(app)
@@ -258,7 +258,7 @@ async def browse_listings(
     try:
         rows = conn.execute(query, params).fetchall()
         total = conn.execute(
-            f"SELECT COUNT(*) FROM listings WHERE status='active'"
+            "SELECT COUNT(*) FROM listings WHERE status='active'"
             + (" AND resource_type=?" if resource_type else ""),
             ([resource_type] if resource_type else []),
         ).fetchone()[0]

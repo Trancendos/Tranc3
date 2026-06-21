@@ -69,9 +69,9 @@ __all__ = [
 # Dimensional Services package (Shared-Core = Dimensional's)
 from . import (
     dimensionals,  # noqa: F401
-    infinity,  # noqa: F401
     gas,  # noqa: F401
     genetics,  # noqa: F401
+    infinity,  # noqa: F401
     liquid,  # noqa: F401
 )
 

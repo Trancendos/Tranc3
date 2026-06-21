@@ -7,15 +7,15 @@ existing imports continue to work.
 """
 
 from src.workflow.nodes.neural import (  # noqa: F401
-    NeuralMeshNode,
     CollectiveMemoryNode,
     MetaLearnNode,
+    NeuralMeshNode,
 )
 from src.workflow.nodes.reasoning import (  # noqa: F401
     AttentionRouteNode,
     CausalReasonNode,
-    KnowledgeGraphNode,
     ForesightNode,
+    KnowledgeGraphNode,
 )
 
 PHASE4_NODE_TYPES = {

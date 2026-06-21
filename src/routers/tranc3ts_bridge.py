@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("src.routers.tranc3ts_bridge")
@@ -98,7 +98,6 @@ async def ts_infer(req: TSInferenceRequest):
 async def _dispatch_inference(req: TSInferenceRequest):
     """Route inference through available Python providers."""
     prompt = req.prompt
-    params = req.parameters
 
     # Try AI Gateway (zero-cost rotation chain)
     try:

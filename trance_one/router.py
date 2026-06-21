@@ -112,6 +112,7 @@ async def dispatch_command(
 ):
     """Issue a tier command from Sovereign down the hierarchy."""
     from fastapi import HTTPException
+
     from trance_one.tier_bridge import TierCommand, TierCommandType
 
     try:

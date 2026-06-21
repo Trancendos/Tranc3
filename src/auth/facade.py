@@ -20,8 +20,6 @@ from __future__ import annotations
 import logging
 import os
 import secrets
-import time
-import uuid
 from typing import Any, Optional
 
 from fastapi import Depends, HTTPException, status
@@ -30,7 +28,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from src.auth.passwords import hash_password, verify_password  # noqa: F401
 from src.auth.tokens import (  # noqa: F401
     create_access_token as _tokens_create,
+)
+from src.auth.tokens import (
     create_refresh_token,
+)
+from src.auth.tokens import (
     decode_access_token as _tokens_decode,
 )
 

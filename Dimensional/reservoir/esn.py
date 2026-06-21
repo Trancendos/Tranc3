@@ -15,8 +15,7 @@ from __future__ import annotations
 import logging
 import math
 import random
-import time
-from typing import List, Optional, Tuple
+from typing import List
 
 logger = logging.getLogger("tranc3.dimensional.reservoir.esn")
 
@@ -57,9 +56,9 @@ class EchoStateNetwork:
 
         # Reservoir weights W: (N × N), sparse random
         W_raw = []
-        for i in range(reservoir_size):
+        for _ in range(reservoir_size):
             row = []
-            for j in range(reservoir_size):
+            for _j in range(reservoir_size):
                 if rng.random() > sparsity:
                     row.append(rng.uniform(-1, 1))
                 else:

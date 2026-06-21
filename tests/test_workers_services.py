@@ -16,11 +16,10 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
-import json
 import sys
 import types
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient

@@ -13,12 +13,11 @@ This is NOT a buzzword — ACO is deployed in real-time routing at Cisco, AT&T, 
 from __future__ import annotations
 
 import logging
-import math
 import random
 import time
 from dataclasses import dataclass, field
 from threading import RLock
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 logger = logging.getLogger("tranc3.dimensional.swarm.aco")
 
@@ -115,7 +114,7 @@ class AntColonyRouter:
     def _roulette(self, nodes: List[ProviderNode], probs: List[float]) -> ProviderNode:
         r = random.random()  # nosec B311 — not cryptographic
         cumulative = 0.0
-        for node, prob in zip(nodes, probs):
+        for node, prob in zip(nodes, probs, strict=False):
             cumulative += prob
             if r <= cumulative:
                 return node

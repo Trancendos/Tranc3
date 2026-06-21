@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -350,7 +350,8 @@ class LemonSqueezyManager:
         if not variant_id:
             return None
         try:
-            import urllib.request, json as _json
+            import json as _json
+            import urllib.request
             body = _json.dumps({
                 "data": {
                     "type": "checkouts",
@@ -474,7 +475,7 @@ class PassiveRevenueEngine:
     }
 
     def __init__(self):
-        self._revenue: Dict[str, float] = {k: 0.0 for k in self.STREAMS}
+        self._revenue: Dict[str, float] = dict.fromkeys(self.STREAMS, 0.0)
         self._transactions: List[Dict] = []
 
     def record(self, stream: str, amount_gbp: float, metadata: Optional[Dict] = None):

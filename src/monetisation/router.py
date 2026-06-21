@@ -5,8 +5,7 @@ src/monetisation/router.py — Billing, Revenue & Tax REST endpoints.
 from __future__ import annotations
 
 import logging
-import os
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -59,7 +58,7 @@ def _tax():
 @router.get("/status")
 async def billing_status():
     """Provider availability and tier configuration."""
-    from src.monetisation.billing import TIERS, stripe_manager
+    from src.monetisation.billing import TIERS
     provider_status = _billing().provider_status()
     tiers_info = {
         tier_key: {

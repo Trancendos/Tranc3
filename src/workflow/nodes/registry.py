@@ -7,13 +7,13 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Type
 
-from .base import BaseNode, NodeConfig, NodeType
 from .ai import LLMNode, MLPredictNode
+from .base import BaseNode, NodeConfig, NodeType
 from .code import CodeExecNode
+from .data import OutputNode, TransformNode, TriggerNode
+from .flow import ConditionNode, LoopNode, MergeNode, ParallelNode
 from .http import HTTPNode, VectorSearchNode
-from .flow import ConditionNode, ParallelNode, LoopNode, MergeNode
-from .data import TransformNode, OutputNode, TriggerNode
-from .tools import SparkToolNode, SkillCallNode
+from .tools import SkillCallNode, SparkToolNode
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,12 @@ def _ensure_phase4_nodes_loaded() -> None:
         return
     _PHASE4_LOADED = True
     try:
-        from .neural import NeuralMeshNode, CollectiveMemoryNode, MetaLearnNode
+        from .neural import CollectiveMemoryNode, MetaLearnNode, NeuralMeshNode
         from .reasoning import (  # noqa: PLC0415
-            AttentionRouteNode, CausalReasonNode, KnowledgeGraphNode, ForesightNode
+            AttentionRouteNode,
+            CausalReasonNode,
+            ForesightNode,
+            KnowledgeGraphNode,
         )
 
         _PHASE4_NODE_REGISTRY.update({
@@ -63,8 +66,11 @@ def _ensure_phase4_nodes_loaded() -> None:
         logger.warning("Phase 4 workflow nodes unavailable: %s", exc)
     try:
         from .agents import (
-            AgentCreateNode, AgentRunStepNode, AgentGoalNode,
-            AgentReflectNode, AgentDecomposeNode,
+            AgentCreateNode,
+            AgentDecomposeNode,
+            AgentGoalNode,
+            AgentReflectNode,
+            AgentRunStepNode,
         )
 
         _PHASE4_NODE_REGISTRY.update({

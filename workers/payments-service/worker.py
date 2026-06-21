@@ -17,7 +17,6 @@ import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -123,6 +122,7 @@ class DepositRequest(BaseModel):
 async def lifespan(app: FastAPI):
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
         from src.observability.otel import init_otel
         init_otel(service_name="tranc3.royal-bank")
         FastAPIInstrumentor.instrument_app(app)

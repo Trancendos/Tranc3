@@ -19,7 +19,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,6 +143,7 @@ class FailRequest(BaseModel):
 async def lifespan(app: FastAPI):
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
         from src.observability.otel import init_otel
         init_otel(service_name="tranc3.the-hive")
         FastAPIInstrumentor.instrument_app(app)
