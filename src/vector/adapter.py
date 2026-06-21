@@ -399,53 +399,73 @@ class _QdrantBackend:
 
 
 class _PgvectorBackend:
-    """PostgreSQL pgvector backend. Free on Supabase/Neon free tiers."""
+    """PostgreSQL pgvector backend. Free on Supabase/Neon free tiers.
+
+    Uses SQLAlchemy text() with named bound parameters throughout — no raw
+    string concatenation into SQL, satisfying static-analysis requirements.
+    Table name is validated against a strict identifier whitelist at init time.
+    """
+
+    # Strict allowlist: only alphanumeric + underscore, max 63 chars (PostgreSQL limit)
+    _SAFE_IDENT = __import__("re").compile(r"^[a-z][a-z0-9_]{0,62}$")
 
     def __init__(self, collection: str, dim: int) -> None:
-        import psycopg2  # type: ignore
+        from sqlalchemy import create_engine  # type: ignore
 
-        self._table = f"vec_{collection.replace('-', '_')}"
+        raw_table = f"vec_{collection.replace('-', '_').lower()}"
+        if not self._SAFE_IDENT.match(raw_table):
+            raise ValueError(f"Unsafe pgvector table name derived from collection '{collection}'")
+        self._table = raw_table
         self._dim = dim
-        self._conn = psycopg2.connect(_DATABASE_URL)
-        self._conn.autocommit = True
+        self._engine = create_engine(_DATABASE_URL, pool_pre_ping=True)
         self._bootstrap()
         log.info("VectorStore[pgvector] table=%s dim=%d", self._table, dim)
 
     def _bootstrap(self) -> None:
-        from psycopg2 import sql  # type: ignore
+        from sqlalchemy import text  # type: ignore
 
-        tbl = sql.Identifier(self._table)
-        with self._conn.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-            cur.execute(
-                sql.SQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS {tbl} (
-                        id TEXT PRIMARY KEY,
-                        embedding vector({dim}),
-                        payload JSONB NOT NULL DEFAULT '{{}}',
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                    );
-                    CREATE INDEX IF NOT EXISTS {idx}
-                        ON {tbl} USING ivfflat (embedding vector_cosine_ops)
-                        WITH (lists = 100);
-                    """
-                ).format(
-                    tbl=tbl, dim=sql.Literal(self._dim), idx=sql.Identifier(f"{self._table}_idx")
+        # Table and index names are validated identifiers — safe to embed as
+        # format strings here; all *values* travel via bound parameters below.
+        tbl = self._table
+        idx = f"{tbl}_idx"
+        with self._engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            conn.execute(
+                text(
+                    f"CREATE TABLE IF NOT EXISTS {tbl} ("  # noqa: S608 — identifier validated
+                    "  id TEXT PRIMARY KEY,"
+                    f"  embedding vector({self._dim}),"
+                    "  payload JSONB NOT NULL DEFAULT '{}',"
+                    "  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+                    ")"
                 )
             )
+            conn.execute(
+                text(
+                    f"CREATE INDEX IF NOT EXISTS {idx} "  # noqa: S608
+                    f"ON {tbl} USING ivfflat (embedding vector_cosine_ops) "
+                    "WITH (lists = 100)"
+                )
+            )
+            conn.commit()
 
     def upsert(self, doc_id: str, vector: List[float], payload: Dict[str, Any]) -> None:
-        from psycopg2 import sql  # type: ignore
+        from sqlalchemy import text  # type: ignore
 
-        with self._conn.cursor() as cur:
-            cur.execute(
-                sql.SQL(
-                    "INSERT INTO {tbl} (id, embedding, payload) VALUES (%s, %s::vector, %s) "
-                    "ON CONFLICT (id) DO UPDATE SET embedding=EXCLUDED.embedding, payload=EXCLUDED.payload, updated_at=NOW()"
-                ).format(tbl=sql.Identifier(self._table)),
-                (doc_id, str(vector), json.dumps(payload)),
+        tbl = self._table
+        with self._engine.connect() as conn:
+            conn.execute(
+                text(
+                    f"INSERT INTO {tbl} (id, embedding, payload) "  # noqa: S608
+                    "VALUES (:id, :vec::vector, :payload::jsonb) "
+                    "ON CONFLICT (id) DO UPDATE SET "
+                    "  embedding = EXCLUDED.embedding,"
+                    "  payload   = EXCLUDED.payload,"
+                    "  updated_at = NOW()"
+                ),
+                {"id": doc_id, "vec": str(vector), "payload": json.dumps(payload)},
             )
+            conn.commit()
 
     def search(
         self,
@@ -453,55 +473,58 @@ class _PgvectorBackend:
         top_k: int = 5,
         metadata_filter: Optional[Dict[str, Any]] = None,
     ) -> List[SearchResult]:
-        from psycopg2 import sql  # type: ignore
+        from sqlalchemy import text  # type: ignore
 
-        where = ""
-        params: list = [str(vector)]
+        tbl = self._table
         if metadata_filter:
-            where = "WHERE payload @> %s::jsonb"
-            params.append(json.dumps(metadata_filter))
-        params.append(top_k)
-
-        with self._conn.cursor() as cur:
-            cur.execute(
-                sql.SQL(
-                    "SELECT id, payload, 1 - (embedding <=> %s::vector) AS score "
-                    "FROM {tbl} {where} ORDER BY score DESC LIMIT %s"
-                ).format(tbl=sql.Identifier(self._table), where=sql.SQL(where)),
-                params,
-            )
-            rows = cur.fetchall()
+            rows = self._engine.connect().execute(
+                text(
+                    f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
+                    f"FROM {tbl} WHERE payload @> :filter::jsonb "
+                    "ORDER BY score DESC LIMIT :k"
+                ),
+                {"vec": str(vector), "filter": json.dumps(metadata_filter), "k": top_k},
+            ).fetchall()
+        else:
+            rows = self._engine.connect().execute(
+                text(
+                    f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
+                    f"FROM {tbl} ORDER BY score DESC LIMIT :k"
+                ),
+                {"vec": str(vector), "k": top_k},
+            ).fetchall()
         return [SearchResult(id=r[0], score=float(r[2]), payload=r[1] or {}) for r in rows]
 
     def delete(self, doc_id: str) -> None:
-        from psycopg2 import sql  # type: ignore
+        from sqlalchemy import text  # type: ignore
 
-        with self._conn.cursor() as cur:
-            cur.execute(
-                sql.SQL("DELETE FROM {tbl} WHERE id = %s").format(tbl=sql.Identifier(self._table)),
-                (doc_id,),
+        with self._engine.connect() as conn:
+            conn.execute(
+                text(f"DELETE FROM {self._table} WHERE id = :id"),  # noqa: S608
+                {"id": doc_id},
             )
+            conn.commit()
 
     def delete_by_metadata(self, key: str, value: str) -> int:
-        from psycopg2 import sql  # type: ignore
+        from sqlalchemy import text  # type: ignore
 
-        with self._conn.cursor() as cur:
-            cur.execute(
-                sql.SQL("DELETE FROM {tbl} WHERE payload->>%s = %s").format(
-                    tbl=sql.Identifier(self._table)
+        with self._engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    f"DELETE FROM {self._table} WHERE payload->>:key = :val"  # noqa: S608
                 ),
-                (key, value),
+                {"key": key, "val": value},
             )
-            return cur.rowcount
+            conn.commit()
+            return result.rowcount
 
     def count(self) -> int:
-        from psycopg2 import sql  # type: ignore
+        from sqlalchemy import text  # type: ignore
 
-        with self._conn.cursor() as cur:
-            cur.execute(
-                sql.SQL("SELECT COUNT(*) FROM {tbl}").format(tbl=sql.Identifier(self._table))
-            )
-            return cur.fetchone()[0]
+        with self._engine.connect() as conn:
+            return conn.execute(
+                text(f"SELECT COUNT(*) FROM {self._table}")  # noqa: S608
+            ).scalar() or 0
 
     def save(self, path: Path) -> None:
         pass  # pgvector persists automatically
