@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 log = logging.getLogger("tranc3.vector")
 
@@ -34,7 +35,6 @@ class SearchResult:
 
 
 # ─── Backend implementations ──────────────────────────────────────────────────
-
 
 class _QdrantBackend:
     """Qdrant client backend — requires qdrant-client package."""
@@ -86,70 +86,54 @@ class _FaissBackend:
 
     def __init__(self, collection: str, dim: int) -> None:
         import faiss  # type: ignore
+        import numpy as np  # type: ignore
 
         self._collection = collection
         self._dim = dim
         self._index = faiss.IndexFlatIP(dim)  # inner product (cosine after L2-norm)
         self._ids: List[str] = []
-        self._vectors: List[List[float]] = []
         self._payloads: List[Dict[str, Any]] = []
+        self._np = np
         log.info("VectorStore[faiss] collection=%s dim=%d", collection, dim)
 
-    def _rebuild_index(self) -> None:
-        import faiss  # type: ignore
-        import numpy as np  # type: ignore
-
-        self._index = faiss.IndexFlatIP(self._dim)
-        if self._vectors:
-            v = np.array(self._vectors, dtype="float32")
-            faiss.normalize_L2(v)
-            self._index.add(v)
-
     def upsert(self, doc_id: str, vector: List[float], payload: Dict[str, Any]) -> None:
+        import numpy as np
+
+        v = np.array([vector], dtype="float32")
+        faiss = __import__("faiss")
+        faiss.normalize_L2(v)
         if doc_id in self._ids:
             idx = self._ids.index(doc_id)
-            self._vectors[idx] = vector
             self._payloads[idx] = payload
-            self._rebuild_index()
         else:
-            import faiss  # type: ignore
-            import numpy as np  # type: ignore
-
-            v = np.array([vector], dtype="float32")
-            faiss.normalize_L2(v)
             self._index.add(v)
             self._ids.append(doc_id)
-            self._vectors.append(vector)
             self._payloads.append(payload)
 
     def search(self, vector: List[float], top_k: int = 5) -> List[SearchResult]:
-        import faiss  # type: ignore
-        import numpy as np  # type: ignore
+        import numpy as np
 
         if self._index.ntotal == 0:
             return []
         v = np.array([vector], dtype="float32")
+        faiss = __import__("faiss")
         faiss.normalize_L2(v)
         k = min(top_k, self._index.ntotal)
         scores, indices = self._index.search(v, k)
         results = []
-        for score, idx in zip(scores[0], indices[0], strict=False):
-            if 0 <= idx < len(self._ids):
-                results.append(
-                    SearchResult(id=self._ids[idx], score=float(score), payload=self._payloads[idx])
-                )
+        for score, idx in zip(scores[0], indices[0]):
+            if idx >= 0:
+                results.append(SearchResult(id=self._ids[idx], score=float(score), payload=self._payloads[idx]))
         return results
 
     def delete(self, doc_id: str) -> None:
         if doc_id in self._ids:
             i = self._ids.index(doc_id)
             self._ids.pop(i)
-            self._vectors.pop(i)
             self._payloads.pop(i)
-            self._rebuild_index()
 
     def count(self) -> int:
-        return len(self._ids)
+        return self._index.ntotal
 
 
 class _NumpyBackend:
@@ -189,7 +173,7 @@ class _NumpyBackend:
             return []
         v = np.array(vector)
         scores = [self._cosine(v, np.array(sv)) for sv in self._vectors]
-        top = sorted(zip(scores, range(len(scores)), strict=False), reverse=True)[:top_k]
+        top = sorted(zip(scores, range(len(scores))), reverse=True)[:top_k]
         return [SearchResult(id=self._ids[i], score=s, payload=self._payloads[i]) for s, i in top]
 
     def delete(self, doc_id: str) -> None:
@@ -205,7 +189,6 @@ class _NumpyBackend:
 
 # ─── Public VectorStore facade ────────────────────────────────────────────────
 
-
 class VectorStore:
     """
     Unified vector store. Use get_vector_store() to obtain an instance.
@@ -214,9 +197,7 @@ class VectorStore:
     def __init__(self, collection: str, dim: int = _EMBED_DIM) -> None:
         self._backend = _make_backend(collection, dim)
 
-    def upsert(
-        self, doc_id: str, vector: List[float], payload: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def upsert(self, doc_id: str, vector: List[float], payload: Optional[Dict[str, Any]] = None) -> None:
         self._backend.upsert(doc_id, vector, payload or {})
 
     def search(self, vector: List[float], top_k: int = 5) -> List[SearchResult]:
@@ -242,7 +223,6 @@ def get_vector_store(collection: str, dim: int = _EMBED_DIM) -> VectorStore:
 
 
 # ─── Backend selection ────────────────────────────────────────────────────────
-
 
 def _make_backend(collection: str, dim: int) -> Any:
     # 1. Try Qdrant

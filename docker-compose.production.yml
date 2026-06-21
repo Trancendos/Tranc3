@@ -1831,7 +1831,7 @@ services:
       - WEBHOOK_URL=http://n8n:5678/
       - GENERIC_TIMEZONE=UTC
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:?required}
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:?n8n password required}
       - DB_TYPE=sqlite
       - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
@@ -1883,7 +1883,7 @@ services:
       - WAZUH_API_PASSWORD=${WAZUH_API_PASSWORD}
       - OPENSEARCH_HOSTS=https://wazuh-indexer:9200
       - OPENSEARCH_USERNAME=kibanaserver
-      - OPENSEARCH_PASSWORD=${WAZUH_KIBANA_PASSWORD:?required}
+      - OPENSEARCH_PASSWORD=${WAZUH_KIBANA_PASSWORD:-kibanaserver}
     ports:
       - "5601:5601"
     networks:
@@ -1926,7 +1926,7 @@ services:
       - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:?required}
       - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:?required}
       - PAPERLESS_URL=http://trancendos.com/docutari
-      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:?required}
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:-admin}
       - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:?required}
       - PAPERLESS_OCR_LANGUAGE=eng
       - PAPERLESS_TIME_ZONE=UTC
@@ -1977,7 +1977,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://openbas-db:5432/openbas
       - SPRING_DATASOURCE_USERNAME=${OPENBAS_DB_USER:-openbas}
       - SPRING_DATASOURCE_PASSWORD=${OPENBAS_DB_PASSWORD:?required}
-      - OPENBAS_ADMIN_EMAIL=${OPENBAS_ADMIN_EMAIL:?required}
+      - OPENBAS_ADMIN_EMAIL=${OPENBAS_ADMIN_EMAIL:-admin@trancendos.com}
       - OPENBAS_ADMIN_PASSWORD=${OPENBAS_ADMIN_PASSWORD:?required}
       - OPENBAS_ADMIN_TOKEN=${OPENBAS_ADMIN_TOKEN:?required}
       - OPENBAS_BASE_URL=http://trancendos.com/openbas

@@ -23,8 +23,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-import sqlite3
 import subprocess
+import sqlite3
 import time
 import urllib.request
 from dataclasses import dataclass, field
@@ -36,10 +36,9 @@ from typing import Any, Dict, List, Optional
 log = logging.getLogger("tranc3.cryptex.bounty_hunter")
 
 _DB_PATH = Path(os.getenv("BOUNTY_DB", "/tmp/bounty_hunter.db"))
-_NUCLEI_PATH = os.getenv(
-    "NUCLEI_BIN", "nuclei"
-)  # install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+_NUCLEI_PATH = os.getenv("NUCLEI_BIN", "nuclei")  # install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 _OSV_API = "https://api.osv.dev/v1"
+_NVD_API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 _SCAN_TARGET = os.getenv("BOUNTY_TARGET_URL", "http://localhost:8000")
 
 
@@ -67,7 +66,6 @@ class Finding:
 
 
 # ─── Database ─────────────────────────────────────────────────────────────────
-
 
 def _init_db(conn: sqlite3.Connection) -> None:
     conn.executescript("""
@@ -107,7 +105,6 @@ def _get_db() -> sqlite3.Connection:
 
 # ─── Nuclei scanner ───────────────────────────────────────────────────────────
 
-
 def run_nuclei_scan(
     target: str = _SCAN_TARGET,
     severity: str = "medium,high,critical",
@@ -120,23 +117,14 @@ def run_nuclei_scan(
     nuclei must be installed: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
     Or: pip install nuclei (Python wrapper, experimental)
     """
-    _ALLOWED_SEVERITIES = frozenset({"info", "low", "medium", "high", "critical"})
-    _severity_parts = [s.strip() for s in severity.split(",")]
-    if not all(p in _ALLOWED_SEVERITIES for p in _severity_parts):
-        raise ValueError(f"Invalid severity value: {severity!r}")
-
-    # Use list form (no shell=True) so each argument is passed verbatim without shell interpretation.
     cmd = [
         _NUCLEI_PATH,
-        "-target",
-        target,
-        "-severity",
-        severity,
+        "-target", target,
+        "-severity", severity,
         "-json",
         "-silent",
-        "-no-interactsh",
-        "-timeout",
-        str(timeout // 60),
+        "-no-interactsh",  # no external callbacks needed
+        "-timeout", str(timeout // 60),
     ]
     if templates:
         cmd += ["-t", ",".join(templates)]
@@ -144,12 +132,10 @@ def run_nuclei_scan(
         cmd += ["-t", "cves,vulnerabilities,exposures,misconfiguration"]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, shell=False)  # nosec B603 # codeql[py/command-injection]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         return _parse_nuclei_output(result.stdout)
     except FileNotFoundError:
-        log.warning(
-            "nuclei not installed — skipping active scan (install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest)"
-        )
+        log.warning("nuclei not installed — skipping active scan (install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest)")
         return []
     except subprocess.TimeoutExpired:
         log.warning("nuclei scan timed out after %ds", timeout)
@@ -173,25 +159,20 @@ def _parse_nuclei_output(raw: str) -> List[Finding]:
         sev_raw = data.get("info", {}).get("severity", "info").lower()
         sev = Severity(sev_raw) if sev_raw in Severity._value2member_map_ else Severity.INFO
         cve_ids = [t for t in data.get("info", {}).get("tags", []) if t.upper().startswith("CVE-")]
-        findings.append(
-            Finding(
-                id=data.get("template-id", f"nuclei-{time.time()}"),
-                title=data.get("info", {}).get("name", "Unknown"),
-                severity=sev,
-                description=data.get("info", {}).get("description", ""),
-                cve_ids=cve_ids,
-                affected_component=data.get("matched-at", ""),
-                cvss_score=float(
-                    data.get("info", {}).get("classification", {}).get("cvss-score", 0)
-                ),
-                bounty_eligible=sev in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM),
-            )
-        )
+        findings.append(Finding(
+            id=data.get("template-id", f"nuclei-{time.time()}"),
+            title=data.get("info", {}).get("name", "Unknown"),
+            severity=sev,
+            description=data.get("info", {}).get("description", ""),
+            cve_ids=cve_ids,
+            affected_component=data.get("matched-at", ""),
+            cvss_score=float(data.get("info", {}).get("classification", {}).get("cvss-score", 0)),
+            bounty_eligible=sev in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM),
+        ))
     return findings
 
 
 # ─── CVE feed from OSV.dev (zero-cost, no auth) ──────────────────────────────
-
 
 def query_osv_for_packages(packages: List[Dict[str, str]]) -> List[Finding]:
     """
@@ -200,15 +181,13 @@ def query_osv_for_packages(packages: List[Dict[str, str]]) -> List[Finding]:
     """
     findings = []
     for pkg in packages:
-        payload = json.dumps(
-            {
-                "package": {
-                    "name": pkg["name"],
-                    "ecosystem": pkg.get("ecosystem", "PyPI"),
-                },
-                "version": pkg.get("version", ""),
-            }
-        ).encode()
+        payload = json.dumps({
+            "package": {
+                "name": pkg["name"],
+                "ecosystem": pkg.get("ecosystem", "PyPI"),
+            },
+            "version": pkg.get("version", ""),
+        }).encode()
         try:
             req = urllib.request.Request(
                 f"{_OSV_API}/query",
@@ -237,17 +216,15 @@ def query_osv_for_packages(packages: List[Dict[str, str]]) -> List[Finding]:
                 break
 
             sev = Severity(severity_str)
-            findings.append(
-                Finding(
-                    id=vuln.get("id", f"osv-{time.time()}"),
-                    title=vuln.get("summary", vuln.get("id", "CVE")),
-                    severity=sev,
-                    description=vuln.get("details", "")[:500],
-                    cve_ids=[a["id"] for a in vuln.get("aliases", []) if "CVE" in a.get("id", "")],
-                    affected_component=f"{pkg['name']}=={pkg.get('version', '?')}",
-                    bounty_eligible=sev in (Severity.CRITICAL, Severity.HIGH),
-                )
-            )
+            findings.append(Finding(
+                id=vuln.get("id", f"osv-{time.time()}"),
+                title=vuln.get("summary", vuln.get("id", "CVE")),
+                severity=sev,
+                description=vuln.get("details", "")[:500],
+                cve_ids=[a["id"] for a in vuln.get("aliases", []) if "CVE" in a.get("id", "")],
+                affected_component=f"{pkg['name']}=={pkg.get('version', '?')}",
+                bounty_eligible=sev in (Severity.CRITICAL, Severity.HIGH),
+            ))
     return findings
 
 
@@ -256,9 +233,7 @@ def scan_python_dependencies() -> List[Finding]:
     try:
         result = subprocess.run(
             ["pip-audit", "--format", "json", "--progress-spinner", "off"],
-            capture_output=True,
-            text=True,
-            timeout=120,
+            capture_output=True, text=True, timeout=120,
         )
         data = json.loads(result.stdout or "[]")
     except (FileNotFoundError, json.JSONDecodeError, subprocess.TimeoutExpired):
@@ -270,7 +245,7 @@ def scan_python_dependencies() -> List[Finding]:
         pkg_ver = vuln.get("version", "?")
         for v in vuln.get("vulns", []):
             score = 0.0
-            for _fix in v.get("fix_versions", []):
+            for fix in v.get("fix_versions", []):
                 pass
             sev = Severity.MEDIUM
             if score >= 9.0:
@@ -278,22 +253,19 @@ def scan_python_dependencies() -> List[Finding]:
             elif score >= 7.0:
                 sev = Severity.HIGH
 
-            findings.append(
-                Finding(
-                    id=v.get("id", f"pip-audit-{time.time()}"),
-                    title=f"{pkg_name} {v.get('id', 'VULN')}",
-                    severity=sev,
-                    description=v.get("description", "")[:500],
-                    cve_ids=[v["id"]] if v.get("id", "").startswith("CVE") else [],
-                    affected_component=f"{pkg_name}=={pkg_ver}",
-                    bounty_eligible=False,  # dependency CVEs aren't bounty-eligible
-                )
-            )
+            findings.append(Finding(
+                id=v.get("id", f"pip-audit-{time.time()}"),
+                title=f"{pkg_name} {v.get('id', 'VULN')}",
+                severity=sev,
+                description=v.get("description", "")[:500],
+                cve_ids=[v["id"]] if v.get("id", "").startswith("CVE") else [],
+                affected_component=f"{pkg_name}=={pkg_ver}",
+                bounty_eligible=False,  # dependency CVEs aren't bounty-eligible
+            ))
     return findings
 
 
 # ─── Persistence & triage ─────────────────────────────────────────────────────
-
 
 def save_findings(findings: List[Finding]) -> int:
     if not findings:
@@ -308,19 +280,9 @@ def save_findings(findings: List[Finding]) -> int:
                    (id, title, severity, description, cve_ids, affected_component,
                     reproduction, cvss_score, bounty_eligible, status, created_at)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    f.id,
-                    f.title,
-                    f.severity.value,
-                    f.description,
-                    json.dumps(f.cve_ids),
-                    f.affected_component,
-                    f.reproduction,
-                    f.cvss_score,
-                    int(f.bounty_eligible),
-                    f.status,
-                    now,
-                ),
+                (f.id, f.title, f.severity.value, f.description,
+                 json.dumps(f.cve_ids), f.affected_component, f.reproduction,
+                 f.cvss_score, int(f.bounty_eligible), f.status, now),
             )
             if conn.execute("SELECT changes()").fetchone()[0]:
                 saved += 1
@@ -338,15 +300,7 @@ def get_bounty_candidates() -> List[Dict[str, Any]]:
         "SELECT * FROM findings WHERE bounty_eligible=1 AND status='new' ORDER BY cvss_score DESC"
     ).fetchall()
     conn.close()
-    results = []
-    for r in rows:
-        d = dict(r)
-        try:
-            d["cve_ids"] = json.loads(d["cve_ids"])
-        except (json.JSONDecodeError, TypeError):
-            d["cve_ids"] = []
-        results.append(d)
-    return results
+    return [dict(r) for r in rows]
 
 
 def get_summary() -> Dict[str, Any]:
@@ -355,9 +309,7 @@ def get_summary() -> Dict[str, Any]:
     by_severity = {}
     for row in conn.execute("SELECT severity, COUNT(*) as c FROM findings GROUP BY severity"):
         by_severity[row[0]] = row[1]
-    bounty_eligible = conn.execute(
-        "SELECT COUNT(*) FROM findings WHERE bounty_eligible=1"
-    ).fetchone()[0]
+    bounty_eligible = conn.execute("SELECT COUNT(*) FROM findings WHERE bounty_eligible=1").fetchone()[0]
     conn.close()
     return {
         "total_findings": total,
@@ -368,7 +320,6 @@ def get_summary() -> Dict[str, Any]:
 
 
 # ─── Full scan pipeline ───────────────────────────────────────────────────────
-
 
 def run_full_scan(target: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -399,15 +350,8 @@ def run_full_scan(target: Optional[str] = None) -> Dict[str, Any]:
         "by_severity": {},
     }
     for f in all_findings:
-        summary["by_severity"][f.severity.value] = (
-            summary["by_severity"].get(f.severity.value, 0) + 1
-        )
+        summary["by_severity"][f.severity.value] = summary["by_severity"].get(f.severity.value, 0) + 1
 
-    log.info(
-        "Scan complete: %d findings (%d new, %d bounty-eligible) in %.1fs",
-        len(all_findings),
-        saved,
-        summary["bounty_candidates"],
-        duration,
-    )
+    log.info("Scan complete: %d findings (%d new, %d bounty-eligible) in %.1fs",
+             len(all_findings), saved, summary["bounty_candidates"], duration)
     return summary
