@@ -66,6 +66,7 @@ import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
 import RealtimeStatusBar from './components/ui/RealtimeStatusBar'
+import LandingPage from './pages/LandingPage'
 
 const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development'
 
