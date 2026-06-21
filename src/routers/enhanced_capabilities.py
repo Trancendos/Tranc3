@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
@@ -307,13 +307,10 @@ _KNOWN_PERSONALITIES = [
 
 
 @router.post("/think", tags=["core"])
-async def think(req: ThinkRequest):
+async def think(req: ThinkRequest, request: Request):
     """Run inference with optional personality (public)."""
     try:
-        import api as _api_mod
-
-        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
-        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
+        enhanced = getattr(request.app.state, "enhanced", None)
         if enhanced and hasattr(enhanced, "think"):
             result = await enhanced.think(req.prompt, personality=req.personality)
             return result if isinstance(result, dict) else {"response": str(result)}
@@ -361,13 +358,10 @@ async def workflow_templates():
 
 
 @router.get("/evolution/stats", tags=["evolution"])
-async def evolution_stats():
+async def evolution_stats(request: Request):
     """Get evolution statistics (public)."""
     try:
-        import api as _api_mod
-
-        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
-        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
+        enhanced = getattr(request.app.state, "enhanced", None)
         if enhanced:
             subsystems = getattr(enhanced, "_subsystems", {})
             evolution = subsystems.get("evolution")
@@ -380,13 +374,10 @@ async def evolution_stats():
 
 
 @router.post("/evolution/feedback", tags=["evolution"])
-async def evolution_feedback(req: FeedbackRequest):
+async def evolution_feedback(req: FeedbackRequest, request: Request):
     """Record a feedback signal for evolutionary learning (public)."""
     try:
-        import api as _api_mod
-
-        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
-        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
+        enhanced = getattr(request.app.state, "enhanced", None)
         if enhanced:
             subsystems = getattr(enhanced, "_subsystems", {})
             evolution = subsystems.get("evolution")
@@ -456,13 +447,10 @@ class MCPToolRequest(BaseModel):
 
 
 @router.post("/mcp/tool", tags=["mcp"])
-async def call_mcp_tool(req: MCPToolRequest):
+async def call_mcp_tool(req: MCPToolRequest, request: Request):
     """Proxy a call to an MCP tool by name (public)."""
     try:
-        import api as _api_mod
-
-        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
-        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
+        enhanced = getattr(request.app.state, "enhanced", None)
         if enhanced and hasattr(enhanced, "call_mcp_tool"):
             result = await enhanced.call_mcp_tool(req.tool, req.params)
             return {"result": result}
