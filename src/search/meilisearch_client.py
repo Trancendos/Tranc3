@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.search.meilisearch")
 
+
 def _validated_base_url() -> str:
     """Return the Meilisearch base URL, validated to prevent SSRF.
 
