@@ -1817,6 +1817,196 @@ services:
       traefik.http.services.excalidraw.loadbalancer.server.port: "80"
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Item 8 — n8n: Workflow node upgrade for The Digital Grid
+# ═══════════════════════════════════════════════════════════════════════════
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: trancendos-n8n
+    restart: unless-stopped
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://n8n:5678/
+      - GENERIC_TIMEZONE=UTC
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:?n8n password required}
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:?required}
+    volumes:
+      - n8n-data:/home/node/.n8n
+    ports:
+      - "5678:5678"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`trancendos.com`) && PathPrefix(`/n8n`)"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Item 7 — Wazuh: SIEM/EDR for Cryptex (single-node, free OSS)
+# Requires: vm.max_map_count=262144 on host (sysctl -w vm.max_map_count=262144)
+# ═══════════════════════════════════════════════════════════════════════════
+  wazuh-manager:
+    image: wazuh/wazuh-manager:4.8.0
+    container_name: trancendos-wazuh-manager
+    restart: unless-stopped
+    environment:
+      - WAZUH_API_USER=${WAZUH_API_USER:-wazuh}
+      - WAZUH_API_PASSWORD=${WAZUH_API_PASSWORD:?required}
+      - WAZUH_MANAGER_IP=0.0.0.0
+    volumes:
+      - wazuh-manager-data:/var/ossec/data
+      - wazuh-manager-logs:/var/ossec/logs
+      - wazuh-manager-etc:/var/ossec/etc
+    ports:
+      - "1514:1514/udp"
+      - "1515:1515"
+      - "55000:55000"
+    networks:
+      - tranc3-net
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:4.8.0
+    container_name: trancendos-wazuh-dashboard
+    restart: unless-stopped
+    depends_on:
+      - wazuh-manager
+    environment:
+      - WAZUH_API_URL=https://wazuh-manager
+      - WAZUH_API_PORT=55000
+      - WAZUH_API_USER=${WAZUH_API_USER:-wazuh}
+      - WAZUH_API_PASSWORD=${WAZUH_API_PASSWORD}
+      - OPENSEARCH_HOSTS=https://wazuh-indexer:9200
+      - OPENSEARCH_USERNAME=kibanaserver
+      - OPENSEARCH_PASSWORD=${WAZUH_KIBANA_PASSWORD:-kibanaserver}
+    ports:
+      - "5601:5601"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wazuh.rule=Host(`trancendos.com`) && PathPrefix(`/wazuh`)"
+      - "traefik.http.services.wazuh.loadbalancer.server.port=5601"
+
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:4.8.0
+    container_name: trancendos-wazuh-indexer
+    restart: unless-stopped
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - network.host=0.0.0.0
+      - node.name=wazuh-indexer
+      - cluster.initial_cluster_manager_nodes=wazuh-indexer
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${WAZUH_INDEXER_PASSWORD:?required}
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Item 5 — Paperless-ngx: Document management for DocUtari
+# ═══════════════════════════════════════════════════════════════════════════
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: trancendos-paperless
+    restart: unless-stopped
+    depends_on:
+      - paperless-db
+      - paperless-redis
+    environment:
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBNAME=${PAPERLESS_DB_NAME:-paperless}
+      - PAPERLESS_DBUSER=${PAPERLESS_DB_USER:-paperless}
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:?required}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:?required}
+      - PAPERLESS_URL=http://trancendos.com/docutari
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:-admin}
+      - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:?required}
+      - PAPERLESS_OCR_LANGUAGE=eng
+      - PAPERLESS_TIME_ZONE=UTC
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - paperless-export:/usr/src/paperless/export
+      - paperless-consume:/usr/src/paperless/consume
+    ports:
+      - "8085:8000"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.paperless.rule=Host(`trancendos.com`) && PathPrefix(`/docutari`)"
+      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
+
+  paperless-db:
+    image: postgres:15-alpine
+    container_name: trancendos-paperless-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${PAPERLESS_DB_NAME:-paperless}
+      - POSTGRES_USER=${PAPERLESS_DB_USER:-paperless}
+      - POSTGRES_PASSWORD=${PAPERLESS_DB_PASSWORD}
+    volumes:
+      - paperless-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: trancendos-paperless-redis
+    restart: unless-stopped
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Item 7 — OpenBAS: Breach & attack simulation for The Ice Box
+# ═══════════════════════════════════════════════════════════════════════════
+  openbas:
+    image: filigran/openbas-platform:latest
+    container_name: trancendos-openbas
+    restart: unless-stopped
+    depends_on:
+      - openbas-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://openbas-db:5432/openbas
+      - SPRING_DATASOURCE_USERNAME=${OPENBAS_DB_USER:-openbas}
+      - SPRING_DATASOURCE_PASSWORD=${OPENBAS_DB_PASSWORD:?required}
+      - OPENBAS_ADMIN_EMAIL=${OPENBAS_ADMIN_EMAIL:-admin@trancendos.com}
+      - OPENBAS_ADMIN_PASSWORD=${OPENBAS_ADMIN_PASSWORD:?required}
+      - OPENBAS_ADMIN_TOKEN=${OPENBAS_ADMIN_TOKEN:?required}
+      - OPENBAS_BASE_URL=http://trancendos.com/openbas
+      - SERVER_PORT=8082
+    volumes:
+      - openbas-data:/opt/openbas/files
+    ports:
+      - "8082:8082"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openbas.rule=Host(`trancendos.com`) && PathPrefix(`/openbas`)"
+      - "traefik.http.services.openbas.loadbalancer.server.port=8082"
+
+  openbas-db:
+    image: postgres:15-alpine
+    container_name: trancendos-openbas-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=openbas
+      - POSTGRES_USER=${OPENBAS_DB_USER:-openbas}
+      - POSTGRES_PASSWORD=${OPENBAS_DB_PASSWORD}
+    volumes:
+      - openbas-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
 volumes:
@@ -1941,6 +2131,30 @@ volumes:
   authentik-db-data:
     driver: local
   authentik-redis-data:
+    driver: local
+  n8n-data:
+    driver: local
+  wazuh-manager-data:
+    driver: local
+  wazuh-manager-logs:
+    driver: local
+  wazuh-manager-etc:
+    driver: local
+  wazuh-indexer-data:
+    driver: local
+  paperless-data:
+    driver: local
+  paperless-media:
+    driver: local
+  paperless-export:
+    driver: local
+  paperless-consume:
+    driver: local
+  paperless-db-data:
+    driver: local
+  openbas-data:
+    driver: local
+  openbas-db-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════
