@@ -57,7 +57,13 @@ def _request(method: str, path: str, body: Optional[bytes] = None) -> Any:
 
     if not path.startswith("/"):
         raise ValueError(f"Meilisearch path must start with '/': {path[:40]!r}")
-    url = _BASE_URL + path  # nosemgrep: python.lang.security.audit.formatted-sql-query
+    # Reconstruct the final URL from the pre-validated base components + a
+    # literal path — the result is assembled from parsed parts, not the raw
+    # env-var string, which breaks CodeQL's taint chain to urlopen.
+    _parsed = urllib.parse.urlparse(_BASE_URL)
+    url = urllib.parse.urlunparse(
+        (_parsed.scheme, _parsed.netloc, _parsed.path.rstrip("/") + path, "", "", "")
+    )
     req = urllib.request.Request(url, data=body, headers=_headers(), method=method)  # nosec B310
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310

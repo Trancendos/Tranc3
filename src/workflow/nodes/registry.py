@@ -5,34 +5,51 @@ src/workflow/nodes/registry.py — Node registry and factory for The Digital Gri
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Type
 
-from .ai import LLMNode, MLPredictNode
 from .base import BaseNode, NodeConfig, NodeType
-from .code import CodeExecNode
-from .data import OutputNode, TransformNode, TriggerNode
-from .flow import ConditionNode, LoopNode, MergeNode, ParallelNode
-from .http import HTTPNode, VectorSearchNode
-from .tools import SkillCallNode, SparkToolNode
 
 logger = logging.getLogger(__name__)
 
-NODE_REGISTRY: Dict[NodeType, Type[BaseNode]] = {
-    NodeType.LLM: LLMNode,
-    NodeType.CODE_EXEC: CodeExecNode,
-    NodeType.HTTP_REQUEST: HTTPNode,
-    NodeType.CONDITION: ConditionNode,
-    NodeType.TRANSFORM: TransformNode,
-    NodeType.VECTOR_SEARCH: VectorSearchNode,
-    NodeType.SPARK_TOOL: SparkToolNode,
-    NodeType.PARALLEL: ParallelNode,
-    NodeType.LOOP: LoopNode,
-    NodeType.MERGE: MergeNode,
-    NodeType.OUTPUT: OutputNode,
-    NodeType.TRIGGER: TriggerNode,
-    NodeType.SKILL_CALL: SkillCallNode,
-    NodeType.ML_PREDICT: MLPredictNode,
-}
+# NODE_REGISTRY is populated lazily on first call to create_node() to avoid
+# circular imports: flow.py deferred-imports create_node from this module, so
+# importing flow.py here at module level would create a detectable import cycle.
+NODE_REGISTRY: Dict[NodeType, Type[BaseNode]] = {}
+_REGISTRY_INITIALISED = False
+
+
+def _init_registry() -> None:
+    global _REGISTRY_INITIALISED
+    if _REGISTRY_INITIALISED:
+        return
+    _REGISTRY_INITIALISED = True
+
+    from .ai import LLMNode, MLPredictNode  # noqa: PLC0415
+    from .code import CodeExecNode  # noqa: PLC0415
+    from .data import OutputNode, TransformNode, TriggerNode  # noqa: PLC0415
+    from .flow import ConditionNode, LoopNode, MergeNode, ParallelNode  # noqa: PLC0415
+    from .http import HTTPNode, VectorSearchNode  # noqa: PLC0415
+    from .tools import SkillCallNode, SparkToolNode  # noqa: PLC0415
+
+    NODE_REGISTRY.update(
+        {
+            NodeType.LLM: LLMNode,
+            NodeType.CODE_EXEC: CodeExecNode,
+            NodeType.HTTP_REQUEST: HTTPNode,
+            NodeType.CONDITION: ConditionNode,
+            NodeType.TRANSFORM: TransformNode,
+            NodeType.VECTOR_SEARCH: VectorSearchNode,
+            NodeType.SPARK_TOOL: SparkToolNode,
+            NodeType.PARALLEL: ParallelNode,
+            NodeType.LOOP: LoopNode,
+            NodeType.MERGE: MergeNode,
+            NodeType.OUTPUT: OutputNode,
+            NodeType.TRIGGER: TriggerNode,
+            NodeType.SKILL_CALL: SkillCallNode,
+            NodeType.ML_PREDICT: MLPredictNode,
+        }
+    )
+
 
 _PHASE4_NODE_REGISTRY: Dict[str, Any] = {}
 _PHASE4_LOADED = False
@@ -91,10 +108,11 @@ def _ensure_phase4_nodes_loaded() -> None:
 
 def create_node(config: NodeConfig) -> BaseNode:
     """Factory: instantiate the correct BaseNode subclass for a given NodeConfig."""
+    _init_registry()
     _ensure_phase4_nodes_loaded()
-    node_class = NODE_REGISTRY.get(config.type)
+    node_class: Optional[Type[BaseNode]] = NODE_REGISTRY.get(config.type)
     if node_class is None:
-        node_class = _PHASE4_NODE_REGISTRY.get(config.type)
+        node_class = _PHASE4_NODE_REGISTRY.get(config.type)  # type: ignore[assignment]
     if node_class is None:
         raise ValueError(
             f"Unknown node type: {config.type!r}. "

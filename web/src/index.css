@@ -1,3 +1,74 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 5%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 8%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 5%;
+    --secondary: 261 51% 51%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 223 47% 14%;
+    --muted-foreground: 215 16% 57%;
+    --accent: 199 89% 38%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 213 31% 91%;
+    --border: 223 47% 18%;
+    --input: 223 47% 14%;
+    --ring: 199 89% 48%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Fluid / liquid design tokens */
+@layer utilities {
+  .fluid-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary) / 0.15),
+      hsl(var(--secondary) / 0.10),
+      hsl(var(--accent) / 0.15)
+    );
+    background-size: 200% 200%;
+    animation: liquid-flow 6s ease infinite;
+  }
+
+  .glass {
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  .glow {
+    box-shadow: 0 0 24px hsl(var(--primary) / 0.3),
+                0 0 4px hsl(var(--primary) / 0.2);
+  }
+
+  .cell-border {
+    border: 1px solid hsl(var(--primary) / 0.25);
+    border-radius: var(--radius);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .cell-border:hover {
+    border-color: hsl(var(--primary) / 0.6);
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.2);
+  }
+}
