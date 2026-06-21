@@ -926,6 +926,10 @@ from src.routers.tranc3ts_bridge import router as _tranc3ts_router  # noqa: F401
 
 app.include_router(_tranc3ts_router)
 
+from src.monetisation.router import router as _billing_router  # noqa: F401
+
+app.include_router(_billing_router)
+
 
 # ── Root endpoint (must be before catch-all frontend route) ───────────────────
 @app.get("/", tags=["system"], summary="Platform root")
