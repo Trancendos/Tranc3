@@ -14,3 +14,7 @@
 ## 2024-05-18 - Missing ARIA labels pattern in modal dismiss buttons
 **Learning:** Found an accessibility pattern specific to this app's components: various custom implementation of modal/panel components (`DigitalGridPage.tsx`, `ExecutionPanel.tsx`, `Dashboard.tsx`) have icon-only "✕" dismiss/close buttons without `aria-label`s or keyboard focus rings, leading to accessibility violations with screen readers.
 **Action:** Always verify newly created floating panels or sidebars include proper keyboard-navigable and screen-reader compliant close buttons with `focus-visible` utilities.
+
+## 2024-05-15 - [Icon-only Buttons Accessibility]
+**Learning:** Icon-only buttons without explicit text fail `axe-core` accessibility tests.
+**Action:** Always add an `aria-label` attribute to icon-only buttons to provide an accessible name for screen readers, and add `aria-hidden="true"` to the inner SVG elements to avoid redundant announcements.

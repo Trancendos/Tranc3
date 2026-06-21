@@ -416,8 +416,8 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
               <span className="text-xs text-gray-500">{pillarDef?.name} Pillar · Tier {displayHub.tier}</span>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Close modal" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-            ✕
+          <button onClick={onClose} aria-label="Close details panel" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
@@ -552,9 +552,10 @@ function Sidebar({
             <div className="text-[10px] text-gray-600">Ecosystem Command</div>
           </div>
         )}
-        <button onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        <button onClick={() => setCollapsed(!collapsed)}
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-          <ChevronRight size={14} className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} />
+          <ChevronRight size={14} aria-hidden="true" className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} />
         </button>
       </div>
 
@@ -660,10 +661,11 @@ function Sidebar({
       {collapsed && (
         <div className="flex-1 flex flex-col items-center py-3 gap-2">
           <button onClick={() => onSelectPillar(null)}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                  aria-label="Overview"
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                     activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-600 hover:text-white hover:bg-gray-900'
                   }`}>
-            <LayoutDashboard size={16} />
+            <LayoutDashboard size={16} aria-hidden="true" />
           </button>
           {pillars.map(pillar => (
             <button key={pillar.id} onClick={() => onSelectPillar(pillar.id)}
@@ -743,20 +745,21 @@ function TopBar({
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <button onClick={onRefresh} aria-label="Refresh dashboard"
+          <button onClick={onRefresh}
+                  aria-label="Refresh data"
                   className={`p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${refreshing ? 'animate-spin' : ''}`}>
-            <RefreshCw size={16} />
+            <RefreshCw size={16} aria-hidden="true" />
           </button>
-          <button aria-label="View notifications" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-            <Bell size={16} />
+          <button aria-label={`Notifications ${totalAlerts > 0 ? `(${totalAlerts} unread)` : ''}`} className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            <Bell size={16} aria-hidden="true" />
             {totalAlerts > 0 && (
-              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center">
+              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center" aria-hidden="true">
                 <span className="text-[8px] font-bold text-white">{totalAlerts > 9 ? '9+' : totalAlerts}</span>
               </div>
             )}
           </button>
           <button aria-label="Settings" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-            <Settings size={16} />
+            <Settings size={16} aria-hidden="true" />
           </button>
         </div>
       </div>
