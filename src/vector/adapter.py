@@ -17,7 +17,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 log = logging.getLogger("tranc3.vector")
 
@@ -121,7 +121,7 @@ class _FaissBackend:
         k = min(top_k, self._index.ntotal)
         scores, indices = self._index.search(v, k)
         results = []
-        for score, idx in zip(scores[0], indices[0]):
+        for score, idx in zip(scores[0], indices[0], strict=False):
             if idx >= 0:
                 results.append(SearchResult(id=self._ids[idx], score=float(score), payload=self._payloads[idx]))
         return results
@@ -173,7 +173,7 @@ class _NumpyBackend:
             return []
         v = np.array(vector)
         scores = [self._cosine(v, np.array(sv)) for sv in self._vectors]
-        top = sorted(zip(scores, range(len(scores))), reverse=True)[:top_k]
+        top = sorted(zip(scores, range(len(scores)), strict=False), reverse=True)[:top_k]
         return [SearchResult(id=self._ids[i], score=s, payload=self._payloads[i]) for s, i in top]
 
     def delete(self, doc_id: str) -> None:

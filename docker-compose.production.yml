@@ -1702,8 +1702,8 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: "authentik"
       AUTHENTIK_SECRET_KEY: "${AUTHENTIK_SECRET_KEY:-authentik-secret-change-me}"
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
-      AUTHENTIK_BOOTSTRAP_EMAIL: "${ADMIN_EMAIL:-admin@trancendos.com}"
-      AUTHENTIK_BOOTSTRAP_PASSWORD: "${AUTHENTIK_ADMIN_PASSWORD:-admin-change-me}"
+      AUTHENTIK_BOOTSTRAP_EMAIL: "${ADMIN_EMAIL:?required}"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "${AUTHENTIK_ADMIN_PASSWORD:?required}"
       AUTHENTIK_BOOTSTRAP_TOKEN: "${AUTHENTIK_BOOTSTRAP_TOKEN:-}"
     depends_on:
       - authentik-db
@@ -1883,7 +1883,7 @@ services:
       - WAZUH_API_PASSWORD=${WAZUH_API_PASSWORD}
       - OPENSEARCH_HOSTS=https://wazuh-indexer:9200
       - OPENSEARCH_USERNAME=kibanaserver
-      - OPENSEARCH_PASSWORD=${WAZUH_KIBANA_PASSWORD:-kibanaserver}
+      - OPENSEARCH_PASSWORD=${WAZUH_KIBANA_PASSWORD:?required}
     ports:
       - "5601:5601"
     networks:
@@ -1977,7 +1977,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://openbas-db:5432/openbas
       - SPRING_DATASOURCE_USERNAME=${OPENBAS_DB_USER:-openbas}
       - SPRING_DATASOURCE_PASSWORD=${OPENBAS_DB_PASSWORD:?required}
-      - OPENBAS_ADMIN_EMAIL=${OPENBAS_ADMIN_EMAIL:-admin@trancendos.com}
+      - OPENBAS_ADMIN_EMAIL=${OPENBAS_ADMIN_EMAIL:?required}
       - OPENBAS_ADMIN_PASSWORD=${OPENBAS_ADMIN_PASSWORD:?required}
       - OPENBAS_ADMIN_TOKEN=${OPENBAS_ADMIN_TOKEN:?required}
       - OPENBAS_BASE_URL=http://trancendos.com/openbas
