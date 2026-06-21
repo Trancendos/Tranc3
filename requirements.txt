@@ -184,3 +184,6 @@ msgpack>=1.0.8
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt
 # See: requirements-security.txt for scanning toolchain
+
+# AeonMind polyglot AI engine (editable local install)
+-e aeonmind/python

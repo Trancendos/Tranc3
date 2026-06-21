@@ -910,6 +910,10 @@ from src.routers.ecosystem import router as _ecosystem_router  # noqa: F401
 
 app.include_router(_ecosystem_router)
 
+from src.routers.aeonmind import router as _aeonmind_router  # noqa: F401
+
+app.include_router(_aeonmind_router)
+
 
 # ── Root endpoint (must be before catch-all frontend route) ───────────────────
 @app.get("/", tags=["system"], summary="Platform root")
