@@ -30,12 +30,15 @@ import base64
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+_SAFE_COMPONENT_RE = re.compile(r"^[\w\-]+$")
 
 import httpx
 from cryptography.hazmat.primitives import hashes
@@ -213,6 +216,14 @@ def init_schema() -> None:
     conn.close()
 
 
+def _safe_path_component(value: str, field: str = "id") -> str:
+    """Reject path-traversal characters; allow only word chars and hyphens."""
+    stripped = Path(value).name
+    if not stripped or stripped != value or not _SAFE_COMPONENT_RE.match(stripped):
+        raise HTTPException(status_code=400, detail=f"Invalid {field} format")
+    return stripped
+
+
 # ── Auth ────────────────────────────────────────────────────────
 
 
@@ -369,8 +380,10 @@ async def store_secret(request: Request, authorization: str | None = Header(None
     encrypted = encrypt_secret(plaintext, MASTER_KEY_SEED)
 
     # Store payload in R2-like file storage
-    r2_key = f"secrets/{user_id}/{secret_id}"
-    r2_path = R2_DIR / user_id / secret_id
+    safe_uid = _safe_path_component(user_id, "user_id")
+    safe_sid = _safe_path_component(secret_id, "secret_id")
+    r2_key = f"secrets/{safe_uid}/{safe_sid}"
+    r2_path = R2_DIR / safe_uid / safe_sid
     r2_path.mkdir(parents=True, exist_ok=True)
     with open(r2_path / "payload.json", "w") as f:
         json.dump({"ciphertext": encrypted["ciphertext"]}, f)
@@ -443,7 +456,9 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
         raise HTTPException(status_code=410, detail="Secret is not active")
 
     # Read payload from R2-like storage
-    r2_path = R2_DIR / user_id / secret_id / "payload.json"
+    safe_uid = _safe_path_component(user_id, "user_id")
+    safe_sid = _safe_path_component(secret_id, "secret_id")
+    r2_path = R2_DIR / safe_uid / safe_sid / "payload.json"
     if r2_path.exists():
         with open(r2_path) as f:
             payload = json.load(f)
@@ -524,7 +539,9 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
         raise HTTPException(status_code=403, detail="Forbidden")
 
     # Crypto-shred: delete R2 payload
-    r2_path = R2_DIR / user_id / secret_id
+    safe_uid = _safe_path_component(user_id, "user_id")
+    safe_sid = _safe_path_component(secret_id, "secret_id")
+    r2_path = R2_DIR / safe_uid / safe_sid
     if r2_path.exists():
         import shutil
 

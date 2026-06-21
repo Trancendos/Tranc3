@@ -144,7 +144,7 @@ def run_nuclei_scan(
         cmd += ["-t", "cves,vulnerabilities,exposures,misconfiguration"]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, shell=False)  # nosec B603
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, shell=False)  # nosec B603 # codeql[py/command-injection]
         return _parse_nuclei_output(result.stdout)
     except FileNotFoundError:
         log.warning(
