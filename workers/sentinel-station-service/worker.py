@@ -379,6 +379,15 @@ async def health():
     """Health check endpoint."""
     sentinel_health = await sentinel.health_check()
     health_summary = worker_kit.health.get_health_summary()
+    # HealthSummary may be a dataclass or dict depending on Dimensional version
+    if hasattr(health_summary, "score"):
+        _hs_score = health_summary.score
+        _hs_tier = getattr(health_summary, "tier", "EXCELLENT")
+    elif isinstance(health_summary, dict):
+        _hs_score = health_summary.get("health_score", health_summary.get("score", 1.0))
+        _hs_tier = health_summary.get("tier", "EXCELLENT")
+    else:
+        _hs_score, _hs_tier = 1.0, "EXCELLENT"
     return {
         "status": "ok",
         "service": "sentinel-station-service",
@@ -388,8 +397,8 @@ async def health():
             "running": dimensional_bus.is_running,
         },
         # Phase 22.6: Smart health
-        "health_score": health_summary.get("health_score", 1.0),
-        "health_tier": health_summary.get("tier", "EXCELLENT"),
+        "health_score": _hs_score,
+        "health_tier": _hs_tier,
         "smart_adaptive": True,
         "reactive_topology": sentinel_topology_state is not None,
     }
@@ -437,7 +446,7 @@ async def publish_event(body: EventPublish, request: Request):
     valid_channels = [ch.value for ch in SentinelChannel]
     if body.channel not in valid_channels:
         raise HTTPException(
-            400,
+            422,
             detail=f"Invalid channel: {body.channel}. Valid channels: {', '.join(valid_channels)}",
         )
 

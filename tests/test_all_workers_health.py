@@ -111,7 +111,7 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
     assert hasattr(mod, "app"), f"Worker {module_name} missing 'app' attribute"
 
     # Check /health route exists
-    routes = [route.path for route in mod.app.routes]
+    routes = [route.path for route in mod.app.routes if hasattr(route, "path")]
     assert "/health" in routes, f"Worker {module_name} missing /health endpoint"
 
     # Set up test client with patched database if needed
