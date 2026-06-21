@@ -122,9 +122,7 @@ token_manager = TokenManager()
 
 
 def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-        HTTPBearer(auto_error=False)
-    ),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
 ) -> dict:
     """
     FastAPI dependency — validates JWT and returns the current user.

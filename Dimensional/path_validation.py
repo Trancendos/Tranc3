@@ -241,11 +241,13 @@ def list_validated_children(
     for child in entries:
         try:
             stat = child.stat()
-            children.append({
-                "name": child.name,
-                "type": "directory" if child.is_dir() else "file",
-                "size": stat.st_size if child.is_file() else 0,
-            })
+            children.append(
+                {
+                    "name": child.name,
+                    "type": "directory" if child.is_dir() else "file",
+                    "size": stat.st_size if child.is_file() else 0,
+                }
+            )
         except OSError:
             pass
     return children
