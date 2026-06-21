@@ -138,7 +138,9 @@ class GBrainIngestionPipeline:
         result.duration_ms = (time.monotonic() - t0) * 1000
         return result
 
-    async def ingest_batch(self, interactions: List[AgentInteraction]) -> List[IngestionResult]:
+    async def ingest_batch(
+        self, interactions: List[AgentInteraction]
+    ) -> List[IngestionResult]:
         if not interactions:
             return []
         return [await self.ingest(i) for i in interactions]
