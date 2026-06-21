@@ -307,10 +307,13 @@ _KNOWN_PERSONALITIES = [
 
 
 @router.post("/think", tags=["core"])
-async def think(req: ThinkRequest, request: Request):
+async def think(req: ThinkRequest):
     """Run inference with optional personality (public)."""
     try:
-        enhanced = getattr(request.app.state, "enhanced", None)
+        import api as _api_mod
+
+        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
+        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
         if enhanced and hasattr(enhanced, "think"):
             result = await enhanced.think(req.prompt, personality=req.personality)
             return result if isinstance(result, dict) else {"response": str(result)}
@@ -358,10 +361,13 @@ async def workflow_templates():
 
 
 @router.get("/evolution/stats", tags=["evolution"])
-async def evolution_stats(request: Request):
+async def evolution_stats():
     """Get evolution statistics (public)."""
     try:
-        enhanced = getattr(request.app.state, "enhanced", None)
+        import api as _api_mod
+
+        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
+        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
         if enhanced:
             subsystems = getattr(enhanced, "_subsystems", {})
             evolution = subsystems.get("evolution")
@@ -374,10 +380,13 @@ async def evolution_stats(request: Request):
 
 
 @router.post("/evolution/feedback", tags=["evolution"])
-async def evolution_feedback(req: FeedbackRequest, request: Request):
+async def evolution_feedback(req: FeedbackRequest):
     """Record a feedback signal for evolutionary learning (public)."""
     try:
-        enhanced = getattr(request.app.state, "enhanced", None)
+        import api as _api_mod
+
+        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
+        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
         if enhanced:
             subsystems = getattr(enhanced, "_subsystems", {})
             evolution = subsystems.get("evolution")
@@ -447,10 +456,13 @@ class MCPToolRequest(BaseModel):
 
 
 @router.post("/mcp/tool", tags=["mcp"])
-async def call_mcp_tool(req: MCPToolRequest, request: Request):
+async def call_mcp_tool(req: MCPToolRequest):
     """Proxy a call to an MCP tool by name (public)."""
     try:
-        enhanced = getattr(request.app.state, "enhanced", None)
+        import api as _api_mod
+
+        enhanced = getattr(getattr(_api_mod, "app", None), "state", None)
+        enhanced = getattr(enhanced, "enhanced", None) if enhanced else None
         if enhanced and hasattr(enhanced, "call_mcp_tool"):
             result = await enhanced.call_mcp_tool(req.tool, req.params)
             return {"result": result}

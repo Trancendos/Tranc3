@@ -303,7 +303,7 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 @router.post("/rpc")
 async def rpc_endpoint(
-    request: Request, current_user: dict = Depends(get_current_user)
+    request: Request,
 ) -> JSONResponse:
     """
     JSON-RPC 2.0 entry-point.  Accepts a single request object or a batch array.

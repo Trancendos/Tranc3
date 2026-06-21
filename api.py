@@ -910,7 +910,6 @@ from src.routers.ecosystem import router as _ecosystem_router  # noqa: F401
 
 app.include_router(_ecosystem_router)
 
-
 # ── Root endpoint (must be before catch-all frontend route) ───────────────────
 @app.get("/", tags=["system"], summary="Platform root")
 async def root():
