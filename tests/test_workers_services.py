@@ -332,7 +332,8 @@ class TestVaultService:
     def test_openbao_client_unavailable(self, mod):
         """OpenBaoClient returns None gracefully when server is not reachable."""
         client_obj = mod.OpenBaoClient(
-            addr="http://127.0.0.1:19999", token="fake-token"  # nothing listening
+            addr="http://127.0.0.1:19999",
+            token="fake-token",  # nothing listening
         )
         assert client_obj.is_available() is False
         assert client_obj.get_secret("any/path") is None

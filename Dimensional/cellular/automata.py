@@ -117,8 +117,7 @@ class ServiceHealthCA:
                 continue
             # Count failing neighbours
             failing = sum(
-                1 for n in cell.neighbours
-                if n in self.cells and self.cells[n].health < 0.5
+                1 for n in cell.neighbours if n in self.cells and self.cells[n].health < 0.5
             )
             if failing >= 2:
                 at_risk.append(name)

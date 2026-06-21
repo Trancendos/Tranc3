@@ -52,15 +52,17 @@ def _ensure_phase4_nodes_loaded() -> None:
             KnowledgeGraphNode,
         )
 
-        _PHASE4_NODE_REGISTRY.update({
-            "NEURAL_MESH": NeuralMeshNode,
-            "COLLECTIVE_MEMORY": CollectiveMemoryNode,
-            "META_LEARN": MetaLearnNode,
-            "ATTENTION_ROUTE": AttentionRouteNode,
-            "CAUSAL_REASON": CausalReasonNode,
-            "KNOWLEDGE_GRAPH": KnowledgeGraphNode,
-            "FORESIGHT": ForesightNode,
-        })
+        _PHASE4_NODE_REGISTRY.update(
+            {
+                "NEURAL_MESH": NeuralMeshNode,
+                "COLLECTIVE_MEMORY": CollectiveMemoryNode,
+                "META_LEARN": MetaLearnNode,
+                "ATTENTION_ROUTE": AttentionRouteNode,
+                "CAUSAL_REASON": CausalReasonNode,
+                "KNOWLEDGE_GRAPH": KnowledgeGraphNode,
+                "FORESIGHT": ForesightNode,
+            }
+        )
         logger.info("Phase 4 workflow nodes loaded")
     except Exception as exc:
         logger.warning("Phase 4 workflow nodes unavailable: %s", exc)
@@ -73,13 +75,15 @@ def _ensure_phase4_nodes_loaded() -> None:
             AgentRunStepNode,
         )
 
-        _PHASE4_NODE_REGISTRY.update({
-            "AGENT_CREATE": AgentCreateNode,
-            "AGENT_RUN_STEP": AgentRunStepNode,
-            "AGENT_GOAL": AgentGoalNode,
-            "AGENT_REFLECT": AgentReflectNode,
-            "AGENT_DECOMPOSE": AgentDecomposeNode,
-        })
+        _PHASE4_NODE_REGISTRY.update(
+            {
+                "AGENT_CREATE": AgentCreateNode,
+                "AGENT_RUN_STEP": AgentRunStepNode,
+                "AGENT_GOAL": AgentGoalNode,
+                "AGENT_REFLECT": AgentReflectNode,
+                "AGENT_DECOMPOSE": AgentDecomposeNode,
+            }
+        )
         logger.info("Phase 5 workflow nodes loaded")
     except Exception as exc:
         logger.warning("Phase 5 workflow nodes unavailable: %s", exc)

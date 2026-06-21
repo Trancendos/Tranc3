@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 # Billing Tiers
 # ---------------------------------------------------------------------------
 
+
 class BillingTier(str, Enum):
     FREE = "free"
     PRO = "pro"
@@ -69,8 +70,11 @@ TIERS: Dict[str, Dict[str, Any]] = {
         "req_per_hour": 1_000,
         "req_per_day": 10_000,
         "personalities": [
-            "tranc3-base", "tranc3-creative", "tranc3-analytical",
-            "tranc3-empathetic", "tranc3-multilingual",
+            "tranc3-base",
+            "tranc3-creative",
+            "tranc3-analytical",
+            "tranc3-empathetic",
+            "tranc3-multilingual",
         ],
         "languages": "all",
         "quantum": True,
@@ -123,13 +127,17 @@ def check_rate_limit(
     limits = TIERS.get(tier_key, TIERS["free"])
     hourly = limits.get("req_per_hour", 100)
     if hourly != -1 and request_count > hourly:
-        return False, f"Hourly rate limit exceeded ({request_count} > {hourly} req/hr for {tier_key})"
+        return (
+            False,
+            f"Hourly rate limit exceeded ({request_count} > {hourly} req/hr for {tier_key})",
+        )
     return True, None
 
 
 # ---------------------------------------------------------------------------
 # Usage Tracking
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class UsageRecord:
@@ -190,7 +198,9 @@ class TierEnforcer:
             "tier": tier,
             "requests_this_hour": record.requests_this_hour,
             "hourly_limit": hourly_limit,
-            "remaining_hour": max(0, hourly_limit - record.requests_this_hour) if hourly_limit != -1 else -1,
+            "remaining_hour": max(0, hourly_limit - record.requests_this_hour)
+            if hourly_limit != -1
+            else -1,
         }
 
     def can_use_feature(self, tier: str, feature: str) -> bool:
@@ -213,6 +223,7 @@ class TierEnforcer:
 # Stripe Manager
 # ---------------------------------------------------------------------------
 
+
 class StripeManager:
     """Stripe subscription management. Requires real price IDs from Stripe Dashboard."""
 
@@ -224,6 +235,7 @@ class StripeManager:
         if self._enabled:
             try:
                 import stripe
+
                 stripe.api_key = self._key
                 self._stripe = stripe
                 logger.info("Stripe integration enabled")
@@ -246,7 +258,8 @@ class StripeManager:
         if not price_id:
             logger.error(
                 "No Stripe price ID for tier '%s' — set STRIPE_%s_PRICE_ID in .env",
-                tier, tier.upper()
+                tier,
+                tier.upper(),
             )
             return None
         try:
@@ -269,9 +282,7 @@ class StripeManager:
         if not self._enabled or not self._webhook_secret:
             return None
         try:
-            event = self._stripe.Webhook.construct_event(
-                payload, sig_header, self._webhook_secret
-            )
+            event = self._stripe.Webhook.construct_event(payload, sig_header, self._webhook_secret)
             return {"type": event["type"], "data": event["data"]["object"]}
         except Exception as exc:
             logger.error("Stripe webhook error: %s", sanitize_for_log(exc))
@@ -323,6 +334,7 @@ class StripeManager:
 # Lemon Squeezy Manager (fallback billing provider)
 # ---------------------------------------------------------------------------
 
+
 class LemonSqueezyManager:
     """
     Lemon Squeezy — 0-cost integration (5% + 50¢ per transaction).
@@ -352,21 +364,24 @@ class LemonSqueezyManager:
         try:
             import json as _json
             import urllib.request
-            body = _json.dumps({
-                "data": {
-                    "type": "checkouts",
-                    "attributes": {
-                        "checkout_data": {
-                            "email": user_email,
-                            "custom": custom_data,
-                        }
-                    },
-                    "relationships": {
-                        "store": {"data": {"type": "stores", "id": self._store_id}},
-                        "variant": {"data": {"type": "variants", "id": variant_id}},
-                    },
+
+            body = _json.dumps(
+                {
+                    "data": {
+                        "type": "checkouts",
+                        "attributes": {
+                            "checkout_data": {
+                                "email": user_email,
+                                "custom": custom_data,
+                            }
+                        },
+                        "relationships": {
+                            "store": {"data": {"type": "stores", "id": self._store_id}},
+                            "variant": {"data": {"type": "variants", "id": variant_id}},
+                        },
+                    }
                 }
-            }).encode()
+            ).encode()
             req = urllib.request.Request(
                 f"{self.BASE_URL}/checkouts",
                 data=body,
@@ -388,6 +403,7 @@ class LemonSqueezyManager:
 # ---------------------------------------------------------------------------
 # Billing Router — tries providers in order
 # ---------------------------------------------------------------------------
+
 
 class BillingRouter:
     """
@@ -440,6 +456,7 @@ class BillingRouter:
 # Passive Revenue Engine
 # ---------------------------------------------------------------------------
 
+
 class PassiveRevenueEngine:
     """
     Multi-stream passive revenue tracking and strategy engine.
@@ -462,14 +479,26 @@ class PassiveRevenueEngine:
     STREAMS = {
         "saas_subscriptions": {"description": "Recurring monthly subscriptions", "currency": "GBP"},
         "api_metering": {"description": "Pay-per-request above free tier", "currency": "GBP"},
-        "personality_packs": {"description": "One-time personality pack purchases", "currency": "GBP"},
+        "personality_packs": {
+            "description": "One-time personality pack purchases",
+            "currency": "GBP",
+        },
         "white_label_licenses": {"description": "B2B white-label licensing", "currency": "GBP"},
-        "affiliate_commissions": {"description": "Referral and affiliate income", "currency": "GBP"},
+        "affiliate_commissions": {
+            "description": "Referral and affiliate income",
+            "currency": "GBP",
+        },
         "github_sponsors": {"description": "GitHub Sponsors open-source income", "currency": "GBP"},
         "kofi_tips": {"description": "Ko-fi community tips", "currency": "GBP"},
-        "marketplace_fees": {"description": "Arcadian Exchange 2.5% transaction fee", "currency": "GBP"},
+        "marketplace_fees": {
+            "description": "Arcadian Exchange 2.5% transaction fee",
+            "currency": "GBP",
+        },
         "data_insights": {"description": "Anonymised aggregate data reports", "currency": "GBP"},
-        "certification_fees": {"description": "Developer certification programme", "currency": "GBP"},
+        "certification_fees": {
+            "description": "Developer certification programme",
+            "currency": "GBP",
+        },
         "ad_revenue": {"description": "Opt-in contextual advertising", "currency": "GBP"},
         "consulting": {"description": "Platform consulting and integration", "currency": "GBP"},
     }
@@ -483,12 +512,14 @@ class PassiveRevenueEngine:
             logger.warning("Unknown revenue stream: %s", sanitize_for_log(stream))
             return
         self._revenue[stream] += amount_gbp
-        self._transactions.append({
-            "stream": stream,
-            "amount_gbp": amount_gbp,
-            "ts": time.time(),
-            "metadata": metadata or {},
-        })
+        self._transactions.append(
+            {
+                "stream": stream,
+                "amount_gbp": amount_gbp,
+                "ts": time.time(),
+                "metadata": metadata or {},
+            }
+        )
         logger.info("Revenue: %s +£%.2f (total: £%.2f)", stream, amount_gbp, self._revenue[stream])
 
     def marketplace_fee(self, transaction_amount_gbp: float) -> float:
@@ -512,23 +543,36 @@ class PassiveRevenueEngine:
         """Return actionable zero-cost revenue growth recommendations."""
         recs = []
         if self._revenue["github_sponsors"] == 0:
-            recs.append("Set up GitHub Sponsors (0% fee) at github.com/sponsors — passive income from OSS community")
+            recs.append(
+                "Set up GitHub Sponsors (0% fee) at github.com/sponsors — passive income from OSS community"
+            )
         if self._revenue["kofi_tips"] == 0:
-            recs.append("Set up Ko-fi (0% on free plan) at ko-fi.com — low-friction one-time supporter income")
+            recs.append(
+                "Set up Ko-fi (0% on free plan) at ko-fi.com — low-friction one-time supporter income"
+            )
         if self._revenue["affiliate_commissions"] == 0:
-            recs.append("Join Anthropic / OpenRouter / Groq affiliate programmes — earn per referred API user")
+            recs.append(
+                "Join Anthropic / OpenRouter / Groq affiliate programmes — earn per referred API user"
+            )
         if self._revenue["ad_revenue"] == 0:
-            recs.append("Apply to Carbon Ads (ethical, dev-focused ads — $30-150 CPM) at carbonads.com")
+            recs.append(
+                "Apply to Carbon Ads (ethical, dev-focused ads — $30-150 CPM) at carbonads.com"
+            )
         if self._revenue["certification_fees"] == 0:
-            recs.append("Launch Trancendos Developer Certification — £49/exam, 0-cost to deliver digitally")
+            recs.append(
+                "Launch Trancendos Developer Certification — £49/exam, 0-cost to deliver digitally"
+            )
         if self._revenue["marketplace_fees"] < 100:
-            recs.append("Promote Arcadian Exchange — 2.5% fee on every transaction compounds quickly")
+            recs.append(
+                "Promote Arcadian Exchange — 2.5% fee on every transaction compounds quickly"
+            )
         return recs
 
 
 # ---------------------------------------------------------------------------
 # Tax Monitor
 # ---------------------------------------------------------------------------
+
 
 class TaxMonitor:
     """
@@ -549,12 +593,33 @@ class TaxMonitor:
     EU_DEFAULT_VAT_RATE = 0.20  # varies; use Stripe Tax for per-country rates
 
     EU_VAT_RATES = {
-        "DE": 0.19, "FR": 0.20, "IT": 0.22, "ES": 0.21, "NL": 0.21,
-        "BE": 0.21, "AT": 0.20, "PL": 0.23, "SE": 0.25, "DK": 0.25,
-        "FI": 0.24, "IE": 0.23, "PT": 0.23, "RO": 0.19, "HU": 0.27,
-        "CZ": 0.21, "SK": 0.20, "BG": 0.20, "HR": 0.25, "LT": 0.21,
-        "LV": 0.21, "EE": 0.22, "SI": 0.22, "GR": 0.24, "LU": 0.17,
-        "MT": 0.18, "CY": 0.19,
+        "DE": 0.19,
+        "FR": 0.20,
+        "IT": 0.22,
+        "ES": 0.21,
+        "NL": 0.21,
+        "BE": 0.21,
+        "AT": 0.20,
+        "PL": 0.23,
+        "SE": 0.25,
+        "DK": 0.25,
+        "FI": 0.24,
+        "IE": 0.23,
+        "PT": 0.23,
+        "RO": 0.19,
+        "HU": 0.27,
+        "CZ": 0.21,
+        "SK": 0.20,
+        "BG": 0.20,
+        "HR": 0.25,
+        "LT": 0.21,
+        "LV": 0.21,
+        "EE": 0.22,
+        "SI": 0.22,
+        "GR": 0.24,
+        "LU": 0.17,
+        "MT": 0.18,
+        "CY": 0.19,
     }
 
     def __init__(self):
@@ -576,7 +641,9 @@ class TaxMonitor:
             vat_amount = 0.0
             vat_treatment = "reverse_charge"
         elif country_code == "GB":
-            vat_rate = self.UK_VAT_RATE if self._annual_revenue_gbp >= self.UK_VAT_THRESHOLD_GBP else 0.0
+            vat_rate = (
+                self.UK_VAT_RATE if self._annual_revenue_gbp >= self.UK_VAT_THRESHOLD_GBP else 0.0
+            )
             vat_amount = round(amount_gbp * vat_rate, 2)
             vat_treatment = "uk_vat" if vat_rate > 0 else "below_threshold"
         elif country_code in self.EU_VAT_RATES:
@@ -603,6 +670,7 @@ class TaxMonitor:
         try:
             import urllib.request
             import xml.etree.ElementTree as ET
+
             soap = (
                 '<?xml version="1.0" encoding="UTF-8"?>'
                 '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"'
@@ -620,7 +688,9 @@ class TaxMonitor:
             )
             with urllib.request.urlopen(req, timeout=5) as resp:
                 tree = ET.fromstring(resp.read())
-                valid_el = tree.find(".//{urn:ec.europa.eu:taxud:vies:services:checkVat:types}valid")
+                valid_el = tree.find(
+                    ".//{urn:ec.europa.eu:taxud:vies:services:checkVat:types}valid"
+                )
                 return valid_el is not None and valid_el.text == "true"
         except Exception:
             return False  # fail open — Stripe Tax handles validation in production
@@ -632,7 +702,9 @@ class TaxMonitor:
             "annual_revenue_gbp": round(self._annual_revenue_gbp, 2),
             "uk_vat_registration_required": uk_threshold_reached,
             "uk_vat_threshold_gbp": self.UK_VAT_THRESHOLD_GBP,
-            "uk_vat_threshold_remaining_gbp": max(0, round(self.UK_VAT_THRESHOLD_GBP - self._annual_revenue_gbp, 2)),
+            "uk_vat_threshold_remaining_gbp": max(
+                0, round(self.UK_VAT_THRESHOLD_GBP - self._annual_revenue_gbp, 2)
+            ),
             "vat_collected_by_country": {k: round(v, 2) for k, v in self._vat_collected.items()},
             "total_vat_collected_gbp": round(total_vat, 2),
             "eu_oss_required": any(c != "GB" for c in self._vat_collected),

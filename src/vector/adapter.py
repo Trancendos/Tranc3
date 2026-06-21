@@ -477,22 +477,30 @@ class _PgvectorBackend:
 
         tbl = self._table
         if metadata_filter:
-            rows = self._engine.connect().execute(
-                text(
-                    f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
-                    f"FROM {tbl} WHERE payload @> :filter::jsonb "
-                    "ORDER BY score DESC LIMIT :k"
-                ),
-                {"vec": str(vector), "filter": json.dumps(metadata_filter), "k": top_k},
-            ).fetchall()
+            rows = (
+                self._engine.connect()
+                .execute(
+                    text(
+                        f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
+                        f"FROM {tbl} WHERE payload @> :filter::jsonb "
+                        "ORDER BY score DESC LIMIT :k"
+                    ),
+                    {"vec": str(vector), "filter": json.dumps(metadata_filter), "k": top_k},
+                )
+                .fetchall()
+            )
         else:
-            rows = self._engine.connect().execute(
-                text(
-                    f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
-                    f"FROM {tbl} ORDER BY score DESC LIMIT :k"
-                ),
-                {"vec": str(vector), "k": top_k},
-            ).fetchall()
+            rows = (
+                self._engine.connect()
+                .execute(
+                    text(
+                        f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
+                        f"FROM {tbl} ORDER BY score DESC LIMIT :k"
+                    ),
+                    {"vec": str(vector), "k": top_k},
+                )
+                .fetchall()
+            )
         return [SearchResult(id=r[0], score=float(r[2]), payload=r[1] or {}) for r in rows]
 
     def delete(self, doc_id: str) -> None:
@@ -522,9 +530,12 @@ class _PgvectorBackend:
         from sqlalchemy import text  # type: ignore
 
         with self._engine.connect() as conn:
-            return conn.execute(
-                text(f"SELECT COUNT(*) FROM {self._table}")  # noqa: S608
-            ).scalar() or 0
+            return (
+                conn.execute(
+                    text(f"SELECT COUNT(*) FROM {self._table}")  # noqa: S608
+                ).scalar()
+                or 0
+            )
 
     def save(self, path: Path) -> None:
         pass  # pgvector persists automatically

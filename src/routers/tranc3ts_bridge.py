@@ -24,6 +24,7 @@ router = APIRouter(prefix="/tranc3ts", tags=["tranc3ts-bridge"])
 # Request / Response models (mirror InferenceRequest/Response from tranc3-ts)
 # ---------------------------------------------------------------------------
 
+
 class TSInferenceRequest(BaseModel):
     id: str
     type: str = "CHAT"  # CHAT | COMPLETION | EMBEDDING | CLASSIFICATION | SUMMARIZATION
@@ -64,6 +65,7 @@ class TSCommandAck(BaseModel):
 # Inference endpoint
 # ---------------------------------------------------------------------------
 
+
 @router.post("/infer", response_model=TSInferenceResponse)
 async def ts_infer(req: TSInferenceRequest):
     """
@@ -102,6 +104,7 @@ async def _dispatch_inference(req: TSInferenceRequest):
     # Try AI Gateway (zero-cost rotation chain)
     try:
         from src.ai_gateway.provider_rotation import get_available_provider
+
         provider = get_available_provider()
         if provider:
             provider.record_request()
@@ -112,6 +115,7 @@ async def _dispatch_inference(req: TSInferenceRequest):
     # Fallback: Tranc3Engine bootstrap mode
     try:
         from src.core.tranc3_inference import Tranc3Engine
+
         engine = Tranc3Engine.get_instance()
         result = engine.generate(prompt)
         return result, "tranc3-bootstrap", 0
@@ -126,6 +130,7 @@ async def _dispatch_inference(req: TSInferenceRequest):
 # Health signal ingestion (TS hubs report health to t2ance Prime Intelligence)
 # ---------------------------------------------------------------------------
 
+
 @router.post("/health/signal")
 async def ts_health_signal(signal: TSHealthSignal):
     """
@@ -134,6 +139,7 @@ async def ts_health_signal(signal: TSHealthSignal):
     """
     try:
         from t2ance.prime_intelligence import EntityHealthSignal, get_intelligence_hub
+
         hs = EntityHealthSignal(
             entity_id=signal.hub_id or signal.entity_id,
             latency_ms=signal.latency_ms,
@@ -152,21 +158,54 @@ async def ts_health_signal(signal: TSHealthSignal):
 # Status / registry
 # ---------------------------------------------------------------------------
 
+
 @router.get("/status")
 async def ts_bridge_status():
     """tranc3-ts bridge status — lists expected TypeScript hub IDs and inference availability."""
     _hub_ids = [
-        "PID-SPARK", "PID-DIGITALGRID", "PID-VOID", "PID-WORKSHOP",
-        "PID-INFINITY", "PID-LIGHTHOUSE", "PID-HIVE", "PID-ROYALBANK",
-        "PID-ARCADIANEXCHANGE", "PID-OBSERVATORY", "PID-LUMINOUS", "PID-TURINGSHUB",
-        "PID-ARCADIA", "PID-NEXUS", "PID-TOWNHALL", "PID-LIBRARY",
-        "PID-ACADEMY", "PID-DOCUTARI", "PID-BASEMENT", "PID-STUDIO",
-        "PID-SASHASPHOTOSTUDIO", "PID-TRANCEFLOW", "PID-TATEKING", "PID-FABULOUSA",
-        "PID-IMAGINARIUM", "PID-LAB", "PID-CHAOSPARTY", "PID-ARTIFACTORY",
-        "PID-APIMARKETPLACE", "PID-CRYPTEX", "PID-ICEBOX", "PID-WARPTUNNEL",
-        "PID-WARPRADIO", "PID-DUTCHY", "PID-CITADEL", "PID-THINKTANK",
-        "PID-CHRONOSSPHERE", "PID-DEVOCITY", "PID-TRANQUILITY", "PID-IMIND",
-        "PID-TAIMRA", "PID-VRAR3D", "PID-RESONATE",
+        "PID-SPARK",
+        "PID-DIGITALGRID",
+        "PID-VOID",
+        "PID-WORKSHOP",
+        "PID-INFINITY",
+        "PID-LIGHTHOUSE",
+        "PID-HIVE",
+        "PID-ROYALBANK",
+        "PID-ARCADIANEXCHANGE",
+        "PID-OBSERVATORY",
+        "PID-LUMINOUS",
+        "PID-TURINGSHUB",
+        "PID-ARCADIA",
+        "PID-NEXUS",
+        "PID-TOWNHALL",
+        "PID-LIBRARY",
+        "PID-ACADEMY",
+        "PID-DOCUTARI",
+        "PID-BASEMENT",
+        "PID-STUDIO",
+        "PID-SASHASPHOTOSTUDIO",
+        "PID-TRANCEFLOW",
+        "PID-TATEKING",
+        "PID-FABULOUSA",
+        "PID-IMAGINARIUM",
+        "PID-LAB",
+        "PID-CHAOSPARTY",
+        "PID-ARTIFACTORY",
+        "PID-APIMARKETPLACE",
+        "PID-CRYPTEX",
+        "PID-ICEBOX",
+        "PID-WARPTUNNEL",
+        "PID-WARPRADIO",
+        "PID-DUTCHY",
+        "PID-CITADEL",
+        "PID-THINKTANK",
+        "PID-CHRONOSSPHERE",
+        "PID-DEVOCITY",
+        "PID-TRANQUILITY",
+        "PID-IMIND",
+        "PID-TAIMRA",
+        "PID-VRAR3D",
+        "PID-RESONATE",
     ]
     inference_ok = _probe_inference()
     return {
@@ -182,11 +221,13 @@ async def ts_bridge_status():
 def _probe_inference() -> bool:
     try:
         from src.ai_gateway.provider_rotation import get_available_provider  # noqa: F401
+
         return True
     except Exception:
         pass
     try:
         from src.core.tranc3_inference import Tranc3Engine  # noqa: F401
+
         return True
     except Exception:
         return False

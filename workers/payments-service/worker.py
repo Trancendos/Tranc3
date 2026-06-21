@@ -124,6 +124,7 @@ async def lifespan(app: FastAPI):
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         from src.observability.otel import init_otel
+
         init_otel(service_name="tranc3.royal-bank")
         FastAPIInstrumentor.instrument_app(app)
     except Exception:
@@ -206,7 +207,14 @@ async def create_account(req: CreateAccountRequest):
             if req.initial_balance > 0:
                 cur.execute(
                     "INSERT INTO transactions (id, to_account, amount, type, description, created_at) VALUES (?,?,?,?,?,?)",
-                    (str(uuid.uuid4()), acct_id, req.initial_balance, "deposit", "Initial deposit", now),
+                    (
+                        str(uuid.uuid4()),
+                        acct_id,
+                        req.initial_balance,
+                        "deposit",
+                        "Initial deposit",
+                        now,
+                    ),
                 )
     finally:
         conn.close()
@@ -266,20 +274,32 @@ async def transfer(req: TransferRequest):
             raise HTTPException(400, "Destination account is not active")
         if from_row["balance"] < req.amount:
             conn.rollback()
-            raise HTTPException(409, f"Insufficient funds: balance {from_row['balance']:.2f}, requested {req.amount:.2f}")
+            raise HTTPException(
+                409,
+                f"Insufficient funds: balance {from_row['balance']:.2f}, requested {req.amount:.2f}",
+            )
 
         now = datetime.now(timezone.utc).isoformat()
         tx_id = str(uuid.uuid4())
 
         conn.execute(
-            "UPDATE accounts SET balance = balance - ? WHERE id=?", (req.amount, req.from_account_id)
+            "UPDATE accounts SET balance = balance - ? WHERE id=?",
+            (req.amount, req.from_account_id),
         )
         conn.execute(
             "UPDATE accounts SET balance = balance + ? WHERE id=?", (req.amount, req.to_account_id)
         )
         conn.execute(
             "INSERT INTO transactions (id, from_account, to_account, amount, type, description, created_at) VALUES (?,?,?,?,?,?,?)",
-            (tx_id, req.from_account_id, req.to_account_id, req.amount, "transfer", req.description, now),
+            (
+                tx_id,
+                req.from_account_id,
+                req.to_account_id,
+                req.amount,
+                "transfer",
+                req.description,
+                now,
+            ),
         )
         conn.commit()
 
@@ -311,7 +331,9 @@ async def deposit(req: DepositRequest):
     """Deposit funds into an account."""
     conn = _get_conn()
     try:
-        row = conn.execute("SELECT id, status FROM accounts WHERE id=?", (req.account_id,)).fetchone()
+        row = conn.execute(
+            "SELECT id, status FROM accounts WHERE id=?", (req.account_id,)
+        ).fetchone()
         if not row:
             raise HTTPException(404, "Account not found")
         if row["status"] != "active":
@@ -320,13 +342,24 @@ async def deposit(req: DepositRequest):
         now = datetime.now(timezone.utc).isoformat()
         tx_id = str(uuid.uuid4())
         with _cursor(conn) as cur:
-            cur.execute("UPDATE accounts SET balance = balance + ? WHERE id=?", (req.amount, req.account_id))
+            cur.execute(
+                "UPDATE accounts SET balance = balance + ? WHERE id=?", (req.amount, req.account_id)
+            )
             cur.execute(
                 "INSERT INTO transactions (id, to_account, amount, type, description, created_at) VALUES (?,?,?,?,?,?)",
                 (tx_id, req.account_id, req.amount, "deposit", req.description, now),
             )
-        new_balance = conn.execute("SELECT balance FROM accounts WHERE id=?", (req.account_id,)).fetchone()[0]
-        return {"ok": True, "transaction_id": tx_id, "account_id": req.account_id, "amount": req.amount, "balance_after": new_balance, "created_at": now}
+        new_balance = conn.execute(
+            "SELECT balance FROM accounts WHERE id=?", (req.account_id,)
+        ).fetchone()[0]
+        return {
+            "ok": True,
+            "transaction_id": tx_id,
+            "account_id": req.account_id,
+            "amount": req.amount,
+            "balance_after": new_balance,
+            "created_at": now,
+        }
     finally:
         conn.close()
 
@@ -369,16 +402,24 @@ async def ledger_summary():
     """Platform-wide AUM, transaction count, and daily volume."""
     conn = _get_conn()
     try:
-        aum = conn.execute("SELECT SUM(balance) FROM accounts WHERE status='active'").fetchone()[0] or 0
-        total_accounts = conn.execute("SELECT COUNT(*) FROM accounts WHERE status='active'").fetchone()[0]
+        aum = (
+            conn.execute("SELECT SUM(balance) FROM accounts WHERE status='active'").fetchone()[0]
+            or 0
+        )
+        total_accounts = conn.execute(
+            "SELECT COUNT(*) FROM accounts WHERE status='active'"
+        ).fetchone()[0]
         total_txns = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
 
         # Daily volume (UTC today)
         today = datetime.now(timezone.utc).date().isoformat()
-        daily_vol = conn.execute(
-            "SELECT COALESCE(SUM(amount),0) FROM transactions WHERE created_at >= ? AND type IN ('transfer','deposit')",
-            (today,),
-        ).fetchone()[0] or 0
+        daily_vol = (
+            conn.execute(
+                "SELECT COALESCE(SUM(amount),0) FROM transactions WHERE created_at >= ? AND type IN ('transfer','deposit')",
+                (today,),
+            ).fetchone()[0]
+            or 0
+        )
 
         by_currency = conn.execute(
             "SELECT currency, COUNT(*) as accounts, SUM(balance) as total FROM accounts WHERE status='active' GROUP BY currency"
@@ -400,4 +441,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

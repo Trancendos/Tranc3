@@ -8,6 +8,7 @@ Applied here: the reservoir learns patterns in AI provider request sequences,
 predicting which provider will succeed before the request is made.
 This is a real ML technique used in production at Nokia Bell Labs etc.
 """
+
 from .esn import EchoStateNetwork
 
 __all__ = ["EchoStateNetwork"]

@@ -47,12 +47,14 @@ def chat(
     if not is_available():
         raise RuntimeError("Together AI: TOGETHER_API_KEY required")
     model = model or _DEFAULT_MODEL
-    payload = json.dumps({
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }).encode()
+    payload = json.dumps(
+        {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+    ).encode()
     req = urllib.request.Request(
         f"{_BASE}/chat/completions",
         data=payload,
@@ -73,5 +75,6 @@ async def achat(
     **kwargs: Any,
 ) -> str:
     import asyncio
+
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, lambda: chat(messages, model, **kwargs))

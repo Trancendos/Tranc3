@@ -458,7 +458,9 @@ async def create_secret(body: SecretCreate):
     encrypted = _encrypt_secret(body.value)
     # Mirror to OpenBao when available (primary backend)
     if _openbao_active and _openbao is not None:
-        _openbao.put_secret(f"tranc3/{body.key}", {"value": body.value, "sid": sid, "ttl": body.ttl})
+        _openbao.put_secret(
+            f"tranc3/{body.key}", {"value": body.value, "sid": sid, "ttl": body.ttl}
+        )
     try:
         conn.execute(
             "INSERT INTO secrets (id, key, encrypted_value, tags, ttl, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",

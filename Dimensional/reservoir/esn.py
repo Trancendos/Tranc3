@@ -120,18 +120,25 @@ class EchoStateNetwork:
         Y = self._Y_buf
         n = len(X)
         N = self.N
-        # Compute X^T X  (N × N)
-        XtX = [[sum(X[k][i] * X[k][j] for k in range(n)) for j in range(N)] for i in range(N)]
-        # Add ridge
-        for i in range(N):
-            XtX[i][i] += self.ridge
-        # Solve via Cholesky-free: use pseudo-inverse approximation (diagonal dominance)
-        # For production use numpy; this is a dependency-free fallback
-        XtX_inv_diag = [1.0 / max(XtX[i][i], 1e-10) for i in range(N)]
-        # W_out[d] = sum_k Y[k][d] * X[k][i] * inv_diag[i]
-        for d in range(self.output_dim):
+        try:
+            import numpy as np
+
+            X_np = np.array(X)  # (n, N)
+            Y_np = np.array(Y)  # (n, output_dim)
+            XtX = X_np.T @ X_np + self.ridge * np.eye(N)
+            XtY = X_np.T @ Y_np
+            W_out_T = np.linalg.solve(XtX, XtY)  # (N, output_dim)
+            self.W_out = W_out_T.T.tolist()
+        except ImportError:
+            # Pure-Python fallback: diagonal approximation (less accurate for correlated states)
+            logger.warning("numpy unavailable — ESN using diagonal ridge approximation")
+            XtX = [[sum(X[k][i] * X[k][j] for k in range(n)) for j in range(N)] for i in range(N)]
             for i in range(N):
-                self.W_out[d][i] = sum(Y[k][d] * X[k][i] for k in range(n)) * XtX_inv_diag[i]
+                XtX[i][i] += self.ridge
+            XtX_inv_diag = [1.0 / max(XtX[i][i], 1e-10) for i in range(N)]
+            for d in range(self.output_dim):
+                for i in range(N):
+                    self.W_out[d][i] = sum(Y[k][d] * X[k][i] for k in range(n)) * XtX_inv_diag[i]
         self._trained = True
         self._X_buf.clear()
         self._Y_buf.clear()

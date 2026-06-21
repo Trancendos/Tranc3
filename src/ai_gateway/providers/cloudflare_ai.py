@@ -52,11 +52,13 @@ def chat(
     if not is_available():
         raise RuntimeError("Cloudflare AI: CF_ACCOUNT_ID and CF_AI_API_TOKEN required")
     model = model or _DEFAULT_MODEL
-    payload = json.dumps({
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-    }).encode()
+    payload = json.dumps(
+        {
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+    ).encode()
     req = urllib.request.Request(
         f"{_BASE_URL}/{model}",
         data=payload,
@@ -82,5 +84,6 @@ async def achat(
     **kwargs: Any,
 ) -> str:
     import asyncio
+
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, lambda: chat(messages, model, **kwargs))

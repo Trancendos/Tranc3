@@ -145,6 +145,7 @@ async def lifespan(app: FastAPI):
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         from src.observability.otel import init_otel
+
         init_otel(service_name="tranc3.the-hive")
         FastAPIInstrumentor.instrument_app(app)
     except Exception:
@@ -225,7 +226,13 @@ async def enqueue(req: EnqueueRequest):
         conn.commit()
     finally:
         conn.close()
-    return {"id": task_id, "queue_name": req.queue_name, "status": "pending", "priority": req.priority, "created_at": now}
+    return {
+        "id": task_id,
+        "queue_name": req.queue_name,
+        "status": "pending",
+        "priority": req.priority,
+        "created_at": now,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -281,9 +288,7 @@ async def complete_task(task_id: str, req: CompleteRequest = CompleteRequest()):
             raise HTTPException(404, "Task not found")
         if row["status"] not in ("processing", "pending"):
             raise HTTPException(409, f"Cannot complete task with status '{row['status']}'")
-        conn.execute(
-            "UPDATE tasks SET status='done', completed_at=? WHERE id=?", (now, task_id)
-        )
+        conn.execute("UPDATE tasks SET status='done', completed_at=? WHERE id=?", (now, task_id))
         conn.commit()
     finally:
         conn.close()
@@ -296,7 +301,9 @@ async def fail_task(task_id: str, req: FailRequest = FailRequest()):
     now = datetime.now(timezone.utc).isoformat()
     conn = _get_conn()
     try:
-        row = conn.execute("SELECT status, retries, max_retries FROM tasks WHERE id=?", (task_id,)).fetchone()
+        row = conn.execute(
+            "SELECT status, retries, max_retries FROM tasks WHERE id=?", (task_id,)
+        ).fetchone()
         if not row:
             raise HTTPException(404, "Task not found")
         if row["status"] not in ("processing",):
@@ -367,4 +374,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

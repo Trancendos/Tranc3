@@ -390,15 +390,23 @@ class ZeroCostRoutingChain:
 
 ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
     "zero_cost_self_hosted_first": ZeroCostRoutingChain(
-        name="Zero-Cost Self-Hosted First (8 providers)",
+        name="Zero-Cost Self-Hosted First (10 providers)",
         description=(
             "Prioritises self-hosted inference — fully unlimited. "
             "llama.cpp → vLLM → Ollama → Groq → Gemini → Cerebras → Cloudflare AI "
             "→ SambaNova → OpenRouter → Offline"
         ),
         providers=[
-            "llamacpp", "vllm", "ollama", "groq", "gemini",
-            "cerebras", "cloudflare_ai", "sambanova", "openrouter", "offline",
+            "llamacpp",
+            "vllm",
+            "ollama",
+            "groq",
+            "gemini",
+            "cerebras",
+            "cloudflare_ai",
+            "sambanova",
+            "openrouter",
+            "offline",
         ],
         models={
             "llamacpp": "local",
@@ -422,8 +430,15 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
             "→ OpenRouter → HuggingFace → Offline"
         ),
         providers=[
-            "ollama", "groq", "gemini", "cerebras",
-            "cloudflare_ai", "sambanova", "openrouter", "huggingface", "offline",
+            "ollama",
+            "groq",
+            "gemini",
+            "cerebras",
+            "cloudflare_ai",
+            "sambanova",
+            "openrouter",
+            "huggingface",
+            "offline",
         ],
         models={
             "ollama": "llama3.2",
@@ -555,9 +570,7 @@ def discover_available_providers() -> Dict[str, bool]:
     available["sambanova"] = bool(os.getenv("SAMBANOVA_API_KEY"))
 
     # Cloudflare Workers AI — 10K neurons/day free, requires CF_ACCOUNT_ID + CF_AI_API_TOKEN
-    available["cloudflare_ai"] = bool(
-        os.getenv("CF_ACCOUNT_ID") and os.getenv("CF_AI_API_TOKEN")
-    )
+    available["cloudflare_ai"] = bool(os.getenv("CF_ACCOUNT_ID") and os.getenv("CF_AI_API_TOKEN"))
 
     # OpenRouter — free models available, requires OPENROUTER_API_KEY
     available["openrouter"] = bool(os.getenv("OPENROUTER_API_KEY"))

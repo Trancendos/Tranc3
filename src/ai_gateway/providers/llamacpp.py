@@ -37,12 +37,15 @@ def chat(
     max_tokens: int = 2048,
     **kwargs: Any,
 ) -> str:
-    payload = json.dumps({
-        "messages": messages,
-        "temperature": temperature,
-        "n_predict": max_tokens,
-        "stream": False,
-    }).encode()
+    payload = json.dumps(
+        {
+            "model": model or _DEFAULT_MODEL,
+            "messages": messages,
+            "temperature": temperature,
+            "n_predict": max_tokens,
+            "stream": False,
+        }
+    ).encode()
     req = urllib.request.Request(
         f"{_BASE}/v1/chat/completions",
         data=payload,
@@ -60,5 +63,6 @@ async def achat(
     **kwargs: Any,
 ) -> str:
     import asyncio
+
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, lambda: chat(messages, model, **kwargs))

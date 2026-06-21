@@ -244,7 +244,7 @@ try:
     from Dimensional.swarm.ant_colony import AntColonyRouter as _AntColonyRouter
 
     _aco_router: Optional[_AntColonyRouter] = _AntColonyRouter(
-        provider_names=[p.name for p in PROVIDERS]
+        providers=[p.name for p in PROVIDERS]
     )
 except Exception:
     _aco_router = None
@@ -262,7 +262,9 @@ def get_available_provider(use_aco: bool = True) -> Optional[ProviderLimit]:
         # All at rotation threshold — try providers at capacity before giving up
         available = [p for p in PROVIDERS if p.is_available()]
         if available:
-            logger.warning("All providers at rotation threshold — using %s at capacity", available[0].name)
+            logger.warning(
+                "All providers at rotation threshold — using %s at capacity", available[0].name
+            )
 
     if not available:
         logger.error("ALL providers have hit hard-stop limits — refusing request")
@@ -270,7 +272,7 @@ def get_available_provider(use_aco: bool = True) -> Optional[ProviderLimit]:
 
     if use_aco and _aco_router is not None:
         available_names = {p.name for p in available}
-        candidates = _aco_router.select(n=len(available))
+        candidates = _aco_router.select(n=len(PROVIDERS))
         # pick first ACO candidate that is actually available
         for name in candidates:
             if name in available_names:
@@ -279,9 +281,7 @@ def get_available_provider(use_aco: bool = True) -> Optional[ProviderLimit]:
     return available[0]
 
 
-def record_provider_outcome(
-    provider_name: str, success: bool, latency_ms: float = 0.0
-) -> None:
+def record_provider_outcome(provider_name: str, success: bool, latency_ms: float = 0.0) -> None:
     """Feed ACO pheromone update after a request completes."""
     if _aco_router is None or provider_name not in PROVIDER_INDEX:
         return

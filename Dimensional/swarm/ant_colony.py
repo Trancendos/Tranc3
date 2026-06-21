@@ -67,6 +67,8 @@ class AntColonyRouter:
         self.beta = beta
         self.rho = rho
         self.Q = Q
+        self._evaporate_every: int = 1  # updated after nodes are built
+        self._call_count: int = 0
 
         # Static heuristics: local > cloud-fast > cloud-slow
         default_heuristics = {
@@ -87,9 +89,11 @@ class AntColonyRouter:
         }
         h = {**default_heuristics, **(heuristics or {})}
         self.nodes: Dict[str, ProviderNode] = {
-            name: ProviderNode(name=name, heuristic=h.get(name, 0.5))
-            for name in providers
+            name: ProviderNode(name=name, heuristic=h.get(name, 0.5)) for name in providers
         }
+        # Evaporate every N calls scaled by provider count to prevent rapid stagnation.
+        # With 10+ providers, evaporating every call would starve non-selected nodes in <50 reqs.
+        self._evaporate_every = max(1, len(self.nodes) // 3)
 
     def select(self, n: int = 3) -> List[str]:
         """Select `n` providers in priority order using ACO probability."""
@@ -104,10 +108,7 @@ class AntColonyRouter:
             return selected
 
     def _probabilities(self, nodes: List[ProviderNode]) -> List[float]:
-        scores = [
-            (n.pheromone ** self.alpha) * (n.heuristic ** self.beta)
-            for n in nodes
-        ]
+        scores = [(n.pheromone**self.alpha) * (n.heuristic**self.beta) for n in nodes]
         total = sum(scores) or 1.0
         return [s / total for s in scores]
 
@@ -131,7 +132,7 @@ class AntColonyRouter:
             # Deposit pheromone: more pheromone for faster responses
             speed_bonus = max(0.1, 1.0 - latency_ms / 30_000.0)
             node.pheromone += self.Q * speed_bonus
-            self._evaporate()
+            self._maybe_evaporate()
 
     def record_failure(self, provider: str) -> None:
         with self._lock:
@@ -139,13 +140,16 @@ class AntColonyRouter:
             if not node:
                 return
             node.failure_count += 1
-            # Failures evaporate extra pheromone
-            node.pheromone = max(0.01, node.pheromone * (1 - self.rho * 3))
-            self._evaporate()
+            # Penalise the failing node only — don't punish the whole colony
+            node.pheromone = max(0.01, node.pheromone * (1 - self.rho * 2))
+            self._maybe_evaporate()
 
-    def _evaporate(self) -> None:
-        for node in self.nodes.values():
-            node.pheromone = max(0.01, node.pheromone * (1 - self.rho))
+    def _maybe_evaporate(self) -> None:
+        """Evaporate pheromones periodically to avoid winner-take-all stagnation."""
+        self._call_count += 1
+        if self._call_count % self._evaporate_every == 0:
+            for node in self.nodes.values():
+                node.pheromone = max(0.01, node.pheromone * (1 - self.rho))
 
     def pheromone_map(self) -> Dict[str, float]:
         with self._lock:

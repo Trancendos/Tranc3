@@ -46,15 +46,13 @@ class PrimeDomainIntelligence:
     when to rotate, escalate, or rebalance Tier 3 entities.
     """
 
-    ERROR_THRESHOLD = 0.15   # 15% error rate triggers degraded status
+    ERROR_THRESHOLD = 0.15  # 15% error rate triggers degraded status
     LATENCY_THRESHOLD = 2000  # 2 s latency triggers degraded status
     PRESSURE_CRITICAL = 0.80  # pressure index above this → escalate to sovereign
 
     def __init__(self, prime: DomainPrime) -> None:
         self.prime = prime
-        self._signals: Dict[str, List[EntityHealthSignal]] = {
-            eid: [] for eid in prime.entities
-        }
+        self._signals: Dict[str, List[EntityHealthSignal]] = {eid: [] for eid in prime.entities}
         self._pressure_balancer = _get_pressure_balancer()
         self._fitness_evaluator = _get_fitness_evaluator()
 
@@ -117,6 +115,7 @@ class PrimeIntelligenceHub:
     def ingest(self, entity_id: str, signal: EntityHealthSignal) -> None:
         """Route a health signal to the correct Prime intelligence layer."""
         from t2ance.prime_registry import get_prime_registry
+
         prime = get_prime_registry().prime_for_entity(entity_id)
         if prime and prime.domain in self._intel:
             self._intel[prime.domain].ingest_signal(signal)
@@ -139,9 +138,11 @@ class PrimeIntelligenceHub:
 # Optional acceleration via gas / genetics
 # ---------------------------------------------------------------------------
 
+
 def _get_pressure_balancer():
     try:
         from Dimensional.gas.pressure import PressureBalancer
+
         return PressureBalancer()
     except Exception:
         return None
@@ -150,6 +151,7 @@ def _get_pressure_balancer():
 def _get_fitness_evaluator():
     try:
         from Dimensional.genetics.fitness import LatencyThroughputFitness
+
         return LatencyThroughputFitness()
     except Exception:
         return None
@@ -166,8 +168,7 @@ def get_intelligence_hub() -> PrimeIntelligenceHub:
     global _hub
     if _hub is None:
         from t2ance.prime_registry import get_prime_registry
+
         registry = get_prime_registry()
-        _hub = PrimeIntelligenceHub(
-            {domain: registry.get_prime(domain) for domain in PrimeDomain}
-        )
+        _hub = PrimeIntelligenceHub({domain: registry.get_prime(domain) for domain in PrimeDomain})
     return _hub

@@ -31,10 +31,18 @@ WORKER_NAME = "arcadian-exchange"
 DB_PATH = Path(__file__).parent / "data" / "exchange.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-RESOURCE_TYPES = frozenset([
-    "api_credits", "compute_time", "storage_gb", "model_weights",
-    "workflow_slots", "agent_hours", "training_tokens", "bandwidth_gb",
-])
+RESOURCE_TYPES = frozenset(
+    [
+        "api_credits",
+        "compute_time",
+        "storage_gb",
+        "model_weights",
+        "workflow_slots",
+        "agent_hours",
+        "training_tokens",
+        "bandwidth_gb",
+    ]
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
@@ -109,6 +117,7 @@ async def lifespan(app: FastAPI):
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         from src.observability.otel import init_otel
+
         init_otel(service_name="tranc3.arcadian-exchange")
         FastAPIInstrumentor.instrument_app(app)
     except Exception:
@@ -171,7 +180,9 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     conn = _get_conn()
-    listing_count = conn.execute("SELECT COUNT(*) FROM listings WHERE status='active'").fetchone()[0]
+    listing_count = conn.execute("SELECT COUNT(*) FROM listings WHERE status='active'").fetchone()[
+        0
+    ]
     order_count = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
     conn.close()
     return {
@@ -210,8 +221,16 @@ async def create_listing(req: CreateListingRequest):
                 INSERT INTO listings (id, seller_id, resource_type, quantity, price_per_unit, currency, description, created_at)
                 VALUES (?,?,?,?,?,?,?,?)
                 """,
-                (listing_id, req.seller_id, req.resource_type, req.quantity,
-                 req.price_per_unit, req.currency, req.description, now),
+                (
+                    listing_id,
+                    req.seller_id,
+                    req.resource_type,
+                    req.quantity,
+                    req.price_per_unit,
+                    req.currency,
+                    req.description,
+                    now,
+                ),
             )
     finally:
         conn.close()
@@ -237,31 +256,33 @@ async def browse_listings(
     offset: int = Query(0, ge=0),
 ):
     """Browse the marketplace with optional filters."""
-    query = "SELECT * FROM listings WHERE status='active'"
+    # Build conditions and params as parallel lists to avoid SQL concatenation.
+    # All user inputs are bound via parameterized placeholders — never interpolated.
+    conditions = ["status='active'"]
     params: list = []
     if resource_type:
-        query += " AND resource_type=?"
+        conditions.append("resource_type=?")
         params.append(resource_type)
     if min_price is not None:
-        query += " AND price_per_unit >= ?"
+        conditions.append("price_per_unit >= ?")
         params.append(min_price)
     if max_price is not None:
-        query += " AND price_per_unit <= ?"
+        conditions.append("price_per_unit <= ?")
         params.append(max_price)
     if seller_id:
-        query += " AND seller_id=?"
+        conditions.append("seller_id=?")
         params.append(seller_id)
-    query += " ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
+
+    where_clause = " AND ".join(conditions)
+    listing_sql = (
+        f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608
+    )
+    count_sql = f"SELECT COUNT(*) FROM listings WHERE {where_clause}"  # noqa: S608
 
     conn = _get_conn()
     try:
-        rows = conn.execute(query, params).fetchall()
-        total = conn.execute(
-            "SELECT COUNT(*) FROM listings WHERE status='active'"
-            + (" AND resource_type=?" if resource_type else ""),
-            ([resource_type] if resource_type else []),
-        ).fetchone()[0]
+        rows = conn.execute(listing_sql, [*params, limit, offset]).fetchall()
+        total = conn.execute(count_sql, params).fetchone()[0]
         return {"total": total, "listings": [dict(r) for r in rows]}
     finally:
         conn.close()
@@ -370,9 +391,9 @@ async def exchange_stats():
         total_active = conn.execute(
             "SELECT COUNT(*) FROM listings WHERE status='active'"
         ).fetchone()[0]
-        total_volume = conn.execute(
-            "SELECT COALESCE(SUM(total_price),0) FROM orders"
-        ).fetchone()[0] or 0
+        total_volume = (
+            conn.execute("SELECT COALESCE(SUM(total_price),0) FROM orders").fetchone()[0] or 0
+        )
         total_orders = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
 
         most_traded = conn.execute(
@@ -401,4 +422,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

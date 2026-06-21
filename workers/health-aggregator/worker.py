@@ -606,11 +606,11 @@ async def cascade_predict() -> Dict[str, Any]:
             health = {"healthy": 1.0, "degraded": 0.5}.get(status, 0.0)
             ca.update_health(name, health)
 
-        # Run 2 ticks to predict near-future state
+        # Predict at_risk BEFORE each tick so labels align with actual horizon
+        at_risk_t1 = ca.at_risk()  # risk at t+1 given current state
         state_t1 = ca.tick()
-        at_risk_t1 = ca.at_risk()
+        at_risk_t2 = ca.at_risk()  # risk at t+2 given state after one tick
         state_t2 = ca.tick()
-        at_risk_t2 = ca.at_risk()
 
         return {
             "method": "cellular_automaton",
@@ -623,7 +623,7 @@ async def cascade_predict() -> Dict[str, Any]:
         }
     except Exception as exc:
         logger.warning("CA cascade prediction unavailable: %s", exc)
-        return {"error": str(exc), "method": "cellular_automaton"}
+        return {"error": "cascade prediction unavailable", "method": "cellular_automaton"}
 
 
 @app.get("/predict", summary="Degradation forecast: at-risk services")
