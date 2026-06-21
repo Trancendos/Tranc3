@@ -380,12 +380,16 @@ async def store_secret(request: Request, authorization: str | None = Header(None
     encrypted = encrypt_secret(plaintext, MASTER_KEY_SEED)
 
     # Store payload in R2-like file storage
-    safe_uid = _safe_path_component(user_id, "user_id")
-    safe_sid = _safe_path_component(secret_id, "secret_id")
-    r2_key = f"secrets/{safe_uid}/{safe_sid}"  # codeql[py/path-injection]
-    r2_path = R2_DIR / safe_uid / safe_sid  # codeql[py/path-injection]
-    r2_path.mkdir(parents=True, exist_ok=True)  # codeql[py/path-injection]
-    with open(r2_path / "payload.json", "w") as f:  # codeql[py/path-injection]
+    # _safe_path_component raises on path-traversal; Path(...).name re-applies
+    # the basename sanitizer inline so CodeQL's taint analysis sees it cleared.
+    _safe_path_component(user_id, "user_id")
+    _safe_path_component(secret_id, "secret_id")
+    safe_uid = Path(user_id).name
+    safe_sid = Path(secret_id).name
+    r2_key = f"secrets/{safe_uid}/{safe_sid}"
+    r2_path = R2_DIR / safe_uid / safe_sid
+    r2_path.mkdir(parents=True, exist_ok=True)
+    with open(r2_path / "payload.json", "w") as f:
         json.dump({"ciphertext": encrypted["ciphertext"]}, f)
 
     conn = get_db()
@@ -456,11 +460,13 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
         raise HTTPException(status_code=410, detail="Secret is not active")
 
     # Read payload from R2-like storage
-    safe_uid = _safe_path_component(user_id, "user_id")
-    safe_sid = _safe_path_component(secret_id, "secret_id")
-    r2_path = R2_DIR / safe_uid / safe_sid / "payload.json"  # codeql[py/path-injection]
+    _safe_path_component(user_id, "user_id")
+    _safe_path_component(secret_id, "secret_id")
+    safe_uid = Path(user_id).name
+    safe_sid = Path(secret_id).name
+    r2_path = R2_DIR / safe_uid / safe_sid / "payload.json"
     if r2_path.exists():
-        with open(r2_path) as f:  # codeql[py/path-injection]
+        with open(r2_path) as f:
             payload = json.load(f)
     else:
         conn.close()
@@ -539,13 +545,15 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
         raise HTTPException(status_code=403, detail="Forbidden")
 
     # Crypto-shred: delete R2 payload
-    safe_uid = _safe_path_component(user_id, "user_id")
-    safe_sid = _safe_path_component(secret_id, "secret_id")
-    r2_path = R2_DIR / safe_uid / safe_sid  # codeql[py/path-injection]
+    _safe_path_component(user_id, "user_id")
+    _safe_path_component(secret_id, "secret_id")
+    safe_uid = Path(user_id).name
+    safe_sid = Path(secret_id).name
+    r2_path = R2_DIR / safe_uid / safe_sid
     if r2_path.exists():
         import shutil
 
-        shutil.rmtree(r2_path, ignore_errors=True)  # codeql[py/path-injection]
+        shutil.rmtree(r2_path, ignore_errors=True)
 
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute(
