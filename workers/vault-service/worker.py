@@ -25,6 +25,8 @@ import json
 import logging
 import os
 import sqlite3
+import urllib.error
+import urllib.request
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -122,6 +124,89 @@ def _init_db() -> None:
     """)
     conn.commit()
     conn.close()
+
+
+# ---------------------------------------------------------------------------
+# OpenBao Client — stdlib only (no extra pip deps), KV v2 API
+# OpenBao is the open-source fork of HashiCorp Vault (MPL-2.0).
+# When OPENBAO_ADDR is set and reachable, it acts as the primary backend;
+# otherwise the AES-GCM SQLite backend below is used as a fallback.
+# ---------------------------------------------------------------------------
+
+_OPENBAO_ADDR = os.environ.get("OPENBAO_ADDR", "http://localhost:8200")
+_OPENBAO_TOKEN = os.environ.get("OPENBAO_TOKEN", "")
+
+
+class OpenBaoClient:
+    """Minimal OpenBao KV v2 client using stdlib urllib — zero external deps."""
+
+    def __init__(self, addr: str = _OPENBAO_ADDR, token: str = _OPENBAO_TOKEN) -> None:
+        self.addr = addr.rstrip("/")
+        self.token = token
+        self._available: Optional[bool] = None  # None = not yet checked
+
+    def _request(self, method: str, path: str, body: Optional[dict] = None) -> Optional[dict]:
+        url = f"{self.addr}/v1/{path.lstrip('/')}"
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(
+            url,
+            data=data,
+            method=method,
+            headers={
+                "X-Vault-Token": self.token,
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                return None
+            logger.debug("OpenBao HTTP %s for %s", exc.code, url)
+            return None
+        except Exception as exc:
+            logger.debug("OpenBao unreachable at %s: %s", url, exc)
+            return None
+
+    def is_available(self) -> bool:
+        """Check once whether OpenBao is reachable; cache the result."""
+        if self._available is not None:
+            return self._available
+        result = self._request("GET", "sys/health")
+        self._available = result is not None
+        if self._available:
+            logger.info("vault-service: OpenBao backend active at %s", self.addr)
+        else:
+            logger.info("vault-service: OpenBao not reachable — using AES-GCM SQLite backend")
+        return self._available
+
+    def put_secret(self, path: str, data: dict) -> bool:
+        """Write a secret to KV v2 at secret/data/{path}. Returns True on success."""
+        result = self._request("POST", f"secret/data/{path}", {"data": data})
+        return result is not None
+
+    def get_secret(self, path: str) -> Optional[dict]:
+        """Read a secret from KV v2 at secret/data/{path}. Returns data dict or None."""
+        result = self._request("GET", f"secret/data/{path}")
+        if result and "data" in result and "data" in result["data"]:
+            return result["data"]["data"]
+        return None
+
+
+# Module-level OpenBao client — probed at startup
+_openbao: Optional[OpenBaoClient] = None
+_openbao_active: bool = False
+
+
+def _init_openbao() -> None:
+    """Initialise the OpenBao client if OPENBAO_ADDR is configured."""
+    global _openbao, _openbao_active
+    if _OPENBAO_ADDR and _OPENBAO_TOKEN:
+        _openbao = OpenBaoClient()
+        _openbao_active = _openbao.is_available()
+    else:
+        _openbao_active = False
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +392,7 @@ async def _lifespan(app: FastAPI):
     except Exception:
         pass  # OTel is optional — never block startup
     _init_db()
+    _init_openbao()
     logger.info("vault-service started — DB at %s", DB_PATH)
     yield
 
@@ -343,6 +429,22 @@ async def health():
     return {"status": "ok", "service": "vault-service", "port": 8030}
 
 
+@app.get("/vault/backend")
+async def vault_backend():
+    """Return which storage backend is currently active."""
+    if _openbao_active and _openbao is not None:
+        return {
+            "backend": "openbao",
+            "addr": _openbao.addr,
+            "description": "OpenBao KV v2 (primary — AES-GCM SQLite is standby fallback)",
+        }
+    return {
+        "backend": "aes-gcm-sqlite",
+        "db_path": DB_PATH,
+        "description": "AES-256-GCM encrypted SQLite (OpenBao not configured or unreachable)",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Secrets CRUD
 # ---------------------------------------------------------------------------
@@ -354,6 +456,9 @@ async def create_secret(body: SecretCreate):
     now = _now()
     sid = _new_id()
     encrypted = _encrypt_secret(body.value)
+    # Mirror to OpenBao when available (primary backend)
+    if _openbao_active and _openbao is not None:
+        _openbao.put_secret(f"tranc3/{body.key}", {"value": body.value, "sid": sid, "ttl": body.ttl})
     try:
         conn.execute(
             "INSERT INTO secrets (id, key, encrypted_value, tags, ttl, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",

@@ -80,6 +80,12 @@ exporters:
       exporter: false
       job: true
 
+  # SigNoz OpenTelemetry Collector — forward all signals for APM dashboard
+  otlp/signoz:
+    endpoint: signoz-otel-collector:4317
+    tls:
+      insecure: true
+
   # Debug logging (low verbosity)
   logging:
     verbosity: basic
@@ -91,17 +97,17 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, filter/drop_health, tail_sampling, batch]
-      exporters: [otlp/tempo, logging]
+      exporters: [otlp/tempo, otlp/signoz, logging]
 
     metrics:
       receivers: [otlp, prometheus]
       processors: [memory_limiter, resource, batch]
-      exporters: [prometheusremotewrite, logging]
+      exporters: [prometheusremotewrite, otlp/signoz, logging]
 
     logs:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [loki, logging]
+      exporters: [loki, otlp/signoz, logging]
 
   telemetry:
     logs:
