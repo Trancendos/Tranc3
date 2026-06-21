@@ -30,8 +30,8 @@ from .tranc3_base import SWOTSnapshot, Tranc3
 logger = logging.getLogger(__name__)
 
 try:
-    from shared_core.genetics.fitness import LatencyThroughputFitness
-    from shared_core.genetics.optimizer import GeneticOptimizer
+    from Dimensional.genetics.fitness import LatencyThroughputFitness
+    from Dimensional.genetics.optimizer import GeneticOptimizer
 
     _GENETIC_AVAILABLE = True
 except ImportError:

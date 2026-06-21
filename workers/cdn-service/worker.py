@@ -27,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
-from shared_core.path_validation import (
+from Dimensional.path_validation import (
     existing_file_path_str,
 )
 

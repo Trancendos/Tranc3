@@ -70,6 +70,9 @@ __all__ = [
 from . import (
     dimensionals,  # noqa: F401
     infinity,  # noqa: F401
+    gas,  # noqa: F401
+    genetics,  # noqa: F401
+    liquid,  # noqa: F401
 )
 
 __version__ = "0.7.0"

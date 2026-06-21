@@ -1,12 +1,13 @@
 """
-shared_core — Trancendos Platform shared infrastructure layer.
+shared_core — backward-compatibility shim.
 
-Provides cross-cutting concerns used by all 38+ self-hosted workers:
-- Error handlers and canonical error catalog integration
-- Log sanitization (PII/secret scrubbing)
-- Middleware (request logging, trace propagation)
-- Models (shared Pydantic schemas)
-- Orchestration utilities
-- Security automation (watchdog)
-- Architecture primitives (audit ledger, sentinel)
+All functionality has moved to Dimensional. This module re-exports
+everything so existing imports continue to work unchanged.
 """
+
+from Dimensional import *  # noqa: F401, F403
+from Dimensional import (  # noqa: F401
+    gas,
+    genetics,
+    liquid,
+)

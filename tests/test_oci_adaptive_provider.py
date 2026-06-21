@@ -26,7 +26,7 @@ pytest.importorskip(
     reason="OCI Adaptive provider lives in phase-16 storage branch; skipped on main.",
 )
 
-from shared_core.architecture.oci_adaptive_provider import (
+from Dimensional.architecture.oci_adaptive_provider import (
     OCI_FREE_TIER_LIMITS,
     AdaptiveInstanceDatum,
     AdaptiveProviderConfig,

@@ -47,11 +47,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
 
 # Phase 22.5: Infinity Ecosystem nomenclature
-from shared_core.infinity.nomenclature import InfinityRole, Tier
+from Dimensional.infinity.nomenclature import InfinityRole, Tier
 
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.sanitize import sanitize_for_log
 
 # Canonical auth library — single source of truth for password/JWT logic
 from src.auth.passwords import hash_backup_code, hash_password, verify_password
