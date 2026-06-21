@@ -281,8 +281,11 @@ async def browse_listings(
 
     conn = _get_conn()
     try:
-        rows = conn.execute(listing_sql, [*params, limit, offset]).fetchall()
-        total = conn.execute(count_sql, params).fetchone()[0]
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query
+        # `listing_sql` and `count_sql` are built from a hardcoded conditions list;
+        # all user-supplied values are passed as bound parameters, never interpolated.
+        rows = conn.execute(listing_sql, [*params, limit, offset]).fetchall()  # nosec B608
+        total = conn.execute(count_sql, params).fetchone()[0]  # nosec B608
         return {"total": total, "listings": [dict(r) for r in rows]}
     finally:
         conn.close()
