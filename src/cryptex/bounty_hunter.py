@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shlex
 import subprocess
 import sqlite3
 import time
@@ -38,7 +39,6 @@ log = logging.getLogger("tranc3.cryptex.bounty_hunter")
 _DB_PATH = Path(os.getenv("BOUNTY_DB", "/tmp/bounty_hunter.db"))
 _NUCLEI_PATH = os.getenv("NUCLEI_BIN", "nuclei")  # install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 _OSV_API = "https://api.osv.dev/v1"
-_NVD_API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 _SCAN_TARGET = os.getenv("BOUNTY_TARGET_URL", "http://localhost:8000")
 
 
@@ -119,15 +119,15 @@ def run_nuclei_scan(
     """
     cmd = [
         _NUCLEI_PATH,
-        "-target", target,
-        "-severity", severity,
+        "-target", shlex.quote(target),
+        "-severity", shlex.quote(severity),
         "-json",
         "-silent",
-        "-no-interactsh",  # no external callbacks needed
+        "-no-interactsh",
         "-timeout", str(timeout // 60),
     ]
     if templates:
-        cmd += ["-t", ",".join(templates)]
+        cmd += ["-t", shlex.quote(",".join(templates))]
     else:
         cmd += ["-t", "cves,vulnerabilities,exposures,misconfiguration"]
 
@@ -245,7 +245,7 @@ def scan_python_dependencies() -> List[Finding]:
         pkg_ver = vuln.get("version", "?")
         for v in vuln.get("vulns", []):
             score = 0.0
-            for fix in v.get("fix_versions", []):
+            for _fix in v.get("fix_versions", []):
                 pass
             sev = Severity.MEDIUM
             if score >= 9.0:
@@ -300,7 +300,15 @@ def get_bounty_candidates() -> List[Dict[str, Any]]:
         "SELECT * FROM findings WHERE bounty_eligible=1 AND status='new' ORDER BY cvss_score DESC"
     ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    results = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["cve_ids"] = json.loads(d["cve_ids"])
+        except (json.JSONDecodeError, TypeError):
+            d["cve_ids"] = []
+        results.append(d)
+    return results
 
 
 def get_summary() -> Dict[str, Any]:
