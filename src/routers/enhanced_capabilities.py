@@ -432,7 +432,7 @@ async def spawn_personality(req: PersonalitySpawnRequest):
         result = await spawner.spawn(req.personality_id, req.repo_name)
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         _log.error("personality.spawn error: %s", exc)
         raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc

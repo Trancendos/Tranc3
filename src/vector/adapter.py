@@ -104,6 +104,7 @@ _embed_counters: Dict[str, int] = dict.fromkeys(_EMBED_PROVIDER_LIMITS, 0)
 _embed_counter_lock = threading.Lock()
 _embed_last_reset: Dict[str, float] = {k: time.time() for k in _EMBED_PROVIDER_LIMITS}
 _encoder_cache: Dict[str, Any] = {}
+_encoder_lock = threading.Lock()
 
 
 def _reset_embed_counters_if_needed() -> None:
@@ -209,9 +210,11 @@ def _embed_ollama(texts: List[str]) -> List[List[float]]:
 def _embed_sentence_transformers(texts: List[str]) -> List[List[float]]:
     key = "st"
     if key not in _encoder_cache:
-        from sentence_transformers import SentenceTransformer  # type: ignore
+        with _encoder_lock:
+            if key not in _encoder_cache:
+                from sentence_transformers import SentenceTransformer  # type: ignore
 
-        _encoder_cache[key] = SentenceTransformer(_EMBED_MODEL)
+                _encoder_cache[key] = SentenceTransformer(_EMBED_MODEL)
     enc = _encoder_cache[key]
     vecs = enc.encode(texts, show_progress_bar=False)
     return [v.tolist() for v in vecs]
@@ -453,11 +456,11 @@ class _PgvectorBackend:
         from psycopg2 import sql  # type: ignore
 
         where = ""
-        params: list = [str(vector), top_k]
+        params: list = [str(vector)]
         if metadata_filter:
-            clauses = " AND ".join(f"payload->>'{k}' = %s" for k in metadata_filter)
-            params.extend(metadata_filter.values())
-            where = f"WHERE {clauses}"
+            where = "WHERE payload @> %s::jsonb"
+            params.append(json.dumps(metadata_filter))
+        params.append(top_k)
 
         with self._conn.cursor() as cur:
             cur.execute(

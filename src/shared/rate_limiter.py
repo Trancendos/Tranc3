@@ -514,8 +514,22 @@ class AdaptiveRateLimiter:
         total_capacity = self.default_rpm * max(1, len(self._ddos_buckets))
         return recent / total_capacity if total_capacity > 0 else 0.0
 
+    def _prune_ddos_state(self) -> None:
+        """Evict stale entries to prevent unbounded memory growth under high unique-IP load."""
+        now = time.monotonic()
+        if len(self._ddos_buckets) > 10_000:
+            stale = [k for k, b in self._ddos_buckets.items() if now - b.last_refill > 60]
+            for k in stale:
+                self._ddos_buckets.pop(k, None)
+            stale_ips = [
+                ip_k for ip_k, dq in self._request_times.items() if not dq or now - dq[-1] > 60
+            ]
+            for ip_k in stale_ips:
+                self._request_times.pop(ip_k, None)
+
     def check_ddos(self, key: str, ip: str | None = None) -> tuple[bool, dict]:
         """DDoS-aware check. Returns (allowed, metadata)."""
+        self._prune_ddos_state()
         if ip and self._is_ip_blocked(ip):
             return False, {"reason": "ip_blocked", "retry_after": 60}
 
