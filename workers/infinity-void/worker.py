@@ -44,7 +44,6 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-
 # ── Configuration ───────────────────────────────────────────────
 
 _master_key_raw = os.getenv("MASTER_KEY_SEED")
@@ -297,6 +296,7 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
+    conn = None
     try:
         init_schema()
         conn = get_db()
@@ -306,7 +306,6 @@ async def health():
         count = conn.execute(
             "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
         ).fetchone()
-        conn.close()
         vault_sealed = sealed["state_value"] == "true" if sealed else False
         secret_count = count["count"] if count else 0
         status = "healthy"
@@ -314,6 +313,9 @@ async def health():
         vault_sealed = False
         secret_count = 0
         status = "degraded"
+    finally:
+        if conn:
+            conn.close()
     return {
         "status": status,
         "service": "the-void-worker",

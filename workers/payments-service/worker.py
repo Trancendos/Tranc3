@@ -1,7 +1,8 @@
 """
-Trancendos Payments Service — Self-Hosted Worker
-========================================================
-Payment processing API. Replaces CF trancendos-payments-service.
+Royal Bank of Arcadia — Self-Hosted Worker
+===========================================
+Financial hub: accounts ledger, transfers, deposits, AUM reporting.
+Lead AI: Dorris Fontaine
 
 Port: 8013
 Zero-cost: FastAPI + SQLite, no external dependencies.
@@ -12,22 +13,22 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-import threading
 import uuid
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 WORKER_PORT = 8013
-WORKER_NAME = "payments-service"
-DB_PATH = Path(__file__).parent / "data" / "payments.db"
+WORKER_NAME = "royal-bank-of-arcadia"
+DB_PATH = Path(__file__).parent / "data" / "royal_bank.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -37,128 +38,118 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-class PaymentsDatabase:
-    """SQLite-backed storage for payments."""
+def _get_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=15)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
 
-    def __init__(self, db_path: Path):
-        self.db_path = db_path
-        self._local = threading.local()
-        self._init_db()
 
-    def _get_conn(self) -> sqlite3.Connection:
-        if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
-            self._local.conn.row_factory = sqlite3.Row
-            self._local.conn.execute("PRAGMA journal_mode=WAL")
-            self._local.conn.execute("PRAGMA synchronous=NORMAL")
-        return self._local.conn
+@contextmanager
+def _cursor(conn: sqlite3.Connection):
+    cur = conn.cursor()
+    try:
+        yield cur
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
 
-    @contextmanager
-    def _cursor(self):
-        conn = self._get_conn()
-        cur = conn.cursor()
-        try:
-            yield cur
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
 
-    def _init_db(self):
-        with self._cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS payments (
-                    payment_id TEXT PRIMARY KEY,
-                    order_id TEXT NOT NULL,
-                    user_id TEXT NOT NULL,
-                    amount REAL NOT NULL,
-                    currency TEXT DEFAULT 'USD',
-                    status TEXT NOT NULL DEFAULT 'pending',
-                    provider TEXT DEFAULT 'internal',
-                    provider_ref TEXT,
-                    metadata TEXT DEFAULT '{}',
-                    created_at TEXT NOT NULL
-                )
-            """)
+def init_db() -> None:
+    conn = _get_conn()
+    with _cursor(conn) as cur:
+        cur.executescript("""
+            CREATE TABLE IF NOT EXISTS accounts (
+                id          TEXT PRIMARY KEY,
+                user_id     TEXT NOT NULL,
+                name        TEXT NOT NULL DEFAULT 'Main Account',
+                balance     REAL NOT NULL DEFAULT 0.0,
+                currency    TEXT NOT NULL DEFAULT 'ARC',
+                status      TEXT NOT NULL DEFAULT 'active',
+                created_at  TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id);
 
-    def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        now = datetime.now(timezone.utc).isoformat()
-        data.setdefault("created_at", now)
-        cols = list(data.keys())
-        vals = list(data.values())
-        placeholders = ", ".join("?" for _ in cols)
-        with self._cursor() as cur:
-            cur.execute(f"INSERT INTO payments ({', '.join(cols)}) VALUES ({placeholders})", vals)
-        return data
-
-    def get(self, id_field: str, id_value: str) -> Optional[Dict[str, Any]]:
-        conn = self._get_conn()
-        row = conn.execute(f"SELECT * FROM payments WHERE {id_field}=?", (id_value,)).fetchone()
-        return dict(row) if row else None
-
-    def list(self, limit: int = 50, offset: int = 0, **filters) -> List[Dict[str, Any]]:
-        conn = self._get_conn()
-        query = "SELECT * FROM payments WHERE 1=1"
-        params: list = []
-        for key, val in filters.items():
-            query += f" AND {key}=?"
-            params.append(val)
-        query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
-        rows = conn.execute(query, params).fetchall()
-        return [dict(r) for r in rows]
-
-    def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
-        # payments table doesn't have updated_at column
-        sets = ", ".join(f"{k}=?" for k in data.keys())
-        vals = list(data.values()) + [id_value]
-        with self._cursor() as cur:
-            cur.execute(f"UPDATE payments SET {sets} WHERE {id_field}=?", vals)
-            return cur.rowcount > 0
-
-    def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
-        # payments table doesn't have is_active column; use status-based soft delete
-        if soft:
-            with self._cursor() as cur:
-                cur.execute(
-                    f"UPDATE payments SET status='cancelled' WHERE {id_field}=?", (id_value,)
-                )
-                return cur.rowcount > 0
-        else:
-            with self._cursor() as cur:
-                cur.execute(f"DELETE FROM payments WHERE {id_field}=?", (id_value,))
-                return cur.rowcount > 0
+            CREATE TABLE IF NOT EXISTS transactions (
+                id              TEXT PRIMARY KEY,
+                from_account    TEXT,
+                to_account      TEXT,
+                amount          REAL NOT NULL,
+                type            TEXT NOT NULL,
+                description     TEXT DEFAULT '',
+                status          TEXT NOT NULL DEFAULT 'completed',
+                created_at      TEXT NOT NULL,
+                FOREIGN KEY (from_account) REFERENCES accounts(id),
+                FOREIGN KEY (to_account)   REFERENCES accounts(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_tx_from ON transactions(from_account, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_tx_to   ON transactions(to_account,   created_at DESC);
+        """)
+    conn.close()
 
 
 # ---------------------------------------------------------------------------
-# Application
+# Pydantic Models
 # ---------------------------------------------------------------------------
-db = PaymentsDatabase(DB_PATH)
+class CreateAccountRequest(BaseModel):
+    user_id: str
+    name: str = "Main Account"
+    currency: str = "ARC"
+    initial_balance: float = Field(0.0, ge=0)
+
+
+class TransferRequest(BaseModel):
+    from_account_id: str
+    to_account_id: str
+    amount: float = Field(..., gt=0)
+    description: str = ""
+
+
+class DepositRequest(BaseModel):
+    account_id: str
+    amount: float = Field(..., gt=0)
+    description: str = "Deposit"
+
+
+# ---------------------------------------------------------------------------
+# Lifespan
+# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.otel import init_otel
+        init_otel(service_name="tranc3.royal-bank")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass
+    init_db()
+    logger.info("Royal Bank of Arcadia DB ready at %s", DB_PATH)
+    yield
+
+
+# ---------------------------------------------------------------------------
+# App
+# ---------------------------------------------------------------------------
+STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(
-    title="Payments Service",
-    description="Payment processing API. Replaces CF trancendos-payments-service.",
-    version="1.0.0",
+    title="Royal Bank of Arcadia",
+    description="Financial hub — accounts ledger, transfers, deposits, AUM. Lead AI: Dorris Fontaine.",
+    version="2.0.0",
+    lifespan=lifespan,
 )
-
-# OpenTelemetry instrumentation
-try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-    from src.observability.otel import init_otel
-
-    init_otel(service_name="tranc3.payments-service")
-    FastAPIInstrumentor.instrument_app(app)
-except Exception:
-    pass  # OTel is optional — never block startup
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
@@ -173,135 +164,240 @@ async def require_internal_auth(
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
-STARTED_AT = datetime.now(timezone.utc)
 
 
 @app.get("/health")
 async def health():
+    conn = _get_conn()
+    account_count = conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
+    tx_count = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
+    conn.close()
     return {
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "accounts": account_count,
+        "transactions": tx_count,
+        "entity": {
+            "name": "Royal Bank of Arcadia",
+            "lead_ai": "Dorris Fontaine",
+            "role": "Financial hub — billing, payments",
+        },
     }
 
 
-@_router.get("/")
-async def list_all(limit: int = 50, offset: int = 0):
-    """List all payments."""
-    return {"data": db.list(limit=limit, offset=offset)}
+# ---------------------------------------------------------------------------
+# Accounts
+# ---------------------------------------------------------------------------
+@_router.post("/accounts", status_code=201)
+async def create_account(req: CreateAccountRequest):
+    """Create a new account for a user."""
+    acct_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                "INSERT INTO accounts (id, user_id, name, balance, currency, created_at) VALUES (?,?,?,?,?,?)",
+                (acct_id, req.user_id, req.name, req.initial_balance, req.currency, now),
+            )
+            # Record initial deposit if non-zero
+            if req.initial_balance > 0:
+                cur.execute(
+                    "INSERT INTO transactions (id, to_account, amount, type, description, created_at) VALUES (?,?,?,?,?,?)",
+                    (str(uuid.uuid4()), acct_id, req.initial_balance, "deposit", "Initial deposit", now),
+                )
+    finally:
+        conn.close()
+    return {
+        "id": acct_id,
+        "user_id": req.user_id,
+        "name": req.name,
+        "balance": req.initial_balance,
+        "currency": req.currency,
+        "status": "active",
+        "created_at": now,
+    }
 
 
-@_router.post("/")
-async def create(data: Dict[str, Any]):
-    """Create a new payments entry."""
-    item_id = data.get("payment_id", str(uuid.uuid4()))
-    data["payment_id"] = item_id
-    created = db.create(data)
-    return {"ok": True, **created}
-
-
-@_router.get("/{payment_id}")
-async def get_by_id(payment_id: str):
-    """Get a payments entry by ID."""
-    item = db.get("payment_id", payment_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {payment_id}")
-    return item
-
-
-@_router.patch("/{payment_id}")
-async def update_by_id(payment_id: str, data: Dict[str, Any]):
-    """Update a payments entry."""
-    if not db.update("payment_id", payment_id, data):
-        raise HTTPException(404, f"Not found: {payment_id}")
-    return {"ok": True}
-
-
-@_router.delete("/{payment_id}")
-async def delete_by_id(payment_id: str):
-    """Delete a payments entry (soft delete)."""
-    if not db.delete("payment_id", payment_id):
-        raise HTTPException(404, f"Not found: {payment_id}")
-    return {"ok": True}
+@_router.get("/accounts/{user_id}")
+async def get_user_accounts(user_id: str):
+    """Get all accounts and balances for a user."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM accounts WHERE user_id=? AND status='active' ORDER BY created_at",
+            (user_id,),
+        ).fetchall()
+        return {"user_id": user_id, "accounts": [dict(r) for r in rows]}
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
-# Domain-specific endpoints
+# Transactions
 # ---------------------------------------------------------------------------
+@_router.post("/transactions/transfer")
+async def transfer(req: TransferRequest):
+    """Atomic transfer between two accounts."""
+    conn = _get_conn()
+    try:
+        # Use BEGIN EXCLUSIVE for atomicity
+        conn.execute("BEGIN EXCLUSIVE")
+        from_row = conn.execute(
+            "SELECT id, balance, currency, status FROM accounts WHERE id=?", (req.from_account_id,)
+        ).fetchone()
+        to_row = conn.execute(
+            "SELECT id, status FROM accounts WHERE id=?", (req.to_account_id,)
+        ).fetchone()
+
+        if not from_row:
+            conn.rollback()
+            raise HTTPException(404, "Source account not found")
+        if not to_row:
+            conn.rollback()
+            raise HTTPException(404, "Destination account not found")
+        if from_row["status"] != "active":
+            conn.rollback()
+            raise HTTPException(400, "Source account is not active")
+        if to_row["status"] != "active":
+            conn.rollback()
+            raise HTTPException(400, "Destination account is not active")
+        if from_row["balance"] < req.amount:
+            conn.rollback()
+            raise HTTPException(409, f"Insufficient funds: balance {from_row['balance']:.2f}, requested {req.amount:.2f}")
+
+        now = datetime.now(timezone.utc).isoformat()
+        tx_id = str(uuid.uuid4())
+
+        conn.execute(
+            "UPDATE accounts SET balance = balance - ? WHERE id=?", (req.amount, req.from_account_id)
+        )
+        conn.execute(
+            "UPDATE accounts SET balance = balance + ? WHERE id=?", (req.amount, req.to_account_id)
+        )
+        conn.execute(
+            "INSERT INTO transactions (id, from_account, to_account, amount, type, description, created_at) VALUES (?,?,?,?,?,?,?)",
+            (tx_id, req.from_account_id, req.to_account_id, req.amount, "transfer", req.description, now),
+        )
+        conn.commit()
+
+        new_balance = conn.execute(
+            "SELECT balance FROM accounts WHERE id=?", (req.from_account_id,)
+        ).fetchone()[0]
+
+        return {
+            "ok": True,
+            "transaction_id": tx_id,
+            "from_account": req.from_account_id,
+            "to_account": req.to_account_id,
+            "amount": req.amount,
+            "from_balance_after": new_balance,
+            "created_at": now,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Transfer failed")
+        raise HTTPException(500, f"Transfer failed: {exc}") from exc
+    finally:
+        conn.close()
 
 
-@_router.get("/by-order/{order_id}")
-async def get_by_order(order_id: str):
-    """List all payments for a given order."""
-    return {"data": db.list(limit=100, offset=0, order_id=order_id)}
+@_router.post("/transactions/deposit")
+async def deposit(req: DepositRequest):
+    """Deposit funds into an account."""
+    conn = _get_conn()
+    try:
+        row = conn.execute("SELECT id, status FROM accounts WHERE id=?", (req.account_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Account not found")
+        if row["status"] != "active":
+            raise HTTPException(400, "Account is not active")
+
+        now = datetime.now(timezone.utc).isoformat()
+        tx_id = str(uuid.uuid4())
+        with _cursor(conn) as cur:
+            cur.execute("UPDATE accounts SET balance = balance + ? WHERE id=?", (req.amount, req.account_id))
+            cur.execute(
+                "INSERT INTO transactions (id, to_account, amount, type, description, created_at) VALUES (?,?,?,?,?,?)",
+                (tx_id, req.account_id, req.amount, "deposit", req.description, now),
+            )
+        new_balance = conn.execute("SELECT balance FROM accounts WHERE id=?", (req.account_id,)).fetchone()[0]
+        return {"ok": True, "transaction_id": tx_id, "account_id": req.account_id, "amount": req.amount, "balance_after": new_balance, "created_at": now}
+    finally:
+        conn.close()
 
 
-@_router.get("/by-user/{user_id}")
-async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
-    """List all payments made by a user."""
-    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
+@_router.get("/transactions/{account_id}")
+async def get_transactions(
+    account_id: str,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Transaction history for an account (both sent and received)."""
+    conn = _get_conn()
+    try:
+        # Verify account exists
+        if not conn.execute("SELECT id FROM accounts WHERE id=?", (account_id,)).fetchone():
+            raise HTTPException(404, "Account not found")
+        rows = conn.execute(
+            """
+            SELECT * FROM transactions
+            WHERE from_account=? OR to_account=?
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (account_id, account_id, limit, offset),
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM transactions WHERE from_account=? OR to_account=?",
+            (account_id, account_id),
+        ).fetchone()[0]
+        return {"account_id": account_id, "total": total, "transactions": [dict(r) for r in rows]}
+    finally:
+        conn.close()
 
 
-@_router.get("/by-status/{status}")
-async def get_by_status(status: str, limit: int = 50, offset: int = 0):
-    """List payments by status (pending, completed, failed, cancelled, refunded)."""
-    valid = {"pending", "completed", "failed", "cancelled", "refunded"}
-    if status not in valid:
-        raise HTTPException(400, f"Invalid status. Must be one of: {sorted(valid)}")
-    return {"data": db.list(limit=limit, offset=offset, status=status)}
+# ---------------------------------------------------------------------------
+# Ledger Summary
+# ---------------------------------------------------------------------------
+@_router.get("/ledger/summary")
+async def ledger_summary():
+    """Platform-wide AUM, transaction count, and daily volume."""
+    conn = _get_conn()
+    try:
+        aum = conn.execute("SELECT SUM(balance) FROM accounts WHERE status='active'").fetchone()[0] or 0
+        total_accounts = conn.execute("SELECT COUNT(*) FROM accounts WHERE status='active'").fetchone()[0]
+        total_txns = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
 
+        # Daily volume (UTC today)
+        today = datetime.now(timezone.utc).date().isoformat()
+        daily_vol = conn.execute(
+            "SELECT COALESCE(SUM(amount),0) FROM transactions WHERE created_at >= ? AND type IN ('transfer','deposit')",
+            (today,),
+        ).fetchone()[0] or 0
 
-@_router.post("/{payment_id}/capture")
-async def capture_payment(payment_id: str):
-    """Capture a pending payment (mark as completed)."""
-    item = db.get("payment_id", payment_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {payment_id}")
-    if item.get("status") != "pending":
-        raise HTTPException(409, f"Payment status is '{item.get('status')}', not pending")
-    db.update("payment_id", payment_id, {"status": "completed"})
-    return {"ok": True, "payment_id": payment_id, "status": "completed"}
+        by_currency = conn.execute(
+            "SELECT currency, COUNT(*) as accounts, SUM(balance) as total FROM accounts WHERE status='active' GROUP BY currency"
+        ).fetchall()
 
-
-@_router.post("/{payment_id}/refund")
-async def refund_payment(payment_id: str):
-    """Refund a completed payment."""
-    item = db.get("payment_id", payment_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {payment_id}")
-    if item.get("status") != "completed":
-        raise HTTPException(409, f"Payment status is '{item.get('status')}', not completed")
-    db.update("payment_id", payment_id, {"status": "refunded"})
-    return {"ok": True, "payment_id": payment_id, "status": "refunded"}
-
-
-@_router.post("/{payment_id}/cancel")
-async def cancel_payment(payment_id: str):
-    """Cancel a pending payment."""
-    item = db.get("payment_id", payment_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {payment_id}")
-    if item.get("status") not in ("pending",):
-        raise HTTPException(409, f"Cannot cancel payment with status '{item.get('status')}'")
-    db.update("payment_id", payment_id, {"status": "cancelled"})
-    return {"ok": True, "payment_id": payment_id, "status": "cancelled"}
-
-
-@_router.get("/stats/summary")
-async def payment_stats():
-    """Aggregate payment statistics by status and total amounts."""
-    conn = db._get_conn()
-    rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(amount) as total FROM payments GROUP BY status"
-    ).fetchall()
-    return {"stats": [dict(r) for r in rows]}
+        return {
+            "total_aum": round(aum, 4),
+            "total_accounts": total_accounts,
+            "total_transactions": total_txns,
+            "daily_volume": round(daily_vol, 4),
+            "by_currency": [dict(r) for r in by_currency],
+            "as_of": datetime.now(timezone.utc).isoformat(),
+        }
+    finally:
+        conn.close()
 
 
 app.include_router(_router)
 
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

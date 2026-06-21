@@ -114,13 +114,20 @@ class GBrainIngestionPipeline:
                         node_ids[concept] = nid
                         result.nodes_created += 1
 
-                # Stage 4: Create edges between co-occurring concepts
+                # Stage 4: Create edges between co-occurring concepts (concurrent)
                 ids = list(node_ids.values())
-                for i in range(len(ids)):
-                    for j in range(i + 1, len(ids)):
-                        eid = await client.create_edge(ids[i], ids[j], relation="co-occurs")
-                        if eid:
-                            result.edges_created += 1
+                edge_tasks = [
+                    client.create_edge(ids[i], ids[j], relation="co-occurs")
+                    for i in range(len(ids))
+                    for j in range(i + 1, len(ids))
+                ]
+                if edge_tasks:
+                    import asyncio as _asyncio
+
+                    edge_results = await _asyncio.gather(*edge_tasks, return_exceptions=True)
+                    result.edges_created += sum(
+                        1 for r in edge_results if r and not isinstance(r, Exception)
+                    )
 
         except Exception as exc:
             log.debug("GBrainIngestionPipeline.ingest error: %s", exc)

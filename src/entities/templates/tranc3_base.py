@@ -36,23 +36,23 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 try:
-    from shared_core.gas.kinetic import KineticEnergyTracker
-    from shared_core.gas.pressure import PressureBalancer
+    from Dimensional.gas.kinetic import KineticEnergyTracker
+    from Dimensional.gas.pressure import PressureBalancer
 
     _GAS_AVAILABLE = True
 except ImportError:
     _GAS_AVAILABLE = False
 
 try:
-    from shared_core.liquid.ltc_router import LiquidRouter
+    from Dimensional.liquid.ltc_router import LiquidRouter
 
     _LIQUID_AVAILABLE = True
 except ImportError:
     _LIQUID_AVAILABLE = False
 
 try:
-    from shared_core.genetics.fitness import LatencyThroughputFitness
-    from shared_core.genetics.optimizer import GeneticOptimizer
+    from Dimensional.genetics.fitness import LatencyThroughputFitness
+    from Dimensional.genetics.optimizer import GeneticOptimizer
 
     _GENETIC_AVAILABLE = True
 except ImportError:

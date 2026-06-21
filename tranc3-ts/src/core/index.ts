@@ -30,3 +30,5 @@ export {
 } from './definitions';
 export { Logger, setGlobalLogLevel, LogLevel } from './logger';
 export { AuditLedger } from './audit';
+export { PyBridge } from './PyBridge';
+export type { PyInferenceRequest, PyInferenceResponse, PyHealthSignal } from './PyBridge';

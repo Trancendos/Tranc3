@@ -220,6 +220,20 @@ class SovereignController:
                     sanitize_for_log(event.source_tier),
                     sanitize_for_log(entity),
                 )
+        elif event.event_type == "PRIME_ESCALATION":
+            entity = event.source_entity or event.payload.get("entity_id", "unknown")
+            domain = event.payload.get("domain", "unknown")
+            issue = event.payload.get("issue", "")
+            logger.critical(
+                "Sovereign received Prime escalation from domain=%s entity=%s: %s",
+                sanitize_for_log(domain),
+                sanitize_for_log(entity),
+                sanitize_for_log(issue),
+            )
+            # Auto-rotate entity under critical pressure
+            if "pressure" in issue.lower() or "critical" in issue.lower():
+                self.emergency_rotate(entity)
+            self._state.tier_health[TIER_PRIME] = "degraded"
         elif event.event_type.startswith("TIER_HEALTH_"):
             tier_num = event.payload.get("tier")
             health = event.payload.get("health", "unknown")

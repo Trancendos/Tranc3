@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from shared_core.url_validation import SSRFError, validate_url, validate_webhook_url
+from Dimensional.url_validation import SSRFError, validate_url, validate_webhook_url
 
 
 class TestValidateUrlBasics:

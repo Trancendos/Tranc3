@@ -66,6 +66,7 @@ import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
 import RealtimeStatusBar from './components/ui/RealtimeStatusBar'
+import LandingPage from './pages/LandingPage'
 
 const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development'
 
@@ -78,10 +79,11 @@ export default function AppRouter() {
     <BrowserRouter>
       <Routes>
         {/* Public */}
+        <Route path="/"      element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
 
         {/* Protected — all wrapped in persistent Layout */}
-        <Route path="/"             element={<Protected><ChatView /></Protected>} />
+        <Route path="/chat"         element={<Protected><ChatView /></Protected>} />
         <Route path="/dashboard"    element={<Protected><DashboardPage /></Protected>} />
         <Route path="/mission"      element={<Protected><TrancendosDashboard /></Protected>} />
         <Route path="/spark"        element={<Protected><SparkDashboard /></Protected>} />

@@ -49,6 +49,7 @@ WORKER_NAME = "audit-service"
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 
+
 _data_dir = Path(os.environ.get("DATA_DIR", "/data"))
 _data_dir.mkdir(parents=True, exist_ok=True)
 DB_PATH = _data_dir / "audit.db"
