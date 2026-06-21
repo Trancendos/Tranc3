@@ -87,3 +87,53 @@ async def recent_commands():
 async def recent_events():
     """Recent inter-tier events from the tier bridge."""
     return {"events": get_tier_bridge().recent_events(25)}
+
+
+@router.get("/intelligence")
+async def sovereign_intelligence():
+    """Pull full T2ance Prime Intelligence report as seen from Sovereign (Tier 1)."""
+    try:
+        from t2ance.prime_intelligence import get_intelligence_hub
+        t2ance_report = get_intelligence_hub().full_report()
+    except Exception as exc:
+        t2ance_report = {"error": str(exc)}
+    return {
+        "sovereign_status": get_sovereign().status(),
+        "t2ance_intelligence": t2ance_report,
+    }
+
+
+@router.post("/dispatch/{command_type}")
+async def dispatch_command(
+    command_type: str,
+    target_tier: int = 2,
+    target_entity: str | None = None,
+    priority: int = 5,
+):
+    """Issue a tier command from Sovereign down the hierarchy."""
+    from fastapi import HTTPException
+    from trance_one.tier_bridge import TierCommand, TierCommandType
+
+    try:
+        cmd_type = TierCommandType(command_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown command type: {command_type}. Valid: {[c.value for c in TierCommandType]}",
+        ) from None
+
+    get_tier_bridge().issue_command(
+        TierCommand(
+            command_type=cmd_type,
+            source_tier=1,
+            target_tier=target_tier,
+            target_entity=target_entity,
+            priority=priority,
+        )
+    )
+    return {
+        "dispatched": command_type,
+        "target_tier": target_tier,
+        "target_entity": target_entity,
+        "priority": priority,
+    }

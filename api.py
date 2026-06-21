@@ -918,6 +918,10 @@ from t2ance.router import router as _t2ance_router  # noqa: F401
 
 app.include_router(_t2ance_router)
 
+from trance_one.router import router as _trance_one_router  # noqa: F401
+
+app.include_router(_trance_one_router)
+
 
 # ── Root endpoint (must be before catch-all frontend route) ───────────────────
 @app.get("/", tags=["system"], summary="Platform root")
