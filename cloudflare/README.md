@@ -1,4 +1,17 @@
-# Tranc3 — Cloudflare Deployment
+# Cloudflare Workers — MIGRATION IN PROGRESS
+
+> **Status: DEPRECATING** — All CF Workers are being replaced by self-hosted Python workers
+> in `workers/` backed by Docker Compose + Traefik. See `CF_WORKER_MIGRATION_ROADMAP.md`.
+>
+> | CF Worker | Replacement | Status |
+> |---|---|---|
+> | `tranc3-ai` | `workers/infinity-ai/` (port 8009) | In progress |
+> | `trancendos-api-gateway` | Traefik reverse proxy | In progress |
+> | `infinity-void` | `workers/vault-service/` (port 8038) | In progress |
+>
+> Do not add new functionality to CF Workers. Direct new work to the self-hosted equivalents.
+
+# Tranc3 — Cloudflare Deployment (Legacy)
 
 ## Architecture
 

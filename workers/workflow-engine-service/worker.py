@@ -1,15 +1,10 @@
 """
 Trancendos workflow-engine-service — Self-Hosted Worker
 ========================================================
-DAG-based workflow execution inspired by LangGraph.
-
-Features:
-    - Workflow definition with steps and dependencies
-    - DAG validation with cycle detection (DFS)
-    - Topological sort for execution ordering
-    - Step-level state management with checkpoint/resume
-    - Conditional branching support
-    - Run tracking and execution logs
+DEPRECATED: This service duplicates workers/the-grid/ (The Digital Grid, port 8010).
+New workflow work should go to workers/the-grid/ which integrates with src/workflow/.
+This worker remains running to avoid breaking existing integrations but will be
+removed in a future release.
 
 Port: 8034
 Zero-cost: FastAPI + SQLite, no external orchestration required.
