@@ -8,4 +8,4 @@ from api import app  # noqa: F401 — backward-compat re-export
 
 # In-memory rate limiting store: maps client IP → request count.
 # Populated by middleware in api.py; exposed here for test introspection.
-_rate_store: dict = defaultdict(int)
+_rate_store: dict = defaultdict(int)  # noqa: F841 — test introspection hook

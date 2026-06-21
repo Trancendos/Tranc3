@@ -1376,8 +1376,8 @@ services:
       - "3010:3000"
     environment:
       DATABASE_URL: "postgresql://calcom:${CALCOM_DB_PASSWORD:?required}@calcom-db:5432/calcom"
-      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:?required}"
-      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:?required}"
+      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:-changeme-calcom-secret}"
+      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:-changeme-calcom-encryption-key}"
       NEXT_PUBLIC_WEBAPP_URL: "${CALCOM_URL:-http://localhost:3010}"
       EMAIL_FROM: "${CALCOM_EMAIL_FROM:-noreply@trancendos.com}"
       NEXT_PUBLIC_LICENSE_CONSENT: "agree"

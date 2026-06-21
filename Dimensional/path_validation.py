@@ -234,7 +234,11 @@ def list_validated_children(
         raise FileNotFoundError(f"Validated path is not a directory: {resolved}")
 
     children = []
-    for child in sorted(resolved.iterdir()):
+    try:
+        entries = sorted(resolved.iterdir())
+    except OSError:
+        return children
+    for child in entries:
         try:
             stat = child.stat()
             children.append({
