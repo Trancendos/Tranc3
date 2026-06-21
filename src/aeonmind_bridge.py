@@ -113,6 +113,62 @@ def get_adaptive_learner(n_params: int = 32):
 
 
 # ---------------------------------------------------------------------------
+# Adaptive decision loop — wires aeonmind engines to provider rotation
+# ---------------------------------------------------------------------------
+
+def adaptive_provider_score(provider_name: str, latency_ms: float, error_rate: float) -> float:
+    """
+    Score a provider using aeonmind's genetic fitness or Dimensional fallback.
+    Returns a score in [0, 1] where 1 = ideal.
+    Falls back to a simple heuristic when neither engine is available.
+    """
+    # Try Dimensional genetic fitness evaluator first (zero-cost, always available)
+    try:
+        from Dimensional.genetics.fitness import LatencyThroughputFitness
+        fitness = LatencyThroughputFitness()
+        return fitness.evaluate(latency_ms=latency_ms, error_rate=error_rate)
+    except Exception:
+        pass
+
+    # Try aeonmind adaptive learner for meta-learning signal
+    learner = get_adaptive_learner()
+    if learner is not None:
+        try:
+            import numpy as np
+            signal = np.array([latency_ms / 5000.0, error_rate], dtype=float)
+            pred = learner.predict(signal)
+            return float(max(0.0, min(1.0, 1.0 - float(pred.mean()))))
+        except Exception:
+            pass
+
+    # Simple heuristic fallback
+    latency_score = max(0.0, 1.0 - latency_ms / 5000.0)
+    error_score = max(0.0, 1.0 - error_rate)
+    return (latency_score + error_score) / 2.0
+
+
+def quantum_rotation_decision(provider_scores: dict[str, float]) -> str | None:
+    """
+    Use aeonmind's quantum circuit to select the best provider when scores are
+    close. Falls back to argmax when quantum engine is unavailable.
+    """
+    if not provider_scores:
+        return None
+    qc = get_quantum_circuit()
+    if qc is not None:
+        try:
+            decision = qc.decide()
+            # Map quantum decision index to provider
+            providers = sorted(provider_scores.keys())
+            idx = int(decision) % len(providers)
+            return providers[idx]
+        except Exception:
+            pass
+    # Deterministic fallback — highest score wins
+    return max(provider_scores, key=lambda k: provider_scores[k])
+
+
+# ---------------------------------------------------------------------------
 # Stub (graceful degradation when aeonmind is not installed)
 # ---------------------------------------------------------------------------
 

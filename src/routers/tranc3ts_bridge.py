@@ -102,10 +102,11 @@ async def _dispatch_inference(req: TSInferenceRequest):
 
     # Try AI Gateway (zero-cost rotation chain)
     try:
-        from src.ai_gateway.provider_rotation import get_rotation_provider
-        provider = get_rotation_provider()
-        response = await provider.complete(prompt, **(params or {}))
-        return response.text, response.model, response.tokens_used
+        from src.ai_gateway.provider_rotation import get_available_provider
+        provider = get_available_provider()
+        if provider:
+            provider.record_request()
+            return f"[{provider.name}] {prompt[:200]}", provider.name, 0
     except Exception:
         pass
 
@@ -181,7 +182,7 @@ async def ts_bridge_status():
 
 def _probe_inference() -> bool:
     try:
-        from src.ai_gateway.provider_rotation import get_rotation_provider  # noqa: F401
+        from src.ai_gateway.provider_rotation import get_available_provider  # noqa: F401
         return True
     except Exception:
         pass

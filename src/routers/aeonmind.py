@@ -40,3 +40,19 @@ async def quantum_decide():
     if qc is None:
         return {"error": "aeonmind unavailable"}
     return {"decision": qc.decide()}
+
+
+@router.get("/adaptive/score")
+async def adaptive_score(provider: str, latency_ms: float = 100.0, error_rate: float = 0.0):
+    """Score a provider using aeonmind genetic fitness or Dimensional fallback."""
+    from src.aeonmind_bridge import adaptive_provider_score
+    score = adaptive_provider_score(provider, latency_ms, error_rate)
+    return {"provider": provider, "score": round(score, 4), "latency_ms": latency_ms, "error_rate": error_rate}
+
+
+@router.post("/adaptive/rotation-decision")
+async def rotation_decision(provider_scores: dict):
+    """Use quantum circuit or argmax to select best provider from scored candidates."""
+    from src.aeonmind_bridge import quantum_rotation_decision
+    selected = quantum_rotation_decision(provider_scores)
+    return {"selected": selected, "scores": provider_scores}
