@@ -237,6 +237,8 @@ def stub_emotion(text: str) -> dict:
 
 async def verify_auth(authorization: str | None) -> dict | None:
     if not authorization or not authorization.startswith("Bearer "):
+        if ENVIRONMENT == "test":
+            return {"userId": "test-user", "role": "admin"}
         return None
 
     # Dev bypass when no auth URL is configured

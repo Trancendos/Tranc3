@@ -179,7 +179,7 @@ services:
     <<: *common
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-tranc3-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?required}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://localhost:3001
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
@@ -922,7 +922,7 @@ services:
     image: openbao/openbao:latest
     container_name: trancendos-openbao
     environment:
-      BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:-dev-root-token}"
+      BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:?required}"
       BAO_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
     ports:
       - "8200:8200"
@@ -1016,8 +1016,8 @@ services:
     environment:
       DATABASE_URL: "postgresql://langfuse:langfuse@langfuse-db:5432/langfuse"
       NEXTAUTH_URL: "http://localhost:3002"
-      NEXTAUTH_SECRET: "${LANGFUSE_SECRET:-changeme-langfuse-secret}"
-      SALT: "${LANGFUSE_SALT:-changeme-langfuse-salt}"
+      NEXTAUTH_SECRET: "${LANGFUSE_SECRET:?required}"
+      SALT: "${LANGFUSE_SALT:?required}"
       TELEMETRY_ENABLED: "false"
     depends_on:
       - langfuse-db
@@ -1093,7 +1093,7 @@ services:
       - "8070:8070"
     environment:
       INFINITY_BRIDGE_PORT: "8070"
-      INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?required}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8070/health"]
       <<: *healthcheck-default
@@ -1194,7 +1194,7 @@ services:
     restart: unless-stopped
     environment:
       PENPOT_FLAGS: "enable-registration enable-login disable-demo-users disable-secure-session-cookies"
-      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:-insecure-for-dev-only}"
+      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:?required}"
       PENPOT_DATABASE_URI: "postgresql://penpot:penpot@penpot-db/penpot"
       PENPOT_REDIS_URI: "redis://valkey:6379/2"
       PENPOT_STORAGE_BACKEND: "fs"
@@ -1317,7 +1317,7 @@ services:
       WOODPECKER_FORGEJO_URL: "${FORGEJO_URL:-http://forgejo:3000}"
       WOODPECKER_FORGEJO_CLIENT: "${WOODPECKER_FORGEJO_CLIENT}"
       WOODPECKER_FORGEJO_SECRET: "${WOODPECKER_FORGEJO_SECRET}"
-      WOODPECKER_SECRET: "${WOODPECKER_SECRET:-changeme-woodpecker-secret}"
+      WOODPECKER_SECRET: "${WOODPECKER_SECRET:?required}"
       WOODPECKER_DATABASE_DATASOURCE: "/var/lib/woodpecker/woodpecker.db"
       WOODPECKER_DATABASE_DRIVER: "sqlite3"
     volumes:
@@ -1340,7 +1340,7 @@ services:
       - woodpecker-server
     environment:
       WOODPECKER_SERVER: "woodpecker-server:9000"
-      WOODPECKER_TOKEN: "${WOODPECKER_AGENT_TOKEN:-changeme-agent-token}"
+      WOODPECKER_TOKEN: "${WOODPECKER_AGENT_TOKEN:?required}"
       WOODPECKER_MAX_WORKFLOWS: "4"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -1356,7 +1356,7 @@ services:
     container_name: trancendos-calcom-db
     environment:
       POSTGRES_USER: calcom
-      POSTGRES_PASSWORD: "${CALCOM_DB_PASSWORD:-calcom-dev-password}"
+      POSTGRES_PASSWORD: "${CALCOM_DB_PASSWORD:?required}"
       POSTGRES_DB: calcom
     volumes:
       - calcom-db-data:/var/lib/postgresql/data
@@ -1375,9 +1375,9 @@ services:
     ports:
       - "3010:3000"
     environment:
-      DATABASE_URL: "postgresql://calcom:${CALCOM_DB_PASSWORD:-calcom-dev-password}@calcom-db:5432/calcom"
-      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:-changeme-calcom-secret}"
-      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:-changeme-calcom-encryption-key}"
+      DATABASE_URL: "postgresql://calcom:${CALCOM_DB_PASSWORD:?required}@calcom-db:5432/calcom"
+      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:?required}"
+      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:?required}"
       NEXT_PUBLIC_WEBAPP_URL: "${CALCOM_URL:-http://localhost:3010}"
       EMAIL_FROM: "${CALCOM_EMAIL_FROM:-noreply@trancendos.com}"
       NEXT_PUBLIC_LICENSE_CONSENT: "agree"
@@ -1405,7 +1405,7 @@ services:
     container_name: trancendos-outline-db
     environment:
       POSTGRES_USER: outline
-      POSTGRES_PASSWORD: "${OUTLINE_DB_PASSWORD:-outline-dev-password}"
+      POSTGRES_PASSWORD: "${OUTLINE_DB_PASSWORD:?required}"
       POSTGRES_DB: outline
     volumes:
       - outline-db-data:/var/lib/postgresql/data
@@ -1434,10 +1434,10 @@ services:
     ports:
       - "3011:3000"
     environment:
-      DATABASE_URL: "postgres://outline:${OUTLINE_DB_PASSWORD:-outline-dev-password}@outline-db:5432/outline"
+      DATABASE_URL: "postgres://outline:${OUTLINE_DB_PASSWORD:?required}@outline-db:5432/outline"
       REDIS_URL: "redis://outline-redis:6379"
-      SECRET_KEY: "${OUTLINE_SECRET_KEY:-changeme-outline-secret-key-must-be-32char}"
-      UTILS_SECRET: "${OUTLINE_UTILS_SECRET:-changeme-outline-utils-secret}"
+      SECRET_KEY: "${OUTLINE_SECRET_KEY:?required}"
+      UTILS_SECRET: "${OUTLINE_UTILS_SECRET:?required}"
       URL: "${OUTLINE_URL:-http://localhost:3011}"
       PORT: "3000"
       FILE_STORAGE: "local"
@@ -1470,7 +1470,7 @@ services:
     environment:
       CLICKHOUSE_DB: signoz_traces
       CLICKHOUSE_USER: signoz
-      CLICKHOUSE_PASSWORD: "${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz-dev-password}"
+      CLICKHOUSE_PASSWORD: "${SIGNOZ_CLICKHOUSE_PASSWORD:?required}"
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     volumes:
       - signoz-clickhouse-data:/var/lib/clickhouse
@@ -1493,7 +1493,7 @@ services:
     container_name: trancendos-signoz-query
     command: ["-config=/root/config/prometheus.yml"]
     environment:
-      ClickHouseUrl: "tcp://signoz:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz-dev-password}@signoz-clickhouse:9000/signoz_traces"
+      ClickHouseUrl: "tcp://signoz:${SIGNOZ_CLICKHOUSE_PASSWORD:?required}@signoz-clickhouse:9000/signoz_traces"
       STORAGE: clickhouse
       GODEBUG: netdns=go
       TELEMETRY_ENABLED: "false"
@@ -1545,6 +1545,466 @@ services:
     networks:
       - tranc3-net
     restart: unless-stopped
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # ADAPTIVE AI LAYER — LiteLLM Proxy (Apache 2.0, zero-cost)
+  # Unified OpenAI-compatible endpoint over x8 free provider backends.
+  # Port 4000. Route: ai.trancendos.com/litellm
+  # Providers: ollama → groq → cerebras → sambanova → gemini → openrouter
+  #            → mistral → huggingface (x8 rotation with hard stops)
+  # ══════════════════════════════════════════════════════════════════════════
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: trancendos-litellm
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "4"]
+    volumes:
+      - ./config/litellm/config.yaml:/app/config.yaml:ro
+      - litellm-data:/app/data
+    ports:
+      - "4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY:?required}"
+      LITELLM_SALT_KEY: "${LITELLM_SALT_KEY:?required}"
+      DATABASE_URL: "sqlite:////app/data/litellm.db"
+      STORE_MODEL_IN_DB: "True"
+      # Provider API keys (all free tiers)
+      GROQ_API_KEY: "${GROQ_API_KEY:-}"
+      CEREBRAS_API_KEY: "${CEREBRAS_API_KEY:-}"
+      SAMBANOVA_API_KEY: "${SAMBANOVA_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      MISTRAL_API_KEY: "${MISTRAL_API_KEY:-}"
+      HUGGINGFACE_API_KEY: "${HUGGINGFACE_API_KEY:-}"
+      OLLAMA_URL: "http://ollama:11434"
+      # Langfuse observability integration
+      LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PUBLIC_KEY:-}"
+      LANGFUSE_SECRET_KEY: "${LANGFUSE_SECRET_KEY:-}"
+      LANGFUSE_HOST: "http://langfuse:3000"
+    depends_on:
+      - langfuse
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.litellm.rule: "Host(`ai.trancendos.com`)"
+      traefik.http.routers.litellm.entrypoints: "websecure"
+      traefik.http.routers.litellm.tls.certresolver: "letsencrypt"
+      traefik.http.services.litellm.loadbalancer.server.port: "4000"
+
+  # Ollama — local self-hosted LLM inference (zero-cost, tier 0)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: trancendos-ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_ORIGINS: "*"
+      OLLAMA_HOST: "0.0.0.0"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    # GPU support: add 'deploy: resources: reservations: devices: [{driver: nvidia, ...}]'
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # SEARCH — Meilisearch (MIT, zero-cost, self-hosted)
+  # Full-text search for all platform content. Port 7700.
+  # Route: search.trancendos.com
+  # Used by: The Library, DocUtari, API Marketplace, The Lab
+  # ══════════════════════════════════════════════════════════════════════════
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: trancendos-meilisearch
+    volumes:
+      - meilisearch-data:/meili_data
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:?required}"
+      MEILI_ENV: "production"
+      MEILI_DB_PATH: "/meili_data"
+      MEILI_LOG_LEVEL: "INFO"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.meilisearch.rule: "Host(`search.trancendos.com`)"
+      traefik.http.routers.meilisearch.entrypoints: "websecure"
+      traefik.http.routers.meilisearch.tls.certresolver: "letsencrypt"
+      traefik.http.services.meilisearch.loadbalancer.server.port: "7700"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # OBJECT STORAGE — MinIO (AGPL-3.0, zero-cost, S3-compatible)
+  # Replaces Cloudflare R2 / IPFS for blob storage. Port 9000 (API), 9001 (console).
+  # Route: s3.trancendos.com (API), s3-console.trancendos.com (console)
+  # ══════════════════════════════════════════════════════════════════════════
+  minio:
+    image: minio/minio:latest
+    container_name: trancendos-minio
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-tranc3admin}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:?required}"
+      MINIO_BROWSER_REDIRECT_URL: "https://s3-console.trancendos.com"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      # S3 API
+      traefik.http.routers.minio-api.rule: "Host(`s3.trancendos.com`)"
+      traefik.http.routers.minio-api.entrypoints: "websecure"
+      traefik.http.routers.minio-api.tls.certresolver: "letsencrypt"
+      traefik.http.routers.minio-api.service: "minio-api-svc"
+      traefik.http.services.minio-api-svc.loadbalancer.server.port: "9000"
+      # Console
+      traefik.http.routers.minio-console.rule: "Host(`s3-console.trancendos.com`)"
+      traefik.http.routers.minio-console.entrypoints: "websecure"
+      traefik.http.routers.minio-console.tls.certresolver: "letsencrypt"
+      traefik.http.routers.minio-console.service: "minio-console-svc"
+      traefik.http.services.minio-console-svc.loadbalancer.server.port: "9001"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # IDENTITY & SSO — Authentik (MIT, zero-cost)
+  # Replaces Keycloak (heavier) — OAuth2/OIDC/SAML SSO for all services.
+  # Complements workers/infinity-auth/ (which handles Trancendos-native auth).
+  # Authentik = external SSO bridge (Google, GitHub, enterprise SAML).
+  # Port 9300 (HTTP), 9443 (HTTPS). Route: sso.trancendos.com
+  # ══════════════════════════════════════════════════════════════════════════
+  authentik-server:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: trancendos-authentik-server
+    command: server
+    volumes:
+      - authentik-media:/media
+      - authentik-templates:/templates
+    ports:
+      - "9300:9000"
+      - "9443:9443"
+    environment:
+      AUTHENTIK_REDIS__HOST: "authentik-redis"
+      AUTHENTIK_POSTGRESQL__HOST: "authentik-db"
+      AUTHENTIK_POSTGRESQL__USER: "authentik"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "${AUTHENTIK_DB_PASSWORD:?required}"
+      AUTHENTIK_POSTGRESQL__NAME: "authentik"
+      AUTHENTIK_SECRET_KEY: "${AUTHENTIK_SECRET_KEY:?required}"
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_BOOTSTRAP_EMAIL: "${ADMIN_EMAIL:?required}"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "${AUTHENTIK_ADMIN_PASSWORD:?required}"
+      AUTHENTIK_BOOTSTRAP_TOKEN: "${AUTHENTIK_BOOTSTRAP_TOKEN:-}"
+    depends_on:
+      - authentik-db
+      - authentik-redis
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.authentik.rule: "Host(`sso.trancendos.com`)"
+      traefik.http.routers.authentik.entrypoints: "websecure"
+      traefik.http.routers.authentik.tls.certresolver: "letsencrypt"
+      traefik.http.services.authentik.loadbalancer.server.port: "9000"
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: trancendos-authentik-worker
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: "authentik-redis"
+      AUTHENTIK_POSTGRESQL__HOST: "authentik-db"
+      AUTHENTIK_POSTGRESQL__USER: "authentik"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "${AUTHENTIK_DB_PASSWORD:?required}"
+      AUTHENTIK_POSTGRESQL__NAME: "authentik"
+      AUTHENTIK_SECRET_KEY: "${AUTHENTIK_SECRET_KEY:?required}"
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    volumes:
+      - authentik-media:/media
+      - authentik-certs:/certs
+    depends_on:
+      - authentik-db
+      - authentik-redis
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+
+  authentik-db:
+    image: postgres:15-alpine
+    container_name: trancendos-authentik-db
+    volumes:
+      - authentik-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "authentik"
+      POSTGRES_PASSWORD: "${AUTHENTIK_DB_PASSWORD:?required}"
+      POSTGRES_DB: "authentik"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authentik -d authentik"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  authentik-redis:
+    image: redis:7-alpine
+    container_name: trancendos-authentik-redis
+    volumes:
+      - authentik-redis-data:/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CONTAINER LOGS UI — Dozzle (MIT, zero-cost)
+  # Real-time Docker log viewer for all containers. Port 8888.
+  # Route: logs.trancendos.com
+  # ══════════════════════════════════════════════════════════════════════════
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: trancendos-dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8080"
+    environment:
+      DOZZLE_AUTH_PROVIDER: "simple"
+      DOZZLE_ENABLE_ACTIONS: "true"
+      DOZZLE_LEVEL: "info"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dozzle.rule: "Host(`logs.trancendos.com`)"
+      traefik.http.routers.dozzle.entrypoints: "websecure"
+      traefik.http.routers.dozzle.tls.certresolver: "letsencrypt"
+      traefik.http.services.dozzle.loadbalancer.server.port: "8080"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # COLLABORATIVE WHITEBOARD — Excalidraw (MIT, zero-cost)
+  # Infinite canvas for design brainstorming, architecture diagrams.
+  # Complements Penpot (Fabulousa) for freeform collaboration.
+  # Port 3800. Route: draw.trancendos.com
+  # ══════════════════════════════════════════════════════════════════════════
+  excalidraw:
+    image: excalidraw/excalidraw:latest
+    container_name: trancendos-excalidraw
+    ports:
+      - "3800:80"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.excalidraw.rule: "Host(`draw.trancendos.com`)"
+      traefik.http.routers.excalidraw.entrypoints: "websecure"
+      traefik.http.routers.excalidraw.tls.certresolver: "letsencrypt"
+      traefik.http.services.excalidraw.loadbalancer.server.port: "80"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Item 8 — n8n: Workflow node upgrade for The Digital Grid
+# ═══════════════════════════════════════════════════════════════════════════
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: trancendos-n8n
+    restart: unless-stopped
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://n8n:5678/
+      - GENERIC_TIMEZONE=UTC
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:?required}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:?n8n password required}
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:?required}
+    volumes:
+      - n8n-data:/home/node/.n8n
+    ports:
+      - "5678:5678"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`trancendos.com`) && PathPrefix(`/n8n`)"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Item 7 — Wazuh: SIEM/EDR for Cryptex (single-node, free OSS)
+# Requires: vm.max_map_count=262144 on host (sysctl -w vm.max_map_count=262144)
+# ═══════════════════════════════════════════════════════════════════════════
+  wazuh-manager:
+    image: wazuh/wazuh-manager:4.8.0
+    container_name: trancendos-wazuh-manager
+    restart: unless-stopped
+    environment:
+      - WAZUH_API_USER=${WAZUH_API_USER:-wazuh}
+      - WAZUH_API_PASSWORD=${WAZUH_API_PASSWORD:?required}
+      - WAZUH_MANAGER_IP=0.0.0.0
+    volumes:
+      - wazuh-manager-data:/var/ossec/data
+      - wazuh-manager-logs:/var/ossec/logs
+      - wazuh-manager-etc:/var/ossec/etc
+    ports:
+      - "1514:1514/udp"
+      - "1515:1515"
+      - "55000:55000"
+    networks:
+      - tranc3-net
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:4.8.0
+    container_name: trancendos-wazuh-dashboard
+    restart: unless-stopped
+    depends_on:
+      - wazuh-manager
+    environment:
+      - WAZUH_API_URL=https://wazuh-manager
+      - WAZUH_API_PORT=55000
+      - WAZUH_API_USER=${WAZUH_API_USER:-wazuh}
+      - WAZUH_API_PASSWORD=${WAZUH_API_PASSWORD}
+      - OPENSEARCH_HOSTS=https://wazuh-indexer:9200
+      - OPENSEARCH_USERNAME=kibanaserver
+      - OPENSEARCH_PASSWORD=${WAZUH_KIBANA_PASSWORD:?required}
+    ports:
+      - "5601:5601"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wazuh.rule=Host(`trancendos.com`) && PathPrefix(`/wazuh`)"
+      - "traefik.http.services.wazuh.loadbalancer.server.port=5601"
+
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:4.8.0
+    container_name: trancendos-wazuh-indexer
+    restart: unless-stopped
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - network.host=0.0.0.0
+      - node.name=wazuh-indexer
+      - cluster.initial_cluster_manager_nodes=wazuh-indexer
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${WAZUH_INDEXER_PASSWORD:?required}
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Item 5 — Paperless-ngx: Document management for DocUtari
+# ═══════════════════════════════════════════════════════════════════════════
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: trancendos-paperless
+    restart: unless-stopped
+    depends_on:
+      - paperless-db
+      - paperless-redis
+    environment:
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBNAME=${PAPERLESS_DB_NAME:-paperless}
+      - PAPERLESS_DBUSER=${PAPERLESS_DB_USER:-paperless}
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:?required}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:?required}
+      - PAPERLESS_URL=http://trancendos.com/docutari
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:?required}
+      - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:?required}
+      - PAPERLESS_OCR_LANGUAGE=eng
+      - PAPERLESS_TIME_ZONE=UTC
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - paperless-export:/usr/src/paperless/export
+      - paperless-consume:/usr/src/paperless/consume
+    ports:
+      - "8085:8000"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.paperless.rule=Host(`trancendos.com`) && PathPrefix(`/docutari`)"
+      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
+
+  paperless-db:
+    image: postgres:15-alpine
+    container_name: trancendos-paperless-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${PAPERLESS_DB_NAME:-paperless}
+      - POSTGRES_USER=${PAPERLESS_DB_USER:-paperless}
+      - POSTGRES_PASSWORD=${PAPERLESS_DB_PASSWORD}
+    volumes:
+      - paperless-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: trancendos-paperless-redis
+    restart: unless-stopped
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Item 7 — OpenBAS: Breach & attack simulation for The Ice Box
+# ═══════════════════════════════════════════════════════════════════════════
+  openbas:
+    image: filigran/openbas-platform:latest
+    container_name: trancendos-openbas
+    restart: unless-stopped
+    depends_on:
+      - openbas-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://openbas-db:5432/openbas
+      - SPRING_DATASOURCE_USERNAME=${OPENBAS_DB_USER:-openbas}
+      - SPRING_DATASOURCE_PASSWORD=${OPENBAS_DB_PASSWORD:?required}
+      - OPENBAS_ADMIN_EMAIL=${OPENBAS_ADMIN_EMAIL:?required}
+      - OPENBAS_ADMIN_PASSWORD=${OPENBAS_ADMIN_PASSWORD:?required}
+      - OPENBAS_ADMIN_TOKEN=${OPENBAS_ADMIN_TOKEN:?required}
+      - OPENBAS_BASE_URL=http://trancendos.com/openbas
+      - SERVER_PORT=8082
+    volumes:
+      - openbas-data:/opt/openbas/files
+    ports:
+      - "8082:8082"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openbas.rule=Host(`trancendos.com`) && PathPrefix(`/openbas`)"
+      - "traefik.http.services.openbas.loadbalancer.server.port=8082"
+
+  openbas-db:
+    image: postgres:15-alpine
+    container_name: trancendos-openbas-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=openbas
+      - POSTGRES_USER=${OPENBAS_DB_USER:-openbas}
+      - POSTGRES_PASSWORD=${OPENBAS_DB_PASSWORD}
+    volumes:
+      - openbas-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
@@ -1653,6 +2113,48 @@ volumes:
   signoz-clickhouse-logs:
     driver: local
   signoz-query-data:
+    driver: local
+  litellm-data:
+    driver: local
+  ollama-data:
+    driver: local
+  meilisearch-data:
+    driver: local
+  minio-data:
+    driver: local
+  authentik-media:
+    driver: local
+  authentik-templates:
+    driver: local
+  authentik-certs:
+    driver: local
+  authentik-db-data:
+    driver: local
+  authentik-redis-data:
+    driver: local
+  n8n-data:
+    driver: local
+  wazuh-manager-data:
+    driver: local
+  wazuh-manager-logs:
+    driver: local
+  wazuh-manager-etc:
+    driver: local
+  wazuh-indexer-data:
+    driver: local
+  paperless-data:
+    driver: local
+  paperless-media:
+    driver: local
+  paperless-export:
+    driver: local
+  paperless-consume:
+    driver: local
+  paperless-db-data:
+    driver: local
+  openbas-data:
+    driver: local
+  openbas-db-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

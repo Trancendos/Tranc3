@@ -1,9 +1,14 @@
 """
 GBrain — Graph-based AI reasoning pipeline (Luminous subsystem).
-
-Provides AgentInteraction and pipeline orchestration.
 """
 
-from .pipeline import AgentInteraction, get_pipeline
+from .client import GBrainClient
+from .pipeline import AgentInteraction, GBrainIngestionPipeline, IngestionResult, get_pipeline
 
-__all__ = ["AgentInteraction", "get_pipeline"]
+__all__ = [
+    "AgentInteraction",
+    "GBrainClient",
+    "GBrainIngestionPipeline",
+    "IngestionResult",
+    "get_pipeline",
+]

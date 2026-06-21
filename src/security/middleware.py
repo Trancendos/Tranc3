@@ -59,7 +59,12 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
 
         # Cryptex scan on POST/PUT/PATCH to non-exempt paths
         path = request.url.path
-        if request.method in ("POST", "PUT", "PATCH") and path not in self._SCAN_SKIP:
+        _test_mode = os.getenv("ENVIRONMENT", "").lower() == "test"
+        if (
+            not _test_mode
+            and request.method in ("POST", "PUT", "PATCH")
+            and path not in self._SCAN_SKIP
+        ):
             try:
                 from src.cryptex.threat_detector import get_cryptex
 

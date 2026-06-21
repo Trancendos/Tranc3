@@ -166,6 +166,9 @@ capabilities:
 
 # Legacy flat list (backward compatible with is_approved())
 approved_self_hosted:
+  - id: litellm
+    category: ai_inference
+    cost: "MIT — self-hosted aggregator proxy, zero-cost"
   - id: ollama
     category: ai_inference
     cost: "MIT — local only"

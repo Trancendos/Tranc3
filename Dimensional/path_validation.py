@@ -215,3 +215,39 @@ def sanitize_filename(name: str, max_length: int = 255) -> str:
         sanitized = sanitized[:max_length]
 
     return sanitized
+
+
+def list_validated_children(
+    rel: Union[str, Path],
+    base_dir: Union[str, Path],
+) -> list[dict]:
+    """List children of a validated directory path.
+
+    Returns a list of dicts with keys: name, type ('file'/'directory'), size.
+
+    Raises:
+        PathTraversalError: If the path escapes *base_dir*.
+        FileNotFoundError: If the directory does not exist.
+    """
+    resolved = validate_path(rel, base_dir, must_exist=True)
+    if not resolved.is_dir():
+        raise FileNotFoundError(f"Validated path is not a directory: {resolved}")
+
+    children = []
+    try:
+        entries = sorted(resolved.iterdir())
+    except OSError:
+        return children
+    for child in entries:
+        try:
+            stat = child.stat()
+            children.append(
+                {
+                    "name": child.name,
+                    "type": "directory" if child.is_dir() else "file",
+                    "size": stat.st_size if child.is_file() else 0,
+                }
+            )
+        except OSError:
+            pass
+    return children

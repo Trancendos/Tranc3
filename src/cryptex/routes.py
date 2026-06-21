@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Body, Query, Request
 from fastapi.responses import JSONResponse
 
 from src.cryptex.threat_detector import ThreatSeverity, get_cryptex
@@ -72,3 +72,34 @@ async def block_ip(ip: str):
 async def unblock_ip(ip: str):
     get_cryptex().unblock_ip(ip)
     return {"unblocked": ip}
+
+
+# ─── Bug Bounty / CVE scanning ────────────────────────────────────────────────
+
+
+@router.post("/bounty/scan")
+async def run_bounty_scan(background_tasks: BackgroundTasks, target: Optional[str] = Query(None)):
+    """Trigger a full bounty scan (nuclei + pip-audit) in the background."""
+    from src.cryptex.bounty_hunter import run_full_scan
+
+    def _scan():
+        run_full_scan(target)
+
+    background_tasks.add_task(_scan)
+    return {"status": "scan_started", "target": target or "default"}
+
+
+@router.get("/bounty/candidates")
+async def bounty_candidates():
+    """Return bounty-eligible findings not yet reported."""
+    from src.cryptex.bounty_hunter import get_bounty_candidates
+
+    return get_bounty_candidates()
+
+
+@router.get("/bounty/summary")
+async def bounty_summary():
+    """Return aggregate finding statistics."""
+    from src.cryptex.bounty_hunter import get_summary
+
+    return get_summary()
