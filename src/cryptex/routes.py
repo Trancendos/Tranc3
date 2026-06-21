@@ -76,6 +76,7 @@ async def unblock_ip(ip: str):
 
 # ─── Bug Bounty / CVE scanning ────────────────────────────────────────────────
 
+
 @router.post("/bounty/scan")
 async def run_bounty_scan(background_tasks: BackgroundTasks, target: Optional[str] = Query(None)):
     """Trigger a full bounty scan (nuclei + pip-audit) in the background."""
@@ -92,6 +93,7 @@ async def run_bounty_scan(background_tasks: BackgroundTasks, target: Optional[st
 async def bounty_candidates():
     """Return bounty-eligible findings not yet reported."""
     from src.cryptex.bounty_hunter import get_bounty_candidates
+
     return get_bounty_candidates()
 
 
@@ -99,4 +101,5 @@ async def bounty_candidates():
 async def bounty_summary():
     """Return aggregate finding statistics."""
     from src.cryptex.bounty_hunter import get_summary
+
     return get_summary()

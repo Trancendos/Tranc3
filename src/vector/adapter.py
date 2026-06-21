@@ -35,6 +35,7 @@ class SearchResult:
 
 # ─── Backend implementations ──────────────────────────────────────────────────
 
+
 class _QdrantBackend:
     """Qdrant client backend — requires qdrant-client package."""
 
@@ -134,7 +135,9 @@ class _FaissBackend:
         results = []
         for score, idx in zip(scores[0], indices[0], strict=False):
             if 0 <= idx < len(self._ids):
-                results.append(SearchResult(id=self._ids[idx], score=float(score), payload=self._payloads[idx]))
+                results.append(
+                    SearchResult(id=self._ids[idx], score=float(score), payload=self._payloads[idx])
+                )
         return results
 
     def delete(self, doc_id: str) -> None:
@@ -202,6 +205,7 @@ class _NumpyBackend:
 
 # ─── Public VectorStore facade ────────────────────────────────────────────────
 
+
 class VectorStore:
     """
     Unified vector store. Use get_vector_store() to obtain an instance.
@@ -210,7 +214,9 @@ class VectorStore:
     def __init__(self, collection: str, dim: int = _EMBED_DIM) -> None:
         self._backend = _make_backend(collection, dim)
 
-    def upsert(self, doc_id: str, vector: List[float], payload: Optional[Dict[str, Any]] = None) -> None:
+    def upsert(
+        self, doc_id: str, vector: List[float], payload: Optional[Dict[str, Any]] = None
+    ) -> None:
         self._backend.upsert(doc_id, vector, payload or {})
 
     def search(self, vector: List[float], top_k: int = 5) -> List[SearchResult]:
@@ -236,6 +242,7 @@ def get_vector_store(collection: str, dim: int = _EMBED_DIM) -> VectorStore:
 
 
 # ─── Backend selection ────────────────────────────────────────────────────────
+
 
 def _make_backend(collection: str, dim: int) -> Any:
     # 1. Try Qdrant

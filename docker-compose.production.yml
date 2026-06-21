@@ -179,7 +179,7 @@ services:
     <<: *common
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-tranc3-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?required}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://localhost:3001
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
@@ -922,7 +922,7 @@ services:
     image: openbao/openbao:latest
     container_name: trancendos-openbao
     environment:
-      BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:-dev-root-token}"
+      BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:?required}"
       BAO_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
     ports:
       - "8200:8200"
@@ -1016,8 +1016,8 @@ services:
     environment:
       DATABASE_URL: "postgresql://langfuse:langfuse@langfuse-db:5432/langfuse"
       NEXTAUTH_URL: "http://localhost:3002"
-      NEXTAUTH_SECRET: "${LANGFUSE_SECRET:-changeme-langfuse-secret}"
-      SALT: "${LANGFUSE_SALT:-changeme-langfuse-salt}"
+      NEXTAUTH_SECRET: "${LANGFUSE_SECRET:?required}"
+      SALT: "${LANGFUSE_SALT:?required}"
       TELEMETRY_ENABLED: "false"
     depends_on:
       - langfuse-db
@@ -1194,7 +1194,7 @@ services:
     restart: unless-stopped
     environment:
       PENPOT_FLAGS: "enable-registration enable-login disable-demo-users disable-secure-session-cookies"
-      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:-insecure-for-dev-only}"
+      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY:?required}"
       PENPOT_DATABASE_URI: "postgresql://penpot:penpot@penpot-db/penpot"
       PENPOT_REDIS_URI: "redis://valkey:6379/2"
       PENPOT_STORAGE_BACKEND: "fs"
@@ -1317,7 +1317,7 @@ services:
       WOODPECKER_FORGEJO_URL: "${FORGEJO_URL:-http://forgejo:3000}"
       WOODPECKER_FORGEJO_CLIENT: "${WOODPECKER_FORGEJO_CLIENT}"
       WOODPECKER_FORGEJO_SECRET: "${WOODPECKER_FORGEJO_SECRET}"
-      WOODPECKER_SECRET: "${WOODPECKER_SECRET:-changeme-woodpecker-secret}"
+      WOODPECKER_SECRET: "${WOODPECKER_SECRET:?required}"
       WOODPECKER_DATABASE_DATASOURCE: "/var/lib/woodpecker/woodpecker.db"
       WOODPECKER_DATABASE_DRIVER: "sqlite3"
     volumes:
@@ -1340,7 +1340,7 @@ services:
       - woodpecker-server
     environment:
       WOODPECKER_SERVER: "woodpecker-server:9000"
-      WOODPECKER_TOKEN: "${WOODPECKER_AGENT_TOKEN:-changeme-agent-token}"
+      WOODPECKER_TOKEN: "${WOODPECKER_AGENT_TOKEN:?required}"
       WOODPECKER_MAX_WORKFLOWS: "4"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -1376,8 +1376,8 @@ services:
       - "3010:3000"
     environment:
       DATABASE_URL: "postgresql://calcom:${CALCOM_DB_PASSWORD:?required}@calcom-db:5432/calcom"
-      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:-changeme-calcom-secret}"
-      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:-changeme-calcom-encryption-key}"
+      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:?required}"
+      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:?required}"
       NEXT_PUBLIC_WEBAPP_URL: "${CALCOM_URL:-http://localhost:3010}"
       EMAIL_FROM: "${CALCOM_EMAIL_FROM:-noreply@trancendos.com}"
       NEXT_PUBLIC_LICENSE_CONSENT: "agree"
@@ -1436,8 +1436,8 @@ services:
     environment:
       DATABASE_URL: "postgres://outline:${OUTLINE_DB_PASSWORD:?required}@outline-db:5432/outline"
       REDIS_URL: "redis://outline-redis:6379"
-      SECRET_KEY: "${OUTLINE_SECRET_KEY:-changeme-outline-secret-key-must-be-32char}"
-      UTILS_SECRET: "${OUTLINE_UTILS_SECRET:-changeme-outline-utils-secret}"
+      SECRET_KEY: "${OUTLINE_SECRET_KEY:?required}"
+      UTILS_SECRET: "${OUTLINE_UTILS_SECRET:?required}"
       URL: "${OUTLINE_URL:-http://localhost:3011}"
       PORT: "3000"
       FILE_STORAGE: "local"
@@ -1563,8 +1563,8 @@ services:
     ports:
       - "4000:4000"
     environment:
-      LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY:-sk-tranc3-litellm-master}"
-      LITELLM_SALT_KEY: "${LITELLM_SALT_KEY:-sk-tranc3-salt}"
+      LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY:?required}"
+      LITELLM_SALT_KEY: "${LITELLM_SALT_KEY:?required}"
       DATABASE_URL: "sqlite:////app/data/litellm.db"
       STORE_MODEL_IN_DB: "True"
       # Provider API keys (all free tiers)
@@ -1831,7 +1831,7 @@ services:
       - WEBHOOK_URL=http://n8n:5678/
       - GENERIC_TIMEZONE=UTC
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_USER=${N8N_USER:?required}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:?n8n password required}
       - DB_TYPE=sqlite
       - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
@@ -1926,7 +1926,7 @@ services:
       - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:?required}
       - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:?required}
       - PAPERLESS_URL=http://trancendos.com/docutari
-      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:-admin}
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:?required}
       - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:?required}
       - PAPERLESS_OCR_LANGUAGE=eng
       - PAPERLESS_TIME_ZONE=UTC
