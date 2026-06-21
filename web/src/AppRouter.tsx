@@ -79,10 +79,11 @@ export default function AppRouter() {
     <BrowserRouter>
       <Routes>
         {/* Public */}
+        <Route path="/"      element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
 
         {/* Protected — all wrapped in persistent Layout */}
-        <Route path="/"             element={<Protected><ChatView /></Protected>} />
+        <Route path="/chat"         element={<Protected><ChatView /></Protected>} />
         <Route path="/dashboard"    element={<Protected><DashboardPage /></Protected>} />
         <Route path="/mission"      element={<Protected><TrancendosDashboard /></Protected>} />
         <Route path="/spark"        element={<Protected><SparkDashboard /></Protected>} />

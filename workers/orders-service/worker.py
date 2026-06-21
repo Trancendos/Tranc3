@@ -1,7 +1,8 @@
 """
-Trancendos Orders Service — Self-Hosted Worker
-======================================================
-Order management CRUD API. Replaces CF trancendos-orders-service.
+Arcadian Exchange — Self-Hosted Worker
+=======================================
+Resource marketplace: listings, orders, stats.
+Lead AI: The Porter Family
 
 Port: 8012
 Zero-cost: FastAPI + SQLite, no external dependencies.
@@ -9,26 +10,32 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sqlite3
-import threading
 import uuid
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 WORKER_PORT = 8012
-WORKER_NAME = "orders-service"
-DB_PATH = Path(__file__).parent / "data" / "orders.db"
+WORKER_NAME = "arcadian-exchange"
+DB_PATH = Path(__file__).parent / "data" / "exchange.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+RESOURCE_TYPES = frozenset([
+    "api_credits", "compute_time", "storage_gb", "model_weights",
+    "workflow_slots", "agent_hours", "training_tokens", "bandwidth_gb",
+])
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
@@ -37,128 +44,114 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-class OrdersDatabase:
-    """SQLite-backed storage for orders."""
+def _get_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=15)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
 
-    def __init__(self, db_path: Path):
-        self.db_path = db_path
-        self._local = threading.local()
-        self._init_db()
 
-    def _get_conn(self) -> sqlite3.Connection:
-        if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
-            self._local.conn.row_factory = sqlite3.Row
-            self._local.conn.execute("PRAGMA journal_mode=WAL")
-            self._local.conn.execute("PRAGMA synchronous=NORMAL")
-        return self._local.conn
+@contextmanager
+def _cursor(conn: sqlite3.Connection):
+    cur = conn.cursor()
+    try:
+        yield cur
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
 
-    @contextmanager
-    def _cursor(self):
-        conn = self._get_conn()
-        cur = conn.cursor()
-        try:
-            yield cur
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
 
-    def _init_db(self):
-        with self._cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS orders (
-                    order_id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    items TEXT NOT NULL DEFAULT '[]',
-                    total REAL NOT NULL DEFAULT 0,
-                    status TEXT NOT NULL DEFAULT 'pending',
-                    shipping_address TEXT DEFAULT '{}',
-                    metadata TEXT DEFAULT '{}',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
+def init_db() -> None:
+    conn = _get_conn()
+    with _cursor(conn) as cur:
+        cur.executescript("""
+            CREATE TABLE IF NOT EXISTS listings (
+                id              TEXT PRIMARY KEY,
+                seller_id       TEXT NOT NULL,
+                resource_type   TEXT NOT NULL,
+                quantity        REAL NOT NULL,
+                price_per_unit  REAL NOT NULL,
+                currency        TEXT NOT NULL DEFAULT 'ARC',
+                description     TEXT DEFAULT '',
+                status          TEXT NOT NULL DEFAULT 'active',
+                created_at      TEXT NOT NULL,
+                updated_at      TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_listings_type_status
+                ON listings(resource_type, status, price_per_unit);
 
-    def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        now = datetime.now(timezone.utc).isoformat()
-        data.setdefault("created_at", now)
-        cols = list(data.keys())
-        vals = list(data.values())
-        placeholders = ", ".join("?" for _ in cols)
-        with self._cursor() as cur:
-            cur.execute(f"INSERT INTO orders ({', '.join(cols)}) VALUES ({placeholders})", vals)
-        return data
-
-    def get(self, id_field: str, id_value: str) -> Optional[Dict[str, Any]]:
-        conn = self._get_conn()
-        row = conn.execute(f"SELECT * FROM orders WHERE {id_field}=?", (id_value,)).fetchone()
-        return dict(row) if row else None
-
-    def list(self, limit: int = 50, offset: int = 0, **filters) -> List[Dict[str, Any]]:
-        conn = self._get_conn()
-        query = "SELECT * FROM orders WHERE 1=1"
-        params: list = []
-        for key, val in filters.items():
-            query += f" AND {key}=?"
-            params.append(val)
-        query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
-        rows = conn.execute(query, params).fetchall()
-        return [dict(r) for r in rows]
-
-    def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        sets = ", ".join(f"{k}=?" for k in data.keys())
-        vals = list(data.values()) + [id_value]
-        with self._cursor() as cur:
-            cur.execute(f"UPDATE orders SET {sets} WHERE {id_field}=?", vals)
-            return cur.rowcount > 0
-
-    def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
-        # orders table doesn't have is_active column; use status-based soft delete
-        if soft:
-            with self._cursor() as cur:
-                cur.execute(
-                    f"UPDATE orders SET status='cancelled', updated_at=? WHERE {id_field}=?",
-                    (datetime.now(timezone.utc).isoformat(), id_value),
-                )
-                return cur.rowcount > 0
-        else:
-            with self._cursor() as cur:
-                cur.execute(f"DELETE FROM orders WHERE {id_field}=?", (id_value,))
-                return cur.rowcount > 0
+            CREATE TABLE IF NOT EXISTS orders (
+                id              TEXT PRIMARY KEY,
+                buyer_id        TEXT NOT NULL,
+                listing_id      TEXT NOT NULL,
+                quantity        REAL NOT NULL,
+                total_price     REAL NOT NULL,
+                status          TEXT NOT NULL DEFAULT 'completed',
+                created_at      TEXT NOT NULL,
+                FOREIGN KEY (listing_id) REFERENCES listings(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_id, created_at DESC);
+        """)
+    conn.close()
+    logger.info("Arcadian Exchange DB ready at %s", DB_PATH)
 
 
 # ---------------------------------------------------------------------------
-# Application
+# Lifespan
 # ---------------------------------------------------------------------------
-db = OrdersDatabase(DB_PATH)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.otel import init_otel
+        init_otel(service_name="tranc3.arcadian-exchange")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass
+    init_db()
+    yield
+
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
+class CreateListingRequest(BaseModel):
+    seller_id: str
+    resource_type: str
+    quantity: float = Field(..., gt=0)
+    price_per_unit: float = Field(..., ge=0)
+    currency: str = "ARC"
+    description: str = ""
+
+
+class PurchaseRequest(BaseModel):
+    buyer_id: str
+    listing_id: str
+    quantity: float = Field(..., gt=0)
+
+
+# ---------------------------------------------------------------------------
+# App
+# ---------------------------------------------------------------------------
+STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(
-    title="Orders Service",
-    description="Order management CRUD API. Replaces CF trancendos-orders-service.",
-    version="1.0.0",
+    title="Arcadian Exchange",
+    description="Resource marketplace — API credits, compute, storage, models, workflows. Lead AI: The Porter Family.",
+    version="2.0.0",
+    lifespan=lifespan,
 )
-
-# OpenTelemetry instrumentation
-try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-    from src.observability.otel import init_otel
-
-    init_otel(service_name="tranc3.orders-service")
-    FastAPIInstrumentor.instrument_app(app)
-except Exception:
-    pass  # OTel is optional — never block startup
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
@@ -173,145 +166,239 @@ async def require_internal_auth(
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
-STARTED_AT = datetime.now(timezone.utc)
 
 
 @app.get("/health")
 async def health():
+    conn = _get_conn()
+    listing_count = conn.execute("SELECT COUNT(*) FROM listings WHERE status='active'").fetchone()[0]
+    order_count = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+    conn.close()
     return {
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "active_listings": listing_count,
+        "total_orders": order_count,
+        "entity": {
+            "name": "Arcadian Exchange",
+            "lead_ai": "The Porter Family",
+            "role": "Financial exchange — procurement & resource trading",
+        },
     }
 
 
-@_router.get("/")
-async def list_all(limit: int = 50, offset: int = 0):
-    """List all orders."""
-    return {"data": db.list(limit=limit, offset=offset)}
+# ---------------------------------------------------------------------------
+# Listings
+# ---------------------------------------------------------------------------
+@_router.post("/listings", status_code=201)
+async def create_listing(req: CreateListingRequest):
+    """Create a resource listing on the exchange."""
+    if req.resource_type not in RESOURCE_TYPES:
+        raise HTTPException(
+            400,
+            f"Unknown resource_type '{req.resource_type}'. Valid types: {sorted(RESOURCE_TYPES)}",
+        )
+    listing_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                """
+                INSERT INTO listings (id, seller_id, resource_type, quantity, price_per_unit, currency, description, created_at)
+                VALUES (?,?,?,?,?,?,?,?)
+                """,
+                (listing_id, req.seller_id, req.resource_type, req.quantity,
+                 req.price_per_unit, req.currency, req.description, now),
+            )
+    finally:
+        conn.close()
+    return {
+        "id": listing_id,
+        "seller_id": req.seller_id,
+        "resource_type": req.resource_type,
+        "quantity": req.quantity,
+        "price_per_unit": req.price_per_unit,
+        "currency": req.currency,
+        "status": "active",
+        "created_at": now,
+    }
 
 
-@_router.post("/")
-async def create(data: Dict[str, Any]):
-    """Create a new orders entry."""
-    item_id = data.get("order_id", str(uuid.uuid4()))
-    data["order_id"] = item_id
-    created = db.create(data)
-    return {"ok": True, **created}
+@_router.get("/listings")
+async def browse_listings(
+    resource_type: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
+    seller_id: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Browse the marketplace with optional filters."""
+    query = "SELECT * FROM listings WHERE status='active'"
+    params: list = []
+    if resource_type:
+        query += " AND resource_type=?"
+        params.append(resource_type)
+    if min_price is not None:
+        query += " AND price_per_unit >= ?"
+        params.append(min_price)
+    if max_price is not None:
+        query += " AND price_per_unit <= ?"
+        params.append(max_price)
+    if seller_id:
+        query += " AND seller_id=?"
+        params.append(seller_id)
+    query += " ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
 
-
-@_router.get("/{order_id}")
-async def get_by_id(order_id: str):
-    """Get a orders entry by ID."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    return item
-
-
-@_router.patch("/{order_id}")
-async def update_by_id(order_id: str, data: Dict[str, Any]):
-    """Update a orders entry."""
-    if not db.update("order_id", order_id, data):
-        raise HTTPException(404, f"Not found: {order_id}")
-    return {"ok": True}
-
-
-@_router.delete("/{order_id}")
-async def delete_by_id(order_id: str):
-    """Delete a orders entry (soft delete)."""
-    if not db.delete("order_id", order_id):
-        raise HTTPException(404, f"Not found: {order_id}")
-    return {"ok": True}
+    conn = _get_conn()
+    try:
+        rows = conn.execute(query, params).fetchall()
+        total = conn.execute(
+            f"SELECT COUNT(*) FROM listings WHERE status='active'"
+            + (" AND resource_type=?" if resource_type else ""),
+            ([resource_type] if resource_type else []),
+        ).fetchone()[0]
+        return {"total": total, "listings": [dict(r) for r in rows]}
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
-# Domain-specific endpoints
+# Orders
 # ---------------------------------------------------------------------------
+@_router.post("/orders", status_code=201)
+async def purchase(req: PurchaseRequest):
+    """Purchase from a listing (atomic quantity check + deduct)."""
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN EXCLUSIVE")
+        listing = conn.execute(
+            "SELECT * FROM listings WHERE id=? AND status='active'", (req.listing_id,)
+        ).fetchone()
+        if not listing:
+            conn.rollback()
+            raise HTTPException(404, "Listing not found or not active")
+        if listing["quantity"] < req.quantity:
+            conn.rollback()
+            raise HTTPException(
+                409,
+                f"Insufficient quantity: available {listing['quantity']}, requested {req.quantity}",
+            )
 
+        total_price = round(listing["price_per_unit"] * req.quantity, 6)
+        order_id = str(uuid.uuid4())
 
-@_router.get("/by-user/{user_id}")
-async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
-    """List all orders placed by a specific user."""
-    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
-
-
-@_router.get("/by-status/{status}")
-async def get_by_status(status: str, limit: int = 50, offset: int = 0):
-    """List orders by status (pending, confirmed, shipped, delivered, cancelled)."""
-    valid = {"pending", "confirmed", "shipped", "delivered", "cancelled"}
-    if status not in valid:
-        raise HTTPException(400, f"Invalid status. Must be one of: {sorted(valid)}")
-    return {"data": db.list(limit=limit, offset=offset, status=status)}
-
-
-@_router.post("/{order_id}/confirm")
-async def confirm_order(order_id: str):
-    """Confirm a pending order."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") != "pending":
-        raise HTTPException(409, f"Order status is '{item.get('status')}', not pending")
-    db.update("order_id", order_id, {"status": "confirmed"})
-    return {"ok": True, "order_id": order_id, "status": "confirmed"}
-
-
-@_router.post("/{order_id}/ship")
-async def ship_order(order_id: str):
-    """Mark an order as shipped."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") != "confirmed":
-        raise HTTPException(
-            409, f"Order must be confirmed before shipping, got '{item.get('status')}'"
+        # Deduct quantity from listing; mark sold-out if depleted
+        new_qty = listing["quantity"] - req.quantity
+        new_status = "active" if new_qty > 0 else "sold"
+        conn.execute(
+            "UPDATE listings SET quantity=?, status=?, updated_at=? WHERE id=?",
+            (new_qty, new_status, now, req.listing_id),
         )
-    db.update("order_id", order_id, {"status": "shipped"})
-    return {"ok": True, "order_id": order_id, "status": "shipped"}
-
-
-@_router.post("/{order_id}/deliver")
-async def deliver_order(order_id: str):
-    """Mark an order as delivered."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") != "shipped":
-        raise HTTPException(
-            409, f"Order must be shipped before delivery, got '{item.get('status')}'"
+        conn.execute(
+            """
+            INSERT INTO orders (id, buyer_id, listing_id, quantity, total_price, created_at)
+            VALUES (?,?,?,?,?,?)
+            """,
+            (order_id, req.buyer_id, req.listing_id, req.quantity, total_price, now),
         )
-    db.update("order_id", order_id, {"status": "delivered"})
-    return {"ok": True, "order_id": order_id, "status": "delivered"}
+        conn.commit()
+
+        return {
+            "order_id": order_id,
+            "buyer_id": req.buyer_id,
+            "listing_id": req.listing_id,
+            "resource_type": listing["resource_type"],
+            "quantity": req.quantity,
+            "price_per_unit": listing["price_per_unit"],
+            "total_price": total_price,
+            "currency": listing["currency"],
+            "status": "completed",
+            "created_at": now,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Purchase failed")
+        raise HTTPException(500, f"Purchase failed: {exc}") from exc
+    finally:
+        conn.close()
 
 
-@_router.post("/{order_id}/cancel")
-async def cancel_order(order_id: str):
-    """Cancel an order (only pending or confirmed orders can be cancelled)."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") not in ("pending", "confirmed"):
-        raise HTTPException(409, f"Cannot cancel order with status '{item.get('status')}'")
-    db.update("order_id", order_id, {"status": "cancelled"})
-    return {"ok": True, "order_id": order_id, "status": "cancelled"}
+@_router.get("/orders/{buyer_id}")
+async def buyer_orders(
+    buyer_id: str,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Buyer's order history with listing detail."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            """
+            SELECT o.*, l.resource_type, l.price_per_unit, l.currency, l.seller_id
+            FROM orders o
+            JOIN listings l ON l.id = o.listing_id
+            WHERE o.buyer_id=?
+            ORDER BY o.created_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (buyer_id, limit, offset),
+        ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM orders WHERE buyer_id=?", (buyer_id,)
+        ).fetchone()[0]
+        return {"buyer_id": buyer_id, "total": total, "orders": [dict(r) for r in rows]}
+    finally:
+        conn.close()
 
 
-@_router.get("/stats/summary")
-async def order_stats():
-    """Order counts and total revenue by status."""
-    conn = db._get_conn()
-    rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status"
-    ).fetchall()
-    return {"stats": [dict(r) for r in rows]}
+# ---------------------------------------------------------------------------
+# Exchange Stats
+# ---------------------------------------------------------------------------
+@_router.get("/exchange/stats")
+async def exchange_stats():
+    """Total listings, volume traded, most traded resources."""
+    conn = _get_conn()
+    try:
+        total_active = conn.execute(
+            "SELECT COUNT(*) FROM listings WHERE status='active'"
+        ).fetchone()[0]
+        total_volume = conn.execute(
+            "SELECT COALESCE(SUM(total_price),0) FROM orders"
+        ).fetchone()[0] or 0
+        total_orders = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+
+        most_traded = conn.execute(
+            """
+            SELECT l.resource_type, COUNT(o.id) as order_count, SUM(o.quantity) as total_qty, SUM(o.total_price) as total_value
+            FROM orders o JOIN listings l ON l.id=o.listing_id
+            GROUP BY l.resource_type
+            ORDER BY order_count DESC
+            LIMIT 10
+            """
+        ).fetchall()
+
+        return {
+            "active_listings": total_active,
+            "total_orders": total_orders,
+            "total_volume": round(total_volume, 4),
+            "resource_types_available": sorted(RESOURCE_TYPES),
+            "most_traded": [dict(r) for r in most_traded],
+            "as_of": datetime.now(timezone.utc).isoformat(),
+        }
+    finally:
+        conn.close()
 
 
 app.include_router(_router)
 
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)
