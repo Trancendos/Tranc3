@@ -9,10 +9,11 @@ Canonical vector store for the Trancendos platform. Consolidates:
 Backend priority (all zero-cost, self-hosted or free tier):
   1. Qdrant      (self-hosted :6333)         — persistent, scalable, production-grade
   2. pgvector    (Supabase/Neon free tier)   — SQL-native, no extra infra
-  3. ChromaDB    (in-process)                — persistent, SQL-backed
-  4. LanceDB     (in-process)                — columnar, fast, zero-copy
-  5. FAISS       (in-process)                — GPU-optional, battle-tested
-  6. Numpy       (always available)          — zero dependencies
+  3. Weaviate    (self-hosted :8080)         — GraphQL, schema-first, strong typing
+  4. ChromaDB    (in-process)                — persistent, SQL-backed
+  5. LanceDB     (in-process)                — columnar, fast, zero-copy
+  6. FAISS       (in-process)                — GPU-optional, battle-tested
+  7. Numpy       (always available)          — zero dependencies
 
 Embedding provider rotation (all zero-cost):
   1. Ollama          (local, zero network)
@@ -544,6 +545,100 @@ class _PgvectorBackend:
         return self.count()
 
 
+_WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
+
+
+class _WeaviateBackend:
+    """Weaviate — self-hosted vector database with GraphQL interface."""
+
+    def __init__(self, collection: str, dim: int) -> None:
+        import weaviate  # type: ignore
+
+        self._client = weaviate.connect_to_local(
+            host=_WEAVIATE_URL.replace("http://", "").replace("https://", "").split(":")[0],
+            port=int(_WEAVIATE_URL.rsplit(":", 1)[-1])
+            if ":" in _WEAVIATE_URL.rsplit("/", 1)[-1]
+            else 8080,
+        )
+        self._class_name = collection.replace("-", "_").capitalize()
+        self._dim = dim
+        self._ensure_schema()
+        log.info("VectorStore[weaviate] class=%s", self._class_name)
+
+    def _ensure_schema(self) -> None:
+        from weaviate.classes.config import Configure, DataType, Property  # type: ignore
+
+        if not self._client.collections.exists(self._class_name):
+            self._client.collections.create(
+                self._class_name,
+                vectorizer_config=Configure.Vectorizer.none(),
+                properties=[
+                    Property(name="doc_id", data_type=DataType.TEXT),
+                    Property(name="payload_json", data_type=DataType.TEXT),
+                ],
+            )
+
+    def upsert(self, doc_id: str, vector: List[float], payload: Dict[str, Any]) -> None:
+        import json as _json
+
+        from weaviate.classes.query import MetadataQuery  # type: ignore  # noqa: F401
+
+        col = self._client.collections.get(self._class_name)
+        existing = col.query.fetch_objects(
+            filters=col.query.filter.by_property("doc_id").equal(doc_id), limit=1
+        )
+        props = {"doc_id": doc_id, "payload_json": _json.dumps(payload)}
+        if existing.objects:
+            col.data.update(uuid=existing.objects[0].uuid, properties=props, vector=vector)
+        else:
+            col.data.insert(properties=props, vector=vector)
+
+    def search(
+        self,
+        vector: List[float],
+        top_k: int = 5,
+        metadata_filter: Optional[Dict[str, Any]] = None,
+    ) -> List[SearchResult]:
+        import json as _json
+
+        col = self._client.collections.get(self._class_name)
+        from weaviate.classes.query import MetadataQuery  # type: ignore
+
+        response = col.query.near_vector(
+            near_vector=vector,
+            limit=top_k,
+            return_metadata=MetadataQuery(certainty=True, distance=True),
+        )
+        results = []
+        for obj in response.objects:
+            payload = _json.loads(obj.properties.get("payload_json", "{}"))
+            score = float(obj.metadata.certainty or 0.0)
+            results.append(
+                SearchResult(
+                    id=obj.properties.get("doc_id", str(obj.uuid)), score=score, payload=payload
+                )
+            )
+        return results
+
+    def delete(self, doc_id: str) -> None:
+        col = self._client.collections.get(self._class_name)
+        col.data.delete_many(where=col.query.filter.by_property("doc_id").equal(doc_id))
+
+    def delete_by_metadata(self, key: str, value: str) -> int:
+        return 0  # not supported via simple filter in this minimal impl
+
+    def count(self) -> int:
+        col = self._client.collections.get(self._class_name)
+        agg = col.aggregate.over_all(total_count=True)
+        return agg.total_count or 0
+
+    def save(self, path: Path) -> None:
+        pass  # Weaviate persists automatically
+
+    def load(self, path: Path) -> int:
+        return self.count()
+
+
 class _ChromaBackend:
     """ChromaDB — in-process persistent backend. SQLite-backed, zero network."""
 
@@ -895,25 +990,31 @@ def _make_backend(collection: str, dim: int) -> Any:
         except Exception as exc:
             log.debug("pgvector unavailable (%s)", exc)
 
-    # 3. ChromaDB (in-process persistent)
+    # 3. Weaviate (self-hosted)
+    try:
+        return _WeaviateBackend(collection, dim)
+    except Exception as exc:
+        log.debug("Weaviate unavailable (%s)", exc)
+
+    # 4. ChromaDB (in-process persistent)
     try:
         return _ChromaBackend(collection, dim)
     except Exception as exc:
         log.debug("ChromaDB unavailable (%s)", exc)
 
-    # 4. LanceDB (in-process columnar)
+    # 5. LanceDB (in-process columnar)
     try:
         return _LanceBackend(collection, dim)
     except Exception as exc:
         log.debug("LanceDB unavailable (%s)", exc)
 
-    # 5. FAISS (in-process)
+    # 6. FAISS (in-process)
     try:
         return _FaissBackend(collection, dim)
     except Exception as exc:
         log.debug("FAISS unavailable (%s)", exc)
 
-    # 6. Numpy (always available)
+    # 7. Numpy (always available)
     return _NumpyBackend(collection, dim)
 
 

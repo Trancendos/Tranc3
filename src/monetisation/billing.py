@@ -256,10 +256,11 @@ class StripeManager:
             return None
         price_id = TIERS.get(tier, {}).get("stripe_price_id")
         if not price_id:
+            safe_tier = "".join(c for c in tier if c.isalnum() or c == "_")[:32]
             logger.error(
                 "No Stripe price ID for tier '%s' — set STRIPE_%s_PRICE_ID in .env",
-                tier,
-                tier.upper(),
+                safe_tier,
+                safe_tier.upper(),
             )
             return None
         try:

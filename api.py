@@ -869,6 +869,11 @@ from src.apimarket.routes import (
 
 app.include_router(_apimarket_router)
 
+# ── Search & RAG API (hybrid BM25+vector, Meilisearch+Qdrant+Weaviate+Chroma) ─
+from src.routers.search_api import router as _search_router  # noqa: F401  # intentional top-level import
+
+app.include_router(_search_router)
+
 # ── VRAR3D (AR/VR wellbeing centre — Three.js / A-Frame WebXR) ───────────────
 from src.vrar3d.routes import router as _vrar3d_router  # noqa: F401  # intentional top-level import
 

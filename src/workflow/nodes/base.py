@@ -63,7 +63,8 @@ class BaseNode(ABC):
         self.logger = logging.getLogger(f"{__name__}.{config.type}.{config.id}")
 
     @abstractmethod
-    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult: ...
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
+        raise NotImplementedError
 
     async def _with_timeout(self, coro, timeout: float):
         try:
