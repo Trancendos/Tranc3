@@ -144,7 +144,7 @@ def hash_value(value: str) -> str:
 # ── Database (SQLite, replaces Cloudflare D1) ──────────────────
 
 
-_schema_initialized = False
+_schema_initialized = False  # codeql[py/unused-global-variable]
 
 
 def get_db() -> sqlite3.Connection:

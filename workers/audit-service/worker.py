@@ -47,7 +47,7 @@ from pydantic import BaseModel, Field
 PORT = int(os.environ.get("PORT", 8017))
 WORKER_NAME = "audit-service"
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-_INTERNAL_SECRET = INTERNAL_SECRET  # noqa: F841 — alias for test fixtures
+
 
 
 _data_dir = Path(os.environ.get("DATA_DIR", "/data"))
