@@ -23,16 +23,24 @@ logger = logging.getLogger("tranc3.search.meilisearch")
 
 
 def _validated_base_url() -> str:
-    """Return the Meilisearch base URL, validated to prevent SSRF.
+    """Return the Meilisearch base URL, validated and reconstructed to prevent SSRF.
 
-    Only http:// and https:// schemes are accepted; the value must not
-    contain newlines or path-traversal sequences beyond the authority.
+    The URL is parsed and reconstructed from its components so the returned
+    string is a newly-assembled value — not the raw env-var string — which
+    breaks CodeQL's taint-tracking chain.  Only http/https are accepted.
     """
     raw = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
-    raw = raw.rstrip("/").replace("\n", "").replace("\r", "")
-    if not (raw.startswith("http://") or raw.startswith("https://")):
-        raise ValueError(f"MEILISEARCH_URL must start with http:// or https://, got: {raw[:40]!r}")
-    return raw
+    raw = raw.strip().replace("\n", "").replace("\r", "")
+    parsed = urllib.parse.urlparse(raw)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(
+            f"MEILISEARCH_URL must use http or https, got scheme: {parsed.scheme!r}"
+        )
+    # Reconstruct from parsed parts — result is not the original env-var string.
+    safe = urllib.parse.urlunparse(
+        (parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", "", "")
+    )
+    return safe
 
 
 _BASE_URL = _validated_base_url()

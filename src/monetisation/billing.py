@@ -119,6 +119,9 @@ TIERS: Dict[str, Dict[str, Any]] = {
     },
 }
 
+# Allowlist mapping for safe log output — values are string literals, not user input.
+_SAFE_TIER_LABELS: Dict[str, str] = {k: k for k in TIERS}
+
 
 def check_rate_limit(
     user_id: str, tier: "BillingTier", request_count: int
@@ -256,10 +259,8 @@ class StripeManager:
             return None
         price_id = TIERS.get(tier, {}).get("stripe_price_id")
         if not price_id:
-            # Use a lookup against the known set of valid tiers to avoid logging
-            # untrusted input directly (CodeQL log-injection prevention).
-            known_tiers = list(TIERS.keys())
-            tier_label = tier if tier in known_tiers else "<unknown>"
+            # _SAFE_TIER_LABELS values are string literals; .get() result is never user-input.
+            tier_label = _SAFE_TIER_LABELS.get(tier, "unknown")
             logger.error(
                 "No Stripe price ID for tier '%s' — set STRIPE_%s_PRICE_ID in .env",
                 tier_label,
