@@ -563,7 +563,8 @@ class _WeaviateBackend:
         self._class_name = collection.replace("-", "_").capitalize()
         self._dim = dim
         self._ensure_schema()
-        log.info("VectorStore[weaviate] class=%s", self._class_name)
+        _safe_cls = self._class_name[:64].replace("\n", "").replace("\r", "")
+        log.info("VectorStore[weaviate] class=%s", _safe_cls)
 
     def _ensure_schema(self) -> None:
         from weaviate.classes.config import Configure, DataType, Property  # type: ignore

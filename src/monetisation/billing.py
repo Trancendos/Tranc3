@@ -256,11 +256,14 @@ class StripeManager:
             return None
         price_id = TIERS.get(tier, {}).get("stripe_price_id")
         if not price_id:
-            safe_tier = "".join(c for c in tier if c.isalnum() or c == "_")[:32]
+            # Use a lookup against the known set of valid tiers to avoid logging
+            # untrusted input directly (CodeQL log-injection prevention).
+            known_tiers = list(TIERS.keys())
+            tier_label = tier if tier in known_tiers else "<unknown>"
             logger.error(
                 "No Stripe price ID for tier '%s' — set STRIPE_%s_PRICE_ID in .env",
-                safe_tier,
-                safe_tier.upper(),
+                tier_label,
+                tier_label.upper(),
             )
             return None
         try:

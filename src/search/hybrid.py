@@ -189,7 +189,8 @@ class HybridSearch:
             results = []
 
         latency_ms = (time.time() - t0) * 1000
-        logger.debug("HybridSearch '%s' → %d hits in %.1fms", query, len(results), latency_ms)
+        _q = query[:80].replace("\n", " ").replace("\r", " ")
+        logger.debug("HybridSearch '%s' → %d hits in %.1fms", _q, len(results), latency_ms)
         return results[:top_k]
 
     def ingest(self, documents: List[Dict[str, Any]]) -> None:

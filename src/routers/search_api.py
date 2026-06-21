@@ -310,5 +310,5 @@ async def cache_stats() -> Dict[str, Any]:
         from src.search.semantic_cache import get_cache
 
         return get_cache().stats()
-    except Exception as exc:
-        return {"error": str(exc)}
+    except Exception:
+        return {"error": "cache stats unavailable"}

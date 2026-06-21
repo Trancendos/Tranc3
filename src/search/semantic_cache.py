@@ -107,13 +107,15 @@ class SemanticCache:
                     best_sim = sim
                     best_entry = entry
             if best_entry is not None and best_sim >= self._threshold:
-                logger.debug("SemanticCache HIT (sim=%.3f) for '%s'", best_sim, query[:60])
+                _q = query[:60].replace("\n", " ").replace("\r", " ")
+                logger.debug("SemanticCache HIT (sim=%.3f) for '%s'", best_sim, _q)
                 return best_entry.results
         else:
             # exact-match fallback
             entry = self._store.get(self._key(query))
             if entry is not None:
-                logger.debug("SemanticCache exact HIT for '%s'", query[:60])
+                _q = query[:60].replace("\n", " ").replace("\r", " ")
+                logger.debug("SemanticCache exact HIT for '%s'", _q)
                 return entry.results
 
         return None

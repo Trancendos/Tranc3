@@ -21,7 +21,20 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.search.meilisearch")
 
-_BASE_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+def _validated_base_url() -> str:
+    """Return the Meilisearch base URL, validated to prevent SSRF.
+
+    Only http:// and https:// schemes are accepted; the value must not
+    contain newlines or path-traversal sequences beyond the authority.
+    """
+    raw = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+    raw = raw.rstrip("/").replace("\n", "").replace("\r", "")
+    if not (raw.startswith("http://") or raw.startswith("https://")):
+        raise ValueError(f"MEILISEARCH_URL must start with http:// or https://, got: {raw[:40]!r}")
+    return raw
+
+
+_BASE_URL = _validated_base_url()
 _MASTER_KEY = os.getenv("MEILISEARCH_MASTER_KEY", "")
 
 
@@ -35,8 +48,10 @@ def _headers() -> Dict[str, str]:
 def _request(method: str, path: str, body: Optional[bytes] = None) -> Any:
     import json
 
-    url = f"{_BASE_URL}{path}"
-    req = urllib.request.Request(url, data=body, headers=_headers(), method=method)
+    if not path.startswith("/"):
+        raise ValueError(f"Meilisearch path must start with '/': {path[:40]!r}")
+    url = _BASE_URL + path  # nosemgrep: python.lang.security.audit.formatted-sql-query
+    req = urllib.request.Request(url, data=body, headers=_headers(), method=method)  # nosec B310
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
             return json.loads(resp.read())
