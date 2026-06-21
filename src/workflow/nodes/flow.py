@@ -44,7 +44,9 @@ class ParallelNode(BaseNode):
     """Runs a list of child NodeConfigs concurrently and merges their results."""
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
-        from .registry import create_node
+        import importlib  # dynamic import avoids static cyclic-import with registry
+
+        create_node = importlib.import_module("src.workflow.nodes.registry").create_node
 
         t0 = time.monotonic()
         child_configs_raw: List[Dict] = self.config.config.get("nodes", [])
@@ -92,7 +94,9 @@ class LoopNode(BaseNode):
     """Iterates over inputs['items'], running inner node configs for each element."""
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
-        from .registry import create_node
+        import importlib  # dynamic import avoids static cyclic-import with registry
+
+        create_node = importlib.import_module("src.workflow.nodes.registry").create_node
 
         t0 = time.monotonic()
         items: List[Any] = inputs.get("items", self.config.config.get("items", []))

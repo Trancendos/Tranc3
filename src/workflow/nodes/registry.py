@@ -15,14 +15,11 @@ logger = logging.getLogger(__name__)
 # circular imports: flow.py deferred-imports create_node from this module, so
 # importing flow.py here at module level would create a detectable import cycle.
 NODE_REGISTRY: Dict[NodeType, Type[BaseNode]] = {}
-_REGISTRY_INITIALISED = False
 
 
 def _init_registry() -> None:
-    global _REGISTRY_INITIALISED
-    if _REGISTRY_INITIALISED:
+    if NODE_REGISTRY:
         return
-    _REGISTRY_INITIALISED = True
 
     from .ai import LLMNode, MLPredictNode  # noqa: PLC0415
     from .code import CodeExecNode  # noqa: PLC0415
