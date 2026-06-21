@@ -384,8 +384,8 @@ async def store_secret(request: Request, authorization: str | None = Header(None
     # the basename sanitizer inline so CodeQL's taint analysis sees it cleared.
     _safe_path_component(user_id, "user_id")
     _safe_path_component(secret_id, "secret_id")
-    safe_uid = Path(user_id).name
-    safe_sid = Path(secret_id).name
+    safe_uid = hashlib.sha256(user_id.encode()).hexdigest()
+    safe_sid = hashlib.sha256(secret_id.encode()).hexdigest()
     r2_key = f"secrets/{safe_uid}/{safe_sid}"
     r2_path = R2_DIR / safe_uid / safe_sid
     r2_path.mkdir(parents=True, exist_ok=True)
@@ -462,8 +462,8 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
     # Read payload from R2-like storage
     _safe_path_component(user_id, "user_id")
     _safe_path_component(secret_id, "secret_id")
-    safe_uid = Path(user_id).name
-    safe_sid = Path(secret_id).name
+    safe_uid = hashlib.sha256(user_id.encode()).hexdigest()
+    safe_sid = hashlib.sha256(secret_id.encode()).hexdigest()
     r2_path = R2_DIR / safe_uid / safe_sid / "payload.json"
     if r2_path.exists():
         with open(r2_path) as f:
@@ -547,8 +547,8 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
     # Crypto-shred: delete R2 payload
     _safe_path_component(user_id, "user_id")
     _safe_path_component(secret_id, "secret_id")
-    safe_uid = Path(user_id).name
-    safe_sid = Path(secret_id).name
+    safe_uid = hashlib.sha256(user_id.encode()).hexdigest()
+    safe_sid = hashlib.sha256(secret_id.encode()).hexdigest()
     r2_path = R2_DIR / safe_uid / safe_sid
     if r2_path.exists():
         import shutil
