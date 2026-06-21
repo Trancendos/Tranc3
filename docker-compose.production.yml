@@ -1376,8 +1376,8 @@ services:
       - "3010:3000"
     environment:
       DATABASE_URL: "postgresql://calcom:${CALCOM_DB_PASSWORD:?required}@calcom-db:5432/calcom"
-      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:-changeme-calcom-secret}"
-      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:-changeme-calcom-encryption-key}"
+      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:?required}"
+      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:?required}"
       NEXT_PUBLIC_WEBAPP_URL: "${CALCOM_URL:-http://localhost:3010}"
       EMAIL_FROM: "${CALCOM_EMAIL_FROM:-noreply@trancendos.com}"
       NEXT_PUBLIC_LICENSE_CONSENT: "agree"
@@ -1831,7 +1831,7 @@ services:
       - WEBHOOK_URL=http://n8n:5678/
       - GENERIC_TIMEZONE=UTC
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_USER=${N8N_USER:?required}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:?n8n password required}
       - DB_TYPE=sqlite
       - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
@@ -1926,7 +1926,7 @@ services:
       - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:?required}
       - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:?required}
       - PAPERLESS_URL=http://trancendos.com/docutari
-      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:-admin}
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:?required}
       - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:?required}
       - PAPERLESS_OCR_LANGUAGE=eng
       - PAPERLESS_TIME_ZONE=UTC

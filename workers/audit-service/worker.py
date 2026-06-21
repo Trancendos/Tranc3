@@ -667,13 +667,9 @@ async def audit_compat_verify() -> dict:
 async def audit_compat_get(entry_id: str) -> dict:
     with _connect() as conn:
         try:
-            row = conn.execute(
-                "SELECT * FROM audit_log WHERE id = ?", (int(entry_id),)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM audit_log WHERE id = ?", (int(entry_id),)).fetchone()
         except ValueError:
-            row = conn.execute(
-                "SELECT * FROM audit_log WHERE event_id = ?", (entry_id,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM audit_log WHERE event_id = ?", (entry_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail=f"Entry {entry_id!r} not found")
     return _row_to_out(row).model_dump()
