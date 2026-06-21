@@ -53,3 +53,29 @@ async def request_rotation(entity_id: str, reason: str = "manual request"):
     """Request rotation approval through the appropriate Domain Prime."""
     approved = get_relay().route_rotation_request(entity_id, reason)
     return {"entity_id": entity_id, "approved": approved, "reason": reason}
+
+
+@router.get("/intelligence")
+async def intelligence_report():
+    """Full adaptive intelligence report across all 9 Domain Primes."""
+    from t2ance.prime_intelligence import get_intelligence_hub
+    return get_intelligence_hub().full_report()
+
+
+@router.post("/intelligence/signal/{entity_id}")
+async def ingest_signal(
+    entity_id: str,
+    latency_ms: float = 0.0,
+    error_rate: float = 0.0,
+    request_rate: float = 0.0,
+):
+    """Ingest a health signal for a Tier 3 entity into the Prime intelligence layer."""
+    from t2ance.prime_intelligence import EntityHealthSignal, get_intelligence_hub
+    signal = EntityHealthSignal(
+        entity_id=entity_id,
+        latency_ms=latency_ms,
+        error_rate=error_rate,
+        request_rate=request_rate,
+    )
+    get_intelligence_hub().ingest(entity_id, signal)
+    return {"ingested": True, "entity_id": entity_id}

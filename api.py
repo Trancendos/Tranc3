@@ -914,6 +914,10 @@ from src.routers.aeonmind import router as _aeonmind_router  # noqa: F401
 
 app.include_router(_aeonmind_router)
 
+from t2ance.router import router as _t2ance_router  # noqa: F401
+
+app.include_router(_t2ance_router)
+
 
 # ── Root endpoint (must be before catch-all frontend route) ───────────────────
 @app.get("/", tags=["system"], summary="Platform root")
