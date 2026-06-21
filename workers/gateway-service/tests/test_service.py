@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Circuit Breaker
 # ---------------------------------------------------------------------------
@@ -160,8 +159,8 @@ async def test_fetch_worker_success():
 
 @pytest.mark.asyncio
 async def test_fetch_worker_records_failure_on_error():
-    from service import _circuit_breaker, fetch_worker, init_circuit_breakers
     import httpx
+    from service import _circuit_breaker, fetch_worker, init_circuit_breakers
 
     init_circuit_breakers()
 

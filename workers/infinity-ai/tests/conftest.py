@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -66,9 +66,8 @@ def gateway(tmp_db):
 @pytest.fixture()
 def test_app(tmp_db, gateway):
     """Return a TestClient for the FastAPI app with temp DB/gateway injected."""
-    from fastapi.testclient import TestClient
-
     import router as router_mod
+    from fastapi.testclient import TestClient
 
     router_mod.init_router(tmp_db, gateway)
 

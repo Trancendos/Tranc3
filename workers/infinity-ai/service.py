@@ -14,18 +14,23 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import threading
 import time
 import uuid
 from collections import OrderedDict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
+from models import (
+    ChatCompletionChoice,
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChatCompletionUsage,
+    ChatMessage,
+    ProviderName,
+)
 
-from Dimensional.sanitize import sanitize_for_log
 from config import (
     CEREBRAS_API_KEY,
     CEREBRAS_BASE_URL,
@@ -46,13 +51,7 @@ from config import (
     WORKER_NAME,
 )
 from database import AIDatabase
-from models import (
-    ChatCompletionChoice,
-    ChatCompletionResponse,
-    ChatCompletionUsage,
-    ChatMessage,
-    ProviderName,
-)
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(WORKER_NAME)
 
@@ -550,8 +549,7 @@ class AIGatewayRouter:
         raw = f"{tenant_id or 'default'}:{model}:{msg_str}:{max_tokens}:{temperature}"
         return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
-    async def route(self, request: "ChatCompletionRequest") -> ChatCompletionResponse:
-        from models import ChatCompletionRequest  # local import to avoid circular
+    async def route(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
 
         request_id = f"req-{uuid.uuid4().hex[:12]}"
         tenant_id = request.tenant_id or "default"

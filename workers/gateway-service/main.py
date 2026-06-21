@@ -7,24 +7,12 @@ Uvicorn entry-point:  main:app  (or worker:app via the shim).
 from __future__ import annotations
 
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 
+import router as _router_module
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# Dimensional middleware
-from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
-from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-
-# Phase 22.6: Smart Adaptive Intelligence
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
-
-from Dimensional.infinity.nomenclature import SentinelChannel
-from Dimensional.infinity.sentinel_station import SentinelEvent, SharedSSEGenerator
-
-from config import CORS_ORIGINS, JWT_SECRET, logger
-from database import init_db
+from router import router
 from service import (
     dimensional_bus,
     dimensional_registry,
@@ -35,8 +23,18 @@ from service import (
     sentinel,
     underverse_registry,
 )
-import router as _router_module
-from router import router
+
+from config import CORS_ORIGINS, JWT_SECRET, logger
+from database import init_db
+
+# Dimensional middleware
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import SentinelChannel
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.sentinel_station import SentinelEvent, SharedSSEGenerator
+
+# Phase 22.6: Smart Adaptive Intelligence
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Phase 22.6: Smart Adaptive worker kit (module-level singleton)
@@ -60,6 +58,7 @@ async def _lifespan(app: FastAPI):
     # Optional OpenTelemetry instrumentation
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
         from src.observability.otel import init_otel
 
         init_otel(service_name="tranc3.gateway-service")

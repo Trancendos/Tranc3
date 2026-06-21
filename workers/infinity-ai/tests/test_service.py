@@ -4,10 +4,9 @@ Tests for infinity-ai service layer (service.py).
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # LRU Cache
@@ -97,10 +96,9 @@ async def test_router_uses_lru_cache(tmp_db):
     )
     import hashlib
 
-    from models import ChatMessage as CM
 
-    msgs = [CM(role="user", content="test prompt")]
-    raw = f"default:llama3.2:user:test prompt:512:0.7"
+    # msgs unused — hash key is built from raw string below
+    raw = "default:llama3.2:user:test prompt:512:0.7"
     key = hashlib.sha256(raw.encode()).hexdigest()[:32]
     router.cache.put(key, fake)
 
@@ -129,8 +127,9 @@ async def test_router_rejects_over_budget(tmp_db):
     router = AIGatewayRouter(tmp_db)
 
     # Set budget to 0
-    from models import TokenBudget
     from datetime import datetime, timezone
+
+    from models import TokenBudget
 
     budget = TokenBudget(tenant_id="broke", daily_limit=0, used_today=0, last_reset=datetime.now(timezone.utc))
     tmp_db._save_budget(budget)

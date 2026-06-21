@@ -27,9 +27,6 @@ except ImportError:
 
 import pyotp
 
-# Phase 22.5: Infinity Ecosystem nomenclature
-from shared_core.infinity.nomenclature import InfinityRole, Tier
-
 from config import (
     JWT_ALGORITHM,
     JWT_EXPIRY_MINUTES,
@@ -37,6 +34,8 @@ from config import (
     RATE_LIMIT_PER_MINUTE,
 )
 
+# Phase 22.5: Infinity Ecosystem nomenclature
+from shared_core.infinity.nomenclature import InfinityRole, Tier
 
 # ── Role/Tier Mapping ──────────────────────────────────────────────────────────
 # Maps user roles to Tier and InfinityRole for JWT claims.

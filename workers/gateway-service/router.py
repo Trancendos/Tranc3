@@ -9,7 +9,6 @@ import json
 import logging
 import re
 import time
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path as PathLib
 from typing import Any
@@ -17,15 +16,6 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
-from sse_starlette.sse import EventSourceResponse
-
-# Dimensional imports
-from Dimensional.infinity.abac import ThreatLevel
-from Dimensional.infinity.nomenclature import InfinityRole, Pillar
-from Dimensional.infinity.sentinel_station import SharedSSEGenerator
-
-from config import UPSTREAM_WORKERS
-from database import fetch_access_audit, fetch_events, insert_event
 from models import AgentCreate, EventCreate, TopologySwitch, WorkflowCreate
 from service import (
     abac_engine,
@@ -45,6 +35,15 @@ from service import (
     underverse_registry,
     ws_auth_manager,
 )
+from sse_starlette.sse import EventSourceResponse
+
+from config import UPSTREAM_WORKERS
+from database import fetch_access_audit, fetch_events, insert_event
+
+# Dimensional imports
+from Dimensional.infinity.abac import ThreatLevel
+from Dimensional.infinity.nomenclature import Pillar
+from Dimensional.infinity.sentinel_station import SharedSSEGenerator
 
 logger = logging.getLogger("gateway-service")
 

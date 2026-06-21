@@ -8,10 +8,6 @@ These tests do NOT require the Dimensional package or a running server.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # log_admin_action

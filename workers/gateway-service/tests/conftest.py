@@ -124,7 +124,7 @@ def client(mocks):
         patch("Dimensional.infinity.sentinel_station.SharedSSEGenerator", return_value=mocks["sse_gen"]),
         patch("Dimensional.infinity.worker_integration.InfinityWorkerKit", return_value=mocks["worker_kit"]),
     ]
-    started = [p.start() for p in patches]
+    [p.start() for p in patches]
     try:
         from main import create_app
         app = create_app()

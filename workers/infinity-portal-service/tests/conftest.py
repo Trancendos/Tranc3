@@ -108,7 +108,7 @@ def stub_dimensional(monkeypatch):
         patch("Dimensional.infinity.owasp_hardening.OWASPHardeningMiddleware", MagicMock()),
         patch("Dimensional.infinity.rbac.RBACEngine", MagicMock()),
     ]
-    started = [p.start() for p in patches]
+    [p.start() for p in patches]
     yield {
         "sentinel": sentinel_mock,
         "dim_bus": dim_bus_mock,

@@ -5,16 +5,16 @@ App factory, lifespan, middleware, and router inclusion.
 Uvicorn/Docker should point at   main:app   (or worker:app via shim).
 """
 from __future__ import annotations
+
 import asyncio
-import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from shared_core.infinity.worker_integration import InfinityWorkerKit
-from config import PORT, JWT_SECRET, _cors_origins, logger
-from database import db
 from router import init_router_deps, router
+
+from config import PORT, _cors_origins, logger
+from shared_core.infinity.worker_integration import InfinityWorkerKit
 
 worker_kit = InfinityWorkerKit("infinity-auth", defense_threshold=3, defense_window_seconds=60, defense_block_seconds=900)
 init_router_deps(worker_kit=worker_kit)
@@ -23,6 +23,7 @@ init_router_deps(worker_kit=worker_kit)
 async def _lifespan(app: FastAPI):
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
         from src.observability.otel import init_otel
         init_otel(service_name="tranc3.infinity-auth")
         FastAPIInstrumentor.instrument_app(app)

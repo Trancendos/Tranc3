@@ -9,19 +9,6 @@ from __future__ import annotations
 import time
 
 from fastapi import APIRouter, HTTPException, Query, Request
-
-from Dimensional.infinity.nomenclature import (
-    GATE_ROUTING,
-    INFINITY_LOCATIONS,
-    InfinityLocation,
-    InfinityRole,
-    Tier,
-    TransferSystem,
-)
-from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
-from Dimensional.infinity.worker_integration import InfinityWorkerKit
-
-from database import db
 from models import (
     GateRoutingResponse,
     PortalLogin,
@@ -37,6 +24,17 @@ from service import (
     call_auth_service,
     gate,
 )
+
+from database import db
+from Dimensional.infinity.nomenclature import (
+    GATE_ROUTING,
+    INFINITY_LOCATIONS,
+    InfinityRole,
+    Tier,
+    TransferSystem,
+)
+from Dimensional.infinity.sentinel_station import SentinelEvent
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # Shared singletons — imported from main at app startup; populated via dependency
 # injection pattern: router functions call get_sentinel_station() / worker_kit
@@ -61,7 +59,6 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 from Dimensional.infinity.nomenclature import SentinelChannel  # noqa: E402
-
 
 # ---------------------------------------------------------------------------
 # Health & Status
@@ -562,7 +559,8 @@ async def routing_history(limit: int = Query(50, ge=1, le=500)):
 @router.get("/stats")
 async def stats():
     """Get Infinity Portal service statistics including smart adaptive layer stats."""
-    from Dimensional.dimensionals import get_dimensional_bus, get_sentinel_station as _gss
+    from Dimensional.dimensionals import get_dimensional_bus
+    from Dimensional.dimensionals import get_sentinel_station as _gss
 
     dimensional_bus = get_dimensional_bus()
     sentinel = _gss()

@@ -11,25 +11,26 @@ New modular entry point:                        main:app
 from __future__ import annotations
 
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from router import init_router_deps, router
+from service import seed_default_config
 
-from Dimensional.dimensionals import get_dimensional_bus, get_dimensional_registry, get_underverse_registry
+from config import JWT_SECRET, PORT, _cors_origins, logger
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import ECOSYSTEM_NAME, SentinelChannel, UNIVERSE_NAME
+from Dimensional.infinity.nomenclature import ECOSYSTEM_NAME, UNIVERSE_NAME, SentinelChannel
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
 from Dimensional.infinity.rbac import RBACEngine
 from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
-
-from config import JWT_SECRET, PORT, _cors_origins, logger
-from database import db
-from router import init_router_deps, router
-from service import seed_default_config
 
 # ---------------------------------------------------------------------------
 # Security Engines & Singletons
@@ -63,6 +64,7 @@ async def _lifespan(app: FastAPI):
     # OpenTelemetry instrumentation (optional — never block startup)
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
         from src.observability.otel import init_otel
 
         init_otel(service_name="tranc3.infinity-admin-service")

@@ -7,11 +7,6 @@ TOTP helpers, rate limiting, and role/tier mapping.
 
 from __future__ import annotations
 
-import time
-
-import pytest
-
-
 # ── Password hashing ───────────────────────────────────────────────────────────
 
 
@@ -26,7 +21,8 @@ def test_hash_and_verify_password():
 
 def test_verify_pbkdf2_hash():
     """PBKDF2 fallback format must round-trip correctly."""
-    import hashlib, os  # noqa: E401
+    import hashlib  # noqa: E401
+    import os
 
     salt = os.urandom(32)
     dk = hashlib.pbkdf2_hmac("sha256", b"mypassword", salt, 260000)
@@ -94,6 +90,7 @@ def test_get_infinity_role_for_known_roles():
 
 def test_unknown_role_falls_back_to_human():
     from service import get_tier_for_role
+
     from shared_core.infinity.nomenclature import Tier
 
     assert get_tier_for_role("unknown-role") == Tier.HUMAN
@@ -126,6 +123,7 @@ def test_rate_limiter_different_keys_independent():
 
 def test_generate_totp_secret_is_base32():
     import re
+
     from service import generate_totp_secret
 
     secret = generate_totp_secret()
@@ -147,7 +145,7 @@ def test_generate_backup_codes_count_and_hash():
     plain, hashed = generate_backup_codes(5)
     assert len(plain) == 5
     assert len(hashed) == 5
-    for p, h in zip(plain, hashed):
+    for p, h in zip(plain, hashed, strict=False):
         assert hash_backup_code(p) == h
 
 

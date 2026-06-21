@@ -8,13 +8,15 @@ Uvicorn/Docker should point at   main:app   (or worker:app via shim).
 from __future__ import annotations
 
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from router import init_router_deps, router
 
+from config import CORS_ORIGINS, JWT_SECRET, PORT, logger
+from database import db
 from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
@@ -26,10 +28,6 @@ from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
 from Dimensional.infinity.rbac import RBACEngine
 from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
-
-from config import CORS_ORIGINS, JWT_SECRET, PORT, logger
-from database import db
-from router import init_router_deps, router
 
 # ---------------------------------------------------------------------------
 # Security Engines

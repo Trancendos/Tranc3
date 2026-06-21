@@ -19,14 +19,11 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-from config import AUTH_BASE_URL, AUTH_ISSUER, JWT_EXPIRY_MINUTES, REFRESH_EXPIRY_DAYS
-from database import AuthDatabase
 from models import (
     RefreshRequest,
-    TOTPSetupResponse,
     TokenRequest,
     TokenResponse,
+    TOTPSetupResponse,
     UserLogin,
     UserProfile,
     UserRegister,
@@ -46,6 +43,9 @@ from service import (
     verify_password,
     verify_totp,
 )
+
+from config import AUTH_BASE_URL, AUTH_ISSUER, JWT_EXPIRY_MINUTES, REFRESH_EXPIRY_DAYS
+from database import AuthDatabase
 
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.sanitize import sanitize_for_log

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import sys
-import tempfile
 
 import pytest
 
@@ -46,11 +45,11 @@ def test_client(tmp_db, monkeypatch):
         pytest -m "not integration"
     """
     pytest.importorskip("fastapi.testclient", reason="httpx required for TestClient")
+    import service
     from fastapi.testclient import TestClient
 
     # Patch the module-level db singleton used by router / service
     import database
-    import service
 
     monkeypatch.setattr(database, "db", tmp_db)
     monkeypatch.setattr(service, "db", tmp_db)

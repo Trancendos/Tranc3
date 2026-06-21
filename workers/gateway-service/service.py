@@ -15,22 +15,6 @@ from typing import Any
 import httpx
 from fastapi import HTTPException, Request
 
-# Dimensional security engines
-from Dimensional.infinity.abac import ABACEngine, get_default_policies
-from Dimensional.infinity.auth_gateway import WebSocketAuthManager
-from Dimensional.infinity.nomenclature import InfinityRole, Tier
-from Dimensional.infinity.rbac import RBACEngine
-
-# Sentinel Station
-from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
-
-# Dimensional Services (Phase 22.4)
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 from config import (
     CACHE_TTL,
     JWT_SECRET,
@@ -40,6 +24,22 @@ from config import (
     WS_MAX_CONNECTIONS,
 )
 from database import log_access_audit
+
+# Dimensional Services (Phase 22.4)
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
+# Dimensional security engines
+from Dimensional.infinity.abac import ABACEngine, get_default_policies
+from Dimensional.infinity.auth_gateway import WebSocketAuthManager
+from Dimensional.infinity.nomenclature import InfinityRole, Tier
+from Dimensional.infinity.rbac import RBACEngine
+
+# Sentinel Station
+from Dimensional.infinity.sentinel_station import SentinelEvent, get_sentinel_station
 
 logger = logging.getLogger("gateway-service")
 

@@ -13,9 +13,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
-
-from config import _INTERNAL_SECRET, PORT
-from database import db
 from models import (
     ConfigUpdate,
     EntityNameUpdate,
@@ -24,14 +21,21 @@ from models import (
     OrchestratorRename,
 )
 from service import (
-    PLATFORM_ENTITIES,
     _PLATFORM_ENTITIES_AVAILABLE,
+    PLATFORM_ENTITIES,
     get_entity_by_pid,
     log_admin_action,
     resolve_entity_detail,
     upsert_override,
 )
 
+from config import _INTERNAL_SECRET, PORT
+from database import db
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
 from Dimensional.infinity.nomenclature import (
     ECOSYSTEM_NAME,
     INFINITY_LOCATIONS,
@@ -45,11 +49,6 @@ from Dimensional.infinity.nomenclature import (
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
-)
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
 )
 
 # ---------------------------------------------------------------------------
@@ -453,14 +452,19 @@ async def audit_log(
         params.append(actor_id)
 
     where = " WHERE " + " AND ".join(conditions) if conditions else ""
-    query = f"SELECT * FROM admin_actions{where} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    base = "SELECT * FROM admin_actions"
+    if conditions:
+        base += " WHERE " + " AND ".join(conditions)
+    query = base + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
     rows = db.execute(
         query,
         params + [limit, offset],
     ).fetchall()
 
-    count_query = f"SELECT COUNT(*) as cnt FROM admin_actions{where}"
-    total = db.execute(count_query, params).fetchone()["cnt"]
+    count_base = "SELECT COUNT(*) as cnt FROM admin_actions"
+    if conditions:
+        count_base += " WHERE " + " AND ".join(conditions)
+    total = db.execute(count_base, params).fetchone()["cnt"]
 
     return {"actions": [dict(r) for r in rows], "total": total}
 
@@ -482,8 +486,10 @@ async def compliance_events(
         conditions.append("pillar = ?")
         params.append(pillar)
 
-    where = " WHERE " + " AND ".join(conditions) if conditions else ""
-    query = f"SELECT * FROM compliance_events{where} ORDER BY created_at DESC LIMIT ?"
+    base = "SELECT * FROM compliance_events"
+    if conditions:
+        base += " WHERE " + " AND ".join(conditions)
+    query = base + " ORDER BY created_at DESC LIMIT ?"
     rows = db.execute(
         query,
         params + [limit],
@@ -978,11 +984,11 @@ async def reset_entity_overrides(
         params.append("" if slot in ("null", "") else slot)
     where = " AND ".join(conditions)
 
-    count_query = f"SELECT COUNT(*) as cnt FROM entity_overrides WHERE {where}"
+    count_query = "SELECT COUNT(*) as cnt FROM entity_overrides WHERE " + where
     count_row = db.execute(count_query, tuple(params)).fetchone()
     count = count_row["cnt"]
 
-    delete_query = f"DELETE FROM entity_overrides WHERE {where}"
+    delete_query = "DELETE FROM entity_overrides WHERE " + where
     db.execute(delete_query, tuple(params))
     db.commit()
 
@@ -1029,7 +1035,7 @@ async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | N
         params.append(slot)
 
     rows = db.execute(
-        f"SELECT * FROM entity_overrides WHERE {' AND '.join(conditions)} ORDER BY slot",
+        "SELECT * FROM entity_overrides WHERE " + " AND ".join(conditions) + " ORDER BY slot",
         params,
     ).fetchall()
 

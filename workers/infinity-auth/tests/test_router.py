@@ -7,10 +7,6 @@ SQLite DB and mocked worker_kit. No real JWT_SECRET or external deps needed.
 
 from __future__ import annotations
 
-import json
-import pytest
-
-
 # ── /health ───────────────────────────────────────────────────────────────────
 
 

@@ -28,10 +28,9 @@ if str(SERVICE_DIR) not in sys.path:
 @pytest.fixture()
 def test_app(stub_dimensional, in_memory_db):
     """Build a minimal FastAPI test app with just the portal router."""
+    import router as router_module
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-
-    import router as router_module
 
     # Inject stubs into the router module
     router_module._sentinel = stub_dimensional["sentinel"]
