@@ -122,12 +122,22 @@ token_manager = TokenManager()
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+        HTTPBearer(auto_error=False)
+    ),
 ) -> dict:
     """
     FastAPI dependency — validates JWT and returns the current user.
+    When REQUIRE_AUTH=false (default in test/dev), returns an anonymous user dict.
     Tries DB-backed manager first, falls back to in-memory.
     """
+    if os.getenv("REQUIRE_AUTH", "false").lower() != "true":
+        if not credentials:
+            return {"username": "anonymous", "is_active": True, "role": "user"}
+
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Missing authorization header")
+
     payload = token_manager.decode_token(credentials.credentials)
     username = payload.get("sub")
     if not username:

@@ -910,6 +910,12 @@ from src.routers.ecosystem import router as _ecosystem_router  # noqa: F401
 
 app.include_router(_ecosystem_router)
 
+# ── Root endpoint (must be before catch-all frontend route) ───────────────────
+@app.get("/", tags=["system"], summary="Platform root")
+async def root():
+    return {"system": "TRANC3 Enhanced", "version": "3.0.0", "status": "operational"}
+
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
