@@ -592,6 +592,40 @@ async def history(
     return {"history": dict(by_service), "limit_per_service": limit}
 
 
+@app.get("/cascade", summary="CA-based cascade failure prediction (2-tick lookahead)")
+async def cascade_predict() -> Dict[str, Any]:
+    """Uses a cellular automaton over the service dependency graph to predict which
+    services will fail within the next 2 monitoring cycles based on current health."""
+    try:
+        from Dimensional.cellular.automata import ServiceHealthCA
+
+        ca = ServiceHealthCA()
+        # Seed CA with current observed health scores
+        for name, snapshot in _latest.items():
+            status = snapshot.get("status", "unknown")
+            health = {"healthy": 1.0, "degraded": 0.5}.get(status, 0.0)
+            ca.update_health(name, health)
+
+        # Run 2 ticks to predict near-future state
+        state_t1 = ca.tick()
+        at_risk_t1 = ca.at_risk()
+        state_t2 = ca.tick()
+        at_risk_t2 = ca.at_risk()
+
+        return {
+            "method": "cellular_automaton",
+            "ticks": 2,
+            "at_risk_next_tick": at_risk_t1,
+            "at_risk_in_two_ticks": at_risk_t2,
+            "predicted_states_t1": state_t1,
+            "predicted_states_t2": state_t2,
+            "snapshot": ca.snapshot(),
+        }
+    except Exception as exc:
+        logger.warning("CA cascade prediction unavailable: %s", exc)
+        return {"error": str(exc), "method": "cellular_automaton"}
+
+
 @app.get("/predict", summary="Degradation forecast: at-risk services")
 async def predict() -> Dict[str, Any]:
     """

@@ -1575,7 +1575,12 @@ services:
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       MISTRAL_API_KEY: "${MISTRAL_API_KEY:-}"
       HUGGINGFACE_API_KEY: "${HUGGINGFACE_API_KEY:-}"
+      TOGETHER_API_KEY: "${TOGETHER_API_KEY:-}"
+      CF_ACCOUNT_ID: "${CF_ACCOUNT_ID:-}"
+      CF_AI_API_TOKEN: "${CF_AI_API_TOKEN:-}"
       OLLAMA_URL: "http://ollama:11434"
+      VLLM_BASE_URL: "http://vllm:8090/v1"
+      LLAMACPP_BASE_URL: "http://llama-cpp-server:8091"
       # Langfuse observability integration
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PUBLIC_KEY:-}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_SECRET_KEY:-}"
@@ -1607,6 +1612,69 @@ services:
       - tranc3-net
     restart: unless-stopped
     # GPU support: add 'deploy: resources: reservations: devices: [{driver: nvidia, ...}]'
+
+  # vLLM — high-throughput GPU inference (Apache 2.0, zero-cost self-hosted, tier 0)
+  # Requires NVIDIA GPU. Serves any HuggingFace model via OpenAI-compatible API.
+  # Default model: meta-llama/Llama-3.2-3B-Instruct (set VLLM_DEFAULT_MODEL to change)
+  # Port 8090 — OpenAI-compatible: /v1/chat/completions, /v1/models
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: trancendos-vllm
+    command:
+      - "--model"
+      - "${VLLM_DEFAULT_MODEL:-meta-llama/Llama-3.2-3B-Instruct}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8090"
+      - "--dtype"
+      - "auto"
+    volumes:
+      - vllm-models:/root/.cache/huggingface
+    ports:
+      - "8090:8090"
+    environment:
+      HUGGING_FACE_HUB_TOKEN: "${HF_API_TOKEN:-}"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    profiles:
+      - gpu
+    # Uncomment below for NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # llama.cpp server — CPU inference (MIT, zero-cost self-hosted, tier 0)
+  # Runs any GGUF model file. Minimal RAM usage. OpenAI-compatible API.
+  # Port 8091 — endpoints: /health, /v1/chat/completions, /v1/models
+  llama-cpp-server:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    container_name: trancendos-llamacpp
+    command:
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8091"
+      - "--model"
+      - "/models/${LLAMACPP_MODEL_FILE:-llama-3.2-3b-instruct.Q4_K_M.gguf}"
+      - "--ctx-size"
+      - "8192"
+      - "--n-predict"
+      - "2048"
+    volumes:
+      - llamacpp-models:/models
+    ports:
+      - "8091:8091"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    profiles:
+      - cpu-inference
 
   # ══════════════════════════════════════════════════════════════════════════
   # SEARCH — Meilisearch (MIT, zero-cost, self-hosted)
@@ -2117,6 +2185,10 @@ volumes:
   litellm-data:
     driver: local
   ollama-data:
+    driver: local
+  vllm-models:
+    driver: local
+  llamacpp-models:
     driver: local
   meilisearch-data:
     driver: local
