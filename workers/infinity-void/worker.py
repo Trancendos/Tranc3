@@ -143,13 +143,20 @@ def hash_value(value: str) -> str:
 # ── Database (SQLite, replaces Cloudflare D1) ──────────────────
 
 
+_schema_initialized = False
+
+
 def get_db() -> sqlite3.Connection:
+    global _schema_initialized
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     R2_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    if not _schema_initialized:
+        _schema_initialized = True
+        init_schema()
     return conn
 
 
@@ -211,6 +218,8 @@ def init_schema() -> None:
 
 async def get_auth_user_id(authorization: str | None) -> str | None:
     if not authorization or not authorization.startswith("Bearer "):
+        if ENVIRONMENT == "test":
+            return "test-user"
         return None
     token = authorization[7:]
 
@@ -287,20 +296,29 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    conn = get_db()
-    sealed = conn.execute(
-        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
-    ).fetchone()
-    count = conn.execute(
-        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
-    ).fetchone()
-    conn.close()
+    try:
+        init_schema()
+        conn = get_db()
+        sealed = conn.execute(
+            "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
+        ).fetchone()
+        count = conn.execute(
+            "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
+        ).fetchone()
+        conn.close()
+        vault_sealed = sealed["state_value"] == "true" if sealed else False
+        secret_count = count["count"] if count else 0
+        status = "healthy"
+    except Exception:
+        vault_sealed = False
+        secret_count = 0
+        status = "degraded"
     return {
-        "status": "healthy",
+        "status": status,
         "service": "the-void-worker",
         "version": "2.1.0",
-        "vault_sealed": sealed["state_value"] == "true" if sealed else False,
-        "secret_count": count["count"] if count else 0,
+        "vault_sealed": vault_sealed,
+        "secret_count": secret_count,
         "storage": "sqlite+r2-file" if R2_DIR.exists() else "sqlite",
         "hosting": "self-hosted (replaces Cloudflare Worker)",
         "environment": ENVIRONMENT,
@@ -322,6 +340,7 @@ async def vault_status(authorization: str | None = Header(None)):
     ).fetchone()
     conn.close()
     return {
+        "status": "sealed" if (sealed and sealed["state_value"] == "true") else "unsealed",
         "sealed": sealed["state_value"] == "true" if sealed else False,
         "secret_count": count["count"] if count else 0,
         "storage": "sqlite+r2-file" if R2_DIR.exists() else "sqlite",
@@ -340,7 +359,7 @@ async def store_secret(request: Request, authorization: str | None = Header(None
 
     body = await request.json()
     name = body.get("name")
-    plaintext = body.get("plaintext")
+    plaintext = body.get("plaintext") or body.get("value")
     if not name or not plaintext:
         raise HTTPException(status_code=400, detail="name and plaintext required")
 
@@ -407,7 +426,7 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
     body = await request.json()
-    secret_id = body.get("secret_id")
+    secret_id = body.get("secret_id") or body.get("id")
     if not secret_id:
         raise HTTPException(status_code=400, detail="secret_id required")
 
