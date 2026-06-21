@@ -2067,6 +2067,64 @@ services:
       - tranc3-net
 
 # ═══════════════════════════════════════════════════════════════════════════
+# DocUtari — Stirling PDF (self-hosted PDF manipulation, zero-cost OSS)
+# UI:  trancendos.com/docutari/pdf
+# API: trancendos.com/docutari/pdf/api
+# ═══════════════════════════════════════════════════════════════════════════
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest
+    container_name: trancendos-stirling-pdf
+    restart: unless-stopped
+    environment:
+      - DOCKER_ENABLE_SECURITY=false
+      - INSTALL_BOOK_AND_OFFICE_DEPS=false
+      - LANGS=en_GB
+      - SYSTEM_ROOTURIPATH=/docutari/pdf
+    volumes:
+      - stirling-pdf-trainingdata:/usr/share/tessdata
+      - stirling-pdf-extraconfigs:/configs
+      - stirling-pdf-logs:/logs
+      - stirling-pdf-pipeline:/pipeline
+    ports:
+      - "8086:8080"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stirling-pdf.rule=Host(`trancendos.com`) && PathPrefix(`/docutari/pdf`)"
+      - "traefik.http.services.stirling-pdf.loadbalancer.server.port=8080"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DocUtari — Gotenberg (HTML/Office→PDF generation, zero-cost OSS)
+# API: internal only, consumed by DocUtari bridge worker
+# ═══════════════════════════════════════════════════════════════════════════
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: trancendos-gotenberg
+    restart: unless-stopped
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+    ports:
+      - "3000:3000"
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DocUtari — Apache Tika (document parsing + metadata extraction, OSS)
+# API: internal only, consumed by DocUtari bridge worker
+# ═══════════════════════════════════════════════════════════════════════════
+  tika:
+    image: apache/tika:latest-full
+    container_name: trancendos-tika
+    restart: unless-stopped
+    ports:
+      - "9998:9998"
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Item 7 — OpenBAS: Breach & attack simulation for The Ice Box
 # ═══════════════════════════════════════════════════════════════════════════
   openbas:
