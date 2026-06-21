@@ -27,21 +27,11 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import hmac
 import json
 import logging
 import os
 import secrets
-
-try:
-    from argon2 import PasswordHasher as _ArgonPH
-    from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
-
-    _ph = _ArgonPH(time_cost=2, memory_cost=65536, parallelism=2)
-    _ARGON2_AVAILABLE = True
-except ImportError:
-    _ARGON2_AVAILABLE = False
 import sqlite3
 import time
 import uuid
@@ -62,6 +52,12 @@ from shared_core.infinity.nomenclature import InfinityRole, Tier
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
 from shared_core.sanitize import sanitize_for_log
+
+# Canonical auth library — single source of truth for password/JWT logic
+from src.auth.passwords import hash_backup_code, hash_password, verify_password
+from src.auth.tokens import create_access_token as _create_token
+from src.auth.tokens import create_refresh_token
+from src.auth.tokens import decode_access_token as _decode_token
 
 logger = logging.getLogger("tranc3.workers.infinity-auth")
 
@@ -251,54 +247,15 @@ class AuthDatabase:
         self._conn.commit()
 
 
-# ── Password Hashing ───────────────────────────────────────────────────────────
+# ── Password / JWT shims ────────────────────────────────────────────────────────
+# hash_password, verify_password, hash_backup_code imported from src.auth.passwords
+# create_refresh_token imported from src.auth.tokens
+# _create_token / _decode_token are the canonical implementations; the wrappers
+# below bind the worker's JWT_SECRET and algorithm so call-sites stay unchanged.
 
 
-def hash_password(password: str) -> str:
-    """Hash a password using argon2id (preferred) or PBKDF2-HMAC-SHA256 fallback."""
-    if _ARGON2_AVAILABLE:
-        return _ph.hash(password)
-    # fallback: PBKDF2-HMAC-SHA256 (better than plain SHA-256)
-    salt = os.urandom(32)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 260000)
-    return f"pbkdf2:{salt.hex()}:{dk.hex()}"
-
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify a password against stored hash (supports argon2, pbkdf2, and legacy formats)."""
-    if stored_hash.startswith("$argon2") and _ARGON2_AVAILABLE:
-        try:
-            return _ph.verify(stored_hash, password)
-        except (VerifyMismatchError, VerificationError, InvalidHashError):
-            return False
-    elif stored_hash.startswith("pbkdf2:"):
-        try:
-            _, salt_hex, dk_hex = stored_hash.split(":", 2)
-            salt = bytes.fromhex(salt_hex)
-            dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 260000)
-            return hmac.compare_digest(dk.hex(), dk_hex)
-        except (ValueError, AttributeError):
-            return False
-    else:
-        # legacy salt:hash format (PBKDF2-SHA256 with string salt, 100k iterations)
-        try:
-            salt, hash_val = stored_hash.split(":", 1)
-            computed = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
-            return hmac.compare_digest(hash_val, computed)
-        except (ValueError, AttributeError):
-            return False
-
-
-def hash_backup_code(code: str) -> str:
-    """Hash a backup code with HMAC-SHA256 using the site key.
-
-    HMAC-SHA256 is site-specific so leaked hashes cannot be reversed via rainbow
-    tables, yet fast enough for one-time-use codes where bcrypt is overkill.
-    """
-    return hmac.new(JWT_SECRET.encode(), code.upper().encode(), hashlib.sha256).hexdigest()
-
-
-# ── JWT Token Management ───────────────────────────────────────────────────────
+def _worker_hash_backup_code(code: str) -> str:
+    return hash_backup_code(code, JWT_SECRET)
 
 
 def create_access_token(
@@ -307,93 +264,44 @@ def create_access_token(
     role: str = "user",
     extra_claims: dict | None = None,
 ) -> str:
-    """Create a JWT access token with tier-aware claims.
-
-    Phase 22.5: Includes role, tier, and infinity_role in the JWT payload
-    so that downstream services (Infinity Portal, Infinity Gate) can make
-    routing and access decisions without additional lookups.
-    """
     tier = _get_tier_for_role(role)
     infinity_role = _get_infinity_role_for_role(role)
-
-    claims = {
-        "sub": user_id,
-        "username": username,
-        "role": role,
-        "tier": tier.value,
-        "infinity_role": infinity_role.value,
-        "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60,
-        "iat": int(time.time()),
-        "jti": str(uuid.uuid4()),
-        **(extra_claims or {}),
-    }
-
-    try:
-        from jose import jwt
-
-        return jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM)
-    except ImportError:
-        # Fallback: simple base64-encoded token (for development)
-        import base64
-
-        return base64.urlsafe_b64encode(json.dumps(claims).encode()).decode()
-
-
-def create_refresh_token() -> str:
-    """Create a cryptographically secure refresh token."""
-    return secrets.token_urlsafe(64)
+    return _create_token(
+        user_id=user_id,
+        username=username,
+        jwt_secret=JWT_SECRET,
+        algorithm=JWT_ALGORITHM,
+        expiry_minutes=JWT_EXPIRY_MINUTES,
+        role=role,
+        tier_value=tier.value,
+        infinity_role_value=infinity_role.value,
+        extra_claims=extra_claims,
+    )
 
 
 def decode_access_token(token: str) -> dict[str, Any] | None:
-    """Decode and validate a JWT access token."""
-    try:
-        from jose import JWTError, jwt
-
-        try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            return payload
-        except JWTError:
-            return None
-    except ImportError:
-        # Fallback: decode base64 token
-        try:
-            import base64
-
-            payload = json.loads(base64.urlsafe_b64decode(token + "=="))
-            if payload.get("exp", 0) < time.time():
-                return None
-            return payload
-        except Exception:
-            return None
+    return _decode_token(token, JWT_SECRET, JWT_ALGORITHM)
 
 
 # ── Rate Limiting ──────────────────────────────────────────────────────────────
+# Delegate to the canonical shared rate limiter (src/shared/rate_limiter.py).
+# _AuthRateLimiter is a thin adapter exposing the is_allowed(key) API used
+# by the existing rate_limit_check dependency without changing call-sites.
+
+from src.shared.rate_limiter import AdaptiveRateLimiter as _SharedRL  # noqa: E402
 
 
-class RateLimiter:
-    """In-memory rate limiter. Replaces CF KV rate limiting."""
+class _AuthRateLimiter:
+    """Adapter: wraps AdaptiveRateLimiter with the is_allowed(key) API used internally."""
 
     def __init__(self, max_requests: int = RATE_LIMIT_PER_MINUTE, window_seconds: int = 60) -> None:
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self._requests: dict[str, list[float]] = {}
+        self._rl = _SharedRL(base_rate=max_requests, window_seconds=window_seconds)
 
     def is_allowed(self, key: str) -> bool:
-        """Check if a request is allowed within the rate limit."""
-        now = time.monotonic()
-        window_start = now - self.window_seconds
+        return self._rl.check(key)
 
-        # Clean old entries
-        if key in self._requests:
-            self._requests[key] = [t for t in self._requests[key] if t > window_start]
-        else:
-            self._requests[key] = []
 
-        if len(self._requests[key]) >= self.max_requests:
-            return False
-
-        self._requests[key].append(now)
-        return True
+RateLimiter = _AuthRateLimiter
 
 
 # ── FastAPI Application ────────────────────────────────────────────────────────
@@ -640,7 +548,7 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
         else:
             # Backup code recovery path — compare HMAC hashes, constant-time, one-time use
             stored_hashes: list[str] = json.loads(row["backup_codes"] or "[]")
-            incoming_hash = hash_backup_code(code)
+            incoming_hash = _worker_hash_backup_code(code)
             matched_idx = next(
                 (i for i, h in enumerate(stored_hashes) if hmac.compare_digest(h, incoming_hash)),
                 None,
@@ -805,7 +713,7 @@ async def setup_mfa(user: dict = Depends(get_current_user)):
     totp_secret = pyotp.random_base32()
     plaintext_codes = [secrets.token_hex(4).upper() for _ in range(10)]
     # Hash before storage — HMAC-SHA256 with site key; plaintext only shown to user once
-    hashed_codes = [hash_backup_code(c) for c in plaintext_codes]
+    hashed_codes = [_worker_hash_backup_code(c) for c in plaintext_codes]
 
     # Store TOTP secret and hashed backup codes
     db.execute(
