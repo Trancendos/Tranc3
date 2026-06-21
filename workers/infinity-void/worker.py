@@ -38,8 +38,6 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-_SAFE_COMPONENT_RE = re.compile(r"^[\w\-]+$")
-
 import httpx
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -47,6 +45,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+_SAFE_COMPONENT_RE = re.compile(r"^[\w\-]+$")
 
 # ── Configuration ───────────────────────────────────────────────
 
