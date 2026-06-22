@@ -1848,6 +1848,118 @@ services:
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
 # ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 3: Prefect (Python-native orchestration, free OSS)
+# UI: /prefect  |  API: prefect-server:4200  |  SQLite backend
+# ═══════════════════════════════════════════════════════════════════════════
+  prefect-server:
+    image: prefecthq/prefect:3-python3.12
+    container_name: trancendos-prefect
+    restart: unless-stopped
+    command: prefect server start --host 0.0.0.0 --port 4200
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_SERVER_API_PORT=4200
+      - PREFECT_API_DATABASE_CONNECTION_URL=sqlite+aiosqlite:////data/prefect.db
+      - PREFECT_UI_ENABLED=true
+    volumes:
+      - prefect-data:/data
+    ports:
+      - "4200:4200"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prefect.rule=Host(`trancendos.com`) && PathPrefix(`/prefect`)"
+      - "traefik.http.middlewares.prefect-strip.stripprefix.prefixes=/prefect"
+      - "traefik.http.routers.prefect.middlewares=prefect-strip"
+      - "traefik.http.services.prefect.loadbalancer.server.port=4200"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 4: Temporal (durable workflow execution)
+# temporalite single-binary SQLite mode — zero external deps
+# gRPC: 7233  |  Web UI: 8088  |  /temporal Traefik path
+# ═══════════════════════════════════════════════════════════════════════════
+  temporalite:
+    image: temporalio/temporalite:latest
+    container_name: trancendos-temporalite
+    restart: unless-stopped
+    command: start --namespace default --db-filename /data/temporal.db --ip 0.0.0.0
+    volumes:
+      - temporal-data:/data
+    ports:
+      - "7233:7233"
+      - "8088:8088"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.temporal-ui.rule=Host(`trancendos.com`) && PathPrefix(`/temporal`)"
+      - "traefik.http.middlewares.temporal-strip.stripprefix.prefixes=/temporal"
+      - "traefik.http.routers.temporal-ui.middlewares=temporal-strip"
+      - "traefik.http.services.temporal-ui.loadbalancer.server.port=8088"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 5: Apache Airflow (standalone SQLite, free OSS)
+# UI: /airflow  |  REST API: airflow:8089
+# Default creds: admin/admin — override via AIRFLOW_USER / AIRFLOW_PASS
+# ═══════════════════════════════════════════════════════════════════════════
+  airflow:
+    image: apache/airflow:2.9.0
+    container_name: trancendos-airflow
+    restart: unless-stopped
+    entrypoint: >
+      bash -c "airflow db upgrade && airflow users create
+        --username $${AIRFLOW_USER}
+        --password $${AIRFLOW_PASS}
+        --firstname Trancendos --lastname Grid
+        --role Admin --email admin@trancendos.com 2>/dev/null || true
+        && airflow webserver --port 8089"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/data/airflow.db
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__WEBSERVER__BASE_URL=http://trancendos.com/airflow
+      - AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8089
+      - AIRFLOW_USER=${AIRFLOW_USER:?set AIRFLOW_USER in .env}
+      - AIRFLOW_PASS=${AIRFLOW_PASS:?set AIRFLOW_PASS in .env}
+    volumes:
+      - airflow-data:/opt/airflow/data
+      - airflow-dags:/opt/airflow/dags
+    ports:
+      - "8089:8089"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.airflow.rule=Host(`trancendos.com`) && PathPrefix(`/airflow`)"
+      - "traefik.http.services.airflow.loadbalancer.server.port=8089"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 6: Dagster (asset-centric orchestration, free OSS)
+# UI: /dagster  |  GraphQL: dagster-webserver:3002
+# NOTE: port 3001 is Grafana; port 3000 is Gotenberg; Dagster uses 3002
+# ═══════════════════════════════════════════════════════════════════════════
+  dagster-webserver:
+    image: ghcr.io/dagster-io/dagster:latest
+    container_name: trancendos-dagster
+    restart: unless-stopped
+    command: dagster-webserver -h 0.0.0.0 -p 3002
+    environment:
+      - DAGSTER_HOME=/dagster_home
+    volumes:
+      - dagster-data:/dagster_home
+    ports:
+      - "3002:3002"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dagster.rule=Host(`trancendos.com`) && PathPrefix(`/dagster`)"
+      - "traefik.http.middlewares.dagster-strip.stripprefix.prefixes=/dagster"
+      - "traefik.http.routers.dagster.middlewares=dagster-strip"
+      - "traefik.http.services.dagster.loadbalancer.server.port=3002"
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Item 7 — Wazuh: SIEM/EDR for Cryptex (single-node, free OSS)
 # Requires: vm.max_map_count=262144 on host (sysctl -w vm.max_map_count=262144)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -2133,6 +2245,16 @@ volumes:
   authentik-redis-data:
     driver: local
   n8n-data:
+    driver: local
+  prefect-data:
+    driver: local
+  temporal-data:
+    driver: local
+  airflow-data:
+    driver: local
+  airflow-dags:
+    driver: local
+  dagster-data:
     driver: local
   wazuh-manager-data:
     driver: local
