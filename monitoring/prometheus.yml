@@ -371,3 +371,14 @@ scrape_configs:
           named: 'The Library'
           lead_ai: 'Zimik'
           category: 'knowledge'
+
+  # ── lab-service — The Lab code generation platform (Port 8039) ────────
+  - job_name: 'lab-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['lab-service:8039']
+        labels:
+          service: 'lab-service'
+          named: 'The Lab'
+          lead_ai: 'The Dr. & Slime'
+          category: 'code-generation'

@@ -915,6 +915,32 @@ services:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8038/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
+  lab-service:
+    <<: *worker-common
+    build: { context: ./workers/lab-service, dockerfile: Dockerfile }
+    container_name: lab-service-worker
+    ports: ["8039:8039"]
+    environment:
+      LAB_DB_PATH: /data/lab.db
+      OLLAMA_URL: "${OLLAMA_URL:-http://ollama:11434}"
+      OLLAMA_CODE_MODEL: "${OLLAMA_CODE_MODEL:-deepseek-coder-v2:16b}"
+      OLLAMA_FALLBACK_MODEL: "${OLLAMA_FALLBACK_MODEL:-codellama:13b}"
+      OLLAMA_FALLBACK2_MODEL: "${OLLAMA_FALLBACK2_MODEL:-qwen2.5-coder:7b}"
+      TABBY_URL: "${TABBY_URL:-http://tabby:8080}"
+      HF_API_KEY: "${HF_API_KEY:-}"
+      HF_CODE_MODEL: "${HF_CODE_MODEL:-bigcode/starcoder2-7b}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_CODE_MODEL: "${OPENROUTER_CODE_MODEL:-deepseek/deepseek-coder:free}"
+      LAB_HF_HOURLY_LIMIT: "${LAB_HF_HOURLY_LIMIT:-300}"
+      LAB_OPENROUTER_HOURLY_LIMIT: "${LAB_OPENROUTER_HOURLY_LIMIT:-200}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - lab-service-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8039/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
   # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
   # API-compatible with hvac Python client used by vault-service/openbao_client.py
@@ -2802,6 +2828,8 @@ volumes:
   void-data:
     driver: local
   vault-service-data:
+    driver: local
+  lab-service-data:
     driver: local
   admin-data:
     driver: local
