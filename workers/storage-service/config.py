@@ -29,7 +29,9 @@ IPFS_ENABLED = os.environ.get("STORAGE_IPFS", "1") == "1"
 # 4. Valkey — Redis-fork blob store (in docker-compose)
 VALKEY_URL = os.environ.get("VALKEY_URL", "redis://valkey:6379/0")
 VALKEY_ENABLED = os.environ.get("STORAGE_VALKEY", "1") == "1"
-VALKEY_MAX_OBJECT_BYTES = int(os.environ.get("STORAGE_VALKEY_MAX_BYTES", str(10 * 1024 * 1024)))  # 10MB
+VALKEY_MAX_OBJECT_BYTES = int(
+    os.environ.get("STORAGE_VALKEY_MAX_BYTES", str(10 * 1024 * 1024))
+)  # 10MB
 
 # 5. SeaweedFS — self-hosted distributed (Apache 2.0, optional)
 SEAWEEDFS_MASTER = os.environ.get("SEAWEEDFS_MASTER", "http://seaweedfs-master:9333")
