@@ -1,4 +1,4 @@
-"""The Digital Grid — FastAPI app factory"""
+"""Cryptex / The Ice Box — FastAPI app factory"""
 from __future__ import annotations
 
 import logging
@@ -9,8 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import config
-from database import GridDatabase
-from service import WorkflowEngineRouter
+from database import CryptexDatabase
+from service import SecurityEngineRouter
 from router import _make_router
 
 logging.basicConfig(
@@ -24,25 +24,27 @@ _STARTED_AT = datetime.now(timezone.utc)
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    logger.info("The Digital Grid starting on port %d", config.WORKER_PORT)
-    logger.info("8-tier engine order: internal → n8n → prefect → temporal → airflow → dagster → luigi → offline")
+    logger.info("Cryptex / The Ice Box starting on port %d", config.WORKER_PORT)
+    logger.info(
+        "8-tier engine order: internal → wazuh → misp → openvas → clamav → yara → semgrep → offline"
+    )
     yield
-    logger.info("The Digital Grid shutting down")
+    logger.info("Cryptex / The Ice Box shutting down")
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="The Digital Grid — Workflow API",
+        title="Cryptex / The Ice Box — Security API",
         description=(
-            "8-tier adaptive workflow orchestration engine. "
-            "Powers The Digital Grid (Tyler Towncroft). "
-            "Replaces CF the-grid-api."
+            "8-tier adaptive security scanning engine. "
+            "Cryptex (Renik): Cyber defense — threat intel, DDoS, CVE. "
+            "The Ice Box (Neonach): Sandbox threat isolation & quarantine."
         ),
-        version="2.0.0",
+        version="1.0.0",
         lifespan=_lifespan,
     )
 
-    # OpenTelemetry (optional — only if SDK + OTEL_EXPORTER_OTLP_ENDPOINT are set)
+    # OpenTelemetry (optional — requires opentelemetry-sdk + OTEL_EXPORTER_OTLP_ENDPOINT)
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
         from opentelemetry.sdk.trace import TracerProvider
@@ -62,8 +64,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    db = GridDatabase(config.DB_PATH)
-    engine_router = WorkflowEngineRouter(db)
+    db = CryptexDatabase(config.DB_PATH)
+    engine_router = SecurityEngineRouter(db)
 
     @app.get("/health")
     async def health():

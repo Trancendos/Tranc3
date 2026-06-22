@@ -34,23 +34,23 @@ def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRo
     # ── Workflow Definitions ──────────────────────────────────────────────────
 
     @router.post("/workflows")
-    async def create_workflow(wf: WorkflowDefinition):
+    def create_workflow(wf: WorkflowDefinition):
         saved = db.save_definition(wf)
         return {"ok": True, "workflow_id": saved.workflow_id}
 
     @router.get("/workflows")
-    async def list_workflows(limit: int = 50, offset: int = 0):
+    def list_workflows(limit: int = 50, offset: int = 0):
         return {"workflows": db.list_definitions(limit=limit, offset=offset)}
 
     @router.get("/workflows/{workflow_id}")
-    async def get_workflow(workflow_id: str):
+    def get_workflow(workflow_id: str):
         wf = db.get_definition(workflow_id)
         if not wf:
             raise HTTPException(404, f"Workflow not found: {workflow_id}")
         return wf
 
     @router.delete("/workflows/{workflow_id}")
-    async def delete_workflow(workflow_id: str):
+    def delete_workflow(workflow_id: str):
         if not db.delete_definition(workflow_id):
             raise HTTPException(404, f"Workflow not found: {workflow_id}")
         return {"ok": True, "deleted": workflow_id}
@@ -71,8 +71,8 @@ def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRo
         import json
         from models import WorkflowStep
 
-        steps = [WorkflowStep(**s) for s in json.loads(row["steps"])]
-        metadata = json.loads(row.get("metadata", "{}"))
+        steps = [WorkflowStep(**s) for s in json.loads(row["steps"] or "[]")]
+        metadata = json.loads(row["metadata"] or "{}")
         wf_def = WorkflowDefinition(
             workflow_id=row["workflow_id"],
             name=row["name"],
@@ -92,7 +92,7 @@ def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRo
         }
 
     @router.get("/executions")
-    async def list_executions(
+    def list_executions(
         workflow_id: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 50,
@@ -105,7 +105,7 @@ def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRo
         }
 
     @router.get("/executions/{execution_id}")
-    async def get_execution(execution_id: str):
+    def get_execution(execution_id: str):
         ex = db.get_execution(execution_id)
         if not ex:
             raise HTTPException(404, f"Execution not found: {execution_id}")

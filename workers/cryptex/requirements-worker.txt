@@ -1,0 +1,10 @@
+# Exact-pinned — Do NOT use >= or ~=
+fastapi==0.136.3
+starlette==1.3.1
+uvicorn==0.34.3
+pydantic==2.11.5
+httpx==0.28.1
+# Optional engine SDKs (install only if using that engine):
+# pyclamd==0.4.1         # ClamAV client
+# yara-python==4.5.1     # YARA rules engine
+# semgrep==1.82.0        # Semgrep SAST (or install via pip: semgrep)

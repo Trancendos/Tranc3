@@ -11,3 +11,5 @@ export * from "./tabs";
 export * from "./upload-zone"
 export * from "./workflow-card"
 export * from "./workflow-engine-status";
+export * from "./threat-card";
+export * from "./security-engine-status";

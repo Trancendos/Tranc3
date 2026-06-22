@@ -2119,6 +2119,142 @@ services:
       - tranc3-net
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Security — Cryptex (Renik) + The Ice Box (Neonach)
+# 8-tier adaptive security: Wazuh + MISP + OpenVAS + ClamAV + YARA + Semgrep
+# All zero-cost open-source tools. Free community editions only.
+# ═══════════════════════════════════════════════════════════════════════════
+  cryptex:
+    build:
+      context: ./workers/cryptex
+      dockerfile: Dockerfile
+    image: trancendos/cryptex:latest
+    container_name: cryptex-worker
+    restart: unless-stopped
+    depends_on:
+      - misp
+    environment:
+      - CRYPTEX_PORT=8039
+      - CRYPTEX_DB_PATH=/data/cryptex.db
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - WAZUH_URL=https://wazuh-manager:55000
+      - WAZUH_USER=${WAZUH_API_USER:-wazuh-wui}
+      - WAZUH_PASS=${WAZUH_API_PASSWORD:?required}
+      - MISP_URL=http://misp:80
+      - MISP_API_KEY=${MISP_API_KEY}
+      - OPENVAS_URL=http://openvas:9390
+      - OPENVAS_USER=${OPENVAS_USER:-admin}
+      - OPENVAS_PASS=${OPENVAS_PASS}
+      - THRESHOLD_WAZUH=${THRESHOLD_WAZUH:-500}
+      - THRESHOLD_MISP=${THRESHOLD_MISP:-500}
+      - THRESHOLD_OPENVAS=${THRESHOLD_OPENVAS:-100}
+      - THRESHOLD_CLAMAV=${THRESHOLD_CLAMAV:-1000}
+      - THRESHOLD_YARA=${THRESHOLD_YARA:-1000}
+      - THRESHOLD_SEMGREP=${THRESHOLD_SEMGREP:-200}
+      - ACO_DECAY=${ACO_DECAY:-0.9}
+    volumes:
+      - cryptex-data:/data
+    ports:
+      - "8039:8039"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cryptex.rule=Host(`trancendos.com`) && PathPrefix(`/cryptex`)"
+      - "traefik.http.services.cryptex.loadbalancer.server.port=8039"
+
+  # ── MISP — Malware Information Sharing Platform (Cryptex tier 2)
+  # Free, self-hosted, open-source. No paid licence required.
+  misp:
+    image: ghcr.io/misp/misp-docker/misp-core:latest
+    container_name: trancendos-misp
+    restart: unless-stopped
+    depends_on:
+      - misp-db
+      - misp-redis
+    environment:
+      - MYSQL_HOST=misp-db
+      - MYSQL_DATABASE=${MISP_DB_NAME:-misp}
+      - MYSQL_USER=${MISP_DB_USER:-misp}
+      - MYSQL_PASSWORD=${MISP_DB_PASSWORD:?required}
+      - MISP_ADMIN_EMAIL=${MISP_ADMIN_EMAIL:?required}
+      - MISP_ADMIN_PASSPHRASE=${MISP_ADMIN_PASSWORD:?required}
+      - MISP_BASEURL=http://trancendos.com/misp
+      - REDIS_FQDN=misp-redis
+      - WORKERS=1
+    volumes:
+      - misp-data:/var/www/MISP/app/files
+    ports:
+      - "8095:80"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.misp.rule=Host(`trancendos.com`) && PathPrefix(`/misp`)"
+      - "traefik.http.services.misp.loadbalancer.server.port=80"
+
+  misp-db:
+    image: mysql:8.0
+    container_name: trancendos-misp-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=${MISP_DB_NAME:-misp}
+      - MYSQL_USER=${MISP_DB_USER:-misp}
+      - MYSQL_PASSWORD=${MISP_DB_PASSWORD:?required}
+      - MYSQL_ROOT_PASSWORD=${MISP_DB_ROOT_PASSWORD:?required}
+    volumes:
+      - misp-db-data:/var/lib/mysql
+    networks:
+      - tranc3-net
+
+  misp-redis:
+    image: redis:7-alpine
+    container_name: trancendos-misp-redis
+    restart: unless-stopped
+    volumes:
+      - misp-redis-data:/data
+    networks:
+      - tranc3-net
+
+  # ── OpenVAS/Greenbone Community Edition — Vulnerability scanner (Cryptex tier 3)
+  # Free community edition. Greenbone publishes official community containers.
+  openvas:
+    image: greenbone/community-edition:latest
+    container_name: trancendos-openvas
+    restart: unless-stopped
+    environment:
+      - GVM_ADMIN_USER=${OPENVAS_USER:-admin}
+      - GVM_ADMIN_PASSWORD=${OPENVAS_PASS:?required}
+    volumes:
+      - openvas-data:/var/lib/gvm
+    ports:
+      - "9392:9392"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openvas.rule=Host(`trancendos.com`) && PathPrefix(`/openvas`)"
+      - "traefik.http.services.openvas.loadbalancer.server.port=9392"
+
+  # ── Cuckoo Sandbox — Malware analysis / The Ice Box (Neonach, tier sandbox)
+  # Free open-source automated malware analysis system.
+  cuckoo:
+    image: cuckoosandbox/cuckoo:latest
+    container_name: trancendos-cuckoo
+    restart: unless-stopped
+    environment:
+      - CUCKOO_API_TOKEN=${CUCKOO_API_TOKEN}
+    volumes:
+      - cuckoo-data:/cuckoo
+    ports:
+      - "8096:8090"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cuckoo.rule=Host(`trancendos.com`) && PathPrefix(`/icebox`)"
+      - "traefik.http.services.cuckoo.loadbalancer.server.port=8090"
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
 volumes:
@@ -2277,6 +2413,18 @@ volumes:
   openbas-data:
     driver: local
   openbas-db-data:
+    driver: local
+  cryptex-data:
+    driver: local
+  misp-data:
+    driver: local
+  misp-db-data:
+    driver: local
+  misp-redis-data:
+    driver: local
+  openvas-data:
+    driver: local
+  cuckoo-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

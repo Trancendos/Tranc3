@@ -246,14 +246,15 @@ class InternalDagExecutor:
             return {"status": "completed", "output": {"notified": False, "error": str(e)}}
 
     def _script(self, step, step_results, input_data) -> Dict[str, Any]:
-        code = step.config.get("code", "result = input_data")
-        local_vars: Dict[str, Any] = {
-            "input_data": input_data,
-            "step_results": step_results,
-            "result": None,
+        # Arbitrary script execution is disabled — exec() is unsafe even with
+        # a restricted builtins dict (__subclasses__ bypass exists in CPython).
+        # Use action=http_call or action=transform for data manipulation instead.
+        return {
+            "status": "completed",
+            "output": {
+                "note": "script action is disabled for security; use http_call or transform",
+            },
         }
-        exec(code, {"__builtins__": {}}, local_vars)  # noqa: S102
-        return {"status": "completed", "output": local_vars.get("result", {})}
 
 
 # ── n8n engine (Tier 2) ───────────────────────────────────────────────────────
@@ -337,7 +338,6 @@ class TemporalEngine:
     """Schedule a Temporal workflow via temporalio Python SDK or REST API."""
 
     async def execute(self, wf_def: WorkflowDefinition, input_data: Dict[str, Any]) -> Dict:
-        # Attempt SDK path first; fall back to temporalite REST if SDK absent
         try:
             from temporalio.client import Client  # type: ignore
 
@@ -352,7 +352,9 @@ class TemporalEngine:
             )
             return {"status": "completed", "output_data": {"temporal_run_id": handle.result_run_id}}
         except ImportError:
-            raise RuntimeError("temporalio SDK not installed; add temporalio to requirements")
+            raise RuntimeError(
+                "temporalio SDK not installed; add temporalio to requirements-worker.txt"
+            )
 
 
 # ── Airflow engine (Tier 5) ───────────────────────────────────────────────────
@@ -383,24 +385,30 @@ class DagsterEngine:
         job_name = wf_def.metadata.get("dagster_job_name", wf_def.name)
         repo_loc = wf_def.metadata.get("dagster_repo_location", "the_grid")
         repo_name = wf_def.metadata.get("dagster_repo_name", "the_grid_repo")
-        gql = f"""
-        mutation LaunchRun {{
-          launchRun(executionParams: {{
-            selector: {{
-              repositoryLocationName: "{repo_loc}"
-              repositoryName: "{repo_name}"
-              jobName: "{job_name}"
-            }}
-            runConfigData: {json.dumps(json.dumps({"ops": {"input": {"config": input_data}}}))}
-          }}) {{
+        gql = """
+        mutation LaunchRun($repo_loc: String!, $repo_name: String!, $job_name: String!, $run_config: RunConfigData) {
+          launchRun(executionParams: {
+            selector: {
+              repositoryLocationName: $repo_loc
+              repositoryName: $repo_name
+              jobName: $job_name
+            }
+            runConfigData: $run_config
+          }) {
             __typename
-            ... on LaunchRunSuccess {{ run {{ runId }} }}
-            ... on PythonError {{ message }}
-          }}
-        }}
+            ... on LaunchRunSuccess { run { runId } }
+            ... on PythonError { message }
+          }
+        }
         """
+        variables = {
+            "repo_loc": repo_loc,
+            "repo_name": repo_name,
+            "job_name": job_name,
+            "run_config": {"ops": {"input": {"config": input_data}}},
+        }
         async with httpx.AsyncClient(base_url=config.DAGSTER_URL, timeout=30) as client:
-            resp = await client.post("/graphql", json={"query": gql})
+            resp = await client.post("/graphql", json={"query": gql, "variables": variables})
             resp.raise_for_status()
             body = resp.json()
             launch = body.get("data", {}).get("launchRun", {})
@@ -440,7 +448,7 @@ class LuigiEngine:
             GridTask(workflow_id=wf_def.workflow_id, step_index=i)
             for i in range(len(wf_def.steps))
         ]
-        result = luigi.build(tasks, local_scheduler=True, log_level="WARNING")
+        result = await asyncio.to_thread(luigi.build, tasks, local_scheduler=True, log_level="WARNING")
         return {
             "status": "completed" if result else "failed",
             "output_data": {"luigi_tasks": len(tasks)},
@@ -531,7 +539,7 @@ class WorkflowEngineRouter:
                     pheromone=round(self._pheromone.get(e.value), 3),
                     requests_in_window=guard.current_count,
                     threshold=guard.limit,
-                    blocked=not guard.check() if False else guard.current_count >= guard.limit,
+                    blocked=guard.current_count >= guard.limit,
                 )
             )
         return statuses
