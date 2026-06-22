@@ -9,7 +9,6 @@ Each NanoNode holds a TTL-keyed store. Nodes gossip updates to peers
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time

@@ -9,9 +9,7 @@ identifies unstable providers.
 
 from __future__ import annotations
 
-import math
 import statistics
-import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
 

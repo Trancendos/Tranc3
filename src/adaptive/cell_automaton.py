@@ -15,7 +15,6 @@ Used by health-aggregator to auto-restart failing services.
 
 from __future__ import annotations
 
-import math
 import time
 from dataclasses import dataclass, field
 from enum import Enum

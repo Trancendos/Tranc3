@@ -25,7 +25,6 @@ Port: 8049
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sqlite3
@@ -38,7 +37,7 @@ from typing import Any, Optional
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # Configuration

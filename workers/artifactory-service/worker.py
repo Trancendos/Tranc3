@@ -17,13 +17,12 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
