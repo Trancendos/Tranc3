@@ -5,11 +5,11 @@ import json
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from models import ScanResult, ThreatIndicator
+
 import config
-from models import ScanResult, ThreatIndicator, ScanStatus
 
 
 class CryptexDatabase:

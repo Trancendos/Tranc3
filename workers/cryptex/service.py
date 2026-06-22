@@ -23,15 +23,12 @@ import json
 import logging
 import os
 import subprocess
-import tempfile
 import time
 from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
-
-import config
 from models import (
     EngineStatus,
     ScanEngine,
@@ -40,6 +37,8 @@ from models import (
     ScanStatus,
     ThreatSeverity,
 )
+
+import config
 from database import CryptexDatabase
 
 logger = logging.getLogger("cryptex.service")
@@ -89,7 +88,7 @@ class PheromoneState:
 
     def __init__(self, engines: List[str], decay: float = 0.9):
         self._decay = decay
-        self._ph: Dict[str, float] = {e: self._INIT for e in engines}
+        self._ph: Dict[str, float] = dict.fromkeys(engines, self._INIT)
 
     def select(self, candidates: List[str]) -> Optional[str]:
         if not candidates:
@@ -160,7 +159,7 @@ class WazuhEngine:
         async with httpx.AsyncClient(
             base_url=config.WAZUH_URL,
             auth=auth,
-            verify=False,  # self-signed cert in dev
+            verify=config.TLS_VERIFY,
             timeout=20,
         ) as client:
             resp = await client.get("/alerts", params=params)
@@ -201,7 +200,7 @@ class MISPEngine:
         async with httpx.AsyncClient(
             base_url=config.MISP_URL,
             headers=headers,
-            verify=False,
+            verify=config.TLS_VERIFY,
             timeout=20,
         ) as client:
             resp = await client.post("/attributes/restSearch", json=payload)
@@ -236,7 +235,7 @@ class OpenVASEngine:
         async with httpx.AsyncClient(
             base_url=config.OPENVAS_URL,
             auth=auth,
-            verify=False,
+            verify=config.TLS_VERIFY,
             timeout=60,
         ) as client:
             # Create scan target
@@ -263,8 +262,8 @@ class ClamAVEngine:
     async def scan(self, req: ScanRequest) -> Dict[str, Any]:
         try:
             import pyclamd  # type: ignore
-        except ImportError:
-            raise RuntimeError("pyclamd not installed; add pyclamd to requirements-worker.txt")
+        except ImportError as err:
+            raise RuntimeError("pyclamd not installed; add pyclamd to requirements-worker.txt") from err
 
         def _do_scan() -> Dict[str, Any]:
             if config.CLAMAV_SOCKET.startswith("/"):
@@ -297,8 +296,8 @@ class YARAEngine:
         def _do_scan() -> Dict[str, Any]:
             try:
                 import yara  # type: ignore
-            except ImportError:
-                raise RuntimeError("yara-python not installed; add yara-python to requirements-worker.txt")
+            except ImportError as err:
+                raise RuntimeError("yara-python not installed; add yara-python to requirements-worker.txt") from err
 
             import os
             rules_dir = config.YARA_RULES_DIR
@@ -358,15 +357,15 @@ class SemgrepEngine:
                     timeout=120,
                     shell=False,
                 )
-            except FileNotFoundError:
-                raise RuntimeError("semgrep not found; install semgrep CLI")
-            except subprocess.TimeoutExpired:
-                raise RuntimeError("Semgrep scan timed out")
+            except FileNotFoundError as err:
+                raise RuntimeError("semgrep not found; install semgrep CLI") from err
+            except subprocess.TimeoutExpired as err:
+                raise RuntimeError("Semgrep scan timed out") from err
 
             try:
                 data = json.loads(proc.stdout or "{}")
-            except json.JSONDecodeError:
-                raise RuntimeError(f"Semgrep returned non-JSON: {proc.stdout[:200]}")
+            except json.JSONDecodeError as err:
+                raise RuntimeError(f"Semgrep returned non-JSON: {proc.stdout[:200]}") from err
 
             results = data.get("results", [])
             errors = data.get("errors", [])

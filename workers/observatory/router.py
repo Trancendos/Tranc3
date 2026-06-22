@@ -4,11 +4,11 @@ from __future__ import annotations
 import time
 from typing import Optional
 
+import service
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from models import SignalType
 
 import config
-import service
-from models import SignalType
 
 
 def _make_router() -> APIRouter:

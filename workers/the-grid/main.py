@@ -7,11 +7,11 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from router import _make_router as _make_grid_router
+from service import WorkflowEngineRouter
 
 import config
 from database import GridDatabase
-from service import WorkflowEngineRouter
-from router import _make_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,16 +44,16 @@ def create_app() -> FastAPI:
 
     # OpenTelemetry (optional — only if SDK + OTEL_EXPORTER_OTLP_ENDPOINT are set)
     try:
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
         provider = TracerProvider()
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
         FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
-    except Exception:
-        pass
+    except Exception as exc:  # OpenTelemetry is optional; proceed without it
+        logger.debug("OpenTelemetry not available: %s", exc)
 
     app.add_middleware(
         CORSMiddleware,
@@ -75,7 +75,7 @@ def create_app() -> FastAPI:
             "engine_count": 8,
         }
 
-    app.include_router(_make_router(db, engine_router))
+    app.include_router(_make_grid_router(db, engine_router))
     return app
 
 

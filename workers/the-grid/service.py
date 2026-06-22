@@ -22,21 +22,21 @@ import asyncio
 import json
 import logging
 import time
-from collections import deque, defaultdict
+from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
-
-import config
 from models import (
+    EngineStatus,
     EngineType,
     WorkflowDefinition,
     WorkflowExecution,
     WorkflowStatus,
     WorkflowStep,
-    EngineStatus,
 )
+
+import config
 from database import GridDatabase
 
 logger = logging.getLogger("the-grid.service")
@@ -93,7 +93,7 @@ class PheromoneState:
 
     def __init__(self, engines: List[str], decay: float = 0.9):
         self._decay = decay
-        self._ph: Dict[str, float] = {e: self._INIT for e in engines}
+        self._ph: Dict[str, float] = dict.fromkeys(engines, self._INIT)
 
     def select(self, candidates: List[str]) -> Optional[str]:
         """Roulette-wheel selection weighted by pheromone."""
@@ -351,10 +351,10 @@ class TemporalEngine:
                 task_queue=task_queue,
             )
             return {"status": "completed", "output_data": {"temporal_run_id": handle.result_run_id}}
-        except ImportError:
+        except ImportError as err:
             raise RuntimeError(
                 "temporalio SDK not installed; add temporalio to requirements-worker.txt"
-            )
+            ) from err
 
 
 # ── Airflow engine (Tier 5) ───────────────────────────────────────────────────
@@ -427,8 +427,8 @@ class LuigiEngine:
     async def execute(self, wf_def: WorkflowDefinition, input_data: Dict[str, Any]) -> Dict:
         try:
             import luigi  # type: ignore
-        except ImportError:
-            raise RuntimeError("luigi not installed; add luigi to requirements")
+        except ImportError as err:
+            raise RuntimeError("luigi not installed; add luigi to requirements") from err
 
         class GridTask(luigi.Task):
             workflow_id = luigi.Parameter()

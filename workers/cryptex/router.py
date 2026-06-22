@@ -1,14 +1,14 @@
 """Cryptex / The Ice Box — FastAPI routes"""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from models import ScanRequest, ThreatIndicator
+from service import SecurityEngineRouter
 
 import config
 from database import CryptexDatabase
-from models import ScanRequest, ThreatIndicator, ScanType
-from service import SecurityEngineRouter
 
 
 def _make_router(db: CryptexDatabase, engine_router: SecurityEngineRouter) -> APIRouter:

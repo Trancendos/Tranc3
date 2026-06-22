@@ -132,7 +132,7 @@ async def backend_statuses() -> List[BackendStatus]:
     tasks = {bt: _probe(url, path) for bt, (path, url) in probes.items()}
     results = await asyncio.gather(*tasks.values(), return_exceptions=True)
     out = []
-    for (bt, _), result in zip(tasks.items(), results):
+    for (bt, _), result in zip(tasks.items(), results, strict=False):
         url, _ = _BACKEND_CONFIG[bt]
         if isinstance(result, Exception):
             healthy, latency_ms = False, 0.0
@@ -166,7 +166,7 @@ async def _query_with_fallback(
 ) -> Tuple[Any, str, int]:
     """Try each backend in order; return (data, backend_url_used, fallbacks_count)."""
     fallbacks = 0
-    for url, bt in zip(backends, backend_types):
+    for url, bt in zip(backends, backend_types, strict=False):
         guard = _guards[bt]
         if not guard.check():
             logger.warning("Observatory: %s threshold reached — skipping", bt.value)

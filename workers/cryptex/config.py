@@ -38,3 +38,7 @@ THRESHOLD_WINDOW_SECONDS = int(os.environ.get("THRESHOLD_WINDOW_SECONDS", "3600"
 # ── ACO ────────────────────────────────────────────────────────────────────────
 ACO_DECAY = float(os.environ.get("ACO_DECAY", "0.9"))
 FORCE_ENGINE = os.environ.get("CRYPTEX_FORCE_ENGINE", "")
+
+# ── TLS ────────────────────────────────────────────────────────────────────────
+# Self-hosted services often use self-signed certs; set to "1" to enable strict TLS.
+TLS_VERIFY = os.environ.get("CRYPTEX_TLS_VERIFY", "0") != "0"

@@ -1,15 +1,14 @@
 """The Digital Grid — FastAPI routes"""
 from __future__ import annotations
 
-import os
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from models import EngineType, WorkflowDefinition
+from service import WorkflowEngineRouter
 
 import config
 from database import GridDatabase
-from models import WorkflowDefinition, EngineType
-from service import WorkflowEngineRouter
 
 
 def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRouter:
@@ -69,6 +68,7 @@ def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRo
             raise HTTPException(404, f"Workflow not found: {workflow_id}")
 
         import json
+
         from models import WorkflowStep
 
         steps = [WorkflowStep(**s) for s in json.loads(row["steps"] or "[]")]

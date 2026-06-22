@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from router import _make_router as _make_observatory_router
 
 import config
-from router import _make_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,17 +45,17 @@ def create_app() -> FastAPI:
     )
 
     try:
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
         provider = TracerProvider()
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
         FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
         logger.info("OpenTelemetry instrumentation active → %s", config.OTEL_ENDPOINT)
-    except Exception:
-        pass
+    except Exception as exc:  # OpenTelemetry is optional; proceed without it
+        logger.debug("OpenTelemetry not available: %s", exc)
 
     app.add_middleware(
         CORSMiddleware,
@@ -77,7 +77,7 @@ def create_app() -> FastAPI:
             "signal_types": ["traces", "metrics", "logs", "node"],
         }
 
-    app.include_router(_make_router())
+    app.include_router(_make_observatory_router())
     return app
 
 
