@@ -18,9 +18,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-NANO_CACHE_PEERS = [
-    p.strip() for p in os.getenv("NANO_CACHE_PEERS", "").split(",") if p.strip()
-]
+NANO_CACHE_PEERS = [p.strip() for p in os.getenv("NANO_CACHE_PEERS", "").split(",") if p.strip()]
 DEFAULT_TTL = 300  # seconds
 MAX_CACHE_SIZE = 1000
 

@@ -22,8 +22,8 @@ from typing import Any, Optional
 @dataclass
 class RouteGene:
     provider: str
-    weight: float = 1.0      # routing weight (higher = more likely selected)
-    fitness: float = 1.0     # 0.0 - 1.0 (updated from latency/errors)
+    weight: float = 1.0  # routing weight (higher = more likely selected)
+    fitness: float = 1.0  # 0.0 - 1.0 (updated from latency/errors)
     generation: int = 0
     total_requests: int = 0
     total_errors: int = 0
@@ -112,7 +112,9 @@ class DNARouter:
                 )
             else:
                 # take from other if same provider exists there
-                other_gene = next((g for g in other_chromosome if g.provider == gene.provider), gene)
+                other_gene = next(
+                    (g for g in other_chromosome if g.provider == gene.provider), gene
+                )
                 child_genes.append(
                     RouteGene(
                         provider=gene.provider,

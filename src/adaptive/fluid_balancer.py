@@ -17,10 +17,11 @@ from typing import Any, Optional
 @dataclass
 class FluidChannel:
     """Represents a provider connection with flow rate and viscosity (latency)."""
+
     provider: str
-    flow_rate: float = 1.0    # requests/second capacity
-    viscosity: float = 1.0    # latency factor (lower = smoother = preferred)
-    pressure: float = 0.0     # current load pressure
+    flow_rate: float = 1.0  # requests/second capacity
+    viscosity: float = 1.0  # latency factor (lower = smoother = preferred)
+    pressure: float = 0.0  # current load pressure
     current_requests: int = 0
     latency_samples: list[float] = field(default_factory=list)
     error_rate: float = 0.0
@@ -74,7 +75,7 @@ class FluidChannel:
 class FluidBalancer:
     """Fluidic load balancer with Bernoulli-like distribution."""
 
-    TURBULENCE_THRESHOLD = 5.0   # Reynolds number above which channel is turbulent
+    TURBULENCE_THRESHOLD = 5.0  # Reynolds number above which channel is turbulent
 
     def __init__(self) -> None:
         self._channels: dict[str, FluidChannel] = {}
@@ -107,7 +108,9 @@ class FluidBalancer:
             laminar = dict(self._channels)  # fall back to all channels
 
         # Bernoulli score: flow_rate / viscosity (higher = more allocation)
-        scores = {p: max(0.01, ch.flow_rate / max(ch.viscosity, 0.001)) for p, ch in laminar.items()}
+        scores = {
+            p: max(0.01, ch.flow_rate / max(ch.viscosity, 0.001)) for p, ch in laminar.items()
+        }
         total = sum(scores.values())
         return {p: s / total for p, s in scores.items()}
 

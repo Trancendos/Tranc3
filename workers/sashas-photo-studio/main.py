@@ -100,7 +100,10 @@ _COMFYUI_WORKFLOW_TEMPLATE: dict[str, Any] = {
         "class_type": "EmptyLatentImage",
         "inputs": {"batch_size": 1, "height": 512, "width": 512},
     },
-    "6": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["4", 1], "text": "beautiful landscape"}},
+    "6": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {"clip": ["4", 1], "text": "beautiful landscape"},
+    },
     "7": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["4", 1], "text": ""}},
     "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
     "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": "tranc3", "images": ["8", 0]}},
@@ -111,9 +114,7 @@ async def _comfyui_generate(req: GenerateRequest) -> str:
     workflow = json.loads(json.dumps(_COMFYUI_WORKFLOW_TEMPLATE))
     workflow["3"]["inputs"]["cfg"] = req.cfg_scale
     workflow["3"]["inputs"]["steps"] = req.steps
-    workflow["3"]["inputs"]["seed"] = (
-        req.seed if req.seed >= 0 else int(time.time() * 1000) % 2**32
-    )
+    workflow["3"]["inputs"]["seed"] = req.seed if req.seed >= 0 else int(time.time() * 1000) % 2**32
     workflow["4"]["inputs"]["ckpt_name"] = f"{req.model}.safetensors"
     workflow["5"]["inputs"]["width"] = req.width
     workflow["5"]["inputs"]["height"] = req.height
@@ -192,7 +193,9 @@ async def _a1111_generate(req: GenerateRequest) -> str:
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Sashas Photo Studio", description="Photo & image generation centre", version=VERSION)
+app = FastAPI(
+    title="Sashas Photo Studio", description="Photo & image generation centre", version=VERSION
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -284,9 +287,7 @@ async def get_job_status(job_id: str) -> dict[str, Any]:
                 if status_info.get("completed"):
                     outputs = entry.get("outputs", {})
                     images = [
-                        img
-                        for node_out in outputs.values()
-                        for img in node_out.get("images", [])
+                        img for node_out in outputs.values() for img in node_out.get("images", [])
                     ]
                     job["status"] = "completed"
                     job["images"] = images
@@ -327,9 +328,7 @@ async def get_result(job_id: str) -> Response:
             return Response(content=base64.b64decode(images_b64[0]), media_type="image/png")
 
     # Offline placeholder -- 1x1 transparent PNG
-    placeholder_b64 = (
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-    )
+    placeholder_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
     return Response(content=base64.b64decode(placeholder_b64), media_type="image/png")
 
 

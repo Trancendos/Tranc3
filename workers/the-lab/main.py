@@ -51,8 +51,18 @@ _http_timeout = httpx.Timeout(60.0, connect=5.0)
 # ---------------------------------------------------------------------------
 
 ALLOWED_LANGUAGES = {
-    "python", "javascript", "typescript", "go", "rust",
-    "java", "c", "cpp", "shell", "sql", "markdown", "json",
+    "python",
+    "javascript",
+    "typescript",
+    "go",
+    "rust",
+    "java",
+    "c",
+    "cpp",
+    "shell",
+    "sql",
+    "markdown",
+    "json",
 }
 
 
@@ -148,7 +158,9 @@ async def _litellm_chat(messages: list[dict[str, str]], max_tokens: int = 1024) 
     payload = {"model": "ollama/codellama", "messages": messages, "max_tokens": max_tokens}
     try:
         async with httpx.AsyncClient(timeout=_http_timeout) as client:
-            resp = await client.post(f"{LITELLM_URL}/chat/completions", json=payload, headers=headers)
+            resp = await client.post(
+                f"{LITELLM_URL}/chat/completions", json=payload, headers=headers
+            )
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"]
     except Exception as exc:
@@ -163,13 +175,20 @@ def _offline_stub(task: str, language: str, code_or_desc: str) -> str:
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-app = FastAPI(title="The Lab", description="AI code creation platform — TabbyML bridge", version=VERSION)
+app = FastAPI(
+    title="The Lab", description="AI code creation platform — TabbyML bridge", version=VERSION
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    return {"service": WORKER_NAME, "status": "ok", "version": VERSION, "uptime": time.time() - START_TIME}
+    return {
+        "service": WORKER_NAME,
+        "status": "ok",
+        "version": VERSION,
+        "uptime": time.time() - START_TIME,
+    }
 
 
 @app.get("/status")
@@ -266,7 +285,10 @@ async def lab_review(req: ReviewRequest) -> dict[str, Any]:
         f"```{req.language}\n{req.code}\n```"
     )
     messages = [
-        {"role": "system", "content": "You are a senior code reviewer specialising in security and quality."},
+        {
+            "role": "system",
+            "content": "You are a senior code reviewer specialising in security and quality.",
+        },
         {"role": "user", "content": prompt},
     ]
     result = await _tabby_chat(messages, max_tokens=2048)
@@ -281,7 +303,11 @@ async def lab_review(req: ReviewRequest) -> dict[str, Any]:
     if result:
         return {"review": result, "focus": req.focus, "source": "litellm"}
 
-    return {"review": _offline_stub("review", req.language, req.code), "focus": req.focus, "source": "offline"}
+    return {
+        "review": _offline_stub("review", req.language, req.code),
+        "focus": req.focus,
+        "source": "offline",
+    }
 
 
 @app.post("/lab/generate")
@@ -307,7 +333,11 @@ async def lab_generate(req: GenerateRequest) -> dict[str, Any]:
     if result:
         return {"code": result, "language": req.language, "source": "litellm"}
 
-    return {"code": _offline_stub("generate", req.language, req.description), "language": req.language, "source": "offline"}
+    return {
+        "code": _offline_stub("generate", req.language, req.description),
+        "language": req.language,
+        "source": "offline",
+    }
 
 
 @app.get("/lab/models")
@@ -334,7 +364,9 @@ async def lab_models() -> dict[str, Any]:
 async def lab_run(req: RunRequest) -> dict[str, Any]:
     """Execute code in a sandboxed subprocess (Python only for safety)."""
     if req.language not in ("python",):
-        raise HTTPException(status_code=400, detail=f"Sandboxed execution not supported for {req.language}")
+        raise HTTPException(
+            status_code=400, detail=f"Sandboxed execution not supported for {req.language}"
+        )
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write(req.code)

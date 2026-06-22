@@ -177,18 +177,26 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
         else:
             # Generate a colour test card
             input_args = [
-                "-f", "lavfi",
-                "-i", f"color=c=blue:s={req.width}x{req.height}:r={req.fps}:d={req.duration_seconds}",
-                "-vf", f"drawtext=text='{req.title}':fontsize=40:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2",
+                "-f",
+                "lavfi",
+                "-i",
+                f"color=c=blue:s={req.width}x{req.height}:r={req.fps}:d={req.duration_seconds}",
+                "-vf",
+                f"drawtext=text='{req.title}':fontsize=40:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2",
             ]
 
         success, err = _run_ffmpeg(
             *input_args,
-            "-t", str(req.duration_seconds),
-            "-r", str(req.fps),
-            "-s", f"{req.width}x{req.height}",
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
+            "-t",
+            str(req.duration_seconds),
+            "-r",
+            str(req.fps),
+            "-s",
+            f"{req.width}x{req.height}",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
             str(output_path),
             timeout=int(req.duration_seconds * 10 + 60),
         )
@@ -249,10 +257,14 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
         concat_file = f.name
 
     success, err = _run_ffmpeg(
-        "-f", "concat",
-        "-safe", "0",
-        "-i", concat_file,
-        "-c", "copy",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        concat_file,
+        "-c",
+        "copy",
         str(output_path),
     )
     os.unlink(concat_file)
@@ -284,9 +296,12 @@ async def extract_thumbnail(req: ThumbnailRequest) -> dict[str, Any]:
 
     thumb_path = OUTPUT_DIR / f"{req.job_id}_thumb.jpg"
     success, err = _run_ffmpeg(
-        "-i", output_path,
-        "-ss", str(req.timestamp_seconds),
-        "-vframes", "1",
+        "-i",
+        output_path,
+        "-ss",
+        str(req.timestamp_seconds),
+        "-vframes",
+        "1",
         str(thumb_path),
     )
     if success and thumb_path.exists():
@@ -352,9 +367,12 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
 
     subtitled_path = OUTPUT_DIR / f"{req.job_id}_subtitled.mp4"
     success, err = _run_ffmpeg(
-        "-i", output_path,
-        "-vf", f"subtitles={srt_file}",
-        "-c:a", "copy",
+        "-i",
+        output_path,
+        "-vf",
+        f"subtitles={srt_file}",
+        "-c:a",
+        "copy",
         str(subtitled_path),
     )
     os.unlink(srt_file)
@@ -368,7 +386,11 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
             "output_path": str(subtitled_path),
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        return {"job_id": subtitle_job_id, "status": "completed", "output_path": str(subtitled_path)}
+        return {
+            "job_id": subtitle_job_id,
+            "status": "completed",
+            "output_path": str(subtitled_path),
+        }
     raise HTTPException(status_code=500, detail=f"Subtitle burn-in failed: {err}")
 
 

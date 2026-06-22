@@ -19,6 +19,7 @@ from typing import Any, Optional
 
 try:
     import numpy as np  # type: ignore
+
     _HAS_NUMPY = True
 except ImportError:
     _HAS_NUMPY = False
@@ -27,14 +28,15 @@ except ImportError:
 @dataclass
 class QuantumState:
     """Quantum state amplitude for a single provider."""
+
     provider: str
     amplitude: float = 1.0  # probability amplitude (not normalised)
-    phase: float = 0.0      # phase angle in radians
+    phase: float = 0.0  # phase angle in radians
     collapsed: bool = False  # True after observation (this request)
 
     @property
     def probability(self) -> float:
-        return self.amplitude ** 2
+        return self.amplitude**2
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -94,6 +96,7 @@ class QuantumSelector:
             chosen = available[chosen_idx]
         else:
             import random
+
             weights = [s.probability / total for s in available]
             chosen = random.choices(available, weights=weights, k=1)[0]
 
@@ -112,7 +115,8 @@ class QuantumSelector:
     def entangle(self, provider_a: str, provider_b: str) -> None:
         """Link two providers so failures in one affect the other."""
         if (provider_a, provider_b) not in self._entanglements and (
-            provider_b, provider_a
+            provider_b,
+            provider_a,
         ) not in self._entanglements:
             self._entanglements.append((provider_a, provider_b))
 
@@ -151,7 +155,7 @@ class QuantumSelector:
 
     def renormalise(self) -> None:
         """Renormalise amplitudes after failures."""
-        total = math.sqrt(sum(s.amplitude ** 2 for s in self._states.values()))
+        total = math.sqrt(sum(s.amplitude**2 for s in self._states.values()))
         if total == 0:
             # Reset all providers equally
             n = len(self._states)

@@ -217,7 +217,11 @@ async def create_repository(body: RepoCreate) -> dict[str, Any]:
                 "Authorization": f"token {GITEA_TOKEN}",
                 "Content-Type": "application/json",
             }
-            payload = {"name": body.name, "description": body.description, "private": not body.public}
+            payload = {
+                "name": body.name,
+                "description": body.description,
+                "private": not body.public,
+            }
             async with httpx.AsyncClient(timeout=_http_timeout) as client:
                 resp = await client.post(
                     f"{GITEA_URL}/api/v1/user/repos", json=payload, headers=headers

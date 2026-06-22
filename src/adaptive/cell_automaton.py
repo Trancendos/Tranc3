@@ -119,16 +119,16 @@ class CellAutomaton:
                 continue
 
             # Propagate stress from neighbours
-            neighbour_states = [
-                self._cells[n].state
-                for n in cell.neighbors
-                if n in self._cells
-            ]
+            neighbour_states = [self._cells[n].state for n in cell.neighbors if n in self._cells]
             stressed_neighbours = sum(
-                1 for s in neighbour_states
+                1
+                for s in neighbour_states
                 if s in (CellState.STRESSED, CellState.FAILING, CellState.DEAD)
             )
-            if neighbour_states and stressed_neighbours / len(neighbour_states) >= self.STRESS_PROPAGATION_THRESHOLD:
+            if (
+                neighbour_states
+                and stressed_neighbours / len(neighbour_states) >= self.STRESS_PROPAGATION_THRESHOLD
+            ):
                 cell.health_score = max(0.0, cell.health_score - 0.05)
                 cell._update_state()
 

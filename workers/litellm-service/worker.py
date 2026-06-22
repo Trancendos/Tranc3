@@ -260,11 +260,23 @@ async def list_models() -> dict[str, Any]:
                 {"id": "groq/llama-3.1-70b-versatile", "provider": "groq", "free": True},
                 {"id": "gemini/gemini-1.5-flash", "provider": "gemini_flash", "free": True},
                 {"id": "cerebras/llama3.1-8b", "provider": "cerebras", "free": True},
-                {"id": "sambanova/Meta-Llama-3.1-8B-Instruct", "provider": "sambanova", "free": True},
+                {
+                    "id": "sambanova/Meta-Llama-3.1-8B-Instruct",
+                    "provider": "sambanova",
+                    "free": True,
+                },
                 {"id": "github/gpt-4o-mini", "provider": "github_models", "free": True},
                 {"id": "mistral/mistral-small-latest", "provider": "mistral", "free": True},
-                {"id": "openrouter/meta-llama/llama-3.2-3b-instruct:free", "provider": "openrouter", "free": True},
-                {"id": "huggingface/mistralai/Mistral-7B-Instruct-v0.3", "provider": "huggingface", "free": True},
+                {
+                    "id": "openrouter/meta-llama/llama-3.2-3b-instruct:free",
+                    "provider": "openrouter",
+                    "free": True,
+                },
+                {
+                    "id": "huggingface/mistralai/Mistral-7B-Instruct-v0.3",
+                    "provider": "huggingface",
+                    "free": True,
+                },
                 {"id": "deepseek/deepseek-chat", "provider": "deepseek", "free": True},
             ],
         }
@@ -280,7 +292,9 @@ async def chat(body: ChatRequest) -> dict[str, Any]:
     """Proxy to LiteLLM /chat/completions with adaptive provider selection."""
     provider = body.provider or _select_provider()
     if provider is None:
-        raise HTTPException(status_code=429, detail="All free providers at capacity. Retry tomorrow.")
+        raise HTTPException(
+            status_code=429, detail="All free providers at capacity. Retry tomorrow."
+        )
 
     # Hard-stop check
     available, reason = _provider_available(provider)
@@ -392,8 +406,10 @@ async def get_budget() -> dict[str, Any]:
             "monthly_token_limit": limits.get("monthly"),
             "monthly_pct": monthly_pct,
             "status": (
-                "hard_stop" if not _provider_available(provider)[0]
-                else "degraded" if _provider_degraded(provider)
+                "hard_stop"
+                if not _provider_available(provider)[0]
+                else "degraded"
+                if _provider_degraded(provider)
                 else "ok"
             ),
         }
