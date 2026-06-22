@@ -15,8 +15,11 @@ import json
 import logging
 import os
 import sqlite3
+import sys
 import threading
 import uuid
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
