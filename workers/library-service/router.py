@@ -1,12 +1,9 @@
 """The Library — FastAPI router"""
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
-
-import config
-from database import LibraryDatabase
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from models import (
     DocumentCreate,
     DocumentResponse,
@@ -15,6 +12,9 @@ from models import (
     SearchResponse,
 )
 from service import LibraryRouter
+
+import config
+from database import LibraryDatabase
 
 
 def _auth(x_internal_secret: Optional[str] = Header(None)) -> None:

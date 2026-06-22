@@ -8,10 +8,10 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from router import _make_router as _make_library_router
+from service import LibraryRouter
 
 import config
 from database import LibraryDatabase
-from service import LibraryRouter
 
 logging.basicConfig(
     level=logging.INFO,

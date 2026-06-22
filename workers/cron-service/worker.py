@@ -267,6 +267,7 @@ _ALLOWED_HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"}
 async def _dispatch_syscron(job: dict) -> bool:
     try:
         import shlex
+
         from crontab import CronTab  # python-crontab optional dep
 
         method = job.get("method", "POST").upper()

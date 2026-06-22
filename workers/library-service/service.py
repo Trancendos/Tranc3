@@ -1,7 +1,6 @@
 """The Library — ACO pheromone router across 8 free wiki backends (Lead AI: Zimik)"""
 from __future__ import annotations
 
-import asyncio
 import collections
 import logging
 import time
@@ -9,19 +8,19 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import httpx
+from models import (
+    BackendStatus,
+    DocumentCreate,
+    DocumentFormat,
+    DocumentResponse,
+    LibraryBackend,
+    LibraryStatus,
+    SearchResponse,
+    SearchResult,
+)
 
 import config
 from database import LibraryDatabase
-from models import (
-    DocumentCreate,
-    DocumentResponse,
-    DocumentFormat,
-    LibraryBackend,
-    SearchResponse,
-    SearchResult,
-    BackendStatus,
-    LibraryStatus,
-)
 
 logger = logging.getLogger(config.WORKER_NAME)
 
