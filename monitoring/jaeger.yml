@@ -1,0 +1,26 @@
+# Jaeger All-in-One — Distributed tracing UI + collector
+# Zero-cost: Apache 2.0, self-hosted, in-memory or Badger storage
+# Port 16686: UI  |  4317/4318: OTLP receiver  |  14250: gRPC Jaeger native
+# The Observatory wires Grafana → Jaeger as a secondary trace backend
+
+sampling:
+  strategies-file: /etc/jaeger/sampling_strategies.json
+
+collector:
+  otlp:
+    enabled: true
+    grpc:
+      host-port: "0.0.0.0:4317"
+    http:
+      host-port: "0.0.0.0:4318"
+
+storage:
+  type: badger
+  badger:
+    ephemeral: false
+    directory-key: /badger/key
+    directory-value: /badger/data
+    span-store-ttl: 72h
+
+query:
+  ui-config: /etc/jaeger/ui-config.json
