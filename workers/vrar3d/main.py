@@ -44,7 +44,7 @@ def _build_app() -> FastAPI:
             )
             trace.set_tracer_provider(provider)
             FastAPIInstrumentor.instrument_app(app)
-        except Exception:
+        except Exception:  # OTel is optional — never block startup
             pass
 
     db = VRARDatabase(config.DB_PATH)
