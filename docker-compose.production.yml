@@ -941,6 +941,62 @@ services:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8039/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
+  tranceflow:
+    <<: *worker-common
+    build: { context: ./workers/tranceflow, dockerfile: Dockerfile }
+    container_name: tranceflow-worker
+    ports: ["8052:8052"]
+    environment:
+      TRANCEFLOW_DB_PATH: /data/tranceflow.db
+      TRANCEFLOW_ASSET_DIR: /data/tranceflow-assets
+      GODOT_BIN: "${GODOT_BIN:-godot}"
+      BLENDER_BIN: "${BLENDER_BIN:-blender}"
+      TRANCEFLOW_GODOT: "${TRANCEFLOW_GODOT:-1}"
+      TRANCEFLOW_BLENDER: "${TRANCEFLOW_BLENDER:-1}"
+      TRANCEFLOW_TRIMESH: "${TRANCEFLOW_TRIMESH:-1}"
+      TRANCEFLOW_MESHIO: "${TRANCEFLOW_MESHIO:-1}"
+      TRANCEFLOW_OPEN3D: "${TRANCEFLOW_OPEN3D:-1}"
+      TRANCEFLOW_PYVISTA: "${TRANCEFLOW_PYVISTA:-1}"
+      TRANCEFLOW_QUOTA_MAX_CALLS: "${TRANCEFLOW_QUOTA_MAX_CALLS:-10000}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - tranceflow-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+
+  vrar3d:
+    <<: *worker-common
+    build: { context: ./workers/vrar3d, dockerfile: Dockerfile }
+    container_name: vrar3d-worker
+    ports: ["8063:8063"]
+    environment:
+      VRAR3D_DB_PATH: /data/vrar3d.db
+      VRAR3D_ASSET_DIR: /data/assets
+      GODOT_BIN: "${GODOT_BIN:-godot}"
+      BLENDER_BIN: "${BLENDER_BIN:-blender}"
+      VRAR3D_TRIMESH: "${VRAR3D_TRIMESH:-1}"
+      VRAR3D_OPEN3D: "${VRAR3D_OPEN3D:-1}"
+      VRAR3D_BLENDER: "${VRAR3D_BLENDER:-1}"
+      VRAR3D_GODOT: "${VRAR3D_GODOT:-1}"
+      VRAR3D_PYVISTA: "${VRAR3D_PYVISTA:-1}"
+      VRAR3D_MESHIO: "${VRAR3D_MESHIO:-1}"
+      SKETCHFAB_API_KEY: "${SKETCHFAB_API_KEY:-}"
+      VRAR3D_SKETCHFAB_LIMIT: "${VRAR3D_SKETCHFAB_LIMIT:-100}"
+      VRAR3D_QUOTA_MAX_CALLS: "${VRAR3D_QUOTA_MAX_CALLS:-10000}"
+      THREEJS_CDN: "${THREEJS_CDN:-https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js}"
+      BABYLONJS_CDN: "${BABYLONJS_CDN:-https://cdn.babylonjs.com/babylon.js}"
+      AFRAME_CDN: "${AFRAME_CDN:-https://aframe.io/releases/1.6.0/aframe.min.js}"
+      MODEL_VIEWER_CDN: "${MODEL_VIEWER_CDN:-https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - vrar3d-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8063/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
   # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
   # API-compatible with hvac Python client used by vault-service/openbao_client.py
@@ -2830,6 +2886,10 @@ volumes:
   vault-service-data:
     driver: local
   lab-service-data:
+    driver: local
+  tranceflow-data:
+    driver: local
+  vrar3d-data:
     driver: local
   admin-data:
     driver: local

@@ -382,3 +382,25 @@ scrape_configs:
           named: 'The Lab'
           lead_ai: 'The Dr. & Slime'
           category: 'code-generation'
+
+  # ── tranceflow — TranceFlow 3D/games studio (Port 8052) ───────────────
+  - job_name: 'tranceflow'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['tranceflow:8052']
+        labels:
+          service: 'tranceflow'
+          named: 'TranceFlow'
+          lead_ai: 'Junior Cesar'
+          category: '3d-games'
+
+  # ── vrar3d — VRAR3D immersion platform (Port 8063) ────────────────────
+  - job_name: 'vrar3d'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['vrar3d:8063']
+        labels:
+          service: 'vrar3d'
+          named: 'VRAR3D'
+          lead_ai: 'Entari'
+          category: '3d-vr'
