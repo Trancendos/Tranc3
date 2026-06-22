@@ -148,8 +148,13 @@ class CollectiveMemoryNode:
                 )
                 source = cfg.get("source", context.get("workflow_id", "workflow"))
                 entry_id = await cm.store(
-                    key=key, value=value, topic=topic, tags=tags, ttl=ttl,
-                    priority=priority, source=source,
+                    key=key,
+                    value=value,
+                    topic=topic,
+                    tags=tags,
+                    ttl=ttl,
+                    priority=priority,
+                    source=source,
                 )
                 output = {"action": "store", "key": key, "entry_id": entry_id}
             elif action == "retrieve":

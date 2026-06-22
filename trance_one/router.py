@@ -94,6 +94,7 @@ async def sovereign_intelligence():
     """Pull full T2ance Prime Intelligence report as seen from Sovereign (Tier 1)."""
     try:
         from t2ance.prime_intelligence import get_intelligence_hub
+
         t2ance_report = get_intelligence_hub().full_report()
     except Exception as exc:
         t2ance_report = {"error": str(exc)}
@@ -112,6 +113,7 @@ async def dispatch_command(
 ):
     """Issue a tier command from Sovereign down the hierarchy."""
     from fastapi import HTTPException
+
     from trance_one.tier_bridge import TierCommand, TierCommandType
 
     try:

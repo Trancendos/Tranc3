@@ -1575,7 +1575,12 @@ services:
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       MISTRAL_API_KEY: "${MISTRAL_API_KEY:-}"
       HUGGINGFACE_API_KEY: "${HUGGINGFACE_API_KEY:-}"
+      TOGETHER_API_KEY: "${TOGETHER_API_KEY:-}"
+      CF_ACCOUNT_ID: "${CF_ACCOUNT_ID:-}"
+      CF_AI_API_TOKEN: "${CF_AI_API_TOKEN:-}"
       OLLAMA_URL: "http://ollama:11434"
+      VLLM_BASE_URL: "http://vllm:8090/v1"
+      LLAMACPP_BASE_URL: "http://llama-cpp-server:8091"
       # Langfuse observability integration
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PUBLIC_KEY:-}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_SECRET_KEY:-}"
@@ -1608,6 +1613,69 @@ services:
     restart: unless-stopped
     # GPU support: add 'deploy: resources: reservations: devices: [{driver: nvidia, ...}]'
 
+  # vLLM — high-throughput GPU inference (Apache 2.0, zero-cost self-hosted, tier 0)
+  # Requires NVIDIA GPU. Serves any HuggingFace model via OpenAI-compatible API.
+  # Default model: meta-llama/Llama-3.2-3B-Instruct (set VLLM_DEFAULT_MODEL to change)
+  # Port 8090 — OpenAI-compatible: /v1/chat/completions, /v1/models
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: trancendos-vllm
+    command:
+      - "--model"
+      - "${VLLM_DEFAULT_MODEL:-meta-llama/Llama-3.2-3B-Instruct}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8090"
+      - "--dtype"
+      - "auto"
+    volumes:
+      - vllm-models:/root/.cache/huggingface
+    ports:
+      - "8090:8090"
+    environment:
+      HUGGING_FACE_HUB_TOKEN: "${HF_API_TOKEN:-}"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    profiles:
+      - gpu
+    # Uncomment below for NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # llama.cpp server — CPU inference (MIT, zero-cost self-hosted, tier 0)
+  # Runs any GGUF model file. Minimal RAM usage. OpenAI-compatible API.
+  # Port 8091 — endpoints: /health, /v1/chat/completions, /v1/models
+  llama-cpp-server:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    container_name: trancendos-llamacpp
+    command:
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8091"
+      - "--model"
+      - "/models/${LLAMACPP_MODEL_FILE:-llama-3.2-3b-instruct.Q4_K_M.gguf}"
+      - "--ctx-size"
+      - "8192"
+      - "--n-predict"
+      - "2048"
+    volumes:
+      - llamacpp-models:/models
+    ports:
+      - "8091:8091"
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    profiles:
+      - cpu-inference
+
   # ══════════════════════════════════════════════════════════════════════════
   # SEARCH — Meilisearch (MIT, zero-cost, self-hosted)
   # Full-text search for all platform content. Port 7700.
@@ -1635,6 +1703,40 @@ services:
       traefik.http.routers.meilisearch.entrypoints: "websecure"
       traefik.http.routers.meilisearch.tls.certresolver: "letsencrypt"
       traefik.http.services.meilisearch.loadbalancer.server.port: "7700"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # VECTOR DATABASE — Weaviate (BSD-3-Clause, zero-cost, self-hosted)
+  # GraphQL + REST interface. Port 8080 (HTTP), 50051 (gRPC).
+  # Route: weaviate.trancendos.com
+  # ══════════════════════════════════════════════════════════════════════════
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.25.4
+    container_name: trancendos-weaviate
+    restart: unless-stopped
+    ports:
+      - "8181:8080"
+      - "50052:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: "25"
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      ENABLE_MODULES: ""
+      CLUSTER_HOSTNAME: "node1"
+    volumes:
+      - weaviate-data:/var/lib/weaviate
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.weaviate.rule: "Host(`weaviate.trancendos.com`)"
+      traefik.http.routers.weaviate.entrypoints: "websecure"
+      traefik.http.routers.weaviate.tls.certresolver: "letsencrypt"
+      traefik.http.services.weaviate.loadbalancer.server.port: "8080"
 
   # ══════════════════════════════════════════════════════════════════════════
   # OBJECT STORAGE — MinIO (AGPL-3.0, zero-cost, S3-compatible)
@@ -2109,6 +2211,64 @@ services:
     image: redis:7-alpine
     container_name: trancendos-paperless-redis
     restart: unless-stopped
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DocUtari — Stirling PDF (self-hosted PDF manipulation, zero-cost OSS)
+# UI:  trancendos.com/docutari/pdf
+# API: trancendos.com/docutari/pdf/api
+# ═══════════════════════════════════════════════════════════════════════════
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest
+    container_name: trancendos-stirling-pdf
+    restart: unless-stopped
+    environment:
+      - DOCKER_ENABLE_SECURITY=false
+      - INSTALL_BOOK_AND_OFFICE_DEPS=false
+      - LANGS=en_GB
+      - SYSTEM_ROOTURIPATH=/docutari/pdf
+    volumes:
+      - stirling-pdf-trainingdata:/usr/share/tessdata
+      - stirling-pdf-extraconfigs:/configs
+      - stirling-pdf-logs:/logs
+      - stirling-pdf-pipeline:/pipeline
+    ports:
+      - "8086:8080"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stirling-pdf.rule=Host(`trancendos.com`) && PathPrefix(`/docutari/pdf`)"
+      - "traefik.http.services.stirling-pdf.loadbalancer.server.port=8080"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DocUtari — Gotenberg (HTML/Office→PDF generation, zero-cost OSS)
+# API: internal only, consumed by DocUtari bridge worker
+# ═══════════════════════════════════════════════════════════════════════════
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: trancendos-gotenberg
+    restart: unless-stopped
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+    ports:
+      - "3000:3000"
+    networks:
+      - tranc3-net
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DocUtari — Apache Tika (document parsing + metadata extraction, OSS)
+# API: internal only, consumed by DocUtari bridge worker
+# ═══════════════════════════════════════════════════════════════════════════
+  tika:
+    image: apache/tika:latest-full
+    container_name: trancendos-tika
+    restart: unless-stopped
+    ports:
+      - "9998:9998"
     networks:
       - tranc3-net
 
@@ -2620,7 +2780,13 @@ volumes:
     driver: local
   ollama-data:
     driver: local
+  vllm-models:
+    driver: local
+  llamacpp-models:
+    driver: local
   meilisearch-data:
+    driver: local
+  weaviate-data:
     driver: local
   minio-data:
     driver: local

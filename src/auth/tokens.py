@@ -59,7 +59,9 @@ def create_access_token(
         return base64.urlsafe_b64encode(json.dumps(claims).encode()).decode()
 
 
-def decode_access_token(token: str, jwt_secret: str, algorithm: str = "HS256") -> dict[str, Any] | None:
+def decode_access_token(
+    token: str, jwt_secret: str, algorithm: str = "HS256"
+) -> dict[str, Any] | None:
     """Decode and validate a JWT access token. Returns None if invalid/expired."""
     try:
         from jose import JWTError, jwt  # type: ignore

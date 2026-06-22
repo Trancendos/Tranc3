@@ -64,7 +64,7 @@ class BaseNode(ABC):
 
     @abstractmethod
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
-        ...
+        raise NotImplementedError
 
     async def _with_timeout(self, coro, timeout: float):
         try:

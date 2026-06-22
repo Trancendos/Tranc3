@@ -7,10 +7,10 @@ This module re-exports everything so existing imports continue to work.
 
 from src.workflow.nodes.agents import (  # noqa: F401
     AgentCreateNode,
-    AgentRunStepNode,
+    AgentDecomposeNode,
     AgentGoalNode,
     AgentReflectNode,
-    AgentDecomposeNode,
+    AgentRunStepNode,
 )
 
 PHASE5_NODE_TYPES = {

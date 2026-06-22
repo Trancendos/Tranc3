@@ -5,8 +5,7 @@ src/monetisation/router.py — Billing, Revenue & Tax REST endpoints.
 from __future__ import annotations
 
 import logging
-import os
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -19,6 +18,7 @@ router = APIRouter(prefix="/billing", tags=["billing"])
 # ---------------------------------------------------------------------------
 # Request models
 # ---------------------------------------------------------------------------
+
 
 class CheckoutRequest(BaseModel):
     user_id: str
@@ -37,18 +37,22 @@ class MarketplaceFeeRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _billing():
     from src.monetisation.billing import billing_router as br
+
     return br
 
 
 def _revenue():
     from src.monetisation.billing import revenue_tracker
+
     return revenue_tracker
 
 
 def _tax():
     from src.monetisation.billing import tax_monitor
+
     return tax_monitor
 
 
@@ -56,10 +60,12 @@ def _tax():
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/status")
 async def billing_status():
     """Provider availability and tier configuration."""
-    from src.monetisation.billing import TIERS, stripe_manager
+    from src.monetisation.billing import TIERS
+
     provider_status = _billing().provider_status()
     tiers_info = {
         tier_key: {
@@ -100,6 +106,7 @@ async def create_checkout(req: CheckoutRequest):
 async def billing_portal(user_id: str, return_url: str = "https://trancendos.com/account"):
     """Open Stripe billing portal for a customer."""
     from src.monetisation.billing import stripe_manager
+
     if not stripe_manager.enabled:
         raise HTTPException(status_code=503, detail="Stripe not configured")
     result = stripe_manager.create_portal_session(
@@ -112,9 +119,12 @@ async def billing_portal(user_id: str, return_url: str = "https://trancendos.com
 
 
 @router.post("/webhook/stripe")
-async def stripe_webhook(request: Request, stripe_signature: str = Header(None, alias="Stripe-Signature")):
+async def stripe_webhook(
+    request: Request, stripe_signature: str = Header(None, alias="Stripe-Signature")
+):
     """Handle Stripe webhook events."""
     from src.monetisation.billing import stripe_manager
+
     body = await request.body()
     result = stripe_manager.handle_webhook(
         payload=body.decode(),

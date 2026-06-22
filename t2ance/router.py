@@ -59,6 +59,7 @@ async def request_rotation(entity_id: str, reason: str = "manual request"):
 async def intelligence_report():
     """Full adaptive intelligence report across all 9 Domain Primes."""
     from t2ance.prime_intelligence import get_intelligence_hub
+
     return get_intelligence_hub().full_report()
 
 
@@ -71,6 +72,7 @@ async def ingest_signal(
 ):
     """Ingest a health signal for a Tier 3 entity into the Prime intelligence layer."""
     from t2ance.prime_intelligence import EntityHealthSignal, get_intelligence_hub
+
     signal = EntityHealthSignal(
         entity_id=entity_id,
         latency_ms=latency_ms,
