@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import subprocess
 import tempfile
 import time
@@ -331,20 +332,31 @@ class SemgrepEngine:
 
     async def scan(self, req: ScanRequest) -> Dict[str, Any]:
         def _do_scan() -> Dict[str, Any]:
+            # Validate target is a real filesystem path and normalise it.
+            # subprocess.run with a list (not shell=True) already prevents shell
+            # injection, but we also reject paths that escape the allowed scan
+            # root or contain null bytes to prevent directory traversal.
+            target = os.path.realpath(req.target)
+            if "\x00" in target:
+                raise ValueError("Target path contains null byte")
+            if not os.path.exists(target):
+                raise ValueError(f"Semgrep target does not exist: {target}")
+
             cmd = [
                 "semgrep",
                 "--config=auto",
                 "--json",
                 "--no-git-ignore",
                 "--quiet",
-                req.target,
+                target,
             ]
             try:
-                proc = subprocess.run(
+                proc = subprocess.run(  # noqa: S603 — list form, no shell=True
                     cmd,
                     capture_output=True,
                     text=True,
                     timeout=120,
+                    shell=False,
                 )
             except FileNotFoundError:
                 raise RuntimeError("semgrep not found; install semgrep CLI")
