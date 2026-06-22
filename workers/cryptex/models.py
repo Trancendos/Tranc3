@@ -1,4 +1,5 @@
 """Cryptex / The Ice Box — Pydantic models"""
+
 from __future__ import annotations
 
 import uuid

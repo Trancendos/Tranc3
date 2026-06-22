@@ -2,6 +2,7 @@
 models.py — Gateway Service Pydantic schemas
 All request/response models for gateway-service.
 """
+
 from __future__ import annotations
 
 from typing import Any

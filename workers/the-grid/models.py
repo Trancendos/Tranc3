@@ -1,4 +1,5 @@
 """The Digital Grid — Pydantic models and enums"""
+
 from __future__ import annotations
 
 import uuid
@@ -27,14 +28,14 @@ class StepStatus(str, Enum):
 
 
 class EngineType(str, Enum):
-    internal = "internal"    # built-in Python DAG executor (Tier 1)
-    n8n = "n8n"              # n8n REST API           (Tier 2)
-    prefect = "prefect"      # Prefect server API     (Tier 3)
-    temporal = "temporal"    # Temporal gRPC          (Tier 4)
-    airflow = "airflow"      # Apache Airflow REST    (Tier 5)
-    dagster = "dagster"      # Dagster GraphQL        (Tier 6)
-    luigi = "luigi"          # Luigi in-process       (Tier 7)
-    offline = "offline"      # deterministic stub     (Tier 8)
+    internal = "internal"  # built-in Python DAG executor (Tier 1)
+    n8n = "n8n"  # n8n REST API           (Tier 2)
+    prefect = "prefect"  # Prefect server API     (Tier 3)
+    temporal = "temporal"  # Temporal gRPC          (Tier 4)
+    airflow = "airflow"  # Apache Airflow REST    (Tier 5)
+    dagster = "dagster"  # Dagster GraphQL        (Tier 6)
+    luigi = "luigi"  # Luigi in-process       (Tier 7)
+    offline = "offline"  # deterministic stub     (Tier 8)
 
 
 class WorkflowStep(BaseModel):

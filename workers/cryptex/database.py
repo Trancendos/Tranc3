@@ -1,4 +1,5 @@
 """Cryptex / The Ice Box — SQLite persistence"""
+
 from __future__ import annotations
 
 import json
@@ -66,23 +67,26 @@ class CryptexDatabase:
 
     def save_result(self, result: ScanResult) -> ScanResult:
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT OR REPLACE INTO scan_results
                   (scan_id, engine_used, status, threat_found, severity,
                    findings, raw_output, error_message, started_at, completed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                result.scan_id,
-                result.engine_used,
-                result.status.value,
-                1 if result.threat_found else 0,
-                result.severity.value,
-                json.dumps(result.findings),
-                json.dumps(result.raw_output),
-                result.error_message,
-                result.started_at.isoformat() if result.started_at else None,
-                result.completed_at.isoformat() if result.completed_at else None,
-            ))
+            """,
+                (
+                    result.scan_id,
+                    result.engine_used,
+                    result.status.value,
+                    1 if result.threat_found else 0,
+                    result.severity.value,
+                    json.dumps(result.findings),
+                    json.dumps(result.raw_output),
+                    result.error_message,
+                    result.started_at.isoformat() if result.started_at else None,
+                    result.completed_at.isoformat() if result.completed_at else None,
+                ),
+            )
         return result
 
     def get_result(self, scan_id: str) -> Optional[Dict[str, Any]]:
@@ -103,19 +107,22 @@ class CryptexDatabase:
 
     def save_indicator(self, ioc: ThreatIndicator) -> ThreatIndicator:
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT OR REPLACE INTO threat_indicators
                   (indicator_id, ioc_type, value, severity, source, tags, metadata)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                ioc.indicator_id,
-                ioc.ioc_type,
-                ioc.value,
-                ioc.severity.value,
-                ioc.source,
-                json.dumps(ioc.tags),
-                json.dumps(ioc.metadata),
-            ))
+            """,
+                (
+                    ioc.indicator_id,
+                    ioc.ioc_type,
+                    ioc.value,
+                    ioc.severity.value,
+                    ioc.source,
+                    json.dumps(ioc.tags),
+                    json.dumps(ioc.metadata),
+                ),
+            )
         return ioc
 
     def list_indicators(

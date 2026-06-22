@@ -165,9 +165,7 @@ class OpenRouterClient:
         "mistralai/mistral-7b-instruct:free",
     ]
 
-    def __init__(
-        self, base_url: str = OPENROUTER_BASE_URL, api_key: Optional[str] = None
-    ):
+    def __init__(self, base_url: str = OPENROUTER_BASE_URL, api_key: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key or OPENROUTER_API_KEY
 
@@ -222,9 +220,7 @@ class HuggingFaceClient:
         "microsoft/Phi-3-mini-4k-instruct",
     ]
 
-    def __init__(
-        self, base_url: str = HUGGINGFACE_BASE_URL, api_key: Optional[str] = None
-    ):
+    def __init__(self, base_url: str = HUGGINGFACE_BASE_URL, api_key: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key or HUGGINGFACE_API_KEY
 
@@ -545,7 +541,6 @@ class AIGatewayRouter:
         return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
     async def route(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
-
         request_id = f"req-{uuid.uuid4().hex[:12]}"
         tenant_id = request.tenant_id or "default"
         start_time = time.time()
@@ -679,9 +674,7 @@ class AIGatewayRouter:
                 try:
                     from src.ai_gateway.limit_monitor import monitor as _lm
 
-                    _lm.record_provider_outcome(
-                        provider_name.value, success=False, latency_ms=0.0
-                    )
+                    _lm.record_provider_outcome(provider_name.value, success=False, latency_ms=0.0)
                 except Exception:
                     pass
                 continue

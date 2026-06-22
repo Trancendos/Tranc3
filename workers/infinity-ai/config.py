@@ -47,14 +47,14 @@ DEEPSEEK_API_KEY: str = os.environ.get("DEEPSEEK_API_KEY", "")
 # Provider free-tier daily limits (requests)
 # ---------------------------------------------------------------------------
 PROVIDER_DAILY_LIMITS: dict[str, int] = {
-    "ollama": -1,         # unlimited (local)
-    "groq": 14_400,       # free tier
-    "cerebras": 1_000,    # free tier
-    "openrouter": 200,    # free tier (varies by model)
-    "huggingface": 1_000, # free tier inference API
-    "together": 500,      # credit-based approximation
-    "deepseek": 1_000,    # generous free tier
-    "offline": -1,        # always available
+    "ollama": -1,  # unlimited (local)
+    "groq": 14_400,  # free tier
+    "cerebras": 1_000,  # free tier
+    "openrouter": 200,  # free tier (varies by model)
+    "huggingface": 1_000,  # free tier inference API
+    "together": 500,  # credit-based approximation
+    "deepseek": 1_000,  # generous free tier
+    "offline": -1,  # always available
 }
 
 # ---------------------------------------------------------------------------

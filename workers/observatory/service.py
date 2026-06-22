@@ -7,6 +7,7 @@ Signal routing:
   Node    : Netdata → VictoriaMetrics/Prometheus (Netdata Prom endpoint)
   APM     : SigNoz (full unified view — traces + metrics + logs)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -45,6 +46,7 @@ logger = logging.getLogger("observatory.service")
 
 # ── ThresholdGuard ────────────────────────────────────────────────────────────
 
+
 class ThresholdGuard:
     def __init__(self, limit: int, window_seconds: int = THRESHOLD_WINDOW_SECONDS) -> None:
         self.limit = limit
@@ -73,6 +75,7 @@ class ThresholdGuard:
 
 # ── Pheromone state ───────────────────────────────────────────────────────────
 
+
 class PheromoneState:
     def __init__(self, initial: float = 0.8) -> None:
         self.value = initial
@@ -90,21 +93,19 @@ class PheromoneState:
 # ── Per-backend registry ──────────────────────────────────────────────────────
 
 _BACKEND_CONFIG: Dict[BackendType, Tuple[str, int]] = {
-    BackendType.signoz:         (SIGNOZ_URL,          THRESHOLD_SIGNOZ),
-    BackendType.jaeger:         (JAEGER_URL,          THRESHOLD_JAEGER),
-    BackendType.tempo:          (TEMPO_URL,            THRESHOLD_TEMPO),
-    BackendType.victoriametrics:(VICTORIAMETRICS_URL,  THRESHOLD_VICTORIA),
-    BackendType.prometheus:     (PROMETHEUS_URL,       THRESHOLD_PROMETHEUS),
-    BackendType.loki:           (LOKI_URL,             THRESHOLD_LOKI),
-    BackendType.netdata:        (NETDATA_URL,          THRESHOLD_NETDATA),
+    BackendType.signoz: (SIGNOZ_URL, THRESHOLD_SIGNOZ),
+    BackendType.jaeger: (JAEGER_URL, THRESHOLD_JAEGER),
+    BackendType.tempo: (TEMPO_URL, THRESHOLD_TEMPO),
+    BackendType.victoriametrics: (VICTORIAMETRICS_URL, THRESHOLD_VICTORIA),
+    BackendType.prometheus: (PROMETHEUS_URL, THRESHOLD_PROMETHEUS),
+    BackendType.loki: (LOKI_URL, THRESHOLD_LOKI),
+    BackendType.netdata: (NETDATA_URL, THRESHOLD_NETDATA),
 }
 
 _guards: Dict[BackendType, ThresholdGuard] = {
     bt: ThresholdGuard(limit) for bt, (_, limit) in _BACKEND_CONFIG.items()
 }
-_pheromones: Dict[BackendType, PheromoneState] = {
-    bt: PheromoneState() for bt in BackendType
-}
+_pheromones: Dict[BackendType, PheromoneState] = {bt: PheromoneState() for bt in BackendType}
 
 
 async def _probe(url: str, path: str = "/", timeout: float = 3.0) -> Tuple[bool, float]:
@@ -121,13 +122,13 @@ async def _probe(url: str, path: str = "/", timeout: float = 3.0) -> Tuple[bool,
 
 async def backend_statuses() -> List[BackendStatus]:
     probes = {
-        BackendType.signoz:          ("/api/v1/health", SIGNOZ_URL),
-        BackendType.jaeger:          ("/",               JAEGER_URL),
-        BackendType.tempo:           ("/ready",          TEMPO_URL),
-        BackendType.victoriametrics: ("/health",         VICTORIAMETRICS_URL),
-        BackendType.prometheus:      ("/-/healthy",      PROMETHEUS_URL),
-        BackendType.loki:            ("/ready",          LOKI_URL),
-        BackendType.netdata:         ("/api/v1/info",    NETDATA_URL),
+        BackendType.signoz: ("/api/v1/health", SIGNOZ_URL),
+        BackendType.jaeger: ("/", JAEGER_URL),
+        BackendType.tempo: ("/ready", TEMPO_URL),
+        BackendType.victoriametrics: ("/health", VICTORIAMETRICS_URL),
+        BackendType.prometheus: ("/-/healthy", PROMETHEUS_URL),
+        BackendType.loki: ("/ready", LOKI_URL),
+        BackendType.netdata: ("/api/v1/info", NETDATA_URL),
     }
     tasks = {bt: _probe(url, path) for bt, (path, url) in probes.items()}
     results = await asyncio.gather(*tasks.values(), return_exceptions=True)
@@ -144,20 +145,23 @@ async def backend_statuses() -> List[BackendStatus]:
             ph.success(0.02)
         else:
             ph.failure(0.1)
-        out.append(BackendStatus(
-            backend=bt,
-            url=url,
-            healthy=healthy,
-            pheromone=round(ph.value, 4),
-            requests_in_window=guard.current_count,
-            threshold=guard.limit,
-            blocked=guard.current_count >= guard.limit,
-            latency_ms=round(latency_ms, 1),
-        ))
+        out.append(
+            BackendStatus(
+                backend=bt,
+                url=url,
+                healthy=healthy,
+                pheromone=round(ph.value, 4),
+                requests_in_window=guard.current_count,
+                threshold=guard.limit,
+                blocked=guard.current_count >= guard.limit,
+                latency_ms=round(latency_ms, 1),
+            )
+        )
     return out
 
 
 # ── Adaptive query helpers ────────────────────────────────────────────────────
+
 
 async def _query_with_fallback(
     backends: List[str],
@@ -183,13 +187,14 @@ async def _query_with_fallback(
     return {"error": "all_backends_exhausted"}, "offline", fallbacks
 
 
-async def query_traces(service: Optional[str], limit: int = 20, lookback_hours: int = 1) -> QueryResult:
+async def query_traces(
+    service: Optional[str], limit: int = 20, lookback_hours: int = 1
+) -> QueryResult:
     t0 = time.monotonic()
     end_us = int(time.time() * 1_000_000)
     start_us = end_us - lookback_hours * 3600 * 1_000_000
     backend_types = [
-        BackendType.tempo if "tempo" in u else BackendType.jaeger
-        for u in TRACE_BACKENDS
+        BackendType.tempo if "tempo" in u else BackendType.jaeger for u in TRACE_BACKENDS
     ]
 
     async def _request(url: str) -> Any:
@@ -281,7 +286,11 @@ async def query_node_metrics() -> NodeMetricSummary:
                 )
                 r.raise_for_status()
                 cpu_data = r.json()
-                cpu_pct = 100 - cpu_data.get("data", [[None, None]])[-1][-1] if cpu_data.get("data") else None
+                cpu_pct = (
+                    100 - cpu_data.get("data", [[None, None]])[-1][-1]
+                    if cpu_data.get("data")
+                    else None
+                )
 
                 r2 = await client.get(
                     f"{NETDATA_URL}/api/v1/data",
@@ -293,7 +302,9 @@ async def query_node_metrics() -> NodeMetricSummary:
             _pheromones[BackendType.netdata].success()
             return NodeMetricSummary(
                 cpu_usage_pct=round(cpu_pct, 2) if cpu_pct is not None else None,
-                ram_used_mb=round(ram_vals[1] / 1024, 1) if ram_vals and len(ram_vals) > 1 else None,
+                ram_used_mb=round(ram_vals[1] / 1024, 1)
+                if ram_vals and len(ram_vals) > 1
+                else None,
                 source="netdata",
             )
         except Exception as exc:
@@ -302,12 +313,16 @@ async def query_node_metrics() -> NodeMetricSummary:
 
     # Fallback: PromQL via VictoriaMetrics/Prometheus
     try:
-        result = await query_metrics('100 - (avg by(instance)(irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)')
+        result = await query_metrics(
+            '100 - (avg by(instance)(irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'
+        )
         cpu = None
         if result.data and result.data.get("status") == "success":
             data_list = result.data.get("data", {}).get("result", [])
             if data_list:
                 cpu = float(data_list[0]["value"][1])
-        return NodeMetricSummary(cpu_usage_pct=round(cpu, 2) if cpu else None, source="victoriametrics")
+        return NodeMetricSummary(
+            cpu_usage_pct=round(cpu, 2) if cpu else None, source="victoriametrics"
+        )
     except Exception:
         return NodeMetricSummary(source="offline")

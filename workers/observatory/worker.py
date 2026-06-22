@@ -1,4 +1,5 @@
 """Observatory worker entry point."""
+
 from main import app  # noqa: F401 — imported for uvicorn
 
 if __name__ == "__main__":

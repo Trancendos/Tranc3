@@ -252,9 +252,12 @@ async def _dispatch_nats(job: dict) -> bool:
 async def _dispatch_valkey(job: dict) -> bool:
     try:
         import redis.asyncio as aioredis  # optional dep
+
         r = aioredis.from_url(_VALKEY_URL, socket_timeout=3)
         score = time.time()
-        await r.zadd("chronos:schedule", {json.dumps({"id": job["id"], "url": job.get("url")}): score})
+        await r.zadd(
+            "chronos:schedule", {json.dumps({"id": job["id"], "url": job.get("url")}): score}
+        )
         await r.aclose()
         return True
     except Exception:
@@ -446,7 +449,9 @@ async def _execute_job(job: dict) -> None:
             )
         conn.commit()
 
-    logger.info("Job %s (%s) via %s: %s in %.0fms", job["id"], job["name"], backend, status, duration_ms)
+    logger.info(
+        "Job %s (%s) via %s: %s in %.0fms", job["id"], job["name"], backend, status, duration_ms
+    )
 
 
 async def _scheduler_loop() -> None:
@@ -498,6 +503,7 @@ async def lifespan(app: FastAPI):
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         from src.observability.otel import init_otel
+
         init_otel(service_name="tranc3.cron-service")
         FastAPIInstrumentor.instrument_app(app)
     except Exception:
@@ -586,6 +592,7 @@ async def list_jobs(enabled: Optional[bool] = None):
 @_router.post("/jobs", status_code=201)
 async def create_job(req: JobCreate):
     import uuid
+
     job_id = req.id or str(uuid.uuid4())
     now = time.time()
     job_dict = {
@@ -607,9 +614,16 @@ async def create_job(req: JobCreate):
         conn.execute(
             "INSERT INTO jobs (id, name, schedule, url, method, payload, headers, enabled, backend, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
-                job_id, req.name, req.schedule, req.url, req.method,
-                json.dumps(req.payload), json.dumps(req.headers),
-                int(req.enabled), chosen_backend, now,
+                job_id,
+                req.name,
+                req.schedule,
+                req.url,
+                req.method,
+                json.dumps(req.payload),
+                json.dumps(req.headers),
+                int(req.enabled),
+                chosen_backend,
+                now,
             ),
         )
         conn.commit()
@@ -682,4 +696,5 @@ app.include_router(_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

@@ -57,7 +57,9 @@ async def test_offline_client_default():
     from service import OfflineClient
 
     client = OfflineClient()
-    result = await client.complete("model", [ChatMessage(role="user", content="what is this")], 100, 0.7)
+    result = await client.complete(
+        "model", [ChatMessage(role="user", content="what is this")], 100, 0.7
+    )
     assert "offline" in result.get("content", "").lower() or result.get("content")
 
 
@@ -67,7 +69,9 @@ async def test_offline_client_greeting():
     from service import OfflineClient
 
     client = OfflineClient()
-    result = await client.complete("model", [ChatMessage(role="user", content="hello there")], 100, 0.7)
+    result = await client.complete(
+        "model", [ChatMessage(role="user", content="hello there")], 100, 0.7
+    )
     assert "offline" in result["content"].lower()
 
 
@@ -95,7 +99,6 @@ async def test_router_uses_lru_cache(tmp_db):
         provider="ollama",
     )
     import hashlib
-
 
     # msgs unused — hash key is built from raw string below
     raw = "default:llama3.2:user:test prompt:512:0.7"
@@ -131,7 +134,9 @@ async def test_router_rejects_over_budget(tmp_db):
 
     from models import TokenBudget
 
-    budget = TokenBudget(tenant_id="broke", daily_limit=0, used_today=0, last_reset=datetime.now(timezone.utc))
+    budget = TokenBudget(
+        tenant_id="broke", daily_limit=0, used_today=0, last_reset=datetime.now(timezone.utc)
+    )
     tmp_db._save_budget(budget)
 
     from models import ChatCompletionRequest, ChatMessage

@@ -33,9 +33,7 @@ def test_log_admin_action_basic(tmp_db):
     finally:
         service.db = _orig_db
 
-    row = tmp_db.execute(
-        "SELECT * FROM admin_actions WHERE actor_id = ?", ("user-123",)
-    ).fetchone()
+    row = tmp_db.execute("SELECT * FROM admin_actions WHERE actor_id = ?", ("user-123",)).fetchone()
     assert row is not None
     assert row["action_type"] == "test_action"
     assert row["actor_username"] == "tester"
@@ -162,7 +160,5 @@ def test_seed_default_config_values(tmp_db):
     finally:
         service.db = _orig_db
 
-    row = tmp_db.execute(
-        "SELECT value FROM system_config WHERE key = 'ecosystem_name'"
-    ).fetchone()
+    row = tmp_db.execute("SELECT value FROM system_config WHERE key = 'ecosystem_name'").fetchone()
     assert row["value"] == "Infinity"

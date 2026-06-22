@@ -16,6 +16,7 @@ CRYPTEX_FORCE_ENGINE env var overrides selection.
 
 Lead AI: Renik (Cryptex) + Neonach (The Ice Box)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -94,6 +95,7 @@ class PheromoneState:
         if not candidates:
             return None
         import random
+
         total = sum(self._ph.get(e, self._MIN) for e in candidates)
         if total == 0:
             return candidates[0]
@@ -241,7 +243,7 @@ class OpenVASEngine:
             # Create scan target
             target_resp = await client.post(
                 "/gmp",
-                content=f'<create_target><name>grid-{req.scan_id}</name><hosts>{req.target}</hosts></create_target>',
+                content=f"<create_target><name>grid-{req.scan_id}</name><hosts>{req.target}</hosts></create_target>",
                 headers={"Content-Type": "application/xml"},
             )
             target_resp.raise_for_status()
@@ -263,7 +265,9 @@ class ClamAVEngine:
         try:
             import pyclamd  # type: ignore
         except ImportError as err:
-            raise RuntimeError("pyclamd not installed; add pyclamd to requirements-worker.txt") from err
+            raise RuntimeError(
+                "pyclamd not installed; add pyclamd to requirements-worker.txt"
+            ) from err
 
         def _do_scan() -> Dict[str, Any]:
             if config.CLAMAV_SOCKET.startswith("/"):
@@ -297,12 +301,20 @@ class YARAEngine:
             try:
                 import yara  # type: ignore
             except ImportError as err:
-                raise RuntimeError("yara-python not installed; add yara-python to requirements-worker.txt") from err
+                raise RuntimeError(
+                    "yara-python not installed; add yara-python to requirements-worker.txt"
+                ) from err
 
             import os
+
             rules_dir = config.YARA_RULES_DIR
             if not os.path.isdir(rules_dir):
-                return {"threat_found": False, "severity": "info", "findings": [], "note": "No YARA rules dir"}
+                return {
+                    "threat_found": False,
+                    "severity": "info",
+                    "findings": [],
+                    "note": "No YARA rules dir",
+                }
             rule_files = {
                 f: os.path.join(rules_dir, f)
                 for f in os.listdir(rules_dir)
@@ -448,9 +460,7 @@ class SecurityEngineRouter:
 
     def __init__(self, db: CryptexDatabase):
         self.db = db
-        self._pheromone = PheromoneState(
-            [e.value for e in _TIER_ORDER], decay=config.ACO_DECAY
-        )
+        self._pheromone = PheromoneState([e.value for e in _TIER_ORDER], decay=config.ACO_DECAY)
         self._guards: Dict[str, ThresholdGuard] = {
             e.value: ThresholdGuard(_THRESHOLDS[e], config.THRESHOLD_WINDOW_SECONDS)
             for e in _TIER_ORDER
@@ -521,8 +531,7 @@ class SecurityEngineRouter:
         forced = config.FORCE_ENGINE
         preferred = forced or (req.preferred_engine.value if req.preferred_engine else None)
         candidates = (
-            [forced] if forced and forced in self._engines
-            else self._available_engines(preferred)
+            [forced] if forced and forced in self._engines else self._available_engines(preferred)
         )
         if not candidates:
             candidates = [ScanEngine.offline.value]

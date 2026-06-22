@@ -1,4 +1,5 @@
 """The Library — SQLite persistence"""
+
 from __future__ import annotations
 
 import json
@@ -67,7 +68,8 @@ class LibraryDatabase:
 
     def save_document(self, doc: Dict[str, Any]) -> Dict[str, Any]:
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO documents
                   (doc_id, title, content, format, collection, tags, metadata, backend, url)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -81,11 +83,19 @@ class LibraryDatabase:
                   backend=excluded.backend,
                   url=excluded.url,
                   updated_at=datetime('now')
-            """, (
-                doc["doc_id"], doc["title"], doc["content"], doc["format"],
-                doc.get("collection"), json.dumps(doc.get("tags", [])),
-                json.dumps(doc.get("metadata", {})), doc["backend"], doc.get("url"),
-            ))
+            """,
+                (
+                    doc["doc_id"],
+                    doc["title"],
+                    doc["content"],
+                    doc["format"],
+                    doc.get("collection"),
+                    json.dumps(doc.get("tags", [])),
+                    json.dumps(doc.get("metadata", {})),
+                    doc["backend"],
+                    doc.get("url"),
+                ),
+            )
         return self.get_document(doc["doc_id"])
 
     def get_document(self, doc_id: str) -> Optional[Dict[str, Any]]:
@@ -99,7 +109,9 @@ class LibraryDatabase:
         d["metadata"] = json.loads(d["metadata"])
         return d
 
-    def search_documents(self, query: str, collection: Optional[str] = None, limit: int = 20) -> List[Dict[str, Any]]:
+    def search_documents(
+        self, query: str, collection: Optional[str] = None, limit: int = 20
+    ) -> List[Dict[str, Any]]:
         with self._cursor() as cur:
             like = f"%{query}%"
             if collection:
@@ -121,7 +133,9 @@ class LibraryDatabase:
             results.append(d)
         return results
 
-    def list_documents(self, collection: Optional[str] = None, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    def list_documents(
+        self, collection: Optional[str] = None, limit: int = 50, offset: int = 0
+    ) -> List[Dict[str, Any]]:
         with self._cursor() as cur:
             if collection:
                 cur.execute(
@@ -149,6 +163,7 @@ class LibraryDatabase:
 
     def record_event(self, backend: str, success: bool) -> None:
         import time
+
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO backend_events (backend, success, ts) VALUES (?, ?, ?)",
@@ -157,6 +172,7 @@ class LibraryDatabase:
 
     def count_calls_in_window(self, backend: str, window_seconds: int) -> int:
         import time
+
         cutoff = time.time() - window_seconds
         with self._cursor() as cur:
             cur.execute(

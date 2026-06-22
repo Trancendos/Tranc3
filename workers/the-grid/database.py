@@ -1,4 +1,5 @@
 """The Digital Grid — SQLite persistence layer"""
+
 from __future__ import annotations
 
 import json
@@ -69,17 +70,13 @@ class GridDatabase:
             """)
             # add engine_used column if migrating from old schema
             try:
-                cur.execute(
-                    "ALTER TABLE workflow_executions ADD COLUMN engine_used TEXT"
-                )
+                cur.execute("ALTER TABLE workflow_executions ADD COLUMN engine_used TEXT")
             except sqlite3.OperationalError:
                 pass  # column already exists
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_exec_workflow ON workflow_executions(workflow_id)"
             )
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_exec_status ON workflow_executions(status)"
-            )
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_exec_status ON workflow_executions(status)")
 
     # ── Definitions ──────────────────────────────────────────────────────────
 
@@ -102,16 +99,22 @@ class GridDatabase:
         return wf
 
     def get_definition(self, workflow_id: str) -> Optional[Dict[str, Any]]:
-        row = self._get_conn().execute(
-            "SELECT * FROM workflow_definitions WHERE workflow_id=?", (workflow_id,)
-        ).fetchone()
+        row = (
+            self._get_conn()
+            .execute("SELECT * FROM workflow_definitions WHERE workflow_id=?", (workflow_id,))
+            .fetchone()
+        )
         return dict(row) if row else None
 
     def list_definitions(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-        rows = self._get_conn().execute(
-            "SELECT * FROM workflow_definitions ORDER BY name LIMIT ? OFFSET ?",
-            (limit, offset),
-        ).fetchall()
+        rows = (
+            self._get_conn()
+            .execute(
+                "SELECT * FROM workflow_definitions ORDER BY name LIMIT ? OFFSET ?",
+                (limit, offset),
+            )
+            .fetchall()
+        )
         return [dict(r) for r in rows]
 
     def delete_definition(self, workflow_id: str) -> bool:
@@ -145,9 +148,11 @@ class GridDatabase:
         return ex
 
     def get_execution(self, execution_id: str) -> Optional[Dict[str, Any]]:
-        row = self._get_conn().execute(
-            "SELECT * FROM workflow_executions WHERE execution_id=?", (execution_id,)
-        ).fetchone()
+        row = (
+            self._get_conn()
+            .execute("SELECT * FROM workflow_executions WHERE execution_id=?", (execution_id,))
+            .fetchone()
+        )
         return dict(row) if row else None
 
     def list_executions(

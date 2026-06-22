@@ -1,4 +1,5 @@
 """The Library — configuration"""
+
 from __future__ import annotations
 
 import os
@@ -49,6 +50,7 @@ PROBE_TIMEOUT = float(os.environ.get("LIBRARY_PROBE_TIMEOUT", "5.0"))
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 if not INTERNAL_SECRET:
     import warnings
+
     warnings.warn("INTERNAL_SECRET is not set — inter-service auth disabled", stacklevel=1)
 
 # ── TLS ───────────────────────────────────────────────────────────────────────

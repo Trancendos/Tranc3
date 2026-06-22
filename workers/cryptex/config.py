@@ -1,4 +1,5 @@
 """Cryptex / The Ice Box — configuration"""
+
 from __future__ import annotations
 
 import os

@@ -2,6 +2,7 @@
 router.py — Gateway Service FastAPI routes
 All HTTP, SSE, and WebSocket routes via APIRouter.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -85,6 +86,7 @@ async def stats():
     all_stats = await get_cached_or_fetch("all_stats", fetch_all_stats)
     reachable = sum(1 for v in all_stats.values() if v.get("status") == "ok")
     from service import get_cache_size, get_circuit_breaker_states
+
     return {
         "upstream_workers": len(UPSTREAM_WORKERS),
         "reachable": reachable,
@@ -272,6 +274,7 @@ async def create_agent(body: AgentCreate, request: Request):
     check_abac(request, "agent", action="write")
 
     from service import _base_url
+
     async with httpx.AsyncClient() as client:
         try:
             r = await client.post(
@@ -295,6 +298,7 @@ async def create_workflow(body: WorkflowCreate, request: Request):
     check_abac(request, "workflow", action="write")
 
     from service import _base_url
+
     async with httpx.AsyncClient() as client:
         try:
             r = await client.post(
@@ -318,6 +322,7 @@ async def switch_topology(body: TopologySwitch, request: Request):
     check_abac(request, "topology", action="write")
 
     from service import _base_url
+
     async with httpx.AsyncClient() as client:
         try:
             r = await client.put(
@@ -343,6 +348,7 @@ async def run_workflow(workflow_id: str, request: Request):
     check_abac(request, "workflow", resource_id=workflow_id, action="execute")
 
     from service import _base_url
+
     async with httpx.AsyncClient() as client:
         try:
             r = await client.post(
@@ -439,6 +445,7 @@ async def check_access(
 ):
     """Check access for the current user against a given endpoint/resource."""
     from service import rbac_engine as _rbac
+
     user = get_user(request)
 
     rbac_result = True
@@ -679,18 +686,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_text(json.dumps({"type": "pong"}))
                 elif msg_type == "get_overview":
                     overview = await get_cached_or_fetch("all_stats", fetch_all_stats)
-                    await websocket.send_text(
-                        json.dumps({"type": "overview", "data": overview})
-                    )
+                    await websocket.send_text(json.dumps({"type": "overview", "data": overview}))
                 elif msg_type == "heartbeat":
                     ws_auth_manager.update_activity(websocket)
                     await websocket.send_text(
                         json.dumps({"type": "heartbeat_ack", "ts": time.time()})
                     )
             except json.JSONDecodeError:
-                await websocket.send_text(
-                    json.dumps({"type": "error", "message": "Invalid JSON"})
-                )
+                await websocket.send_text(json.dumps({"type": "error", "message": "Invalid JSON"}))
     except WebSocketDisconnect:
         pass
     finally:
@@ -709,6 +712,7 @@ async def create_event(body: EventCreate, request: Request):
     check_rbac(request, "/events", "POST")
 
     import json as _json
+
     eid = insert_event(body.source, body.event_type, _json.dumps(body.payload))
     now = datetime.now(timezone.utc).isoformat()
     await broadcast_event(body.event_type, body.payload, channel="events")

@@ -3,6 +3,7 @@ service.py — Gateway Service business logic
 Circuit breaker, upstream proxy, cache, ABAC/RBAC helpers,
 WebSocket connection manager, and event broadcasting.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -154,8 +155,7 @@ async def fetch_worker(name: str, path: str, timeout: float = 3.0) -> dict | Non
 async def fetch_all_stats() -> dict[str, Any]:
     """Fetch stats from all upstream workers concurrently."""
     tasks: dict[str, Any] = {
-        name: fetch_worker(name, cfg["stats"])
-        for name, cfg in UPSTREAM_WORKERS.items()
+        name: fetch_worker(name, cfg["stats"]) for name, cfg in UPSTREAM_WORKERS.items()
     }
     results = await asyncio.gather(*tasks.values(), return_exceptions=True)
     output: dict[str, Any] = {}

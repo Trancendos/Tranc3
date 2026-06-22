@@ -2,6 +2,7 @@
 test_router.py — Route-level tests for gateway-service.
 All upstream HTTP calls are mocked; no real workers required.
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
@@ -213,6 +214,7 @@ def test_sentinel_status(client):
 
 def test_create_workflow_upstream_error(client):
     import httpx as _httpx
+
     with patch("router.httpx.AsyncClient") as mock_client_cls:
         instance = mock_client_cls.return_value.__aenter__.return_value
         instance.post = AsyncMock(side_effect=_httpx.ConnectError("down"))

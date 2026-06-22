@@ -1,6 +1,7 @@
 """
 conftest.py — Shared fixtures for gateway-service tests.
 """
+
 from __future__ import annotations
 
 import os
@@ -111,22 +112,48 @@ def mocks():
 def client(mocks):
     """Return a TestClient backed by the gateway FastAPI app with all Dimensional deps mocked."""
     patches = [
-        patch("Dimensional.dimensionals.get_dimensional_registry", return_value=mocks["dimensional_registry"]),
-        patch("Dimensional.dimensionals.get_dimensional_bus", return_value=mocks["dimensional_bus"]),
-        patch("Dimensional.dimensionals.get_underverse_registry", return_value=mocks["underverse_registry"]),
+        patch(
+            "Dimensional.dimensionals.get_dimensional_registry",
+            return_value=mocks["dimensional_registry"],
+        ),
+        patch(
+            "Dimensional.dimensionals.get_dimensional_bus", return_value=mocks["dimensional_bus"]
+        ),
+        patch(
+            "Dimensional.dimensionals.get_underverse_registry",
+            return_value=mocks["underverse_registry"],
+        ),
         patch("Dimensional.infinity.abac.ABACEngine", return_value=mocks["abac"]),
         patch("Dimensional.infinity.abac.get_default_policies", return_value=[]),
-        patch("Dimensional.infinity.auth_gateway.AuthGatewayMiddleware", MagicMock(return_value=MagicMock())),
-        patch("Dimensional.infinity.auth_gateway.WebSocketAuthManager", return_value=mocks["ws_auth"]),
-        patch("Dimensional.infinity.owasp_hardening.OWASPHardeningMiddleware", MagicMock(return_value=MagicMock())),
+        patch(
+            "Dimensional.infinity.auth_gateway.AuthGatewayMiddleware",
+            MagicMock(return_value=MagicMock()),
+        ),
+        patch(
+            "Dimensional.infinity.auth_gateway.WebSocketAuthManager", return_value=mocks["ws_auth"]
+        ),
+        patch(
+            "Dimensional.infinity.owasp_hardening.OWASPHardeningMiddleware",
+            MagicMock(return_value=MagicMock()),
+        ),
         patch("Dimensional.infinity.rbac.RBACEngine", return_value=mocks["rbac"]),
-        patch("Dimensional.infinity.sentinel_station.get_sentinel_station", return_value=mocks["sentinel"]),
-        patch("Dimensional.infinity.sentinel_station.SharedSSEGenerator", return_value=mocks["sse_gen"]),
-        patch("Dimensional.infinity.worker_integration.InfinityWorkerKit", return_value=mocks["worker_kit"]),
+        patch(
+            "Dimensional.infinity.sentinel_station.get_sentinel_station",
+            return_value=mocks["sentinel"],
+        ),
+        patch(
+            "Dimensional.infinity.sentinel_station.SharedSSEGenerator",
+            return_value=mocks["sse_gen"],
+        ),
+        patch(
+            "Dimensional.infinity.worker_integration.InfinityWorkerKit",
+            return_value=mocks["worker_kit"],
+        ),
     ]
     [p.start() for p in patches]
     try:
         from main import create_app
+
         app = create_app()
         with TestClient(app, raise_server_exceptions=False) as c:
             yield c

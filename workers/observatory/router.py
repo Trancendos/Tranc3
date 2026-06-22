@@ -1,4 +1,5 @@
 """Observatory — FastAPI routes."""
+
 from __future__ import annotations
 
 import time
@@ -12,7 +13,6 @@ import config
 
 
 def _make_router() -> APIRouter:
-
     async def _auth(
         x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
     ) -> None:
@@ -93,7 +93,11 @@ def _make_router() -> APIRouter:
                 "offline",
             ),
             SignalType.metrics: next(
-                (b.url for b in backends if b.healthy and b.backend.value in ("victoriametrics", "prometheus")),
+                (
+                    b.url
+                    for b in backends
+                    if b.healthy and b.backend.value in ("victoriametrics", "prometheus")
+                ),
                 "offline",
             ),
             SignalType.logs: next(

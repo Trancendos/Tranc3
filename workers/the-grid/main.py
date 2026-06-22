@@ -1,4 +1,5 @@
 """The Digital Grid — FastAPI app factory"""
+
 from __future__ import annotations
 
 import logging
@@ -25,7 +26,9 @@ _STARTED_AT = datetime.now(timezone.utc)
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     logger.info("The Digital Grid starting on port %d", config.WORKER_PORT)
-    logger.info("8-tier engine order: internal → n8n → prefect → temporal → airflow → dagster → luigi → offline")
+    logger.info(
+        "8-tier engine order: internal → n8n → prefect → temporal → airflow → dagster → luigi → offline"
+    )
     yield
     logger.info("The Digital Grid shutting down")
 

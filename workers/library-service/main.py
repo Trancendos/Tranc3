@@ -1,4 +1,5 @@
 """The Library — FastAPI app factory (Lead AI: Zimik)"""
+
 from __future__ import annotations
 
 import logging
@@ -51,7 +52,9 @@ def create_app() -> FastAPI:
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
         provider = TracerProvider()
-        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=config.OTEL_ENDPOINT)))
+        provider.add_span_processor(
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=config.OTEL_ENDPOINT))
+        )
         FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
         logger.info("OpenTelemetry instrumentation active → %s", config.OTEL_ENDPOINT)
     except Exception as exc:
@@ -77,7 +80,16 @@ def create_app() -> FastAPI:
             "port": config.WORKER_PORT,
             "uptime_seconds": (datetime.now(timezone.utc) - _STARTED_AT).total_seconds(),
             "backends": 8,
-            "backend_order": ["outline", "bookstack", "wikijs", "gollum", "dokuwiki", "mkdocs", "gitea", "tiddlywiki"],
+            "backend_order": [
+                "outline",
+                "bookstack",
+                "wikijs",
+                "gollum",
+                "dokuwiki",
+                "mkdocs",
+                "gitea",
+                "tiddlywiki",
+            ],
         }
 
     app.include_router(_make_library_router(db, router_svc))

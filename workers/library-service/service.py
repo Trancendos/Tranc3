@@ -1,4 +1,5 @@
 """The Library — ACO pheromone router across 8 free wiki backends (Lead AI: Zimik)"""
+
 from __future__ import annotations
 
 import collections
@@ -26,6 +27,7 @@ logger = logging.getLogger(config.WORKER_NAME)
 
 
 # ── ThresholdGuard (per-backend quota + pheromone) ─────────────────────────────
+
 
 class ThresholdGuard:
     def __init__(self, name: str, quota: int, window: int):
@@ -67,14 +69,30 @@ class ThresholdGuard:
 # ── Backend registry ───────────────────────────────────────────────────────────
 
 _BACKENDS: Dict[str, ThresholdGuard] = {
-    LibraryBackend.outline: ThresholdGuard(LibraryBackend.outline, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
-    LibraryBackend.bookstack: ThresholdGuard(LibraryBackend.bookstack, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
-    LibraryBackend.wikijs: ThresholdGuard(LibraryBackend.wikijs, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
-    LibraryBackend.gollum: ThresholdGuard(LibraryBackend.gollum, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
-    LibraryBackend.dokuwiki: ThresholdGuard(LibraryBackend.dokuwiki, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
-    LibraryBackend.mkdocs: ThresholdGuard(LibraryBackend.mkdocs, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
-    LibraryBackend.gitea: ThresholdGuard(LibraryBackend.gitea, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
-    LibraryBackend.tiddlywiki: ThresholdGuard(LibraryBackend.tiddlywiki, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS),
+    LibraryBackend.outline: ThresholdGuard(
+        LibraryBackend.outline, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
+    LibraryBackend.bookstack: ThresholdGuard(
+        LibraryBackend.bookstack, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
+    LibraryBackend.wikijs: ThresholdGuard(
+        LibraryBackend.wikijs, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
+    LibraryBackend.gollum: ThresholdGuard(
+        LibraryBackend.gollum, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
+    LibraryBackend.dokuwiki: ThresholdGuard(
+        LibraryBackend.dokuwiki, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
+    LibraryBackend.mkdocs: ThresholdGuard(
+        LibraryBackend.mkdocs, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
+    LibraryBackend.gitea: ThresholdGuard(
+        LibraryBackend.gitea, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
+    LibraryBackend.tiddlywiki: ThresholdGuard(
+        LibraryBackend.tiddlywiki, config.QUOTA_MAX_CALLS, config.QUOTA_WINDOW_SECONDS
+    ),
 }
 
 _BACKEND_ORDER = [
@@ -91,7 +109,8 @@ _BACKEND_ORDER = [
 
 def _choose_backend() -> Optional[str]:
     candidates = [
-        (name, guard) for name, guard in _BACKENDS.items()
+        (name, guard)
+        for name, guard in _BACKENDS.items()
         if guard.can_allow() and guard.pheromone > 0.01
     ]
     if not candidates:
@@ -101,6 +120,7 @@ def _choose_backend() -> Optional[str]:
 
 
 # ── Per-backend adapters ───────────────────────────────────────────────────────
+
 
 async def _probe_backend(name: str) -> bool:
     url_map = {
@@ -117,7 +137,9 @@ async def _probe_backend(name: str) -> bool:
     if not base:
         return False
     try:
-        async with httpx.AsyncClient(verify=config.TLS_VERIFY, timeout=config.PROBE_TIMEOUT) as client:
+        async with httpx.AsyncClient(
+            verify=config.TLS_VERIFY, timeout=config.PROBE_TIMEOUT
+        ) as client:
             r = await client.get(base)
             return 200 <= r.status_code < 400
     except Exception:
@@ -129,11 +151,16 @@ async def _create_outline(doc: DocumentCreate) -> Optional[Dict[str, Any]]:
         return None
     try:
         async with httpx.AsyncClient(verify=config.TLS_VERIFY, timeout=10.0) as client:
-            headers = {"Authorization": f"Bearer {config.OUTLINE_API_KEY}", "Content-Type": "application/json"}
+            headers = {
+                "Authorization": f"Bearer {config.OUTLINE_API_KEY}",
+                "Content-Type": "application/json",
+            }
             payload: Dict[str, Any] = {"title": doc.title, "text": doc.content, "publish": True}
             if doc.collection:
                 payload["collectionId"] = doc.collection
-            r = await client.post(f"{config.OUTLINE_URL}/api/documents.create", json=payload, headers=headers)
+            r = await client.post(
+                f"{config.OUTLINE_URL}/api/documents.create", json=payload, headers=headers
+            )
             r.raise_for_status()
             data = r.json().get("data", {})
             return {"doc_id": data.get("id", str(uuid.uuid4())), "url": data.get("url")}
@@ -142,16 +169,23 @@ async def _create_outline(doc: DocumentCreate) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def _search_outline(query: str, collection: Optional[str], limit: int) -> Optional[List[Dict[str, Any]]]:
+async def _search_outline(
+    query: str, collection: Optional[str], limit: int
+) -> Optional[List[Dict[str, Any]]]:
     if not config.OUTLINE_API_KEY:
         return None
     try:
         async with httpx.AsyncClient(verify=config.TLS_VERIFY, timeout=10.0) as client:
-            headers = {"Authorization": f"Bearer {config.OUTLINE_API_KEY}", "Content-Type": "application/json"}
+            headers = {
+                "Authorization": f"Bearer {config.OUTLINE_API_KEY}",
+                "Content-Type": "application/json",
+            }
             payload: Dict[str, Any] = {"query": query, "limit": limit}
             if collection:
                 payload["collectionId"] = collection
-            r = await client.post(f"{config.OUTLINE_URL}/api/documents.search", json=payload, headers=headers)
+            r = await client.post(
+                f"{config.OUTLINE_URL}/api/documents.search", json=payload, headers=headers
+            )
             r.raise_for_status()
             items = r.json().get("data", [])
             return [
@@ -181,7 +215,9 @@ async def _create_bookstack(doc: DocumentCreate) -> Optional[Dict[str, Any]]:
             payload: Dict[str, Any] = {"name": doc.title, "markdown": doc.content}
             if doc.collection:
                 payload["book_id"] = int(doc.collection) if doc.collection.isdigit() else 1
-            r = await client.post(f"{config.BOOKSTACK_URL}/api/pages", json=payload, headers=headers)
+            r = await client.post(
+                f"{config.BOOKSTACK_URL}/api/pages", json=payload, headers=headers
+            )
             r.raise_for_status()
             data = r.json()
             return {"doc_id": str(data.get("id", uuid.uuid4())), "url": data.get("url")}
@@ -195,7 +231,9 @@ async def _search_bookstack(query: str, limit: int) -> Optional[List[Dict[str, A
         return None
     try:
         async with httpx.AsyncClient(verify=config.TLS_VERIFY, timeout=10.0) as client:
-            headers = {"Authorization": f"Token {config.BOOKSTACK_TOKEN_ID}:{config.BOOKSTACK_TOKEN_SECRET}"}
+            headers = {
+                "Authorization": f"Token {config.BOOKSTACK_TOKEN_ID}:{config.BOOKSTACK_TOKEN_SECRET}"
+            }
             r = await client.get(
                 f"{config.BOOKSTACK_URL}/api/search",
                 params={"query": query, "count": limit},
@@ -223,7 +261,10 @@ async def _create_wikijs(doc: DocumentCreate) -> Optional[Dict[str, Any]]:
         return None
     try:
         async with httpx.AsyncClient(verify=config.TLS_VERIFY, timeout=10.0) as client:
-            headers = {"Authorization": f"Bearer {config.WIKIJS_API_KEY}", "Content-Type": "application/json"}
+            headers = {
+                "Authorization": f"Bearer {config.WIKIJS_API_KEY}",
+                "Content-Type": "application/json",
+            }
             path = f"/library/{doc.title.lower().replace(' ', '-')}"
             mutation = """
             mutation($content: String!, $description: String!, $editor: String!, $isPrivate: Boolean!,
@@ -236,9 +277,15 @@ async def _create_wikijs(doc: DocumentCreate) -> Optional[Dict[str, Any]]:
               }}
             }"""
             variables = {
-                "content": doc.content, "description": "", "editor": "markdown",
-                "isPrivate": False, "isPublished": True, "locale": "en",
-                "path": path, "tags": doc.tags, "title": doc.title,
+                "content": doc.content,
+                "description": "",
+                "editor": "markdown",
+                "isPrivate": False,
+                "isPublished": True,
+                "locale": "en",
+                "path": path,
+                "tags": doc.tags,
+                "title": doc.title,
             }
             r = await client.post(
                 f"{config.WIKIJS_URL}/graphql",
@@ -259,6 +306,7 @@ async def _offline_create(doc: DocumentCreate) -> Dict[str, Any]:
 
 
 # ── LibraryRouter ──────────────────────────────────────────────────────────────
+
 
 class LibraryRouter:
     def __init__(self, db: LibraryDatabase):
@@ -293,17 +341,19 @@ class LibraryRouter:
 
         self._db.record_event(backend_name, ext_result is not None)
 
-        saved = self._db.save_document({
-            "doc_id": ext_result["doc_id"],
-            "title": doc.title,
-            "content": doc.content,
-            "format": doc.format.value,
-            "collection": doc.collection,
-            "tags": doc.tags,
-            "metadata": doc.metadata,
-            "backend": backend_name,
-            "url": ext_result.get("url"),
-        })
+        saved = self._db.save_document(
+            {
+                "doc_id": ext_result["doc_id"],
+                "title": doc.title,
+                "content": doc.content,
+                "format": doc.format.value,
+                "collection": doc.collection,
+                "tags": doc.tags,
+                "metadata": doc.metadata,
+                "backend": backend_name,
+                "url": ext_result.get("url"),
+            }
+        )
 
         return DocumentResponse(
             doc_id=saved["doc_id"],
@@ -337,7 +387,9 @@ class LibraryRouter:
             updated_at=saved.get("updated_at"),
         )
 
-    async def search(self, query: str, collection: Optional[str] = None, limit: int = 20) -> SearchResponse:
+    async def search(
+        self, query: str, collection: Optional[str] = None, limit: int = 20
+    ) -> SearchResponse:
         backend_name = _choose_backend() or LibraryBackend.offline
 
         ext_results: Optional[List[Dict[str, Any]]] = None
@@ -362,7 +414,9 @@ class LibraryRouter:
                 )
                 for r in ext_results
             ]
-            return SearchResponse(results=results, total=len(results), backend=LibraryBackend(backend_name))
+            return SearchResponse(
+                results=results, total=len(results), backend=LibraryBackend(backend_name)
+            )
 
         # Fallback to local SQLite FTS
         local = self._db.search_documents(query, collection, limit)
@@ -384,11 +438,13 @@ class LibraryRouter:
         backend_statuses = []
         for name, guard in _BACKENDS.items():
             calls = guard.calls_in_window()
-            backend_statuses.append(BackendStatus(
-                name=LibraryBackend(name),
-                healthy=guard.pheromone > 0.01,
-                pheromone=round(guard.pheromone, 3),
-                calls_in_window=calls,
-                quota_remaining=max(0, guard.quota - calls),
-            ))
+            backend_statuses.append(
+                BackendStatus(
+                    name=LibraryBackend(name),
+                    healthy=guard.pheromone > 0.01,
+                    pheromone=round(guard.pheromone, 3),
+                    calls_in_window=calls,
+                    quota_remaining=max(0, guard.quota - calls),
+                )
+            )
         return LibraryStatus(active_backend=LibraryBackend(active), backends=backend_statuses)

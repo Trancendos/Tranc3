@@ -2,6 +2,7 @@
 database.py — Gateway Service SQLite layer
 Manages cache, event, and access-audit tables.
 """
+
 from __future__ import annotations
 
 import logging

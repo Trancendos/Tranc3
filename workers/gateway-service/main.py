@@ -4,6 +4,7 @@ main.py — Gateway Service application factory + lifespan
 Wires up middleware, the router, and all startup/shutdown hooks.
 Uvicorn entry-point:  main:app  (or worker:app via the shim).
 """
+
 from __future__ import annotations
 
 import asyncio

@@ -1,4 +1,5 @@
 """Cryptex / The Ice Box — FastAPI routes"""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -12,7 +13,6 @@ from database import CryptexDatabase
 
 
 def _make_router(db: CryptexDatabase, engine_router: SecurityEngineRouter) -> APIRouter:
-
     async def _auth(
         x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
     ) -> None:

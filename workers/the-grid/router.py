@@ -1,4 +1,5 @@
 """The Digital Grid — FastAPI routes"""
+
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
@@ -12,7 +13,6 @@ from database import GridDatabase
 
 
 def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRouter:
-
     async def _auth(
         x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
     ) -> None:

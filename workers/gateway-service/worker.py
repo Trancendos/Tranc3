@@ -14,4 +14,5 @@ This file re-exports ``app`` so that existing uvicorn invocations continue to wo
 
     uvicorn worker:app --port 8040
 """
+
 from main import app  # noqa: F401

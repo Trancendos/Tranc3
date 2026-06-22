@@ -1,4 +1,5 @@
 """The Library — FastAPI router"""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -19,15 +20,24 @@ from database import LibraryDatabase
 
 def _auth(x_internal_secret: Optional[str] = Header(None)) -> None:
     if not config.INTERNAL_SECRET:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="INTERNAL_SECRET not configured")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="INTERNAL_SECRET not configured"
+        )
     if x_internal_secret != config.INTERNAL_SECRET:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal secret")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal secret"
+        )
 
 
 def _make_router(db: LibraryDatabase, router_svc: LibraryRouter) -> APIRouter:
     api = APIRouter(prefix="/library", tags=["library"])
 
-    @api.post("/documents", response_model=DocumentResponse, status_code=201, dependencies=[Depends(_auth)])
+    @api.post(
+        "/documents",
+        response_model=DocumentResponse,
+        status_code=201,
+        dependencies=[Depends(_auth)],
+    )
     async def create_document(doc: DocumentCreate):
         return await router_svc.create_document(doc)
 

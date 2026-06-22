@@ -16,6 +16,7 @@ Selection uses ACO-inspired pheromone-trail routing:
   - ThresholdGuard per engine: sliding-window hard-stop at N requests/hr
   - FORCE_ENGINE env var overrides selection entirely
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -103,6 +104,7 @@ class PheromoneState:
         if total == 0:
             return candidates[0]
         import random
+
         r = random.uniform(0, total)
         cumulative = 0.0
         for e in candidates:
@@ -372,7 +374,10 @@ class AirflowEngine:
             resp = await client.post(url, json=payload, auth=auth)
             resp.raise_for_status()
             data = resp.json()
-            return {"status": "completed", "output_data": {"airflow_run_id": data.get("dag_run_id")}}
+            return {
+                "status": "completed",
+                "output_data": {"airflow_run_id": data.get("dag_run_id")},
+            }
 
 
 # ── Dagster engine (Tier 6) ───────────────────────────────────────────────────
@@ -445,10 +450,11 @@ class LuigiEngine:
                 return luigi.LocalTarget(f"/tmp/grid_{self.workflow_id}_{self.step_index}.json")
 
         tasks = [
-            GridTask(workflow_id=wf_def.workflow_id, step_index=i)
-            for i in range(len(wf_def.steps))
+            GridTask(workflow_id=wf_def.workflow_id, step_index=i) for i in range(len(wf_def.steps))
         ]
-        result = await asyncio.to_thread(luigi.build, tasks, local_scheduler=True, log_level="WARNING")
+        result = await asyncio.to_thread(
+            luigi.build, tasks, local_scheduler=True, log_level="WARNING"
+        )
         return {
             "status": "completed" if result else "failed",
             "output_data": {"luigi_tasks": len(tasks)},
@@ -509,9 +515,7 @@ class WorkflowEngineRouter:
 
     def __init__(self, db: GridDatabase):
         self.db = db
-        self._pheromone = PheromoneState(
-            [e.value for e in _TIER_ORDER], decay=config.ACO_DECAY
-        )
+        self._pheromone = PheromoneState([e.value for e in _TIER_ORDER], decay=config.ACO_DECAY)
         self._guards: Dict[str, ThresholdGuard] = {
             e.value: ThresholdGuard(_THRESHOLDS[e], config.THRESHOLD_WINDOW_SECONDS)
             for e in _TIER_ORDER
@@ -575,9 +579,7 @@ class WorkflowEngineRouter:
         self.db.save_execution(execution)
 
         forced = config.FORCE_ENGINE
-        preferred = (
-            forced or (wf_def.preferred_engine.value if wf_def.preferred_engine else None)
-        )
+        preferred = forced or (wf_def.preferred_engine.value if wf_def.preferred_engine else None)
 
         if forced:
             candidates = [forced] if forced in self._engines else [EngineType.offline.value]
