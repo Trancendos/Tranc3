@@ -59,6 +59,24 @@ datasources:
           url: "$${__value.raw}"
           datasourceUid: tempo
 
+  # ── Jaeger — distributed tracing (secondary, rich service graph) ───────────
+  - name: Jaeger
+    type: jaeger
+    uid: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+      nodeGraph:
+        enabled: true
+
+  # ── Netdata via VictoriaMetrics — node metrics via PromQL ───────────────────
+  # Netdata exports to Prometheus endpoint; VictoriaMetrics scrapes it.
+  # Query with: {job="netdata"} in VictoriaMetrics datasource.
+
   - name: Vault
     type: marcusolsson-json-datasource
     access: proxy

@@ -159,6 +159,15 @@ scrape_configs:
           priority: 'P1'
           named: 'The Observatory'
 
+  - job_name: 'observatory'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['observatory:8040']
+        labels:
+          service: 'observatory'
+          priority: 'P1'
+          named: 'The Observatory / ACO Router'
+
   - job_name: 'notifications'
     metrics_path: '/metrics'
     static_configs:
@@ -290,3 +299,53 @@ scrape_configs:
           - http://calcom:3000/api/health
           - http://outline:3000/api/health.json
           - http://signoz-frontend:3301
+          - http://cryptex:8039/health
+          - http://observatory:8040/health
+          - http://jaeger:16686/
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # ── Jaeger metrics ───────────────────────────────────────────────────
+  - job_name: 'jaeger'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['jaeger:14269']
+        labels:
+          service: 'jaeger'
+          category: 'observability'
+          named: 'The Observatory / Tracing'
+
+  # ── Netdata — host node metrics (Prometheus exposition format) ────────
+  - job_name: 'netdata'
+    metrics_path: '/api/v1/allmetrics'
+    params:
+      format: [prometheus]
+    static_configs:
+      - targets: ['netdata:19999']
+        labels:
+          service: 'netdata'
+          category: 'observability'
+          named: 'The Observatory / Node'
+
+  # ── cAdvisor — per-container CPU/RAM/disk/network ─────────────────────
+  - job_name: 'cadvisor'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          category: 'observability'
+
+  # ── node-exporter — host OS metrics ──────────────────────────────────
+  - job_name: 'node-exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          category: 'observability'
