@@ -360,6 +360,53 @@ async def lab_models() -> dict[str, Any]:
         }
 
 
+_BLOCKED_IMPORTS = frozenset(
+    [
+        "os",
+        "subprocess",
+        "shutil",
+        "socket",
+        "ctypes",
+        "importlib",
+        "multiprocessing",
+        "signal",
+        "pty",
+        "resource",
+        "fcntl",
+        "mmap",
+        "pwd",
+        "grp",
+        "termios",
+    ]
+)
+
+
+def _validate_code(code: str) -> None:
+    """Reject code that imports high-risk stdlib modules."""
+    import ast
+
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as exc:
+        raise HTTPException(status_code=400, detail=f"Syntax error: {exc}") from exc
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".")[0]
+                if top in _BLOCKED_IMPORTS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Import of '{top}' is not allowed in sandboxed execution.",
+                    )
+        elif isinstance(node, ast.ImportFrom):
+            top = (node.module or "").split(".")[0]
+            if top in _BLOCKED_IMPORTS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Import from '{top}' is not allowed in sandboxed execution.",
+                )
+
+
 @app.post("/lab/run")
 async def lab_run(req: RunRequest) -> dict[str, Any]:
     """Execute code in a sandboxed subprocess (Python only for safety)."""
@@ -368,12 +415,15 @@ async def lab_run(req: RunRequest) -> dict[str, Any]:
             status_code=400, detail=f"Sandboxed execution not supported for {req.language}"
         )
 
+    _validate_code(req.code)
+
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write(req.code)
         code_file = f.name
 
     try:
-        result = subprocess.run(
+        # nosec S603 — intentional sandboxed execution; dangerous imports blocked above
+        result = subprocess.run(  # noqa: S603
             [sys.executable, code_file],
             input=req.stdin,
             capture_output=True,

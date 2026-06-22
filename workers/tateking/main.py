@@ -182,7 +182,10 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
                 "-i",
                 f"color=c=blue:s={req.width}x{req.height}:r={req.fps}:d={req.duration_seconds}",
                 "-vf",
-                f"drawtext=text='{req.title}':fontsize=40:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2",
+                # Escape single-quotes and backslashes so title cannot break the filter string
+                "drawtext=text='"
+                + req.title.replace("\\", "\\\\").replace("'", "\\'")
+                + "':fontsize=40:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2",
             ]
 
         success, err = _run_ffmpeg(
@@ -250,9 +253,23 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     if not req.input_paths:
         raise HTTPException(status_code=400, detail="No input paths provided")
 
+    # Validate all input paths resolve within OUTPUT_DIR (prevent path traversal)
+    resolved_output_dir = OUTPUT_DIR.resolve()
+    safe_paths: list[str] = []
+    for raw in req.input_paths:
+        resolved = Path(raw).resolve()
+        try:
+            resolved.relative_to(resolved_output_dir)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Input path not allowed: {raw}",
+            ) from exc
+        safe_paths.append(str(resolved))
+
     # Build concat input
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-        for p in req.input_paths:
+        for p in safe_paths:
             f.write(f"file '{p}'\n")
         concat_file = f.name
 
