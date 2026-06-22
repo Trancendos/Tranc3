@@ -261,11 +261,23 @@ async def _dispatch_valkey(job: dict) -> bool:
         return False
 
 
+_ALLOWED_HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"}
+
+
 async def _dispatch_syscron(job: dict) -> bool:
     try:
+        import shlex
         from crontab import CronTab  # python-crontab optional dep
+
+        method = job.get("method", "POST").upper()
+        if method not in _ALLOWED_HTTP_METHODS:
+            return False
+        url = job.get("url", "")
+        if not url:
+            return False
+
         cron = CronTab(user=True)
-        cmd = f"curl -s -X {job.get('method','POST')} {job.get('url','')}"
+        cmd = f"curl -s -X {method} {shlex.quote(url)}"
         job_entry = cron.new(command=cmd, comment=f"chronos:{job['id']}")
         job_entry.setall(job["schedule"])
         cron.write()

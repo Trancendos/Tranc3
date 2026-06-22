@@ -1461,6 +1461,105 @@ services:
       traefik.http.services.outline.loadbalancer.server.port: "3000"
 
   # ─────────────────────────────────────────────────────────────────────────
+  # BookStack — The Library secondary wiki backend (MIT, self-hosted)
+  # UI: http://localhost:6875
+  # ─────────────────────────────────────────────────────────────────────────
+  bookstack-db:
+    image: mariadb:11
+    container_name: trancendos-bookstack-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "${BOOKSTACK_DB_ROOT_PASSWORD:?required}"
+      MYSQL_DATABASE: bookstack
+      MYSQL_USER: bookstack
+      MYSQL_PASSWORD: "${BOOKSTACK_DB_PASSWORD:?required}"
+    volumes:
+      - bookstack-db-data:/var/lib/mysql
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:latest
+    container_name: trancendos-bookstack
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      APP_URL: "${BOOKSTACK_APP_URL:-http://bookstack:80}"
+      DB_HOST: bookstack-db
+      DB_PORT: "3306"
+      DB_USER: bookstack
+      DB_PASS: "${BOOKSTACK_DB_PASSWORD:?required}"
+      DB_DATABASE: bookstack
+    volumes:
+      - bookstack-data:/config
+    depends_on:
+      bookstack-db:
+        condition: service_healthy
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # library-service — The Library ACO router (Port 8053, Lead AI: Zimik)
+  # Routes: Outline→BookStack→Wiki.js→Gollum→DokuWiki→MkDocs→Gitea→TiddlyWiki
+  # ─────────────────────────────────────────────────────────────────────────
+  library-service:
+    build:
+      context: ./workers/library-service
+      dockerfile: Dockerfile
+    container_name: trancendos-library-service
+    environment:
+      LIBRARY_PORT: "8053"
+      LIBRARY_DB_PATH: "/data/library.db"
+      OUTLINE_URL: "http://outline:3000"
+      OUTLINE_API_KEY: "${OUTLINE_API_KEY:-}"
+      BOOKSTACK_URL: "http://bookstack:80"
+      BOOKSTACK_TOKEN_ID: "${BOOKSTACK_TOKEN_ID:-}"
+      BOOKSTACK_TOKEN_SECRET: "${BOOKSTACK_TOKEN_SECRET:-}"
+      WIKIJS_URL: "${WIKIJS_URL:-http://wikijs:3000}"
+      WIKIJS_API_KEY: "${WIKIJS_API_KEY:-}"
+      GOLLUM_URL: "${GOLLUM_URL:-http://gollum:4567}"
+      DOKUWIKI_URL: "${DOKUWIKI_URL:-http://dokuwiki:80}"
+      MKDOCS_URL: "${MKDOCS_URL:-http://mkdocs:8000}"
+      GITEA_URL: "${GITEA_URL:-http://gitea:3000}"
+      GITEA_TOKEN: "${GITEA_TOKEN:-}"
+      TIDDLYWIKI_URL: "${TIDDLYWIKI_URL:-http://tiddlywiki:8080}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      LIBRARY_TLS_VERIFY: "${LIBRARY_TLS_VERIFY:-0}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - library-data:/data
+    depends_on:
+      - outline
+      - bookstack
+    networks:
+      - tranc3-net
+    ports:
+      - "8053:8053"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.library-service.rule: "PathPrefix(`/library`)"
+      traefik.http.routers.library-service.entrypoints: "websecure"
+      traefik.http.routers.library-service.tls.certresolver: "letsencrypt"
+      traefik.http.services.library-service.loadbalancer.server.port: "8053"
+
+  # ─────────────────────────────────────────────────────────────────────────
   # SigNoz — The Observatory enhanced (OpenTelemetry-native APM, Apache 2.0)
   # UI: http://localhost:3301  Backend: ClickHouse + query-service
   # ─────────────────────────────────────────────────────────────────────────
@@ -2629,7 +2728,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
     ports:
-      - "8088:8080"
+      - "18088:8080"
     networks:
       - tranc3-net
     healthcheck:
@@ -2769,6 +2868,12 @@ volumes:
   outline-redis-data:
     driver: local
   outline-data:
+    driver: local
+  bookstack-db-data:
+    driver: local
+  bookstack-data:
+    driver: local
+  library-data:
     driver: local
   signoz-clickhouse-data:
     driver: local

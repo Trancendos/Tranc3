@@ -360,3 +360,14 @@ scrape_configs:
         labels:
           service: 'node-exporter'
           category: 'observability'
+
+  # ── library-service — The Library ACO wiki router (Port 8053) ────────
+  - job_name: 'library-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['library-service:8053']
+        labels:
+          service: 'library-service'
+          named: 'The Library'
+          lead_ai: 'Zimik'
+          category: 'knowledge'
