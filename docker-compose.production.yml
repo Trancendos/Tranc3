@@ -1960,6 +1960,42 @@ services:
       - "traefik.http.services.dagster.loadbalancer.server.port=3002"
 
 # ═══════════════════════════════════════════════════════════════════════════
+# ChronosSphere / ArcStream — Kestra: Open-source workflow + cron scheduler
+# Standalone mode with H2 embedded DB — zero external deps, Apache 2.0
+# UI / API: 8060  |  Management API: 8061  |  Traefik: /kestra
+# ═══════════════════════════════════════════════════════════════════════════
+  kestra:
+    image: kestra/kestra:latest-full
+    container_name: trancendos-kestra
+    restart: unless-stopped
+    command: server standalone --flow-path /flows
+    user: "root"
+    environment:
+      - KESTRA_CONFIGURATION=
+      - DATASOURCES_POSTGRES_URL=
+      - DATASOURCES_POSTGRES_USERNAME=
+      - DATASOURCES_POSTGRES_PASSWORD=
+    volumes:
+      - kestra-data:/app/storage
+      - kestra-flows:/flows
+    ports:
+      - "8060:8080"
+      - "8061:8081"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/v1/flows/search?q= || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kestra.rule=Host(`trancendos.com`) && PathPrefix(`/kestra`)"
+      - "traefik.http.middlewares.kestra-strip.stripprefix.prefixes=/kestra"
+      - "traefik.http.routers.kestra.middlewares=kestra-strip"
+      - "traefik.http.services.kestra.loadbalancer.server.port=8080"
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Item 7 — Wazuh: SIEM/EDR for Cryptex (single-node, free OSS)
 # Requires: vm.max_map_count=262144 on host (sysctl -w vm.max_map_count=262144)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -2609,6 +2645,10 @@ volumes:
   airflow-dags:
     driver: local
   dagster-data:
+    driver: local
+  kestra-data:
+    driver: local
+  kestra-flows:
     driver: local
   wazuh-manager-data:
     driver: local

@@ -185,6 +185,16 @@ scrape_configs:
           priority: 'P1'
           named: 'AI Gateway'
 
+  # ── ChronosSphere / ArcStream — Kestra ───────────────────────────────
+  - job_name: 'kestra'
+    metrics_path: '/prometheus'
+    static_configs:
+      - targets: ['kestra:8081']
+        labels:
+          service: 'kestra'
+          category: 'scheduler'
+          named: 'ChronosSphere / ArcStream'
+
   # ── P2 Workers ───────────────────────────────────────────────────────
   - job_name: 'the-grid'
     metrics_path: '/metrics'
@@ -300,6 +310,7 @@ scrape_configs:
           - http://outline:3000/api/health.json
           - http://signoz-frontend:3301
           - http://cryptex:8039/health
+          - http://kestra:8080/api/v1/flows/search?q=
           - http://observatory:8040/health
           - http://jaeger:16686/
     relabel_configs:
