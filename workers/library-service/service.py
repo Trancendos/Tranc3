@@ -95,6 +95,7 @@ _BACKENDS: Dict[str, ThresholdGuard] = {
     ),
 }
 
+
 def _choose_backend() -> Optional[str]:
     candidates = [
         (name, guard)
