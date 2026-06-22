@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from router import _make_router as _make_observatory_router
+from router import _make_observatory_router
 
 import config
 

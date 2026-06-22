@@ -29,7 +29,7 @@ def _auth(x_internal_secret: Optional[str] = Header(None)) -> None:
         )
 
 
-def _make_router(db: LibraryDatabase, router_svc: LibraryRouter) -> APIRouter:
+def _make_library_router(db: LibraryDatabase, router_svc: LibraryRouter) -> APIRouter:
     api = APIRouter(prefix="/library", tags=["library"])
 
     @api.post(

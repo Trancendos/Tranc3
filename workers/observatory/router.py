@@ -12,7 +12,7 @@ from models import SignalType
 import config
 
 
-def _make_router() -> APIRouter:
+def _make_observatory_router() -> APIRouter:
     async def _auth(
         x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
     ) -> None:

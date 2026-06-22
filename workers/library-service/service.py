@@ -95,18 +95,6 @@ _BACKENDS: Dict[str, ThresholdGuard] = {
     ),
 }
 
-_BACKEND_ORDER = [
-    LibraryBackend.outline,
-    LibraryBackend.bookstack,
-    LibraryBackend.wikijs,
-    LibraryBackend.gollum,
-    LibraryBackend.dokuwiki,
-    LibraryBackend.mkdocs,
-    LibraryBackend.gitea,
-    LibraryBackend.tiddlywiki,
-]
-
-
 def _choose_backend() -> Optional[str]:
     candidates = [
         (name, guard)

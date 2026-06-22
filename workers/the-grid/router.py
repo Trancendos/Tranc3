@@ -12,7 +12,7 @@ import config
 from database import GridDatabase
 
 
-def _make_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRouter:
+def _make_grid_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> APIRouter:
     async def _auth(
         x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
     ) -> None:

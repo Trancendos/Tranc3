@@ -50,7 +50,7 @@ class LibraryDatabase:
                 try:
                     cur.execute(f"ALTER TABLE documents ADD COLUMN {col} TEXT DEFAULT ({defval})")
                 except sqlite3.OperationalError:
-                    pass
+                    pass  # column already exists — safe to ignore
 
     @contextmanager
     def _cursor(self):
