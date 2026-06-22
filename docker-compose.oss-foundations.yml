@@ -1,0 +1,605 @@
+version: "3.9"
+# ═══════════════════════════════════════════════════════════════════
+# Trancendos — Open-Source Foundations (Zero-Cost)
+# ═══════════════════════════════════════════════════════════════════
+#
+# Each service maps to a named Trancendos entity and uses an OSS
+# foundation as the underlying engine.  All are free, self-hosted,
+# no paid API keys required.
+#
+# Usage (pick a profile or run all):
+#   docker compose -f docker-compose.oss-foundations.yml --profile grid up -d
+#   docker compose -f docker-compose.oss-foundations.yml --profile all up -d
+#
+# Profiles:
+#   grid          — The Digital Grid (n8n workflow engine)
+#   library       — The Library (Outline wiki)
+#   fabulousa     — Fabulousa design (Penpot)
+#   search        — Search Service (Typesense)
+#   vector        — Vector/RAG store (Qdrant)
+#   ai-proxy      — AI Gateway aggregator (LiteLLM proxy)
+#   photo-studio  — Sashas Photo Studio (ComfyUI)
+#   doc-utari     — DocUtari (Paperless-ngx)
+#   artifactory   — The Artifactory (Zot OCI registry)
+#   temporal      — Workflow orchestrator (Temporal)
+#   chronos       — ChronosSphere scheduling (Cal.com)
+#   observatory   — The Observatory metrics (Prometheus + Grafana)
+#   all           — Everything above
+#
+# ═══════════════════════════════════════════════════════════════════
+
+x-restart: &restart
+  restart: unless-stopped
+
+x-network: &network
+  networks:
+    - tranc3-oss
+
+x-hc-http: &hc-http
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+
+# ── Shared postgres for services that need it ─────────────────────
+x-postgres-env: &postgres-env
+  POSTGRES_USER: tranc3
+  POSTGRES_PASSWORD: ${OSS_PG_PASSWORD}
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────
+  # THE DIGITAL GRID — n8n workflow automation engine
+  # Entity: The Digital Grid | Lead AI: Tyler Towncroft
+  # Port 5678 (internal) → Traefik at /grid-engine
+  # ─────────────────────────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: the-digital-grid-n8n
+    <<: [*restart, *network]
+    profiles: ["grid", "all"]
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "http"
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678}
+      GENERIC_TIMEZONE: Europe/London
+      DB_TYPE: sqlite
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "true"
+    volumes:
+      - n8n-data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5678/healthz"]
+      <<: *hc-http
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=PathPrefix(`/grid-engine`)"
+      - "traefik.http.routers.n8n.entrypoints=web"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+  # ─────────────────────────────────────────────────────────────────
+  # THE LIBRARY — Outline wiki / knowledge base
+  # Entity: The Library | Lead AI: Zimik
+  # Port 3000 (internal) → Traefik at /library
+  # Requires: outline-postgres, outline-redis
+  # ─────────────────────────────────────────────────────────────────
+  outline-postgres:
+    image: postgres:16-alpine
+    container_name: outline-postgres
+    <<: [*restart, *network]
+    profiles: ["library", "all"]
+    environment:
+      POSTGRES_DB: outline
+      <<: *postgres-env
+    volumes:
+      - outline-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranc3 -d outline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  outline-redis:
+    image: redis:7-alpine
+    container_name: outline-redis
+    <<: [*restart, *network]
+    profiles: ["library", "all"]
+    volumes:
+      - outline-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  outline:
+    image: outlinewiki/outline:latest
+    container_name: the-library-outline
+    <<: [*restart, *network]
+    profiles: ["library", "all"]
+    ports:
+      - "${OUTLINE_PORT:-3100}:3000"
+    depends_on:
+      outline-postgres:
+        condition: service_healthy
+      outline-redis:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${OUTLINE_SECRET_KEY}
+      UTILS_SECRET: ${OUTLINE_UTILS_SECRET}
+      DATABASE_URL: postgres://tranc3:${OSS_PG_PASSWORD}@outline-postgres/outline
+      REDIS_URL: redis://outline-redis:6379
+      URL: ${OUTLINE_URL:-http://localhost:3100}
+      PORT: "3000"
+      FILE_STORAGE: local
+      FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
+      FORCE_HTTPS: "false"
+      PGSSLMODE: disable
+      # Auth — configure at least one provider (OIDC shown; Google/Slack/GitHub also supported)
+      OIDC_CLIENT_ID: ${OUTLINE_OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OUTLINE_OIDC_CLIENT_SECRET:-}
+      OIDC_AUTH_URI: ${OUTLINE_OIDC_AUTH_URI:-}
+      OIDC_TOKEN_URI: ${OUTLINE_OIDC_TOKEN_URI:-}
+      OIDC_USERINFO_URI: ${OUTLINE_OIDC_USERINFO_URI:-}
+      OIDC_USERNAME_CLAIM: preferred_username
+      OIDC_DISPLAY_NAME: ${OUTLINE_OIDC_DISPLAY_NAME:-SSO}
+      OIDC_SCOPES: openid profile email
+    volumes:
+      - outline-data:/var/lib/outline/data
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:3000/_health"]
+      <<: *hc-http
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.outline.rule=PathPrefix(`/library`)"
+      - "traefik.http.routers.outline.entrypoints=web"
+      - "traefik.http.services.outline.loadbalancer.server.port=3000"
+
+  # ─────────────────────────────────────────────────────────────────
+  # FABULOUSA — Penpot design tool
+  # Entity: Fabulousa | Lead AI: Baron Von Hilton
+  # ─────────────────────────────────────────────────────────────────
+  penpot-frontend:
+    image: penpotapp/frontend:latest
+    container_name: fabulousa-frontend
+    <<: [*restart, *network]
+    profiles: ["fabulousa", "all"]
+    ports:
+      - "${PENPOT_PORT:-9001}:80"
+    environment:
+      PENPOT_FLAGS: "enable-registration enable-login disable-email-verification"
+    volumes:
+      - penpot-assets:/opt/data/assets
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:80"]
+      <<: *hc-http
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.penpot.rule=PathPrefix(`/design`)"
+      - "traefik.http.routers.penpot.entrypoints=web"
+      - "traefik.http.services.penpot.loadbalancer.server.port=80"
+
+  penpot-backend:
+    image: penpotapp/backend:latest
+    container_name: fabulousa-backend
+    <<: [*restart, *network]
+    profiles: ["fabulousa", "all"]
+    environment:
+      PENPOT_FLAGS: "enable-registration enable-login disable-email-verification"
+      PENPOT_SECRET_KEY: ${PENPOT_SECRET_KEY}
+      PENPOT_DATABASE_URI: postgresql://tranc3:${OSS_PG_PASSWORD}@penpot-postgres/penpot
+      PENPOT_REDIS_URI: redis://penpot-redis:6379/0
+      PENPOT_ASSETS_STORAGE_BACKEND: assets-fs
+      PENPOT_STORAGE_ASSETS_FS_DIRECTORY: /opt/data/assets
+    volumes:
+      - penpot-assets:/opt/data/assets
+    depends_on:
+      - penpot-postgres
+      - penpot-redis
+
+  penpot-postgres:
+    image: postgres:16-alpine
+    container_name: penpot-postgres
+    <<: [*restart, *network]
+    profiles: ["fabulousa", "all"]
+    environment:
+      POSTGRES_DB: penpot
+      <<: *postgres-env
+    volumes:
+      - penpot-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranc3 -d penpot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  penpot-redis:
+    image: redis:7-alpine
+    container_name: penpot-redis
+    <<: [*restart, *network]
+    profiles: ["fabulousa", "all"]
+    volumes:
+      - penpot-redis-data:/data
+
+  # ─────────────────────────────────────────────────────────────────
+  # SEARCH SERVICE — Typesense (Apache 2.0)
+  # Entity: Search Service | self-hosted, zero-cost
+  # Port 8108 internal → search-service worker proxies it
+  # ─────────────────────────────────────────────────────────────────
+  typesense:
+    image: typesense/typesense:27.0
+    container_name: search-typesense
+    <<: [*restart, *network]
+    profiles: ["search", "all"]
+    ports:
+      - "${TYPESENSE_PORT:-8108}:8108"
+    environment:
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY}
+      TYPESENSE_DATA_DIR: /data
+    volumes:
+      - typesense-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8108/health"]
+      <<: *hc-http
+
+  # ─────────────────────────────────────────────────────────────────
+  # VECTOR / RAG — Qdrant (Apache 2.0)
+  # Replaces in-process FAISS — persistent, queryable, REST + gRPC
+  # Port 6333 REST, 6334 gRPC
+  # ─────────────────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: vector-qdrant
+    <<: [*restart, *network]
+    profiles: ["vector", "all"]
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:6333/healthz"]
+      <<: *hc-http
+
+  # ─────────────────────────────────────────────────────────────────
+  # AI GATEWAY AGGREGATOR — LiteLLM proxy (MIT)
+  # Unified OpenAI-compatible endpoint for ALL free providers
+  # Workers call this instead of individual provider APIs
+  # Port 4000
+  # ─────────────────────────────────────────────────────────────────
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: ai-gateway-litellm
+    <<: [*restart, *network]
+    profiles: ["ai-proxy", "all"]
+    ports:
+      - "${LITELLM_PORT:-4000}:4000"
+    environment:
+      # API keys for free providers — set in .env
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GOOGLE_GEMINI_API_KEY: ${GOOGLE_GEMINI_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      CEREBRAS_API_KEY: ${CEREBRAS_API_KEY:-}
+      SAMBANOVA_API_KEY: ${SAMBANOVA_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      HF_API_TOKEN: ${HF_API_TOKEN:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      OLLAMA_API_BASE: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      LITELLM_LOG: "ERROR"
+    volumes:
+      - ./config/litellm/config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "2"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:4000/health"]
+      <<: *hc-http
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ─────────────────────────────────────────────────────────────────
+  # SASHAS PHOTO STUDIO — ComfyUI (GPL 3.0)
+  # Entity: Sashas Photo Studio | Lead AI: Madam Krystal
+  # CPU-only mode (works on Oracle free ARM — slow but free)
+  # Port 8188
+  # ─────────────────────────────────────────────────────────────────
+  comfyui:
+    image: yanwk/comfyui-boot:latest
+    container_name: sashas-photo-studio-comfyui
+    <<: [*restart, *network]
+    profiles: ["photo-studio", "all"]
+    ports:
+      - "${COMFYUI_PORT:-8188}:8188"
+    environment:
+      CLI_ARGS: "--cpu --listen 0.0.0.0"
+    volumes:
+      - comfyui-models:/root/ComfyUI/models
+      - comfyui-output:/root/ComfyUI/output
+      - comfyui-input:/root/ComfyUI/input
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8188/"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+  # ─────────────────────────────────────────────────────────────────
+  # DOCUTARI — Paperless-ngx document management (GPL 3.0)
+  # Entity: DocUtari | Lead AI: To be Defined
+  # Port 8000 (internal 8000 — mapped to 8390 to avoid clash)
+  # ─────────────────────────────────────────────────────────────────
+  paperless-postgres:
+    image: postgres:16-alpine
+    container_name: docutari-postgres
+    <<: [*restart, *network]
+    profiles: ["doc-utari", "all"]
+    environment:
+      POSTGRES_DB: paperless
+      <<: *postgres-env
+    volumes:
+      - paperless-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranc3 -d paperless"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: docutari-redis
+    <<: [*restart, *network]
+    profiles: ["doc-utari", "all"]
+    volumes:
+      - paperless-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: docutari-paperless
+    <<: [*restart, *network]
+    profiles: ["doc-utari", "all"]
+    ports:
+      - "${PAPERLESS_PORT:-8390}:8000"
+    depends_on:
+      paperless-postgres:
+        condition: service_healthy
+      paperless-redis:
+        condition: service_healthy
+    environment:
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_DBHOST: paperless-postgres
+      PAPERLESS_DBUSER: tranc3
+      PAPERLESS_DBPASS: ${OSS_PG_PASSWORD}
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_URL: ${PAPERLESS_URL:-http://localhost:8390}
+      PAPERLESS_TIME_ZONE: Europe/London
+      PAPERLESS_OCR_LANGUAGE: eng
+      PAPERLESS_TIKA_ENABLED: "0"
+      PAPERLESS_FILENAME_FORMAT: "{created_year}/{correspondent}/{title}"
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - paperless-export:/usr/src/paperless/export
+      - paperless-consume:/usr/src/paperless/consume
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/accounts/login/"]
+      <<: *hc-http
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.paperless.rule=PathPrefix(`/docutari`)"
+      - "traefik.http.routers.paperless.entrypoints=web"
+      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
+
+  # ─────────────────────────────────────────────────────────────────
+  # THE ARTIFACTORY — Zot OCI registry (Apache 2.0)
+  # Entity: The Artifactory | Lead AI: Lunascene
+  # Port 5000
+  # ─────────────────────────────────────────────────────────────────
+  zot:
+    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    container_name: the-artifactory-zot
+    <<: [*restart, *network]
+    profiles: ["artifactory", "all"]
+    ports:
+      - "${ZOT_PORT:-5000}:5000"
+    volumes:
+      - zot-data:/var/lib/registry
+      - ./config/zot/config.json:/etc/zot/config.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5000/v2/"]
+      <<: *hc-http
+
+  # ─────────────────────────────────────────────────────────────────
+  # WORKFLOW ORCHESTRATION — Temporal (MIT)
+  # Backs The Digital Grid for durable, reliable DAG execution
+  # Port 7233 (gRPC), 8080 (UI)
+  # ─────────────────────────────────────────────────────────────────
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: workflow-temporal
+    <<: [*restart, *network]
+    profiles: ["temporal", "all"]
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: tranc3
+      POSTGRES_PWD: ${OSS_PG_PASSWORD}
+      POSTGRES_SEEDS: temporal-postgres
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/config/dynamicconfig.yaml
+    volumes:
+      - ./config/temporal/dynamicconfig.yaml:/etc/temporal/config/dynamicconfig.yaml:ro
+    depends_on:
+      - temporal-postgres
+
+  temporal-postgres:
+    image: postgres:13-alpine
+    container_name: temporal-postgres
+    <<: [*restart, *network]
+    profiles: ["temporal", "all"]
+    environment:
+      POSTGRES_DB: temporal
+      <<: *postgres-env
+    volumes:
+      - temporal-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranc3 -d temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: workflow-temporal-ui
+    <<: [*restart, *network]
+    profiles: ["temporal", "all"]
+    ports:
+      - "${TEMPORAL_UI_PORT:-8080}:8080"
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: "http://localhost:8080"
+
+  # ─────────────────────────────────────────────────────────────────
+  # CHRONOSSPHERE — Cal.com scheduling (AGPL 3.0)
+  # Entity: ChronosSphere / ArcStream | Lead AI: Chronos
+  # Port 3000 (internal) → mapped to 3200
+  # ─────────────────────────────────────────────────────────────────
+  cal-postgres:
+    image: postgres:16-alpine
+    container_name: chronos-postgres
+    <<: [*restart, *network]
+    profiles: ["chronos", "all"]
+    environment:
+      POSTGRES_DB: cal
+      <<: *postgres-env
+    volumes:
+      - cal-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranc3 -d cal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  calcom:
+    image: calcom/cal.com:latest
+    container_name: chronossphere-calcom
+    <<: [*restart, *network]
+    profiles: ["chronos", "all"]
+    ports:
+      - "${CALCOM_PORT:-3200}:3000"
+    depends_on:
+      cal-postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tranc3:${OSS_PG_PASSWORD}@cal-postgres/cal
+      NEXTAUTH_SECRET: ${CALCOM_SECRET}
+      NEXTAUTH_URL: ${CALCOM_URL:-http://localhost:3200}
+      CALENDSO_ENCRYPTION_KEY: ${CALCOM_ENCRYPTION_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@trancendos.com}
+      EMAIL_SERVER_HOST: ${SMTP_HOST:-localhost}
+      EMAIL_SERVER_PORT: ${SMTP_PORT:-25}
+    volumes:
+      - calcom-data:/app/public/static/media
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calcom.rule=PathPrefix(`/chronos`)"
+      - "traefik.http.routers.calcom.entrypoints=web"
+      - "traefik.http.services.calcom.loadbalancer.server.port=3000"
+
+  # ─────────────────────────────────────────────────────────────────
+  # THE OBSERVATORY — Prometheus + Grafana (Apache 2.0)
+  # Entity: The Observatory | Lead AI: Norman Hawkins
+  # Prometheus: 9090, Grafana: 3000 → mapped to 3300
+  # ─────────────────────────────────────────────────────────────────
+  prometheus-oss:
+    image: prom/prometheus:latest
+    container_name: observatory-prometheus
+    <<: [*restart, *network]
+    profiles: ["observatory", "all"]
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=90d"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:9090/-/healthy"]
+      <<: *hc-http
+
+  grafana-oss:
+    image: grafana/grafana:latest
+    container_name: observatory-grafana
+    <<: [*restart, *network]
+    profiles: ["observatory", "all"]
+    ports:
+      - "${GRAFANA_PORT:-3300}:3000"
+    depends_on:
+      - prometheus-oss
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_URL:-http://localhost:3300}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --spider http://localhost:3000/api/health"]
+      <<: *hc-http
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=PathPrefix(`/observatory`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+# ══════════════════════════════════════════════════════════════════════
+# Named volumes
+# ══════════════════════════════════════════════════════════════════════
+volumes:
+  n8n-data:
+  outline-pg-data:
+  outline-redis-data:
+  outline-data:
+  penpot-pg-data:
+  penpot-redis-data:
+  penpot-assets:
+  typesense-data:
+  qdrant-data:
+  comfyui-models:
+  comfyui-output:
+  comfyui-input:
+  paperless-pg-data:
+  paperless-redis-data:
+  paperless-data:
+  paperless-media:
+  paperless-export:
+  paperless-consume:
+  zot-data:
+  temporal-pg-data:
+  cal-pg-data:
+  calcom-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  tranc3-oss:
+    driver: bridge
+    name: tranc3-oss

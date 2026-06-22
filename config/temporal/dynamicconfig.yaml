@@ -1,0 +1,5 @@
+# Temporal dynamic config — minimal self-hosted setup
+frontend.enableClientVersionCheck:
+  - value: false
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true

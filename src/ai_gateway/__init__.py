@@ -6,15 +6,18 @@ Ported from @trancendos/ai-gateway (infinity-adminOS, TypeScript)
 Per-tenant conditional routing with automatic failover.
 Prioritises zero-cost providers across a multi-provider free chain.
 
-Free Inference Chain (priority order):
+Free Inference Chain (priority order — x10 providers):
   1. Ollama        — local, unlimited, zero-cost (no key needed)
   2. Groq          — 14,400 req/day free, 300+ tok/s (GROQ_API_KEY)
   3. Gemini        — 1,500 req/day free, 1M tok/min (GOOGLE_GEMINI_API_KEY)
-  4. Cerebras      — 1M tokens/day free (CEREBRAS_API_KEY)
-  5. SambaNova     — free tier, large models (SAMBANOVA_API_KEY)
-  6. OpenRouter    — 20+ free models (OPENROUTER_API_KEY)
-  7. HuggingFace   — serverless inference free tier (HF_API_TOKEN)
-  8. Offline       — deterministic stub, always available
+  4. Cerebras      — 30 RPM, wafer-scale inference (CEREBRAS_API_KEY)
+  5. SambaNova     — 50K tokens/req free (SAMBANOVA_API_KEY)
+  6. GitHub Models — GPT-4o-mini, Llama 70B — any GitHub PAT (GITHUB_TOKEN)
+  7. Mistral       — 500K tokens/month, EU-hosted, GDPR (MISTRAL_API_KEY)
+  8. OpenRouter    — 200 req/day, 50+ free models (OPENROUTER_API_KEY)
+  9. HuggingFace   — serverless inference free tier (HF_API_TOKEN)
+ 10. DeepSeek      — free tier (DEEPSEEK_API_KEY)
+ 11. Offline       — deterministic stub, always available
 
 Free Embedding Chain (priority order):
   1. Ollama local  — nomic-embed-text, zero-cost (no key needed)
@@ -58,6 +61,8 @@ from src.ai_gateway.providers import (
     OpenRouterProvider,
     SambanovaProvider,
 )
+from src.ai_gateway.providers.github_models import GitHubModelsProvider
+from src.ai_gateway.providers.mistral_free import MistralFreeProvider
 from src.ai_gateway.types import (
     AIRequest,
     AIResponse,
@@ -82,6 +87,8 @@ __all__ = [
     "SambanovaProvider",
     "OpenRouterProvider",
     "HuggingFaceProvider",
+    "GitHubModelsProvider",
+    "MistralFreeProvider",
     "OfflineProvider",
     # Embedding providers
     "EmbeddingRouter",
