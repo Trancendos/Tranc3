@@ -4,6 +4,7 @@ Main — Infinity Auth Service
 App factory, lifespan, middleware, and router inclusion.
 Uvicorn/Docker should point at   main:app   (or worker:app via shim).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -16,8 +17,11 @@ from router import init_router_deps, router
 from config import PORT, _cors_origins, logger
 from shared_core.infinity.worker_integration import InfinityWorkerKit
 
-worker_kit = InfinityWorkerKit("infinity-auth", defense_threshold=3, defense_window_seconds=60, defense_block_seconds=900)
+worker_kit = InfinityWorkerKit(
+    "infinity-auth", defense_threshold=3, defense_window_seconds=60, defense_block_seconds=900
+)
 init_router_deps(worker_kit=worker_kit)
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
@@ -25,6 +29,7 @@ async def _lifespan(app: FastAPI):
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         from src.observability.otel import init_otel
+
         init_otel(service_name="tranc3.infinity-auth")
         FastAPIInstrumentor.instrument_app(app)
     except Exception:
@@ -32,6 +37,7 @@ async def _lifespan(app: FastAPI):
     logger.info("Infinity Auth starting on port %d", PORT)
     await worker_kit.startup(app, sentinel=None)
     logger.info("Infinity Auth ready ✨")
+
     async def _bg():
         while True:
             try:
@@ -44,6 +50,7 @@ async def _lifespan(app: FastAPI):
                 break
             except Exception as exc:
                 logger.debug("BG loop: %s", exc)
+
     _bg_task = asyncio.create_task(_bg())
     yield
     logger.info("Infinity Auth shutting down...")
@@ -55,11 +62,24 @@ async def _lifespan(app: FastAPI):
     await worker_kit.shutdown()
     logger.info("Infinity Auth stopped")
 
+
 cors_origins = _cors_origins()
-app = FastAPI(title="Infinity — Authentication Service", description="OAuth2/JWT/TOTP authentication for the Trancendos platform.", version="1.0.0", lifespan=_lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(
+    title="Infinity — Authentication Service",
+    description="OAuth2/JWT/TOTP authentication for the Trancendos platform.",
+    version="1.0.0",
+    lifespan=_lifespan,
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=PORT)

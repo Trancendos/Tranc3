@@ -915,6 +915,88 @@ services:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8038/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
+  lab-service:
+    <<: *worker-common
+    build: { context: ./workers/lab-service, dockerfile: Dockerfile }
+    container_name: lab-service-worker
+    ports: ["8039:8039"]
+    environment:
+      LAB_DB_PATH: /data/lab.db
+      OLLAMA_URL: "${OLLAMA_URL:-http://ollama:11434}"
+      OLLAMA_CODE_MODEL: "${OLLAMA_CODE_MODEL:-deepseek-coder-v2:16b}"
+      OLLAMA_FALLBACK_MODEL: "${OLLAMA_FALLBACK_MODEL:-codellama:13b}"
+      OLLAMA_FALLBACK2_MODEL: "${OLLAMA_FALLBACK2_MODEL:-qwen2.5-coder:7b}"
+      TABBY_URL: "${TABBY_URL:-http://tabby:8080}"
+      HF_API_KEY: "${HF_API_KEY:-}"
+      HF_CODE_MODEL: "${HF_CODE_MODEL:-bigcode/starcoder2-7b}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      OPENROUTER_CODE_MODEL: "${OPENROUTER_CODE_MODEL:-deepseek/deepseek-coder:free}"
+      LAB_HF_HOURLY_LIMIT: "${LAB_HF_HOURLY_LIMIT:-300}"
+      LAB_OPENROUTER_HOURLY_LIMIT: "${LAB_OPENROUTER_HOURLY_LIMIT:-200}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - lab-service-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8039/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+
+  tranceflow:
+    <<: *worker-common
+    build: { context: ./workers/tranceflow, dockerfile: Dockerfile }
+    container_name: tranceflow-worker
+    ports: ["8052:8052"]
+    environment:
+      TRANCEFLOW_DB_PATH: /data/tranceflow.db
+      TRANCEFLOW_ASSET_DIR: /data/tranceflow-assets
+      GODOT_BIN: "${GODOT_BIN:-godot}"
+      BLENDER_BIN: "${BLENDER_BIN:-blender}"
+      TRANCEFLOW_GODOT: "${TRANCEFLOW_GODOT:-1}"
+      TRANCEFLOW_BLENDER: "${TRANCEFLOW_BLENDER:-1}"
+      TRANCEFLOW_TRIMESH: "${TRANCEFLOW_TRIMESH:-1}"
+      TRANCEFLOW_MESHIO: "${TRANCEFLOW_MESHIO:-1}"
+      TRANCEFLOW_OPEN3D: "${TRANCEFLOW_OPEN3D:-1}"
+      TRANCEFLOW_PYVISTA: "${TRANCEFLOW_PYVISTA:-1}"
+      TRANCEFLOW_QUOTA_MAX_CALLS: "${TRANCEFLOW_QUOTA_MAX_CALLS:-10000}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - tranceflow-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+
+  vrar3d:
+    <<: *worker-common
+    build: { context: ./workers/vrar3d, dockerfile: Dockerfile }
+    container_name: vrar3d-worker
+    ports: ["8063:8063"]
+    environment:
+      VRAR3D_DB_PATH: /data/vrar3d.db
+      VRAR3D_ASSET_DIR: /data/assets
+      GODOT_BIN: "${GODOT_BIN:-godot}"
+      BLENDER_BIN: "${BLENDER_BIN:-blender}"
+      VRAR3D_TRIMESH: "${VRAR3D_TRIMESH:-1}"
+      VRAR3D_OPEN3D: "${VRAR3D_OPEN3D:-1}"
+      VRAR3D_BLENDER: "${VRAR3D_BLENDER:-1}"
+      VRAR3D_GODOT: "${VRAR3D_GODOT:-1}"
+      VRAR3D_PYVISTA: "${VRAR3D_PYVISTA:-1}"
+      VRAR3D_MESHIO: "${VRAR3D_MESHIO:-1}"
+      SKETCHFAB_API_KEY: "${SKETCHFAB_API_KEY:-}"
+      VRAR3D_SKETCHFAB_LIMIT: "${VRAR3D_SKETCHFAB_LIMIT:-100}"
+      VRAR3D_QUOTA_MAX_CALLS: "${VRAR3D_QUOTA_MAX_CALLS:-10000}"
+      THREEJS_CDN: "${THREEJS_CDN:-https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js}"
+      BABYLONJS_CDN: "${BABYLONJS_CDN:-https://cdn.babylonjs.com/babylon.js}"
+      AFRAME_CDN: "${AFRAME_CDN:-https://aframe.io/releases/1.6.0/aframe.min.js}"
+      MODEL_VIEWER_CDN: "${MODEL_VIEWER_CDN:-https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - vrar3d-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8063/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
   # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
   # API-compatible with hvac Python client used by vault-service/openbao_client.py
@@ -1461,6 +1543,105 @@ services:
       traefik.http.services.outline.loadbalancer.server.port: "3000"
 
   # ─────────────────────────────────────────────────────────────────────────
+  # BookStack — The Library secondary wiki backend (MIT, self-hosted)
+  # UI: http://localhost:6875
+  # ─────────────────────────────────────────────────────────────────────────
+  bookstack-db:
+    image: mariadb:11
+    container_name: trancendos-bookstack-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "${BOOKSTACK_DB_ROOT_PASSWORD:?required}"
+      MYSQL_DATABASE: bookstack
+      MYSQL_USER: bookstack
+      MYSQL_PASSWORD: "${BOOKSTACK_DB_PASSWORD:?required}"
+    volumes:
+      - bookstack-db-data:/var/lib/mysql
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:latest
+    container_name: trancendos-bookstack
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      APP_URL: "${BOOKSTACK_APP_URL:-http://bookstack:80}"
+      DB_HOST: bookstack-db
+      DB_PORT: "3306"
+      DB_USER: bookstack
+      DB_PASS: "${BOOKSTACK_DB_PASSWORD:?required}"
+      DB_DATABASE: bookstack
+    volumes:
+      - bookstack-data:/config
+    depends_on:
+      bookstack-db:
+        condition: service_healthy
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # library-service — The Library ACO router (Port 8053, Lead AI: Zimik)
+  # Routes: Outline→BookStack→Wiki.js→Gollum→DokuWiki→MkDocs→Gitea→TiddlyWiki
+  # ─────────────────────────────────────────────────────────────────────────
+  library-service:
+    build:
+      context: ./workers/library-service
+      dockerfile: Dockerfile
+    container_name: trancendos-library-service
+    environment:
+      LIBRARY_PORT: "8053"
+      LIBRARY_DB_PATH: "/data/library.db"
+      OUTLINE_URL: "http://outline:3000"
+      OUTLINE_API_KEY: "${OUTLINE_API_KEY:-}"
+      BOOKSTACK_URL: "http://bookstack:80"
+      BOOKSTACK_TOKEN_ID: "${BOOKSTACK_TOKEN_ID:-}"
+      BOOKSTACK_TOKEN_SECRET: "${BOOKSTACK_TOKEN_SECRET:-}"
+      WIKIJS_URL: "${WIKIJS_URL:-http://wikijs:3000}"
+      WIKIJS_API_KEY: "${WIKIJS_API_KEY:-}"
+      GOLLUM_URL: "${GOLLUM_URL:-http://gollum:4567}"
+      DOKUWIKI_URL: "${DOKUWIKI_URL:-http://dokuwiki:80}"
+      MKDOCS_URL: "${MKDOCS_URL:-http://mkdocs:8000}"
+      GITEA_URL: "${GITEA_URL:-http://gitea:3000}"
+      GITEA_TOKEN: "${GITEA_TOKEN:-}"
+      TIDDLYWIKI_URL: "${TIDDLYWIKI_URL:-http://tiddlywiki:8080}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
+      LIBRARY_TLS_VERIFY: "${LIBRARY_TLS_VERIFY:-0}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    volumes:
+      - library-data:/data
+    depends_on:
+      - outline
+      - bookstack
+    networks:
+      - tranc3-net
+    ports:
+      - "8053:8053"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.library-service.rule: "PathPrefix(`/library`)"
+      traefik.http.routers.library-service.entrypoints: "websecure"
+      traefik.http.routers.library-service.tls.certresolver: "letsencrypt"
+      traefik.http.services.library-service.loadbalancer.server.port: "8053"
+
+  # ─────────────────────────────────────────────────────────────────────────
   # SigNoz — The Observatory enhanced (OpenTelemetry-native APM, Apache 2.0)
   # UI: http://localhost:3301  Backend: ClickHouse + query-service
   # ─────────────────────────────────────────────────────────────────────────
@@ -1950,6 +2131,154 @@ services:
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
 # ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 3: Prefect (Python-native orchestration, free OSS)
+# UI: /prefect  |  API: prefect-server:4200  |  SQLite backend
+# ═══════════════════════════════════════════════════════════════════════════
+  prefect-server:
+    image: prefecthq/prefect:3-python3.12
+    container_name: trancendos-prefect
+    restart: unless-stopped
+    command: prefect server start --host 0.0.0.0 --port 4200
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_SERVER_API_PORT=4200
+      - PREFECT_API_DATABASE_CONNECTION_URL=sqlite+aiosqlite:////data/prefect.db
+      - PREFECT_UI_ENABLED=true
+    volumes:
+      - prefect-data:/data
+    ports:
+      - "4200:4200"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prefect.rule=Host(`trancendos.com`) && PathPrefix(`/prefect`)"
+      - "traefik.http.middlewares.prefect-strip.stripprefix.prefixes=/prefect"
+      - "traefik.http.routers.prefect.middlewares=prefect-strip"
+      - "traefik.http.services.prefect.loadbalancer.server.port=4200"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 4: Temporal (durable workflow execution)
+# temporalite single-binary SQLite mode — zero external deps
+# gRPC: 7233  |  Web UI: 8088  |  /temporal Traefik path
+# ═══════════════════════════════════════════════════════════════════════════
+  temporalite:
+    image: temporalio/temporalite:latest
+    container_name: trancendos-temporalite
+    restart: unless-stopped
+    command: start --namespace default --db-filename /data/temporal.db --ip 0.0.0.0
+    volumes:
+      - temporal-data:/data
+    ports:
+      - "7233:7233"
+      - "8088:8088"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.temporal-ui.rule=Host(`trancendos.com`) && PathPrefix(`/temporal`)"
+      - "traefik.http.middlewares.temporal-strip.stripprefix.prefixes=/temporal"
+      - "traefik.http.routers.temporal-ui.middlewares=temporal-strip"
+      - "traefik.http.services.temporal-ui.loadbalancer.server.port=8088"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 5: Apache Airflow (standalone SQLite, free OSS)
+# UI: /airflow  |  REST API: airflow:8089
+# Default creds: admin/admin — override via AIRFLOW_USER / AIRFLOW_PASS
+# ═══════════════════════════════════════════════════════════════════════════
+  airflow:
+    image: apache/airflow:2.9.0
+    container_name: trancendos-airflow
+    restart: unless-stopped
+    entrypoint: >
+      bash -c "airflow db upgrade && airflow users create
+        --username $${AIRFLOW_USER}
+        --password $${AIRFLOW_PASS}
+        --firstname Trancendos --lastname Grid
+        --role Admin --email admin@trancendos.com 2>/dev/null || true
+        && airflow webserver --port 8089"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/data/airflow.db
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__WEBSERVER__BASE_URL=http://trancendos.com/airflow
+      - AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8089
+      - AIRFLOW_USER=${AIRFLOW_USER:?set AIRFLOW_USER in .env}
+      - AIRFLOW_PASS=${AIRFLOW_PASS:?set AIRFLOW_PASS in .env}
+    volumes:
+      - airflow-data:/opt/airflow/data
+      - airflow-dags:/opt/airflow/dags
+    ports:
+      - "8089:8089"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.airflow.rule=Host(`trancendos.com`) && PathPrefix(`/airflow`)"
+      - "traefik.http.services.airflow.loadbalancer.server.port=8089"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The Digital Grid — Tier 6: Dagster (asset-centric orchestration, free OSS)
+# UI: /dagster  |  GraphQL: dagster-webserver:3002
+# NOTE: port 3001 is Grafana; port 3000 is Gotenberg; Dagster uses 3002
+# ═══════════════════════════════════════════════════════════════════════════
+  dagster-webserver:
+    image: ghcr.io/dagster-io/dagster:latest
+    container_name: trancendos-dagster
+    restart: unless-stopped
+    command: dagster-webserver -h 0.0.0.0 -p 3002
+    environment:
+      - DAGSTER_HOME=/dagster_home
+    volumes:
+      - dagster-data:/dagster_home
+    ports:
+      - "3002:3002"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dagster.rule=Host(`trancendos.com`) && PathPrefix(`/dagster`)"
+      - "traefik.http.middlewares.dagster-strip.stripprefix.prefixes=/dagster"
+      - "traefik.http.routers.dagster.middlewares=dagster-strip"
+      - "traefik.http.services.dagster.loadbalancer.server.port=3002"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ChronosSphere / ArcStream — Kestra: Open-source workflow + cron scheduler
+# Standalone mode with H2 embedded DB — zero external deps, Apache 2.0
+# UI / API: 8060  |  Management API: 8061  |  Traefik: /kestra
+# ═══════════════════════════════════════════════════════════════════════════
+  kestra:
+    image: kestra/kestra:latest-full
+    container_name: trancendos-kestra
+    restart: unless-stopped
+    command: server standalone --flow-path /flows
+    user: "root"
+    environment:
+      - KESTRA_CONFIGURATION=
+      - DATASOURCES_POSTGRES_URL=
+      - DATASOURCES_POSTGRES_USERNAME=
+      - DATASOURCES_POSTGRES_PASSWORD=
+    volumes:
+      - kestra-data:/app/storage
+      - kestra-flows:/flows
+    ports:
+      - "8060:8080"
+      - "8061:8081"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/v1/flows/search?q= || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kestra.rule=Host(`trancendos.com`) && PathPrefix(`/kestra`)"
+      - "traefik.http.middlewares.kestra-strip.stripprefix.prefixes=/kestra"
+      - "traefik.http.routers.kestra.middlewares=kestra-strip"
+      - "traefik.http.services.kestra.loadbalancer.server.port=8080"
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Item 7 — Wazuh: SIEM/EDR for Cryptex (single-node, free OSS)
 # Requires: vm.max_map_count=262144 on host (sysctl -w vm.max_map_count=262144)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -2167,6 +2496,360 @@ services:
       - tranc3-net
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Security — Cryptex (Renik) + The Ice Box (Neonach)
+# 8-tier adaptive security: Wazuh + MISP + OpenVAS + ClamAV + YARA + Semgrep
+# All zero-cost open-source tools. Free community editions only.
+# ═══════════════════════════════════════════════════════════════════════════
+  cryptex:
+    build:
+      context: ./workers/cryptex
+      dockerfile: Dockerfile
+    image: trancendos/cryptex:latest
+    container_name: cryptex-worker
+    restart: unless-stopped
+    depends_on:
+      - misp
+    environment:
+      - CRYPTEX_PORT=8039
+      - CRYPTEX_DB_PATH=/data/cryptex.db
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - WAZUH_URL=https://wazuh-manager:55000
+      - WAZUH_USER=${WAZUH_API_USER:-wazuh-wui}
+      - WAZUH_PASS=${WAZUH_API_PASSWORD:?required}
+      - MISP_URL=http://misp:80
+      - MISP_API_KEY=${MISP_API_KEY}
+      - OPENVAS_URL=http://openvas:9390
+      - OPENVAS_USER=${OPENVAS_USER:-admin}
+      - OPENVAS_PASS=${OPENVAS_PASS}
+      - THRESHOLD_WAZUH=${THRESHOLD_WAZUH:-500}
+      - THRESHOLD_MISP=${THRESHOLD_MISP:-500}
+      - THRESHOLD_OPENVAS=${THRESHOLD_OPENVAS:-100}
+      - THRESHOLD_CLAMAV=${THRESHOLD_CLAMAV:-1000}
+      - THRESHOLD_YARA=${THRESHOLD_YARA:-1000}
+      - THRESHOLD_SEMGREP=${THRESHOLD_SEMGREP:-200}
+      - ACO_DECAY=${ACO_DECAY:-0.9}
+    volumes:
+      - cryptex-data:/data
+    ports:
+      - "8039:8039"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cryptex.rule=Host(`trancendos.com`) && PathPrefix(`/cryptex`)"
+      - "traefik.http.services.cryptex.loadbalancer.server.port=8039"
+
+  # ── Observatory — The Observatory / Norman Hawkins (Port 8040)
+  # 7-backend ACO pheromone routing: Tempo+Jaeger (traces), VictoriaMetrics+Prometheus
+  # (metrics), Loki (logs), Netdata (node), SigNoz (unified APM). All free, self-hosted.
+  observatory:
+    build:
+      context: ./workers/observatory
+      dockerfile: Dockerfile
+    container_name: tranc3-observatory
+    restart: unless-stopped
+    environment:
+      - OBSERVATORY_PORT=8040
+      - OBSERVATORY_DB_PATH=/data/observatory.db
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - SIGNOZ_URL=http://signoz-query-service:8080
+      - JAEGER_URL=http://jaeger:16686
+      - TEMPO_URL=http://tempo:3200
+      - PROMETHEUS_URL=http://prometheus:9090
+      - VICTORIAMETRICS_URL=http://victoriametrics:8428
+      - LOKI_URL=http://loki:3100
+      - NETDATA_URL=http://netdata:19999
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - ACO_DECAY=${ACO_DECAY:-0.95}
+      - THRESHOLD_SIGNOZ=${THRESHOLD_SIGNOZ:-1000}
+      - THRESHOLD_JAEGER=${THRESHOLD_JAEGER:-2000}
+      - THRESHOLD_TEMPO=${THRESHOLD_TEMPO:-2000}
+      - THRESHOLD_VICTORIA=${THRESHOLD_VICTORIA:-5000}
+      - THRESHOLD_PROMETHEUS=${THRESHOLD_PROMETHEUS:-5000}
+      - THRESHOLD_LOKI=${THRESHOLD_LOKI:-2000}
+      - THRESHOLD_NETDATA=${THRESHOLD_NETDATA:-3000}
+    volumes:
+      - observatory-data:/data
+    ports:
+      - "8040:8040"
+    depends_on:
+      - otel-collector
+      - victoriametrics
+      - loki
+      - tempo
+      - jaeger
+      - netdata
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.observatory.rule=Host(`trancendos.com`) && PathPrefix(`/observatory`)"
+      - "traefik.http.services.observatory.loadbalancer.server.port=8040"
+
+  # ── MISP — Malware Information Sharing Platform (Cryptex tier 2)
+  # Free, self-hosted, open-source. No paid licence required.
+  misp:
+    image: ghcr.io/misp/misp-docker/misp-core:latest
+    container_name: trancendos-misp
+    restart: unless-stopped
+    depends_on:
+      - misp-db
+      - misp-redis
+    environment:
+      - MYSQL_HOST=misp-db
+      - MYSQL_DATABASE=${MISP_DB_NAME:-misp}
+      - MYSQL_USER=${MISP_DB_USER:-misp}
+      - MYSQL_PASSWORD=${MISP_DB_PASSWORD:?required}
+      - MISP_ADMIN_EMAIL=${MISP_ADMIN_EMAIL:?required}
+      - MISP_ADMIN_PASSPHRASE=${MISP_ADMIN_PASSWORD:?required}
+      - MISP_BASEURL=http://trancendos.com/misp
+      - REDIS_FQDN=misp-redis
+      - WORKERS=1
+    volumes:
+      - misp-data:/var/www/MISP/app/files
+    ports:
+      - "8095:80"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.misp.rule=Host(`trancendos.com`) && PathPrefix(`/misp`)"
+      - "traefik.http.services.misp.loadbalancer.server.port=80"
+
+  misp-db:
+    image: mysql:8.0
+    container_name: trancendos-misp-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=${MISP_DB_NAME:-misp}
+      - MYSQL_USER=${MISP_DB_USER:-misp}
+      - MYSQL_PASSWORD=${MISP_DB_PASSWORD:?required}
+      - MYSQL_ROOT_PASSWORD=${MISP_DB_ROOT_PASSWORD:?required}
+    volumes:
+      - misp-db-data:/var/lib/mysql
+    networks:
+      - tranc3-net
+
+  misp-redis:
+    image: redis:7-alpine
+    container_name: trancendos-misp-redis
+    restart: unless-stopped
+    volumes:
+      - misp-redis-data:/data
+    networks:
+      - tranc3-net
+
+  # ── OpenVAS/Greenbone Community Edition — Vulnerability scanner (Cryptex tier 3)
+  # Free community edition. Greenbone publishes official community containers.
+  openvas:
+    image: greenbone/community-edition:latest
+    container_name: trancendos-openvas
+    restart: unless-stopped
+    environment:
+      - GVM_ADMIN_USER=${OPENVAS_USER:-admin}
+      - GVM_ADMIN_PASSWORD=${OPENVAS_PASS:?required}
+    volumes:
+      - openvas-data:/var/lib/gvm
+    ports:
+      - "9392:9392"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openvas.rule=Host(`trancendos.com`) && PathPrefix(`/openvas`)"
+      - "traefik.http.services.openvas.loadbalancer.server.port=9392"
+
+  # ── Cuckoo Sandbox — Malware analysis / The Ice Box (Neonach, tier sandbox)
+  # Free open-source automated malware analysis system.
+  cuckoo:
+    image: cuckoosandbox/cuckoo:latest
+    container_name: trancendos-cuckoo
+    restart: unless-stopped
+    environment:
+      - CUCKOO_API_TOKEN=${CUCKOO_API_TOKEN}
+    volumes:
+      - cuckoo-data:/cuckoo
+    ports:
+      - "8096:8090"
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cuckoo.rule=Host(`trancendos.com`) && PathPrefix(`/icebox`)"
+      - "traefik.http.services.cuckoo.loadbalancer.server.port=8090"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # OBSERVABILITY LAYER — The Observatory (Norman Hawkins)
+  # ══════════════════════════════════════════════════════════════════════════
+
+  # ── Jaeger All-in-One — Distributed Tracing UI + Collector ───────────────
+  # Apache 2.0, self-hosted. Receives OTLP from otel-collector via fan-out.
+  # UI: http://trancendos.com/jaeger  OTLP gRPC: 4317 (internal)
+  # Badger local storage, 72h retention. Zero cost.
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: tranc3-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+      BADGER_SPAN_STORE_TTL: 72h0m0s
+      QUERY_UI_CONFIG: /etc/jaeger/ui-config.json
+    volumes:
+      - jaeger-data:/badger
+      - ./monitoring/jaeger/ui-config.json:/etc/jaeger/ui-config.json:ro
+      - ./monitoring/jaeger/sampling_strategies.json:/etc/jaeger/sampling_strategies.json:ro
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "34317:4317"    # OTLP gRPC (host 34317 avoids conflict)
+      - "34318:4318"    # OTLP HTTP
+      - "14268:14268"   # Jaeger HTTP collector (Thrift)
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.jaeger.rule: "Host(`trancendos.com`) && PathPrefix(`/jaeger`)"
+      traefik.http.routers.jaeger.entrypoints: "websecure"
+      traefik.http.routers.jaeger.tls.certresolver: "letsencrypt"
+      traefik.http.middlewares.jaeger-strip.stripprefix.prefixes: "/jaeger"
+      traefik.http.routers.jaeger.middlewares: "jaeger-strip"
+      traefik.http.services.jaeger.loadbalancer.server.port: "16686"
+
+  # ── Netdata — Real-time Node Metrics (zero-config) ───────────────────────
+  # MIT-licensed. Host-level CPU/RAM/disk/network/container metrics.
+  # Exposes Prometheus endpoint at /api/v1/allmetrics for VictoriaMetrics scrape.
+  # Dashboard: http://trancendos.com/netdata
+  netdata:
+    image: netdata/netdata:latest
+    container_name: tranc3-netdata
+    restart: unless-stopped
+    pid: host
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      NETDATA_CLAIM_TOKEN: ""
+      NETDATA_CLAIM_URL: ""
+      NETDATA_DISABLE_CLOUD: "true"
+      DO_NOT_TRACK: "1"
+    volumes:
+      - netdata-config:/etc/netdata
+      - netdata-lib:/var/lib/netdata
+      - netdata-cache:/var/cache/netdata
+      - ./monitoring/netdata/netdata.conf:/etc/netdata/netdata.conf:ro
+      - ./monitoring/netdata/stream.conf:/etc/netdata/stream.conf:ro
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "19999:19999"   # Netdata UI + Prometheus endpoint
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:19999/api/v1/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.netdata.rule: "Host(`trancendos.com`) && PathPrefix(`/netdata`)"
+      traefik.http.routers.netdata.entrypoints: "websecure"
+      traefik.http.routers.netdata.tls.certresolver: "letsencrypt"
+      traefik.http.middlewares.netdata-strip.stripprefix.prefixes: "/netdata"
+      traefik.http.routers.netdata.middlewares: "netdata-strip"
+      traefik.http.services.netdata.loadbalancer.server.port: "19999"
+
+  # ── Blackbox Exporter — HTTP/HTTPS/TCP endpoint probing ──────────────────
+  # Prometheus community, Apache 2.0. Probes /health endpoints for all workers.
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: tranc3-blackbox
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/blackbox/blackbox.yml"
+    volumes:
+      - ./monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    ports:
+      - "9115:9115"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9115/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=false"
+
+  # ── cAdvisor — Container resource usage metrics ───────────────────────────
+  # Google, Apache 2.0. Per-container CPU/RAM/disk/network → Prometheus.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: tranc3-cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "18088:8080"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=false"
+
+  # ── node-exporter — Host OS metrics → Prometheus ─────────────────────────
+  # Prometheus community, Apache 2.0. CPU/RAM/disk/network at OS level.
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: tranc3-node-exporter
+    restart: unless-stopped
+    pid: host
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/rootfs"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "9100:9100"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=false"
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
 volumes:
@@ -2201,6 +2884,12 @@ volumes:
   void-data:
     driver: local
   vault-service-data:
+    driver: local
+  lab-service-data:
+    driver: local
+  tranceflow-data:
+    driver: local
+  vrar3d-data:
     driver: local
   admin-data:
     driver: local
@@ -2268,6 +2957,12 @@ volumes:
     driver: local
   outline-data:
     driver: local
+  bookstack-db-data:
+    driver: local
+  bookstack-data:
+    driver: local
+  library-data:
+    driver: local
   signoz-clickhouse-data:
     driver: local
   signoz-clickhouse-logs:
@@ -2300,6 +2995,20 @@ volumes:
     driver: local
   n8n-data:
     driver: local
+  prefect-data:
+    driver: local
+  temporal-data:
+    driver: local
+  airflow-data:
+    driver: local
+  airflow-dags:
+    driver: local
+  dagster-data:
+    driver: local
+  kestra-data:
+    driver: local
+  kestra-flows:
+    driver: local
   wazuh-manager-data:
     driver: local
   wazuh-manager-logs:
@@ -2321,6 +3030,28 @@ volumes:
   openbas-data:
     driver: local
   openbas-db-data:
+    driver: local
+  cryptex-data:
+    driver: local
+  misp-data:
+    driver: local
+  misp-db-data:
+    driver: local
+  misp-redis-data:
+    driver: local
+  openvas-data:
+    driver: local
+  cuckoo-data:
+    driver: local
+  jaeger-data:
+    driver: local
+  netdata-config:
+    driver: local
+  netdata-lib:
+    driver: local
+  netdata-cache:
+    driver: local
+  observatory-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

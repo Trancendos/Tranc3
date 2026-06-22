@@ -1,61 +1,74 @@
-"""TranceFlow — Port 8052.
-
-3D modeling & games creation studio.
-"""
+"""TranceFlow — 3D modeling & games creation studio (Lead AI: Junior Cesar)"""
 
 from __future__ import annotations
 
-import os
 import time
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="TranceFlow", version="1.0.0")
+import config
+from database import TranceFlowDatabase
+from router import _make_tranceflow_router
+from service import TranceFlowRouter
 
-PORT = int(os.getenv("PORT", "8052"))
-START_TIME = time.time()
-
-STUB_SCENES = [
-    {"id": "scene-001", "name": "Empty Scene", "objects": 0, "engine": "Godot 4"},
-]
+_START = time.time()
 
 
-@app.get("/health")
-async def health() -> JSONResponse:
-    return JSONResponse(
-        {"service": "tranceflow", "status": "ok", "uptime": time.time() - START_TIME}
+def _build_app() -> FastAPI:
+    app = FastAPI(
+        title="TranceFlow",
+        description="3D modeling & games creation studio — Lead AI: Junior Cesar",
+        version="1.0.0",
     )
 
-
-@app.get("/status")
-async def status() -> JSONResponse:
-    return JSONResponse(
-        {
-            "entity": "TranceFlow",
-            "lead_ai": "Junior Cesar",
-            "status": "initialising",
-            "uptime": time.time() - START_TIME,
-        }
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
+    if config.OTEL_ENDPOINT:
+        try:
+            from opentelemetry import trace
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-@app.get("/scenes")
-async def scenes() -> JSONResponse:
-    return JSONResponse({"scenes": STUB_SCENES, "total": len(STUB_SCENES)})
+            provider = TracerProvider()
+            provider.add_span_processor(
+                BatchSpanProcessor(OTLPSpanExporter(endpoint=config.OTEL_ENDPOINT))
+            )
+            trace.set_tracer_provider(provider)
+            FastAPIInstrumentor.instrument_app(app)
+        except Exception:  # OTel is optional — never block startup
+            pass
+
+    db = TranceFlowDatabase(config.DB_PATH)
+    tf = TranceFlowRouter(db)
+    app.include_router(_make_tranceflow_router(db, tf))
+
+    @app.get("/health", include_in_schema=False)
+    def health() -> JSONResponse:
+        return JSONResponse(
+            {
+                "service": config.WORKER_NAME,
+                "entity": "TranceFlow",
+                "lead_ai": "Junior Cesar",
+                "status": "ok",
+                "uptime_s": round(time.time() - _START, 1),
+            }
+        )
+
+    return app
 
 
-@app.get("/scenes/{scene_id}")
-async def get_scene(scene_id: str) -> JSONResponse:
-    for scene in STUB_SCENES:
-        if scene["id"] == scene_id:
-            return JSONResponse(scene)
-    return JSONResponse(
-        {"id": scene_id, "found": False, "message": "Scene not found."}, status_code=404
-    )
-
+app = _build_app()
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host="0.0.0.0", port=config.WORKER_PORT)

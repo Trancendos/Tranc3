@@ -159,6 +159,15 @@ scrape_configs:
           priority: 'P1'
           named: 'The Observatory'
 
+  - job_name: 'observatory'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['observatory:8040']
+        labels:
+          service: 'observatory'
+          priority: 'P1'
+          named: 'The Observatory / ACO Router'
+
   - job_name: 'notifications'
     metrics_path: '/metrics'
     static_configs:
@@ -175,6 +184,16 @@ scrape_configs:
           service: 'infinity-ai'
           priority: 'P1'
           named: 'AI Gateway'
+
+  # ── ChronosSphere / ArcStream — Kestra ───────────────────────────────
+  - job_name: 'kestra'
+    metrics_path: '/prometheus'
+    static_configs:
+      - targets: ['kestra:8081']
+        labels:
+          service: 'kestra'
+          category: 'scheduler'
+          named: 'ChronosSphere / ArcStream'
 
   # ── P2 Workers ───────────────────────────────────────────────────────
   - job_name: 'the-grid'
@@ -290,3 +309,98 @@ scrape_configs:
           - http://calcom:3000/api/health
           - http://outline:3000/api/health.json
           - http://signoz-frontend:3301
+          - http://cryptex:8039/health
+          - http://kestra:8080/api/v1/flows/search?q=
+          - http://observatory:8040/health
+          - http://jaeger:16686/
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # ── Jaeger metrics ───────────────────────────────────────────────────
+  - job_name: 'jaeger'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['jaeger:14269']
+        labels:
+          service: 'jaeger'
+          category: 'observability'
+          named: 'The Observatory / Tracing'
+
+  # ── Netdata — host node metrics (Prometheus exposition format) ────────
+  - job_name: 'netdata'
+    metrics_path: '/api/v1/allmetrics'
+    params:
+      format: [prometheus]
+    static_configs:
+      - targets: ['netdata:19999']
+        labels:
+          service: 'netdata'
+          category: 'observability'
+          named: 'The Observatory / Node'
+
+  # ── cAdvisor — per-container CPU/RAM/disk/network ─────────────────────
+  - job_name: 'cadvisor'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          category: 'observability'
+
+  # ── node-exporter — host OS metrics ──────────────────────────────────
+  - job_name: 'node-exporter'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          category: 'observability'
+
+  # ── library-service — The Library ACO wiki router (Port 8053) ────────
+  - job_name: 'library-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['library-service:8053']
+        labels:
+          service: 'library-service'
+          named: 'The Library'
+          lead_ai: 'Zimik'
+          category: 'knowledge'
+
+  # ── lab-service — The Lab code generation platform (Port 8039) ────────
+  - job_name: 'lab-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['lab-service:8039']
+        labels:
+          service: 'lab-service'
+          named: 'The Lab'
+          lead_ai: 'The Dr. & Slime'
+          category: 'code-generation'
+
+  # ── tranceflow — TranceFlow 3D/games studio (Port 8052) ───────────────
+  - job_name: 'tranceflow'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['tranceflow:8052']
+        labels:
+          service: 'tranceflow'
+          named: 'TranceFlow'
+          lead_ai: 'Junior Cesar'
+          category: '3d-games'
+
+  # ── vrar3d — VRAR3D immersion platform (Port 8063) ────────────────────
+  - job_name: 'vrar3d'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['vrar3d:8063']
+        labels:
+          service: 'vrar3d'
+          named: 'VRAR3D'
+          lead_ai: 'Entari'
+          category: '3d-vr'

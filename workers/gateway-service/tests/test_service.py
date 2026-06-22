@@ -4,6 +4,7 @@ Tests circuit breaker, cache, RBAC/ABAC helpers, and upstream fetch.
 These tests import directly from service.py and do not require a
 running FastAPI app or real Dimensional runtime.
 """
+
 from __future__ import annotations
 
 import asyncio

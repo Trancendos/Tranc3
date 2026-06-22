@@ -45,7 +45,7 @@ underverse_registry = get_underverse_registry()
 # Phase 22.6: Smart adaptive worker kit (admin gets higher defense thresholds)
 worker_kit = InfinityWorkerKit(
     "infinity-admin",
-    defense_threshold=5,      # Stricter: only 5 violations before block
+    defense_threshold=5,  # Stricter: only 5 violations before block
     defense_window_seconds=300,
     defense_block_seconds=1800,  # 30-min block for admin violations
 )

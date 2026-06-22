@@ -2,6 +2,7 @@
 config.py — Gateway Service configuration
 All environment-variable constants for gateway-service.
 """
+
 from __future__ import annotations
 
 import logging
@@ -28,13 +29,13 @@ JWT_SECRET: str = _jwt_secret_raw
 # ---------------------------------------------------------------------------
 
 UPSTREAM_WORKERS: dict[str, dict[str, str | int]] = {
-    "vault":      {"port": 8030, "health": "/health", "stats": "/stats"},
-    "topology":   {"port": 8031, "health": "/health", "stats": "/stats"},
-    "ledger":     {"port": 8032, "health": "/health", "stats": "/stats"},
+    "vault": {"port": 8030, "health": "/health", "stats": "/stats"},
+    "topology": {"port": 8031, "health": "/health", "stats": "/stats"},
+    "ledger": {"port": 8032, "health": "/health", "stats": "/stats"},
     "model_router": {"port": 8033, "health": "/health", "stats": "/stats"},
-    "workflow":   {"port": 8034, "health": "/health", "stats": "/stats"},
-    "benchmark":  {"port": 8035, "health": "/health", "stats": "/stats"},
-    "langchain":  {"port": 8036, "health": "/health", "stats": "/stats"},
+    "workflow": {"port": 8034, "health": "/health", "stats": "/stats"},
+    "benchmark": {"port": 8035, "health": "/health", "stats": "/stats"},
+    "langchain": {"port": 8036, "health": "/health", "stats": "/stats"},
     "deepagents": {"port": 8037, "health": "/health", "stats": "/stats"},
 }
 

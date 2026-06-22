@@ -78,6 +78,7 @@ def init_router_deps(sentinel: Any = None, worker_kit: Any = None, rbac_engine: 
 
     if sentinel is not None:
         import sys
+
         sys.modules[__name__].__dict__["sentinel"] = sentinel
     if worker_kit is not None:
         _worker_kit_ref = worker_kit
@@ -498,14 +499,12 @@ async def compliance_events(
         ).fetchall()
     elif severity:
         rows = db.execute(
-            "SELECT * FROM compliance_events WHERE severity = ?"
-            " ORDER BY created_at DESC LIMIT ?",
+            "SELECT * FROM compliance_events WHERE severity = ? ORDER BY created_at DESC LIMIT ?",
             (severity, limit),
         ).fetchall()
     elif pillar:
         rows = db.execute(
-            "SELECT * FROM compliance_events WHERE pillar = ?"
-            " ORDER BY created_at DESC LIMIT ?",
+            "SELECT * FROM compliance_events WHERE pillar = ? ORDER BY created_at DESC LIMIT ?",
             (pillar, limit),
         ).fetchall()
     else:

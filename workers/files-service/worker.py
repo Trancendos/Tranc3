@@ -16,7 +16,6 @@ Entity: DocUtari | Lead AI: To be Defined
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import mimetypes
@@ -206,8 +205,11 @@ class DocDatabase:
         return d
 
     def list_documents(
-        self, owner_id: Optional[str] = None, status: Optional[str] = None,
-        limit: int = 50, offset: int = 0
+        self,
+        owner_id: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> List[Dict[str, Any]]:
         query = "SELECT * FROM documents WHERE deleted_at IS NULL"
         params: list = []
@@ -234,8 +236,15 @@ class DocDatabase:
     def update_document(self, doc_id: str, data: Dict[str, Any]) -> bool:
         now = datetime.now(timezone.utc).isoformat()
         allowed = {
-            "title", "status", "paperless_id", "ipfs_cid", "tags",
-            "metadata", "tika_metadata", "ocr_text", "storage_path",
+            "title",
+            "status",
+            "paperless_id",
+            "ipfs_cid",
+            "tags",
+            "metadata",
+            "tika_metadata",
+            "ocr_text",
+            "storage_path",
         }
         fields, vals = [], []
         for k, v in data.items():
@@ -279,7 +288,13 @@ class DocDatabase:
             )
         return job_id
 
-    def update_pdf_job(self, job_id: str, status: str, result_path: Optional[str] = None, error: Optional[str] = None) -> None:
+    def update_pdf_job(
+        self,
+        job_id: str,
+        status: str,
+        result_path: Optional[str] = None,
+        error: Optional[str] = None,
+    ) -> None:
         now = datetime.now(timezone.utc).isoformat()
         with self._cur() as c:
             c.execute(
@@ -311,7 +326,9 @@ async def _tika_parse(content: bytes, content_type: str) -> Dict[str, Any]:
         return {"Content-Type": content_type, "fallback": True}
 
 
-async def _paperless_ingest(filename: str, content: bytes, content_type: str, title: Optional[str] = None) -> Optional[int]:
+async def _paperless_ingest(
+    filename: str, content: bytes, content_type: str, title: Optional[str] = None
+) -> Optional[int]:
     """Push document to Paperless-ngx via its REST API."""
     if not PAPERLESS_TOKEN:
         return None
@@ -361,7 +378,13 @@ async def _gotenberg_fallback(content: bytes, operation: str, params: Dict[str, 
         if operation in ("compress", "optimize"):
             resp = await c.post(
                 f"{GOTENBERG_URL}/forms/chromium/convert/html",
-                files={"files": ("index.html", b"<html><body>Conversion unavailable</body></html>", "text/html")},
+                files={
+                    "files": (
+                        "index.html",
+                        b"<html><body>Conversion unavailable</body></html>",
+                        "text/html",
+                    )
+                },
             )
         else:
             resp = await c.post(
@@ -388,9 +411,18 @@ class DocumentUploadResponse(BaseModel):
 class PdfJobRequest(BaseModel):
     doc_id: str
     operation: Literal[
-        "compress", "merge", "split", "rotate", "watermark",
-        "remove-pages", "extract-images", "pdf-to-word", "word-to-pdf",
-        "img-to-pdf", "pdf-to-img", "ocr",
+        "compress",
+        "merge",
+        "split",
+        "rotate",
+        "watermark",
+        "remove-pages",
+        "extract-images",
+        "pdf-to-word",
+        "word-to-pdf",
+        "img-to-pdf",
+        "pdf-to-img",
+        "ocr",
     ]
     params: Dict[str, Any] = Field(default_factory=dict)
 
@@ -464,7 +496,9 @@ async def upload_document(
     """Upload a document — store locally, push to Paperless-ngx, parse with Tika."""
     content = await file.read()
     filename = file.filename or "upload"
-    content_type = file.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    content_type = (
+        file.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    )
     size = len(content)
 
     doc_id = str(uuid.uuid4())
@@ -472,25 +506,30 @@ async def upload_document(
     dest.mkdir(parents=True, exist_ok=True)
     (dest / filename).write_bytes(content)
 
-    doc = _db.create_document({
-        "id": doc_id,
-        "filename": filename,
-        "title": title or Path(filename).stem,
-        "content_type": content_type,
-        "size_bytes": size,
-        "storage_path": str(dest / filename),
-        "owner_id": owner_id,
-        "status": "processing",
-    })
+    doc = _db.create_document(
+        {
+            "id": doc_id,
+            "filename": filename,
+            "title": title or Path(filename).stem,
+            "content_type": content_type,
+            "size_bytes": size,
+            "storage_path": str(dest / filename),
+            "owner_id": owner_id,
+            "status": "processing",
+        }
+    )
 
     async def _process():
         tika_meta = await _tika_parse(content, content_type)
         paperless_id = await _paperless_ingest(filename, content, content_type, title)
-        _db.update_document(doc_id, {
-            "tika_metadata": tika_meta,
-            "paperless_id": paperless_id,
-            "status": "ready",
-        })
+        _db.update_document(
+            doc_id,
+            {
+                "tika_metadata": tika_meta,
+                "paperless_id": paperless_id,
+                "status": "ready",
+            },
+        )
 
     background_tasks.add_task(_process)
     return doc
@@ -559,11 +598,13 @@ async def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    job_id = _db.create_pdf_job({
-        "doc_id": req.doc_id,
-        "operation": req.operation,
-        "params": req.params,
-    })
+    job_id = _db.create_pdf_job(
+        {
+            "doc_id": req.doc_id,
+            "operation": req.operation,
+            "params": req.params,
+        }
+    )
 
     async def _run_job():
         try:
@@ -687,4 +728,5 @@ app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

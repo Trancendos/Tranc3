@@ -68,15 +68,11 @@ class AIDatabase:
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_reqlog_tenant ON request_log(tenant_id)")
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_reqlog_timestamp ON request_log(timestamp)"
-            )
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_reqlog_timestamp ON request_log(timestamp)")
 
     def get_budget(self, tenant_id: str) -> TokenBudget:
         conn = self._get_conn()
-        row = conn.execute(
-            "SELECT * FROM token_budgets WHERE tenant_id=?", (tenant_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM token_budgets WHERE tenant_id=?", (tenant_id,)).fetchone()
         if row:
             budget = TokenBudget(
                 tenant_id=row["tenant_id"],
@@ -149,9 +145,7 @@ class AIDatabase:
                 ),
             )
 
-    def get_usage_stats(
-        self, tenant_id: Optional[str] = None, hours: int = 24
-    ) -> Dict[str, Any]:
+    def get_usage_stats(self, tenant_id: Optional[str] = None, hours: int = 24) -> Dict[str, Any]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
         if tenant_id:
