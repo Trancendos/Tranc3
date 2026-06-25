@@ -14,9 +14,6 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
-import sys
-import tempfile
 import time
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -409,40 +406,15 @@ def _validate_code(code: str) -> None:
 
 @app.post("/lab/run")
 async def lab_run(req: RunRequest) -> dict[str, Any]:
-    """Execute code in a sandboxed subprocess (Python only for safety)."""
-    if req.language not in ("python",):
-        raise HTTPException(
-            status_code=400, detail=f"Sandboxed execution not supported for {req.language}"
-        )
-
-    _validate_code(req.code)
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(req.code)
-        code_file = f.name
-
-    try:
-        # nosec S603 — intentional sandboxed execution; dangerous imports blocked above
-        result = subprocess.run(  # noqa: S603
-            [sys.executable, code_file],
-            input=req.stdin,
-            capture_output=True,
-            text=True,
-            timeout=req.timeout_seconds,
-        )
-        return {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "exit_code": result.returncode,
-            "language": req.language,
-            "executed": True,
-        }
-    except subprocess.TimeoutExpired:
-        return {"stdout": "", "stderr": "Execution timed out", "exit_code": -1, "executed": True}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Execution failed: {exc}") from exc
-    finally:
-        os.unlink(code_file)
+    """Execute code — requires gVisor/microVM isolation (not available on this host)."""
+    # AST-based import blocking is bypassable via __import__(), builtins, etc.
+    # Direct host execution is disabled until a proper isolated sandbox
+    # (gVisor runsc, Firecracker microVM, or nsjail) is wired up.
+    raise HTTPException(
+        status_code=503,
+        detail="Code execution is disabled: requires isolated sandbox environment. "
+        "Deploy with gVisor or Firecracker to enable.",
+    )
 
 
 @app.get("/workspaces")

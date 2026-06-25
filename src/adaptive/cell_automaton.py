@@ -96,30 +96,27 @@ class CellAutomaton:
     def tick(self) -> dict[str, CellState]:
         """Advance one generation. Returns new state map."""
         self._generation += 1
-        new_states: dict[str, CellState] = {}
 
+        # Snapshot states before any mutations so neighbour lookups are consistent
+        snapshot: dict[str, CellState] = {n: c.state for n, c in self._cells.items()}
+        pending_health: dict[str, float] = {}
+
+        now = time.time()
         for name, cell in self._cells.items():
             cell.generation = self._generation
 
-            # Dead cell — check grace period for auto-regeneration
             if cell.state == CellState.DEAD:
-                elapsed = time.time() - cell.last_state_change
+                elapsed = now - cell.last_state_change
                 if elapsed >= self.DEAD_GRACE_SECONDS:
-                    cell.state = CellState.REGENERATING
-                    cell.health_score = self.REGENERATION_SCORE
-                    cell.last_state_change = time.time()
-                new_states[name] = cell.state
+                    pending_health[name] = self.REGENERATION_SCORE
                 continue
 
-            # Regenerating — promote to healthy if score rising
             if cell.state == CellState.REGENERATING:
-                cell.health_score = min(1.0, cell.health_score + 0.1)
-                cell._update_state()
-                new_states[name] = cell.state
+                pending_health[name] = min(1.0, cell.health_score + 0.1)
                 continue
 
-            # Propagate stress from neighbours
-            neighbour_states = [self._cells[n].state for n in cell.neighbors if n in self._cells]
+            # Use snapshot states for neighbour stress to avoid in-loop mutation
+            neighbour_states = [snapshot[n] for n in cell.neighbors if n in snapshot]
             stressed_neighbours = sum(
                 1
                 for s in neighbour_states
@@ -129,9 +126,22 @@ class CellAutomaton:
                 neighbour_states
                 and stressed_neighbours / len(neighbour_states) >= self.STRESS_PROPAGATION_THRESHOLD
             ):
-                cell.health_score = max(0.0, cell.health_score - 0.05)
-                cell._update_state()
+                pending_health[name] = max(0.0, cell.health_score - 0.05)
 
+        # Apply all mutations atomically after the read pass
+        new_states: dict[str, CellState] = {}
+        for name, cell in self._cells.items():
+            if cell.state == CellState.DEAD and name in pending_health:
+                cell.state = CellState.REGENERATING
+                cell.health_score = pending_health[name]
+                cell.last_state_change = now
+            elif name in pending_health:
+                old_state = cell.state
+                cell.health_score = pending_health[name]
+                if old_state == CellState.REGENERATING and cell.health_score < 0.6:
+                    pass  # keep REGENERATING until health crosses recovery threshold
+                else:
+                    cell._update_state()
             new_states[name] = cell.state
 
         return new_states

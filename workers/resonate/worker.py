@@ -22,7 +22,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = 8093
+WORKER_PORT = int(os.environ.get("PORT", "8076"))
 WORKER_NAME = "resonate"
 DB_PATH = Path(__file__).parent / "data" / "resonate.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

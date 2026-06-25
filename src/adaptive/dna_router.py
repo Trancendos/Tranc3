@@ -83,12 +83,18 @@ class DNARouter:
     # Genetic operators
     # ------------------------------------------------------------------
 
-    def mutate(self, rate: float = 0.1) -> None:
-        """Randomly adjust weights based on fitness (rate = mutation probability)."""
-        for gene in self._chromosome:
+    def mutate(self, rate: float = 0.1, genes: list[RouteGene] | None = None) -> None:
+        """Randomly adjust weights based on fitness (rate = mutation probability).
+
+        Pass ``genes`` to restrict mutation to a subset (e.g. non-elite genes).
+        """
+        targets = genes if genes is not None else self._chromosome
+        for gene in targets:
             if self._rng.random() < rate:
                 delta = self._rng.uniform(-self.MUTATION_WEIGHT_DELTA, self.MUTATION_WEIGHT_DELTA)
-                gene.weight = max(0.01, gene.weight + delta * gene.fitness)
+                # Mutate fitness so the perturbation survives evolve()'s weight
+                # normalization pass (which recomputes weight from fitness).
+                gene.fitness = max(0.0, min(1.0, gene.fitness + delta))
 
     def crossover(self, other_chromosome: list[RouteGene]) -> list[RouteGene]:
         """One-point crossover between this chromosome and another. Returns offspring."""
@@ -144,11 +150,12 @@ class DNARouter:
         self._chromosome.sort(key=lambda g: g.fitness, reverse=True)
 
         elite_count = max(1, int(len(self._chromosome) * self.ELITE_FRACTION))
-        # Elites survive unchanged; rest mutate
-        for gene in self._chromosome[elite_count:]:
+        non_elite = self._chromosome[elite_count:]
+        # Elites survive unchanged; only non-elite genes are mutated
+        for gene in non_elite:
             gene.generation = self._generation
-            if self._rng.random() < 0.3:
-                self.mutate(rate=0.2)
+        if non_elite and self._rng.random() < 0.3:
+            self.mutate(rate=0.2, genes=non_elite)
 
         # Update weights proportional to fitness
         total_fitness = sum(g.fitness for g in self._chromosome) or 1.0
