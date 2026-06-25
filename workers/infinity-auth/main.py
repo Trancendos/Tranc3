@@ -26,12 +26,9 @@ init_router_deps(worker_kit=worker_kit)
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.infinity-auth")
-        FastAPIInstrumentor.instrument_app(app)
+        instrument_worker(app, service_name="tranc3.infinity-auth", worker_port=PORT)
     except Exception:
         pass
     logger.info("Infinity Auth starting on port %d", PORT)

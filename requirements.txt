@@ -117,6 +117,8 @@ pyswarms==1.3.0
 
 # === Observability (activates src/observability/metrics.py declarations) ===
 prometheus-client==0.21.0
+# Auto-instrument every FastAPI route: http_requests_total, http_request_duration_seconds
+prometheus-fastapi-instrumentator==7.0.2
 opentelemetry-api==1.42.1
 opentelemetry-sdk==1.42.1
 opentelemetry-exporter-otlp-proto-grpc==1.42.1
@@ -124,6 +126,9 @@ opentelemetry-exporter-otlp-proto-http==1.42.1
 opentelemetry-instrumentation-fastapi==0.63b1
 opentelemetry-instrumentation-httpx==0.63b1
 opentelemetry-instrumentation-sqlalchemy==0.63b1
+# Redis + aiohttp auto-instrumentation (zero-cost span coverage for all workers)
+opentelemetry-instrumentation-redis==0.63b1
+opentelemetry-instrumentation-aiohttp-client==0.63b1
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)

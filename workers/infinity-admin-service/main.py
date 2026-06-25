@@ -63,12 +63,9 @@ init_router_deps(sentinel=sentinel, worker_kit=worker_kit, rbac_engine=rbac_engi
 async def _lifespan(app: FastAPI):
     # OpenTelemetry instrumentation (optional — never block startup)
     try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.infinity-admin-service")
-        FastAPIInstrumentor.instrument_app(app)
+        instrument_worker(app, service_name="tranc3.infinity-admin-service")
     except Exception:
         pass
 
