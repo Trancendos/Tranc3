@@ -4,7 +4,7 @@ Trancendos basement — Archived Information Store
 Long-term archive from The Observatory audit trail. Append-only,
 FTS5 full-text search, configurable retention pull from audit-service.
 
-Port: 8039  Entity: The Basement  Lead AI: Gary Glowman (Glow-Worm)
+Port: 8088  Entity: The Basement  Lead AI: Gary Glowman (Glow-Worm)
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = 8039
+WORKER_PORT = 8088
 WORKER_NAME = "basement"
 DB_PATH = Path(__file__).parent / "data" / "basement.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

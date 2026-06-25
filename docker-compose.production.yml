@@ -2849,6 +2849,740 @@ services:
     labels:
       - "traefik.enable=false"
 
+  # ═══════════════════════════════════════════════════════════════════════
+  # EXTENDED WORKER LAYER — All platform entities
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ── Imaginarium — omni-creative orchestrator (Port 8064) ──────────────────────────────────────────────
+  imaginarium:
+    build:
+      context: ./workers/imaginarium
+      dockerfile: Dockerfile
+    container_name: tranc3-imaginarium
+    <<: *worker-common
+    environment:
+      - PORT=8064
+    expose:
+      - "8064"
+    ports:
+      - "8064:8064"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8064/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.imaginarium.rule=PathPrefix(`/imaginarium`)"
+      - "traefik.http.routers.imaginarium.entrypoints=websecure"
+      - "traefik.http.services.imaginarium.loadbalancer.server.port=8064"
+
+  # ── TateKing — video creation / editing (Port 8066) ──────────────────────────────────────────────
+  tateking:
+    build:
+      context: ./workers/tateking
+      dockerfile: Dockerfile
+    container_name: tranc3-tateking
+    <<: *worker-common
+    environment:
+      - PORT=8066
+    expose:
+      - "8066"
+    ports:
+      - "8066:8066"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8066/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tateking.rule=PathPrefix(`/tateking`)"
+      - "traefik.http.routers.tateking.entrypoints=websecure"
+      - "traefik.http.services.tateking.loadbalancer.server.port=8066"
+
+  # ── Sashas Photo Studio — image generation (Port 8051) ──────────────────────────────────────────────
+  sashas-photo-studio:
+    build:
+      context: ./workers/sashas-photo-studio
+      dockerfile: Dockerfile
+    container_name: tranc3-sashas-photo-studio
+    <<: *worker-common
+    environment:
+      - PORT=8051
+    expose:
+      - "8051"
+    ports:
+      - "8051:8051"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sashas-photo-studio.rule=PathPrefix(`/sashas-photo-studio`)"
+      - "traefik.http.routers.sashas-photo-studio.entrypoints=websecure"
+      - "traefik.http.services.sashas-photo-studio.loadbalancer.server.port=8051"
+
+  # ── The Lab — code creation platform (Port 8055) ──────────────────────────────────────────────
+  the-lab:
+    build:
+      context: ./workers/the-lab
+      dockerfile: Dockerfile
+    container_name: tranc3-the-lab
+    <<: *worker-common
+    environment:
+      - PORT=8055
+    expose:
+      - "8055"
+    ports:
+      - "8055:8055"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8055/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.the-lab.rule=PathPrefix(`/the-lab`)"
+      - "traefik.http.routers.the-lab.entrypoints=websecure"
+      - "traefik.http.services.the-lab.loadbalancer.server.port=8055"
+
+  # ── Deep Agents Orchestrator — multi-agent coordination (Port 8037) ──────────────────────────────────────────────
+  deepagents-orchestrator-service:
+    build:
+      context: ./workers/deepagents-orchestrator-service
+      dockerfile: Dockerfile
+    container_name: tranc3-deepagents-orchestrator-service
+    <<: *worker-common
+    environment:
+      - PORT=8037
+    expose:
+      - "8037"
+    ports:
+      - "8037:8037"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8037/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.deepagents-orchestrator-service.rule=PathPrefix(`/deepagents-orchestrator`)"
+      - "traefik.http.routers.deepagents-orchestrator-service.entrypoints=websecure"
+      - "traefik.http.services.deepagents-orchestrator-service.loadbalancer.server.port=8037"
+
+  # ── tAimra — opt-in digital twin (Port 8065) ──────────────────────────────────────────────
+  taimra:
+    build:
+      context: ./workers/taimra
+      dockerfile: Dockerfile
+    container_name: tranc3-taimra
+    <<: *worker-common
+    environment:
+      - PORT=8065
+    expose:
+      - "8065"
+    ports:
+      - "8065:8065"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8065/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.taimra.rule=PathPrefix(`/taimra`)"
+      - "traefik.http.routers.taimra.entrypoints=websecure"
+      - "traefik.http.services.taimra.loadbalancer.server.port=8065"
+
+  # ── I-Mind — emotion sensitivity engine (Port 8059) ──────────────────────────────────────────────
+  imind:
+    build:
+      context: ./workers/imind
+      dockerfile: Dockerfile
+    container_name: tranc3-imind
+    <<: *worker-common
+    environment:
+      - PORT=8059
+    expose:
+      - "8059"
+    ports:
+      - "8059:8059"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8059/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.imind.rule=PathPrefix(`/imind`)"
+      - "traefik.http.routers.imind.entrypoints=websecure"
+      - "traefik.http.services.imind.loadbalancer.server.port=8059"
+
+  # ── Resonate — empathy engine (Port 8060) ──────────────────────────────────────────────
+  resonate:
+    build:
+      context: ./workers/resonate
+      dockerfile: Dockerfile
+    container_name: tranc3-resonate
+    <<: *worker-common
+    environment:
+      - PORT=8060
+    expose:
+      - "8060"
+    ports:
+      - "8060:8060"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.resonate.rule=PathPrefix(`/resonate`)"
+      - "traefik.http.routers.resonate.entrypoints=websecure"
+      - "traefik.http.services.resonate.loadbalancer.server.port=8060"
+
+  # ── Tranquility — wellbeing hub (Port 8058) ──────────────────────────────────────────────
+  tranquility:
+    build:
+      context: ./workers/tranquility
+      dockerfile: Dockerfile
+    container_name: tranc3-tranquility
+    <<: *worker-common
+    environment:
+      - PORT=8058
+    expose:
+      - "8058"
+    ports:
+      - "8058:8058"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8058/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranquility.rule=PathPrefix(`/tranquility`)"
+      - "traefik.http.routers.tranquility.entrypoints=websecure"
+      - "traefik.http.services.tranquility.loadbalancer.server.port=8058"
+
+  # ── The Studio — central creativity hub (Port 8069) ──────────────────────────────────────────────
+  the-studio:
+    build:
+      context: ./workers/the-studio
+      dockerfile: Dockerfile
+    container_name: tranc3-the-studio
+    <<: *worker-common
+    environment:
+      - PORT=8069
+    expose:
+      - "8069"
+    ports:
+      - "8069:8069"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8069/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.the-studio.rule=PathPrefix(`/the-studio`)"
+      - "traefik.http.routers.the-studio.entrypoints=websecure"
+      - "traefik.http.services.the-studio.loadbalancer.server.port=8069"
+
+  # ── The Academy — LMS / skill training (Port 8056) ──────────────────────────────────────────────
+  the-academy:
+    build:
+      context: ./workers/the-academy
+      dockerfile: Dockerfile
+    container_name: tranc3-the-academy
+    <<: *worker-common
+    environment:
+      - PORT=8056
+    expose:
+      - "8056"
+    ports:
+      - "8056:8056"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8056/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.the-academy.rule=PathPrefix(`/the-academy`)"
+      - "traefik.http.routers.the-academy.entrypoints=websecure"
+      - "traefik.http.services.the-academy.loadbalancer.server.port=8056"
+
+  # ── Turing's Hub — AI personality creator (Port 8085) ──────────────────────────────────────────────
+  turings-hub-service:
+    build:
+      context: ./workers/turings-hub-service
+      dockerfile: Dockerfile
+    container_name: tranc3-turings-hub-service
+    <<: *worker-common
+    environment:
+      - PORT=8085
+    expose:
+      - "8085"
+    ports:
+      - "8085:8085"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8085/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.turings-hub-service.rule=PathPrefix(`/turings-hub`)"
+      - "traefik.http.routers.turings-hub-service.entrypoints=websecure"
+      - "traefik.http.services.turings-hub-service.loadbalancer.server.port=8085"
+
+  # ── TranceFlow — 3D/game creation (Port 8067) ──────────────────────────────────────────────
+  tranceflow:
+    build:
+      context: ./workers/tranceflow
+      dockerfile: Dockerfile
+    container_name: tranc3-tranceflow
+    <<: *worker-common
+    environment:
+      - PORT=8067
+    expose:
+      - "8067"
+    ports:
+      - "8067:8067"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8067/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
+      - "traefik.http.routers.tranceflow.entrypoints=websecure"
+      - "traefik.http.services.tranceflow.loadbalancer.server.port=8067"
+
+  # ── VRAR3D — Three.js / A-Frame immersion (Port 8068) ──────────────────────────────────────────────
+  vrar3d:
+    build:
+      context: ./workers/vrar3d
+      dockerfile: Dockerfile
+    container_name: tranc3-vrar3d
+    <<: *worker-common
+    environment:
+      - PORT=8068
+    expose:
+      - "8068"
+    ports:
+      - "8068:8068"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8068/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
+      - "traefik.http.routers.vrar3d.entrypoints=websecure"
+      - "traefik.http.services.vrar3d.loadbalancer.server.port=8068"
+
+  # ── The Warp Tunnel — crypto scanner / quarantine (Port 8040) ──────────────────────────────────────────────
+  warp-tunnel:
+    build:
+      context: ./workers/warp-tunnel
+      dockerfile: Dockerfile
+    container_name: tranc3-warp-tunnel
+    <<: *worker-common
+    environment:
+      - PORT=8040
+    expose:
+      - "8040"
+    ports:
+      - "8040:8040"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8040/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.warp-tunnel.rule=PathPrefix(`/warp-tunnel`)"
+      - "traefik.http.routers.warp-tunnel.entrypoints=websecure"
+      - "traefik.http.services.warp-tunnel.loadbalancer.server.port=8040"
+
+  # ── Warp Radio — music/audio streaming (Port 8057) ──────────────────────────────────────────────
+  warp-radio:
+    build:
+      context: ./workers/warp-radio
+      dockerfile: Dockerfile
+    container_name: tranc3-warp-radio
+    <<: *worker-common
+    environment:
+      - PORT=8057
+    expose:
+      - "8057"
+    ports:
+      - "8057:8057"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8057/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.warp-radio.rule=PathPrefix(`/warp-radio`)"
+      - "traefik.http.routers.warp-radio.entrypoints=websecure"
+      - "traefik.http.services.warp-radio.loadbalancer.server.port=8057"
+
+  # ── The Dutchy — intelligence / market analysis (Port 8061) ──────────────────────────────────────────────
+  the-dutchy:
+    build:
+      context: ./workers/the-dutchy
+      dockerfile: Dockerfile
+    container_name: tranc3-the-dutchy
+    <<: *worker-common
+    environment:
+      - PORT=8061
+    expose:
+      - "8061"
+    ports:
+      - "8061:8061"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.the-dutchy.rule=PathPrefix(`/the-dutchy`)"
+      - "traefik.http.routers.the-dutchy.entrypoints=websecure"
+      - "traefik.http.services.the-dutchy.loadbalancer.server.port=8061"
+
+  # ── DevOcity — development ops hub (Port 8062) ──────────────────────────────────────────────
+  devocity:
+    build:
+      context: ./workers/devocity
+      dockerfile: Dockerfile
+    container_name: tranc3-devocity
+    <<: *worker-common
+    environment:
+      - PORT=8062
+    expose:
+      - "8062"
+    ports:
+      - "8062:8062"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8062/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.devocity.rule=PathPrefix(`/devocity`)"
+      - "traefik.http.routers.devocity.entrypoints=websecure"
+      - "traefik.http.services.devocity.loadbalancer.server.port=8062"
+
+  # ── The Chaos Party — testing platform (Port 8063) ──────────────────────────────────────────────
+  chaos-party:
+    build:
+      context: ./workers/chaos-party
+      dockerfile: Dockerfile
+    container_name: tranc3-chaos-party
+    <<: *worker-common
+    environment:
+      - PORT=8063
+    expose:
+      - "8063"
+    ports:
+      - "8063:8063"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8063/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chaos-party.rule=PathPrefix(`/chaos-party`)"
+      - "traefik.http.routers.chaos-party.entrypoints=websecure"
+      - "traefik.http.services.chaos-party.loadbalancer.server.port=8063"
+
+  # ── The Basement — archived info store (Port 8088) ──────────────────────────────────────────────
+  basement:
+    build:
+      context: ./workers/basement
+      dockerfile: Dockerfile
+    container_name: tranc3-basement
+    <<: *worker-common
+    environment:
+      - PORT=8088
+    expose:
+      - "8088"
+    ports:
+      - "8088:8088"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.basement.rule=PathPrefix(`/basement`)"
+      - "traefik.http.routers.basement.entrypoints=websecure"
+      - "traefik.http.services.basement.loadbalancer.server.port=8088"
+
+  # ── Backup Service — automated data backup (Port 8039) ──────────────────────────────────────────────
+  backup-service:
+    build:
+      context: ./workers/backup-service
+      dockerfile: Dockerfile
+    container_name: tranc3-backup-service
+    <<: *worker-common
+    environment:
+      - PORT=8039
+    expose:
+      - "8039"
+    ports:
+      - "8039:8039"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8039/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backup-service.rule=PathPrefix(`/backup`)"
+      - "traefik.http.routers.backup-service.entrypoints=websecure"
+      - "traefik.http.services.backup-service.loadbalancer.server.port=8039"
+
+  # ── LangChain — chain/RAG/agent orchestration (Port 8036) ──────────────────────────────────────────────
+  langchain-integration-service:
+    build:
+      context: ./workers/langchain-integration-service
+      dockerfile: Dockerfile
+    container_name: tranc3-langchain-integration-service
+    <<: *worker-common
+    environment:
+      - PORT=8036
+    expose:
+      - "8036"
+    ports:
+      - "8036:8036"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8036/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.langchain-integration-service.rule=PathPrefix(`/langchain-integration`)"
+      - "traefik.http.routers.langchain-integration-service.entrypoints=websecure"
+      - "traefik.http.services.langchain-integration-service.loadbalancer.server.port=8036"
+
+  # ── MLflow — experiment tracking (Port 8095) ──────────────────────────────────────────────
+  mlflow-service:
+    build:
+      context: ./workers/mlflow-service
+      dockerfile: Dockerfile
+    container_name: tranc3-mlflow-service
+    <<: *worker-common
+    environment:
+      - PORT=8095
+    expose:
+      - "8095"
+    ports:
+      - "8095:8095"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8095/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mlflow-service.rule=PathPrefix(`/mlflow`)"
+      - "traefik.http.routers.mlflow-service.entrypoints=websecure"
+      - "traefik.http.services.mlflow-service.loadbalancer.server.port=8095"
+
+  # ── LiteLLM — AI proxy x10 provider rotation (Port 8049) ──────────────────────────────────────────────
+  litellm-service:
+    build:
+      context: ./workers/litellm-service
+      dockerfile: Dockerfile
+    container_name: tranc3-litellm-service
+    <<: *worker-common
+    environment:
+      - PORT=8049
+    expose:
+      - "8049"
+    ports:
+      - "8049:8049"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8049/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.litellm-service.rule=PathPrefix(`/litellm`)"
+      - "traefik.http.routers.litellm-service.entrypoints=websecure"
+      - "traefik.http.services.litellm-service.loadbalancer.server.port=8049"
+
+  # ── The Artifactory — Zot OCI registry bridge (Port 8047) ──────────────────────────────────────────────
+  artifactory-service:
+    build:
+      context: ./workers/artifactory-service
+      dockerfile: Dockerfile
+    container_name: tranc3-artifactory-service
+    <<: *worker-common
+    environment:
+      - PORT=8047
+    expose:
+      - "8047"
+    ports:
+      - "8047:8047"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8047/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.artifactory-service.rule=PathPrefix(`/artifactory`)"
+      - "traefik.http.routers.artifactory-service.entrypoints=websecure"
+      - "traefik.http.services.artifactory-service.loadbalancer.server.port=8047"
+
+  # ── Sentinel Station — platform guardian (Port 8041) ──────────────────────────────────────────────
+  sentinel-station-service:
+    build:
+      context: ./workers/sentinel-station-service
+      dockerfile: Dockerfile
+    container_name: tranc3-sentinel-station-service
+    <<: *worker-common
+    environment:
+      - PORT=8041
+    expose:
+      - "8041"
+    ports:
+      - "8041:8041"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8041/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sentinel-station-service.rule=PathPrefix(`/sentinel-station`)"
+      - "traefik.http.routers.sentinel-station-service.entrypoints=websecure"
+      - "traefik.http.services.sentinel-station-service.loadbalancer.server.port=8041"
+
+  # ── Swarm Coordinator — agent swarm management (Port 8053) ──────────────────────────────────────────────
+  swarm-coordinator-service:
+    build:
+      context: ./workers/swarm-coordinator-service
+      dockerfile: Dockerfile
+    container_name: tranc3-swarm-coordinator-service
+    <<: *worker-common
+    environment:
+      - PORT=8053
+    expose:
+      - "8053"
+    ports:
+      - "8053:8053"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.swarm-coordinator-service.rule=PathPrefix(`/swarm-coordinator`)"
+      - "traefik.http.routers.swarm-coordinator-service.entrypoints=websecure"
+      - "traefik.http.services.swarm-coordinator-service.loadbalancer.server.port=8053"
+
+  # ── The HIVE — task queue / agent coordination (Port 8060) ──────────────────────────────────────────────
+  hive-service:
+    build:
+      context: ./workers/hive-service
+      dockerfile: Dockerfile
+    container_name: tranc3-hive-service
+    <<: *worker-common
+    environment:
+      - PORT=8060
+    expose:
+      - "8060"
+    ports:
+      - "8060:8060"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hive-service.rule=PathPrefix(`/hive`)"
+      - "traefik.http.routers.hive-service.entrypoints=websecure"
+      - "traefik.http.services.hive-service.loadbalancer.server.port=8060"
+
+  # ── The Ice Box — sandbox threat isolation (Port 8046) ──────────────────────────────────────────────
+  ice-box-service:
+    build:
+      context: ./workers/ice-box-service
+      dockerfile: Dockerfile
+    container_name: tranc3-ice-box-service
+    <<: *worker-common
+    environment:
+      - PORT=8046
+    expose:
+      - "8046"
+    ports:
+      - "8046:8046"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8046/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ice-box-service.rule=PathPrefix(`/ice-box`)"
+      - "traefik.http.routers.ice-box-service.entrypoints=websecure"
+      - "traefik.http.services.ice-box-service.loadbalancer.server.port=8046"
+
+  # ── Fabulousa — UX/UI/design hub (Port 8048) ──────────────────────────────────────────────
+  fabulousa-service:
+    build:
+      context: ./workers/fabulousa-service
+      dockerfile: Dockerfile
+    container_name: tranc3-fabulousa-service
+    <<: *worker-common
+    environment:
+      - PORT=8048
+    expose:
+      - "8048"
+    ports:
+      - "8048:8048"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8048/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fabulousa-service.rule=PathPrefix(`/fabulousa`)"
+      - "traefik.http.routers.fabulousa-service.entrypoints=websecure"
+      - "traefik.http.services.fabulousa-service.loadbalancer.server.port=8048"
+
+  # ── LlamaIndex Service — RAG framework (Port 8096) ───────────────────
+  llamaindex-service:
+    build:
+      context: ./workers/llamaindex-service
+      dockerfile: Dockerfile
+    container_name: tranc3-llamaindex-service
+    <<: *worker-common
+    environment:
+      - PORT=8096
+      - OLLAMA_URL=http://tranc3-ollama:11434
+    expose:
+      - "8096"
+    ports:
+      - "8096:8096"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8096/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.llamaindex.rule=PathPrefix(`/llamaindex`)"
+      - "traefik.http.routers.llamaindex.entrypoints=websecure"
+      - "traefik.http.services.llamaindex.loadbalancer.server.port=8096"
+
+  # ── Haystack Service — production RAG pipelines (Port 8097) ──────────
+  haystack-service:
+    build:
+      context: ./workers/haystack-service
+      dockerfile: Dockerfile
+    container_name: tranc3-haystack-service
+    <<: *worker-common
+    environment:
+      - PORT=8097
+      - OLLAMA_URL=http://tranc3-ollama:11434
+    expose:
+      - "8097"
+    ports:
+      - "8097:8097"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8097/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.haystack.rule=PathPrefix(`/haystack`)"
+      - "traefik.http.routers.haystack.entrypoints=websecure"
+      - "traefik.http.services.haystack.loadbalancer.server.port=8097"
+
+  # ── DSPy Service — programmatic LLM prompting (Port 8098) ────────────
+  dspy-service:
+    build:
+      context: ./workers/dspy-service
+      dockerfile: Dockerfile
+    container_name: tranc3-dspy-service
+    <<: *worker-common
+    environment:
+      - PORT=8098
+      - OLLAMA_URL=http://tranc3-ollama:11434
+    expose:
+      - "8098"
+    ports:
+      - "8098:8098"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8098/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dspy.rule=PathPrefix(`/dspy`)"
+      - "traefik.http.routers.dspy.entrypoints=websecure"
+      - "traefik.http.services.dspy.loadbalancer.server.port=8098"
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════

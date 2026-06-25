@@ -2,7 +2,7 @@
 Trancendos mlflow-service — Self-Hosted ML Experiment Tracking
 ===============================================================
 MLflow-compatible experiment tracking for Turing's Hub (3D AI entity builder,
-port 8035) and Luminous (AI brain, src/bio_neural/ + src/core/).
+port 8095) and Luminous (AI brain, src/bio_neural/ + src/core/).
 
 Architecture
 ------------
@@ -16,7 +16,7 @@ Port: 8039 (reserved in CLAUDE.md self-hosted worker map)
 
 Integrations
 ------------
-  Turing's Hub  (port 8035) — logs per-entity build experiments: personality
+  Turing's Hub  (port 8095) — logs per-entity build experiments: personality
                                matrix iterations, voice model tuning, memory
                                consolidation scores, 3D mesh quality metrics.
   Luminous      (src/bio_neural/) — logs neural architecture search, IIT

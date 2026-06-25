@@ -5,7 +5,7 @@ Full-text search engine built on SQLite FTS5. Supports multiple named
 indices, document ingestion, full-text queries with ranking (BM25),
 prefix search, and snippet highlighting.
 
-Port: 8017
+Port: 8083
 Zero-cost: FastAPI + SQLite FTS5 (built-in), no external deps.
 """
 
@@ -25,7 +25,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-WORKER_PORT = 8017
+WORKER_PORT", "8083
 WORKER_NAME = "search-service"
 DB_PATH = Path(__file__).parent / "data" / "search.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

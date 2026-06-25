@@ -223,9 +223,12 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | model-router-service | 8033 | P3 | `workers/model-router-service/` | AI model routing |
 | workflow-engine-service | 8034 | P3 | `workers/workflow-engine-service/` | The Digital Grid engine |
 | skills-benchmark-service | 8035 | P3 | `workers/skills-benchmark-service/` | Turing's Hub benchmarks |
-| langchain-integration-service | 8036 | P3 | `workers/langchain-integration-service/` | LangChain integration |
+| langchain-integration-service | 8036 | P3 | `workers/langchain-integration-service/` | LangChain — chain/RAG/agent orchestration |
+| llamaindex-service | 8096 | P3 | `workers/llamaindex-service/` | LlamaIndex — RAG framework / document Q&A |
+| haystack-service | 8097 | P3 | `workers/haystack-service/` | Haystack — production RAG pipelines |
+| dspy-service | 8098 | P3 | `workers/dspy-service/` | DSPy — programmatic LLM prompt compiler |
 | deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
-| vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault |
+| vault-service | 8086 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
 | mlflow-service | 8039 | P3 | `workers/mlflow-service/` | MLflow experiment tracking |
 | litellm-service | 8040 | P3 | `workers/litellm-service/` | LiteLLM zero-cost AI proxy (x10 provider rotation) |
 | artifactory-service | 8047 | P2 | `workers/artifactory-service/` | The Artifactory — Zot OCI registry bridge |
@@ -505,6 +508,8 @@ When building new services, prefer these vetted open-source projects:
 | LangChain / AI Framework | deepset-ai/haystack | 18K | Apache 2.0 |
 | LangChain / AI Framework | microsoft/semantic-kernel | 23K | MIT |
 | LangChain / AI Framework | stanfordnlp/dspy | 22K | MIT |
+| **Agent Frameworks** | microsoft/autogen | 35K | MIT |
+| Agent Frameworks | crewAIInc/crewAI | 25K | MIT |
 | **MLOps / Experiment Tracking** | mlflow/mlflow | 19K | Apache 2.0 |
 | MLOps / Experiment Tracking | wandb/wandb | 9K | MIT |
 | **Agent Orchestration** | microsoft/autogen | 35K | MIT |

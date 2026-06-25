@@ -1,5 +1,5 @@
 """
-Turing's Hub — 3D AI Model Builder Service (Port 8035)
+Turing's Hub — 3D AI Model Builder Service (Port 8085)
 ========================================================
 The pod/capsule that assembles all platform threads into a complete,
 living, functioning 3D AI entity. Draws from:
@@ -55,7 +55,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger("turings-hub")
 
 SERVICE_NAME = "turings-hub"
-PORT = 8035
+PORT = 8085
 
 # ---------------------------------------------------------------------------
 # Paths
