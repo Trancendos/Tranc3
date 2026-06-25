@@ -311,10 +311,17 @@ async def extract_thumbnail(req: ThumbnailRequest) -> dict[str, Any]:
     if not output_path or not Path(output_path).exists():
         raise HTTPException(status_code=404, detail="Video file not found")
 
+    # Re-validate stored path still resolves within OUTPUT_DIR
+    resolved_output = Path(output_path).resolve()
+    try:
+        resolved_output.relative_to(OUTPUT_DIR.resolve())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Video path not allowed") from exc
+
     thumb_path = OUTPUT_DIR / f"{req.job_id}_thumb.jpg"
     success, err = _run_ffmpeg(
         "-i",
-        output_path,
+        str(resolved_output),
         "-ss",
         str(req.timestamp_seconds),
         "-vframes",
@@ -342,8 +349,8 @@ async def get_video_status(job_id: str) -> dict[str, Any]:
                     job["status"] = "completed"
                 elif data.get("status") == "error":
                     job["status"] = "failed"
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Remotion status poll failed for %s: %s", job_id, exc)
 
     return {"job_id": job_id, **job}
 

@@ -152,7 +152,7 @@ class NanoCache:
                 except Exception as exc:
                     logger.debug("Gossip to %s failed: %s", peer, exc)
         except ImportError:
-            pass
+            logger.debug("httpx not available; gossip propagation skipped")
 
         return sent
 

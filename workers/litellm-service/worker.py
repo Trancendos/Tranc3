@@ -299,11 +299,15 @@ async def chat(body: ChatRequest) -> dict[str, Any]:
     # Hard-stop check
     available, reason = _provider_available(provider)
     if not available:
-        logger.warning("Provider %s at hard-stop: %s", provider, reason)
-        raise HTTPException(status_code=429, detail=f"Provider {provider} limit reached: {reason}")
+        safe_provider = (provider or "").replace("\n", "").replace("\r", "")[:50]
+        logger.warning("Provider %s at hard-stop: %s", safe_provider, reason)
+        raise HTTPException(
+            status_code=429, detail=f"Provider {safe_provider} limit reached: {reason}"
+        )
 
     if _provider_degraded(provider):
-        logger.info("Provider %s degraded (80%% limit) — using anyway", provider)
+        safe_provider = (provider or "").replace("\n", "").replace("\r", "")[:50]
+        logger.info("Provider %s degraded (80%% limit) — using anyway", safe_provider)
 
     headers: dict[str, str] = {"Content-Type": "application/json"}
     if LITELLM_MASTER_KEY:

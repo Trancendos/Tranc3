@@ -142,7 +142,8 @@ async def fabulousa_status() -> dict[str, Any]:
         await _penpot_get("/api/rpc/command/get-profile")
         penpot_ok = True
     except Exception as exc:
-        penpot_error = str(exc)
+        logger.warning("Penpot status check failed: %s", exc)
+        penpot_error = "Penpot unreachable"
 
     figma_ok = bool(FIGMA_TOKEN)
 
@@ -191,8 +192,8 @@ async def list_projects() -> dict[str, Any]:
                                     "source": "penpot",
                                 }
                             )
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Failed to get files for team %s: %s", team.get("id"), exc)
         _cache["projects"] = projects
         return {"projects": projects, "total": len(projects), "degraded": False}
     except Exception as exc:

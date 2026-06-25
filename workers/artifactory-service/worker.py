@@ -66,7 +66,25 @@ class PullRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+_ZOT_ALLOWED_PATHS: frozenset[str] = frozenset(
+    [
+        "/v2/",
+        "/v2/_catalog",
+    ]
+)
+
+
+def _validate_zot_path(path: str) -> None:
+    """Restrict Zot API calls to known safe path prefixes (prevent SSRF)."""
+    if path in _ZOT_ALLOWED_PATHS:
+        return
+    if path.startswith("/v2/") and path.endswith("/tags/list"):
+        return
+    raise ValueError(f"Zot path not permitted: {path}")
+
+
 async def _zot_get(path: str) -> Any:
+    _validate_zot_path(path)
     async with httpx.AsyncClient(timeout=_http_timeout) as client:
         resp = await client.get(f"{ZOT_URL}{path}")
         resp.raise_for_status()
@@ -144,7 +162,8 @@ async def artifactory_status() -> dict[str, Any]:
         await _zot_get("/v2/")
         zot_ok = True
     except Exception as exc:
-        zot_error = str(exc)
+        logger.warning("Zot status check failed: %s", exc)
+        zot_error = "Zot registry unreachable"
 
     return {
         "service": WORKER_NAME,
@@ -203,7 +222,7 @@ async def list_tags(repo: str) -> dict[str, Any]:
         return {"repo": repo, "tags": tags, "total": len(tags)}
     except Exception as exc:
         logger.warning("Zot tags unavailable for %s: %s", repo, exc)
-        return {"repo": repo, "tags": [], "total": 0, "error": str(exc)}
+        return {"repo": repo, "tags": [], "total": 0, "error": "Tags unavailable"}
 
 
 @app.post("/artifactory/repositories")
@@ -255,8 +274,8 @@ async def search_artifacts(q: str = "") -> dict[str, Any]:
         for repo in data.get("repositories", []):
             if not q or q.lower() in repo.lower():
                 results.append({"name": repo, "source": "zot"})
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Zot catalog search failed: %s", exc)
 
     if not results:
         local = _local_scan()
@@ -270,10 +289,17 @@ async def search_artifacts(q: str = "") -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _sanitize_log(value: str) -> str:
+    """Strip newlines and control chars to prevent log injection."""
+    return value.replace("\r", "").replace("\n", "").replace("\t", " ")[:200]
+
+
 @app.post("/artifactory/pull")
 async def log_pull(body: PullRequest) -> dict[str, Any]:
     """Log an image pull request (audit trail). Does not execute docker pull."""
-    logger.info("Artifact pull requested: image=%s repo=%s", body.image, body.repo)
+    safe_image = _sanitize_log(body.image)
+    safe_repo = _sanitize_log(body.repo or "")
+    logger.info("Artifact pull requested: image=%s repo=%s", safe_image, safe_repo)
     return {
         "logged": True,
         "image": body.image,

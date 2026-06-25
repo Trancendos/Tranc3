@@ -198,8 +198,8 @@ async def status() -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=httpx.Timeout(3.0)) as client:
             r = await client.get(f"{TABBY_URL}/v1/health")
             tabby_ok = r.status_code == 200
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Tabby status check failed: %s", exc)
     return {
         "entity": "The Lab",
         "lead_ai": "The Dr. & Slime",
