@@ -22,4 +22,5 @@ ignore:
   - "deploy/**"
   - "monitoring/**"
   - "tranc3-bots/**"
+  - "src/observability/worker_setup.py"
   - "*.md"
