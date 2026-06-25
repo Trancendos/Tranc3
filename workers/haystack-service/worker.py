@@ -136,6 +136,7 @@ async def status() -> dict[str, Any]:
 @app.post("/haystack/pipelines")
 async def create_pipeline(body: PipelineCreate) -> dict[str, Any]:
     import json
+
     pid = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     try:
@@ -152,6 +153,7 @@ async def create_pipeline(body: PipelineCreate) -> dict[str, Any]:
 @app.get("/haystack/pipelines")
 async def list_pipelines() -> dict[str, Any]:
     import json
+
     rows = db().execute("SELECT * FROM pipelines ORDER BY created_at DESC").fetchall()
     result = []
     for r in rows:
@@ -164,6 +166,7 @@ async def list_pipelines() -> dict[str, Any]:
 @app.post("/haystack/documents")
 async def add_document(body: DocumentAdd) -> dict[str, Any]:
     import json
+
     row = db().execute("SELECT id FROM pipelines WHERE id=?", (body.pipeline_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Pipeline not found")
@@ -180,17 +183,29 @@ async def add_document(body: DocumentAdd) -> dict[str, Any]:
 @app.post("/haystack/run")
 async def run_pipeline(body: PipelineRun) -> dict[str, Any]:
     import json
+
     row = db().execute("SELECT * FROM pipelines WHERE id=?", (body.pipeline_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Pipeline not found")
     start = datetime.now(timezone.utc)
-    docs = db().execute(
-        "SELECT content, meta FROM documents WHERE pipeline_id=? LIMIT ?",
-        (body.pipeline_id, body.top_k * 5),
-    ).fetchall()
+    docs = (
+        db()
+        .execute(
+            "SELECT content, meta FROM documents WHERE pipeline_id=? LIMIT ?",
+            (body.pipeline_id, body.top_k * 5),
+        )
+        .fetchall()
+    )
     q_lower = body.query.lower()
     scored = sorted(
-        [(sum(1 for w in q_lower.split() if w in d["content"].lower()), d["content"][:600], json.loads(d["meta"])) for d in docs],
+        [
+            (
+                sum(1 for w in q_lower.split() if w in d["content"].lower()),
+                d["content"][:600],
+                json.loads(d["meta"]),
+            )
+            for d in docs
+        ],
         reverse=True,
     )[: body.top_k]
     latency = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
@@ -202,7 +217,9 @@ async def run_pipeline(body: PipelineRun) -> dict[str, Any]:
         (run_id, body.pipeline_id, body.query, result_payload, latency, now),
     )
     db().commit()
-    logger.info("Pipeline %s run %s — %d results in %dms", body.pipeline_id, run_id, len(scored), latency)
+    logger.info(
+        "Pipeline %s run %s — %d results in %dms", body.pipeline_id, run_id, len(scored), latency
+    )
     return {
         "run_id": run_id,
         "query": body.query,
@@ -212,16 +229,28 @@ async def run_pipeline(body: PipelineRun) -> dict[str, Any]:
 
 
 @app.get("/haystack/runs")
-async def list_runs(pipeline_id: Optional[str] = Query(None), limit: int = Query(50, le=200)) -> dict[str, Any]:
+async def list_runs(
+    pipeline_id: Optional[str] = Query(None), limit: int = Query(50, le=200)
+) -> dict[str, Any]:
     if pipeline_id:
-        rows = db().execute(
-            "SELECT * FROM pipeline_runs WHERE pipeline_id=? ORDER BY created_at DESC LIMIT ?", (pipeline_id, limit)
-        ).fetchall()
+        rows = (
+            db()
+            .execute(
+                "SELECT * FROM pipeline_runs WHERE pipeline_id=? ORDER BY created_at DESC LIMIT ?",
+                (pipeline_id, limit),
+            )
+            .fetchall()
+        )
     else:
-        rows = db().execute("SELECT * FROM pipeline_runs ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+        rows = (
+            db()
+            .execute("SELECT * FROM pipeline_runs ORDER BY created_at DESC LIMIT ?", (limit,))
+            .fetchall()
+        )
     return {"runs": [dict(r) for r in rows], "total": len(rows)}
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

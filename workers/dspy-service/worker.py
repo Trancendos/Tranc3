@@ -88,6 +88,7 @@ def db() -> sqlite3.Connection:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class ProgramCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str = ""
@@ -109,12 +110,15 @@ class ProgramExecute(BaseModel):
 
 class CompileRequest(BaseModel):
     program_id: str
-    optimizer: str = Field(default="BootstrapFewShot", description="BootstrapFewShot | MIPROv2 | COPRO")
+    optimizer: str = Field(
+        default="BootstrapFewShot", description="BootstrapFewShot | MIPROv2 | COPRO"
+    )
 
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -132,6 +136,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
@@ -188,6 +193,7 @@ async def get_program(program_id: str) -> dict[str, Any]:
 @app.post("/dspy/examples")
 async def add_example(body: ExampleAdd) -> dict[str, Any]:
     import json
+
     row = db().execute("SELECT id FROM programs WHERE id=?", (body.program_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -212,13 +218,18 @@ async def compile_program(body: CompileRequest) -> dict[str, Any]:
     In production this would call actual DSPy with BootstrapFewShot/MIPROv2/COPRO.
     """
     import json
+
     row = db().execute("SELECT * FROM programs WHERE id=?", (body.program_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Program not found")
-    examples = db().execute(
-        "SELECT input_data, expected_output FROM examples WHERE program_id=? LIMIT 10",
-        (body.program_id,),
-    ).fetchall()
+    examples = (
+        db()
+        .execute(
+            "SELECT input_data, expected_output FROM examples WHERE program_id=? LIMIT 10",
+            (body.program_id,),
+        )
+        .fetchall()
+    )
     # Build few-shot prompt from examples
     few_shot = ""
     for ex in examples:
@@ -232,7 +243,9 @@ async def compile_program(body: CompileRequest) -> dict[str, Any]:
         (optimized, now, body.program_id),
     )
     db().commit()
-    logger.info("Compiled program %s with %s (%d examples)", body.program_id, body.optimizer, len(examples))
+    logger.info(
+        "Compiled program %s with %s (%d examples)", body.program_id, body.optimizer, len(examples)
+    )
     return {
         "program_id": body.program_id,
         "optimizer": body.optimizer,
@@ -245,35 +258,68 @@ async def compile_program(body: CompileRequest) -> dict[str, Any]:
 @app.post("/dspy/execute")
 async def execute_program(body: ProgramExecute) -> dict[str, Any]:
     import json
+
     row = db().execute("SELECT * FROM programs WHERE id=?", (body.program_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Program not found")
     start = datetime.now(timezone.utc)
-    prompt = row["optimized_prompt"] if body.use_optimized and row["optimized_prompt"] else row["signature"]
+    prompt = (
+        row["optimized_prompt"]
+        if body.use_optimized and row["optimized_prompt"]
+        else row["signature"]
+    )
     # Stub execution — returns structured response based on signature
-    output = {"result": f"Executed '{row['name']}' with input {body.input_data}", "prompt_used": prompt[:100]}
+    output = {
+        "result": f"Executed '{row['name']}' with input {body.input_data}",
+        "prompt_used": prompt[:100],
+    }
     latency = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
     exec_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     db().execute(
         "INSERT INTO executions (id, program_id, input_data, output, confidence, latency_ms, created_at) VALUES (?,?,?,?,?,?,?)",
-        (exec_id, body.program_id, json.dumps(body.input_data), json.dumps(output), 0.85, latency, now),
+        (
+            exec_id,
+            body.program_id,
+            json.dumps(body.input_data),
+            json.dumps(output),
+            0.85,
+            latency,
+            now,
+        ),
     )
     db().commit()
-    return {"execution_id": exec_id, "program_id": body.program_id, "output": output, "latency_ms": latency}
+    return {
+        "execution_id": exec_id,
+        "program_id": body.program_id,
+        "output": output,
+        "latency_ms": latency,
+    }
 
 
 @app.get("/dspy/executions")
-async def list_executions(program_id: Optional[str] = Query(None), limit: int = Query(50, le=200)) -> dict[str, Any]:
+async def list_executions(
+    program_id: Optional[str] = Query(None), limit: int = Query(50, le=200)
+) -> dict[str, Any]:
     if program_id:
-        rows = db().execute(
-            "SELECT * FROM executions WHERE program_id=? ORDER BY created_at DESC LIMIT ?", (program_id, limit)
-        ).fetchall()
+        rows = (
+            db()
+            .execute(
+                "SELECT * FROM executions WHERE program_id=? ORDER BY created_at DESC LIMIT ?",
+                (program_id, limit),
+            )
+            .fetchall()
+        )
     else:
-        rows = db().execute("SELECT * FROM executions ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+        rows = (
+            db()
+            .execute("SELECT * FROM executions ORDER BY created_at DESC LIMIT ?", (limit,))
+            .fetchall()
+        )
     return {"executions": [dict(r) for r in rows], "total": len(rows)}
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

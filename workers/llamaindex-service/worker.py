@@ -42,6 +42,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Database
 # ---------------------------------------------------------------------------
 
+
 def _init_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", exist_ok=True)
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -93,6 +94,7 @@ def db() -> sqlite3.Connection:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class IndexCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str = ""
@@ -114,6 +116,7 @@ class QueryRequest(BaseModel):
 # App
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db()
@@ -130,6 +133,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
@@ -188,10 +192,19 @@ async def ingest_document(body: DocumentIngest) -> dict[str, Any]:
         "INSERT INTO documents (id, index_id, filename, content, chunk_count, status, created_at) VALUES (?,?,?,?,?,?,?)",
         (doc_id, body.index_id, body.filename, body.content, len(chunks), "indexed", now),
     )
-    db().execute("UPDATE indexes SET doc_count=doc_count+1, updated_at=? WHERE id=?", (now, body.index_id))
+    db().execute(
+        "UPDATE indexes SET doc_count=doc_count+1, updated_at=? WHERE id=?", (now, body.index_id)
+    )
     db().commit()
-    logger.info("Ingested document %s into index %s (%d chunks)", doc_id, body.index_id, len(chunks))
-    return {"id": doc_id, "index_id": body.index_id, "chunk_count": len(chunks), "status": "indexed"}
+    logger.info(
+        "Ingested document %s into index %s (%d chunks)", doc_id, body.index_id, len(chunks)
+    )
+    return {
+        "id": doc_id,
+        "index_id": body.index_id,
+        "chunk_count": len(chunks),
+        "status": "indexed",
+    }
 
 
 @app.post("/llamaindex/query")
@@ -200,10 +213,14 @@ async def query_index(body: QueryRequest) -> dict[str, Any]:
     if not row:
         raise HTTPException(status_code=404, detail="Index not found")
     start = datetime.now(timezone.utc)
-    docs = db().execute(
-        "SELECT content, filename FROM documents WHERE index_id=? AND status='indexed' LIMIT ?",
-        (body.index_id, body.top_k * 10),
-    ).fetchall()
+    docs = (
+        db()
+        .execute(
+            "SELECT content, filename FROM documents WHERE index_id=? AND status='indexed' LIMIT ?",
+            (body.index_id, body.top_k * 10),
+        )
+        .fetchall()
+    )
     # Simple keyword relevance scoring (no external deps needed)
     query_lower = body.query.lower()
     scored = []
@@ -231,16 +248,28 @@ async def query_index(body: QueryRequest) -> dict[str, Any]:
 
 
 @app.get("/llamaindex/queries")
-async def list_queries(index_id: Optional[str] = Query(None), limit: int = Query(50, le=200)) -> dict[str, Any]:
+async def list_queries(
+    index_id: Optional[str] = Query(None), limit: int = Query(50, le=200)
+) -> dict[str, Any]:
     if index_id:
-        rows = db().execute(
-            "SELECT * FROM queries WHERE index_id=? ORDER BY created_at DESC LIMIT ?", (index_id, limit)
-        ).fetchall()
+        rows = (
+            db()
+            .execute(
+                "SELECT * FROM queries WHERE index_id=? ORDER BY created_at DESC LIMIT ?",
+                (index_id, limit),
+            )
+            .fetchall()
+        )
     else:
-        rows = db().execute("SELECT * FROM queries ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+        rows = (
+            db()
+            .execute("SELECT * FROM queries ORDER BY created_at DESC LIMIT ?", (limit,))
+            .fetchall()
+        )
     return {"queries": [dict(r) for r in rows], "total": len(rows)}
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)
