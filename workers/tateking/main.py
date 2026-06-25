@@ -70,7 +70,7 @@ class VideoCreateRequest(BaseModel):
 
 
 class ComposeRequest(BaseModel):
-    input_paths: list[str]
+    input_paths: list[str]  # job IDs; paths are resolved server-side from _jobs
     output_name: str = ""
     transition: str = "none"  # none, fade, dissolve
 
@@ -260,23 +260,25 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     if not req.input_paths:
         raise HTTPException(status_code=400, detail="No input paths provided")
 
-    # Validate all input paths resolve within OUTPUT_DIR (prevent path traversal).
-    # We check for ".." components before Path.resolve() so the taint never reaches
-    # a filesystem call with user-controlled data.
+    # Resolve job IDs to trusted output paths stored in _jobs (server-side only).
+    # User-supplied strings are used only as dict keys — they never flow into Path().
     resolved_output_dir = OUTPUT_DIR.resolve()
     safe_paths: list[str] = []
-    for raw in req.input_paths:
-        candidate = Path(raw)
-        if ".." in candidate.parts:
-            raise HTTPException(status_code=400, detail=f"Input path not allowed: {raw}")
-        resolved = (resolved_output_dir / candidate.name).resolve()
+    for job_id_input in req.input_paths:
+        job = _jobs.get(job_id_input)
+        if not job or not job.get("output_path"):
+            raise HTTPException(status_code=400, detail=f"Job not found: {job_id_input}")
+        stored_path = job["output_path"]  # trusted: written by this service, not the caller
+        resolved = Path(stored_path).resolve()
         try:
             resolved.relative_to(resolved_output_dir)
         except ValueError as exc:
             raise HTTPException(
                 status_code=400,
-                detail=f"Input path not allowed: {raw}",
+                detail="Job path not allowed",
             ) from exc
+        if not resolved.exists():
+            raise HTTPException(status_code=404, detail=f"File not found for job: {job_id_input}")
         safe_paths.append(str(resolved))
 
     # Build concat input
