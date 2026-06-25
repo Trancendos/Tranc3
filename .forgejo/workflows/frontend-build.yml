@@ -63,24 +63,11 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: web
-
-      - name: Build production bundle
-        run: npm run build
-        working-directory: web
-        env:
-          VITE_API_URL: 'https://api.trancendos.com'
-          VITE_ECOSYSTEM_API_URL: 'https://api.trancendos.com'
+          name: tranc3-web-dist
+          path: web/dist
 
       - name: Install Wrangler
         run: npm install -g wrangler

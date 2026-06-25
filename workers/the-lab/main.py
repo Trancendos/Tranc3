@@ -419,41 +419,6 @@ async def lab_run(req: RunRequest) -> dict[str, Any]:
         "Deploy with gVisor or Firecracker to enable.",
     )
 
-    # Dead code below retained for reference when sandbox is wired up:
-    if req.language not in ("python",):  # noqa: unreachable
-        raise HTTPException(
-            status_code=400, detail=f"Sandboxed execution not supported for {req.language}"
-        )
-
-    _validate_code(req.code)
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(req.code)
-        code_file = f.name
-
-    try:
-        # nosec S603 — intentional sandboxed execution; dangerous imports blocked above
-        result = subprocess.run(  # noqa: S603
-            [sys.executable, code_file],
-            input=req.stdin,
-            capture_output=True,
-            text=True,
-            timeout=req.timeout_seconds,
-        )
-        return {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "exit_code": result.returncode,
-            "language": req.language,
-            "executed": True,
-        }
-    except subprocess.TimeoutExpired:
-        return {"stdout": "", "stderr": "Execution timed out", "exit_code": -1, "executed": True}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Execution failed: {exc}") from exc
-    finally:
-        os.unlink(code_file)
-
 
 @app.get("/workspaces")
 async def workspaces() -> dict[str, Any]:

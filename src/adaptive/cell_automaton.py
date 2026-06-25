@@ -136,8 +136,12 @@ class CellAutomaton:
                 cell.health_score = pending_health[name]
                 cell.last_state_change = now
             elif name in pending_health:
+                old_state = cell.state
                 cell.health_score = pending_health[name]
-                cell._update_state()
+                if old_state == CellState.REGENERATING and cell.health_score < 0.6:
+                    pass  # keep REGENERATING until health crosses recovery threshold
+                else:
+                    cell._update_state()
             new_states[name] = cell.state
 
         return new_states

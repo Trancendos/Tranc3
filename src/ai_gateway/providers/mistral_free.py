@@ -72,21 +72,24 @@ class MistralFreeProvider(AIProvider):
             api_key=api_key or os.getenv("MISTRAL_API_KEY", ""),
         )
         self._default_model = default_model
-        self._db = _open_db()
+        # Ensure schema exists at startup; do not hold a persistent connection.
+        _open_db().close()
 
     def _get_monthly_tokens(self) -> int:
-        row = self._db.execute(
-            "SELECT tokens_used FROM monthly_budget WHERE month=?", (_current_month(),)
-        ).fetchone()
+        with _open_db() as conn:
+            row = conn.execute(
+                "SELECT tokens_used FROM monthly_budget WHERE month=?", (_current_month(),)
+            ).fetchone()
         return row[0] if row else 0
 
     def _add_monthly_tokens(self, count: int) -> None:
-        self._db.execute(
-            "INSERT INTO monthly_budget (month, tokens_used) VALUES (?, ?) "
-            "ON CONFLICT(month) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used",
-            (_current_month(), count),
-        )
-        self._db.commit()
+        with _open_db() as conn:
+            conn.execute(
+                "INSERT INTO monthly_budget (month, tokens_used) VALUES (?, ?) "
+                "ON CONFLICT(month) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used",
+                (_current_month(), count),
+            )
+            conn.commit()
 
     def _budget_ok(self) -> bool:
         return self._get_monthly_tokens() < int(_MONTHLY_TOKEN_BUDGET * _STOP_THRESHOLD)
@@ -98,9 +101,10 @@ class MistralFreeProvider(AIProvider):
                 "no credit card needed. Free tier: 500K tokens/month."
             )
         if not self._budget_ok():
+            used = self._get_monthly_tokens()
             raise RuntimeError(
                 f"Mistral free monthly budget exhausted "
-                f"({self._monthly_tokens_used:,}/{_MONTHLY_TOKEN_BUDGET:,} tokens). "
+                f"({used:,}/{_MONTHLY_TOKEN_BUDGET:,} tokens). "
                 "Rotating to next provider."
             )
 

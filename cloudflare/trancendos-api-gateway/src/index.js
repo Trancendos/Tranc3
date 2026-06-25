@@ -146,6 +146,15 @@ async function proxy(request, targetBase, targetPath, requestId) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+// Circuit breakers at module scope so state persists across requests in the same isolate
+const cb = {
+  users:    new CircuitBreaker("users"),
+  products: new CircuitBreaker("products"),
+  orders:   new CircuitBreaker("orders"),
+  payments: new CircuitBreaker("payments"),
+  ai:       new CircuitBreaker("ai"),
+};
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
@@ -190,14 +199,6 @@ export default {
       "X-RateLimit-Reset": String(resetAt),
     };
 
-    const cb = {
-      users:    new CircuitBreaker("users"),
-      products: new CircuitBreaker("products"),
-      orders:   new CircuitBreaker("orders"),
-      payments: new CircuitBreaker("payments"),
-      ai:       new CircuitBreaker("ai"),
-    };
-
     // Health
     if (path === "/health" && method === "GET") {
       return jsonResp({
@@ -226,25 +227,24 @@ export default {
     let targetService = null;
     let targetPath    = null;
     let breaker       = null;
-    let requiresAuth  = true;
 
     // Public (no auth)
     if (path === "/health" || path === "/api/health" || path.startsWith("/health/")) {
       targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
-      targetPath = path; breaker = cb.ai; requiresAuth = false;
+      targetPath = path; breaker = cb.ai;
     } else if (path.startsWith("/mcp") || path.startsWith("/api/mcp")) {
       // MCP tools authenticate at the MCP layer, not the gateway
       targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
-      targetPath = path; breaker = cb.ai; requiresAuth = false;
+      targetPath = path; breaker = cb.ai;
     } else if (path.startsWith("/api/auth")) {
       targetService = env.USERS_SERVICE_URL; targetPath = path.replace("/api/auth", "");
-      breaker = cb.users; requiresAuth = false;
+      breaker = cb.users;
     } else if (path.startsWith("/api/categories")) {
       targetService = env.PRODUCTS_SERVICE_URL; targetPath = path.replace("/api/categories", "/categories");
-      breaker = cb.products; requiresAuth = false;
+      breaker = cb.products;
     } else if (path.startsWith("/api/products") && method === "GET") {
       targetService = env.PRODUCTS_SERVICE_URL; targetPath = path.replace("/api/products", "/products");
-      breaker = cb.products; requiresAuth = false;
+      breaker = cb.products;
     }
 
     // Auth-protected (with JWT check)
