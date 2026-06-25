@@ -241,8 +241,8 @@ class TestInstrumentWorker:
     def test_instrument_worker_prometheus_branch(self):
         """Prometheus branch executes when prometheus_fastapi_instrumentator is present."""
         import sys
-        import importlib
         from fastapi import FastAPI
+        from src.observability.worker_setup import instrument_worker
 
         fake_pfi, fake_inst = self._make_fake_instrumentator()
         fake_otel_init = MagicMock()
@@ -257,12 +257,9 @@ class TestInstrumentWorker:
             "opentelemetry.instrumentation.redis": MagicMock(),
             "opentelemetry.instrumentation.aiohttp_client": MagicMock(),
         }
+        app = FastAPI()
         with patch.dict(sys.modules, patches):
-            import src.observability.worker_setup as ws_mod
-
-            importlib.reload(ws_mod)
-            app = FastAPI()
-            ws_mod.instrument_worker(app, service_name="tranc3.test", worker_port=9999)
+            instrument_worker(app, service_name="tranc3.test", worker_port=9999)
 
         # Prometheus instrumentator was called
         fake_pfi.Instrumentator.assert_called_once()
@@ -276,19 +273,16 @@ class TestInstrumentWorker:
     def test_instrument_worker_prometheus_disabled_via_env(self):
         """PROMETHEUS_ENABLED=false skips Prometheus branch."""
         import sys
-        import importlib
         import os
         from fastapi import FastAPI
+        from src.observability.worker_setup import instrument_worker
 
         fake_pfi, fake_inst = self._make_fake_instrumentator()
         patches = {"prometheus_fastapi_instrumentator": fake_pfi}
+        app = FastAPI()
         with patch.dict(sys.modules, patches):
             with patch.dict(os.environ, {"PROMETHEUS_ENABLED": "false"}):
-                import src.observability.worker_setup as ws_mod
-
-                importlib.reload(ws_mod)
-                app = FastAPI()
-                ws_mod.instrument_worker(app, service_name="tranc3.test", enable_otel=False)
+                instrument_worker(app, service_name="tranc3.test", enable_otel=False)
 
         # Prometheus branch skipped
         fake_pfi.Instrumentator.assert_not_called()
@@ -307,23 +301,20 @@ class TestInstrumentWorker:
     def test_instrument_worker_prometheus_import_error(self):
         """ImportError on prometheus package degrades gracefully."""
         import sys
-        import importlib
         from fastapi import FastAPI
+        from src.observability.worker_setup import instrument_worker
 
+        app = FastAPI()
         with patch.dict(sys.modules, {"prometheus_fastapi_instrumentator": None}):
-            import src.observability.worker_setup as ws_mod
-
-            importlib.reload(ws_mod)
-            app = FastAPI()
-            ws_mod.instrument_worker(app, service_name="tranc3.test", enable_otel=False)
+            instrument_worker(app, service_name="tranc3.test", enable_otel=False)
 
         assert app.state._tranc3_instrumented is True
 
     def test_instrument_worker_exclude_paths(self):
         """Custom exclude_paths are merged with default exclusions."""
         import sys
-        import importlib
         from fastapi import FastAPI
+        from src.observability.worker_setup import instrument_worker
 
         fake_pfi, fake_inst = self._make_fake_instrumentator()
         patches = {
@@ -333,12 +324,9 @@ class TestInstrumentWorker:
             "opentelemetry.instrumentation.redis": MagicMock(),
             "opentelemetry.instrumentation.aiohttp_client": MagicMock(),
         }
+        app = FastAPI()
         with patch.dict(sys.modules, patches):
-            import src.observability.worker_setup as ws_mod
-
-            importlib.reload(ws_mod)
-            app = FastAPI()
-            ws_mod.instrument_worker(
+            instrument_worker(
                 app,
                 service_name="tranc3.test",
                 exclude_paths=["/custom-exclude"],
