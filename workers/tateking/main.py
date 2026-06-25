@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -92,13 +93,18 @@ class ThumbnailRequest(BaseModel):
 
 def _run_ffmpeg(*args: str, timeout: int = 120) -> tuple[bool, str]:
     """Run ffmpeg with given args. Returns (success, output)."""
-    cmd = [FFMPEG_PATH, "-y", *args]
+    ffmpeg_bin = shutil.which(FFMPEG_PATH)
+    if not ffmpeg_bin:
+        return False, f"FFmpeg not found: {FFMPEG_PATH}"
+    # Use shlex.quote on each argument to prevent command injection
+    cmd = [ffmpeg_bin, "-y", *[shlex.quote(a) for a in args]]
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=timeout,
+            shell=False,
         )
         return result.returncode == 0, result.stderr
     except subprocess.TimeoutExpired:
