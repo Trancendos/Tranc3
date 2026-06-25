@@ -1,5 +1,10 @@
 # TRANC3 — Core AI Platform
 
+[![Codecov](https://codecov.io/gh/Trancendos/Tranc3/branch/main/graph/badge.svg)](https://codecov.io/gh/Trancendos/Tranc3)
+[![Ruff](https://img.shields.io/badge/linter-ruff-blue)](https://github.com/astral-sh/ruff)
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors)
+[![Mergify](https://img.shields.io/endpoint.svg?url=https://dashboard.mergify.com/badges/Trancendos/Tranc3&style=flat)](https://mergify.com)
+
 A self-hosted, zero-cost AI platform built from the ground up. Custom transformer model, autonomous agent orchestration, encrypted secrets vault, and a full observability stack — all running on your infrastructure with no paid external dependencies.
 
 ---
@@ -245,6 +250,35 @@ It will be available immediately — no restart, no retraining.
 | [CF Worker Migration Roadmap](CF_WORKER_MIGRATION_ROADMAP.md) | Cloudflare → self-hosted plan |
 | [Security Assessment](SECURITY-ASSESSMENT.md) | Vulnerability analysis |
 | [Project Pulse](PROJECT_PULSE.md) | Current status + metrics |
+
+---
+
+## Contributors
+
+Thanks to all contributors who have helped build the Trancendos platform:
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not edit this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/Trancendos">
+          <img src="https://github.com/Trancendos.png" width="100px;" alt="Trancendos"/>
+          <br /><sub><b>Trancendos</b></sub>
+        </a>
+        <br />
+        💻 🎨 📖 🤔 🚇 🚧 📆 👀 🛡️
+      </td>
+    </tr>
+  </tbody>
+</table>
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+To add yourself: comment `@all-contributors please add @username for code,doc` on any PR or issue.
 
 ---
 

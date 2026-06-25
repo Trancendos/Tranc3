@@ -1,0 +1,30 @@
+{
+  "projectName": "Tranc3",
+  "projectOwner": "Trancendos",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": ["README.md"],
+  "imageSize": 100,
+  "commit": false,
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "contributors": [
+    {
+      "login": "Trancendos",
+      "name": "Trancendos",
+      "avatar_url": "https://github.com/Trancendos.png",
+      "profile": "https://github.com/Trancendos",
+      "contributions": [
+        "code",
+        "design",
+        "doc",
+        "ideas",
+        "infra",
+        "maintenance",
+        "projectManagement",
+        "review",
+        "security"
+      ]
+    }
+  ]
+}

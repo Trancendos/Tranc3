@@ -1,0 +1,108 @@
+---
+# Mergify — free for open-source repos
+# https://docs.mergify.com/
+
+pull_request_rules:
+
+  # ── Auto-merge: Renovate patch/minor after CI green ──────────────────
+  - name: Auto-merge Renovate patch updates
+    conditions:
+      - author=renovate[bot]
+      - label=dependencies
+      - "-label~=major-update"
+      - "-label~=ai-framework"
+      - "-label~=security"
+      - check-success=Ruff Lint
+      - check-success=Pytest
+      - "-draft"
+    actions:
+      merge:
+        method: squash
+        commit_message_template: |
+          {{ title }} (#{{ number }})
+          {{ body }}
+
+  # ── Auto-merge: Renovate GitHub Actions digest bumps ─────────────────
+  - name: Auto-merge Renovate GitHub Actions updates
+    conditions:
+      - author=renovate[bot]
+      - label=dependencies
+      - "title~=^(chore|fix)\\(deps\\): update"
+      - check-success=Ruff Lint
+      - "-draft"
+    actions:
+      merge:
+        method: squash
+
+  # ── Auto-label by file path ───────────────────────────────────────────
+  - name: Label worker changes
+    conditions:
+      - "files~=^workers/"
+    actions:
+      label:
+        add: [worker]
+
+  - name: Label CI changes
+    conditions:
+      - "files~=^(\\.github/|\\.forgejo/)"
+    actions:
+      label:
+        add: [ci]
+
+  - name: Label AI framework changes
+    conditions:
+      - "files~=^workers/(langchain|llamaindex|haystack|dspy)-service/"
+    actions:
+      label:
+        add: [ai-framework]
+
+  - name: Label security changes
+    conditions:
+      - "files~=^(workers/cryptex|workers/vault-service|workers/warp-tunnel|src/auth|src/security)/"
+    actions:
+      label:
+        add: [security]
+
+  # ── Request review for major dependency updates ───────────────────────
+  - name: Request review on major dependency updates
+    conditions:
+      - author=renovate[bot]
+      - "label~=major-update"
+    actions:
+      request_reviews:
+        users: [Trancendos]
+      comment:
+        message: |
+          🚨 **Major dependency update** — manual review required before merge.
+          Please check the changelog and test locally before approving.
+
+  # ── Auto-close stale WIP PRs ─────────────────────────────────────────
+  - name: Warn on stale draft PRs
+    conditions:
+      - draft=true
+      - "updated-at<7 days ago"
+    actions:
+      comment:
+        message: |
+          ⏰ This draft PR hasn't been updated in 7 days. Update it or close if no longer needed.
+
+  # ── Dismiss stale reviews after new push ─────────────────────────────
+  - name: Dismiss stale reviews on new commits
+    conditions:
+      - "-draft"
+      - "base=main"
+    actions:
+      dismiss_reviews:
+        approved: true
+        message: "Dismissed — new commits pushed. Please re-review."
+
+  # ── Require CI green before merge to main ────────────────────────────
+  - name: Block merge if Ruff Lint fails
+    conditions:
+      - "base=main"
+      - "check-failure=Ruff Lint"
+    actions:
+      comment:
+        message: "⛔ Ruff Lint is failing — fix lint errors before merging to main."
+      label:
+        add: [blocked]

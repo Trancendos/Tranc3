@@ -1,0 +1,59 @@
+---
+# Codecov configuration — free for open-source repos
+# https://docs.codecov.com/docs/codecov-yaml
+
+codecov:
+  require_ci_to_pass: false
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...90"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 2%
+        if_no_uploads: error
+        if_not_found: success
+    patch:
+      default:
+        target: 60%
+        threshold: 5%
+        if_no_uploads: success
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+ignore:
+  - "tests/**"
+  - "**/__pycache__/**"
+  - "**/migrations/**"
+  - "cloudflare/**"
+  - "docs/**"
+  - "scripts/**"
+  - "web/node_modules/**"
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: true
+  require_base: false
+  require_head: true
+
+flags:
+  unittests:
+    paths:
+      - src/
+    carryforward: true
+  workers:
+    paths:
+      - workers/
+    carryforward: true

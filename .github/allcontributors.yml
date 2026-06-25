@@ -1,0 +1,37 @@
+# AllContributors bot configuration
+# https://allcontributors.org/docs/en/bot/configuration
+files:
+  - README.md
+imageSize: 100
+commit: true
+contributorsPerLine: 7
+badgeTemplate: '[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg?style=flat-square)](#contributors-)'
+contributorTemplate: '<a href="<%= contributor.profile %>"><img src="<%= contributor.avatar_url %>" width="<%= options.imageSize %>px;" alt="<%= contributor.name %>"/><br /><sub><b><%= contributor.name %></b></sub></a>'
+types:
+  code:
+    symbol: 💻
+    description: Code
+  design:
+    symbol: 🎨
+    description: Design
+  doc:
+    symbol: 📖
+    description: Documentation
+  ideas:
+    symbol: 🤔
+    description: Ideas & Planning
+  infra:
+    symbol: 🚇
+    description: Infrastructure
+  maintenance:
+    symbol: 🚧
+    description: Maintenance
+  projectManagement:
+    symbol: 📆
+    description: Project Management
+  review:
+    symbol: 👀
+    description: Reviewed Pull Requests
+  security:
+    symbol: 🛡️
+    description: Security
