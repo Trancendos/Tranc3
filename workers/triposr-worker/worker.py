@@ -4,7 +4,7 @@ Trancendos triposr-worker — Self-Hosted Worker
 Image-to-3D mesh reconstruction using TripoSR (MIT licence,
 Stability AI + Tripo AI) for Sashas Photo Studio.
 
-Port: 8051
+Port: 8092
 Zero-cost: FastAPI + TripoSR, no external service deps.
 Gracefully degrades to 503 when the `tsr` package is not installed.
 Model is loaded lazily on the first /reconstruct request.
@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-WORKER_PORT = 8051
+WORKER_PORT = 8092
 WORKER_NAME = "triposr-worker"
 
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", "/app/outputs"))

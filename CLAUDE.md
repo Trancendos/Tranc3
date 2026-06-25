@@ -223,9 +223,46 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | model-router-service | 8033 | P3 | `workers/model-router-service/` | AI model routing |
 | workflow-engine-service | 8034 | P3 | `workers/workflow-engine-service/` | The Digital Grid engine |
 | skills-benchmark-service | 8035 | P3 | `workers/skills-benchmark-service/` | Turing's Hub benchmarks |
-| langchain-integration-service | 8036 | P3 | `workers/langchain-integration-service/` | LangChain integration |
+| langchain-integration-service | 8036 | P3 | `workers/langchain-integration-service/` | LangChain — chain/RAG/agent orchestration |
+| llamaindex-service | 8096 | P3 | `workers/llamaindex-service/` | LlamaIndex — RAG framework / document Q&A |
+| haystack-service | 8097 | P3 | `workers/haystack-service/` | Haystack — production RAG pipelines |
+| dspy-service | 8098 | P3 | `workers/dspy-service/` | DSPy — programmatic LLM prompt compiler |
 | deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
-| vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault |
+| vault-service | 8086 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
+| mlflow-service | 8039 | P3 | `workers/mlflow-service/` | MLflow experiment tracking |
+| litellm-service | 8040 | P3 | `workers/litellm-service/` | LiteLLM zero-cost AI proxy (x10 provider rotation) |
+| artifactory-service | 8047 | P2 | `workers/artifactory-service/` | The Artifactory — Zot OCI registry bridge |
+| sentinel-station-service | 8048 | P3 | `workers/sentinel-station-service/` | Sentinel Station — platform guardian |
+| swarm-coordinator-service | 8049 | P3 | `workers/swarm-coordinator-service/` | Swarm Coordinator — agent swarm management |
+| dimensional-nexus-service | 8050 | P3 | `workers/dimensional-nexus-service/` | Dimensional Nexus — multi-dimensional data routing |
+| hive-service | 8051 | P3 | `workers/hive-service/` | The HIVE — task queue / agent coordination |
+| ice-box-service | 8052 | P3 | `workers/ice-box-service/` | The Ice Box — sandbox threat isolation |
+| cryptex | 8053 | P3 | `workers/cryptex/` | Cryptex — cyber defense / threat intel |
+| imaginarium | 8054 | P3 | `workers/imaginarium/` | Imaginarium — omni-creative orchestrator |
+| the-studio | 8055 | P3 | `workers/the-studio/` | The Studio — central creativity hub |
+| the-academy | 8056 | P3 | `workers/the-academy/` | The Academy — LMS / skill training |
+| the-dutchy | 8057 | P3 | `workers/the-dutchy/` | The Dutchy — intelligence & market analysis |
+| turings-hub-service | 8058 | P3 | `workers/turings-hub-service/` | Turing's Hub — AI personality creator |
+| tranceflow | 8059 | P3 | `workers/tranceflow/` | TranceFlow — 3D/game creation (Godot) |
+| vrar3d | 8060 | P3 | `workers/vrar3d/` | VRAR3D — Three.js / A-Frame immersion |
+| tateking | 8061 | P3 | `workers/tateking/` | TateKing — video creation/editing |
+| sashas-photo-studio | 8062 | P3 | `workers/sashas-photo-studio/` | Sashas Photo Studio — image generation |
+| fabulousa-service | 8063 | P3 | `workers/fabulousa-service/` | Fabulousa — UX/UI/design (Penpot) |
+| the-lab | 8064 | P3 | `workers/the-lab/` | The Lab — code creation platform |
+| observatory | 8065 | P3 | `workers/observatory/` | The Observatory — audit trail worker |
+| lab-service | 8066 | P3 | `workers/lab-service/` | The Lab extended service layer |
+| library-service | 8067 | P3 | `workers/library-service/` | The Library — knowledge base / wiki |
+| basement | 8068 | P3 | `workers/basement/` | The Basement — archived info store |
+| devocity | 8069 | P3 | `workers/devocity/` | DevOcity — development ops hub |
+| warp-tunnel | 8072 | P3 | `workers/warp-tunnel/` | The Warp Tunnel — crypto scanner / quarantine |
+| warp-radio | 8073 | P3 | `workers/warp-radio/` | Warp Radio — music/audio streaming |
+| taimra | 8074 | P3 | `workers/taimra/` | tAimra — opt-in digital twin |
+| imind | 8075 | P3 | `workers/imind/` | I-Mind — emotion sensitivity engine |
+| resonate | 8076 | P3 | `workers/resonate/` | Resonate — empathy engine |
+| tranquility | 8077 | P3 | `workers/tranquility/` | Tranquility — wellbeing hub |
+| backup-service | 8078 | P3 | `workers/backup-service/` | Backup — automated data backup |
+| chaos-party | 8079 | P3 | `workers/chaos-party/` | The Chaos Party — central testing platform |
+| infinity-void | 8082 | P3 | `workers/infinity-void/` | The Void — self-hosted AES-GCM vault |
 
 ### Production Infrastructure Stack
 
@@ -421,17 +458,59 @@ Workers subdomain: `luminous-aimastermind.workers.dev`
 
 When building new services, prefer these vetted open-source projects:
 
-| Service to build | Foundation | GitHub |
-|---|---|---|
-| The Digital Grid (enhance) | n8n (188k⭐) | github.com/n8n-io/n8n |
-| The Library / Wiki | Outline (38k⭐) | github.com/outline/outline |
-| The Observatory | SigNoz (27k⭐, OpenTelemetry) | github.com/SigNoz/signoz |
-| ChronosSphere / ArcStream | Cal.com | cal.com/self-hosting |
-| Fabulousa (UX/design) | Penpot | penpot.app/self-host |
-| API Marketplace | Gravitee.io | gravitee.io |
-| Cryptex (security SIEM) | Wazuh + MISP | wazuh.com |
-| The Ice Box (threat analysis) | Cuckoo Sandbox | cuckoosandbox.org |
-| DocUtari (documents) | Paperless-ngx | github.com/paperless-ngx |
-| TranceFlow (3D game dev) | Godot Engine | godotengine.org |
-| The Artifactory | Zot (OCI registry) | zotregistry.dev |
-| The Workshop (enhance) | Forgejo | forgejo.org |
+| Your Service | Repo to fork/integrate | Stars | License |
+|---|---|---|---|
+| **The Digital Grid** | n8n-io/n8n | 95K | Fair-code (self-host free) |
+| The Digital Grid | PrefectHQ/prefect | 17K | Apache 2.0 |
+| The Digital Grid | temporalio/temporal | 12K | MIT |
+| The Digital Grid | apache/airflow | 38K | Apache 2.0 |
+| **The Library** | outline/outline | 29K | BSL (self-host free) |
+| The Library | BookStackApp/BookStack | 15K | MIT |
+| **The Observatory** | SigNoz/signoz | 21K | Apache 2.0 |
+| The Observatory | jaegertracing/jaeger | 20K | Apache 2.0 |
+| The Observatory | netdata/netdata | 73K | GPL 3.0 |
+| **Fabulousa** | penpot/penpot | 35K | MPL 2.0 |
+| Fabulousa | storybookjs/storybook | 84K | MIT |
+| **API Marketplace** | gravitee-io/gravitee-api-management | 4K | Apache 2.0 |
+| **Cryptex** | MISP/MISP | 5.7K | AGPL 3.0 |
+| Cryptex | greenbone/openvas-scanner | 3.5K | AGPL 3.0 |
+| **The Ice Box** | cuckoosandbox/cuckoo | 5.7K | GPL 3.0 |
+| **DocUtari** | paperless-ngx/paperless-ngx | 24K | GPL 3.0 |
+| DocUtari | Stirling-Tools/Stirling-PDF | 52K | MIT |
+| **TranceFlow** | godotengine/godot | 94K | MIT |
+| **VRAR3D** | mrdoob/three.js | 103K | MIT |
+| VRAR3D | aframevr/aframe | 16K | MIT |
+| VRAR3D | BabylonJS/Babylon.js | 23K | Apache 2.0 |
+| **The Artifactory** | project-zot/zot | 1.2K | Apache 2.0 |
+| **ChronosSphere** | calcom/cal.com | 34K | AGPL 3.0 |
+| ChronosSphere | kestra-io/kestra | 14K | Apache 2.0 |
+| **The Void (self-hosted)** | hashicorp/vault | 31K | BSL (self-host free) |
+| **Luminous AI** | vllm-project/vllm | 47K | Apache 2.0 |
+| **Sashas Photo Studio** | comfyanonymous/ComfyUI | 72K | GPL 3.0 |
+| Sashas Photo Studio | AUTOMATIC1111/stable-diffusion-webui | 147K | AGPL 3.0 |
+| **TateKing (Video)** | remotion-dev/remotion | 22K | Company licence (basic free) |
+| **I-Mind / Resonate** | openai/evals | 14K | MIT |
+| **The Lab** | continuedev/continue | 24K | Apache 2.0 |
+| The Lab | TabbyML/tabby | 23K | Apache 2.0 |
+| The Lab | Aider-AI/aider | 24K | Apache 2.0 |
+| **Frontend components** | shadcn-ui/ui | 83K | MIT |
+| **Frontend testing** | microsoft/playwright | 68K | Apache 2.0 |
+| **AI Gateway** | BerriAI/litellm | 18K | MIT |
+| **Vector / RAG** | qdrant/qdrant | 22K | Apache 2.0 |
+| Vector / RAG | weaviate/weaviate | 12K | BSD 3-Clause |
+| Vector / RAG | chroma-core/chroma | 17K | Apache 2.0 |
+| Vector / RAG | meilisearch/meilisearch | 48K | MIT |
+| **Database / Storage** | minio/minio | 50K | AGPL 3.0 |
+| Database / Storage | duckdb/duckdb | 25K | MIT |
+| **The Workshop (enhance)** | forgejo/forgejo | — | MIT |
+| **LangChain / AI Framework** | langchain-ai/langchain | 95K | MIT |
+| LangChain / AI Framework | run-llama/llama_index | 38K | MIT |
+| LangChain / AI Framework | deepset-ai/haystack | 18K | Apache 2.0 |
+| LangChain / AI Framework | microsoft/semantic-kernel | 23K | MIT |
+| LangChain / AI Framework | stanfordnlp/dspy | 22K | MIT |
+| **Agent Frameworks** | microsoft/autogen | 35K | MIT |
+| Agent Frameworks | crewAIInc/crewAI | 25K | MIT |
+| **MLOps / Experiment Tracking** | mlflow/mlflow | 19K | Apache 2.0 |
+| MLOps / Experiment Tracking | wandb/wandb | 9K | MIT |
+| **Agent Orchestration** | microsoft/autogen | 35K | MIT |
+| Agent Orchestration | crewAIInc/crewAI | 25K | MIT |

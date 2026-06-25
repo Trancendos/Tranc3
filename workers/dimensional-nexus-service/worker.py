@@ -29,7 +29,7 @@ Architecture:
                                           ▼
                               WebSocket Dashboard
 
-Port: 8050
+Port: 8091
 Zero-cost: FastAPI + SQLite + in-process routing. No external deps.
 
 IMPORTANT: This is The Nexus — for AI/Agent/Bot traffic ONLY.

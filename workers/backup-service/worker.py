@@ -3,7 +3,7 @@ Trancendos Backup Service — Automated DR Worker
 =================================================
 Self-hosted backup daemon for all SQLite worker databases.
 
-Port: 8039
+Port: 8087
 Zero-cost: FastAPI + asyncio scheduler + sqlite3 hot-backup API.
 
 Schedules

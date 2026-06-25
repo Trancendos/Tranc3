@@ -1,0 +1,166 @@
+### Trancendos Platform — REST Client quick-tests
+### Use with VS Code "REST Client" extension (humao.rest-client)
+### Switch environment: Ctrl+Shift+P → "Rest Client: Switch Environment" → local
+
+@spark     = {{spark_url}}
+@grid      = {{grid_url}}
+@auth      = {{auth_url}}
+@langchain = {{langchain_url}}
+@llamaindex = {{llamaindex_url}}
+@haystack  = {{haystack_url}}
+@dspy      = {{dspy_url}}
+
+
+# ── Core health checks ──────────────────────────────────────────────────
+
+### Backend health
+GET {{spark}}/health
+
+### The Digital Grid health
+GET {{grid}}/health
+
+### Infinity auth health
+GET {{auth}}/health
+
+
+# ── LangChain (8036) ───────────────────────────────────────────────────
+
+### Status
+GET {{langchain}}/langchain/status
+
+### Create chain
+POST {{langchain}}/langchain/chains
+Content-Type: application/json
+
+{
+  "name": "qa-chain",
+  "description": "Simple Q&A chain",
+  "chain_type": "simple",
+  "template": "Answer the question: {question}"
+}
+
+### Run chain
+POST {{langchain}}/langchain/run
+Content-Type: application/json
+
+{
+  "chain_id": "REPLACE_WITH_ID",
+  "inputs": {"question": "What is Trancendos?"}
+}
+
+
+# ── LlamaIndex (8096) ──────────────────────────────────────────────────
+
+### Status
+GET {{llamaindex}}/llamaindex/status
+
+### Create index
+POST {{llamaindex}}/llamaindex/indexes
+Content-Type: application/json
+
+{
+  "name": "platform-docs",
+  "description": "Trancendos platform documentation"
+}
+
+### Ingest document
+POST {{llamaindex}}/llamaindex/ingest
+Content-Type: application/json
+
+{
+  "index_id": "REPLACE_WITH_ID",
+  "content": "Trancendos is a self-hosted zero-cost AI platform with 43 named entities.",
+  "doc_id": "intro-001",
+  "metadata": {"source": "CLAUDE.md"}
+}
+
+### Query index
+POST {{llamaindex}}/llamaindex/query
+Content-Type: application/json
+
+{
+  "index_id": "REPLACE_WITH_ID",
+  "query": "What is Trancendos?",
+  "top_k": 3
+}
+
+
+# ── Haystack (8097) ────────────────────────────────────────────────────
+
+### Status
+GET {{haystack}}/haystack/status
+
+### Create pipeline
+POST {{haystack}}/haystack/pipelines
+Content-Type: application/json
+
+{
+  "name": "rag-pipeline",
+  "description": "RAG retrieval pipeline",
+  "pipeline_type": "retrieval"
+}
+
+### Add document
+POST {{haystack}}/haystack/documents
+Content-Type: application/json
+
+{
+  "pipeline_id": "REPLACE_WITH_ID",
+  "content": "The Spark is the MCP server and AI tool registry for Trancendos.",
+  "doc_id": "spark-001",
+  "metadata": {"entity": "The Spark"}
+}
+
+### Run pipeline
+POST {{haystack}}/haystack/run
+Content-Type: application/json
+
+{
+  "pipeline_id": "REPLACE_WITH_ID",
+  "query": "What is The Spark?",
+  "top_k": 3
+}
+
+
+# ── DSPy (8098) ────────────────────────────────────────────────────────
+
+### Status
+GET {{dspy}}/dspy/status
+
+### Create program
+POST {{dspy}}/dspy/programs
+Content-Type: application/json
+
+{
+  "name": "qa-program",
+  "description": "Question answering",
+  "signature": "question -> answer"
+}
+
+### Add example
+POST {{dspy}}/dspy/examples
+Content-Type: application/json
+
+{
+  "program_id": "REPLACE_WITH_ID",
+  "input_data": {"question": "What is DSPy?"},
+  "expected_output": {"answer": "DSPy is a framework for programming language model pipelines."}
+}
+
+### Compile program
+POST {{dspy}}/dspy/compile
+Content-Type: application/json
+
+{
+  "program_id": "REPLACE_WITH_ID",
+  "optimizer": "BootstrapFewShot"
+}
+
+### Execute program
+POST {{dspy}}/dspy/execute
+Content-Type: application/json
+
+{
+  "program_id": "REPLACE_WITH_ID",
+  "input_data": {"question": "What is Trancendos?"}
+}

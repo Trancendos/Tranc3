@@ -1,4 +1,4 @@
-"""Optional Services Health Monitor — Port 8039.
+"""Optional Services Health Monitor — Port 8094.
 
 Polls each optional service's health endpoint, aggregates status,
 and reports to The Observatory (port 8007). Exposes a unified
@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Optional Services Health", version="1.0.0")
 
-PORT = int(os.getenv("PORT", "8039"))
+PORT = int(os.getenv("PORT", "8094"))
 OBSERVATORY_URL = os.getenv("OBSERVATORY_URL", "http://localhost:8007")
 
 # Parse SERVICES env: "name:url, name2:url2, ..."

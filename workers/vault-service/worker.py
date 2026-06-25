@@ -13,7 +13,7 @@ Features:
     - Leak detection (scans environment for known secret patterns)
     - Secret rotation with versioning
 
-Port: 8038
+Port: 8086
 Zero-cost: FastAPI + SQLite + mmap, no external vault required.
 """
 
@@ -50,7 +50,7 @@ from sse_starlette.sse import EventSourceResponse
 # ---------------------------------------------------------------------------
 
 SERVICE_NAME = "vault-service"
-PORT = 8038
+PORT = 8086
 
 # ---------------------------------------------------------------------------
 
