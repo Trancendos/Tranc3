@@ -1,31 +1,83 @@
 # .woodpecker.yml — Woodpecker CI pipeline for Trancendos
 # Runs on Woodpecker CI (Apache 2.0) alongside Forgejo (The Workshop)
-# Mirrors the security gates defined in .forgejo/workflows/security-scan.yml
+# Mirrors the security gates defined in .forgejo/workflows/
 #
 # Woodpecker docs: https://woodpecker-ci.org/docs
-# Service: Woodpecker server at https://ci.trancendos.com
+# Service: Woodpecker server (docker-compose.production.yml → woodpecker-server)
+#
+# Zero-cost: all images are free/open-source; no paid CI minutes
 
 when:
-  - event: push
-    branch: main
-  - event: pull_request
+  - event: [push, pull_request]
 
 steps:
-  python-lint:
+  # ── Ruff lint + format check (matches GitHub Actions CI gate) ───────────────
+  ruff-lint:
     image: python:3.11-slim
     commands:
       - pip install --quiet ruff
-      - ruff check src/ --exit-zero
+      - ruff check --select E,F,W,B --ignore E501,B008,B904 .
+      - ruff format --check .
 
+  # ── Full pytest suite ────────────────────────────────────────────────────────
+  pytest:
+    image: python:3.11-slim
+    environment:
+      SECRET_KEY: woodpecker-ci-test-key-not-real
+      DATABASE_URL: sqlite:///./test.db
+      REDIS_URL: ""
+      ENVIRONMENT: test
+    commands:
+      - pip install --quiet -r requirements.txt
+      - python -m pytest tests/ -q --tb=short
+        --ignore=tests/test_chaos.py
+        --ignore=tests/test_penetration.py
+    depends_on: [ruff-lint]
+
+  # ── Security: Python dependencies + SAST ────────────────────────────────────
   python-security:
     image: python:3.11-slim
     commands:
       - pip install --quiet pip-audit bandit
       - pip-audit --requirement requirements.txt --vulnerability-service osv || true
-      - bandit -r src/ --severity-level medium --exit-zero
+      - bandit -r src/ workers/ --severity-level medium --exit-zero
+    depends_on: [ruff-lint]
+    when:
+      - event: push
+        branch: [main, "claude/*"]
 
+  # ── Docker Compose lint (Checkov IaC scanner) ────────────────────────────────
   docker-lint:
     image: python:3.11-slim
     commands:
       - pip install --quiet checkov
       - checkov -f docker-compose.production.yml --quiet || true
+    when:
+      - event: push
+
+  # ── Node.js audit (web frontend) ─────────────────────────────────────────────
+  npm-audit:
+    image: node:20-slim
+    directory: web
+    commands:
+      - npm ci --silent
+      - npm audit --audit-level=high || true
+    when:
+      - event: [push, pull_request]
+
+  # ── Mattermost notification (main branch only) ────────────────────────────────
+  notify-mattermost:
+    image: plugins/webhook
+    settings:
+      urls:
+        from_secret: MATTERMOST_WEBHOOK_URL
+      content_type: application/json
+      template: |
+        {
+          "text": "### Woodpecker CI **${CI_PIPELINE_STATUS}** — ${CI_REPO_NAME}\n**Branch:** `${CI_COMMIT_BRANCH}` | **Commit:** `${CI_COMMIT_SHA:0:8}`\n**Author:** ${CI_COMMIT_AUTHOR} | **Message:** ${CI_COMMIT_MESSAGE}"
+        }
+    depends_on: [pytest]
+    when:
+      - event: push
+        branch: main
+        status: [success, failure]
