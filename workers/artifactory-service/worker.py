@@ -73,6 +73,12 @@ _ZOT_ALLOWED_PATHS: frozenset[str] = frozenset(
     ]
 )
 
+_GITEA_ALLOWED_PATH_PREFIXES: tuple[str, ...] = (
+    "/api/v1/repos/search",
+    "/api/v1/user/repos",
+    "/api/v1/packages",
+)
+
 
 def _validate_zot_path(path: str) -> None:
     """Restrict Zot API calls to known safe path prefixes (prevent SSRF)."""
@@ -81,6 +87,14 @@ def _validate_zot_path(path: str) -> None:
     if path.startswith("/v2/") and path.endswith("/tags/list"):
         return
     raise ValueError(f"Zot path not permitted: {path}")
+
+
+def _validate_gitea_path(path: str) -> None:
+    """Restrict Gitea API calls to known safe path prefixes (prevent SSRF)."""
+    for prefix in _GITEA_ALLOWED_PATH_PREFIXES:
+        if path.startswith(prefix):
+            return
+    raise ValueError(f"Gitea path not permitted: {path}")
 
 
 async def _zot_get(path: str) -> Any:
@@ -92,6 +106,7 @@ async def _zot_get(path: str) -> Any:
 
 
 async def _gitea_get(path: str) -> Any:
+    _validate_gitea_path(path)
     headers = {}
     if GITEA_TOKEN:
         headers["Authorization"] = f"token {GITEA_TOKEN}"
@@ -216,12 +231,13 @@ async def list_repositories() -> dict[str, Any]:
 @app.get("/artifactory/repositories/{repo}/tags")
 async def list_tags(repo: str) -> dict[str, Any]:
     """List tags for a repository in Zot."""
+    safe_repo = repo.replace("\n", "").replace("\r", "")[:100]
     try:
         data = await _zot_get(f"/v2/{repo}/tags/list")
         tags = data.get("tags") or []
         return {"repo": repo, "tags": tags, "total": len(tags)}
     except Exception as exc:
-        logger.warning("Zot tags unavailable for %s: %s", repo, exc)
+        logger.warning("Zot tags unavailable for %s: %s", safe_repo, exc)
         return {"repo": repo, "tags": [], "total": 0, "error": "Tags unavailable"}
 
 

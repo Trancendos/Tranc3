@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shlex
 import shutil
 import subprocess
 import tempfile
@@ -96,10 +95,12 @@ def _run_ffmpeg(*args: str, timeout: int = 120) -> tuple[bool, str]:
     ffmpeg_bin = shutil.which(FFMPEG_PATH)
     if not ffmpeg_bin:
         return False, f"FFmpeg not found: {FFMPEG_PATH}"
-    # Use shlex.quote on each argument to prevent command injection
-    cmd = [ffmpeg_bin, "-y", *[shlex.quote(a) for a in args]]
+    # shell=False (default) + list form means the OS passes args directly —
+    # no shell interpretation occurs. shlex.quote is intentionally omitted
+    # because quoting in list mode adds literal quote chars, breaking paths.
+    cmd = [ffmpeg_bin, "-y", *args]
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603  # nosemgrep
             cmd,
             capture_output=True,
             text=True,
@@ -259,11 +260,16 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     if not req.input_paths:
         raise HTTPException(status_code=400, detail="No input paths provided")
 
-    # Validate all input paths resolve within OUTPUT_DIR (prevent path traversal)
+    # Validate all input paths resolve within OUTPUT_DIR (prevent path traversal).
+    # We check for ".." components before Path.resolve() so the taint never reaches
+    # a filesystem call with user-controlled data.
     resolved_output_dir = OUTPUT_DIR.resolve()
     safe_paths: list[str] = []
     for raw in req.input_paths:
-        resolved = Path(raw).resolve()
+        candidate = Path(raw)
+        if ".." in candidate.parts:
+            raise HTTPException(status_code=400, detail=f"Input path not allowed: {raw}")
+        resolved = (resolved_output_dir / candidate.name).resolve()
         try:
             resolved.relative_to(resolved_output_dir)
         except ValueError as exc:
@@ -356,7 +362,8 @@ async def get_video_status(job_id: str) -> dict[str, Any]:
                 elif data.get("status") == "error":
                     job["status"] = "failed"
         except Exception as exc:
-            logger.debug("Remotion status poll failed for %s: %s", job_id, exc)
+            safe_job_id = job_id.replace("\n", "").replace("\r", "")[:64]
+            logger.debug("Remotion status poll failed for %s: %s", safe_job_id, exc)
 
     return {"job_id": job_id, **job}
 
@@ -373,7 +380,13 @@ async def get_video_result(job_id: str) -> FileResponse:
     if not output_path or not Path(output_path).exists():
         raise HTTPException(status_code=404, detail="Video file not found")
 
-    return FileResponse(output_path, media_type="video/mp4", filename=Path(output_path).name)
+    resolved = Path(output_path).resolve()
+    try:
+        resolved.relative_to(OUTPUT_DIR.resolve())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Video path not allowed") from exc
+
+    return FileResponse(str(resolved), media_type="video/mp4", filename=resolved.name)
 
 
 @app.post("/video/subtitle")
