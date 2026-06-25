@@ -80,6 +80,32 @@
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "OpenTofu provider updates",
       "automerge": false
+    },
+    {
+      "matchPackagePatterns": [
+        "^langchain", "^llama-index", "^llama_index",
+        "^farm-haystack$", "^haystack-ai$",
+        "^dspy-ai$", "^dspy$"
+      ],
+      "groupName": "AI frameworks (LangChain / LlamaIndex / Haystack / DSPy)",
+      "minimumReleaseAge": "7 days",
+      "automerge": false,
+      "labels": ["dependencies", "ai-framework"]
+    },
+    {
+      "matchPackageNames": ["fastapi", "uvicorn", "pydantic", "httpx", "starlette"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "FastAPI stack",
+      "minimumReleaseAge": "3 days",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "GitHub Actions",
+      "automerge": true,
+      "minimumReleaseAge": "1 day",
+      "pinDigests": true
     }
   ],
   "ignorePaths": [
