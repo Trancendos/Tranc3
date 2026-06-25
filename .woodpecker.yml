@@ -74,7 +74,7 @@ steps:
       content_type: application/json
       template: |
         {
-          "text": "### Woodpecker CI **${CI_PIPELINE_STATUS}** — ${CI_REPO_NAME}\n**Branch:** `${CI_COMMIT_BRANCH}` | **Commit:** `${CI_COMMIT_SHA:0:8}`\n**Author:** ${CI_COMMIT_AUTHOR} | **Message:** ${CI_COMMIT_MESSAGE}"
+          "text": "### Woodpecker CI **${CI_PIPELINE_STATUS}** — ${CI_REPO_NAME}\n**Branch:** `${CI_COMMIT_BRANCH}` | **Commit:** `${CI_COMMIT_SHA}`\n**Author:** ${CI_COMMIT_AUTHOR} | **Message:** ${CI_COMMIT_MESSAGE}"
         }
     depends_on: [pytest]
     when:

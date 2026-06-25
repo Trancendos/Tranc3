@@ -4,7 +4,7 @@ This guide wires The Workshop (Forgejo) events into Mattermost channels.
 
 ## 1. Create Mattermost Incoming Webhook
 
-1. Log in to Mattermost at `http://<host>:8065`
+1. Log in to Mattermost at `https://chat.trancendos.com` (via Traefik) or `http://<host>:8065` for initial setup only
 2. **Main Menu → Integrations → Incoming Webhooks → Add Incoming Webhook**
 3. Title: `Forgejo / The Workshop`
 4. Channel: `#ci-notifications` (or create it first)
@@ -25,7 +25,7 @@ This guide wires The Workshop (Forgejo) events into Mattermost channels.
 
 Woodpecker notifies Mattermost via the `plugins/webhook` step in `.woodpecker.yml`.
 
-1. In Woodpecker UI (`http://<host>:8000`), navigate to your repo settings
+1. In Woodpecker UI (`https://ci.trancendos.com` or `http://<host>:8100`), navigate to your repo settings
 2. **Secrets → Add Secret**
    - Name: `MATTERMOST_WEBHOOK_URL`
    - Value: the incoming webhook URL from Step 1

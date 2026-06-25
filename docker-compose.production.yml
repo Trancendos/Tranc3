@@ -3611,12 +3611,11 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - "3000:3000"
       - "2222:22"
     networks:
       - tranc3-net
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/-/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/the-workshop/-/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -3699,8 +3698,6 @@ services:
       - mattermost-logs:/mattermost/logs
       - mattermost-config:/mattermost/config
       - mattermost-plugins:/mattermost/plugins
-    ports:
-      - "8065:8065"
     networks:
       - tranc3-net
     healthcheck:
