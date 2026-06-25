@@ -332,7 +332,9 @@ async def extract_thumbnail(req: ThumbnailRequest) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Video path not allowed") from exc
 
-    thumb_path = OUTPUT_DIR / f"{req.job_id}_thumb.jpg"
+    # Derive thumbnail path from trusted resolved_output (server-side), not from
+    # user-supplied job_id, so no user-controlled data flows into Path operations.
+    thumb_path = resolved_output.with_name(resolved_output.stem + "_thumb.jpg")
     success, err = _run_ffmpeg(
         "-i",
         str(resolved_output),

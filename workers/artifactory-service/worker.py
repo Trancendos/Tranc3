@@ -20,6 +20,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote as _urlquote
 
 import httpx
 from fastapi import FastAPI
@@ -82,6 +83,8 @@ _GITEA_ALLOWED_PATH_PREFIXES: tuple[str, ...] = (
 
 def _validate_zot_path(path: str) -> None:
     """Restrict Zot API calls to known safe path prefixes (prevent SSRF)."""
+    if ".." in path:
+        raise ValueError(f"Zot path not permitted: {path}")
     if path in _ZOT_ALLOWED_PATHS:
         return
     if path.startswith("/v2/") and path.endswith("/tags/list"):
@@ -232,8 +235,11 @@ async def list_repositories() -> dict[str, Any]:
 async def list_tags(repo: str) -> dict[str, Any]:
     """List tags for a repository in Zot."""
     safe_repo = repo.replace("\n", "").replace("\r", "")[:100]
+    # Percent-encode repo so path-traversal characters ('../', '%2F', etc.) cannot
+    # influence the URL path — _urlquote(safe='') encodes every special character.
+    encoded_repo = _urlquote(safe_repo, safe="")
     try:
-        data = await _zot_get(f"/v2/{repo}/tags/list")
+        data = await _zot_get(f"/v2/{encoded_repo}/tags/list")
         tags = data.get("tags") or []
         return {"repo": repo, "tags": tags, "total": len(tags)}
     except Exception as exc:
