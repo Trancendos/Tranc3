@@ -66,9 +66,7 @@ def instrument_worker(
             )
             instrumentator.instrument(app)
             instrumentator.expose(app, endpoint=metrics_path, include_in_schema=False)
-            logger.info(
-                "Prometheus instrumentation active for %s → %s", service_name, metrics_path
-            )
+            logger.info("Prometheus instrumentation active for %s → %s", service_name, metrics_path)
         except ImportError:
             logger.debug("prometheus-fastapi-instrumentator not installed — metrics passive")
         except Exception as exc:
