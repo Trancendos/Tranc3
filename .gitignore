@@ -53,11 +53,17 @@ web/node_modules/
 web/dist/
 web/.vite/
 
-# IDE
-.vscode/
+# IDE — keep team-shared config, ignore personal settings
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tranc3-api.http
 .idea/
 *.vsix
 .vs/
+# Continue.dev — track shared model config
+.continue/*
+!.continue/config.json
 
 # OS
 .DS_Store

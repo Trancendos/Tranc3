@@ -1,0 +1,73 @@
+{
+  "models": [
+    {
+      "title": "Ollama — CodeLlama 13B (local, zero-cost)",
+      "provider": "ollama",
+      "model": "codellama:13b",
+      "apiBase": "http://localhost:11434"
+    },
+    {
+      "title": "Ollama — DeepSeek Coder 6.7B (local, zero-cost)",
+      "provider": "ollama",
+      "model": "deepseek-coder:6.7b",
+      "apiBase": "http://localhost:11434"
+    },
+    {
+      "title": "Groq — Llama3 70B (free tier)",
+      "provider": "groq",
+      "model": "llama3-70b-8192",
+      "apiKey": "$GROQ_API_KEY"
+    },
+    {
+      "title": "OpenRouter — DeepSeek Coder :free",
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-coder:free",
+      "apiKey": "$OPENROUTER_API_KEY"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Ollama — Starcoder2 3B (local, zero-cost)",
+    "provider": "ollama",
+    "model": "starcoder2:3b",
+    "apiBase": "http://localhost:11434"
+  },
+  "embeddingsProvider": {
+    "provider": "ollama",
+    "model": "nomic-embed-text",
+    "apiBase": "http://localhost:11434"
+  },
+  "contextProviders": [
+    { "name": "code" },
+    { "name": "docs" },
+    { "name": "diff" },
+    { "name": "terminal" },
+    { "name": "problems" },
+    { "name": "folder" },
+    {
+      "name": "url",
+      "params": {
+        "urls": [
+          "http://localhost:8000/docs",
+          "http://localhost:8010/docs",
+          "http://localhost:8036/docs",
+          "http://localhost:8096/docs",
+          "http://localhost:8097/docs",
+          "http://localhost:8098/docs"
+        ]
+      }
+    }
+  ],
+  "slashCommands": [
+    { "name": "edit", "description": "Edit highlighted code" },
+    { "name": "comment", "description": "Write comments for highlighted code" },
+    { "name": "share", "description": "Share conversation" },
+    { "name": "cmd", "description": "Generate a shell command" }
+  ],
+  "customCommands": [
+    {
+      "name": "worker",
+      "prompt": "You are working in the Trancendos platform. All workers are zero-cost FastAPI + SQLite + uvicorn services. Ports are unique per worker (8001–8098). Follow the existing worker.py pattern: WORKER_NAME, WORKER_PORT, VERSION, DB_PATH globals; asynccontextmanager lifespan; /health endpoint. No paid external services.",
+      "description": "Trancendos worker context"
+    }
+  ]
+}

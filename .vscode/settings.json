@@ -1,0 +1,81 @@
+{
+  // ── Python ──────────────────────────────────────────────────────────────
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "ruff.args": [
+    "--select", "E,F,W,B",
+    "--ignore", "E501,B008,B904"
+  ],
+
+  // ── Continue.dev — zero-cost local AI via Ollama ──────────────────────
+  "continue.enableTabAutocomplete": true,
+  "continue.remoteConfigServerUrl": "",
+
+  // ── Editor defaults ───────────────────────────────────────────────────
+  "editor.rulers": [100],
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.eol": "\n",
+
+  // ── YAML (docker-compose, CI workflows) ──────────────────────────────
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": [
+      "docker-compose*.yml",
+      "docker-compose*.yaml"
+    ]
+  },
+
+  // ── REST Client — point at local workers ─────────────────────────────
+  "rest-client.environmentVariables": {
+    "$shared": {
+      "base_url": "http://localhost"
+    },
+    "local": {
+      "spark_url": "http://localhost:8000",
+      "grid_url": "http://localhost:8010",
+      "auth_url": "http://localhost:8005",
+      "ws_url": "http://localhost:8004",
+      "langchain_url": "http://localhost:8036",
+      "llamaindex_url": "http://localhost:8096",
+      "haystack_url": "http://localhost:8097",
+      "dspy_url": "http://localhost:8098"
+    }
+  },
+
+  // ── Docker ────────────────────────────────────────────────────────────
+  "docker.dockerComposeBuild": true,
+  "docker.dockerComposeDetached": true,
+
+  // ── GitLens ───────────────────────────────────────────────────────────
+  "gitlens.codeLens.enabled": true,
+  "gitlens.currentLine.enabled": true,
+
+  // ── Playwright ────────────────────────────────────────────────────────
+  "playwright.reuseBrowser": false,
+  "playwright.showTrace": true,
+
+  // ── File exclusions (keep explorer clean) ────────────────────────────
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/node_modules": true,
+    "**/.venv": false
+  },
+  "search.exclude": {
+    "**/__pycache__": true,
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/data/*.db": true
+  }
+}

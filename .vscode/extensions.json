@@ -1,0 +1,32 @@
+{
+  "recommendations": [
+    // AI code completion — local Ollama, zero-cost
+    "continue.continue",
+    // Python linting & formatting (mirrors pre-commit ruff gate)
+    "charliermarsh.ruff",
+    // TOML editing — wrangler.toml, pyproject.toml
+    "tamasfe.even-better-toml",
+    // Docker container management
+    "ms-azuretools.vscode-docker",
+    // Test API endpoints without Postman
+    "humao.rest-client",
+    // Git history, blame, code lens
+    "eamodio.gitlens",
+    // Run Playwright E2E tests from IDE
+    "ms-playwright.playwright",
+    // Python language support
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    // YAML editing (docker-compose, CI workflows)
+    "redhat.vscode-yaml",
+    // SQLite viewer (inspect worker .db files)
+    "qwtel.sqlite-viewer",
+    // GitHub Actions / Forgejo workflow editing
+    "github.vscode-github-actions",
+    // Environment variable files
+    "mikestead.dotenv",
+    // EditorConfig support
+    "editorconfig.editorconfig"
+  ],
+  "unwantedRecommendations": []
+}
