@@ -535,16 +535,21 @@ async def lifespan(app: FastAPI):
     except Exception as _hb_exc:
         logger.warning("Healing Bridge unavailable: %s", sanitize_for_log(_hb_exc))
 
-    # OpenTelemetry instrumentation
+    # Unified observability: Prometheus auto-instrumentation + OpenTelemetry
     try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.worker_setup import instrument_worker
 
-        FastAPIInstrumentor.instrument_app(app)
-        logger.info("OpenTelemetry FastAPI instrumentation active")
-    except ImportError:
-        logger.debug("opentelemetry-instrumentation-fastapi not installed — traces disabled")
-    except Exception as _otel_exc:
-        logger.warning("OpenTelemetry instrumentation failed: %s", sanitize_for_log(_otel_exc))
+        instrument_worker(app, service_name="tranc3.backend", worker_port=8000)
+        logger.info("Worker observability active (Prometheus + OTel) for tranc3.backend")
+    except Exception as _obs_exc:
+        logger.warning("Worker observability setup failed: %s", sanitize_for_log(_obs_exc))
+        # Fallback: bare OTel FastAPI instrumentation
+        try:
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+            FastAPIInstrumentor.instrument_app(app)
+        except (ImportError, Exception):
+            pass
 
     # Observatory→Library pipeline — wire audit events to KB article triggers
     try:

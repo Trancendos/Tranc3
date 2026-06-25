@@ -404,3 +404,35 @@ scrape_configs:
           named: 'VRAR3D'
           lead_ai: 'Entari'
           category: '3d-vr'
+
+  # ── Forgejo (The Workshop) — built-in Prometheus endpoint ────────────────
+  - job_name: 'forgejo'
+    metrics_path: '/the-workshop/metrics'
+    bearer_token_file: /etc/prometheus/forgejo_metrics_token
+    static_configs:
+      - targets: ['forgejo:3000']
+        labels:
+          service: 'forgejo'
+          named: 'The Workshop'
+          category: 'vcs'
+
+  # ── Mattermost — built-in Prometheus endpoint (requires Performance Monitoring) ──
+  - job_name: 'mattermost'
+    metrics_path: '/api/v4/metrics'
+    bearer_token_file: /etc/prometheus/mattermost_metrics_token
+    static_configs:
+      - targets: ['mattermost:8065']
+        labels:
+          service: 'mattermost'
+          named: 'Mattermost'
+          category: 'comms'
+
+  # ── Woodpecker CI — built-in Prometheus endpoint ──────────────────────────
+  - job_name: 'woodpecker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['woodpecker-server:9000']
+        labels:
+          service: 'woodpecker'
+          named: 'Woodpecker CI'
+          category: 'ci'
