@@ -236,17 +236,17 @@ class TestInstrumentWorker:
         app = FastAPI()
         # Patch away optional packages so the function degrades gracefully
         import sys
-        with (
-            __import__("unittest.mock", fromlist=["patch"]).patch.dict(
-                sys.modules,
-                {
-                    "prometheus_fastapi_instrumentator": None,
-                    "opentelemetry.instrumentation.fastapi": None,
-                },
-            )
+
+        with __import__("unittest.mock", fromlist=["patch"]).patch.dict(
+            sys.modules,
+            {
+                "prometheus_fastapi_instrumentator": None,
+                "opentelemetry.instrumentation.fastapi": None,
+            },
         ):
             from importlib import reload
             import src.observability.worker_setup as ws_mod
+
             reload(ws_mod)
             # Should complete without raising
             ws_mod.instrument_worker(app, service_name="tranc3.test-worker")
