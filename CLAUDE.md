@@ -421,17 +421,31 @@ Workers subdomain: `luminous-aimastermind.workers.dev`
 
 When building new services, prefer these vetted open-source projects:
 
-| Service to build | Foundation | GitHub |
-|---|---|---|
-| The Digital Grid (enhance) | n8n (188k⭐) | github.com/n8n-io/n8n |
-| The Library / Wiki | Outline (38k⭐) | github.com/outline/outline |
-| The Observatory | SigNoz (27k⭐, OpenTelemetry) | github.com/SigNoz/signoz |
-| ChronosSphere / ArcStream | Cal.com | cal.com/self-hosting |
-| Fabulousa (UX/design) | Penpot | penpot.app/self-host |
-| API Marketplace | Gravitee.io | gravitee.io |
-| Cryptex (security SIEM) | Wazuh + MISP | wazuh.com |
-| The Ice Box (threat analysis) | Cuckoo Sandbox | cuckoosandbox.org |
-| DocUtari (documents) | Paperless-ngx | github.com/paperless-ngx |
-| TranceFlow (3D game dev) | Godot Engine | godotengine.org |
-| The Artifactory | Zot (OCI registry) | zotregistry.dev |
-| The Workshop (enhance) | Forgejo | forgejo.org |
+| Your Service | Repo to fork/integrate | Stars | License |
+|---|---|---|---|
+| The Digital Grid | n8n-io/n8n | 95K | Fair-code (self-host free) |
+| The Digital Grid | PrefectHQ/prefect | 17K | Apache 2.0 |
+| The Library | outline/outline | 29K | BSL (self-host free) |
+| The Observatory | SigNoz/signoz | 21K | Apache 2.0 |
+| Fabulousa | penpot/penpot | 35K | MPL 2.0 |
+| API Marketplace | gravitee-io/gravitee-api-management | 4K | Apache 2.0 |
+| Cryptex | MISP/MISP | 5.7K | AGPL 3.0 |
+| The Ice Box | cuckoosandbox/cuckoo | 5.7K | GPL 3.0 |
+| DocUtari | paperless-ngx/paperless-ngx | 24K | GPL 3.0 |
+| TranceFlow | godotengine/godot | 94K | MIT |
+| The Artifactory | project-zot/zot | 1.2K | Apache 2.0 |
+| ChronosSphere | calcom/cal.com | 34K | AGPL 3.0 |
+| The Void (self-hosted) | hashicorp/vault | 31K | BSL (self-host free) |
+| Luminous AI | vllm-project/vllm | 47K | Apache 2.0 |
+| Sashas Photo Studio | comfyanonymous/ComfyUI | 72K | GPL 3.0 |
+| Sashas Photo Studio | AUTOMATIC1111/stable-diffusion-webui | 147K | AGPL 3.0 |
+| TateKing (Video) | remotion-dev/remotion | 22K | Company licence (basic free) |
+| I-Mind / Resonate | openai/evals | 14K | MIT |
+| The Lab | continuedev/continue | 24K | Apache 2.0 |
+| The Lab | TabbyML/tabby | 23K | Apache 2.0 |
+| Frontend components | shadcn-ui/ui | 83K | MIT |
+| Frontend testing | microsoft/playwright | 68K | Apache 2.0 |
+| AI Gateway | BerriAI/litellm | 18K | MIT |
+| Vector / RAG | qdrant/qdrant | 22K | Apache 2.0 |
+| Workflow testing | temporalio/temporal | 12K | MIT |
+| The Workshop (enhance) | forgejo/forgejo | — | MIT |
