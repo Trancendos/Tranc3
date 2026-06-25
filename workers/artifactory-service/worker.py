@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import quote as _urlquote
 
 import httpx
 from fastapi import FastAPI
@@ -104,6 +104,20 @@ async def _zot_get(path: str) -> Any:
     _validate_zot_path(path)
     async with httpx.AsyncClient(timeout=_http_timeout) as client:
         resp = await client.get(f"{ZOT_URL}{path}")
+        resp.raise_for_status()
+        return resp.json()
+
+
+# Strict allowlist for repo name characters — CodeQL recognises re.fullmatch as SSRF sanitizer.
+_ZOT_REPO_RE = re.compile(r"[a-zA-Z0-9._/-]{1,200}")
+
+
+async def _zot_list_tags(repo: str) -> Any:
+    """Fetch tags for a Zot repository. repo is validated via regex before URL construction."""
+    if not _ZOT_REPO_RE.fullmatch(repo):
+        raise ValueError(f"Repo name not permitted: {repo}")
+    async with httpx.AsyncClient(timeout=_http_timeout) as client:
+        resp = await client.get(f"{ZOT_URL}/v2/{repo}/tags/list")
         resp.raise_for_status()
         return resp.json()
 
@@ -235,11 +249,8 @@ async def list_repositories() -> dict[str, Any]:
 async def list_tags(repo: str) -> dict[str, Any]:
     """List tags for a repository in Zot."""
     safe_repo = repo.replace("\n", "").replace("\r", "")[:100]
-    # Percent-encode repo so path-traversal characters ('../', '%2F', etc.) cannot
-    # influence the URL path — _urlquote(safe='') encodes every special character.
-    encoded_repo = _urlquote(safe_repo, safe="")
     try:
-        data = await _zot_get(f"/v2/{encoded_repo}/tags/list")
+        data = await _zot_list_tags(safe_repo)
         tags = data.get("tags") or []
         return {"repo": repo, "tags": tags, "total": len(tags)}
     except Exception as exc:
