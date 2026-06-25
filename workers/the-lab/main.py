@@ -416,7 +416,7 @@ async def lab_run(req: RunRequest) -> dict[str, Any]:
     raise HTTPException(
         status_code=503,
         detail="Code execution is disabled: requires isolated sandbox environment. "
-               "Deploy with gVisor or Firecracker to enable.",
+        "Deploy with gVisor or Firecracker to enable.",
     )
 
     # Dead code below retained for reference when sandbox is wired up:
