@@ -3007,7 +3007,7 @@ services:
       - "traefik.http.routers.imind.entrypoints=websecure"
       - "traefik.http.services.imind.loadbalancer.server.port=8059"
 
-  # ── Resonate — empathy engine (Port 8060) ──────────────────────────────────────────────
+  # ── Resonate — empathy engine (Port 8076) ──────────────────────────────────────────────
   resonate:
     build:
       context: ./workers/resonate
@@ -3015,19 +3015,19 @@ services:
     container_name: tranc3-resonate
     <<: *worker-common
     environment:
-      - PORT=8060
+      - PORT=8076
     expose:
-      - "8060"
+      - "8076"
     ports:
-      - "8060:8060"
+      - "8076:8076"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8076/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.resonate.rule=PathPrefix(`/resonate`)"
       - "traefik.http.routers.resonate.entrypoints=websecure"
-      - "traefik.http.services.resonate.loadbalancer.server.port=8060"
+      - "traefik.http.services.resonate.loadbalancer.server.port=8076"
 
   # ── Tranquility — wellbeing hub (Port 8058) ──────────────────────────────────────────────
   tranquility:
@@ -3447,7 +3447,7 @@ services:
       - "traefik.http.routers.swarm-coordinator-service.entrypoints=websecure"
       - "traefik.http.services.swarm-coordinator-service.loadbalancer.server.port=8053"
 
-  # ── The HIVE — task queue / agent coordination (Port 8060) ──────────────────────────────────────────────
+  # ── The HIVE — task queue / agent coordination (Port 8051) ──────────────────────────────────────────────
   hive-service:
     build:
       context: ./workers/hive-service
@@ -3455,19 +3455,19 @@ services:
     container_name: tranc3-hive-service
     <<: *worker-common
     environment:
-      - PORT=8060
+      - HIVE_PORT=8051
     expose:
-      - "8060"
+      - "8051"
     ports:
-      - "8060:8060"
+      - "8051:8051"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.hive-service.rule=PathPrefix(`/hive`)"
       - "traefik.http.routers.hive-service.entrypoints=websecure"
-      - "traefik.http.services.hive-service.loadbalancer.server.port=8060"
+      - "traefik.http.services.hive-service.loadbalancer.server.port=8051"
 
   # ── The Ice Box — sandbox threat isolation (Port 8046) ──────────────────────────────────────────────
   ice-box-service:

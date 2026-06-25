@@ -229,7 +229,14 @@ export default {
     let requiresAuth  = true;
 
     // Public (no auth)
-    if (path.startsWith("/api/auth")) {
+    if (path === "/health" || path === "/api/health" || path.startsWith("/health/")) {
+      targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+      targetPath = path; breaker = cb.ai; requiresAuth = false;
+    } else if (path.startsWith("/mcp") || path.startsWith("/api/mcp")) {
+      // MCP tools authenticate at the MCP layer, not the gateway
+      targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+      targetPath = path; breaker = cb.ai; requiresAuth = false;
+    } else if (path.startsWith("/api/auth")) {
       targetService = env.USERS_SERVICE_URL; targetPath = path.replace("/api/auth", "");
       breaker = cb.users; requiresAuth = false;
     } else if (path.startsWith("/api/categories")) {
@@ -265,6 +272,12 @@ export default {
         targetService = env.PAYMENTS_SERVICE_URL; targetPath = path.replace("/api/payments", "/payments"); breaker = cb.payments;
       } else if (path.startsWith("/api/products")) {
         targetService = env.PRODUCTS_SERVICE_URL; targetPath = path.replace("/api/products", "/products"); breaker = cb.products;
+      } else {
+        // Fallback: all other authenticated routes go to tranc3-backend on Fly.io
+        // Covers: /api/workflow/*, /api/v1/*, etc.
+        targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
+        targetPath    = path;
+        breaker       = cb.ai;
       }
     }
 

@@ -79,7 +79,11 @@ class FluidBalancer:
 
     def __init__(self) -> None:
         self._channels: dict[str, FluidChannel] = {}
-        self._total_pressure: float = 0.0
+
+    @property
+    def _total_pressure(self) -> float:
+        """Derive total pressure from per-channel values so they stay in sync."""
+        return sum(ch.pressure for ch in self._channels.values())
 
     def add_channel(self, provider: str, flow_rate: float = 1.0) -> FluidChannel:
         ch = FluidChannel(provider=provider, flow_rate=flow_rate)
@@ -88,7 +92,6 @@ class FluidBalancer:
 
     def add_pressure(self, request_count: float) -> None:
         """Add load pressure to the system (distributes to channels)."""
-        self._total_pressure += request_count
         if self._channels:
             per_channel = request_count / len(self._channels)
             for ch in self._channels.values():
@@ -137,9 +140,8 @@ class FluidBalancer:
     def record_result(self, provider: str, latency_ms: float, success: bool) -> None:
         if provider in self._channels:
             self._channels[provider].record_latency(latency_ms, success)
-            # Relieve pressure on completion
+            # Relieve per-channel pressure on completion; total is derived automatically
             self._channels[provider].pressure = max(0.0, self._channels[provider].pressure - 1)
-            self._total_pressure = max(0.0, self._total_pressure - 1)
 
     def system_state(self) -> dict[str, Any]:
         turbulent = self.detect_turbulence()

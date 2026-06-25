@@ -9,6 +9,7 @@ id = "aa064ae803e5423db7b517400187b693"  # CACHE namespace (confirmed 2026-05-19
 [vars]
 ENVIRONMENT = "production"
 # These are set as secrets via: wrangler secret put <NAME> --name trancendos-api-gateway
+# TRANC3_BACKEND_URL   = "https://trancendos-backend.fly.dev"
 # USERS_SERVICE_URL    = "https://infinity-auth-api.luminous-aimastermind.workers.dev"
 # PRODUCTS_SERVICE_URL = "https://trancendos-products-service.luminous-aimastermind.workers.dev"
 # ORDERS_SERVICE_URL   = "https://trancendos-orders-service.luminous-aimastermind.workers.dev"

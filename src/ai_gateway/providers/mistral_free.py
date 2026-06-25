@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import logging
 import os
+import sqlite3
 import time
+from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -30,12 +32,31 @@ MISTRAL_FREE_MODELS = [
 _MONTHLY_TOKEN_BUDGET = 500_000
 _STOP_THRESHOLD = 0.95
 
+_DB_PATH = Path(os.getenv("DATA_DIR", "/tmp")) / "mistral_budget.db"
+
+
+def _open_db() -> sqlite3.Connection:
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS monthly_budget "
+        "(month TEXT PRIMARY KEY, tokens_used INTEGER NOT NULL DEFAULT 0)"
+    )
+    conn.commit()
+    return conn
+
+
+def _current_month() -> str:
+    return time.strftime("%Y-%m")
+
 
 class MistralFreeProvider(AIProvider):
     """Mistral La Plateforme free tier — 500K tokens/month, GDPR-compliant.
 
     Zero-Cost Mandate: enforces a monthly token hard stop at 95% of the free
-    500K token budget. Switches to next provider when budget is near exhausted.
+    500K token budget. Token usage is persisted to SQLite so restarts don't
+    reset the counter mid-month.
 
     EU-hosted (Paris), GDPR Article 28 compliant — preferred for EU users.
     """
@@ -51,18 +72,24 @@ class MistralFreeProvider(AIProvider):
             api_key=api_key or os.getenv("MISTRAL_API_KEY", ""),
         )
         self._default_model = default_model
-        self._monthly_tokens_used: int = 0
-        self._month_start: float = time.time()
+        self._db = _open_db()
 
-    def _reset_if_new_month(self) -> None:
-        now = time.time()
-        if now - self._month_start >= 2_592_000:  # 30 days
-            self._monthly_tokens_used = 0
-            self._month_start = now
+    def _get_monthly_tokens(self) -> int:
+        row = self._db.execute(
+            "SELECT tokens_used FROM monthly_budget WHERE month=?", (_current_month(),)
+        ).fetchone()
+        return row[0] if row else 0
+
+    def _add_monthly_tokens(self, count: int) -> None:
+        self._db.execute(
+            "INSERT INTO monthly_budget (month, tokens_used) VALUES (?, ?) "
+            "ON CONFLICT(month) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used",
+            (_current_month(), count),
+        )
+        self._db.commit()
 
     def _budget_ok(self) -> bool:
-        self._reset_if_new_month()
-        return self._monthly_tokens_used < int(_MONTHLY_TOKEN_BUDGET * _STOP_THRESHOLD)
+        return self._get_monthly_tokens() < int(_MONTHLY_TOKEN_BUDGET * _STOP_THRESHOLD)
 
     async def complete(self, request: AIRequest) -> AIResponse:
         if not self.api_key:
@@ -104,7 +131,8 @@ class MistralFreeProvider(AIProvider):
 
         usage = data.get("usage", {})
         tokens_used = usage.get("total_tokens", 0)
-        self._monthly_tokens_used += tokens_used
+        self._add_monthly_tokens(tokens_used)
+        monthly_used = self._get_monthly_tokens()
 
         text = data["choices"][0]["message"]["content"]
         latency_ms = int((time.monotonic() - start) * 1000)
@@ -117,17 +145,16 @@ class MistralFreeProvider(AIProvider):
             latency_ms=latency_ms,
             cost=0.0,
             metadata={
-                "monthly_tokens_used": self._monthly_tokens_used,
+                "monthly_tokens_used": monthly_used,
                 "monthly_budget": _MONTHLY_TOKEN_BUDGET,
-                "budget_pct": round(self._monthly_tokens_used / _MONTHLY_TOKEN_BUDGET * 100, 1),
+                "budget_pct": round(monthly_used / _MONTHLY_TOKEN_BUDGET * 100, 1),
             },
         )
 
     async def health_check(self) -> ProviderHealth:
         if not self.api_key:
             return ProviderHealth(provider=self.name, healthy=False, error="No MISTRAL_API_KEY")
-        self._reset_if_new_month()
-        budget_pct = self._monthly_tokens_used / _MONTHLY_TOKEN_BUDGET * 100
+        budget_pct = self._get_monthly_tokens() / _MONTHLY_TOKEN_BUDGET * 100
         if budget_pct >= _STOP_THRESHOLD * 100:
             return ProviderHealth(
                 provider=self.name,

@@ -296,7 +296,7 @@ services:
       - ./config/litellm/config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "2"]
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:4000/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health')"]
       <<: *hc-http
     extra_hosts:
       - "host.docker.internal:host-gateway"

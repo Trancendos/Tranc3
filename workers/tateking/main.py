@@ -251,7 +251,7 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
 async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     """Compose video from multiple input assets using FFmpeg."""
     job_id = str(uuid.uuid4())
-    output_name = req.output_name or f"{job_id}.mp4"
+    output_name = os.path.basename(req.output_name) if req.output_name else f"{job_id}.mp4"
     output_path = OUTPUT_DIR / output_name
 
     if not _ffmpeg_available():

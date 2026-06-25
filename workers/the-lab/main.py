@@ -409,8 +409,18 @@ def _validate_code(code: str) -> None:
 
 @app.post("/lab/run")
 async def lab_run(req: RunRequest) -> dict[str, Any]:
-    """Execute code in a sandboxed subprocess (Python only for safety)."""
-    if req.language not in ("python",):
+    """Execute code — requires gVisor/microVM isolation (not available on this host)."""
+    # AST-based import blocking is bypassable via __import__(), builtins, etc.
+    # Direct host execution is disabled until a proper isolated sandbox
+    # (gVisor runsc, Firecracker microVM, or nsjail) is wired up.
+    raise HTTPException(
+        status_code=503,
+        detail="Code execution is disabled: requires isolated sandbox environment. "
+               "Deploy with gVisor or Firecracker to enable.",
+    )
+
+    # Dead code below retained for reference when sandbox is wired up:
+    if req.language not in ("python",):  # noqa: unreachable
         raise HTTPException(
             status_code=400, detail=f"Sandboxed execution not supported for {req.language}"
         )
