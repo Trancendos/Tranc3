@@ -92,7 +92,9 @@ class DNARouter:
         for gene in targets:
             if self._rng.random() < rate:
                 delta = self._rng.uniform(-self.MUTATION_WEIGHT_DELTA, self.MUTATION_WEIGHT_DELTA)
-                gene.weight = max(0.01, gene.weight + delta * gene.fitness)
+                # Mutate fitness so the perturbation survives evolve()'s weight
+                # normalization pass (which recomputes weight from fitness).
+                gene.fitness = max(0.0, min(1.0, gene.fitness + delta))
 
     def crossover(self, other_chromosome: list[RouteGene]) -> list[RouteGene]:
         """One-point crossover between this chromosome and another. Returns offspring."""

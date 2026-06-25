@@ -232,7 +232,7 @@ export default {
     if (path === "/health" || path === "/api/health" || path.startsWith("/health/")) {
       targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
       targetPath = path; breaker = cb.ai;
-    } else if (path.startsWith("/mcp") || path.startsWith("/api/mcp")) {
+    } else if (path === "/mcp" || path.startsWith("/mcp/") || path === "/api/mcp" || path.startsWith("/api/mcp/")) {
       // MCP tools authenticate at the MCP layer, not the gateway
       targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
       targetPath = path; breaker = cb.ai;

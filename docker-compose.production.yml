@@ -2897,7 +2897,7 @@ services:
       - "traefik.http.routers.tateking.entrypoints=websecure"
       - "traefik.http.services.tateking.loadbalancer.server.port=8066"
 
-  # ── Sashas Photo Studio — image generation (Port 8051) ──────────────────────────────────────────────
+  # ── Sashas Photo Studio — image generation (Port 8062) ──────────────────────────────────────────────
   sashas-photo-studio:
     build:
       context: ./workers/sashas-photo-studio
@@ -2905,19 +2905,19 @@ services:
     container_name: tranc3-sashas-photo-studio
     <<: *worker-common
     environment:
-      - PORT=8051
+      - PORT=8062
     expose:
-      - "8051"
+      - "8062"
     ports:
-      - "8051:8051"
+      - "8062:8062"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8062/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sashas-photo-studio.rule=PathPrefix(`/sashas-photo-studio`)"
       - "traefik.http.routers.sashas-photo-studio.entrypoints=websecure"
-      - "traefik.http.services.sashas-photo-studio.loadbalancer.server.port=8051"
+      - "traefik.http.services.sashas-photo-studio.loadbalancer.server.port=8062"
 
   # ── The Lab — code creation platform (Port 8055) ──────────────────────────────────────────────
   the-lab:

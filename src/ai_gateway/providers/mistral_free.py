@@ -32,13 +32,14 @@ MISTRAL_FREE_MODELS = [
 _MONTHLY_TOKEN_BUDGET = 500_000
 _STOP_THRESHOLD = 0.95
 
-_DB_PATH = Path(os.getenv("DATA_DIR", "/tmp")) / "mistral_budget.db"
+_DB_PATH = Path(os.getenv("DATA_DIR", "/data")) / "mistral_budget.db"
 
 
 def _open_db() -> sqlite3.Connection:
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.execute(
         "CREATE TABLE IF NOT EXISTS monthly_budget "
         "(month TEXT PRIMARY KEY, tokens_used INTEGER NOT NULL DEFAULT 0)"
