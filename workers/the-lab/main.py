@@ -14,9 +14,6 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
-import sys
-import tempfile
 import time
 from datetime import datetime, timezone
 from typing import Any, Optional
