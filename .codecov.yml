@@ -1,0 +1,24 @@
+coverage:
+  status:
+    patch:
+      default:
+        # Only measure patch coverage on src/ — workers/ are integration-tested
+        # via docker-compose, not unit-tested, so we exclude them from the target.
+        paths:
+          - "src/**"
+        target: 60%
+        threshold: 5%
+    project:
+      default:
+        target: auto
+        threshold: 2%
+
+ignore:
+  - "workers/**"
+  - "cloudflare/**"
+  - "tests/**"
+  - "scripts/**"
+  - "deploy/**"
+  - "monitoring/**"
+  - "tranc3-bots/**"
+  - "*.md"

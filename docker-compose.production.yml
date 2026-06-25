@@ -3616,7 +3616,7 @@ services:
     networks:
       - tranc3-net
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/the-workshop/-/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/-/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -3628,8 +3628,11 @@ services:
       - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
 
   # ── Forgejo Actions Runner — executes .forgejo/workflows/ ────────────
+  # Aligns with deploy/forgejo/runner-setup.sh registration-token flow.
+  # Obtain RUNNER_REGISTRATION_TOKEN from:
+  #   https://trancendos.com/the-workshop/-/admin/runners → "Create new runner"
   forgejo-runner:
-    image: code.forgejo.org/forgejo/runner:3
+    image: ${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}
     container_name: trancendos-forgejo-runner
     restart: unless-stopped
     depends_on:
@@ -3637,7 +3640,7 @@ services:
         condition: service_healthy
     environment:
       FORGEJO_INSTANCE_URL: "http://forgejo:3000"
-      FORGEJO_RUNNER_SECRET: "${FORGEJO_RUNNER_SECRET:?required}"
+      FORGEJO_RUNNER_REGISTRATION_TOKEN: "${RUNNER_REGISTRATION_TOKEN:-}"
       FORGEJO_RUNNER_NAME: "citadel-runner"
       FORGEJO_RUNNER_LABELS: "self-hosted,linux,x86_64,docker"
     volumes:
