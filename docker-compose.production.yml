@@ -3600,6 +3600,7 @@ services:
       FORGEJO__database__PATH: "/data/gitea/gitea.db"
       FORGEJO__actions__ENABLED: "true"
       FORGEJO__actions__DEFAULT_ACTIONS_URL: "https://code.forgejo.org"
+      FORGEJO__packages__ENABLED: "true"
       FORGEJO__webhook__ALLOWED_HOST_LIST: "mattermost,*"
       FORGEJO__mailer__ENABLED: "false"
       FORGEJO__service__DISABLE_REGISTRATION: "true"
