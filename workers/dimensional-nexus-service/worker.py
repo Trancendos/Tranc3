@@ -93,12 +93,9 @@ async def health():
 async def _worker_startup():
     # OpenTelemetry instrumentation
     try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.dimensional-nexus-service")
-        FastAPIInstrumentor.instrument_app(app)
+        instrument_worker(app, service_name="tranc3.dimensional-nexus-service")
     except Exception:
         pass  # OTel is optional — never block startup
     """Initialize the Nexus with default AI/Agent/Bot services and topology on startup."""
