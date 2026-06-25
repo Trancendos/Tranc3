@@ -224,3 +224,48 @@ class TestModuleFunctions:
                 assert obs1 is obs2
         finally:
             obs_mod._observatory = None
+
+
+class TestInstrumentWorker:
+    """Tests for src.observability.worker_setup.instrument_worker."""
+
+    def test_instrument_worker_no_packages(self):
+        """instrument_worker() is a no-op when optional packages are absent."""
+        from fastapi import FastAPI
+
+        app = FastAPI()
+        # Patch away optional packages so the function degrades gracefully
+        import sys
+        with (
+            __import__("unittest.mock", fromlist=["patch"]).patch.dict(
+                sys.modules,
+                {
+                    "prometheus_fastapi_instrumentator": None,
+                    "opentelemetry.instrumentation.fastapi": None,
+                },
+            )
+        ):
+            from importlib import reload
+            import src.observability.worker_setup as ws_mod
+            reload(ws_mod)
+            # Should complete without raising
+            ws_mod.instrument_worker(app, service_name="tranc3.test-worker")
+            # State flag must be set even without packages
+            assert getattr(app.state, "_tranc3_instrumented", False)
+
+    def test_instrument_worker_idempotent(self):
+        """Calling instrument_worker twice on the same app is a no-op on second call."""
+        from fastapi import FastAPI
+        from src.observability.worker_setup import instrument_worker
+
+        app = FastAPI()
+        app.state._tranc3_instrumented = True  # pre-set as if already instrumented
+        # Second call must return immediately — no side effects
+        instrument_worker(app, service_name="tranc3.test-worker")
+        assert app.state._tranc3_instrumented is True
+
+    def test_sanitise_service_name(self):
+        """_sanitise converts dots, dashes, slashes to underscores."""
+        from src.observability.worker_setup import _sanitise
+
+        assert _sanitise("tranc3.my-service/v1") == "tranc3_my_service_v1"

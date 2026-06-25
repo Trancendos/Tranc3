@@ -549,7 +549,7 @@ async def lifespan(app: FastAPI):
 
             FastAPIInstrumentor.instrument_app(app)
         except (ImportError, Exception):
-            pass
+            pass  # OTel fallback is optional — absent package is expected
 
     # Observatory→Library pipeline — wire audit events to KB article triggers
     try:

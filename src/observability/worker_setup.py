@@ -105,7 +105,7 @@ def instrument_worker(
             RedisInstrumentor().instrument()
             logger.debug("OTel Redis instrumentation active")
         except (ImportError, Exception):
-            pass
+            pass  # Redis OTel instrumentation is optional — absent package is expected
 
         # aiohttp auto-instrumentation
         try:
@@ -114,7 +114,7 @@ def instrument_worker(
             AioHttpClientInstrumentor().instrument()
             logger.debug("OTel aiohttp-client instrumentation active")
         except (ImportError, Exception):
-            pass
+            pass  # aiohttp OTel instrumentation is optional — absent package is expected
 
     app.state._tranc3_instrumented = True
     app.state._tranc3_service_name = service_name
