@@ -409,40 +409,16 @@ def _validate_code(code: str) -> None:
 
 @app.post("/lab/run")
 async def lab_run(req: RunRequest) -> dict[str, Any]:
-    """Execute code in a sandboxed subprocess (Python only for safety)."""
-    if req.language not in ("python",):
-        raise HTTPException(
-            status_code=400, detail=f"Sandboxed execution not supported for {req.language}"
-        )
+    """Code execution endpoint — disabled pending proper container sandboxing.
 
-    _validate_code(req.code)
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(req.code)
-        code_file = f.name
-
-    try:
-        # nosec S603 — intentional sandboxed execution; dangerous imports blocked above
-        result = subprocess.run(  # noqa: S603
-            [sys.executable, code_file],
-            input=req.stdin,
-            capture_output=True,
-            text=True,
-            timeout=req.timeout_seconds,
-        )
-        return {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "exit_code": result.returncode,
-            "language": req.language,
-            "executed": True,
-        }
-    except subprocess.TimeoutExpired:
-        return {"stdout": "", "stderr": "Execution timed out", "exit_code": -1, "executed": True}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Execution failed: {exc}") from exc
-    finally:
-        os.unlink(code_file)
+    AST import blocking is insufficient: __import__('os'), builtins, and
+    importlib bypass it trivially, allowing arbitrary RCE. This endpoint will
+    be re-enabled once the service runs inside a gVisor/nsjail sandbox.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail="Code execution is disabled pending container-level sandboxing. Use a dedicated sandbox service.",
+    )
 
 
 @app.get("/workspaces")

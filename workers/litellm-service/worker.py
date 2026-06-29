@@ -85,9 +85,11 @@ _db_lock = threading.Lock()
 
 @contextmanager
 def _db():
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=30.0)
     conn.row_factory = sqlite3.Row
     try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
         yield conn
         conn.commit()
     finally:

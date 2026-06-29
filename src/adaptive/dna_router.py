@@ -144,11 +144,12 @@ class DNARouter:
         self._chromosome.sort(key=lambda g: g.fitness, reverse=True)
 
         elite_count = max(1, int(len(self._chromosome) * self.ELITE_FRACTION))
-        # Elites survive unchanged; rest mutate
+        # Elites survive unchanged; mutate only non-elite genes in-place
         for gene in self._chromosome[elite_count:]:
             gene.generation = self._generation
             if self._rng.random() < 0.3:
-                self.mutate(rate=0.2)
+                delta = self._rng.uniform(-self.MUTATION_WEIGHT_DELTA, self.MUTATION_WEIGHT_DELTA)
+                gene.weight = max(0.01, gene.weight + delta * gene.fitness)
 
         # Update weights proportional to fitness
         total_fitness = sum(g.fitness for g in self._chromosome) or 1.0
