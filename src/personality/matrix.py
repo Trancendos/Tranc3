@@ -49,12 +49,22 @@ class PersonalityProfile:
     @classmethod
     def _from_dict(cls, data: Dict[str, Any]) -> "PersonalityProfile":
         """Map both the rich JSON profile schema and the flat dataclass schema."""
+        name = data.get("name") or data.get("id") or data.get("code_name")
+        if not name:
+            raise ValueError(
+                "Invalid PersonalityProfile JSON: expected one of 'name', 'id', or 'code_name'."
+            )
+        system_prompt = data.get("system_prompt") or data.get("system_prompt_prefix")
+        if not system_prompt:
+            raise ValueError(
+                "Invalid PersonalityProfile JSON: expected 'system_prompt' or 'system_prompt_prefix'."
+            )
         behavior = data.get("behavior", {})
         style = data.get("style", {})
         return cls(
-            name=data.get("name") or data.get("id") or data.get("code_name", "unknown"),
+            name=name,
             version=data.get("version", "1.0.0"),
-            system_prompt=data.get("system_prompt") or data.get("system_prompt_prefix", ""),
+            system_prompt=system_prompt,
             temperature=behavior.get("temperature", data.get("temperature", 0.8)),
             top_k=behavior.get("top_k", data.get("top_k", 50)),
             top_p=behavior.get("top_p", data.get("top_p", 0.92)),
