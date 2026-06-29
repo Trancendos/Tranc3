@@ -38,12 +38,9 @@ MAX_DELEGATION_DEPTH = 5
 async def _lifespan(app):
     # OpenTelemetry instrumentation
     try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.deepagents-orchestrator-service")
-        FastAPIInstrumentor.instrument_app(app)
+        instrument_worker(app, service_name="tranc3.deepagents-orchestrator-service")
     except Exception:
         pass  # OTel is optional — never block startup
     """Initialize database on startup."""

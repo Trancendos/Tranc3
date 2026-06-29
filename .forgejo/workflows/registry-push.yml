@@ -1,0 +1,118 @@
+---
+# registry-push.yml — Build and push Docker images to Forgejo package registry
+# Zero-cost: uses self-hosted Forgejo Packages (OCI/Docker registry built-in)
+# Falls back rotation: Forgejo registry → Zot (artifactory-service:8047)
+# Triggered on push to main (tags workers/ or Dockerfile changes)
+
+name: Registry Push
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "workers/*/Dockerfile"
+      - "docker/**"
+      - "requirements.txt"
+  workflow_dispatch:
+
+env:
+  # Primary: Forgejo Packages (self-hosted, zero-cost, no rate limits)
+  FORGEJO_REGISTRY: trancendos.com/the-workshop
+  FORGEJO_REGISTRY_USER: ${{ secrets.FORGEJO_REGISTRY_USER }}
+  FORGEJO_REGISTRY_TOKEN: ${{ secrets.FORGEJO_REGISTRY_TOKEN }}
+  # Fallback: Zot OCI registry (artifactory-service, port 8047)
+  ZOT_REGISTRY: ${{ secrets.ZOT_REGISTRY_URL }}
+
+jobs:
+  build-and-push:
+    name: Build & Push — ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: tranc3-backend
+            dockerfile: Dockerfile
+            context: .
+          - image: tranc3-bots
+            dockerfile: tranc3-bots/Dockerfile
+            context: tranc3-bots
+          - image: infinity-ws
+            dockerfile: workers/infinity-ws/Dockerfile
+            context: workers/infinity-ws
+          - image: infinity-auth
+            dockerfile: workers/infinity-auth/Dockerfile
+            context: workers/infinity-auth
+
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: https://code.forgejo.org/docker/setup-buildx-action@v3
+
+      - name: Log in to Forgejo Package Registry
+        uses: https://code.forgejo.org/docker/login-action@v3
+        with:
+          registry: ${{ env.FORGEJO_REGISTRY }}
+          username: ${{ env.FORGEJO_REGISTRY_USER }}
+          password: ${{ env.FORGEJO_REGISTRY_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: https://code.forgejo.org/docker/metadata-action@v5
+        with:
+          images: ${{ env.FORGEJO_REGISTRY }}/trancendos/${{ matrix.image }}
+          tags: |
+            type=sha,prefix=git-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push to Forgejo registry
+        id: push-forgejo
+        uses: https://code.forgejo.org/docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+        continue-on-error: true
+
+      # Fallback: push to Zot if Forgejo registry fails (adaptive rotation)
+      - name: Fallback — log in to Zot registry
+        if: steps.push-forgejo.outcome == 'failure'
+        uses: https://code.forgejo.org/docker/login-action@v3
+        with:
+          registry: ${{ env.ZOT_REGISTRY }}
+          username: ${{ secrets.ZOT_REGISTRY_USER }}
+          password: ${{ secrets.ZOT_REGISTRY_TOKEN }}
+
+      - name: Fallback — push to Zot registry
+        if: steps.push-forgejo.outcome == 'failure'
+        uses: https://code.forgejo.org/docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ env.ZOT_REGISTRY }}/trancendos/${{ matrix.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Notify Mattermost
+        if: always()
+        uses: https://code.forgejo.org/actions/github-script@v7
+        env:
+          WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          STATUS: ${{ job.status }}
+          IMAGE: ${{ matrix.image }}
+          SHA: ${{ github.sha }}
+        with:
+          script: |
+            const msg = `### Registry Push **${process.env.STATUS}** — \`${process.env.IMAGE}\`\n**Commit:** \`${process.env.SHA.slice(0,8)}\``;
+            await fetch(process.env.WEBHOOK_URL, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({text: msg})
+            });

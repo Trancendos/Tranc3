@@ -561,12 +561,9 @@ app.add_middleware(
 )
 
 try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from src.observability.worker_setup import instrument_worker
 
-    from src.observability.otel import init_otel
-
-    init_otel(service_name="tranc3.monitoring")
-    FastAPIInstrumentor.instrument_app(app)
+    instrument_worker(app, service_name="tranc3.monitoring")
 except Exception as _otel_exc:  # noqa: BLE001
     logger.warning("OTel instrumentation unavailable: %s", _otel_exc)
 

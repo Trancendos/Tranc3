@@ -500,12 +500,9 @@ class JobUpdate(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.cron-service")
-        FastAPIInstrumentor.instrument_app(app)
+        instrument_worker(app, service_name="tranc3.cron-service")
     except Exception:
         pass
     init_db()

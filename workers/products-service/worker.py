@@ -143,12 +143,9 @@ app = FastAPI(
 
 # OpenTelemetry instrumentation
 try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from src.observability.worker_setup import instrument_worker
 
-    from src.observability.otel import init_otel
-
-    init_otel(service_name="tranc3.products-service")
-    FastAPIInstrumentor.instrument_app(app)
+    instrument_worker(app, service_name="tranc3.products-service")
 except Exception:
     pass  # OTel is optional — never block startup
 

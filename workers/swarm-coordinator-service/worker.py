@@ -48,12 +48,9 @@ app = FastAPI(title="Swarm Coordinator", version="1.0.0")
 
 # OpenTelemetry instrumentation
 try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from src.observability.worker_setup import instrument_worker
 
-    from src.observability.otel import init_otel
-
-    init_otel(service_name="tranc3.swarm-coordinator-service")
-    FastAPIInstrumentor.instrument_app(app)
+    instrument_worker(app, service_name="tranc3.swarm-coordinator-service")
 except Exception:
     pass  # OTel is optional — never block startup
 STARTED_AT = datetime.now(timezone.utc)
