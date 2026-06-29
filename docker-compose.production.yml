@@ -3534,6 +3534,152 @@ services:
       - "traefik.http.routers.dspy.entrypoints=websecure"
       - "traefik.http.services.dspy.loadbalancer.server.port=8098"
 
+  # ── Forgejo — self-hosted Git forge (The Workshop) ───────────────────
+  # Replaces GitHub. Forgejo Actions CI/CD runs inside this container.
+  # Access: https://trancendos.com/the-workshop  (via Traefik PathPrefix)
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:7
+    container_name: trancendos-forgejo
+    restart: unless-stopped
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      FORGEJO__server__DOMAIN: "trancendos.com"
+      FORGEJO__server__ROOT_URL: "https://trancendos.com/the-workshop/"
+      FORGEJO__server__HTTP_PORT: "3000"
+      FORGEJO__database__DB_TYPE: "sqlite3"
+      FORGEJO__database__PATH: "/data/gitea/gitea.db"
+      FORGEJO__actions__ENABLED: "true"
+      FORGEJO__actions__DEFAULT_ACTIONS_URL: "https://code.forgejo.org"
+      FORGEJO__packages__ENABLED: "true"
+      FORGEJO__webhook__ALLOWED_HOST_LIST: "mattermost,*"
+      FORGEJO__mailer__ENABLED: "false"
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "false"
+      FORGEJO__security__SECRET_KEY: "${FORGEJO_SECRET_KEY:?required}"
+      FORGEJO__security__INTERNAL_TOKEN: "${FORGEJO_INTERNAL_TOKEN:?required}"
+    volumes:
+      - forgejo-data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "2222:22"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/-/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.forgejo.rule=Host(`trancendos.com`) && PathPrefix(`/the-workshop`)"
+      - "traefik.http.routers.forgejo.entrypoints=websecure"
+      - "traefik.http.routers.forgejo.tls.certresolver=letsencrypt"
+      - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+
+  # ── Forgejo Actions Runner — executes .forgejo/workflows/ ────────────
+  forgejo-runner:
+    image: ${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}
+    container_name: trancendos-forgejo-runner
+    restart: unless-stopped
+    depends_on:
+      forgejo:
+        condition: service_healthy
+    environment:
+      FORGEJO_INSTANCE_URL: "http://forgejo:3000"
+      FORGEJO_RUNNER_REGISTRATION_TOKEN: "${RUNNER_REGISTRATION_TOKEN:-}"
+      FORGEJO_RUNNER_NAME: "citadel-runner"
+      FORGEJO_RUNNER_LABELS: "self-hosted,linux,x86_64,docker"
+    volumes:
+      - forgejo-runner-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - tranc3-net
+
+  # ── Self-hosted Renovate — dependency update bot ──────────────────────
+  renovate-bot:
+    image: renovate/renovate:latest
+    container_name: trancendos-renovate-bot
+    restart: "no"
+    environment:
+      RENOVATE_PLATFORM: "gitea"
+      RENOVATE_ENDPOINT: "http://forgejo:3000"
+      RENOVATE_TOKEN: "${RENOVATE_FORGEJO_TOKEN:?required}"
+      RENOVATE_AUTODISCOVER: "true"
+      RENOVATE_AUTODISCOVER_FILTER: "Trancendos/*"
+      RENOVATE_GIT_AUTHOR: "Renovate Bot <renovate@trancendos.com>"
+      RENOVATE_ONBOARDING: "false"
+      RENOVATE_REQUIRE_CONFIG: "optional"
+      LOG_LEVEL: "info"
+    volumes:
+      - renovate-cache:/tmp/renovate
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=false"
+
+  # ── Mattermost — self-hosted team chat (Slack alternative) ───────────
+  mattermost:
+    image: mattermost/mattermost-team-edition:9
+    container_name: trancendos-mattermost
+    restart: unless-stopped
+    depends_on:
+      - mattermost-db
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: "postgres"
+      MM_SQLSETTINGS_DATASOURCE: "postgres://mattermost:${MATTERMOST_DB_PASSWORD:-mattermost_pass}@mattermost-db:5432/mattermost?sslmode=disable"
+      MM_SERVICESETTINGS_SITEURL: "https://chat.trancendos.com"
+      MM_SERVICESETTINGS_LISTENADDRESS: ":8065"
+      MM_SERVICESETTINGS_ENABLEINCOMINGWEBHOOKS: "true"
+      MM_SERVICESETTINGS_ENABLEOUTGOINGWEBHOOKS: "true"
+      MM_SERVICESETTINGS_ENABLECOMMANDS: "true"
+      MM_PLUGINSETTINGS_ENABLE: "true"
+      MM_TEAMSETTINGS_ENABLEOPENSERVER: "false"
+      MM_EMAILSETTINGS_ENABLESMTPAUTH: "false"
+      MM_LOGSETTINGS_ENABLECONSOLE: "true"
+      MM_LOGSETTINGS_CONSOLELEVEL: "INFO"
+      MM_FILESETTINGS_DRIVERNAME: "local"
+      MM_FILESETTINGS_DIRECTORY: "/mattermost/data/"
+    volumes:
+      - mattermost-data:/mattermost/data
+      - mattermost-logs:/mattermost/logs
+      - mattermost-config:/mattermost/config
+      - mattermost-plugins:/mattermost/plugins
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8065/api/v4/system/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mattermost.rule=Host(`chat.trancendos.com`)"
+      - "traefik.http.routers.mattermost.entrypoints=websecure"
+      - "traefik.http.routers.mattermost.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mattermost.loadbalancer.server.port=8065"
+
+  mattermost-db:
+    image: postgres:16-alpine
+    container_name: trancendos-mattermost-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mattermost
+      POSTGRES_PASSWORD: "${MATTERMOST_DB_PASSWORD:-mattermost_pass}"
+      POSTGRES_DB: mattermost
+    volumes:
+      - mattermost-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mattermost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "traefik.enable=false"
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
@@ -3738,6 +3884,22 @@ volumes:
   netdata-cache:
     driver: local
   observatory-data:
+    driver: local
+  forgejo-data:
+    driver: local
+  forgejo-runner-data:
+    driver: local
+  renovate-cache:
+    driver: local
+  mattermost-data:
+    driver: local
+  mattermost-logs:
+    driver: local
+  mattermost-config:
+    driver: local
+  mattermost-plugins:
+    driver: local
+  mattermost-db-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

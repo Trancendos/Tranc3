@@ -319,16 +319,9 @@ class CompareRunsIn(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # OpenTelemetry instrumentation
-    try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.mlflow-service")
-        FastAPIInstrumentor.instrument_app(app)
-    except Exception:
-        pass  # OTel is optional — never block startup
+    instrument_worker(app, service_name="tranc3.mlflow-service")
     init_db()
     logger.info("mlflow-service ready — tracking URI: sqlite:///%s", DB_PATH)
     yield

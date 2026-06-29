@@ -381,16 +381,9 @@ def _new_id() -> str:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    # OpenTelemetry instrumentation
-    try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.vault-service")
-        FastAPIInstrumentor.instrument_app(app)
-    except Exception:
-        pass  # OTel is optional — never block startup
+    instrument_worker(app, service_name="tranc3.vault-service")
     _init_db()
     _init_openbao()
     logger.info("vault-service started — DB at %s", DB_PATH)

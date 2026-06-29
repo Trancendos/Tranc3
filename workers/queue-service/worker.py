@@ -141,15 +141,9 @@ class FailRequest(BaseModel):
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from src.observability.worker_setup import instrument_worker
 
-        from src.observability.otel import init_otel
-
-        init_otel(service_name="tranc3.the-hive")
-        FastAPIInstrumentor.instrument_app(app)
-    except Exception:
-        pass
+    instrument_worker(app, service_name="tranc3.the-hive")
     init_db()
     sweeper = asyncio.create_task(_stuck_task_sweeper())
     yield
