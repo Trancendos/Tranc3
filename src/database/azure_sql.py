@@ -93,7 +93,7 @@ def bootstrap_table(table_name: str, ddl: str) -> bool:
     try:
         cur = conn.cursor()
         # Azure SQL uses IF NOT EXISTS via: IF NOT EXISTS (SELECT ...)
-        check_sql = f"""
+        check_sql = f"""  # nosec B608 -- table_name is internal constant, not user input
         IF NOT EXISTS (
             SELECT 1 FROM INFORMATION_SCHEMA.TABLES
             WHERE TABLE_NAME = '{table_name}'
@@ -123,7 +123,7 @@ def upsert_json(table: str, key_col: str, key_val: str, data_col: str, data: str
         return False
     try:
         cur = conn.cursor()
-        sql = f"""
+        sql = f"""  # nosec B608 -- table/column names are internal constants, not user input
         MERGE {table} AS target
         USING (SELECT ? AS {key_col}, ? AS {data_col}) AS source
         ON target.{key_col} = source.{key_col}

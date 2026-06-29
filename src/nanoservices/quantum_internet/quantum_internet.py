@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
-import random
+import random  # nosec B311 -- non-cryptographic simulation use
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone

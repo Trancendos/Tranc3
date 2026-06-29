@@ -457,7 +457,7 @@ class _PgvectorBackend:
         with self._engine.connect() as conn:
             conn.execute(
                 text(
-                    f"INSERT INTO {tbl} (id, embedding, payload) "  # noqa: S608
+                    f"INSERT INTO {tbl} (id, embedding, payload) "  # noqa: S608  # nosec B608 -- table name is internal config, not user input
                     "VALUES (:id, :vec::vector, :payload::jsonb) "
                     "ON CONFLICT (id) DO UPDATE SET "
                     "  embedding = EXCLUDED.embedding,"
@@ -482,7 +482,7 @@ class _PgvectorBackend:
                 self._engine.connect()
                 .execute(
                     text(
-                        f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
+                        f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608  # nosec B608 -- table name is internal config, not user input
                         f"FROM {tbl} WHERE payload @> :filter::jsonb "
                         "ORDER BY score DESC LIMIT :k"
                     ),
@@ -495,7 +495,7 @@ class _PgvectorBackend:
                 self._engine.connect()
                 .execute(
                     text(
-                        f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608
+                        f"SELECT id, payload, 1 - (embedding <=> :vec::vector) AS score "  # noqa: S608  # nosec B608 -- table name is internal config, not user input
                         f"FROM {tbl} ORDER BY score DESC LIMIT :k"
                     ),
                     {"vec": str(vector), "k": top_k},
@@ -509,7 +509,7 @@ class _PgvectorBackend:
 
         with self._engine.connect() as conn:
             conn.execute(
-                text(f"DELETE FROM {self._table} WHERE id = :id"),  # noqa: S608
+                text(f"DELETE FROM {self._table} WHERE id = :id"),  # noqa: S608  # nosec B608 -- table name is internal config, not user input
                 {"id": doc_id},
             )
             conn.commit()
@@ -520,7 +520,7 @@ class _PgvectorBackend:
         with self._engine.connect() as conn:
             result = conn.execute(
                 text(
-                    f"DELETE FROM {self._table} WHERE payload->>:key = :val"  # noqa: S608
+                    f"DELETE FROM {self._table} WHERE payload->>:key = :val"  # noqa: S608  # nosec B608 -- table name is internal config, not user input
                 ),
                 {"key": key, "val": value},
             )
@@ -533,7 +533,7 @@ class _PgvectorBackend:
         with self._engine.connect() as conn:
             return (
                 conn.execute(
-                    text(f"SELECT COUNT(*) FROM {self._table}")  # noqa: S608
+                    text(f"SELECT COUNT(*) FROM {self._table}")  # noqa: S608  # nosec B608 -- table name is internal config, not user input
                 ).scalar()
                 or 0
             )
