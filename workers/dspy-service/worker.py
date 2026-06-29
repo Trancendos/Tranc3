@@ -316,7 +316,17 @@ async def list_executions(
             .execute("SELECT * FROM executions ORDER BY created_at DESC LIMIT ?", (limit,))
             .fetchall()
         )
-    return {"executions": [dict(r) for r in rows], "total": len(rows)}
+    def _decode_row(r: dict) -> dict:
+        row = dict(r)
+        for field in ("input_data", "output"):
+            if isinstance(row.get(field), str):
+                try:
+                    row[field] = json.loads(row[field])
+                except (ValueError, TypeError):
+                    pass
+        return row
+
+    return {"executions": [_decode_row(r) for r in rows], "total": len(rows)}
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ The HIVE — Self-Hosted Worker
 Priority task queue with retry logic, dead-letter, and stuck-task sweep.
 Lead AI: The Queen
 
-Port: 8084
+Port: 8027
 Zero-cost: FastAPI + SQLite, asyncio background sweeper.
 """
 
@@ -25,7 +25,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-WORKER_PORT = 8084
+WORKER_PORT = int(os.getenv("PORT", "8027"))
 WORKER_NAME = "the-hive"
 DB_PATH = Path(__file__).parent / "data" / "hive.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -141,12 +141,9 @@ class FailRequest(BaseModel):
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        from src.observability.worker_setup import instrument_worker
+    from src.observability.worker_setup import instrument_worker
 
-        instrument_worker(app, service_name="tranc3.the-hive")
-    except Exception:
-        pass
+    instrument_worker(app, service_name="tranc3.the-hive")
     init_db()
     sweeper = asyncio.create_task(_stuck_task_sweeper())
     yield

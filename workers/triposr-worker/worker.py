@@ -138,13 +138,9 @@ class ReconstructRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # OpenTelemetry instrumentation
-    try:
-        from src.observability.worker_setup import instrument_worker
+    from src.observability.worker_setup import instrument_worker
 
-        instrument_worker(app, service_name="tranc3.triposr-worker")
-    except Exception:
-        pass  # OTel is optional — never block startup
+    instrument_worker(app, service_name="tranc3.triposr-worker")
     if _check_tsr_available():
         logger.info("TripoSR package detected; model will be loaded on first request.")
     else:

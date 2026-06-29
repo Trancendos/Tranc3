@@ -884,24 +884,6 @@ services:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8035/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
-  langchain-integration-service:
-    <<: *worker-common
-    build: { context: ./workers/langchain-integration-service, dockerfile: Dockerfile }
-    container_name: langchain-integration-service-worker
-    ports: ["8036:8036"]
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8036/health', timeout=5).read()\""]
-      <<: *healthcheck-default
-
-  deepagents-orchestrator-service:
-    <<: *worker-common
-    build: { context: ./workers/deepagents-orchestrator-service, dockerfile: Dockerfile }
-    container_name: deepagents-orchestrator-service-worker
-    ports: ["8037:8037"]
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8037/health', timeout=5).read()\""]
-      <<: *healthcheck-default
-
   vault-service:
     <<: *worker-common
     build: { context: ./workers/vault-service, dockerfile: Dockerfile }
@@ -919,7 +901,7 @@ services:
     <<: *worker-common
     build: { context: ./workers/lab-service, dockerfile: Dockerfile }
     container_name: lab-service-worker
-    ports: ["8039:8039"]
+    ports: ["8066:8066"]
     environment:
       LAB_DB_PATH: /data/lab.db
       OLLAMA_URL: "${OLLAMA_URL:-http://ollama:11434}"
@@ -938,15 +920,17 @@ services:
     volumes:
       - lab-service-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8039/health', timeout=5).read()\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8066/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   tranceflow:
     <<: *worker-common
     build: { context: ./workers/tranceflow, dockerfile: Dockerfile }
-    container_name: tranceflow-worker
-    ports: ["8052:8052"]
+    container_name: tranc3-tranceflow
+    ports: ["8059:8059"]
+    expose: ["8059"]
     environment:
+      PORT: "8059"
       TRANCEFLOW_DB_PATH: /data/tranceflow.db
       TRANCEFLOW_ASSET_DIR: /data/tranceflow-assets
       GODOT_BIN: "${GODOT_BIN:-godot}"
@@ -963,15 +947,22 @@ services:
     volumes:
       - tranceflow-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=5).read()\""]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8059/health')"]
       <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
+      - "traefik.http.routers.tranceflow.entrypoints=websecure"
+      - "traefik.http.services.tranceflow.loadbalancer.server.port=8059"
 
   vrar3d:
     <<: *worker-common
     build: { context: ./workers/vrar3d, dockerfile: Dockerfile }
-    container_name: vrar3d-worker
-    ports: ["8063:8063"]
+    container_name: tranc3-vrar3d
+    ports: ["8060:8060"]
+    expose: ["8060"]
     environment:
+      PORT: "8060"
       VRAR3D_DB_PATH: /data/vrar3d.db
       VRAR3D_ASSET_DIR: /data/assets
       GODOT_BIN: "${GODOT_BIN:-godot}"
@@ -994,8 +985,13 @@ services:
     volumes:
       - vrar3d-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8063/health', timeout=5).read()\""]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
       <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
+      - "traefik.http.routers.vrar3d.entrypoints=websecure"
+      - "traefik.http.services.vrar3d.loadbalancer.server.port=8060"
 
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
   # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
@@ -1005,16 +1001,16 @@ services:
     container_name: trancendos-openbao
     environment:
       BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:?required}"
-      BAO_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      BAO_DEV_LISTEN_ADDRESS: "0.0.0.0:8201"
     ports:
-      - "8200:8200"
+      - "8201:8201"
     volumes:
       - openbao-data:/openbao/data
     networks:
       - tranc3-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8200/v1/sys/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8201/v1/sys/health"]
       <<: *healthcheck-default
 
   # ── KrakenD — API Gateway (Apache 2.0, replaces CF trancendos-api-gateway) ──
@@ -1027,7 +1023,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
     ports:
       - "8099:8080"
-      - "8090:8090"
+      - "8105:8090"
     volumes:
       - ./config/krakend/krakend.json:/etc/krakend/krakend.json:ro
     networks:
@@ -1060,12 +1056,12 @@ services:
       dockerfile: Dockerfile
     container_name: trancendos-triposr-worker
     ports:
-      - "8051:8051"
+      - "8111:8111"
     volumes:
       - triposr-models:/app/models
       - triposr-outputs:/app/outputs
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8111/health')"]
       <<: *healthcheck-default
 
   # ── FFmpeg Worker — TateKing Video Processing (Port 8052) ──────────────
@@ -1256,7 +1252,7 @@ services:
     container_name: trancendos-penpot-frontend
     restart: unless-stopped
     ports:
-      - "9001:80"
+      - "9002:80"
     environment:
       PENPOT_FLAGS: "enable-registration enable-login disable-demo-users"
     depends_on:
@@ -1601,7 +1597,7 @@ services:
       dockerfile: Dockerfile
     container_name: trancendos-library-service
     environment:
-      LIBRARY_PORT: "8053"
+      LIBRARY_PORT: "8067"
       LIBRARY_DB_PATH: "/data/library.db"
       OUTLINE_URL: "http://outline:3000"
       OUTLINE_API_KEY: "${OUTLINE_API_KEY:-}"
@@ -1627,10 +1623,10 @@ services:
     networks:
       - tranc3-net
     ports:
-      - "8053:8053"
+      - "8067:8067"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8067/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -1639,7 +1635,7 @@ services:
       traefik.http.routers.library-service.rule: "PathPrefix(`/library`)"
       traefik.http.routers.library-service.entrypoints: "websecure"
       traefik.http.routers.library-service.tls.certresolver: "letsencrypt"
-      traefik.http.services.library-service.loadbalancer.server.port: "8053"
+      traefik.http.services.library-service.loadbalancer.server.port: "8067"
 
   # ─────────────────────────────────────────────────────────────────────────
   # SigNoz — The Observatory enhanced (OpenTelemetry-native APM, Apache 2.0)
@@ -2063,7 +2059,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "8888:8080"
+      - "8108:8080"
     environment:
       DOZZLE_AUTH_PROVIDER: "simple"
       DOZZLE_ENABLE_ACTIONS: "true"
@@ -2219,20 +2215,20 @@ services:
 
 # ═══════════════════════════════════════════════════════════════════════════
 # The Digital Grid — Tier 6: Dagster (asset-centric orchestration, free OSS)
-# UI: /dagster  |  GraphQL: dagster-webserver:3002
-# NOTE: port 3001 is Grafana; port 3000 is Gotenberg; Dagster uses 3002
+# UI: /dagster  |  GraphQL: dagster-webserver:3003
+# NOTE: port 3001 is Grafana; port 3000 is Gotenberg; Dagster uses 3003
 # ═══════════════════════════════════════════════════════════════════════════
   dagster-webserver:
     image: ghcr.io/dagster-io/dagster:latest
     container_name: trancendos-dagster
     restart: unless-stopped
-    command: dagster-webserver -h 0.0.0.0 -p 3002
+    command: dagster-webserver -h 0.0.0.0 -p 3003
     environment:
       - DAGSTER_HOME=/dagster_home
     volumes:
       - dagster-data:/dagster_home
     ports:
-      - "3002:3002"
+      - "3003:3003"
     networks:
       - tranc3-net
     labels:
@@ -2240,7 +2236,7 @@ services:
       - "traefik.http.routers.dagster.rule=Host(`trancendos.com`) && PathPrefix(`/dagster`)"
       - "traefik.http.middlewares.dagster-strip.stripprefix.prefixes=/dagster"
       - "traefik.http.routers.dagster.middlewares=dagster-strip"
-      - "traefik.http.services.dagster.loadbalancer.server.port=3002"
+      - "traefik.http.services.dagster.loadbalancer.server.port=3003"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ChronosSphere / ArcStream — Kestra: Open-source workflow + cron scheduler
@@ -2262,8 +2258,8 @@ services:
       - kestra-data:/app/storage
       - kestra-flows:/flows
     ports:
-      - "8060:8080"
-      - "8061:8081"
+      - "8102:8080"
+      - "8103:8081"
     networks:
       - tranc3-net
     healthcheck:
@@ -2367,7 +2363,7 @@ services:
       - paperless-export:/usr/src/paperless/export
       - paperless-consume:/usr/src/paperless/consume
     ports:
-      - "8085:8000"
+      - "8104:8000"
     networks:
       - tranc3-net
     labels:
@@ -2510,7 +2506,7 @@ services:
     depends_on:
       - misp
     environment:
-      - CRYPTEX_PORT=8039
+      - CRYPTEX_PORT=8053
       - CRYPTEX_DB_PATH=/data/cryptex.db
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - WAZUH_URL=https://wazuh-manager:55000
@@ -2531,13 +2527,13 @@ services:
     volumes:
       - cryptex-data:/data
     ports:
-      - "8039:8039"
+      - "8053:8053"
     networks:
       - tranc3-net
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.cryptex.rule=Host(`trancendos.com`) && PathPrefix(`/cryptex`)"
-      - "traefik.http.services.cryptex.loadbalancer.server.port=8039"
+      - "traefik.http.services.cryptex.loadbalancer.server.port=8053"
 
   # ── Observatory — The Observatory / Norman Hawkins (Port 8040)
   # 7-backend ACO pheromone routing: Tempo+Jaeger (traces), VictoriaMetrics+Prometheus
@@ -2549,7 +2545,7 @@ services:
     container_name: tranc3-observatory
     restart: unless-stopped
     environment:
-      - OBSERVATORY_PORT=8040
+      - OBSERVATORY_PORT=8065
       - OBSERVATORY_DB_PATH=/data/observatory.db
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - SIGNOZ_URL=http://signoz-query-service:8080
@@ -2571,7 +2567,7 @@ services:
     volumes:
       - observatory-data:/data
     ports:
-      - "8040:8040"
+      - "8065:8065"
     depends_on:
       - otel-collector
       - victoriametrics
@@ -2584,7 +2580,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.observatory.rule=Host(`trancendos.com`) && PathPrefix(`/observatory`)"
-      - "traefik.http.services.observatory.loadbalancer.server.port=8040"
+      - "traefik.http.services.observatory.loadbalancer.server.port=8065"
 
   # ── MISP — Malware Information Sharing Platform (Cryptex tier 2)
   # Free, self-hosted, open-source. No paid licence required.
@@ -2608,7 +2604,7 @@ services:
     volumes:
       - misp-data:/var/www/MISP/app/files
     ports:
-      - "8095:80"
+      - "8106:80"
     networks:
       - tranc3-net
     labels:
@@ -2670,7 +2666,7 @@ services:
     volumes:
       - cuckoo-data:/cuckoo
     ports:
-      - "8096:8090"
+      - "8107:8090"
     networks:
       - tranc3-net
     labels:
@@ -2883,19 +2879,19 @@ services:
     container_name: tranc3-tateking
     <<: *worker-common
     environment:
-      - PORT=8066
+      - PORT=8061
     expose:
-      - "8066"
+      - "8061"
     ports:
-      - "8066:8066"
+      - "8061:8061"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8066/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tateking.rule=PathPrefix(`/tateking`)"
       - "traefik.http.routers.tateking.entrypoints=websecure"
-      - "traefik.http.services.tateking.loadbalancer.server.port=8066"
+      - "traefik.http.services.tateking.loadbalancer.server.port=8061"
 
   # ── Sashas Photo Studio — image generation (Port 8062) ──────────────────────────────────────────────
   sashas-photo-studio:
@@ -2971,19 +2967,19 @@ services:
     container_name: tranc3-taimra
     <<: *worker-common
     environment:
-      - PORT=8065
+      - PORT=8074
     expose:
-      - "8065"
+      - "8074"
     ports:
-      - "8065:8065"
+      - "8074:8074"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8065/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8074/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.taimra.rule=PathPrefix(`/taimra`)"
       - "traefik.http.routers.taimra.entrypoints=websecure"
-      - "traefik.http.services.taimra.loadbalancer.server.port=8065"
+      - "traefik.http.services.taimra.loadbalancer.server.port=8074"
 
   # ── I-Mind — emotion sensitivity engine (Port 8059) ──────────────────────────────────────────────
   imind:
@@ -2993,19 +2989,19 @@ services:
     container_name: tranc3-imind
     <<: *worker-common
     environment:
-      - PORT=8059
+      - PORT=8075
     expose:
-      - "8059"
+      - "8075"
     ports:
-      - "8059:8059"
+      - "8075:8075"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8059/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8075/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.imind.rule=PathPrefix(`/imind`)"
       - "traefik.http.routers.imind.entrypoints=websecure"
-      - "traefik.http.services.imind.loadbalancer.server.port=8059"
+      - "traefik.http.services.imind.loadbalancer.server.port=8075"
 
   # ── Resonate — empathy engine (Port 8076) ──────────────────────────────────────────────
   resonate:
@@ -3037,19 +3033,19 @@ services:
     container_name: tranc3-tranquility
     <<: *worker-common
     environment:
-      - PORT=8058
+      - PORT=8077
     expose:
-      - "8058"
+      - "8077"
     ports:
-      - "8058:8058"
+      - "8077:8077"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8058/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8077/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tranquility.rule=PathPrefix(`/tranquility`)"
       - "traefik.http.routers.tranquility.entrypoints=websecure"
-      - "traefik.http.services.tranquility.loadbalancer.server.port=8058"
+      - "traefik.http.services.tranquility.loadbalancer.server.port=8077"
 
   # ── The Studio — central creativity hub (Port 8069) ──────────────────────────────────────────────
   the-studio:
@@ -3103,63 +3099,19 @@ services:
     container_name: tranc3-turings-hub-service
     <<: *worker-common
     environment:
-      - PORT=8085
+      - PORT=8058
     expose:
-      - "8085"
+      - "8058"
     ports:
-      - "8085:8085"
+      - "8058:8058"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8085/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8058/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.turings-hub-service.rule=PathPrefix(`/turings-hub`)"
       - "traefik.http.routers.turings-hub-service.entrypoints=websecure"
-      - "traefik.http.services.turings-hub-service.loadbalancer.server.port=8085"
-
-  # ── TranceFlow — 3D/game creation (Port 8067) ──────────────────────────────────────────────
-  tranceflow:
-    build:
-      context: ./workers/tranceflow
-      dockerfile: Dockerfile
-    container_name: tranc3-tranceflow
-    <<: *worker-common
-    environment:
-      - PORT=8067
-    expose:
-      - "8067"
-    ports:
-      - "8067:8067"
-    healthcheck:
-      <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8067/health')"]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
-      - "traefik.http.routers.tranceflow.entrypoints=websecure"
-      - "traefik.http.services.tranceflow.loadbalancer.server.port=8067"
-
-  # ── VRAR3D — Three.js / A-Frame immersion (Port 8068) ──────────────────────────────────────────────
-  vrar3d:
-    build:
-      context: ./workers/vrar3d
-      dockerfile: Dockerfile
-    container_name: tranc3-vrar3d
-    <<: *worker-common
-    environment:
-      - PORT=8068
-    expose:
-      - "8068"
-    ports:
-      - "8068:8068"
-    healthcheck:
-      <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8068/health')"]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
-      - "traefik.http.routers.vrar3d.entrypoints=websecure"
-      - "traefik.http.services.vrar3d.loadbalancer.server.port=8068"
+      - "traefik.http.services.turings-hub-service.loadbalancer.server.port=8058"
 
   # ── The Warp Tunnel — crypto scanner / quarantine (Port 8040) ──────────────────────────────────────────────
   warp-tunnel:
@@ -3169,19 +3121,19 @@ services:
     container_name: tranc3-warp-tunnel
     <<: *worker-common
     environment:
-      - PORT=8040
+      - PORT=8072
     expose:
-      - "8040"
+      - "8072"
     ports:
-      - "8040:8040"
+      - "8072:8072"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8040/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8072/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.warp-tunnel.rule=PathPrefix(`/warp-tunnel`)"
       - "traefik.http.routers.warp-tunnel.entrypoints=websecure"
-      - "traefik.http.services.warp-tunnel.loadbalancer.server.port=8040"
+      - "traefik.http.services.warp-tunnel.loadbalancer.server.port=8072"
 
   # ── Warp Radio — music/audio streaming (Port 8057) ──────────────────────────────────────────────
   warp-radio:
@@ -3189,6 +3141,28 @@ services:
       context: ./workers/warp-radio
       dockerfile: Dockerfile
     container_name: tranc3-warp-radio
+    <<: *worker-common
+    environment:
+      - PORT=8073
+    expose:
+      - "8073"
+    ports:
+      - "8073:8073"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8073/health')"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.warp-radio.rule=PathPrefix(`/warp-radio`)"
+      - "traefik.http.routers.warp-radio.entrypoints=websecure"
+      - "traefik.http.services.warp-radio.loadbalancer.server.port=8073"
+
+  # ── The Dutchy — intelligence / market analysis (Port 8061) ──────────────────────────────────────────────
+  the-dutchy:
+    build:
+      context: ./workers/the-dutchy
+      dockerfile: Dockerfile
+    container_name: tranc3-the-dutchy
     <<: *worker-common
     environment:
       - PORT=8057
@@ -3201,31 +3175,9 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8057/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.warp-radio.rule=PathPrefix(`/warp-radio`)"
-      - "traefik.http.routers.warp-radio.entrypoints=websecure"
-      - "traefik.http.services.warp-radio.loadbalancer.server.port=8057"
-
-  # ── The Dutchy — intelligence / market analysis (Port 8061) ──────────────────────────────────────────────
-  the-dutchy:
-    build:
-      context: ./workers/the-dutchy
-      dockerfile: Dockerfile
-    container_name: tranc3-the-dutchy
-    <<: *worker-common
-    environment:
-      - PORT=8061
-    expose:
-      - "8061"
-    ports:
-      - "8061:8061"
-    healthcheck:
-      <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"]
-    labels:
-      - "traefik.enable=true"
       - "traefik.http.routers.the-dutchy.rule=PathPrefix(`/the-dutchy`)"
       - "traefik.http.routers.the-dutchy.entrypoints=websecure"
-      - "traefik.http.services.the-dutchy.loadbalancer.server.port=8061"
+      - "traefik.http.services.the-dutchy.loadbalancer.server.port=8057"
 
   # ── DevOcity — development ops hub (Port 8062) ──────────────────────────────────────────────
   devocity:
@@ -3235,19 +3187,19 @@ services:
     container_name: tranc3-devocity
     <<: *worker-common
     environment:
-      - PORT=8062
+      - PORT=8110
     expose:
-      - "8062"
+      - "8110"
     ports:
-      - "8062:8062"
+      - "8110:8110"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8062/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8110/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.devocity.rule=PathPrefix(`/devocity`)"
       - "traefik.http.routers.devocity.entrypoints=websecure"
-      - "traefik.http.services.devocity.loadbalancer.server.port=8062"
+      - "traefik.http.services.devocity.loadbalancer.server.port=8110"
 
   # ── The Chaos Party — testing platform (Port 8063) ──────────────────────────────────────────────
   chaos-party:
@@ -3257,19 +3209,19 @@ services:
     container_name: tranc3-chaos-party
     <<: *worker-common
     environment:
-      - PORT=8063
+      - PORT=8079
     expose:
-      - "8063"
+      - "8079"
     ports:
-      - "8063:8063"
+      - "8079:8079"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8063/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8079/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.chaos-party.rule=PathPrefix(`/chaos-party`)"
       - "traefik.http.routers.chaos-party.entrypoints=websecure"
-      - "traefik.http.services.chaos-party.loadbalancer.server.port=8063"
+      - "traefik.http.services.chaos-party.loadbalancer.server.port=8079"
 
   # ── The Basement — archived info store (Port 8088) ──────────────────────────────────────────────
   basement:
@@ -3279,19 +3231,19 @@ services:
     container_name: tranc3-basement
     <<: *worker-common
     environment:
-      - PORT=8088
+      - PORT=8068
     expose:
-      - "8088"
+      - "8068"
     ports:
-      - "8088:8088"
+      - "8068:8068"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8068/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.basement.rule=PathPrefix(`/basement`)"
       - "traefik.http.routers.basement.entrypoints=websecure"
-      - "traefik.http.services.basement.loadbalancer.server.port=8088"
+      - "traefik.http.services.basement.loadbalancer.server.port=8068"
 
   # ── Backup Service — automated data backup (Port 8039) ──────────────────────────────────────────────
   backup-service:
@@ -3301,19 +3253,19 @@ services:
     container_name: tranc3-backup-service
     <<: *worker-common
     environment:
-      - PORT=8039
+      - PORT=8078
     expose:
-      - "8039"
+      - "8078"
     ports:
-      - "8039:8039"
+      - "8078:8078"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8039/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8078/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backup-service.rule=PathPrefix(`/backup`)"
       - "traefik.http.routers.backup-service.entrypoints=websecure"
-      - "traefik.http.services.backup-service.loadbalancer.server.port=8039"
+      - "traefik.http.services.backup-service.loadbalancer.server.port=8078"
 
   # ── LangChain — chain/RAG/agent orchestration (Port 8036) ──────────────────────────────────────────────
   langchain-integration-service:
@@ -3345,19 +3297,19 @@ services:
     container_name: tranc3-mlflow-service
     <<: *worker-common
     environment:
-      - PORT=8095
+      - PORT=8039
     expose:
-      - "8095"
+      - "8039"
     ports:
-      - "8095:8095"
+      - "8039:8039"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8095/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8039/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mlflow-service.rule=PathPrefix(`/mlflow`)"
       - "traefik.http.routers.mlflow-service.entrypoints=websecure"
-      - "traefik.http.services.mlflow-service.loadbalancer.server.port=8095"
+      - "traefik.http.services.mlflow-service.loadbalancer.server.port=8039"
 
   # ── LiteLLM — AI proxy x10 provider rotation (Port 8049) ──────────────────────────────────────────────
   litellm-service:
@@ -3433,19 +3385,19 @@ services:
     container_name: tranc3-swarm-coordinator-service
     <<: *worker-common
     environment:
-      - PORT=8053
+      - PORT=8109
     expose:
-      - "8053"
+      - "8109"
     ports:
-      - "8053:8053"
+      - "8109:8109"
     healthcheck:
       <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8109/health')"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.swarm-coordinator-service.rule=PathPrefix(`/swarm-coordinator`)"
       - "traefik.http.routers.swarm-coordinator-service.entrypoints=websecure"
-      - "traefik.http.services.swarm-coordinator-service.loadbalancer.server.port=8053"
+      - "traefik.http.services.swarm-coordinator-service.loadbalancer.server.port=8109"
 
   # ── The HIVE — task queue / agent coordination (Port 8051) ──────────────────────────────────────────────
   hive-service:
@@ -3522,7 +3474,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8096
-      - OLLAMA_URL=http://tranc3-ollama:11434
+      - OLLAMA_URL=http://ollama:11434
     expose:
       - "8096"
     ports:
@@ -3545,7 +3497,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8097
-      - OLLAMA_URL=http://tranc3-ollama:11434
+      - OLLAMA_URL=http://ollama:11434
     expose:
       - "8097"
     ports:
@@ -3568,7 +3520,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8098
-      - OLLAMA_URL=http://tranc3-ollama:11434
+      - OLLAMA_URL=http://ollama:11434
     expose:
       - "8098"
     ports:
@@ -3581,7 +3533,6 @@ services:
       - "traefik.http.routers.dspy.rule=PathPrefix(`/dspy`)"
       - "traefik.http.routers.dspy.entrypoints=websecure"
       - "traefik.http.services.dspy.loadbalancer.server.port=8098"
-
 
   # ── Forgejo — self-hosted Git forge (The Workshop) ───────────────────
   # Replaces GitHub. Forgejo Actions CI/CD runs inside this container.
@@ -3628,9 +3579,6 @@ services:
       - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
 
   # ── Forgejo Actions Runner — executes .forgejo/workflows/ ────────────
-  # Aligns with deploy/forgejo/runner-setup.sh registration-token flow.
-  # Obtain RUNNER_REGISTRATION_TOKEN from:
-  #   https://trancendos.com/the-workshop/-/admin/runners → "Create new runner"
   forgejo-runner:
     image: ${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}
     container_name: trancendos-forgejo-runner
@@ -3650,8 +3598,6 @@ services:
       - tranc3-net
 
   # ── Self-hosted Renovate — dependency update bot ──────────────────────
-  # Runs on schedule; scans all repos in Forgejo and opens update PRs.
-  # Zero-cost: no paid plan needed, uses Forgejo token only.
   renovate-bot:
     image: renovate/renovate:latest
     container_name: trancendos-renovate-bot
@@ -3674,8 +3620,6 @@ services:
       - "traefik.enable=false"
 
   # ── Mattermost — self-hosted team chat (Slack alternative) ───────────
-  # Receives Forgejo webhooks for push, PR, CI, and security alerts.
-  # Zero-cost: Mattermost Team Edition is fully free self-hosted.
   mattermost:
     image: mattermost/mattermost-team-edition:9
     container_name: trancendos-mattermost
@@ -3741,22 +3685,6 @@ services:
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
 volumes:
-  forgejo-data:
-    driver: local
-  forgejo-runner-data:
-    driver: local
-  renovate-cache:
-    driver: local
-  mattermost-data:
-    driver: local
-  mattermost-logs:
-    driver: local
-  mattermost-config:
-    driver: local
-  mattermost-plugins:
-    driver: local
-  mattermost-db-data:
-    driver: local
   cranbania-data:
     driver: local
   traefik-config:
@@ -3956,6 +3884,22 @@ volumes:
   netdata-cache:
     driver: local
   observatory-data:
+    driver: local
+  forgejo-data:
+    driver: local
+  forgejo-runner-data:
+    driver: local
+  renovate-cache:
+    driver: local
+  mattermost-data:
+    driver: local
+  mattermost-logs:
+    driver: local
+  mattermost-config:
+    driver: local
+  mattermost-plugins:
+    driver: local
+  mattermost-db-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

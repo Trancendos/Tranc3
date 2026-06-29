@@ -245,7 +245,7 @@ async def list_repositories() -> dict[str, Any]:
     return {"repositories": repos, "total": len(repos), "source": "local"}
 
 
-@app.get("/artifactory/repositories/{repo}/tags")
+@app.get("/artifactory/repositories/{repo:path}/tags")
 async def list_tags(repo: str) -> dict[str, Any]:
     """List tags for a repository in Zot."""
     safe_repo = repo.replace("\n", "").replace("\r", "")[:100]
@@ -283,9 +283,10 @@ async def create_repository(body: RepoCreate) -> dict[str, Any]:
         except Exception as exc:
             logger.error("Gitea create repo failed: %s", exc)
 
-    # Zot — repos are auto-created on first push; return success stub
+    # Zot repos are auto-created on first image push — not created yet
     return {
-        "created": True,
+        "created": False,
+        "pending_push": True,
         "repo": {"name": body.name, "description": body.description},
         "source": "zot",
         "note": "Zot repos are created automatically on first image push.",

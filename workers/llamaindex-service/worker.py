@@ -216,8 +216,8 @@ async def query_index(body: QueryRequest) -> dict[str, Any]:
     docs = (
         db()
         .execute(
-            "SELECT content, filename FROM documents WHERE index_id=? AND status='indexed' LIMIT ?",
-            (body.index_id, body.top_k * 10),
+            "SELECT content, filename FROM documents WHERE index_id=? AND status='indexed'",
+            (body.index_id,),
         )
         .fetchall()
     )

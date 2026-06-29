@@ -376,13 +376,9 @@ _audio_cache: Dict[str, bytes] = {}
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    # OpenTelemetry instrumentation
-    try:
-        from src.observability.worker_setup import instrument_worker
+    from src.observability.worker_setup import instrument_worker
 
-        instrument_worker(app, service_name="tranc3.turings-hub-service")
-    except Exception:
-        pass  # OTel is optional — never block startup
+    instrument_worker(app, service_name="tranc3.turings-hub-service")
     for d in (VRM_DIR, ANIM_DIR, PORTRAIT_DIR):
         d.mkdir(parents=True, exist_ok=True)
     logger.info("Turing's Hub 3D AI Model Builder started on port %d", PORT)

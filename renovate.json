@@ -6,7 +6,6 @@
     ":semanticCommits",
     ":separatePatchReleases",
     "group:monorepos",
-    "group:popular-preset-monorepos",
     "workarounds:all"
   ],
   "labels": ["dependencies", "automated"],

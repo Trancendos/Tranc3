@@ -91,13 +91,9 @@ async def health():
 
 @app.on_event("startup")
 async def _worker_startup():
-    # OpenTelemetry instrumentation
-    try:
-        from src.observability.worker_setup import instrument_worker
+    from src.observability.worker_setup import instrument_worker
 
-        instrument_worker(app, service_name="tranc3.dimensional-nexus-service")
-    except Exception:
-        pass  # OTel is optional — never block startup
+    instrument_worker(app, service_name="tranc3.dimensional-nexus-service")
     """Initialize the Nexus with default AI/Agent/Bot services and topology on startup."""
     nexus = get_nexus()
     logger.info(f"Nexus worker starting on port {WORKER_PORT}")

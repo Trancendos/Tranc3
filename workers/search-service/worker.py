@@ -132,13 +132,9 @@ class SearchIn(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # OpenTelemetry instrumentation
-    try:
-        from src.observability.worker_setup import instrument_worker
+    from src.observability.worker_setup import instrument_worker
 
-        instrument_worker(app, service_name="tranc3.search-service")
-    except Exception:
-        pass  # OTel is optional — never block startup
+    instrument_worker(app, service_name="tranc3.search-service")
     init_db()
     logger.info("search-service DB ready with FTS5")
     yield

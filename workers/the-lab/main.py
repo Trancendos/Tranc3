@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
+import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -71,7 +74,7 @@ class CompleteRequest(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    messages: list[dict[str, str]]
+    messages: list[dict[str, str]] = Field(..., min_length=1)
     language: str = "python"
     max_tokens: int = Field(1024, ge=1, le=4096)
 
@@ -406,14 +409,15 @@ def _validate_code(code: str) -> None:
 
 @app.post("/lab/run")
 async def lab_run(req: RunRequest) -> dict[str, Any]:
-    """Execute code — requires gVisor/microVM isolation (not available on this host)."""
-    # AST-based import blocking is bypassable via __import__(), builtins, etc.
-    # Direct host execution is disabled until a proper isolated sandbox
-    # (gVisor runsc, Firecracker microVM, or nsjail) is wired up.
+    """Code execution endpoint — disabled pending proper container sandboxing.
+
+    AST import blocking is insufficient: __import__('os'), builtins, and
+    importlib bypass it trivially, allowing arbitrary RCE. This endpoint will
+    be re-enabled once the service runs inside a gVisor/nsjail sandbox.
+    """
     raise HTTPException(
-        status_code=503,
-        detail="Code execution is disabled: requires isolated sandbox environment. "
-        "Deploy with gVisor or Firecracker to enable.",
+        status_code=501,
+        detail="Code execution is disabled pending container-level sandboxing. Use a dedicated sandbox service.",
     )
 
 

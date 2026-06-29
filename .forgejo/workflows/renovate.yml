@@ -21,25 +21,23 @@ jobs:
 
       - name: Run Renovate (self-hosted)
         run: |
+          mkdir -p logs
           if ! command -v npx &>/dev/null; then
-            echo "::warning::npx not available — installing Node.js"
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-            apt-get install -y nodejs || true
+            echo "::error::npx not available — Node.js must be pre-installed on the act-runner"
+            exit 1
           fi
-          # Run Renovate dry-run to detect available updates
+          # Run Renovate via Forgejo platform
           npx renovate \
-            --platform=github \
-            --token="${GITHUB_TOKEN}" \
+            --platform=gitea \
+            --endpoint="${FORGEJO_API_URL}" \
+            --token="${FORGEJO_TOKEN}" \
             --dry-run=false \
             --autodiscover=false \
             --repositories=Trancendos/Tranc3 \
-            2>&1 | tee logs/renovate-output.txt || {
-              echo "::warning::Renovate run completed with warnings — check logs"
-              exit 0
-            }
-        continue-on-error: true
+            2>&1 | tee logs/renovate-output.txt
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          FORGEJO_API_URL: ${{ secrets.FORGEJO_URL }}/api/v1
           RENOVATE_CONFIG_FILE: renovate.json
           LOG_LEVEL: info
 

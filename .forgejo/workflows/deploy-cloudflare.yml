@@ -47,16 +47,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Wrangler
-        run: npm install -g wrangler
-
       - name: Install dependencies
         working-directory: cloudflare/tranc3-ai
         run: npm ci
 
       - name: Deploy tranc3-ai
         working-directory: cloudflare/tranc3-ai
-        run: wrangler deploy
+        run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

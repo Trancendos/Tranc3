@@ -65,7 +65,7 @@ if not _internal_secret_raw or _internal_secret_raw == "internal-dev-secret":
 INTERNAL_SECRET: str = _internal_secret_raw
 INFINITY_ONE_URL = os.getenv("INFINITY_ONE_URL", "")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-DATA_DIR = Path(os.getenv("VOID_DATA_DIR", "/tmp/void-data"))
+DATA_DIR = Path(os.getenv("VOID_DATA_DIR", "/data/void"))
 DB_PATH = DATA_DIR / "void.db"
 R2_DIR = DATA_DIR / "secrets"  # Replaces Cloudflare R2
 
@@ -143,20 +143,13 @@ def hash_value(value: str) -> str:
 # ── Database (SQLite, replaces Cloudflare D1) ──────────────────
 
 
-_schema_initialized = False  # codeql[py/unused-global-variable]
-
-
 def get_db() -> sqlite3.Connection:
-    global _schema_initialized
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     R2_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
-    if not _schema_initialized:
-        _schema_initialized = True
-        init_schema()
     return conn
 
 
@@ -251,15 +244,11 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
 
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
-    # OpenTelemetry instrumentation
-    try:
-        from src.observability.worker_setup import instrument_worker
-
-        instrument_worker(app, service_name="tranc3.infinity-void")
-    except Exception:
-        pass  # OTel is optional — never block startup
-    """Startup: initialize DB schema. Shutdown: cleanup (if needed)."""
+    """Startup: initialize DB schema. Shutdown: no-op."""
     init_schema()
+    from src.observability.worker_setup import instrument_worker
+
+    instrument_worker(app_instance, service_name="tranc3.infinity-void")
     yield
 
 
@@ -583,5 +572,5 @@ async def get_audit_log(secret_id: str, authorization: str | None = Header(None)
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", "8002"))
+    port = int(os.getenv("PORT", "8082"))
     uvicorn.run(app, host="0.0.0.0", port=port)

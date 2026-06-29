@@ -348,22 +348,10 @@ async def list_models() -> dict[str, Any]:
 
 @app.post("/photo/upscale")
 async def upscale(req: UpscaleRequest) -> dict[str, Any]:
-    job = _jobs.get(req.job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    if job["status"] != "completed":
-        raise HTTPException(status_code=400, detail="Job not completed yet")
-
-    upscale_job_id = str(uuid.uuid4())
-    _jobs[upscale_job_id] = {
-        "status": "queued",
-        "source": "comfyui",
-        "parent_job_id": req.job_id,
-        "scale_factor": req.scale_factor,
-        "type": "upscale",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    return {"job_id": upscale_job_id, "status": "queued", "scale_factor": req.scale_factor}
+    raise HTTPException(
+        status_code=501,
+        detail="Upscale is not yet implemented. ComfyUI upscale pipeline coming soon.",
+    )
 
 
 @app.get("/gallery")
