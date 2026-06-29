@@ -457,12 +457,13 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
         srt_file = f.name
 
     subtitled_path = OUTPUT_DIR / f"{req.job_id}_subtitled.mp4"
+    escaped_srt = srt_file.replace("\\", "/").replace(":", "\\:")
     success, err = _run_ffmpeg(
         [
             "-i",
             output_path,
             "-vf",
-            f"subtitles={srt_file}",
+            f"subtitles='{escaped_srt}'",
             "-c:a",
             "copy",
             str(subtitled_path),

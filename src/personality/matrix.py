@@ -44,7 +44,37 @@ class PersonalityProfile:
     def from_file(cls, path: str) -> "PersonalityProfile":
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return cls(**data)
+        return cls._from_dict(data)
+
+    @classmethod
+    def _from_dict(cls, data: Dict[str, Any]) -> "PersonalityProfile":
+        """Map both the rich JSON profile schema and the flat dataclass schema."""
+        name = data.get("name") or data.get("id") or data.get("code_name")
+        if not name:
+            raise ValueError(
+                "Invalid PersonalityProfile JSON: expected one of 'name', 'id', or 'code_name'."
+            )
+        system_prompt = data.get("system_prompt") or data.get("system_prompt_prefix")
+        if not system_prompt:
+            raise ValueError(
+                "Invalid PersonalityProfile JSON: expected 'system_prompt' or 'system_prompt_prefix'."
+            )
+        behavior = data.get("behavior") or {}
+        style = data.get("style") or {}
+        return cls(
+            name=name,
+            version=data.get("version", "1.0.0"),
+            system_prompt=system_prompt,
+            temperature=behavior.get("temperature", data.get("temperature", 0.8)),
+            top_k=behavior.get("top_k", data.get("top_k", 50)),
+            top_p=behavior.get("top_p", data.get("top_p", 0.92)),
+            repetition_penalty=behavior.get("repetition_penalty", data.get("repetition_penalty", 1.15)),
+            max_new_tokens=behavior.get("max_tokens", data.get("max_new_tokens", 512)),
+            tone=style.get("tone", data.get("tone", "warm")),
+            domain_focus=data.get("domain", data.get("domain_focus", "general")),
+            avatar_id=data.get("avatar_id"),
+            context_preamble=data.get("context_preamble", ""),
+        )
 
     def to_file(self, path: str):
         os.makedirs(os.path.dirname(path), exist_ok=True)
