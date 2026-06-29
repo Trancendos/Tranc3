@@ -1270,12 +1270,16 @@ class AzureCosmosProvider(SmartStorageProvider):
 
     async def list(self, prefix: str = "") -> List[str]:
         container = self._get_container()
-        query = "SELECT c.id FROM c"
         if prefix:
-            query = f"SELECT c.id FROM c WHERE STARTSWITH(c.id, '{prefix}')"
+            query = "SELECT c.id FROM c WHERE STARTSWITH(c.id, @prefix)"
+            parameters: list[dict] = [{"name": "@prefix", "value": prefix}]
+        else:
+            query = "SELECT c.id FROM c"
+            parameters = []
         results = list(
             container.query_items(
                 query=query,
+                parameters=parameters or None,
                 enable_cross_partition_query=True,
             ),
         )
@@ -1283,10 +1287,10 @@ class AzureCosmosProvider(SmartStorageProvider):
 
     async def exists(self, path: str) -> bool:
         container = self._get_container()
-        query = f"SELECT VALUE COUNT(1) FROM c WHERE c.id = '{path}'"
         results = list(
             container.query_items(
-                query=query,
+                query="SELECT VALUE COUNT(1) FROM c WHERE c.id = @path",
+                parameters=[{"name": "@path", "value": path}],
                 enable_cross_partition_query=True,
             ),
         )

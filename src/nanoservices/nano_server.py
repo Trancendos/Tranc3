@@ -439,7 +439,7 @@ if __name__ == "__main__":
     )
     uvicorn.run(
         "src.nanoservices.nano_server:nano_app",
-        host="0.0.0.0",  # nosec B104
+        host="0.0.0.0",  # nosec B104 — containerised service
         port=_NANO_PORT,
         reload=False,
         log_level="info",

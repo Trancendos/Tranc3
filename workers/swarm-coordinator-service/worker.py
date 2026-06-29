@@ -220,4 +220,4 @@ async def run_now(body: RunRequest | None = None):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)
+    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)  # nosec B104 — containerised service

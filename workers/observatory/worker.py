@@ -7,4 +7,4 @@ if __name__ == "__main__":
 
     import config
 
-    uvicorn.run("main:app", host="0.0.0.0", port=config.WORKER_PORT, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=config.WORKER_PORT, reload=False)  # nosec B104 — containerised service

@@ -67,4 +67,4 @@ class IceBoxHandler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     print(f"[icebox] The Ice Box stub listening on :{PORT}")
     print("[icebox] NOTE: This is a stub. Deploy CAPEv2 for real sandbox analysis.")
-    HTTPServer(("0.0.0.0", PORT), IceBoxHandler).serve_forever()
+    HTTPServer(("0.0.0.0", PORT), IceBoxHandler).serve_forever()  # nosec B104 — isolated cuckoo sandbox container
