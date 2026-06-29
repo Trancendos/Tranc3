@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import random
+import secrets
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -103,12 +103,12 @@ class SchnorrProver:
 
     def generate_keypair(self, p: int = None, g: int = 2) -> Tuple[int, int, int, int]:
         p = p or (2**127 - 1)
-        x = random.randint(2, p - 2)
+        x = secrets.randbelow(p - 3) + 2
         y = self._mod_pow(g, x, p)
         return p, g, x, y
 
     def prove(self, secret: int, p: int, g: int) -> Tuple[int, int, int]:
-        k = random.randint(2, p - 2)
+        k = secrets.randbelow(p - 3) + 2
         r = self._mod_pow(g, k, p)
         challenge = int(hashlib.sha256(f"{r}{p}{g}".encode()).hexdigest(), 16) % (p - 1)
         s = (k - secret * challenge) % (p - 1)
@@ -154,7 +154,7 @@ class BulletproofSimulator:
         self, value: int, min_val: int = 0, max_val: int = 2**32 - 1
     ) -> Tuple[str, bool]:
         commitment = hashlib.sha256(
-            f"commit-{value}-{random.randint(0, 2**64)}".encode()
+            f"commit-{value}-{secrets.randbelow(2**64)}".encode()
         ).hexdigest()
         in_range = min_val <= value <= max_val
         proof = f"bp-{commitment[:48]}-{int(in_range)}"

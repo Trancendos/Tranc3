@@ -74,7 +74,7 @@ class CircuitBreaker:
 
         if current == CircuitState.HALF_OPEN:
             # Allow a percentage of requests through
-            return random.random() * 100 < self.config.half_open_request_percentage
+            return random.random() * 100 < self.config.half_open_request_percentage  # nosec B311 -- probabilistic circuit breaker, not cryptographic
 
         return False
 

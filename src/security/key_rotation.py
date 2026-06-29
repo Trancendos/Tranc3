@@ -393,8 +393,10 @@ class KeyRotationService:
     def purge_previous_keys(self) -> int:
         """Delete previous (old) key values older than grace period."""
         conn = self._db()
-        cutoff = f"datetime('now', '-{_GRACE_DAYS} days')"
-        cur = conn.execute(f"DELETE FROM key_store WHERE is_previous = 1 AND created_at < {cutoff}")
+        cur = conn.execute(
+            "DELETE FROM key_store WHERE is_previous = 1 AND created_at < datetime('now', ?)",
+            (f"-{_GRACE_DAYS} days",),
+        )
         conn.commit()
         purged = cur.rowcount
         if purged:
