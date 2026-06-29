@@ -186,6 +186,9 @@ qiskit-aer==0.17.2
 # === MessagePack (content negotiation) ===
 msgpack>=1.0.8
 
+# === XML Security ===
+defusedxml==0.7.1     # Prevents XXE attacks (CWE-611); used by billing.py, oci/microceph providers
+
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt
 # See: requirements-security.txt for scanning toolchain
