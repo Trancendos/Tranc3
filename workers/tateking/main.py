@@ -182,34 +182,43 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
         if req.input_url:
             input_args = ["-i", req.input_url]
         else:
-            # Generate a colour test card
+            # Generate a colour test card — write title to a temp file so it
+            # never touches the FFmpeg filter string (prevents filter injection).
+            title_file = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False, encoding="utf-8"
+            )
+            title_file.write(req.title)
+            title_file.close()
             input_args = [
                 "-f",
                 "lavfi",
                 "-i",
                 f"color=c=blue:s={req.width}x{req.height}:r={req.fps}:d={req.duration_seconds}",
                 "-vf",
-                # Escape single-quotes and backslashes so title cannot break the filter string
-                "drawtext=text='"
-                + req.title.replace("\\", "\\\\").replace("'", "\\'")
-                + "':fontsize=40:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2",
+                f"drawtext=textfile={title_file.name}:fontsize=40:fontcolor=white"
+                ":x=(w-text_w)/2:y=(h-text_h)/2",
             ]
 
-        success, err = _run_ffmpeg(
-            *input_args,
-            "-t",
-            str(req.duration_seconds),
-            "-r",
-            str(req.fps),
-            "-s",
-            f"{req.width}x{req.height}",
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            str(output_path),
-            timeout=int(req.duration_seconds * 10 + 60),
-        )
+        try:
+            success, err = _run_ffmpeg(
+                *input_args,
+                "-t",
+                str(req.duration_seconds),
+                "-r",
+                str(req.fps),
+                "-s",
+                f"{req.width}x{req.height}",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                str(output_path),
+                timeout=int(req.duration_seconds * 10 + 60),
+            )
+        finally:
+            # Clean up title temp file if it was created
+            if "title_file" in locals():
+                Path(title_file.name).unlink(missing_ok=True)
         if success:
             _jobs[job_id] = {
                 "status": "completed",
