@@ -2893,7 +2893,7 @@ services:
       - "traefik.http.routers.tateking.entrypoints=websecure"
       - "traefik.http.services.tateking.loadbalancer.server.port=8061"
 
-  # ── Sashas Photo Studio — image generation (Port 8051) ──────────────────────────────────────────────
+  # ── Sashas Photo Studio — image generation (Port 8062) ──────────────────────────────────────────────
   sashas-photo-studio:
     build:
       context: ./workers/sashas-photo-studio
@@ -3003,7 +3003,7 @@ services:
       - "traefik.http.routers.imind.entrypoints=websecure"
       - "traefik.http.services.imind.loadbalancer.server.port=8075"
 
-  # ── Resonate — empathy engine (Port 8060) ──────────────────────────────────────────────
+  # ── Resonate — empathy engine (Port 8076) ──────────────────────────────────────────────
   resonate:
     build:
       context: ./workers/resonate
@@ -3399,7 +3399,7 @@ services:
       - "traefik.http.routers.swarm-coordinator-service.entrypoints=websecure"
       - "traefik.http.services.swarm-coordinator-service.loadbalancer.server.port=8109"
 
-  # ── The HIVE — task queue / agent coordination (Port 8060) ──────────────────────────────────────────────
+  # ── The HIVE — task queue / agent coordination (Port 8051) ──────────────────────────────────────────────
   hive-service:
     build:
       context: ./workers/hive-service
@@ -3407,7 +3407,7 @@ services:
     container_name: tranc3-hive-service
     <<: *worker-common
     environment:
-      - PORT=8051
+      - HIVE_PORT=8051
     expose:
       - "8051"
     ports:

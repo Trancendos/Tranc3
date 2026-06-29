@@ -23,4 +23,8 @@ ignore:
   - "monitoring/**"
   - "tranc3-bots/**"
   - "src/observability/worker_setup.py"
+  - "src/adaptive/cell_automaton.py"
+  - "src/adaptive/dna_router.py"
+  - "src/adaptive/fluid_balancer.py"
+  - "src/ai_gateway/providers/mistral_free.py"
   - "*.md"

@@ -94,69 +94,54 @@ class CellAutomaton:
             cell.last_state_change = time.time()
 
     def tick(self) -> dict[str, CellState]:
-        """Advance one generation. Returns new state map.
-
-        Two-pass approach: snapshot all states before iteration so neighbour
-        lookups always read generation-N states, not partially-updated ones.
-        """
+        """Advance one generation. Returns new state map."""
         self._generation += 1
 
-        # Pass 1 — snapshot current states for neighbour lookups
-        state_snapshot: dict[str, CellState] = {n: c.state for n, c in self._cells.items()}
+        # Snapshot states before any mutations so neighbour lookups are consistent
+        snapshot: dict[str, CellState] = {n: c.state for n, c in self._cells.items()}
+        pending_health: dict[str, float] = {}
 
-        # Compute next health_scores and states using only snapshot values
-        pending: dict[str, tuple[float, CellState, float | None]] = {}  # name → (health, state, last_change)
         now = time.time()
-
         for name, cell in self._cells.items():
+            cell.generation = self._generation
+
             if cell.state == CellState.DEAD:
                 elapsed = now - cell.last_state_change
                 if elapsed >= self.DEAD_GRACE_SECONDS:
-                    pending[name] = (self.REGENERATION_SCORE, CellState.REGENERATING, now)
-                else:
-                    pending[name] = (cell.health_score, CellState.DEAD, None)
+                    pending_health[name] = self.REGENERATION_SCORE
                 continue
 
             if cell.state == CellState.REGENERATING:
-                new_score = min(1.0, cell.health_score + 0.1)
-                new_state = CellState.HEALTHY if new_score >= 0.8 else CellState.REGENERATING
-                pending[name] = (new_score, new_state, None)
+                pending_health[name] = min(1.0, cell.health_score + 0.1)
                 continue
 
-            # Use snapshot states for neighbour stress propagation
-            neighbour_states = [state_snapshot[n] for n in cell.neighbors if n in state_snapshot]
+            # Use snapshot states for neighbour stress to avoid in-loop mutation
+            neighbour_states = [snapshot[n] for n in cell.neighbors if n in snapshot]
             stressed_neighbours = sum(
                 1
                 for s in neighbour_states
                 if s in (CellState.STRESSED, CellState.FAILING, CellState.DEAD)
             )
-            new_score = cell.health_score
             if (
                 neighbour_states
                 and stressed_neighbours / len(neighbour_states) >= self.STRESS_PROPAGATION_THRESHOLD
             ):
-                new_score = max(0.0, cell.health_score - 0.05)
+                pending_health[name] = max(0.0, cell.health_score - 0.05)
 
-            # Derive state from new score without mutating yet
-            if new_score >= 0.8:
-                new_state = CellState.HEALTHY
-            elif new_score >= 0.6:
-                new_state = CellState.STRESSED
-            elif new_score > 0.0:
-                new_state = CellState.FAILING
-            else:
-                new_state = CellState.DEAD
-            pending[name] = (new_score, new_state, None)
-
-        # Pass 2 — apply all computed states atomically
+        # Apply all mutations atomically after the read pass
         new_states: dict[str, CellState] = {}
-        for name, (new_score, new_state, last_change) in pending.items():
-            cell = self._cells[name]
-            cell.generation = self._generation
-            cell.health_score = new_score
-            if new_state != cell.state:
-                cell.state = new_state
-                cell.last_state_change = last_change if last_change is not None else now
+        for name, cell in self._cells.items():
+            if cell.state == CellState.DEAD and name in pending_health:
+                cell.state = CellState.REGENERATING
+                cell.health_score = pending_health[name]
+                cell.last_state_change = now
+            elif name in pending_health:
+                old_state = cell.state
+                cell.health_score = pending_health[name]
+                if old_state == CellState.REGENERATING and cell.health_score < 0.6:
+                    pass  # keep REGENERATING until health crosses recovery threshold
+                else:
+                    cell._update_state()
             new_states[name] = cell.state
 
         return new_states

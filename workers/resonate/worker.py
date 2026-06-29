@@ -4,7 +4,7 @@ Trancendos resonate — Empathy Engine
 Conversation empathy scoring and interpersonal communication analysis.
 Zero-cost: keyword-based empathy signal detection, no external APIs.
 
-Port: 8076  Entity: Resonate  Lead AI: Magdalena
+Port: 8093  Entity: Resonate  Lead AI: Magdalena
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT", "8076"))
+WORKER_PORT = int(os.environ.get("PORT", "8076"))
 WORKER_NAME = "resonate"
 DB_PATH = Path(__file__).parent / "data" / "resonate.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

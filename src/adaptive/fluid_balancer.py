@@ -79,7 +79,11 @@ class FluidBalancer:
 
     def __init__(self) -> None:
         self._channels: dict[str, FluidChannel] = {}
-        self._total_pressure: float = 0.0
+
+    @property
+    def _total_pressure(self) -> float:
+        """Derive total pressure from per-channel values so they stay in sync."""
+        return sum(ch.pressure for ch in self._channels.values())
 
     def add_channel(self, provider: str, flow_rate: float = 1.0) -> FluidChannel:
         ch = FluidChannel(provider=provider, flow_rate=flow_rate)
@@ -87,20 +91,11 @@ class FluidBalancer:
         return ch
 
     def add_pressure(self, request_count: float) -> None:
-        """Record arriving requests as system-level pressure (no per-channel distribution).
-
-        Call assign_request(provider) when a request is routed to a specific channel
-        so that per-channel pressure stays balanced with record_result's -1 decrement.
-        """
-        self._total_pressure += request_count
-
-    def assign_request(self, provider: str) -> None:
-        """Increment pressure on the specific channel handling a request.
-
-        Must be paired with a record_result call when the request completes.
-        """
-        if provider in self._channels:
-            self._channels[provider].pressure = max(0.0, self._channels[provider].pressure + 1)
+        """Add load pressure to the system (distributes to channels)."""
+        if self._channels:
+            per_channel = request_count / len(self._channels)
+            for ch in self._channels.values():
+                ch.pressure = max(0.0, ch.pressure + per_channel)
 
     def flow(self) -> dict[str, float]:
         """Distribute load following Bernoulli-like principles.
@@ -115,10 +110,9 @@ class FluidBalancer:
         if not laminar:
             laminar = dict(self._channels)  # fall back to all channels
 
-        # Bernoulli score: flow_rate / viscosity, penalised by in-flight pressure
+        # Bernoulli score: flow_rate / viscosity (higher = more allocation)
         scores = {
-            p: max(0.01, ch.flow_rate / max(ch.viscosity, 0.001) / max(1.0, ch.pressure))
-            for p, ch in laminar.items()
+            p: max(0.01, ch.flow_rate / max(ch.viscosity, 0.001)) for p, ch in laminar.items()
         }
         total = sum(scores.values())
         return {p: s / total for p, s in scores.items()}
@@ -128,15 +122,12 @@ class FluidBalancer:
         return [p for p, ch in self._channels.items() if ch.turbulent]
 
     def laminar_route(self, request: dict[str, Any] | None = None) -> Optional[str]:
-        """Route request proportionally to flow allocation (weighted random)."""
-        import random
-
+        """Route request to the smoothest flow channel."""
         allocation = self.flow()
         if not allocation:
             return None
-        providers = list(allocation.keys())
-        weights = [allocation[p] for p in providers]
-        return random.choices(providers, weights=weights, k=1)[0]
+        # Pick channel with highest allocation fraction
+        return max(allocation, key=lambda p: allocation[p])
 
     def turbulent_fallback(self, request: dict[str, Any] | None = None) -> Optional[str]:
         """Emergency routing when primary channels are turbulent — use lowest error rate."""
@@ -149,9 +140,8 @@ class FluidBalancer:
     def record_result(self, provider: str, latency_ms: float, success: bool) -> None:
         if provider in self._channels:
             self._channels[provider].record_latency(latency_ms, success)
-            # Relieve pressure on completion
+            # Relieve per-channel pressure on completion; total is derived automatically
             self._channels[provider].pressure = max(0.0, self._channels[provider].pressure - 1)
-            self._total_pressure = max(0.0, self._total_pressure - 1)
 
     def system_state(self) -> dict[str, Any]:
         turbulent = self.detect_turbulence()

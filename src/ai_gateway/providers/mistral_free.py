@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-import threading
 import time
 from pathlib import Path
 from typing import Optional
@@ -33,31 +32,32 @@ MISTRAL_FREE_MODELS = [
 _MONTHLY_TOKEN_BUDGET = 500_000
 _STOP_THRESHOLD = 0.95
 
-_DATA_DIR = Path(os.getenv("AI_GATEWAY_DATA_DIR", "/data/ai-gateway"))
-_BUDGET_DB = _DATA_DIR / "mistral_budget.db"
+_DB_PATH = Path(os.getenv("DATA_DIR", "/data")) / "mistral_budget.db"
 
 
-def _budget_db_conn() -> sqlite3.Connection:
-    _DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_BUDGET_DB), timeout=10.0)
-    conn.execute("PRAGMA journal_mode=WAL;")
+def _open_db() -> sqlite3.Connection:
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.execute(
-        """CREATE TABLE IF NOT EXISTS monthly_budget (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            tokens_used INTEGER NOT NULL DEFAULT 0,
-            month_start REAL NOT NULL
-        )"""
+        "CREATE TABLE IF NOT EXISTS monthly_budget "
+        "(month TEXT PRIMARY KEY, tokens_used INTEGER NOT NULL DEFAULT 0)"
     )
     conn.commit()
     return conn
+
+
+def _current_month() -> str:
+    return time.strftime("%Y-%m")
 
 
 class MistralFreeProvider(AIProvider):
     """Mistral La Plateforme free tier — 500K tokens/month, GDPR-compliant.
 
     Zero-Cost Mandate: enforces a monthly token hard stop at 95% of the free
-    500K token budget. Switches to next provider when budget is near exhausted.
-    Token usage is persisted to SQLite so restarts don't reset the counter.
+    500K token budget. Token usage is persisted to SQLite so restarts don't
+    reset the counter mid-month.
 
     EU-hosted (Paris), GDPR Article 28 compliant — preferred for EU users.
     """
@@ -73,45 +73,27 @@ class MistralFreeProvider(AIProvider):
             api_key=api_key or os.getenv("MISTRAL_API_KEY", ""),
         )
         self._default_model = default_model
-        self._budget_lock = threading.Lock()
-        self._monthly_tokens_used, self._month_start = self._load_or_init_budget()
+        # Ensure schema exists at startup; do not hold a persistent connection.
+        _open_db().close()
 
-    def _load_or_init_budget(self) -> tuple[int, float]:
-        try:
-            with _budget_db_conn() as conn:
-                row = conn.execute("SELECT tokens_used, month_start FROM monthly_budget WHERE id=1").fetchone()
-                if row:
-                    return int(row[0]), float(row[1])
-                now = time.time()
-                conn.execute(
-                    "INSERT INTO monthly_budget(id, tokens_used, month_start) VALUES(1, 0, ?)", (now,)
-                )
-                return 0, now
-        except Exception as exc:
-            raise RuntimeError(f"mistral_free: cannot read budget db — cannot proceed safely: {exc}") from exc
+    def _get_monthly_tokens(self) -> int:
+        with _open_db() as conn:
+            row = conn.execute(
+                "SELECT tokens_used FROM monthly_budget WHERE month=?", (_current_month(),)
+            ).fetchone()
+        return row[0] if row else 0
 
-    def _persist_budget(self) -> None:
-        try:
-            with _budget_db_conn() as conn:
-                conn.execute(
-                    "INSERT INTO monthly_budget(id, tokens_used, month_start) VALUES(1, ?, ?) "
-                    "ON CONFLICT(id) DO UPDATE SET tokens_used=excluded.tokens_used, month_start=excluded.month_start",
-                    (self._monthly_tokens_used, self._month_start),
-                )
-        except Exception as exc:
-            raise RuntimeError(f"mistral_free: cannot persist budget — aborting to avoid silent over-spend: {exc}") from exc
-
-    def _reset_if_new_month(self) -> None:
-        now = time.time()
-        if now - self._month_start >= 2_592_000:  # 30 days
-            self._monthly_tokens_used = 0
-            self._month_start = now
-            self._persist_budget()
+    def _add_monthly_tokens(self, count: int) -> None:
+        with _open_db() as conn:
+            conn.execute(
+                "INSERT INTO monthly_budget (month, tokens_used) VALUES (?, ?) "
+                "ON CONFLICT(month) DO UPDATE SET tokens_used = tokens_used + excluded.tokens_used",
+                (_current_month(), count),
+            )
+            conn.commit()
 
     def _budget_ok(self) -> bool:
-        with self._budget_lock:
-            self._reset_if_new_month()
-            return self._monthly_tokens_used < int(_MONTHLY_TOKEN_BUDGET * _STOP_THRESHOLD)
+        return self._get_monthly_tokens() < int(_MONTHLY_TOKEN_BUDGET * _STOP_THRESHOLD)
 
     async def complete(self, request: AIRequest) -> AIResponse:
         if not self.api_key:
@@ -120,9 +102,10 @@ class MistralFreeProvider(AIProvider):
                 "no credit card needed. Free tier: 500K tokens/month."
             )
         if not self._budget_ok():
+            used = self._get_monthly_tokens()
             raise RuntimeError(
                 f"Mistral free monthly budget exhausted "
-                f"({self._monthly_tokens_used:,}/{_MONTHLY_TOKEN_BUDGET:,} tokens). "
+                f"({used:,}/{_MONTHLY_TOKEN_BUDGET:,} tokens). "
                 "Rotating to next provider."
             )
 
@@ -134,7 +117,7 @@ class MistralFreeProvider(AIProvider):
             "model": model,
             "messages": messages,
             "max_tokens": min(request.max_tokens or 512, 4096),
-            "temperature": 0.7 if request.temperature is None else request.temperature,
+            "temperature": request.temperature or 0.7,
             "stream": False,
         }
 
@@ -153,9 +136,8 @@ class MistralFreeProvider(AIProvider):
 
         usage = data.get("usage", {})
         tokens_used = usage.get("total_tokens", 0)
-        with self._budget_lock:
-            self._monthly_tokens_used += tokens_used
-            self._persist_budget()
+        self._add_monthly_tokens(tokens_used)
+        monthly_used = self._get_monthly_tokens()
 
         text = data["choices"][0]["message"]["content"]
         latency_ms = int((time.monotonic() - start) * 1000)
@@ -168,17 +150,16 @@ class MistralFreeProvider(AIProvider):
             latency_ms=latency_ms,
             cost=0.0,
             metadata={
-                "monthly_tokens_used": self._monthly_tokens_used,
+                "monthly_tokens_used": monthly_used,
                 "monthly_budget": _MONTHLY_TOKEN_BUDGET,
-                "budget_pct": round(self._monthly_tokens_used / _MONTHLY_TOKEN_BUDGET * 100, 1),
+                "budget_pct": round(monthly_used / _MONTHLY_TOKEN_BUDGET * 100, 1),
             },
         )
 
     async def health_check(self) -> ProviderHealth:
         if not self.api_key:
             return ProviderHealth(provider=self.name, healthy=False, error="No MISTRAL_API_KEY")
-        self._reset_if_new_month()
-        budget_pct = self._monthly_tokens_used / _MONTHLY_TOKEN_BUDGET * 100
+        budget_pct = self._get_monthly_tokens() / _MONTHLY_TOKEN_BUDGET * 100
         if budget_pct >= _STOP_THRESHOLD * 100:
             return ProviderHealth(
                 provider=self.name,
