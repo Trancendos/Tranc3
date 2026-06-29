@@ -9,7 +9,7 @@ name = "tranc3_snn"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.28", features = ["extension-module"] }
+pyo3 = { version = "0.29.0", features = ["extension-module"] }
 
 [profile.release]
 opt-level = 3
