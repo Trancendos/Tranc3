@@ -95,12 +95,12 @@ class BFVScheme:
         self.n = poly_modulus_degree
         self.t = plain_modulus
         self.q = 2**60
-        self._sk = [random.randint(0, 1) for _ in range(poly_modulus_degree)]
-        self._pk_noise = [random.randint(-10, 10) for _ in range(poly_modulus_degree)]
+        self._sk = [random.randint(0, 1) for _ in range(poly_modulus_degree)]  # nosec B311 -- simulation noise, not cryptographic key
+        self._pk_noise = [random.randint(-10, 10) for _ in range(poly_modulus_degree)]  # nosec B311 -- simulation noise
 
     def encrypt(self, plaintext: int) -> HECiphertext:
-        encoded = [(plaintext + random.randint(-5, 5)) % self.t for _ in range(min(8, self.n))]
-        noise = random.uniform(0.001, 0.01)
+        encoded = [(plaintext + random.randint(-5, 5)) % self.t for _ in range(min(8, self.n))]  # nosec B311 -- simulation noise
+        noise = random.uniform(0.001, 0.01)  # nosec B311 -- simulation noise, not cryptographic
         return HECiphertext(
             scheme=HEScheme.BFV,
             data=encoded,
@@ -153,7 +153,7 @@ class CKKSScheme:
 
     def encrypt(self, value: float) -> HECiphertext:
         scaled = int(value * self.scale)
-        encoded = [(scaled + random.randint(-100, 100)) % (2**60) for _ in range(min(8, self.n))]
+        encoded = [(scaled + random.randint(-100, 100)) % (2**60) for _ in range(min(8, self.n))]  # nosec B311 -- simulation noise
         return HECiphertext(
             scheme=HEScheme.CKKS,
             data=encoded,

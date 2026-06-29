@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import random
 import secrets
 import uuid
 from dataclasses import dataclass, field
@@ -134,7 +133,7 @@ class AdditiveSecretSharing:
     """Additive secret sharing for n-party computation."""
 
     def share(self, secret: int, num_parties: int, modulus: int = 2**32) -> List[int]:
-        shares = [random.randint(0, modulus - 1) for _ in range(num_parties - 1)]
+        shares = [secrets.randbelow(modulus) for _ in range(num_parties - 1)]
         last_share = (secret - sum(shares)) % modulus
         shares.append(last_share)
         return shares

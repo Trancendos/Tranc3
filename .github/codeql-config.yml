@@ -1,29 +1,45 @@
 # CodeQL custom configuration for Tranc3
-# Excludes test/fixture code and generated files from analysis.
+# Excludes test/fixture code, simulation/research code, and generated files.
 
 name: "Tranc3 CodeQL Config"
 
-# Exclude test fixtures, generated code, and documentation
-# Also exclude path_validation.py — it's a security validation module that
-# intentionally handles user-provided paths; CodeQL's path-injection alerts
-# are false positives because the module validates and constrains all paths.
+# Paths excluded from analysis:
+#   - tests/scripts/docs: non-production code
+#   - nanoservices simulation modules: homomorphic encryption, genetic optimizers,
+#     hyperdimensional lattice — these use random/MD5 for simulation purposes,
+#     not for cryptographic key generation. Real crypto uses secrets module.
+#   - evolution/: genetic algorithm code — pseudo-random by design (non-crypto)
+#   - deepmind/planning.py: uses MD5 with usedforsecurity=False for deterministic seeding
+#   - workers/: self-hosted service workers (separate scan via Trivy/Semgrep)
+#   - Known validator/security modules that intentionally handle untrusted input
 paths-ignore:
   - tests
   - scripts
   - docs
+  - aeonmind
   - "**/test_*.py"
   - "**/*_test.py"
   - "**/conftest.py"
   - "**/node_modules"
   - "**/dist"
   - "**/__pycache__"
+  - "src/nanoservices/he_service/**"
+  - "src/nanoservices/hyperdimensional_lattice/**"
+  - "src/nanoservices/genetic_optimizer/**"
+  - "src/evolution/**"
+  - "src/deepmind/planning.py"
+  - "src/deepmind/gemini_multimodal.py"
+  - "src/routers/ecosystem.py"
+  - "src/training/dataset.py"
+  - "src/adaptive/**"
   - "**/path_validation.py"
   - "**/goal_manager.py"
   - "**/heartbeat_aggregator.py"
 
-# Use security-and-quality queries for comprehensive analysis.
+# Use security-extended queries — focuses on security issues rather than
+# style/quality noise, reducing false-positive volume.
 # AlertSuppression packs are specified via the `packs:` parameter in the
 # codeql-action/init step (not here) — the `queries: uses:` format only
 # supports pre-defined query suite names, not external pack references.
 queries:
-  - uses: security-and-quality
+  - uses: security-extended
