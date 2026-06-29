@@ -90,22 +90,20 @@ class ThumbnailRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _run_ffmpeg(*args: str, timeout: int = 120) -> tuple[bool, str]:
-    """Run ffmpeg with given args. Returns (success, output)."""
+def _run_ffmpeg(args: list[str], timeout: int = 120) -> tuple[bool, str]:
+    """Run ffmpeg with the given pre-built argument list. Returns (success, stderr)."""
     ffmpeg_bin = shutil.which(FFMPEG_PATH)
     if not ffmpeg_bin:
         return False, f"FFmpeg not found: {FFMPEG_PATH}"
-    # shell=False (default) + list form means the OS passes args directly —
-    # no shell interpretation occurs. shlex.quote is intentionally omitted
-    # because quoting in list mode adds literal quote chars, breaking paths.
-    cmd = [ffmpeg_bin, "-y", *args]
+    # shell=False + list form: OS passes args directly with no shell interpretation.
+    cmd = [ffmpeg_bin, "-y"] + args
     try:
-        result = subprocess.run(  # nosec B603  # nosemgrep  # sourcery skip: do-not-use-subprocess
+        result = subprocess.run(  # nosec B603
             cmd,
             capture_output=True,
             text=True,
             timeout=timeout,
-            shell=False,  # list-form + shell=False: no shell injection possible
+            shell=False,
         )
         return result.returncode == 0, result.stderr
     except subprocess.TimeoutExpired:
@@ -201,18 +199,15 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
 
         try:
             success, err = _run_ffmpeg(
-                *input_args,
-                "-t",
-                str(req.duration_seconds),
-                "-r",
-                str(req.fps),
-                "-s",
-                f"{req.width}x{req.height}",
-                "-c:v",
-                "libx264",
-                "-pix_fmt",
-                "yuv420p",
-                str(output_path),
+                [
+                    *input_args,
+                    "-t", str(req.duration_seconds),
+                    "-r", str(req.fps),
+                    "-s", f"{req.width}x{req.height}",
+                    "-c:v", "libx264",
+                    "-pix_fmt", "yuv420p",
+                    str(output_path),
+                ],
                 timeout=int(req.duration_seconds * 10 + 60),
             )
         finally:
@@ -260,7 +255,8 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
 async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     """Compose video from multiple input assets using FFmpeg."""
     job_id = str(uuid.uuid4())
-    output_name = req.output_name or f"{job_id}.mp4"
+    # Strip directory components from caller-supplied name to prevent path traversal.
+    output_name = Path(req.output_name).name if req.output_name else f"{job_id}.mp4"
     output_path = OUTPUT_DIR / output_name
 
     if not _ffmpeg_available():
@@ -296,17 +292,13 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
             f.write(f"file '{p}'\n")
         concat_file = f.name
 
-    success, err = _run_ffmpeg(
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        concat_file,
-        "-c",
-        "copy",
+    success, err = _run_ffmpeg([
+        "-f", "concat",
+        "-safe", "0",
+        "-i", concat_file,
+        "-c", "copy",
         str(output_path),
-    )
+    ])
     os.unlink(concat_file)
 
     if success:
@@ -344,15 +336,12 @@ async def extract_thumbnail(req: ThumbnailRequest) -> dict[str, Any]:
     # Derive thumbnail path from trusted resolved_output (server-side), not from
     # user-supplied job_id, so no user-controlled data flows into Path operations.
     thumb_path = resolved_output.with_name(resolved_output.stem + "_thumb.jpg")
-    success, err = _run_ffmpeg(
-        "-i",
-        str(resolved_output),
-        "-ss",
-        str(req.timestamp_seconds),
-        "-vframes",
-        "1",
+    success, err = _run_ffmpeg([
+        "-i", str(resolved_output),
+        "-ss", str(req.timestamp_seconds),
+        "-vframes", "1",
         str(thumb_path),
-    )
+    ])
     if success and thumb_path.exists():
         return {"job_id": req.job_id, "thumbnail_path": str(thumb_path), "source": "ffmpeg"}
     raise HTTPException(status_code=500, detail=f"Thumbnail extraction failed: {err}")
@@ -422,15 +411,12 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
         srt_file = f.name
 
     subtitled_path = OUTPUT_DIR / f"{req.job_id}_subtitled.mp4"
-    success, err = _run_ffmpeg(
-        "-i",
-        output_path,
-        "-vf",
-        f"subtitles={srt_file}",
-        "-c:a",
-        "copy",
+    success, err = _run_ffmpeg([
+        "-i", output_path,
+        "-vf", f"subtitles={srt_file}",
+        "-c:a", "copy",
         str(subtitled_path),
-    )
+    ])
     os.unlink(srt_file)
 
     if success:
