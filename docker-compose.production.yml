@@ -2121,6 +2121,9 @@ services:
       - "5678:5678"
     networks:
       - tranc3-net
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.n8n.rule=Host(`trancendos.com`) && PathPrefix(`/n8n`)"
@@ -2880,10 +2883,13 @@ services:
     <<: *worker-common
     environment:
       - PORT=8061
+      - REMOTION_SERVE_URL=http://remotion-render-service:8093
     expose:
       - "8061"
     ports:
       - "8061:8061"
+    depends_on:
+      - remotion-render-service
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"]
@@ -2892,6 +2898,54 @@ services:
       - "traefik.http.routers.tateking.rule=PathPrefix(`/tateking`)"
       - "traefik.http.routers.tateking.entrypoints=websecure"
       - "traefik.http.services.tateking.loadbalancer.server.port=8061"
+
+  # ── Remotion render service — Remotion serverless render tier for TateKing (Port 8093) ──────────────
+  remotion-render-service:
+    build:
+      context: ./workers/remotion-render-service
+      dockerfile: Dockerfile
+    container_name: tranc3-remotion-render-service
+    <<: *worker-common
+    environment:
+      - PORT=8093
+    expose:
+      - "8093"
+    ports:
+      - "8093:8093"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8093/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.remotion-render-service.rule=PathPrefix(`/remotion-render-service`)"
+      - "traefik.http.routers.remotion-render-service.entrypoints=websecure"
+      - "traefik.http.services.remotion-render-service.loadbalancer.server.port=8093"
+
+  # ── BullMQ queue service — Node.js job queue scaffold for The HIVE (Port 8092) ───────────────────────
+  bullmq-queue-service:
+    build:
+      context: ./workers/bullmq-queue-service
+      dockerfile: Dockerfile
+    container_name: tranc3-bullmq-queue-service
+    <<: *worker-common
+    environment:
+      - PORT=8092
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+    expose:
+      - "8092"
+    ports:
+      - "8092:8092"
+    depends_on:
+      - valkey
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8092/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bullmq-queue-service.rule=PathPrefix(`/bullmq-queue-service`)"
+      - "traefik.http.routers.bullmq-queue-service.entrypoints=websecure"
+      - "traefik.http.services.bullmq-queue-service.loadbalancer.server.port=8092"
 
   # ── Sashas Photo Studio — image generation (Port 8062) ──────────────────────────────────────────────
   sashas-photo-studio:
