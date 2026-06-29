@@ -54,9 +54,7 @@ _jobs: dict[str, dict[str, Any]] = {}
 _SAFE_OUTPUT_NAME = re.compile(r"^[A-Za-z0-9_.-]+\.mp4$")
 _ALLOWED_INPUT_SCHEMES = frozenset({"http", "https"})
 _ALLOWED_INPUT_HOSTS = frozenset(
-    h.strip()
-    for h in os.getenv("TATEKING_ALLOWED_INPUT_HOSTS", "").split(",")
-    if h.strip()
+    h.strip() for h in os.getenv("TATEKING_ALLOWED_INPUT_HOSTS", "").split(",") if h.strip()
 )
 
 
@@ -230,11 +228,16 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
             success, err = _run_ffmpeg(
                 [
                     *input_args,
-                    "-t", str(req.duration_seconds),
-                    "-r", str(req.fps),
-                    "-s", f"{req.width}x{req.height}",
-                    "-c:v", "libx264",
-                    "-pix_fmt", "yuv420p",
+                    "-t",
+                    str(req.duration_seconds),
+                    "-r",
+                    str(req.fps),
+                    "-s",
+                    f"{req.width}x{req.height}",
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
                     str(output_path),
                 ],
                 timeout=int(req.duration_seconds * 10 + 60),
@@ -324,13 +327,19 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
             f.write(f"file '{p}'\n")
         concat_file = f.name
 
-    success, err = _run_ffmpeg([
-        "-f", "concat",
-        "-safe", "0",
-        "-i", concat_file,
-        "-c", "copy",
-        str(output_path),
-    ])
+    success, err = _run_ffmpeg(
+        [
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_file,
+            "-c",
+            "copy",
+            str(output_path),
+        ]
+    )
     os.unlink(concat_file)
 
     if success:
@@ -368,12 +377,17 @@ async def extract_thumbnail(req: ThumbnailRequest) -> dict[str, Any]:
     # Derive thumbnail path from trusted resolved_output (server-side), not from
     # user-supplied job_id, so no user-controlled data flows into Path operations.
     thumb_path = resolved_output.with_name(resolved_output.stem + "_thumb.jpg")
-    success, err = _run_ffmpeg([
-        "-i", str(resolved_output),
-        "-ss", str(req.timestamp_seconds),
-        "-vframes", "1",
-        str(thumb_path),
-    ])
+    success, err = _run_ffmpeg(
+        [
+            "-i",
+            str(resolved_output),
+            "-ss",
+            str(req.timestamp_seconds),
+            "-vframes",
+            "1",
+            str(thumb_path),
+        ]
+    )
     if success and thumb_path.exists():
         return {"job_id": req.job_id, "thumbnail_path": str(thumb_path), "source": "ffmpeg"}
     raise HTTPException(status_code=500, detail=f"Thumbnail extraction failed: {err}")
@@ -443,12 +457,17 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
         srt_file = f.name
 
     subtitled_path = OUTPUT_DIR / f"{req.job_id}_subtitled.mp4"
-    success, err = _run_ffmpeg([
-        "-i", output_path,
-        "-vf", f"subtitles={srt_file}",
-        "-c:a", "copy",
-        str(subtitled_path),
-    ])
+    success, err = _run_ffmpeg(
+        [
+            "-i",
+            output_path,
+            "-vf",
+            f"subtitles={srt_file}",
+            "-c:a",
+            "copy",
+            str(subtitled_path),
+        ]
+    )
     os.unlink(srt_file)
 
     if success:
