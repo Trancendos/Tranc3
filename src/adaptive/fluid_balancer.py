@@ -87,12 +87,20 @@ class FluidBalancer:
         return ch
 
     def add_pressure(self, request_count: float) -> None:
-        """Add load pressure to the system (distributes to channels)."""
+        """Record arriving requests as system-level pressure (no per-channel distribution).
+
+        Call assign_request(provider) when a request is routed to a specific channel
+        so that per-channel pressure stays balanced with record_result's -1 decrement.
+        """
         self._total_pressure += request_count
-        if self._channels:
-            per_channel = request_count / len(self._channels)
-            for ch in self._channels.values():
-                ch.pressure = max(0.0, ch.pressure + per_channel)
+
+    def assign_request(self, provider: str) -> None:
+        """Increment pressure on the specific channel handling a request.
+
+        Must be paired with a record_result call when the request completes.
+        """
+        if provider in self._channels:
+            self._channels[provider].pressure = max(0.0, self._channels[provider].pressure + 1)
 
     def flow(self) -> dict[str, float]:
         """Distribute load following Bernoulli-like principles.
