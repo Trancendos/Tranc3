@@ -29,3 +29,6 @@ filelock==3.20.3
 cyclonedx-python-lib==11.7.0
 # lxml: PYSEC-2026-87 (fix: >=6.1.0) — resolved by cyclonedx-python-lib==11.7.0 above
 lxml==6.1.1
+
+# === XML Security ===
+defusedxml==0.7.1     # Prevents XXE attacks in XML parsing (CWE-611)

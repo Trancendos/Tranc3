@@ -263,4 +263,4 @@ if __name__ == "__main__":
             bridge.open_bridge(source, target)
 
     logger.info(f"InfinityBridge worker starting on port {WORKER_PORT}")
-    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)
+    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)  # nosec B104 — containerised service

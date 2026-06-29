@@ -438,4 +438,4 @@ async def compress(req: CompressRequest) -> dict:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8052)
+    uvicorn.run(app, host="0.0.0.0", port=8052)  # nosec B104 — containerised service

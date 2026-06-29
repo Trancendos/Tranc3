@@ -222,4 +222,4 @@ def health():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("worker:app", host="0.0.0.0", port=PORT, reload=False)
+    uvicorn.run("worker:app", host="0.0.0.0", port=PORT, reload=False)  # nosec B104 — containerised service

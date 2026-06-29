@@ -68,7 +68,9 @@ class PersonalityProfile:
             temperature=behavior.get("temperature", data.get("temperature", 0.8)),
             top_k=behavior.get("top_k", data.get("top_k", 50)),
             top_p=behavior.get("top_p", data.get("top_p", 0.92)),
-            repetition_penalty=behavior.get("repetition_penalty", data.get("repetition_penalty", 1.15)),
+            repetition_penalty=behavior.get(
+                "repetition_penalty", data.get("repetition_penalty", 1.15)
+            ),
             max_new_tokens=behavior.get("max_tokens", data.get("max_new_tokens", 512)),
             tone=style.get("tone", data.get("tone", "warm")),
             domain_focus=data.get("domain", data.get("domain_focus", "general")),

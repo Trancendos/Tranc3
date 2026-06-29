@@ -102,7 +102,9 @@ class ShamirSecretSharing:
     def share(self, secret: int, threshold: int, num_shares: int) -> List[Tuple[int, int]]:
         if threshold > num_shares:
             raise ValueError("Threshold cannot exceed number of shares")
-        coefficients = [secret] + [secrets.randbelow(self.prime - 1) + 1 for _ in range(threshold - 1)]
+        coefficients = [secret] + [
+            secrets.randbelow(self.prime - 1) + 1 for _ in range(threshold - 1)
+        ]
         shares = []
         for i in range(1, num_shares + 1):
             y = 0
