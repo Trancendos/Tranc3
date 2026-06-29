@@ -11,7 +11,9 @@
   "labels": ["dependencies", "automated"],
   "reviewers": ["Trancendos"],
   "assignees": ["Trancendos"],
-  "baseBranches": ["main"],
+  "baseBranchPatterns": [
+    "main"
+  ],
   "prCreation": "immediate",
   "prHourlyLimit": 4,
   "prConcurrentLimit": 10,
@@ -56,23 +58,34 @@
       "automerge": true
     },
     {
-      "matchPackagePatterns": ["^fastapi$", "^uvicorn$", "^pydantic$"],
       "matchUpdateTypes": ["major"],
       "enabled": false,
-      "description": "Block major FastAPI/Uvicorn/Pydantic upgrades — require manual review"
+      "description": "Block major FastAPI/Uvicorn/Pydantic upgrades — require manual review",
+      "matchPackageNames": [
+        "/^fastapi$/",
+        "/^uvicorn$/",
+        "/^pydantic$/"
+      ]
     },
     {
-      "matchPackagePatterns": ["^torch$", "^transformers$", "^sentence-transformers$"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false,
-      "description": "Block ML library upgrades — require manual compatibility testing"
+      "description": "Block ML library upgrades — require manual compatibility testing",
+      "matchPackageNames": [
+        "/^torch$/",
+        "/^transformers$/",
+        "/^sentence-transformers$/"
+      ]
     },
     {
       "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["^postgres$", "^clickhouse$"],
       "matchUpdateTypes": ["major"],
       "enabled": false,
-      "description": "Block database major version upgrades — require migration planning"
+      "description": "Block database major version upgrades — require migration planning",
+      "matchPackageNames": [
+        "/^postgres$/",
+        "/^clickhouse$/"
+      ]
     },
     {
       "matchManagers": ["terraform", "opentofu"],
@@ -81,15 +94,19 @@
       "automerge": false
     },
     {
-      "matchPackagePatterns": [
-        "^langchain", "^llama-index", "^llama_index",
-        "^farm-haystack$", "^haystack-ai$",
-        "^dspy-ai$", "^dspy$"
-      ],
       "groupName": "AI frameworks (LangChain / LlamaIndex / Haystack / DSPy)",
       "minimumReleaseAge": "7 days",
       "automerge": false,
-      "labels": ["dependencies", "ai-framework"]
+      "labels": ["dependencies", "ai-framework"],
+      "matchPackageNames": [
+        "/^langchain/",
+        "/^llama-index/",
+        "/^llama_index/",
+        "/^farm-haystack$/",
+        "/^haystack-ai$/",
+        "/^dspy-ai$/",
+        "/^dspy$/"
+      ]
     },
     {
       "matchPackageNames": ["fastapi", "uvicorn", "pydantic", "httpx", "starlette"],
@@ -118,7 +135,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["(\\.forgejo\\/workflows\\/.*\\.yml$|\\.woodpecker\\.yml$)"],
+      "managerFilePatterns": [
+        "/(\\.forgejo\\/workflows\\/.*\\.yml$|\\.woodpecker\\.yml$)/"
+      ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)\\n.*?(?<currentValue>[\\d.]+)"
       ],
