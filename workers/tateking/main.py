@@ -462,7 +462,7 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
             "-i",
             output_path,
             "-vf",
-            f"subtitles={srt_file}",
+            f"subtitles='{srt_file.replace(chr(92), '/').replace(':', '\\\\:')}'",
             "-c:a",
             "copy",
             str(subtitled_path),

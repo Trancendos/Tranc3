@@ -59,8 +59,8 @@ class PersonalityProfile:
             raise ValueError(
                 "Invalid PersonalityProfile JSON: expected 'system_prompt' or 'system_prompt_prefix'."
             )
-        behavior = data.get("behavior", {})
-        style = data.get("style", {})
+        behavior = data.get("behavior") or {}
+        style = data.get("style") or {}
         return cls(
             name=name,
             version=data.get("version", "1.0.0"),
