@@ -100,12 +100,12 @@ def _run_ffmpeg(*args: str, timeout: int = 120) -> tuple[bool, str]:
     # because quoting in list mode adds literal quote chars, breaking paths.
     cmd = [ffmpeg_bin, "-y", *args]
     try:
-        result = subprocess.run(  # nosec B603  # nosemgrep
+        result = subprocess.run(  # nosec B603  # nosemgrep  # sourcery skip: do-not-use-subprocess
             cmd,
             capture_output=True,
             text=True,
             timeout=timeout,
-            shell=False,
+            shell=False,  # list-form + shell=False: no shell injection possible
         )
         return result.returncode == 0, result.stderr
     except subprocess.TimeoutExpired:
