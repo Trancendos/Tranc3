@@ -1,13 +1,1 @@
-# Tranc3 Security Baseline
-# Automatically updated by .forgejo/workflows/security-baseline.yml
-# when finding counts decrease (ratchet: never allowed to increase).
-#
-# To reset the baseline after a bulk remediation run:
-#   bandit -r src api.py -f json | python3 -c "
-#     import json,sys; d=json.load(sys.stdin)
-#     print('bandit_findings='+str(len(d.get('results',[]))))"
-#   >> .security-baseline
-#
-# Last updated: 2026-06-29 (post security-hardening PR)
-
-bandit_findings=866
+bandit_findings=364

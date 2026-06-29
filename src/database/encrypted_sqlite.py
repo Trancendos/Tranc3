@@ -217,8 +217,8 @@ class EncryptedKVStore:
     ::
 
         store = EncryptedKVStore("data/secrets.db")
-        store.set("api_token", "sk-real-token-here")
-        token = store.get("api_token")   # returns "sk-real-token-here"
+        store.set("api_token", "sk-example-value")
+        token = store.get("api_token")   # returns "sk-example-value"
         store.delete("api_token")
     """
 
