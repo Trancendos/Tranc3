@@ -12,6 +12,7 @@ Entity: The Lab (programmatic prompting / prompt compiler)
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sqlite3
@@ -316,6 +317,7 @@ async def list_executions(
             .execute("SELECT * FROM executions ORDER BY created_at DESC LIMIT ?", (limit,))
             .fetchall()
         )
+
     def _decode_row(r: dict) -> dict:
         row = dict(r)
         for field in ("input_data", "output"):

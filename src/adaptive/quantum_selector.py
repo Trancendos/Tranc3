@@ -72,7 +72,9 @@ class QuantumSelector:
         # Replace entire state dict so removed providers can't be selected.
         self._states = {p: QuantumState(provider=p, amplitude=amplitude) for p in providers}
         # Drop entanglements that reference providers no longer in the set.
-        self._entanglements = [(a, b) for a, b in self._entanglements if a in provider_set and b in provider_set]
+        self._entanglements = [
+            (a, b) for a, b in self._entanglements if a in provider_set and b in provider_set
+        ]
 
     # ------------------------------------------------------------------
     # Collapse
