@@ -101,7 +101,7 @@ if ENVIRONMENT == "production":
             + ", ".join(missing_upstreams)
         )
 
-# ── Logger ──────────────────────────────────────────────────────
+# ── Logger ──────────────────────────────────────────────
 
 logger = logging.getLogger("api-gateway")
 
@@ -172,7 +172,7 @@ circuit_breakers = {
 }
 
 
-# ── JWT Auth Service ───────────────────────────────────────────
+# ── JWT Auth Service ──────────────────────────────────────
 
 
 class AuthService:
@@ -207,7 +207,7 @@ class AuthService:
 auth_service = AuthService(JWT_SECRET)
 
 
-# ── Proxy ──────────────────────────────────────────────────────
+# ── Proxy ──────────────────────────────────────────────
 
 
 async def proxy_request(
@@ -239,7 +239,7 @@ async def proxy_request(
     return None
 
 
-# ── App ─────────────────────────────────────────────────────────
+# ── App ─────────────────────────────────────────────
 
 app = FastAPI(
     title="Trancendos API Gateway (Self-Hosted)",
@@ -271,7 +271,7 @@ app.add_middleware(
 )
 
 
-# ── Routes ──────────────────────────────────────────────────────
+# ── Routes ─────────────────────────────────────────────
 
 
 @app.get("/health")
@@ -401,10 +401,10 @@ async def gateway(request: Request, path: str):
     return None
 
 
-# ── Run ─────────────────────────────────────────────────────────
+# ── Run ─────────────────────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn
 
     port = int(os.getenv("PORT", "8003"))
-    uvicorn.run(app, host="0.0.0.0", port=port)  # nosec B104 — containerised service  # nosec B104 — Docker/K8s bind
+    uvicorn.run(app, host="0.0.0.0", port=port)  # nosec B104 — containerised service
