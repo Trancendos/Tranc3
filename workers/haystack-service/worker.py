@@ -191,8 +191,8 @@ async def run_pipeline(body: PipelineRun) -> dict[str, Any]:
     docs = (
         db()
         .execute(
-            "SELECT content, meta FROM documents WHERE pipeline_id=? LIMIT ?",
-            (body.pipeline_id, body.top_k * 5),
+            "SELECT content, meta FROM documents WHERE pipeline_id=?",
+            (body.pipeline_id,),
         )
         .fetchall()
     )
@@ -230,7 +230,7 @@ async def run_pipeline(body: PipelineRun) -> dict[str, Any]:
 
 @app.get("/haystack/runs")
 async def list_runs(
-    pipeline_id: Optional[str] = Query(None), limit: int = Query(50, le=200)
+    pipeline_id: Optional[str] = Query(None), limit: int = Query(50, ge=1, le=200)
 ) -> dict[str, Any]:
     if pipeline_id:
         rows = (

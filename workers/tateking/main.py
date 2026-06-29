@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 import time
+import urllib.parse
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,6 +50,32 @@ logger = logging.getLogger(WORKER_NAME)
 
 _http_timeout = httpx.Timeout(300.0, connect=10.0)
 _jobs: dict[str, dict[str, Any]] = {}
+
+_SAFE_OUTPUT_NAME = re.compile(r"^[A-Za-z0-9_.-]+\.mp4$")
+_ALLOWED_INPUT_SCHEMES = frozenset({"http", "https"})
+_ALLOWED_INPUT_HOSTS = frozenset(
+    h.strip()
+    for h in os.getenv("TATEKING_ALLOWED_INPUT_HOSTS", "").split(",")
+    if h.strip()
+)
+
+
+def _validate_input_url(url: str) -> None:
+    """Reject URLs that could trigger SSRF via FFmpeg protocol handlers."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid input_url")
+    if parsed.scheme not in _ALLOWED_INPUT_SCHEMES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"input_url scheme '{parsed.scheme}' not allowed; use http or https",
+        )
+    if _ALLOWED_INPUT_HOSTS and parsed.hostname not in _ALLOWED_INPUT_HOSTS:
+        raise HTTPException(
+            status_code=400,
+            detail="input_url host not in TATEKING_ALLOWED_INPUT_HOSTS allowlist",
+        )
 
 
 def _ffmpeg_available() -> bool:
@@ -178,6 +206,7 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
     if _ffmpeg_available():
         input_args: list[str]
         if req.input_url:
+            _validate_input_url(req.input_url)
             input_args = ["-i", req.input_url]
         else:
             # Generate a colour test card — write title to a temp file so it
@@ -255,8 +284,11 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
 async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     """Compose video from multiple input assets using FFmpeg."""
     job_id = str(uuid.uuid4())
-    # Strip directory components from caller-supplied name to prevent path traversal.
-    output_name = Path(req.output_name).name if req.output_name else f"{job_id}.mp4"
+    # Strict allowlist: alphanumeric, underscores, hyphens, dots — must end in .mp4.
+    raw_name = req.output_name or f"{job_id}.mp4"
+    if not _SAFE_OUTPUT_NAME.match(raw_name):
+        raise HTTPException(status_code=400, detail="output_name must match [A-Za-z0-9_.-]+.mp4")
+    output_name = raw_name
     output_path = OUTPUT_DIR / output_name
 
     if not _ffmpeg_available():

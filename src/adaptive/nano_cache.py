@@ -112,13 +112,16 @@ class NanoCache:
         if local is not None:
             return local
 
-        # Query peers
+        # Query peers — percent-encode the key so slashes/specials don't alter the URL path
+        import urllib.parse
+
+        encoded_key = urllib.parse.quote(key, safe="")
         for peer in self._peers:
             try:
                 import httpx
 
                 async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
-                    resp = await client.get(f"{peer}/cache/{key}")
+                    resp = await client.get(f"{peer}/cache/{encoded_key}")
                     if resp.status_code == 200:
                         data = resp.json()
                         value = data.get("value")
@@ -137,7 +140,6 @@ class NanoCache:
             return 0
 
         pending = list(self._gossip_queue)
-        self._gossip_queue.clear()
         sent = 0
 
         try:
@@ -153,6 +155,15 @@ class NanoCache:
                     logger.debug("Gossip to %s failed: %s", peer, exc)
         except ImportError:
             logger.debug("httpx not available; gossip propagation skipped")
+
+        # Only clear the queue entries that were successfully attempted; entries
+        # added concurrently while we were iterating remain for the next round.
+        if pending:
+            for item in pending:
+                try:
+                    self._gossip_queue.remove(item)
+                except ValueError:
+                    pass  # already removed by a concurrent gossip call
 
         return sent
 

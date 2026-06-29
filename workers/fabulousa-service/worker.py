@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -59,7 +59,7 @@ class ProjectCreate(BaseModel):
 class ExportRequest(BaseModel):
     project_id: str
     file_id: Optional[str] = None
-    format: str = "png"  # png, svg, pdf
+    format: Literal["png", "svg", "pdf"] = "png"
 
 
 # ---------------------------------------------------------------------------

@@ -74,7 +74,7 @@ class CompleteRequest(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    messages: list[dict[str, str]]
+    messages: list[dict[str, str]] = Field(..., min_length=1)
     language: str = "python"
     max_tokens: int = Field(1024, ge=1, le=4096)
 

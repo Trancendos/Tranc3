@@ -232,7 +232,7 @@ export default {
     if (path === "/health" || path === "/api/health" || path.startsWith("/health/")) {
       targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
       targetPath = path; breaker = cb.ai; requiresAuth = false;
-    } else if (path.startsWith("/mcp") || path.startsWith("/api/mcp")) {
+    } else if (path === "/mcp" || path.startsWith("/mcp/") || path === "/api/mcp" || path.startsWith("/api/mcp/")) {
       // MCP tools are authenticated at the MCP layer, not the gateway
       targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
       targetPath = path; breaker = cb.ai; requiresAuth = false;
@@ -272,12 +272,13 @@ export default {
         targetService = env.PAYMENTS_SERVICE_URL; targetPath = path.replace("/api/payments", "/payments"); breaker = cb.payments;
       } else if (path.startsWith("/api/products")) {
         targetService = env.PRODUCTS_SERVICE_URL; targetPath = path.replace("/api/products", "/products"); breaker = cb.products;
-      } else {
-        // Fallback: send everything else to tranc3-backend on Fly.io
-        // Covers: /api/mcp/*, /api/health, /api/v1/*, /api/workflow/*, etc.
+      } else if (path.startsWith("/api/")) {
+        // Fallback: route remaining /api/* paths to tranc3-backend on Fly.io
         targetService = env.TRANC3_BACKEND_URL || "https://trancendos-backend.fly.dev";
         targetPath    = path;
-        breaker       = cb.ai; // reuse ai breaker for backend
+        breaker       = cb.ai;
+      } else {
+        return jsonResp({ error: "Not Found", message: "No route matched", requestId }, 404, { "X-Request-ID": requestId });
       }
     }
 

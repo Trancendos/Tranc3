@@ -115,9 +115,10 @@ class FluidBalancer:
         if not laminar:
             laminar = dict(self._channels)  # fall back to all channels
 
-        # Bernoulli score: flow_rate / viscosity (higher = more allocation)
+        # Bernoulli score: flow_rate / viscosity, penalised by in-flight pressure
         scores = {
-            p: max(0.01, ch.flow_rate / max(ch.viscosity, 0.001)) for p, ch in laminar.items()
+            p: max(0.01, ch.flow_rate / max(ch.viscosity, 0.001) / max(1.0, ch.pressure))
+            for p, ch in laminar.items()
         }
         total = sum(scores.values())
         return {p: s / total for p, s in scores.items()}
@@ -127,12 +128,15 @@ class FluidBalancer:
         return [p for p, ch in self._channels.items() if ch.turbulent]
 
     def laminar_route(self, request: dict[str, Any] | None = None) -> Optional[str]:
-        """Route request to the smoothest flow channel."""
+        """Route request proportionally to flow allocation (weighted random)."""
+        import random
+
         allocation = self.flow()
         if not allocation:
             return None
-        # Pick channel with highest allocation fraction
-        return max(allocation, key=lambda p: allocation[p])
+        providers = list(allocation.keys())
+        weights = [allocation[p] for p in providers]
+        return random.choices(providers, weights=weights, k=1)[0]
 
     def turbulent_fallback(self, request: dict[str, Any] | None = None) -> Optional[str]:
         """Emergency routing when primary channels are turbulent — use lowest error rate."""

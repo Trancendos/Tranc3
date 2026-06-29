@@ -63,13 +63,16 @@ class QuantumSelector:
     # ------------------------------------------------------------------
 
     def superpose(self, providers: list[str]) -> None:
-        """Create equal superposition across all providers."""
+        """Create equal superposition across all providers, replacing stale state."""
         n = len(providers)
         if n == 0:
             return
         amplitude = 1.0 / math.sqrt(n)
-        for p in providers:
-            self._states[p] = QuantumState(provider=p, amplitude=amplitude)
+        provider_set = set(providers)
+        # Replace entire state dict so removed providers can't be selected.
+        self._states = {p: QuantumState(provider=p, amplitude=amplitude) for p in providers}
+        # Drop entanglements that reference providers no longer in the set.
+        self._entanglements = [(a, b) for a, b in self._entanglements if a in provider_set and b in provider_set]
 
     # ------------------------------------------------------------------
     # Collapse

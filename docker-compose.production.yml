@@ -920,15 +920,17 @@ services:
     volumes:
       - lab-service-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8039/health', timeout=5).read()\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8066/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   tranceflow:
     <<: *worker-common
     build: { context: ./workers/tranceflow, dockerfile: Dockerfile }
-    container_name: traceflow-worker
-    ports: ["8112:8112"]
+    container_name: tranc3-tranceflow
+    ports: ["8059:8059"]
+    expose: ["8059"]
     environment:
+      PORT: "8059"
       TRANCEFLOW_DB_PATH: /data/tranceflow.db
       TRANCEFLOW_ASSET_DIR: /data/tranceflow-assets
       GODOT_BIN: "${GODOT_BIN:-godot}"
@@ -945,15 +947,22 @@ services:
     volumes:
       - tranceflow-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=5).read()\""]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8059/health')"]
       <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
+      - "traefik.http.routers.tranceflow.entrypoints=websecure"
+      - "traefik.http.services.tranceflow.loadbalancer.server.port=8059"
 
   vrar3d:
     <<: *worker-common
     build: { context: ./workers/vrar3d, dockerfile: Dockerfile }
-    container_name: vrar3d-worker
-    ports: ["8113:8113"]
+    container_name: tranc3-vrar3d
+    ports: ["8060:8060"]
+    expose: ["8060"]
     environment:
+      PORT: "8060"
       VRAR3D_DB_PATH: /data/vrar3d.db
       VRAR3D_ASSET_DIR: /data/assets
       GODOT_BIN: "${GODOT_BIN:-godot}"
@@ -976,8 +985,13 @@ services:
     volumes:
       - vrar3d-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8063/health', timeout=5).read()\""]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
       <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
+      - "traefik.http.routers.vrar3d.entrypoints=websecure"
+      - "traefik.http.services.vrar3d.loadbalancer.server.port=8060"
 
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
   # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
@@ -996,7 +1010,7 @@ services:
       - tranc3-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8200/v1/sys/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8201/v1/sys/health"]
       <<: *healthcheck-default
 
   # ── KrakenD — API Gateway (Apache 2.0, replaces CF trancendos-api-gateway) ──
@@ -2201,8 +2215,8 @@ services:
 
 # ═══════════════════════════════════════════════════════════════════════════
 # The Digital Grid — Tier 6: Dagster (asset-centric orchestration, free OSS)
-# UI: /dagster  |  GraphQL: dagster-webserver:3002
-# NOTE: port 3001 is Grafana; port 3000 is Gotenberg; Dagster uses 3002
+# UI: /dagster  |  GraphQL: dagster-webserver:3003
+# NOTE: port 3001 is Grafana; port 3000 is Gotenberg; Dagster uses 3003
 # ═══════════════════════════════════════════════════════════════════════════
   dagster-webserver:
     image: ghcr.io/dagster-io/dagster:latest
@@ -2222,7 +2236,7 @@ services:
       - "traefik.http.routers.dagster.rule=Host(`trancendos.com`) && PathPrefix(`/dagster`)"
       - "traefik.http.middlewares.dagster-strip.stripprefix.prefixes=/dagster"
       - "traefik.http.routers.dagster.middlewares=dagster-strip"
-      - "traefik.http.services.dagster.loadbalancer.server.port=3002"
+      - "traefik.http.services.dagster.loadbalancer.server.port=3003"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ChronosSphere / ArcStream — Kestra: Open-source workflow + cron scheduler
@@ -2492,7 +2506,7 @@ services:
     depends_on:
       - misp
     environment:
-      - CRYPTEX_PORT=8039
+      - CRYPTEX_PORT=8053
       - CRYPTEX_DB_PATH=/data/cryptex.db
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - WAZUH_URL=https://wazuh-manager:55000
@@ -2531,7 +2545,7 @@ services:
     container_name: tranc3-observatory
     restart: unless-stopped
     environment:
-      - OBSERVATORY_PORT=8040
+      - OBSERVATORY_PORT=8065
       - OBSERVATORY_DB_PATH=/data/observatory.db
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - SIGNOZ_URL=http://signoz-query-service:8080
@@ -2965,7 +2979,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.taimra.rule=PathPrefix(`/taimra`)"
       - "traefik.http.routers.taimra.entrypoints=websecure"
-      - "traefik.http.services.taimra.loadbalancer.server.port=8065"
+      - "traefik.http.services.taimra.loadbalancer.server.port=8074"
 
   # ── I-Mind — emotion sensitivity engine (Port 8059) ──────────────────────────────────────────────
   imind:
@@ -2987,7 +3001,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.imind.rule=PathPrefix(`/imind`)"
       - "traefik.http.routers.imind.entrypoints=websecure"
-      - "traefik.http.services.imind.loadbalancer.server.port=8059"
+      - "traefik.http.services.imind.loadbalancer.server.port=8075"
 
   # ── Resonate — empathy engine (Port 8060) ──────────────────────────────────────────────
   resonate:
@@ -3098,50 +3112,6 @@ services:
       - "traefik.http.routers.turings-hub-service.rule=PathPrefix(`/turings-hub`)"
       - "traefik.http.routers.turings-hub-service.entrypoints=websecure"
       - "traefik.http.services.turings-hub-service.loadbalancer.server.port=8058"
-
-  # ── TranceFlow — 3D/game creation (Port 8067) ──────────────────────────────────────────────
-  tranceflow:
-    build:
-      context: ./workers/tranceflow
-      dockerfile: Dockerfile
-    container_name: tranc3-tranceflow
-    <<: *worker-common
-    environment:
-      - PORT=8059
-    expose:
-      - "8059"
-    ports:
-      - "8059:8059"
-    healthcheck:
-      <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8059/health')"]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
-      - "traefik.http.routers.tranceflow.entrypoints=websecure"
-      - "traefik.http.services.tranceflow.loadbalancer.server.port=8059"
-
-  # ── VRAR3D — Three.js / A-Frame immersion (Port 8068) ──────────────────────────────────────────────
-  vrar3d:
-    build:
-      context: ./workers/vrar3d
-      dockerfile: Dockerfile
-    container_name: tranc3-vrar3d
-    <<: *worker-common
-    environment:
-      - PORT=8060
-    expose:
-      - "8060"
-    ports:
-      - "8060:8060"
-    healthcheck:
-      <<: *healthcheck-default
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8060/health')"]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
-      - "traefik.http.routers.vrar3d.entrypoints=websecure"
-      - "traefik.http.services.vrar3d.loadbalancer.server.port=8060"
 
   # ── The Warp Tunnel — crypto scanner / quarantine (Port 8040) ──────────────────────────────────────────────
   warp-tunnel:
@@ -3504,7 +3474,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8096
-      - OLLAMA_URL=http://tranc3-ollama:11434
+      - OLLAMA_URL=http://ollama:11434
     expose:
       - "8096"
     ports:
@@ -3527,7 +3497,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8097
-      - OLLAMA_URL=http://tranc3-ollama:11434
+      - OLLAMA_URL=http://ollama:11434
     expose:
       - "8097"
     ports:
@@ -3550,7 +3520,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8098
-      - OLLAMA_URL=http://tranc3-ollama:11434
+      - OLLAMA_URL=http://ollama:11434
     expose:
       - "8098"
     ports:

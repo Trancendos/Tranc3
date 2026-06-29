@@ -21,11 +21,11 @@ jobs:
 
       - name: Run Renovate (self-hosted)
         run: |
+          mkdir -p logs
           if ! command -v npx &>/dev/null; then
             echo "::error::npx not available — Node.js must be pre-installed on the act-runner"
             exit 1
           fi
-          mkdir -p logs
           # Run Renovate via Forgejo platform
           npx renovate \
             --platform=gitea \
@@ -34,11 +34,7 @@ jobs:
             --dry-run=false \
             --autodiscover=false \
             --repositories=Trancendos/Tranc3 \
-            2>&1 | tee logs/renovate-output.txt || {
-              echo "::warning::Renovate run completed with warnings — check logs"
-              exit 0
-            }
-        continue-on-error: true
+            2>&1 | tee logs/renovate-output.txt
         env:
           FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
           FORGEJO_API_URL: ${{ secrets.FORGEJO_URL }}/api/v1

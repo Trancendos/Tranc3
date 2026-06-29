@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+import threading
 import time
 from pathlib import Path
 from typing import Optional
@@ -72,6 +73,7 @@ class MistralFreeProvider(AIProvider):
             api_key=api_key or os.getenv("MISTRAL_API_KEY", ""),
         )
         self._default_model = default_model
+        self._budget_lock = threading.Lock()
         self._monthly_tokens_used, self._month_start = self._load_or_init_budget()
 
     def _load_or_init_budget(self) -> tuple[int, float]:
@@ -85,9 +87,8 @@ class MistralFreeProvider(AIProvider):
                     "INSERT INTO monthly_budget(id, tokens_used, month_start) VALUES(1, 0, ?)", (now,)
                 )
                 return 0, now
-        except Exception:
-            logger.warning("mistral_free: could not read budget db, starting at 0")
-            return 0, time.time()
+        except Exception as exc:
+            raise RuntimeError(f"mistral_free: cannot read budget db — cannot proceed safely: {exc}") from exc
 
     def _persist_budget(self) -> None:
         try:
@@ -97,8 +98,8 @@ class MistralFreeProvider(AIProvider):
                     "ON CONFLICT(id) DO UPDATE SET tokens_used=excluded.tokens_used, month_start=excluded.month_start",
                     (self._monthly_tokens_used, self._month_start),
                 )
-        except Exception:
-            logger.warning("mistral_free: could not persist budget, state may be lost on restart")
+        except Exception as exc:
+            raise RuntimeError(f"mistral_free: cannot persist budget — aborting to avoid silent over-spend: {exc}") from exc
 
     def _reset_if_new_month(self) -> None:
         now = time.time()
@@ -108,8 +109,9 @@ class MistralFreeProvider(AIProvider):
             self._persist_budget()
 
     def _budget_ok(self) -> bool:
-        self._reset_if_new_month()
-        return self._monthly_tokens_used < int(_MONTHLY_TOKEN_BUDGET * _STOP_THRESHOLD)
+        with self._budget_lock:
+            self._reset_if_new_month()
+            return self._monthly_tokens_used < int(_MONTHLY_TOKEN_BUDGET * _STOP_THRESHOLD)
 
     async def complete(self, request: AIRequest) -> AIResponse:
         if not self.api_key:
@@ -132,7 +134,7 @@ class MistralFreeProvider(AIProvider):
             "model": model,
             "messages": messages,
             "max_tokens": min(request.max_tokens or 512, 4096),
-            "temperature": request.temperature or 0.7,
+            "temperature": 0.7 if request.temperature is None else request.temperature,
             "stream": False,
         }
 
@@ -151,8 +153,9 @@ class MistralFreeProvider(AIProvider):
 
         usage = data.get("usage", {})
         tokens_used = usage.get("total_tokens", 0)
-        self._monthly_tokens_used += tokens_used
-        self._persist_budget()
+        with self._budget_lock:
+            self._monthly_tokens_used += tokens_used
+            self._persist_budget()
 
         text = data["choices"][0]["message"]["content"]
         latency_ms = int((time.monotonic() - start) * 1000)
