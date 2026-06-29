@@ -674,7 +674,7 @@ class TaxMonitor:
         """Validate EU VAT number via VIES API (free, no key required)."""
         try:
             import urllib.request
-            import xml.etree.ElementTree as ET
+            import defusedxml.ElementTree as ET  # nosec B405 — defusedxml prevents XXE
 
             soap = (
                 '<?xml version="1.0" encoding="UTF-8"?>'

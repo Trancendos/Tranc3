@@ -733,7 +733,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     uvicorn.run(
         "workers.sentinel_station_service.worker:app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # nosec B104 — containerised service
         port=PORT,
         reload=False,
     )

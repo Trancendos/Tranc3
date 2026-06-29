@@ -1215,7 +1215,7 @@ class _RgwS3Client:
         async with self._sess().get(full, headers=headers) as resp:
             resp.raise_for_status()
             body = await resp.text()
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET  # nosec B405 — defusedxml prevents XXE
 
         root = ET.fromstring(body)
         ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
