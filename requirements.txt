@@ -163,8 +163,9 @@ qiskit==2.4.1
 qiskit-aer==0.17.2
 
 # === MessagePack (content negotiation) ===
+# Fixes: GHSA-6v7p-g79w-8964 (HIGH) — out-of-bounds read/crash on Unpacker reuse after caught error.
 # Pinned to exact version per project policy (no >= or ~= specifiers).
-msgpack==1.1.0
+msgpack==1.2.1
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks (CWE-611); used by billing.py, oci/microceph providers
