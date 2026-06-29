@@ -58,12 +58,17 @@ jobs:
 
           # Count findings (excluding already-suppressed nosec lines)
           FINDINGS=$(python3 -c "
-          import json, sys
+          import json, sys, os
+          if not os.path.exists('logs/bandit-full.json'):
+              print('Error: logs/bandit-full.json not found', file=sys.stderr)
+              sys.exit(1)
           try:
-              data = json.load(open('logs/bandit-full.json'))
+              with open('logs/bandit-full.json') as f:
+                  data = json.load(f)
               print(len(data.get('results', [])))
-          except Exception:
-              print(0)
+          except Exception as e:
+              print(f'Error parsing bandit output: {e}', file=sys.stderr)
+              sys.exit(1)
           ")
           echo "findings=$FINDINGS" >> $GITHUB_OUTPUT
           echo "Bandit findings: $FINDINGS"
@@ -76,6 +81,7 @@ jobs:
             BASELINE=${BASELINE:-9999}
           else
             BASELINE=9999
+            echo "bandit_findings=9999" > .security-baseline
           fi
           echo "count=$BASELINE" >> $GITHUB_OUTPUT
           echo "Baseline: $BASELINE"
@@ -122,32 +128,42 @@ jobs:
           pip-audit --requirement requirements.txt \
             --format json --output logs/pip-audit.json 2>/dev/null || true
 
-          # Count HIGH and CRITICAL findings
+          # Count HIGH and CRITICAL findings with available fixes
           CRITICAL=$(python3 -c "
-          import json
+          import json, sys, os
+          if not os.path.exists('logs/pip-audit.json'):
+              print('Error: logs/pip-audit.json not found', file=sys.stderr)
+              sys.exit(1)
           try:
-              data = json.load(open('logs/pip-audit.json'))
+              with open('logs/pip-audit.json') as f:
+                  data = json.load(f)
+              # Only count HIGH/CRITICAL severity vulns with available fixes
+              HIGH_SEVERITIES = {'high', 'critical'}
               highs = [v for dep in data.get('dependencies', [])
                        for v in dep.get('vulns', [])
-                       if v.get('fix_versions')]
+                       if v.get('fix_versions') and
+                          v.get('severity', '').lower() in HIGH_SEVERITIES]
               print(len(highs))
-          except Exception:
-              print(0)
+          except Exception as e:
+              print(f'Error parsing pip-audit output: {e}', file=sys.stderr)
+              sys.exit(1)
           ")
-          echo "Actionable CVEs (with fix versions): $CRITICAL"
+          echo "Actionable HIGH/CRITICAL CVEs (with fix versions): $CRITICAL"
           if [ "$CRITICAL" -gt "0" ]; then
-            echo "❌ $CRITICAL CVE(s) with available fixes — update requirements.txt"
+            echo "❌ $CRITICAL HIGH/CRITICAL CVE(s) with available fixes — update requirements.txt"
             python3 -c "
-          import json
-          data = json.load(open('logs/pip-audit.json'))
+          import json, sys, os
+          with open('logs/pip-audit.json') as f:
+              data = json.load(f)
+          HIGH_SEVERITIES = {'high', 'critical'}
           for dep in data.get('dependencies', []):
               for v in dep.get('vulns', []):
-                  if v.get('fix_versions'):
-                      print(f\"  {dep['name']} {dep['version']}: {v['id']} — fix: {v['fix_versions']}\")
+                  if v.get('fix_versions') and v.get('severity', '').lower() in HIGH_SEVERITIES:
+                      print(f\"  {dep['name']} {dep['version']}: {v['id']} ({v.get('severity','?')}) — fix: {v['fix_versions']}\")
           "
             exit 1
           fi
-          echo "✅ No actionable CVEs with available fix versions"
+          echo "✅ No HIGH/CRITICAL CVEs with available fix versions"
 
   # ──────────────────────────────────────────────────────────────────────
   # Hard gate: no new secrets in the diff

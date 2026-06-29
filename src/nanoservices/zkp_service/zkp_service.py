@@ -224,7 +224,7 @@ class ZKPService:
 
         try:
             if circuit.proof_system == ProofSystem.SCHNORR:
-                secret = int(private_inputs[0]) if private_inputs else random.randint(2, 1000)
+                secret = int(private_inputs[0]) if private_inputs else secrets.randbelow(999) + 2
                 p, g, x, y = self.schnorr.generate_keypair()
                 r, challenge, s = self.schnorr.prove(secret, p, g)
                 proof.proof_data = json.dumps(
