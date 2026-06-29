@@ -1,5 +1,5 @@
 # TRANC3 — Python Dependencies
-# Updated: 2026-05 — CVE Remediation & Security Hardening
+# Updated: 2026-06 — CVE Remediation & Security Hardening; duplicate/conflict resolution
 # All versions EXACT-PINNED for security and reproducibility
 # Do NOT use >= or ~= — exact pins prevent supply-chain drift
 
@@ -45,19 +45,23 @@ python-multipart==0.0.31
 python-dotenv==1.2.2
 
 # === Password Hashing ===
-# bcrypt: Used by src/auth/db_user_manager.py for password hashing — replaces passlib.
-# Pinned to bcrypt 4.x line which avoids the legacy ``crypt`` deprecation warnings in 3.13.
-bcrypt==4.2.1
+# bcrypt 5.x: Used by src/auth/db_user_manager.py and auth.py for password hashing.
+# 5.0.0 avoids the legacy ``crypt`` deprecation warnings in Python 3.13.
+bcrypt==5.0.0
 
 # === MFA / TOTP ===
 # pyotp: TOTP/HOTP one-time passwords — powers MFA in workers/infinity-auth.
 pyotp==2.9.0
 
-# === Database / ORM ===
-# sqlalchemy: ORM — powers src/database/schema.py and src/auth/db_user_manager.py
-# alembic: schema migrations
-sqlalchemy==2.0.36
-alembic==1.14.0
+# === Database / ORM / Migrations ===
+# SQLAlchemy: ORM models in src/database/schema.py + src/auth/db_user_manager.py.
+#   Imported transitively by api.py (via DBUserManager) — required for the API to start.
+# alembic: schema migrations run by docker-entrypoint.sh (`alembic upgrade head`).
+# psycopg2-binary: PostgreSQL driver for the documented production DATABASE_URL
+#   (Supabase postgresql://...). Not needed for the SQLite dev/test path.
+sqlalchemy==2.0.50
+alembic==1.18.4
+psycopg2-binary==2.9.12
 
 # === Web Framework ===
 # Fixes: CVE-2024-33663 (algorithm confusion), CVE-2024-29370 (JWE DoS) via python-jose>=3.4.0
@@ -83,10 +87,6 @@ pyasn1==0.6.3
 #        PYSEC-2025-183 (header injection via unvalidated kid/typ claims)
 # Transitive via multiple auth paths — pinned explicitly to prevent downgrade.
 PyJWT==2.13.0
-# bcrypt: required by auth.py password hashing/verification.
-bcrypt==5.0.0
-# pyotp: required by the self-hosted Infinity MFA worker and worker import tests.
-pyotp==2.9.0
 # idna: fixes CVE-2026-45409 (quadratic complexity ReDoS on crafted labels)
 # Transitive via anyio, httpx, email-validator, requests — explicit pin required.
 idna==3.16
@@ -141,32 +141,11 @@ cachetools==5.5.0
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
 
-# === Database / ORM ===
-# SQLAlchemy: ORM models in src/database/schema.py + src/auth/db_user_manager.py.
-#   Imported transitively by api.py (via DBUserManager) — required for the API to
-#   start, not optional.
-# alembic: schema migrations in migrations/ (`make migrate` → alembic upgrade head).
-sqlalchemy==2.0.50
-alembic==1.18.4
-
 # === Redis Client ===
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
 #   src/security/security_framework.py, src/mcp/tools.py for caching, session
 #   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
 redis==7.4.0
-
-# === Database / ORM / Migrations ===
-# SQLAlchemy: hard top-level dependency of src/database/schema.py and
-#   src/auth/db_user_manager.py (imported at api.py load time). The app cannot
-#   start without it.
-SQLAlchemy==2.0.50
-# alembic: schema migrations run by docker-entrypoint.sh (`alembic upgrade head`)
-#   on container start. Required in the production image.
-alembic==1.18.4
-# psycopg2-binary: PostgreSQL driver for the documented production DATABASE_URL
-#   (Supabase postgresql://...). Not needed for the SQLite dev/test path, but
-#   required to connect to the production database.
-psycopg2-binary==2.9.12
 
 # === Master Worker / BotSwarm / Task Orchestration ===
 # pyyaml: YAML task definition parsing — powers src/master/task_loader.py
@@ -184,7 +163,8 @@ qiskit==2.4.1
 qiskit-aer==0.17.2
 
 # === MessagePack (content negotiation) ===
-msgpack>=1.0.8
+# Pinned to exact version per project policy (no >= or ~= specifiers).
+msgpack==1.1.0
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks (CWE-611); used by billing.py, oci/microceph providers
