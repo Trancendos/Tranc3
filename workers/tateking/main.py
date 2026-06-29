@@ -98,7 +98,7 @@ def _run_ffmpeg(args: list[str], timeout: int = 120) -> tuple[bool, str]:
     # shell=False + list form: OS passes args directly with no shell interpretation.
     cmd = [ffmpeg_bin, "-y"] + args
     try:
-        result = subprocess.run(  # nosec B603
+        result = subprocess.run(  # nosec B603 # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args
             cmd,
             capture_output=True,
             text=True,
