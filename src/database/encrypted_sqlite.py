@@ -261,7 +261,8 @@ class EncryptedKVStore:
     def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
         h = self._key_hash(key)
         row = self._conn.execute(
-            f"SELECT value_enc FROM {self.table} WHERE key_hash=?", (h,)  # nosec B608 -- table name is class-internal config, not user input
+            f"SELECT value_enc FROM {self.table} WHERE key_hash=?",  # nosec B608 -- table name is class-internal config, not user input
+            (h,),
         ).fetchone()
         if row is None:
             return default
