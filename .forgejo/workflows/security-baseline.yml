@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.FORGEJO_TOKEN || github.token }}
+          token: ${{ secrets.FORGEJO_TOKEN }}
 
       - name: Install bandit
         run: python3 -m pip install --quiet bandit
@@ -137,12 +137,10 @@ jobs:
           try:
               with open('logs/pip-audit.json') as f:
                   data = json.load(f)
-              # Only count HIGH/CRITICAL severity vulns with available fixes
-              HIGH_SEVERITIES = {'high', 'critical'}
+              # Count any vuln with an available fix (pip-audit JSON has no severity field)
               highs = [v for dep in data.get('dependencies', [])
                        for v in dep.get('vulns', [])
-                       if v.get('fix_versions') and
-                          v.get('severity', '').lower() in HIGH_SEVERITIES]
+                       if v.get('fix_versions')]
               print(len(highs))
           except Exception as e:
               print(f'Error parsing pip-audit output: {e}', file=sys.stderr)
@@ -155,11 +153,10 @@ jobs:
           import json, sys, os
           with open('logs/pip-audit.json') as f:
               data = json.load(f)
-          HIGH_SEVERITIES = {'high', 'critical'}
           for dep in data.get('dependencies', []):
               for v in dep.get('vulns', []):
-                  if v.get('fix_versions') and v.get('severity', '').lower() in HIGH_SEVERITIES:
-                      print(f\"  {dep['name']} {dep['version']}: {v['id']} ({v.get('severity','?')}) — fix: {v['fix_versions']}\")
+                  if v.get('fix_versions'):
+                      print(f\"  {dep['name']} {dep['version']}: {v['id']} — fix: {v['fix_versions']}\")
           "
             exit 1
           fi

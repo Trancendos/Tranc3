@@ -13,7 +13,7 @@
  */
 
 const express = require('express');
-const { Queue, Worker, QueueEvents } = require('bullmq');
+const { Queue, Worker } = require('bullmq');
 
 const PORT = process.env.PORT || 8092;
 const REDIS_HOST = process.env.VALKEY_HOST || process.env.REDIS_HOST || 'valkey';
@@ -21,17 +21,27 @@ const REDIS_PORT = parseInt(process.env.VALKEY_PORT || process.env.REDIS_PORT ||
 
 const connection = { host: REDIS_HOST, port: REDIS_PORT };
 
+// Declare which queues this service handles. Requests for unknown queues
+// return 404 rather than silently enqueuing to an unprocessed queue.
+const ALLOWED_QUEUES = (process.env.BULLMQ_QUEUES || 'default')
+  .split(',')
+  .map((q) => q.trim())
+  .filter((q) => q.length > 0);
+
 const queues = new Map();
 
 function getQueue(name) {
+  if (!ALLOWED_QUEUES.includes(name)) {
+    return null;
+  }
   if (!queues.has(name)) {
     queues.set(name, new Queue(name, { connection }));
   }
   return queues.get(name);
 }
 
-// Default worker: logs and completes jobs on the "default" queue.
-// Real job processors should be added per-queue as needed.
+// Default worker for the "default" queue.
+// Add additional Workers here for each entry in ALLOWED_QUEUES as needed.
 const defaultWorker = new Worker(
   'default',
   async (job) => {
@@ -48,17 +58,31 @@ const app = express();
 app.use(express.json());
 
 app.get('/health', async (_req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'bullmq-queue-service',
-    entity: 'The HIVE',
-    redis: `${REDIS_HOST}:${REDIS_PORT}`,
-  });
+  try {
+    // Ping Valkey by attempting a queue connection check on the default queue.
+    const q = getQueue('default');
+    await q.getJobCounts();
+    res.json({
+      status: 'ok',
+      service: 'bullmq-queue-service',
+      entity: 'The HIVE',
+      redis: `${REDIS_HOST}:${REDIS_PORT}`,
+    });
+  } catch (err) {
+    res.status(503).json({ status: 'error', error: err.message });
+  }
+});
+
+app.get('/queues', (_req, res) => {
+  res.json({ queues: ALLOWED_QUEUES });
 });
 
 app.post('/queues/:name/jobs', async (req, res) => {
+  const queue = getQueue(req.params.name);
+  if (!queue) {
+    return res.status(404).json({ error: `Queue "${req.params.name}" is not handled by this service` });
+  }
   try {
-    const queue = getQueue(req.params.name);
     const { jobName = 'job', data = {}, opts = {} } = req.body || {};
     const job = await queue.add(jobName, data, opts);
     res.status(201).json({ id: job.id, name: job.name, queue: req.params.name });
@@ -68,8 +92,11 @@ app.post('/queues/:name/jobs', async (req, res) => {
 });
 
 app.get('/queues/:name/jobs/:id', async (req, res) => {
+  const queue = getQueue(req.params.name);
+  if (!queue) {
+    return res.status(404).json({ error: `Queue "${req.params.name}" is not handled by this service` });
+  }
   try {
-    const queue = getQueue(req.params.name);
     const job = await queue.getJob(req.params.id);
     if (!job) {
       return res.status(404).json({ error: 'job not found' });
@@ -82,8 +109,11 @@ app.get('/queues/:name/jobs/:id', async (req, res) => {
 });
 
 app.get('/queues/:name/counts', async (req, res) => {
+  const queue = getQueue(req.params.name);
+  if (!queue) {
+    return res.status(404).json({ error: `Queue "${req.params.name}" is not handled by this service` });
+  }
   try {
-    const queue = getQueue(req.params.name);
     const counts = await queue.getJobCounts();
     res.json({ queue: req.params.name, counts });
   } catch (err) {
@@ -92,5 +122,5 @@ app.get('/queues/:name/counts', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`bullmq-queue-service listening on :${PORT} (redis ${REDIS_HOST}:${REDIS_PORT})`);
+  console.log(`bullmq-queue-service listening on :${PORT} (redis ${REDIS_HOST}:${REDIS_PORT}, queues: ${ALLOWED_QUEUES.join(', ')})`);
 });

@@ -2884,6 +2884,8 @@ services:
     environment:
       - PORT=8061
       - REMOTION_SERVE_URL=http://remotion-render-service:8093
+    volumes:
+      - remotion-renders:/renders:ro
     expose:
       - "8061"
     ports:
@@ -2908,6 +2910,9 @@ services:
     <<: *worker-common
     environment:
       - PORT=8093
+      - RENDER_OUTPUT_DIR=/renders
+    volumes:
+      - remotion-renders:/renders
     expose:
       - "8093"
     ports:
@@ -2946,6 +2951,53 @@ services:
       - "traefik.http.routers.bullmq-queue-service.rule=PathPrefix(`/bullmq-queue-service`)"
       - "traefik.http.routers.bullmq-queue-service.entrypoints=websecure"
       - "traefik.http.services.bullmq-queue-service.loadbalancer.server.port=8092"
+
+  # ── The Void — Rust/AES-GCM vault service (Port 8094) ───────────────────────────────────────────────
+  vault-service-rs:
+    build:
+      context: ./workers/vault-service-rs
+      dockerfile: Dockerfile
+    container_name: tranc3-vault-service-rs
+    <<: *worker-common
+    environment:
+      - PORT=8094
+      - VAULT_DB_PATH=/data/vault.db
+    expose:
+      - "8094"
+    ports:
+      - "8094:8094"
+    volumes:
+      - vault-service-rs-data:/data
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "wget", "-qO-", "http://localhost:8094/health"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vault-service-rs.rule=PathPrefix(`/vault-rs`)"
+      - "traefik.http.routers.vault-service-rs.entrypoints=websecure"
+      - "traefik.http.services.vault-service-rs.loadbalancer.server.port=8094"
+
+  # ── Rate Limit Service — Rust token-bucket rate limiter (Port 8099) ──────────────────────────────────
+  rate-limit-service-rs:
+    build:
+      context: ./workers/rate-limit-service-rs
+      dockerfile: Dockerfile
+    container_name: tranc3-rate-limit-service-rs
+    <<: *worker-common
+    environment:
+      - PORT=8099
+    expose:
+      - "8099"
+    ports:
+      - "8099:8099"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "wget", "-qO-", "http://localhost:8099/health"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rate-limit-service-rs.rule=PathPrefix(`/rate-limit-rs`)"
+      - "traefik.http.routers.rate-limit-service-rs.entrypoints=websecure"
+      - "traefik.http.services.rate-limit-service-rs.loadbalancer.server.port=8099"
 
   # ── Sashas Photo Studio — image generation (Port 8062) ──────────────────────────────────────────────
   sashas-photo-studio:
@@ -3739,6 +3791,8 @@ services:
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
 volumes:
+  remotion-renders:
+    driver: local
   cranbania-data:
     driver: local
   traefik-config:
@@ -3770,6 +3824,8 @@ volumes:
   void-data:
     driver: local
   vault-service-data:
+    driver: local
+  vault-service-rs-data:
     driver: local
   lab-service-data:
     driver: local
