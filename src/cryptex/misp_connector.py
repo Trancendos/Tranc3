@@ -20,6 +20,7 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
@@ -78,9 +79,7 @@ class MISPConnector:
         verify_ssl: bool = True,
     ) -> None:
         raw_url = (misp_url or _MISP_URL).rstrip("/")
-        from urllib.parse import urlparse as _urlparse
-
-        _scheme = _urlparse(raw_url).scheme
+        _scheme = urlparse(raw_url).scheme
         if _scheme not in ("http", "https"):
             raise ValueError(f"MISPConnector: URL scheme must be http or https, got {_scheme!r}")
         self._url = raw_url

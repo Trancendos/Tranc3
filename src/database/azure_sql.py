@@ -94,7 +94,10 @@ def bootstrap_table(table_name: str, ddl: str) -> bool:
         cur = conn.cursor()
         # Azure SQL uses IF NOT EXISTS via: IF NOT EXISTS (SELECT ...)
         # table_name is an internal constant, never user input — nosec B608
-        check_sql = f"IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{table_name}') BEGIN {ddl} END"  # nosec B608
+        check_sql = (
+            f"IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{table_name}') "  # nosec B608
+            f"BEGIN {ddl} END"
+        )
         cur.execute(check_sql)
         conn.commit()
         logger.info("azure_sql: table %s bootstrapped", table_name)
@@ -117,7 +120,14 @@ def upsert_json(table: str, key_col: str, key_val: str, data_col: str, data: str
     try:
         cur = conn.cursor()
         # table/column names are internal constants, never user input — nosec B608
-        sql = f"MERGE {table} AS target USING (SELECT ? AS {key_col}, ? AS {data_col}) AS source ON target.{key_col} = source.{key_col} WHEN MATCHED THEN UPDATE SET {data_col} = source.{data_col} WHEN NOT MATCHED THEN INSERT ({key_col}, {data_col}) VALUES (source.{key_col}, source.{data_col});"  # nosec B608
+        sql = (
+            f"MERGE {table} AS target "  # nosec B608
+            f"USING (SELECT ? AS {key_col}, ? AS {data_col}) AS source "
+            f"ON target.{key_col} = source.{key_col} "
+            f"WHEN MATCHED THEN UPDATE SET {data_col} = source.{data_col} "
+            f"WHEN NOT MATCHED THEN INSERT ({key_col}, {data_col}) "
+            f"VALUES (source.{key_col}, source.{data_col});"
+        )
         cur.execute(sql, (key_val, data))
         conn.commit()
         return True

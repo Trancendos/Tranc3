@@ -229,8 +229,13 @@ class PlatformLayerRotator:
             import urllib.error
             import urllib.request
 
+            parsed = urlparse(health_url)
+            if parsed.scheme not in ("http", "https"):
+                h.available = False
+                h.detail = f"invalid_scheme:{parsed.scheme}"
+                return h
             req = urllib.request.Request(health_url, method="GET")
-            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310 — health_url is derived from service base_url (env-configured, scheme enforced by caller)
+            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310 — scheme validated above
                 h.available = 200 <= resp.status < 400
                 h.detail = f"http_{resp.status}"
         except urllib.error.HTTPError as exc:

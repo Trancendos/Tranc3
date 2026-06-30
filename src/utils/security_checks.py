@@ -86,6 +86,7 @@ def _load_usage() -> dict[str, int]:
 
 def _save_usage(usage: dict[str, int]) -> None:
     try:
+        _USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
         payload = dict(usage)
         payload["_day"] = time.strftime("%Y-%m-%d")
         _USAGE_FILE.write_text(json.dumps(payload))
