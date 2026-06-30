@@ -45,7 +45,7 @@ FREE_PROVIDERS: list[dict] = [
     },
 ]
 
-_USAGE_FILE = Path(os.getenv("PROVIDER_USAGE_FILE", "/data/tranc3_provider_usage.json"))
+_USAGE_FILE = Path(os.getenv("PROVIDER_USAGE_FILE", "/app/data/tranc3_provider_usage.json"))
 _USAGE_THRESHOLD = 0.80  # hard stop at 80 %
 
 

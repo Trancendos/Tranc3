@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Optional
 
 log = logging.getLogger("tranc3.cryptex.bounty_hunter")
 
-_DB_PATH = Path(os.getenv("BOUNTY_DB", "/data/bounty_hunter.db"))
+_DB_PATH = Path(os.getenv("BOUNTY_DB", "/app/data/bounty_hunter.db"))
 _NUCLEI_PATH = os.getenv(
     "NUCLEI_BIN", "nuclei"
 )  # install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
