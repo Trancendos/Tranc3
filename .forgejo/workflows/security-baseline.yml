@@ -45,14 +45,14 @@ jobs:
           token: ${{ secrets.FORGEJO_TOKEN }}
 
       - name: Install bandit
-        run: python3 -m pip install --quiet bandit
+        run: python3 -m pip install --quiet "bandit==1.8.3"
 
       - name: Run bandit and count findings
         id: bandit
         run: |
           mkdir -p logs
           # Run bandit; exit code 1 = findings, exit code 0 = clean.
-          bandit -r src api.py \
+          bandit -r src api.py workers/tateking/main.py \
             --exclude src/nanoservices/genetic_optimizer,src/evolution \
             -f json -o logs/bandit-full.json 2>/dev/null || true
 
@@ -114,7 +114,7 @@ jobs:
   # Hard gate: no new HIGH/CRITICAL CVEs in runtime requirements
   # ──────────────────────────────────────────────────────────────────────
   dependency-gate:
-    name: Dependency CVE Gate (HIGH/CRITICAL → fail)
+    name: Dependency CVE Gate (fixable vulns → fail)
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -182,14 +182,13 @@ jobs:
           fi
 
           mkdir -p logs
-          gitleaks detect \
-            --source . \
+          gitleaks git \
             --config .gitleaks.toml \
             --report-format json \
             --report-path logs/gitleaks.json \
             --log-level warn \
             --no-banner \
-            --exit-code 1 2>/dev/null && echo "✅ No secrets detected" || {
+            --exit-code 1 2>/dev/null && echo "✅ No secrets detected in diff" || {
             echo "❌ Secrets detected — review logs/gitleaks.json"
             python3 -c "
           import json

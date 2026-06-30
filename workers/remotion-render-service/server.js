@@ -27,8 +27,9 @@ function pruneJobs() {
   const now = Date.now();
   for (const [jobId, job] of jobs.entries()) {
     if (
-      TERMINAL_JOB_STATUSES.has(job.status) ||
-      (typeof job.updatedAt === 'number' && now - job.updatedAt > JOB_TTL_MS)
+      TERMINAL_JOB_STATUSES.has(job.status) &&
+      typeof job.updatedAt === 'number' &&
+      now - job.updatedAt > JOB_TTL_MS
     ) {
       jobs.delete(jobId);
     }
@@ -41,7 +42,10 @@ let bundleLocationPromise = null;
 
 function getBundleLocation() {
   if (!bundleLocationPromise) {
-    bundleLocationPromise = bundle({ entryPoint: ENTRY_POINT });
+    bundleLocationPromise = bundle({ entryPoint: ENTRY_POINT }).catch((err) => {
+      bundleLocationPromise = null;
+      throw err;
+    });
   }
   return bundleLocationPromise;
 }
@@ -61,8 +65,8 @@ async function runRender(renderId, payload) {
     });
 
     const RENDER_OUTPUT_DIR = process.env.RENDER_OUTPUT_DIR || '/renders';
-    const outputLocation =
-      payload.outputLocation || path.join(RENDER_OUTPUT_DIR, `${renderId}.mp4`);
+    const requestedName = payload.outputFilename || `${renderId}.mp4`;
+    const outputLocation = path.join(RENDER_OUTPUT_DIR, path.basename(requestedName));
 
     await renderMedia({
       composition: {

@@ -30,7 +30,7 @@ RUN npm install --omit=dev
 COPY --chown=worker:worker server.js ./
 COPY --chown=worker:worker remotion/ ./remotion/
 
-RUN mkdir -p /tmp && chown worker:worker /tmp
+RUN mkdir -p /tmp /renders && chown worker:worker /tmp /renders
 USER worker
 
 EXPOSE 8093

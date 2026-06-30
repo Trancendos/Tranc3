@@ -40,18 +40,22 @@ function getQueue(name) {
   return queues.get(name);
 }
 
-// Default worker for the "default" queue.
-// Add additional Workers here for each entry in ALLOWED_QUEUES as needed.
-const defaultWorker = new Worker(
-  'default',
-  async (job) => {
-    return { processed: true, jobId: job.id, name: job.name };
-  },
-  { connection },
-);
-
-defaultWorker.on('failed', (job, err) => {
-  console.error(`Job ${job?.id} failed:`, err?.message);
+// Create a worker for every allowed queue so jobs are actually consumed.
+const workers = ALLOWED_QUEUES.map((queueName) => {
+  const w = new Worker(
+    queueName,
+    async (job) => {
+      return { processed: true, jobId: job.id, name: job.name, queue: queueName };
+    },
+    { connection },
+  );
+  w.on('failed', (job, err) => {
+    console.error(`[${queueName}] job ${job?.id} failed:`, err?.message);
+  });
+  w.on('error', (err) => {
+    console.error(`[${queueName}] worker error:`, err?.message);
+  });
+  return w;
 });
 
 const app = express();

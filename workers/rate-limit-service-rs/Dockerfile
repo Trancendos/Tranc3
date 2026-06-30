@@ -11,8 +11,8 @@ WORKDIR /app
 COPY --from=builder /app/target/release/rate-limit-service ./
 USER worker
 
-EXPOSE 8028
+EXPOSE 8099
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://localhost:8028/health || exit 1
+  CMD wget -qO- http://localhost:8099/health || exit 1
 
 CMD ["./rate-limit-service"]

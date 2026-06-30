@@ -3,7 +3,9 @@
 # when finding counts decrease (ratchet: never allowed to increase).
 #
 # To reset the baseline after a bulk remediation run:
-#   bandit -r src api.py -f json | python3 -c "
+#   bandit -r src api.py workers/tateking/main.py \
+#     --exclude src/nanoservices/genetic_optimizer,src/evolution \
+#     -f json | python3 -c "
 #     import json,sys; d=json.load(sys.stdin)
 #     print('bandit_findings='+str(len(d.get('results',[]))))"
 #   >> .security-baseline

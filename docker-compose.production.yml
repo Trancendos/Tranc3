@@ -1127,6 +1127,56 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Infinity Portal — Front Entrance + Infinity Gate (Port 8042) ────────────
+  # Entity: Infinity | Lead AI: The Guardian | Source: workers/infinity-portal-service
+  # Public-facing login portal; embeds the Infinity Gate auth handshake
+  infinity-portal:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-portal-service/Dockerfile
+    container_name: infinity-portal-worker
+    ports:
+      - "8042:8042"
+    environment:
+      INFINITY_PORTAL_PORT: "8042"
+      JWT_SECRET: ${JWT_SECRET:?required}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?required}
+      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8042/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-portal.rule=PathPrefix(`/portal`)"
+      - "traefik.http.routers.infinity-portal.entrypoints=websecure"
+      - "traefik.http.services.infinity-portal.loadbalancer.server.port=8042"
+
+  # ── Infinity One — Single Identity Layer (Port 8043) ─────────────────────
+  # Entity: Infinity | Lead AI: The Guardian | Source: workers/infinity-one-service
+  # One login → multi-app access; identity resolution across the ecosystem
+  infinity-one:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-one-service/Dockerfile
+    container_name: infinity-one-worker
+    ports:
+      - "8043:8043"
+    environment:
+      INFINITY_ONE_PORT: "8043"
+      JWT_SECRET: ${JWT_SECRET:?required}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?required}
+      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8043/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-one.rule=PathPrefix(`/identity`)"
+      - "traefik.http.routers.infinity-one.entrypoints=websecure"
+      - "traefik.http.services.infinity-one.loadbalancer.server.port=8043"
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -2915,16 +2965,11 @@ services:
       - remotion-renders:/renders
     expose:
       - "8093"
-    ports:
-      - "8093:8093"
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:8093/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.remotion-render-service.rule=PathPrefix(`/remotion-render-service`)"
-      - "traefik.http.routers.remotion-render-service.entrypoints=websecure"
-      - "traefik.http.services.remotion-render-service.loadbalancer.server.port=8093"
+      - "traefik.enable=false"
 
   # ── BullMQ queue service — Node.js job queue scaffold for The HIVE (Port 8092) ───────────────────────
   bullmq-queue-service:
@@ -2962,6 +3007,8 @@ services:
     environment:
       - PORT=8094
       - VAULT_DB_PATH=/data/vault.db
+      - VAULT_MASTER_KEY=${VAULT_MASTER_KEY:?required}
+      - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
     expose:
       - "8094"
     ports:
@@ -2988,8 +3035,6 @@ services:
       - PORT=8099
     expose:
       - "8099"
-    ports:
-      - "8099:8099"
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "wget", "-qO-", "http://localhost:8099/health"]

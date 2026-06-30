@@ -15,7 +15,7 @@
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::Json,
     routing::{delete, get, post},
     Router,
@@ -37,6 +37,18 @@ type Db = Arc<Mutex<Connection>>;
 struct AppState {
     db: Db,
     master_key: String,
+    internal_secret: String,
+}
+
+fn check_internal_auth(headers: &HeaderMap, secret: &str) -> bool {
+    if secret.is_empty() {
+        return true;
+    }
+    headers
+        .get("x-internal-secret")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v == secret)
+        .unwrap_or(false)
 }
 
 #[derive(Serialize)]
@@ -182,12 +194,16 @@ async fn vault_status(State(s): State<AppState>) -> Json<VaultStatus> {
 
 async fn store_secret(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Json(body): Json<StoreBody>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), AppError> {
+    if !check_internal_auth(&headers, &s.internal_secret) {
+        return Err(err(StatusCode::UNAUTHORIZED, "unauthorized"));
+    }
     let id = Uuid::new_v4().to_string();
     let (ciphertext, nonce, salt) =
         encrypt(&s.master_key, body.value.as_bytes()).map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e))?;
-    let tags_str = body.tags.map(|t| t.join(","));
+    let tags_str = body.tags.as_ref().and_then(|t| serde_json::to_string(t).ok());
 
     let db = s.db.lock().unwrap();
     db.execute(
@@ -195,15 +211,20 @@ async fn store_secret(
         params![id, body.name, ciphertext.as_slice(), nonce.as_slice(), salt.as_slice(), body.description, tags_str],
     )
     .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()))?;
-    db.execute("INSERT INTO audit_log(secret_id,action) VALUES(?1,'store')", params![id]).ok();
+    db.execute("INSERT INTO audit_log(secret_id,action) VALUES(?1,'store')", params![id])
+        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()))?;
 
     Ok((StatusCode::CREATED, Json(serde_json::json!({ "id": id, "name": body.name }))))
 }
 
 async fn retrieve_secret(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Json(body): Json<RetrieveBody>,
 ) -> Result<Json<SecretFull>, AppError> {
+    if !check_internal_auth(&headers, &s.internal_secret) {
+        return Err(err(StatusCode::UNAUTHORIZED, "unauthorized"));
+    }
     let db = s.db.lock().unwrap();
     let row = db
         .query_row(
@@ -229,12 +250,16 @@ async fn retrieve_secret(
         .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e))?;
     let value = String::from_utf8(plain).map_err(|_| err(StatusCode::INTERNAL_SERVER_ERROR, "utf8 error"))?;
 
-    db.execute("INSERT INTO audit_log(secret_id,action) VALUES(?1,'retrieve')", params![id]).ok();
+    db.execute("INSERT INTO audit_log(secret_id,action) VALUES(?1,'retrieve')", params![id])
+        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()))?;
 
     Ok(Json(SecretFull { id, name, value, description, tags, created_at }))
 }
 
-async fn list_secrets(State(s): State<AppState>) -> Json<Vec<SecretMeta>> {
+async fn list_secrets(State(s): State<AppState>, headers: HeaderMap) -> Result<Json<Vec<SecretMeta>>, AppError> {
+    if !check_internal_auth(&headers, &s.internal_secret) {
+        return Err(err(StatusCode::UNAUTHORIZED, "unauthorized"));
+    }
     let db = s.db.lock().unwrap();
     let mut stmt = db
         .prepare("SELECT id,name,description,tags,created_at FROM secrets ORDER BY created_at DESC")
@@ -250,13 +275,17 @@ async fn list_secrets(State(s): State<AppState>) -> Json<Vec<SecretMeta>> {
             })
         })
         .unwrap();
-    Json(rows.filter_map(|r| r.ok()).collect())
+    Ok(Json(rows.filter_map(|r| r.ok()).collect()))
 }
 
 async fn get_secret(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<SecretMeta>, AppError> {
+    if !check_internal_auth(&headers, &s.internal_secret) {
+        return Err(err(StatusCode::UNAUTHORIZED, "unauthorized"));
+    }
     let db = s.db.lock().unwrap();
     db.query_row(
         "SELECT id,name,description,tags,created_at FROM secrets WHERE id=?1",
@@ -277,8 +306,12 @@ async fn get_secret(
 
 async fn delete_secret(
     State(s): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    if !check_internal_auth(&headers, &s.internal_secret) {
+        return Err(err(StatusCode::UNAUTHORIZED, "unauthorized"));
+    }
     let db = s.db.lock().unwrap();
     let n = db
         .execute("DELETE FROM secrets WHERE id=?1", params![id])
@@ -286,11 +319,19 @@ async fn delete_secret(
     if n == 0 {
         return Err(err(StatusCode::NOT_FOUND, "not found"));
     }
-    db.execute("INSERT INTO audit_log(secret_id,action) VALUES(?1,'delete')", params![id]).ok();
+    db.execute("INSERT INTO audit_log(secret_id,action) VALUES(?1,'delete')", params![id])
+        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
 }
 
-async fn get_audit(State(s): State<AppState>, Path(id): Path<String>) -> Json<Vec<AuditEntry>> {
+async fn get_audit(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Vec<AuditEntry>>, AppError> {
+    if !check_internal_auth(&headers, &s.internal_secret) {
+        return Err(err(StatusCode::UNAUTHORIZED, "unauthorized"));
+    }
     let db = s.db.lock().unwrap();
     let mut stmt = db
         .prepare(
@@ -307,7 +348,7 @@ async fn get_audit(State(s): State<AppState>, Path(id): Path<String>) -> Json<Ve
             })
         })
         .unwrap();
-    Json(rows.filter_map(|r| r.ok()).collect())
+    Ok(Json(rows.filter_map(|r| r.ok()).collect()))
 }
 
 #[tokio::main]
@@ -316,17 +357,16 @@ async fn main() {
 
     let master_key = std::env::var("VAULT_MASTER_KEY")
         .or_else(|_| std::env::var("MASTER_KEY"))
-        .unwrap_or_else(|_| {
-            tracing::warn!("VAULT_MASTER_KEY not set — using insecure default; set it in production");
-            "dev-master-key-change-in-production".to_string()
-        });
+        .expect("VAULT_MASTER_KEY or MASTER_KEY must be set");
+
+    let internal_secret = std::env::var("INTERNAL_SECRET").unwrap_or_default();
 
     let db_path = std::env::var("VAULT_DB_PATH").unwrap_or_else(|_| "/data/vault.db".to_string());
     let conn = Connection::open(&db_path).expect("open db");
     init_db(&conn);
     let db: Db = Arc::new(Mutex::new(conn));
 
-    let state = AppState { db, master_key };
+    let state = AppState { db, master_key, internal_secret };
 
     let app = Router::new()
         .route("/health", get(health))

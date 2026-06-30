@@ -4,8 +4,8 @@ FROM node:20-slim
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
-COPY --chown=worker:worker package.json ./
-RUN npm install --omit=dev
+COPY --chown=worker:worker package.json package-lock.json* ./
+RUN npm ci --omit=dev
 
 COPY --chown=worker:worker server.js ./
 

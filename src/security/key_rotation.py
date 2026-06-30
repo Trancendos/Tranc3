@@ -394,7 +394,7 @@ class KeyRotationService:
         """Delete previous (old) key values older than grace period."""
         conn = self._db()
         cur = conn.execute(
-            "DELETE FROM key_store WHERE is_previous = 1 AND created_at < datetime('now', ?)",
+            "DELETE FROM key_store WHERE is_previous = 1 AND datetime(created_at) < datetime('now', ?)",
             (f"-{_GRACE_DAYS} days",),
         )
         conn.commit()
