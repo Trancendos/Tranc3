@@ -451,7 +451,7 @@ class OsvIngestor:
                     },
                     method="POST",
                 )
-                with _ur.urlopen(req, timeout=15) as resp:
+                with _ur.urlopen(req, timeout=15) as resp:  # nosec B310 — OSV_BATCH_URL is hardcoded https://api.osv.dev
                     batch_data = json.loads(resp.read().decode("utf-8"))
             except Exception as exc:
                 logger.warning(

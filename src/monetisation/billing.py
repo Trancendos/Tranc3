@@ -397,7 +397,7 @@ class LemonSqueezyManager:
                 },
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 — BASE_URL is hardcoded https://api.lemonsqueezy.com
                 data = _json.loads(resp.read())
                 return data["data"]["attributes"].get("url")
         except Exception as exc:
@@ -691,7 +691,7 @@ class TaxMonitor:
                 headers={"Content-Type": "text/xml"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310 — URL is hardcoded https://ec.europa.eu
                 tree = ET.fromstring(resp.read())
                 valid_el = tree.find(
                     ".//{urn:ec.europa.eu:taxud:vies:services:checkVat:types}valid"

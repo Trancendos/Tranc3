@@ -251,8 +251,8 @@ class EncryptedKVStore:
         h = self._key_hash(key)
         enc = encrypt_field(self.db_path, value)
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(  # nosec B608 -- table name is class-internal config, not user input
-            f"INSERT INTO {self.table} (key_hash, value_enc, updated_at) "
+        self._conn.execute(
+            f"INSERT INTO {self.table} (key_hash, value_enc, updated_at) "  # nosec B608 -- table name is class-internal config, not user input
             "VALUES (?,?,?) ON CONFLICT(key_hash) DO UPDATE SET value_enc=excluded.value_enc, updated_at=excluded.updated_at",
             (h, enc, now),
         )
@@ -260,8 +260,8 @@ class EncryptedKVStore:
 
     def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
         h = self._key_hash(key)
-        row = self._conn.execute(  # nosec B608 -- table name is class-internal config, not user input
-            f"SELECT value_enc FROM {self.table} WHERE key_hash=?", (h,)
+        row = self._conn.execute(
+            f"SELECT value_enc FROM {self.table} WHERE key_hash=?", (h,)  # nosec B608 -- table name is class-internal config, not user input
         ).fetchone()
         if row is None:
             return default

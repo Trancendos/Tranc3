@@ -525,7 +525,7 @@ class TranceBridge:
             # Generate SQL-like representation
             relations = ", ".join(query.relations) if query.relations else "R"
             projections = ", ".join(query.variables.keys()) if query.variables else "*"
-            result = "SELECT " + projections + " FROM " + relations  # noqa: S608 — DSL output, not executed
+            result = "SELECT " + projections + " FROM " + relations  # noqa: S608  # nosec B608 — DSL string representation only, never executed as SQL
             if query.query_type == QueryType.FILTER:
                 result += " WHERE condition"
             return result

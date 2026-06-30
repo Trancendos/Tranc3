@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Optional
 
 log = logging.getLogger("tranc3.cryptex.bounty_hunter")
 
-_DB_PATH = Path(os.getenv("BOUNTY_DB", "/tmp/bounty_hunter.db"))
+_DB_PATH = Path(os.getenv("BOUNTY_DB", "/data/bounty_hunter.db"))
 _NUCLEI_PATH = os.getenv(
     "NUCLEI_BIN", "nuclei"
 )  # install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
@@ -216,7 +216,7 @@ def query_osv_for_packages(packages: List[Dict[str, str]]) -> List[Finding]:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310 — _OSV_API is hardcoded https://api.osv.dev
                 data = json.loads(r.read())
         except Exception as exc:
             log.debug("OSV query failed for %s: %s", pkg["name"], exc)

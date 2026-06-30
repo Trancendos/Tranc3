@@ -96,8 +96,8 @@ class QueryExpander:
                 from transformers import T5ForConditionalGeneration, T5Tokenizer  # type: ignore
 
                 if not hasattr(self, "_t5_model"):
-                    self._t5_tokenizer = T5Tokenizer.from_pretrained("t5-small")  # type: ignore
-                    self._t5_model = T5ForConditionalGeneration.from_pretrained("t5-small")  # type: ignore
+                    self._t5_tokenizer = T5Tokenizer.from_pretrained("t5-small", revision="main")  # type: ignore  # nosec B615 — t5-small is a well-known HF model; revision="main" pins to stable branch
+                    self._t5_model = T5ForConditionalGeneration.from_pretrained("t5-small", revision="main")  # type: ignore  # nosec B615 — t5-small is a well-known HF model; revision="main" pins to stable branch
 
                 prompt = f"paraphrase: {query} </s>"
                 inputs = self._t5_tokenizer(

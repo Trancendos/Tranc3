@@ -230,7 +230,7 @@ class PlatformLayerRotator:
             import urllib.request
 
             req = urllib.request.Request(health_url, method="GET")
-            with urllib.request.urlopen(req, timeout=4) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310 — health_url is derived from service base_url (env-configured, scheme enforced by caller)
                 h.available = 200 <= resp.status < 400
                 h.detail = f"http_{resp.status}"
         except urllib.error.HTTPError as exc:
