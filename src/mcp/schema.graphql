@@ -1,0 +1,171 @@
+# The Spark — GraphQL Schema
+# ===========================
+# Schema-first definition of The Spark MCP tool registry.
+# Entity: The Spark  |  Lead AI: Norman Hawkins
+#
+# Mirrors the JSON-RPC 2.0 surface exposed at /mcp/rpc and /mcp/tools,
+# providing a typed GraphQL alternative for clients that prefer it over
+# JSON-RPC. Intended for use with an ariadne or strawberry resolver layer.
+
+# ---------------------------------------------------------------------------
+# Scalars
+# ---------------------------------------------------------------------------
+
+"""
+Arbitrary JSON value — used for tool input/output schemas and job data
+where the shape is tool-defined rather than statically known.
+"""
+scalar JSON
+
+"""ISO-8601 datetime string (UTC)."""
+scalar DateTime
+
+# ---------------------------------------------------------------------------
+# Tool registry
+# ---------------------------------------------------------------------------
+
+"""A parameter accepted by a SparkTool."""
+type ToolParameter {
+  name: String!
+  type: String!
+  description: String!
+  required: Boolean!
+}
+
+"""A registered tool in The Spark tool registry."""
+type SparkTool {
+  name: String!
+  description: String!
+  category: String
+  parameters: [ToolParameter!]!
+  tags: [String!]!
+}
+
+"""Paginated list of tools."""
+type ToolConnection {
+  tools: [SparkTool!]!
+  total: Int!
+}
+
+# ---------------------------------------------------------------------------
+# JSON-RPC / invocation
+# ---------------------------------------------------------------------------
+
+"""Result of calling a tool via The Spark."""
+type ToolResult {
+  toolName: String!
+  success: Boolean!
+  """Structured output returned by the tool (JSON)."""
+  data: JSON
+  """Error message when success = false."""
+  error: String
+  durationMs: Int
+}
+
+# ---------------------------------------------------------------------------
+# Workflow (The Digital Grid)
+# ---------------------------------------------------------------------------
+
+"""A workflow registered with The Digital Grid."""
+type Workflow {
+  id: String!
+  name: String!
+  description: String
+}
+
+"""Execution status of a triggered workflow."""
+type WorkflowExecution {
+  workflowId: String!
+  executionId: String!
+  status: WorkflowStatus!
+  result: JSON
+  startedAt: DateTime
+  completedAt: DateTime
+}
+
+enum WorkflowStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+# ---------------------------------------------------------------------------
+# Observability (The Observatory)
+# ---------------------------------------------------------------------------
+
+"""Health and telemetry snapshot for a single Spark node."""
+type SparkNode {
+  nodeId: String!
+  status: NodeStatus!
+  toolCount: Int!
+  requestsTotal: Int
+  errorsTotal: Int
+  uptimeSeconds: Int
+}
+
+enum NodeStatus {
+  HEALTHY
+  DEGRADED
+  OFFLINE
+}
+
+# ---------------------------------------------------------------------------
+# Queries
+# ---------------------------------------------------------------------------
+
+type Query {
+  """List all registered tools, optionally filtered by category or tag."""
+  tools(category: String, tag: String, limit: Int, offset: Int): ToolConnection!
+
+  """Fetch a single tool by exact name."""
+  tool(name: String!): SparkTool
+
+  """
+  Semantic / keyword search across tool names and descriptions.
+  Returns up to `limit` best-matching tools (default 10).
+  """
+  searchTools(query: String!, limit: Int): [SparkTool!]!
+
+  """List all workflows registered with The Digital Grid."""
+  workflows: [Workflow!]!
+
+  """Current health and metrics for all known Spark nodes."""
+  sparkNodes: [SparkNode!]!
+}
+
+# ---------------------------------------------------------------------------
+# Mutations
+# ---------------------------------------------------------------------------
+
+type Mutation {
+  """
+  Invoke a registered Spark tool by name.
+  `params` is a JSON object matching the tool's declared parameters.
+  """
+  callTool(name: String!, params: JSON!): ToolResult!
+
+  """Trigger a Digital Grid workflow by ID."""
+  triggerWorkflow(
+    workflowId: String!
+    inputs: JSON
+    asyncMode: Boolean
+  ): WorkflowExecution!
+}
+
+# ---------------------------------------------------------------------------
+# Subscriptions (SSE-backed)
+# ---------------------------------------------------------------------------
+
+type Subscription {
+  """
+  Stream tool events from The Spark SSE bus.
+  Mirrors the /mcp/sse endpoint over GraphQL subscriptions.
+  Filter to a specific tool name or receive all events.
+  """
+  toolEvents(toolName: String): ToolResult!
+
+  """Workflow execution progress updates."""
+  workflowProgress(executionId: String!): WorkflowExecution!
+}

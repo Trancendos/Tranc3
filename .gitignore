@@ -94,6 +94,8 @@ aeonmind/python/*.egg-info/
 # Nexus test artifacts
 bridge-*
 nexus-*
+# exclude the Rust Nexus service from the above pattern
+!workers/nexus-ws-rs/
 
 # Runtime data directories (backups and test workspaces)
 data/admin_os_backups/

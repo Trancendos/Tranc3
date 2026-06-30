@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 WORKDIR /app
 COPY --chown=worker:worker workers/infinity-portal-service/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker workers/infinity-portal-service/worker.py .
+COPY --chown=worker:worker workers/infinity-portal-service/ .
 
 RUN mkdir -p data && chown -R worker:worker data
 

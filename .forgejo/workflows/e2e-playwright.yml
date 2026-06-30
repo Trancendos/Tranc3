@@ -1,0 +1,63 @@
+name: E2E (Playwright)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/e2e/**'
+      - 'api.py'
+      - 'src/**'
+  pull_request:
+    paths:
+      - 'tests/e2e/**'
+      - 'api.py'
+      - 'src/**'
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright dependencies
+        working-directory: tests/e2e
+        run: npm install
+
+      - name: Install Playwright browsers
+        working-directory: tests/e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Start API server
+        run: |
+          SECRET_KEY=ci-test-secret-key nohup uvicorn api:app --host 0.0.0.0 --port 8000 \
+            > api-server.log 2>&1 &
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then
+              ready=1; break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat api-server.log || true; exit 1; fi
+
+      - name: Run Playwright tests
+        working-directory: tests/e2e
+        run: npm test
+        env:
+          BASE_URL: http://localhost:8000
+
+      - name: Dump API server log on failure
+        if: failure()
+        run: cat api-server.log || true

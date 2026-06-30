@@ -1127,6 +1127,56 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Infinity Portal — Front Entrance + Infinity Gate (Port 8042) ────────────
+  # Entity: Infinity | Lead AI: The Guardian | Source: workers/infinity-portal-service
+  # Public-facing login portal; embeds the Infinity Gate auth handshake
+  infinity-portal:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-portal-service/Dockerfile
+    container_name: infinity-portal-worker
+    ports:
+      - "8042:8042"
+    environment:
+      INFINITY_PORTAL_PORT: "8042"
+      JWT_SECRET: ${JWT_SECRET:?required}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?required}
+      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8042/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-portal.rule=PathPrefix(`/portal`)"
+      - "traefik.http.routers.infinity-portal.entrypoints=websecure"
+      - "traefik.http.services.infinity-portal.loadbalancer.server.port=8042"
+
+  # ── Infinity One — Single Identity Layer (Port 8043) ─────────────────────
+  # Entity: Infinity | Lead AI: The Guardian | Source: workers/infinity-one-service
+  # One login → multi-app access; identity resolution across the ecosystem
+  infinity-one:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-one-service/Dockerfile
+    container_name: infinity-one-worker
+    ports:
+      - "8043:8043"
+    environment:
+      INFINITY_ONE_PORT: "8043"
+      JWT_SECRET: ${JWT_SECRET:?required}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?required}
+      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8043/health', timeout=5).read()\""]
+      <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-one.rule=PathPrefix(`/identity`)"
+      - "traefik.http.routers.infinity-one.entrypoints=websecure"
+      - "traefik.http.services.infinity-one.loadbalancer.server.port=8043"
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -2121,6 +2171,9 @@ services:
       - "5678:5678"
     networks:
       - tranc3-net
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.n8n.rule=Host(`trancendos.com`) && PathPrefix(`/n8n`)"
@@ -2880,10 +2933,15 @@ services:
     <<: *worker-common
     environment:
       - PORT=8061
+      - REMOTION_SERVE_URL=http://remotion-render-service:8093
+    volumes:
+      - remotion-renders:/renders:ro
     expose:
       - "8061"
     ports:
       - "8061:8061"
+    depends_on:
+      - remotion-render-service
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"]
@@ -2892,6 +2950,123 @@ services:
       - "traefik.http.routers.tateking.rule=PathPrefix(`/tateking`)"
       - "traefik.http.routers.tateking.entrypoints=websecure"
       - "traefik.http.services.tateking.loadbalancer.server.port=8061"
+
+  # ── Remotion render service — Remotion serverless render tier for TateKing (Port 8093) ──────────────
+  remotion-render-service:
+    build:
+      context: ./workers/remotion-render-service
+      dockerfile: Dockerfile
+    container_name: tranc3-remotion-render-service
+    <<: *worker-common
+    environment:
+      - PORT=8093
+      - RENDER_OUTPUT_DIR=/renders
+    volumes:
+      - remotion-renders:/renders
+    expose:
+      - "8093"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8093/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+    labels:
+      - "traefik.enable=false"
+
+  # ── BullMQ queue service — Node.js job queue scaffold for The HIVE (Port 8092) ───────────────────────
+  bullmq-queue-service:
+    build:
+      context: ./workers/bullmq-queue-service
+      dockerfile: Dockerfile
+    container_name: tranc3-bullmq-queue-service
+    <<: *worker-common
+    environment:
+      - PORT=8092
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+    expose:
+      - "8092"
+    ports:
+      - "8092:8092"
+    depends_on:
+      - valkey
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8092/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bullmq-queue-service.rule=PathPrefix(`/bullmq-queue-service`)"
+      - "traefik.http.routers.bullmq-queue-service.entrypoints=websecure"
+      - "traefik.http.services.bullmq-queue-service.loadbalancer.server.port=8092"
+
+  # ── The Void — Rust/AES-GCM vault service (Port 8094) ───────────────────────────────────────────────
+  vault-service-rs:
+    build:
+      context: ./workers/vault-service-rs
+      dockerfile: Dockerfile
+    container_name: tranc3-vault-service-rs
+    <<: *worker-common
+    environment:
+      - PORT=8094
+      - VAULT_DB_PATH=/data/vault.db
+      - VAULT_MASTER_KEY=${VAULT_MASTER_KEY:?required}
+      - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
+    expose:
+      - "8094"
+    ports:
+      - "8094:8094"
+    volumes:
+      - vault-service-rs-data:/data
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "wget", "-qO-", "http://localhost:8094/health"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vault-service-rs.rule=PathPrefix(`/vault-rs`)"
+      - "traefik.http.routers.vault-service-rs.entrypoints=websecure"
+      - "traefik.http.services.vault-service-rs.loadbalancer.server.port=8094"
+
+  # ── Rate Limit Service — Rust token-bucket rate limiter (Port 8099) ──────────────────────────────────
+  rate-limit-service-rs:
+    build:
+      context: ./workers/rate-limit-service-rs
+      dockerfile: Dockerfile
+    container_name: tranc3-rate-limit-service-rs
+    <<: *worker-common
+    environment:
+      - PORT=8099
+    expose:
+      - "8099"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "wget", "-qO-", "http://localhost:8099/health"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rate-limit-service-rs.rule=PathPrefix(`/rate-limit-rs`)"
+      - "traefik.http.routers.rate-limit-service-rs.entrypoints=websecure"
+      - "traefik.http.services.rate-limit-service-rs.loadbalancer.server.port=8099"
+
+  # ── Nexus WebSocket hub (Rust) — The Nexus real-time comms hub (Port 8004) ────────────────────────
+  nexus-ws-rs:
+    build:
+      context: ./workers/nexus-ws-rs
+      dockerfile: Dockerfile
+    container_name: tranc3-nexus-ws-rs
+    <<: *worker-common
+    environment:
+      - PORT=8004
+      - JWT_SECRET=${JWT_SECRET:-}
+      - INTERNAL_SECRET=${INTERNAL_SECRET:-}
+    expose:
+      - "8004"
+    ports:
+      - "8100:8004"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "wget", "-qO-", "http://localhost:8004/health"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nexus-ws-rs.rule=PathPrefix(`/nexus-rs`)"
+      - "traefik.http.routers.nexus-ws-rs.entrypoints=websecure"
+      - "traefik.http.services.nexus-ws-rs.loadbalancer.server.port=8004"
 
   # ── Sashas Photo Studio — image generation (Port 8062) ──────────────────────────────────────────────
   sashas-photo-studio:
@@ -3685,6 +3860,8 @@ services:
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
 volumes:
+  remotion-renders:
+    driver: local
   cranbania-data:
     driver: local
   traefik-config:
@@ -3716,6 +3893,8 @@ volumes:
   void-data:
     driver: local
   vault-service-data:
+    driver: local
+  vault-service-rs-data:
     driver: local
   lab-service-data:
     driver: local
