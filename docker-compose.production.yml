@@ -2999,6 +2999,30 @@ services:
       - "traefik.http.routers.rate-limit-service-rs.entrypoints=websecure"
       - "traefik.http.services.rate-limit-service-rs.loadbalancer.server.port=8099"
 
+  # ── Nexus WebSocket hub (Rust) — The Nexus real-time comms hub (Port 8004) ────────────────────────
+  nexus-ws-rs:
+    build:
+      context: ./workers/nexus-ws-rs
+      dockerfile: Dockerfile
+    container_name: tranc3-nexus-ws-rs
+    <<: *worker-common
+    environment:
+      - PORT=8004
+      - JWT_SECRET=${JWT_SECRET:-}
+      - INTERNAL_SECRET=${INTERNAL_SECRET:-}
+    expose:
+      - "8004"
+    ports:
+      - "8100:8004"
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "wget", "-qO-", "http://localhost:8004/health"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nexus-ws-rs.rule=PathPrefix(`/nexus-rs`)"
+      - "traefik.http.routers.nexus-ws-rs.entrypoints=websecure"
+      - "traefik.http.services.nexus-ws-rs.loadbalancer.server.port=8004"
+
   # ── Sashas Photo Studio — image generation (Port 8062) ──────────────────────────────────────────────
   sashas-photo-studio:
     build:
