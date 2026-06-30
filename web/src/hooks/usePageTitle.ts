@@ -1,77 +1,14 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router'
+import ROUTE_META from '../config/routeMeta'
 
-const ROUTE_TITLES: Record<string, string> = {
-  '/': 'Home',
-  '/chat': 'Chat',
-  '/dashboard': 'Dashboard',
-  '/spark': 'The Spark',
-  '/status': 'Status',
-  '/compliance': 'Compliance',
-  '/grid': 'Digital Grid',
-  '/notifications': 'Alerts',
-  '/services': 'Services',
-  '/ai-providers': 'AI Providers',
-  '/storage': 'Storage',
-  '/search': 'Search',
-  '/queue': 'Queue',
-  '/admin': 'Admin',
-  '/workers': 'Workers',
-  '/the-lab': 'The Lab',
-  '/the-dutchy': 'The Dutchy',
-  '/turings-hub': "Turing's Hub",
-  '/deep-agents': 'Deep Agents',
-  '/audit': 'Audit Log',
-  '/langchain': 'LangChain',
-  '/model-router': 'Model Router',
-  '/ledger': 'Ledger',
-  '/topology': 'Topology',
-  '/vault': 'The Void',
-  '/analytics': 'Analytics',
-  '/config': 'Config Store',
-  '/cron': 'ChronosSphere',
-  '/cache': 'Cache',
-  '/rate-limit': 'Rate Limiter',
-  '/geo': 'Geo Service',
-  '/email-svc': 'Email Service',
-  '/sms': 'SMS Gateway',
-  '/hive': 'The HIVE',
-  '/gbrain': 'GBrain',
-  '/devocity': 'DevOcity',
-  '/backup': 'Backup',
-  '/cdn': 'CDN',
-  '/infinity-portal': 'Infinity Portal',
-  '/swarm-coordinator': 'Swarm Coordinator',
-  '/dimensional-nexus': 'Dimensional Nexus',
-  '/sashas-photo-studio': 'Sashas Photo Studio',
-  '/imind': 'I-Mind',
-  '/resonate': 'Resonate',
-  '/tranquility': 'Tranquility',
-  '/taimra': 'tAimra',
-  '/the-studio': 'The Studio',
-  '/the-academy': 'The Academy',
-  '/warp-radio': 'Warp Radio',
-  '/gateway': 'Gateway',
-  '/sentinel-station': 'Sentinel Station',
-  '/ice-box': 'The Ice Box',
-  '/tranceflow': 'TranceFlow',
-  '/tateking': 'TateKing',
-  '/vrar3d': 'VRAR3D',
-  '/infinity-one': 'Infinity One',
-  '/infinity-admin': 'Infinity Admin',
-  '/infinity-shards': 'Infinity Shards',
-  '/infinity-bridge': 'Infinity Bridge',
-  '/users-service': 'Users Service',
-  '/settings': 'Settings',
-  '/login': 'Sign In',
-  '/ux-showcase': 'UX Showcase',
-}
+const BASE_TITLE = 'TRANC3'
 
 export function usePageTitle(override?: string): void {
   const location = useLocation()
 
   useEffect(() => {
-    const pageTitle = override ?? ROUTE_TITLES[location.pathname] ?? 'TRANC3'
-    document.title = `${pageTitle} — TRANC3`
+    const pageTitle = override ?? ROUTE_META[location.pathname]?.title
+    document.title = pageTitle ? `${pageTitle} — ${BASE_TITLE}` : BASE_TITLE
   }, [location.pathname, override])
 }

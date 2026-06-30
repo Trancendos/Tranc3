@@ -65,6 +65,7 @@ import UsersServicePage from './pages/UsersServicePage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
+import GlobalAccessibility from './components/GlobalAccessibility'
 import RealtimeStatusBar from './components/ui/RealtimeStatusBar'
 import LandingPage from './pages/LandingPage'
 
@@ -77,6 +78,7 @@ function Protected({ children }: { children: React.ReactNode }) {
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      <GlobalAccessibility />
       <Routes>
         {/* Public */}
         <Route path="/"      element={<LandingPage />} />
