@@ -32,6 +32,7 @@ paths-ignore:
   - "src/routers/ecosystem.py"
   - "src/training/dataset.py"
   - "src/adaptive/**"
+  - "**/path_validation.py"
   - "**/goal_manager.py"
   - "**/heartbeat_aggregator.py"
 

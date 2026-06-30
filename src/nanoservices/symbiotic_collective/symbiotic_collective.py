@@ -14,7 +14,7 @@ capabilities through synergy, specialization, and co-evolution.
 from __future__ import annotations
 
 import logging
-import random
+import random  # nosec B311 -- non-cryptographic simulation use
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone

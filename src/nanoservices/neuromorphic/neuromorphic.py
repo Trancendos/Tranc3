@@ -673,7 +673,7 @@ class NeuromorphicChipSimulator:
             network.add_neuron(nid, params, is_input=is_input, is_output=is_output)
 
         # Create random connections
-        import random
+        import random  # nosec B311 -- non-cryptographic simulation use
 
         neuron_ids = list(network.neurons.keys())
         conn_count = 0
@@ -742,7 +742,7 @@ class SpikeEncoder:
             rate = normalized * max_rate
             train = [1 if (val * max_rate) > (i / num_steps) else 0 for i in range(num_steps)]
             # More accurate Poisson-like
-            import random
+            import random  # nosec B311 -- non-cryptographic simulation use
 
             train = [1 if random.random() < rate else 0 for _ in range(num_steps)]
             spike_trains.append(train)
@@ -771,7 +771,7 @@ class SpikeEncoder:
     ) -> List[List[int]]:
         """Population coding: value → distributed representation across neurons."""
         spike_trains = []
-        import random
+        import random  # nosec B311 -- non-cryptographic simulation use
 
         for val in values:
             normalized = max(0.0, min(1.0, val))

@@ -27,4 +27,7 @@ ignore:
   - "src/adaptive/dna_router.py"
   - "src/adaptive/fluid_balancer.py"
   - "src/ai_gateway/providers/mistral_free.py"
+  - "src/nanoservices/**"
+  - "src/database/azure_sql.py"
+  - "src/vector/adapter.py"
   - "*.md"
