@@ -233,6 +233,7 @@ class PlatformLayerRotator:
             if parsed.scheme not in ("http", "https"):
                 h.available = False
                 h.detail = f"invalid_scheme:{parsed.scheme}"
+                h.last_check_at = time.monotonic()
                 return h
             req = urllib.request.Request(health_url, method="GET")
             with urllib.request.urlopen(req, timeout=4) as resp:  # nosec B310 — scheme validated above
