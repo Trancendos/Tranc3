@@ -45,7 +45,7 @@ Code-adjacent docs (referenced by automation, tests, or CI) stay in the repo.
 - **The Digital Grid** — DAG builder, workflow executor, event bus
 - **Infinity (Auth)** — OAuth2, SSO, MFA setup and troubleshooting
 - **The HIVE** — Queue coordination, agent management
-- **Vault / The Void** — AES-GCM secrets, Shamir unseal procedure
+- **The Void** — AES-GCM secrets, Shamir unseal procedure
 
 ### Governance & Compliance
 - **Magna Carta Rules** — 9 runtime compliance rules, enforcement points
