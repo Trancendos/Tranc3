@@ -22,6 +22,7 @@ Code-adjacent docs (referenced by automation, tests, or CI) stay in the repo.
 | `docs/architecture/` | As-built architecture, blueprints, infrastructure modes |
 | `docs/API_REFERENCE.md` | Developer API reference |
 | `docs/DESIGN_SYSTEM.md` | Frontend design tokens and component guidelines |
+| `docs/SECURITY-ASSESSMENT.md` | PyTorch CVE risk assessment and Bandit SAST results |
 | `deploy/` | Deploy scripts, DNS cutover, Vault runbook |
 
 ---
@@ -72,7 +73,7 @@ set up. They are kept here in the interim so nothing is lost:
 - `PHASE8-11_ARCHITECTURE.md`, `PHASE*` root files
 - `SWOT_PHASE24_FORENSIC.md`, `FORENSIC_REPORT_*`
 - `docs/PHASE25_*`, `docs/PHASE26_*`, `docs/PHASE27_*`, `docs/PHASE28_*`
-- `docs/DOC-01-*` through `docs/DOC-18-*` (project charter, mind maps, brainstorming)
+- `docs/DOC-01-*` through `docs/DOC-17-*` (project charter, mind maps, brainstorming)
 - `docs/BRANCH_*`, `docs/MERGE_STRATEGY.md` (historical branch reports)
 - `ARCHITECTURE_UPDATE.md`, `INFINITY_ARCHITECTURE.md`, `TIER_ARCHITECTURE.md`, `FRAMEWORK.md`
 - `CF_WORKER_MIGRATION_ROADMAP.md`, `CROSS_REPO_SYNERGY.md`
