@@ -30,8 +30,8 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | Arcadian Exchange | ✅ Deployed | The Porter Family | ⬜ Pending | CF `arcadia-exchange` |
 | The Citadel | ✅ Self-hosted | Trancendos | ⬜ Pending | Compose + Traefik |
 | The Void | 🔧 Migrating | Prometheus | ⬜ Pending | `workers/infinity-void/` (port 8082 [^void-port]) |
-| Luminous | 🔧 Partial | Cornelius MacIntyre | ⬜ Pending | `src/bio_neural/`, `src/core/` |
-| Turing's Hub | 🔧 Partial | Samantha Turing | ⬜ Pending | `src/personality/` |
+| **Luminous** | 🔧 Partial | Cornelius MacIntyre | ✅ **Complete** | `docs/services/luminous/` |
+| **Turing's Hub** | 🔧 Partial | Samantha Turing | ✅ **Complete** | `docs/services/turings-hub/` |
 | Arcadia | 🔧 Partial | Lilli SC | ⬜ Pending | `web/` |
 | The Chaos Party | 🔧 Partial | The Mad Hatter | ⬜ Pending | `tests/test_chaos.py` |
 | The Library | 🔧 Planned | Zimik | ⬜ Charter-only | Outline |
