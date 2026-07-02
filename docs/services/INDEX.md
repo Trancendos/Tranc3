@@ -29,7 +29,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | Royal Bank of Arcadia | ✅ Deployed | Dorris Fontaine | ⬜ Pending | CF `arcadia-royal-bank` |
 | Arcadian Exchange | ✅ Deployed | The Porter Family | ⬜ Pending | CF `arcadia-exchange` |
 | The Citadel | ✅ Self-hosted | Trancendos | ⬜ Pending | Compose + Traefik |
-| The Void | 🔧 Migrating | Prometheus | ⬜ Pending | `workers/infinity-void/` (8082) |
+| The Void | 🔧 Migrating | Prometheus | ⬜ Pending | `workers/infinity-void/` (port 8082 [^void-port]) |
 | Luminous | 🔧 Partial | Cornelius MacIntyre | ⬜ Pending | `src/bio_neural/`, `src/core/` |
 | Turing's Hub | 🔧 Partial | Samantha Turing | ⬜ Pending | `src/personality/` |
 | Arcadia | 🔧 Partial | Lilli SC | ⬜ Pending | `web/` |
@@ -70,3 +70,12 @@ status-tracked · reference pack established · rollout order per framework §6.
 |------|--------|
 | 2026-07-02 | Framework + template + The Spark reference pack; index established (1/43). |
 | 2026-07-02 | Added The Digital Grid pack, code-grounded against `src/workflow/` (2/43). |
+
+[^void-port]: **Source discrepancy (flagged, not silently resolved).** `CLAUDE.md`'s
+    self-hosted worker map lists The Void's self-hosted vault as `infinity-void` on **8082**
+    (the value used here, matching the real `workers/infinity-void/` path). `PLATFORM_ENTITIES.md`
+    instead maps The Void's "primary worker" to **8024 / `config-service`**, which appears to
+    be an error in that table (8024 is `search-service` and `config-service` is 8020 per
+    `CLAUDE.md`). This note records the conflict; reconciling the two canonical docs is
+    tracked as a separate cleanup, and The Void's own Doc-Pack will cite the authoritative
+    port once resolved.
