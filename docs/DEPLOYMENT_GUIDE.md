@@ -56,7 +56,7 @@ cp .env.example .env
 python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 
 # Nanoservices layer (port 8001)
-python -m uvicorn src.nanoservices.app:app --host 0.0.0.0 --port 8001 --reload
+python -m uvicorn src.nanoservices.nano_server:nano_app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ### 4. Verify
