@@ -22,9 +22,11 @@ def _spawner():
 
 
 def _matrix():
-    from src.personality.matrix import EnhancedPersonalityMatrix
+    # matrix.py exports PersonalityMatrix (the `EnhancedPersonalityMatrix` alias
+    # only exists in api.py); importing the real class avoids a spurious ImportError.
+    from src.personality.matrix import PersonalityMatrix
 
-    return EnhancedPersonalityMatrix()
+    return PersonalityMatrix()
 
 
 @router.get("/status")
