@@ -18,10 +18,28 @@ It exists to prevent two failure modes:
 2. **Fictional documentation** — polished docs describing behaviour the code does not
    implement. Per platform principle, **a doc that overstates the code is a defect**.
 
-> **Truthfulness rule.** Every artifact states its `Implementation Status` against the
-> canonical status in `PLATFORM_ENTITIES.md` (✅ In repo / 🔧 Partial / 🔧 Planned).
-> A `🔧 Planned` service gets a **Charter + Standards + Policy** pack only (intent-level);
-> it does **not** get a DDD/TASD claiming implemented behaviour until code exists.
+> **Truthfulness rule.** Every artifact states its `Implementation Status` using the
+> canonical status string from `PLATFORM_ENTITIES.md` verbatim, and the framework maps
+> that to one of three **gate tiers** (§2.1) which drive artifact requirements.
+> A `Planned`-tier service gets a **Charter + Standards + Policy + RACI + TFM** pack only
+> (intent-level); it does **not** get a DDD/TASD/Runbook claiming implemented behaviour
+> until code exists.
+
+### 2.1 Status vocabulary → gate tier (normalization)
+
+`PLATFORM_ENTITIES.md` uses several canonical status labels. Docs keep that exact label
+(it carries deployment nuance), but the honesty gate and any CI automation operate on the
+three **gate tiers** below. This is the single source of truth for the mapping:
+
+| Canonical status label (from `PLATFORM_ENTITIES.md`) | Gate tier | Required pack |
+|------------------------------------------------------|-----------|---------------|
+| `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 11-artifact pack, code-grounded |
+| `🔧 Partial`, `🔧 Migrating`, `🔧 Self-hosted` | **Partial** | Live pack, scoped to what exists; gaps flagged |
+| `🔧 Planned` | **Planned** | GOV + RACI + TFM + POL + STD only |
+
+> A `✅` label always maps to **Live**; a `🔧` label maps to **Partial** unless it is
+> exactly `🔧 Planned`, which maps to **Planned**. Automation keys off the emoji + the
+> word `Planned`, so new nuance labels remain forward-compatible.
 
 ---
 
@@ -92,8 +110,13 @@ failing the build on gaps — the same pattern already used for entity-name lint
 
 ## 5. Standards & Conventions
 
-- **Naming:** artifacts follow `<ARTIFACT>-<service-slug>.md` inside the service folder,
-  or the combined pack `docs/services/<slug>/README.md` as the pack index.
+- **Naming & file layout:** the **default** is a single combined pack at
+  `docs/services/<slug>/README.md` containing all artifacts as `##` sections (see The Spark
+  reference pack) — this keeps a service's design in one reviewable place. For large or
+  ✅-Live services where a single file becomes unwieldy, artifacts **may** be split into
+  `docs/services/<slug>/<ARTIFACT>-<service-slug>.md` (e.g. `DDD-the-spark.md`), with the
+  `README.md` retained as the pack index that links them. Both layouts satisfy the gate;
+  choose one per service and stay consistent within it.
 - **Entity names:** use canonical names only (`PLATFORM_ENTITIES.md` / `CLAUDE.md` rules).
 - **Zero-cost mandate:** every ASD and TFM must state the free-tier limits and the
   hard-stop / rotation strategy — no artifact may assume a paid dependency.

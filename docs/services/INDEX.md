@@ -5,10 +5,12 @@ named entities. Governed by `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 Artifact legend: **GOV** Charter · **DDD** · **TASD** · **RACI** · **SIM** · **ASD** ·
 **TFM** · **POL** · **PROC** · **RUN** · **STD**.
 
-**Required-by-status rule (honesty gate):**
-- ✅ **In repo** → full 11-artifact pack, code-grounded.
-- 🔧 **Partial** → GOV, RACI, TFM, POL, STD + DDD/TASD/SIM/ASD scoped to what exists.
-- 🔧 **Planned** → GOV, RACI, TFM, POL, STD **only** (intent-level; no fabricated DDD/RUN).
+**Required-by-status rule (honesty gate).** The `Status` column below shows the canonical
+`PLATFORM_ENTITIES.md` label verbatim; the framework normalizes each to a **gate tier**
+(see `DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1) that sets the required pack:
+- **Live** (any `✅` label) → full 11-artifact pack, code-grounded.
+- **Partial** (`🔧` labels except `🔧 Planned`) → GOV, RACI, TFM, POL, STD + DDD/TASD/SIM/ASD scoped to what exists.
+- **Planned** (`🔧 Planned`) → GOV, RACI, TFM, POL, STD **only** (intent-level; no fabricated DDD/RUN).
 
 Status column mirrors `PLATFORM_ENTITIES.md` — update both together.
 
