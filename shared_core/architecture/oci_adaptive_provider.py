@@ -1,25 +1,9 @@
-# Re-export from canonical location — Dimensional.architecture is the source of truth.
+"""Backward-compatibility shim — canonical: Dimensional.architecture.oci_adaptive_provider"""
+
+from Dimensional.architecture.oci_adaptive_provider import *  # noqa: F401, F403
 from Dimensional.architecture.oci_adaptive_provider import (  # noqa: F401
-    CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-    CIRCUIT_BREAKER_RECOVERY_SECONDS,
-    IDLE_RECLAIM_THRESHOLD_CPU_PCT,
-    KEEPALIVE_INTERVAL_SECONDS,
-    MAX_RETRY_ATTEMPTS,
-    OCI_FREE_TIER_LIMITS,
-    REQUEST_TIMEOUT_SECONDS,
-    RETRY_BACKOFF_BASE,
-    AdaptiveInstanceDatum,
-    AdaptiveProviderConfig,
-    CircuitBreaker,
-    CircuitState,
-    MinioConfig,
-    OciAdaptiveProvider,
-    OciConfig,
-    OciKeepaliveWorker,
-    OciQuotaTracker,
-    PersistentInfrastructureDatum,
-    R2Config,
-    StorageTier,
-    SystemMode,
-    _aws_sig4_sign,  # noqa: F401
+    _S3CompatTier,
+    _aws_sig4_sign,
+    _default_provider,
+    _oci_sign_headers,
 )

@@ -37,6 +37,31 @@
   }
 }
 
+/* Light mode overrides */
+@layer base {
+  .light {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 199 89% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 261 51% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 93%;
+    --muted-foreground: 215 16% 40%;
+    --accent: 199 89% 30%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 82%;
+    --input: 214 32% 91%;
+    --ring: 199 89% 38%;
+  }
+}
+
 /* Fluid / liquid design tokens */
 @layer utilities {
   .fluid-gradient {
@@ -70,5 +95,51 @@
   .cell-border:hover {
     border-color: hsl(var(--primary) / 0.6);
     box-shadow: 0 0 12px hsl(var(--primary) / 0.2);
+  }
+}
+
+/* ── Selection colour ─────────────────────────────────────────────────────── */
+::selection {
+  background: hsl(var(--primary) / 0.35);
+  color: hsl(var(--foreground));
+}
+
+/* ── Custom scrollbar (webkit) ────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.6);
+}
+
+/* ── Global focus-visible fallback using ring token ──────────────────────── */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* ── Smooth text rendering ───────────────────────────────────────────────── */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .fluid-gradient {
+    animation: none;
+    background-size: 100% 100%;
+  }
+
+  .cell-border {
+    transition: none;
   }
 }

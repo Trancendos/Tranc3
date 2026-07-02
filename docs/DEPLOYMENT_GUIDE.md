@@ -55,8 +55,8 @@ cp .env.example .env
 # Primary API (port 8000)
 python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 
-# Enhanced API (port 8001)
-python -m uvicorn api_enhanced:app --host 0.0.0.0 --port 8001 --reload
+# Nanoservices layer (port 8001)
+python -m uvicorn src.nanoservices.nano_server:nano_app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ### 4. Verify
@@ -314,4 +314,4 @@ journalctl -u tranc3 -f
 
 ---
 
-*Generated for the Tranc3 platform. For architecture details, see [System Architecture](DOC-02-System-Architecture.md). For zero-cost cloud providers research, see [Zero-Cost Cloud Providers](ZERO_COST_CLOUD_PROVIDERS.md).*
+*Generated for the Tranc3 platform. For architecture details, see [System Architecture](DOC-02-System-Architecture.md). For zero-cost cloud providers research, see [Zero-Cost Cloud Providers](ZERO_COST_CLOUD_PROVIDERS.md). For the full self-hosted production runbook see [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md).*

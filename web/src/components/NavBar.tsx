@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useLocation, Link } from 'react-router'
 import {
   MessageSquare, LayoutDashboard, Zap, Activity, Bell, Mail,
   Database, Search, ListTodo, Settings, ChevronLeft,
@@ -100,20 +100,19 @@ interface NavBarProps {
 
 export default function NavBar({ username, onLogout }: NavBarProps) {
   const location = useLocation()
-  const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
 
   return (
     <nav
       aria-label="Main navigation"
-      className={`flex flex-col h-full bg-gray-900 border-r border-gray-700 transition-all duration-200 ${
+      className={`flex flex-col h-full bg-card border-r border-border transition-all duration-200 ${
         collapsed ? 'w-14' : 'w-52'
       }`}
     >
       {/* Logo / collapse toggle */}
-      <div className="flex items-center justify-between px-3 py-4 border-b border-gray-700">
+      <div className="flex items-center justify-between px-3 py-4 border-b border-border">
         {!collapsed && (
-          <span className="text-white font-bold text-sm tracking-widest select-none" aria-hidden="true">
+          <span className="text-primary font-bold text-sm tracking-widest select-none" aria-hidden="true">
             TRANC3
           </span>
         )}
@@ -122,7 +121,7 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
           aria-expanded={!collapsed}
           aria-controls="sidebar-nav-list"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="text-gray-400 hover:text-white transition-colors ml-auto rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900 p-0.5"
+          className="text-muted-foreground hover:text-foreground transition-colors ml-auto rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card p-0.5"
         >
           {collapsed
             ? <ChevronRight size={16} aria-hidden="true" />
@@ -148,15 +147,15 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
                   </li>
                 )}
                 <li>
-                  <button
-                    onClick={() => navigate(item.path)}
+                  <Link
+                    to={item.path}
                     aria-current={active ? 'page' : undefined}
                     aria-label={collapsed ? item.label : undefined}
                     title={collapsed ? item.label : undefined}
-                    className={`w-full flex items-center gap-3 px-2 py-2 text-sm rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                    className={`flex items-center gap-3 px-2 py-2 text-sm rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       active
-                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-900/50'
-                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
                     <span className="flex-shrink-0" aria-hidden="true">{item.icon}</span>
@@ -164,12 +163,12 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
                     {!collapsed && item.badge && (
                       <span
                         aria-label={`${item.badge} unread`}
-                        className="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 tabular-nums"
+                        className="ml-auto text-xs bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 tabular-nums"
                       >
                         {item.badge}
                       </span>
                     )}
-                  </button>
+                  </Link>
                 </li>
               </React.Fragment>
             )
@@ -179,16 +178,16 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
 
       {/* User footer */}
       {username && (
-        <div className="border-t border-gray-700 p-2">
+        <div className="border-t border-border p-2">
           <div className="flex items-center gap-2 px-1">
             <div
-              className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0"
+              className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
               aria-hidden="true"
             >
-              <User size={14} className="text-white" aria-hidden="true" />
+              <User size={14} className="text-primary-foreground" aria-hidden="true" />
             </div>
             {!collapsed && (
-              <span className="text-gray-300 text-xs truncate flex-1" title={username}>
+              <span className="text-muted-foreground text-xs truncate flex-1" title={username}>
                 {username}
               </span>
             )}
@@ -197,7 +196,7 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
                 onClick={onLogout}
                 aria-label="Sign out"
                 title="Sign out"
-                className="text-gray-500 hover:text-red-400 transition-colors flex-shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 p-0.5"
+                className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive p-0.5"
               >
                 <LogOut size={14} aria-hidden="true" />
               </button>

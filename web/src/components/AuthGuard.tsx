@@ -20,10 +20,17 @@ export default function AuthGuard({ children }: Props) {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div
+        role="status"
+        aria-label="Checking authentication"
+        className="min-h-screen bg-background flex items-center justify-center"
+      >
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">Checking authentication…</p>
+          <div
+            className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+          <p className="text-muted-foreground text-sm">Checking authentication…</p>
         </div>
       </div>
     )

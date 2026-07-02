@@ -1,28 +1,3 @@
-# Re-export from canonical location — Dimensional.architecture is the source of truth.
-from Dimensional.architecture.microceph_provider import (  # noqa: F401
-    DEFAULT_POOLS,
-    MAX_PG_COUNT,
-    MICROCEPH_CMD,
-    MIN_PG_COUNT,
-    OSD_TARGET_PG_PER_OSD,
-    CephHealthMonitor,
-    CephHealthStatus,
-    CephPoolManager,
-    CrushBucket,
-    CrushMap,
-    CrushMapBuilder,
-    MicroCephConfig,
-    MicroCephProvider,
-    OsdInfo,
-    OsdLifecycleManager,
-    OsdState,
-    PoolInfo,
-    PoolType,
-    RgwCredentials,
-    RgwManager,
-    crush_hash,
-    crush_place,
-    get_microceph_provider,
-    shutdown_microceph_provider,
-    straw2_choose,
-)
+"""Backward-compatibility shim — canonical: Dimensional.architecture.microceph_provider"""
+
+from Dimensional.architecture.microceph_provider import *  # noqa: F401, F403
