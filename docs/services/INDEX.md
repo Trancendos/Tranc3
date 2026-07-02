@@ -19,9 +19,9 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 |---------|--------|---------|------|-------|
 | **The Spark** | ✅ In repo | Imfy (Prime: Norman Hawkins) | ✅ **Complete** (reference) | `docs/services/the-spark/` |
 | **The Digital Grid** | ✅ In repo | Tyler Towncroft (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-digital-grid/` |
-| Infinity | ✅ Self-hosted | The Guardian (Anchor: Orb of Orisis) | ⬜ Pending | `workers/infinity-auth/` (8005) |
+| **Infinity** | ✅ Self-hosted | The Guardian (Anchor: Orb of Orisis) (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/infinity/` |
 | The Nexus | 🔧 Self-hosted | Nexus-Prime | ⬜ Pending | `workers/infinity-ws/` (8004) |
-| The Observatory | ✅ Self-hosted | Norman Hawkins | ⬜ Pending | `src/observability/` |
+| **The Observatory** | ✅ Self-hosted | Norman Hawkins (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-observatory/` |
 | The Workshop | ✅ In repo | Larry Lowhammer | ⬜ Pending | `deploy/forgejo/` |
 | The Town Hall | ✅ Integrated | Tristuran | ⬜ Pending | `workers/cranbania/` (8071) |
 | The Lighthouse | ✅ Deployed | Rocking Ricki | ⬜ Pending | CF `infinity-lighthouse` |
@@ -61,7 +61,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | VRAR3D | 🔧 Planned | Entari | ⬜ Charter-only | Three.js |
 | Resonate | 🔧 Planned | Magdalena | ⬜ Charter-only | `src/resonate/` (TBD) |
 
-**Coverage:** **2 / 11 required full packs** complete (Live-tier cohort) · 43 / 43 entities
+**Coverage:** **4 / 11 required full packs** complete (Live-tier cohort) · 43 / 43 entities
 status-tracked · reference pack established · rollout order per framework §6.
 
 ## Rollout log
@@ -70,6 +70,7 @@ status-tracked · reference pack established · rollout order per framework §6.
 |------|--------|
 | 2026-07-02 | Framework + template + The Spark reference pack; index established (1/43). |
 | 2026-07-02 | Added The Digital Grid pack, code-grounded against `src/workflow/` (2/43). |
+| 2026-07-02 | Added Infinity + The Observatory packs, code-grounded against `workers/infinity-auth/` and `src/observability/` (4/11 required full packs). |
 
 [^void-port]: **Source discrepancy (flagged, not silently resolved).** `CLAUDE.md`'s
     self-hosted worker map lists The Void's self-hosted vault as `infinity-void` on **8082**
