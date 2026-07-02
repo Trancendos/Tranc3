@@ -269,7 +269,7 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 > ¹ `TBD` marks a worker whose code port currently **collides** with another worker's
 > `EXPOSE` (11 duplicated ports across the fleet, e.g. `8053` is bound by three services)
 > or is otherwise unvalidated. These need a canonical assignment — tracked in the port
-> registry reconciliation issue; do not treat a `TBD` row as a usable port until resolved.
+> registry reconciliation issue **#188**; do not treat a `TBD` row as a usable port until resolved.
 
 ### Production Infrastructure Stack
 
