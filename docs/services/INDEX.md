@@ -71,6 +71,7 @@ status-tracked · reference pack established · rollout order per framework §6.
 | 2026-07-02 | Framework + template + The Spark reference pack; index established (1/43). |
 | 2026-07-02 | Added The Digital Grid pack, code-grounded against `src/workflow/` (2/43). |
 | 2026-07-02 | Added Infinity + The Observatory packs, code-grounded against `workers/infinity-auth/` and `src/observability/` (4/11 required full packs). |
+| 2026-07-02 | Added Luminous + Turing's Hub packs (Partial-tier), code-grounded against `src/bio_neural/` + `src/core/` and `src/personality/`; review surfaced and repaired real route bugs (phi tensor type, neuromorphic kwarg, `/status` probe, `_matrix` import) and flagged remaining PARTIAL wiring. |
 
 [^void-port]: **Source discrepancy (flagged, not silently resolved).** `CLAUDE.md`'s
     self-hosted worker map lists The Void's self-hosted vault as `infinity-void` on **8082**

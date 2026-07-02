@@ -26,11 +26,11 @@
 ### HTTP surface (`src/personality/turingshub/routes.py`, prefix `/turingshub`)
 | Method | Route | Backing code |
 |---|---|---|
-| GET | `/turingshub/status` | spawner + matrix availability |
+| GET | `/turingshub/status` | spawner (profile count + list) — the route uses only the spawner; the matrix is not touched here |
 | GET | `/turingshub/personalities` | iterates `list(spawner._profiles.keys())` (the route's `list_profiles` `hasattr` guard is dead — that method is on `PersonalityMatrix`, not the spawner — so it takes the `_profiles` fallback), returning `{id, profile}` per id |
 | GET | `/turingshub/personalities/{personality_id}` | profile lookup |
 | POST | `/turingshub/spawn` | `PersonalitySpawner.spawn(...)` |
-| GET | `/turingshub/matrix/active` | active profile from `PersonalityMatrix` |
+| GET | `/turingshub/matrix/active` | **PARTIAL** — returns `{active_personality}`, but `PersonalityMatrix` has no active-personality tracking, so the value is currently `null` (an "active" concept is PLANNED). The `_matrix()` import was corrected here to `PersonalityMatrix` (the old `EnhancedPersonalityMatrix` import raised and forced the error fallback) |
 
 ### Core (`src/personality/`)
 - **`matrix.py`** — `PersonalityProfile` (load/save JSON, `build_system_prompt(user_context)`) and
@@ -62,8 +62,12 @@
 
 ## 5. Solutions Integration Model (SIM)
 
-- **Upstream:** `api.py` mounts `/turingshub` and instantiates `EnhancedPersonalityMatrix`; profiles
-  are consumed by the inference layer for system-prompt construction (`build_system_prompt`).
+- **Upstream:** `api.py` mounts `/turingshub`. It also *attempts* to instantiate
+  `EnhancedPersonalityMatrix` (an alias of `PersonalityMatrix`) at startup, but currently passes a
+  config object where `PersonalityMatrix.__init__` expects a `profiles_dir` path — so that call
+  raises and `personality_matrix` is left unset (fail-soft, logged). **PARTIAL/PLANNED:**
+  `PersonalityProfile.build_system_prompt` exists but is **not yet consumed** by any in-repo inference
+  path; wiring profiles into prompt construction (and fixing the startup arg) is pending.
 - **Downstream:** `spawn` writes a generated personality repo to a sandboxed output base.
 - **Auth boundary (current):** the `/turingshub` router does not enforce auth itself; `spawn` writes
   to filesystem — front with platform auth (Infinity) and restrict `spawn` in production (**PLANNED**).

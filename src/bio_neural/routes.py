@@ -21,12 +21,23 @@ router = APIRouter(prefix="/luminous", tags=["luminous"])
 async def luminous_status() -> Dict[str, Any]:
     modules: Dict[str, Any] = {}
 
+    # Actually probe the optional heavy deps so "degraded" is reachable when
+    # torch/numpy (or the module) are missing, rather than always "available".
     try:
+        import numpy  # noqa: F401
+        import torch  # noqa: F401
+
+        from src.bio_neural.consciousness_engine import IITCalculator  # noqa: F401
+
         modules["consciousness"] = "available"
     except Exception:
         modules["consciousness"] = "degraded"
 
     try:
+        import torch  # noqa: F401
+
+        from src.bio_neural.neuromorphic import NeuromorphicProcessor  # noqa: F401
+
         modules["neuromorphic"] = "available"
     except Exception:
         modules["neuromorphic"] = "degraded"
