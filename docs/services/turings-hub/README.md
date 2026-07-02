@@ -27,7 +27,7 @@
 | Method | Route | Backing code |
 |---|---|---|
 | GET | `/turingshub/status` | spawner + matrix availability |
-| GET | `/turingshub/personalities` | `PersonalitySpawner.list_personalities()` |
+| GET | `/turingshub/personalities` | iterates `list(spawner._profiles.keys())` (the route's `list_profiles` `hasattr` guard is dead — that method is on `PersonalityMatrix`, not the spawner — so it takes the `_profiles` fallback), returning `{id, profile}` per id |
 | GET | `/turingshub/personalities/{personality_id}` | profile lookup |
 | POST | `/turingshub/spawn` | `PersonalitySpawner.spawn(...)` |
 | GET | `/turingshub/matrix/active` | active profile from `PersonalityMatrix` |

@@ -42,6 +42,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     """
     try:
         import numpy as np
+        import torch
 
         from src.bio_neural.consciousness_engine import IITCalculator
 
@@ -55,7 +56,10 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         if state_arr.sum() > 0:
             state_arr = state_arr / state_arr.sum()
 
-        phi = calc.calculate_phi(state_arr) if hasattr(calc, "calculate_phi") else 0.0
+        # IITCalculator.calculate_phi expects a torch.Tensor (it calls
+        # .detach().cpu().numpy() internally) — pass a tensor, not the ndarray.
+        state_tensor = torch.tensor(state_arr, dtype=torch.float32)
+        phi = calc.calculate_phi(state_tensor) if hasattr(calc, "calculate_phi") else 0.0
         return {"phi": float(phi), "state_dim": len(state)}
     except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
@@ -81,8 +85,10 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
 
         processor = NeuromorphicProcessor({})
         tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
+        # NeuromorphicProcessor.process(x, learn=False) — timesteps is fixed at
+        # construction, not a call kwarg; echo the requested value in the response.
         result = (
-            processor.process(tensor, timesteps=timesteps)
+            processor.process(tensor)
             if hasattr(processor, "process")
             else {"note": "processor scaffold — wire input dimensions to activate"}
         )

@@ -29,8 +29,8 @@
 | Method | Route | Backing code | Notes |
 |---|---|---|---|
 | GET | `/luminous/status` | inline | Reports `consciousness` / `neuromorphic` module availability |
-| POST | `/luminous/consciousness/phi` | `IITCalculator.calculate_phi` | Body `{state: list[float]}`; state normalised to a distribution; returns `{phi, state_dim}`. Falls back to `0.0` if the calculator lacks `calculate_phi` |
-| POST | `/luminous/neuromorphic/process` | `NeuromorphicProcessor` | Body `{input: list[float], timesteps:int}`. **PARTIAL** — returns a scaffold note when the processor has no `process()` wired for the given input dims |
+| POST | `/luminous/consciousness/phi` | `IITCalculator.calculate_phi` | Body `{state: list[float]}`; state normalised to a distribution, passed to the calculator **as a `torch.Tensor`** (it calls `.detach().cpu().numpy()` internally); returns `{phi, state_dim}`. Returns `503` if torch/numpy are absent |
+| POST | `/luminous/neuromorphic/process` | `NeuromorphicProcessor.process(x, learn=False)` | Body `{input: list[float], timesteps:int}`. `timesteps` is echoed in the response (it is fixed at processor construction, **not** a `process()` kwarg); a dimension mismatch against the configured spiking net returns `500` with sanitised detail |
 
 ### Bio-neural core (`src/bio_neural/`)
 - **`consciousness_engine.py`** — `IITCalculator` (Φ via whole-vs-parts entropy differences,
@@ -108,10 +108,14 @@ These are libraries consumed by the backend; not all are exposed via the `/lumin
 
 - **`/luminous/status` degraded:** check `consciousness`/`neuromorphic` module fields; a `degraded`
   value indicates a failed import — verify `torch`/`numpy` in the image.
-- **`phi` returns 0.0 unexpectedly:** confirm the `state` vector is non-zero (it is normalised to a
-  distribution; an all-zero state yields 0).
-- **`neuromorphic/process` returns a scaffold note:** input dims are not yet wired to a
-  `NeuromorphicProcessor.process()` — this is the known PARTIAL path, not an outage.
+- **`phi` returns 0.0 unexpectedly:** `IITCalculator.calculate_phi` returns `0.0` on any internal
+  error (it wraps the entropy math in try/except). Confirm the `state` vector is non-zero, and that
+  it reaches the calculator as a `torch.Tensor` (a plain ndarray triggers an `AttributeError` on
+  `.detach()` → caught → `0.0`; the route converts to a tensor for this reason).
+- **`neuromorphic/process` returns `500`:** most often a dimension mismatch between the input and the
+  configured spiking net (`safe_error_detail` sanitises the message). Note the handler calls
+  `process(x)` — passing a `timesteps=` kwarg is a `TypeError` (the real signature is
+  `process(x, learn=False)`).
 
 ## 11. Standards (STD)
 
