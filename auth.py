@@ -3,6 +3,7 @@
 All workers and API routes should import from there:
     from src.auth.facade import AuthFacade, get_current_user, create_token, verify_token
 """
+
 from src.auth.facade import (  # noqa: F401
     AuthFacade,
     create_token,
