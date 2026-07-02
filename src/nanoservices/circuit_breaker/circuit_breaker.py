@@ -12,13 +12,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
+# Canonical CircuitState (TASD-001 Phase 1) — re-exported for backward compatibility.
+from src.resilience.circuit_state import CircuitState
+
 logger = logging.getLogger(__name__)
-
-
-class CircuitState(Enum):
-    CLOSED = "closed"  # Normal operation
-    OPEN = "open"  # Failing — reject requests
-    HALF_OPEN = "half_open"  # Testing recovery
 
 
 class FailureType(Enum):

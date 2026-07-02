@@ -13,15 +13,11 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
+# Canonical CircuitState (TASD-001 Phase 1) — re-exported for backward compatibility.
+# NOTE: unifies mesh's former HALF_OPEN value "half-open" with canonical "half_open".
+from src.resilience.circuit_state import CircuitState
+
 # ── Enums ────────────────────────────────────────────────────
-
-
-class CircuitState(str, enum.Enum):
-    """Circuit breaker states — closed (healthy), open (failing), half-open (testing)."""
-
-    CLOSED = "closed"
-    OPEN = "open"
-    HALF_OPEN = "half-open"
 
 
 class HealthStatus(str, enum.Enum):

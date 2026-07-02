@@ -12,16 +12,14 @@ from typing import Any, Callable, Dict
 
 from Dimensional.sanitize import sanitize_for_log
 
+# Canonical CircuitState (TASD-001 Phase 1) — was a plain constants class here;
+# now re-exports the shared str-Enum. Member/string comparisons are preserved.
+from src.resilience.circuit_state import CircuitState
+
 logger = logging.getLogger(__name__)
 
 
 # ── Circuit Breaker ───────────────────────────────────────────────────────────
-
-
-class CircuitState:
-    CLOSED = "closed"  # Normal operation
-    OPEN = "open"  # Failing — reject calls
-    HALF_OPEN = "half_open"  # Testing recovery
 
 
 @dataclass
