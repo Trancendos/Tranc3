@@ -6,19 +6,20 @@ Artifact legend: **GOV** Charter · **DDD** · **TASD** · **RACI** · **SIM** �
 **TFM** · **POL** · **PROC** · **RUN** · **STD**.
 
 **Required-by-status rule (honesty gate).** The `Status` column below shows the canonical
-`PLATFORM_ENTITIES.md` label verbatim; the framework normalizes each to a **gate tier**
+`CLAUDE.md`-service-table label verbatim; the framework normalizes each to a **gate tier**
 (see `DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1) that sets the required pack:
 - **Live** (any `✅` label) → full 11-artifact pack, code-grounded.
 - **Partial** (`🔧` labels except `🔧 Planned`) → GOV, RACI, TFM, POL, STD + DDD/TASD/SIM/ASD scoped to what exists.
 - **Planned** (`🔧 Planned`) → GOV, RACI, TFM, POL, STD **only** (intent-level; no fabricated DDD/RUN).
 
-Status column mirrors `PLATFORM_ENTITIES.md` — update both together.
+Status column mirrors the `CLAUDE.md` service table (status source); Lead AI/identity
+mirrors `PLATFORM_ENTITIES.md` — update together.
 
 | Service | Status | Lead AI | Pack | Notes |
 |---------|--------|---------|------|-------|
 | **The Spark** | ✅ In repo | Imfy (Prime: Norman Hawkins) | ✅ **Complete** (reference) | `docs/services/the-spark/` |
 | **The Digital Grid** | ✅ In repo | Tyler Towncroft (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-digital-grid/` |
-| Infinity | ✅ Self-hosted | The Guardian | ⬜ Pending | `workers/infinity-auth/` (8005) |
+| Infinity | ✅ Self-hosted | The Guardian (Anchor: Orb of Orisis) | ⬜ Pending | `workers/infinity-auth/` (8005) |
 | The Nexus | 🔧 Self-hosted | Nexus-Prime | ⬜ Pending | `workers/infinity-ws/` (8004) |
 | The Observatory | ✅ Self-hosted | Norman Hawkins | ⬜ Pending | `src/observability/` |
 | The Workshop | ✅ In repo | Larry Lowhammer | ⬜ Pending | `deploy/forgejo/` |
@@ -60,7 +61,8 @@ Status column mirrors `PLATFORM_ENTITIES.md` — update both together.
 | VRAR3D | 🔧 Planned | Entari | ⬜ Charter-only | Three.js |
 | Resonate | 🔧 Planned | Magdalena | ⬜ Charter-only | `src/resonate/` (TBD) |
 
-**Coverage:** 2 / 43 complete · reference pack established · rollout order per framework §6.
+**Coverage:** **2 / 11 required full packs** complete (Live-tier cohort) · 43 / 43 entities
+status-tracked · reference pack established · rollout order per framework §6.
 
 ## Rollout log
 

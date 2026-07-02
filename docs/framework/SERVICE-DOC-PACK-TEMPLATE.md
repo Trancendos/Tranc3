@@ -7,7 +7,7 @@
 > `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 
 **Service:** `<Service Name>` · **Slug:** `<service-slug>` · **Lead AI:** `<Tier-3 name>`
-**Canonical status:** `<✅ In repo | 🔧 Partial | 🔧 Planned>` (must match `PLATFORM_ENTITIES.md`)
+**Canonical status:** `<✅ In repo | 🔧 Partial | 🔧 Planned>` (must match the `CLAUDE.md` service table)
 **Code root:** `<path>` · **Port:** `<port>` · **Owner:** Platform Engineering
 **Version:** 0.1.0 · **Last verified against `main`:** `<YYYY-MM-DD @ commit>`
 
@@ -38,9 +38,11 @@
 
 - **Context:** `<where this sits in the platform>`
 - **Architecture decisions (ADRs):**
+
   | ID | Decision | Options considered | Why | Consequence |
   |----|----------|--------------------|-----|-------------|
   | AD-1 | `<decision>` | `<A / B / C>` | `<rationale>` | `<trade-off accepted>` |
+
 - **Non-functional drivers:** `<security, cost, latency, portability>`
 - **Rejected alternatives:** `<what we did NOT do and why>`
 
@@ -102,9 +104,11 @@
 
 - **Health check:** `<endpoint + expected response>`
 - **Key alerts → action:**
+
   | Alert | Likely cause | First action | Escalation |
   |-------|-------------|--------------|------------|
   | `<alert>` | `<cause>` | `<action>` | `<who>` |
+
 - **Diagnostics:** `<logs, metrics, traces — where>`
 - **Rollback:** `<how to revert safely>`
 - **Recovery from data loss:** `<backup restore steps>`

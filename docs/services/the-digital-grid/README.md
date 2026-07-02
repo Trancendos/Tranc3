@@ -4,7 +4,7 @@
 > Claims cite `src/workflow/`.
 
 **Service:** The Digital Grid · **Slug:** `the-digital-grid` · **Lead AI:** Tyler Towncroft (AID-DGR-01, Tier 3) · **Prime:** The Doctor / Nikolai O'denhim (Tier 2)
-**Canonical status:** ✅ In repo → **Live** tier (matches `PLATFORM_ENTITIES.md` PID-DGR)
+**Canonical status:** ✅ In repo → **Live** tier (status per `CLAUDE.md`; identity/PID-DGR per `PLATFORM_ENTITIES.md`)
 **Code root:** `src/workflow/` · **Worker:** `the-grid` (port 8010) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `2250aaf`
 
@@ -28,6 +28,7 @@
 ## 2. Detailed Design Document (DDD)
 
 - **Component breakdown:**
+
   | Module | Responsibility |
   |--------|----------------|
   | `src/workflow/builder.py` | `WorkflowBuilder` (fluent DAG DSL) + `WorkflowDefinition` |
@@ -35,7 +36,9 @@
   | `src/workflow/nodes/` | Typed node registry: `agents`, `ai`, `code`, `data`, `flow`, `http`, `neural`, `reasoning`, `tools` (+ `base`, `registry`) |
   | `src/workflow/phase4_nodes.py`, `phase5_nodes.py` | Extended node packs (`register_phase`, `extend_node_registry`) |
   | `src/workflow/routes.py` | FastAPI routes (see interface) |
+
 - **Public interface (routes, `src/workflow/routes.py`):**
+
   | Method | Route | Handler |
   |--------|-------|---------|
   | GET | `/status` | `grid_status` |
@@ -45,10 +48,11 @@
   | POST | `/workflows/{workflow_id}/run` | `run_workflow` |
   | GET | `/executions/{execution_id}` | `get_execution` |
   | POST | `/executions/{execution_id}/cancel` | `cancel_execution` |
+
 - **Data model:** `WorkflowDefinition` (nodes + edges); `ExecutionState` (per-run status,
   node outputs); node registry keyed by node type.
 - **Key sequence flow:**
-  ```
+  ```text
   POST /workflows/{id}/run
     → executor._build_adjacency() → _topological_sort()
     → for each layer: execute independent nodes in parallel
@@ -66,11 +70,13 @@
 - **Context:** the platform's workflow/automation engine; foundation `src/workflow/`;
   open-source alignment target n8n (self-host free) per `CLAUDE.md`.
 - **Architecture decisions:**
+
   | ID | Decision | Options | Why | Consequence |
   |----|----------|---------|-----|-------------|
   | AD-1 | In-house topological DAG executor | n8n, Prefect, Temporal, Airflow | zero-cost, no external runtime, tight platform integration | must maintain scheduler ourselves |
   | AD-2 | Parallel execution per topological layer | sequential, full async graph | throughput without a full dataflow engine | layer granularity, not per-edge streaming |
   | AD-3 | Typed node registry (`nodes/`) + phase packs | monolithic node file | extensibility, isolation per node class | registry must be kept in sync |
+
 - **Non-functional drivers:** zero-cost, extensibility, observability (event bus), parallelism.
 - **Rejected alternatives:** external orchestrators (operational cost / vendor runtime).
 
@@ -140,11 +146,13 @@
 
 - **Health check:** `GET /status` → grid status body.
 - **Key alerts → action:**
+
   | Alert | Likely cause | First action | Escalation |
   |-------|-------------|--------------|------------|
   | Executions stuck | node hung / downstream dependency down | inspect `/executions/{id}`; cancel; check node's target service | SRE → Platform Eng |
   | Run failure spike | bad workflow or node regression | identify failing node type from events; isolate | Platform Eng |
   | Memory growth | execution history retention | cap/evict history; restart worker | SRE |
+
 - **Diagnostics:** `WorkflowEventBus` events; structured logs with `trace_id`; metrics `/metrics`.
 - **Rollback:** redeploy previous image; workflow API is versioned/backward-compatible by policy.
 - **Recovery:** re-register workflows from source factories; in-flight executions are re-runnable.

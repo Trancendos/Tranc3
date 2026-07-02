@@ -5,7 +5,7 @@
 > `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 
 **Service:** The Spark · **Slug:** `the-spark` · **Lead AI:** Imfy (AID-SPK-01, Tier 3) · **Prime:** Norman Hawkins (Tier 2)
-**Canonical status:** ✅ In repo (matches `PLATFORM_ENTITIES.md`)
+**Canonical status:** ✅ In repo → **Live** tier (status per `CLAUDE.md`; identity/PID-SPK per `PLATFORM_ENTITIES.md`)
 **Code root:** `src/mcp/` · **Routes prefix:** `/mcp` · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `60b3b18`
 
@@ -16,8 +16,9 @@
 - **Mission:** Expose the platform's AI tool registry to agents and services via a
   standards-compliant **Model Context Protocol** server (JSON-RPC 2.0 over HTTP + SSE).
 - **In scope:** tool registration/discovery, JSON-RPC request handling, SSE event bus,
-  semantic tool selection (RAG-MCP), prompt-injection scanning of inbound payloads,
-  Digital Grid status surfacing.
+  semantic tool selection (RAG-MCP), prompt-injection scanning of inbound payloads
+  (scanner module present; runtime wiring **PLANNED** — see §2), The Digital Grid
+  status surfacing.
 - **Out of scope:** model inference (delegated to Luminous / AI Gateway), workflow
   execution (The Digital Grid), auth issuance (Infinity).
 - **Lead AI (Tier 3):** Imfy (AID-SPK-01); **Prime (Tier 2):** Norman Hawkins.
@@ -30,34 +31,42 @@
 ## 2. Detailed Design Document (DDD)
 
 - **Component breakdown:**
+
   | Module | Responsibility |
   |--------|----------------|
   | `src/mcp/server.py` | JSON-RPC 2.0 handler, routes, `_SSEBus`, request/response/error models |
   | `src/mcp/tools.py` | Tool registry + tool implementations |
   | `src/mcp/tool_rag.py` | Semantic tool selection — FAISS `IndexFlatIP` + sentence-transformers |
-  | `src/mcp/payload_scanner.py` | Prompt-injection scan of `/mcp/rpc` payloads (`ScanFinding`/`ScanResult`) |
+  | `src/mcp/payload_scanner.py` | Prompt-injection scanner (`scan_rpc_payload` → `ScanFinding`/`ScanResult`). **Present but NOT yet wired into `server.py`'s `/mcp/rpc` handler — integration PLANNED.** |
   | `src/mcp/client.py` | Outbound `MCPClient` / `MCPClientPool` for remote MCP servers |
   | `src/mcp/spark_*_tools.py` | Tool packs: gbrain, knowledge, phase4, phase5 |
+
 - **Public interface (routes, `src/mcp/server.py`):**
-  | Method | Route | Purpose |
-  |--------|-------|---------|
-  | POST | `/mcp/rpc` | JSON-RPC 2.0 request/response |
-  | GET | `/mcp/sse` | Server-Sent Events stream (`StreamingResponse`) |
-  | GET | `/mcp/tools` | List registered tools |
-  | GET | `/mcp/health` | Liveness/readiness |
-  | GET | `/mcp/grid/status` | The Digital Grid status passthrough |
+
+  | Method | Route | Auth (`Depends(get_current_user)`) | Purpose |
+  |--------|-------|:--:|---------|
+  | POST | `/mcp/rpc` | ✅ required | JSON-RPC 2.0 request/response |
+  | GET | `/mcp/sse` | ✅ required | Server-Sent Events stream (`StreamingResponse`) |
+  | GET | `/mcp/tools` | ⬜ open | List registered tools |
+  | GET | `/mcp/health` | ⬜ open | Liveness/readiness |
+  | GET | `/mcp/grid/status` | ⬜ open | The Digital Grid status passthrough |
+
 - **Data model:** `MCPRequest` / `MCPResponse` / `MCPError` Pydantic models;
   `jsonrpc="2.0"` constant; standard JSON-RPC error codes defined in `server.py`.
-- **Key sequence flow:**
-  ```
-  client → POST /mcp/rpc → payload_scanner.scan_rpc_payload()
-        → [clean] dispatch to tool registry (tools.py, optionally tool_rag selection)
+- **Key sequence flow (as implemented in `server.py`):**
+  ```text
+  client → POST /mcp/rpc (auth: Depends(get_current_user))
+        → parse/validate MCPRequest
+        → dispatch to tool registry (tools.py, optionally tool_rag selection)
         → MCPResponse | MCPError → client
         (SSE subscribers notified via _SSEBus)
   ```
+  > **PLANNED:** `payload_scanner.scan_rpc_payload()` is intended to run on the inbound
+  > payload before dispatch, failing open with logging. It is **not yet called** from the
+  > handler; until wired, prompt-injection scanning is not enforced at runtime.
 - **Error handling:** JSON-RPC standard codes in `server.py`; platform canonical codes via
-  `src/errors/error_catalog.py` (42 `ErrorCode` members defined). Scanner failures **fail open with logging**
-  by design (documented in `payload_scanner.py`) so a scanner bug cannot deny all callers.
+  `src/errors/error_catalog.py` (42 `ErrorCode` members defined). The scanner's documented
+  fail-open-with-logging policy (`payload_scanner.py`) applies **once the PLANNED wiring lands**.
 - **Concurrency / state:** async FastAPI; `_SSEBus` fans events to subscribers; tool RAG
   index is in-process and ephemeral (rebuildable, no persistent state required to serve).
 
@@ -65,11 +74,13 @@
 
 - **Context:** the platform's single MCP ingress for agent tool use; foundation `src/mcp/`.
 - **Architecture decisions:**
+
   | ID | Decision | Options | Why | Consequence |
   |----|----------|---------|-----|-------------|
   | AD-1 | JSON-RPC 2.0 over HTTP+SSE | REST, gRPC, JSON-RPC | MCP spec compliance; agent interop | Must maintain JSON-RPC envelope discipline |
   | AD-2 | In-process FAISS `IndexFlatIP` for tool RAG | external vector DB, no RAG | zero-cost, no new deps (faiss-cpu + sentence-transformers already present) | Index is ephemeral; rebuilt on start |
   | AD-3 | Regex/heuristic payload scanner, fail-open | external moderation API, fail-closed | zero-cost, no external calls; availability over strictness | Heuristic coverage only; logged bypass on scanner error |
+
 - **Non-functional drivers:** zero-cost (no paid APIs), MCP interop, low ingress latency,
   availability-biased security (fail-open scan with audit).
 - **Rejected alternatives:** external vector DB (cost), gRPC (agent-ecosystem friction),
@@ -93,8 +104,10 @@
   vector stores; `/mcp/grid/status` → The Digital Grid). Outbound remote MCP via
   `MCPClientPool` (`client.py`) with `MCPClientError` handling.
 - **Events:** `_SSEBus` broadcasts tool/registry events to SSE subscribers.
-- **Auth boundary:** MCP routes sit behind platform auth middleware (Infinity/JWT);
-  inbound payloads additionally pass `payload_scanner`.
+- **Auth boundary:** `/mcp/rpc` and `/mcp/sse` require a valid platform token
+  (`Depends(get_current_user)`, Infinity/JWT). `/mcp/tools`, `/mcp/health`, and
+  `/mcp/grid/status` are currently **unauthenticated** (see §2 route table). Inbound
+  payload scanning via `payload_scanner` is **PLANNED**, not yet enforced.
 - **Data classification:** tool arguments may carry user content; no secrets persisted by
   The Spark itself.
 
@@ -126,12 +139,14 @@
 
 - **Applicable platform policies:** `POL-AI-001` (AI Ethics & Governance),
   `POL-OPS-002`, `POL-PRI-001` — see `docs/policies/`.
-- **Service-specific rules:** all inbound `/mcp/rpc` payloads are scanned for prompt
-  injection; scanner bypass events MUST be logged (audit to The Observatory).
+- **Service-specific rules (target):** inbound `/mcp/rpc` payloads should be scanned for
+  prompt injection with bypass events logged (audit to The Observatory). **Status: PLANNED
+  — the scanner exists (`payload_scanner.py`) but is not yet wired into the handler.**
 - **Data handling:** The Spark persists no user content; tool-level data handling is
   governed by the downstream service's policy.
-- **Access:** MCP routes require a valid platform token (Infinity); tier limits per
-  `src/monetisation/`.
+- **Access:** `/mcp/rpc` and `/mcp/sse` require a valid platform token (Infinity); the
+  read-only `/mcp/tools`, `/mcp/health`, `/mcp/grid/status` are currently open. Tier
+  limits per `src/monetisation/`.
 
 ## 9. Procedure (PROC)
 
@@ -146,14 +161,17 @@
 
 - **Health check:** `GET /mcp/health` → 200 with status body.
 - **Key alerts → action:**
+
   | Alert | Likely cause | First action | Escalation |
   |-------|-------------|--------------|------------|
   | `/mcp/rpc` 5xx spike | tool exception / dependency down | check logs for tool id; isolate failing tool | SRE → Platform Eng |
   | SSE connection saturation | too many subscribers | scale replicas / cap subscribers | SRE |
-  | Scanner error rate up | `payload_scanner` bug | confirm fail-open (calls still served); patch scanner | Platform Eng |
   | Cold-start latency | model load | pre-warm / pin replica | SRE |
-- **Diagnostics:** structured JSON logs with `trace_id`; metrics at `/metrics`; traces via
-  The Observatory (`src/observability/`).
+
+- **Diagnostics:** structured JSON logs with `trace_id`; Prometheus metrics are exposed at
+  the app level (`/metrics` in `api.py`, and `/api/ecosystem/metrics` via the ecosystem
+  router) — the MCP router itself serves only `/mcp/*`; traces via The Observatory
+  (`src/observability/`).
 - **Rollback:** redeploy previous image tag; MCP surface is backward-compatible by policy.
 - **Recovery:** stateless — restart restores service; RAG index rebuilds automatically.
 
@@ -172,4 +190,6 @@
 
 | Date | Verifier | Commit | Result |
 |------|----------|--------|--------|
-| 2026-07-02 | Platform Engineering | `60b3b18` | All routes, models, RAG stack, scanner behaviour, and error catalog claims verified against `src/mcp/`. No overstated behaviour. |
+| 2026-07-02 | Platform Engineering | `60b3b18` | Initial pack authored against `src/mcp/`. |
+| 2026-07-02 | Platform Engineering | `2250aaf` | Corrected error-code count (42) and Lead AI (Imfy). |
+| 2026-07-02 | Platform Engineering | `HEAD` | **Truthfulness corrections** verified against `src/mcp/server.py`: payload scanner exists but is **not wired** into the `/mcp/rpc` handler (marked PLANNED); only `/mcp/rpc` + `/mcp/sse` are token-protected (`/mcp/tools`, `/mcp/health`, `/mcp/grid/status` are open); Prometheus `/metrics` is app-level (`api.py` / ecosystem router), not on the MCP router. |

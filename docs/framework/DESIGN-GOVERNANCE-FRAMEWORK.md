@@ -19,19 +19,23 @@ It exists to prevent two failure modes:
    implement. Per platform principle, **a doc that overstates the code is a defect**.
 
 > **Truthfulness rule.** Every artifact states its `Implementation Status` using the
-> canonical status string from `PLATFORM_ENTITIES.md` verbatim, and the framework maps
-> that to one of three **gate tiers** (§2.1) which drive artifact requirements.
-> A `Planned`-tier service gets a **Charter + Standards + Policy + RACI + TFM** pack only
-> (intent-level); it does **not** get a DDD/TASD/Runbook claiming implemented behaviour
-> until code exists.
+> canonical status label from the service table in **`CLAUDE.md`** verbatim (that table —
+> not `PLATFORM_ENTITIES.md`, which carries identity/ownership only — is the source of
+> the ✅/🔧 status). The framework maps that label to one of three **gate tiers** (§2.1)
+> which drive artifact requirements. A `Planned`-tier service gets a
+> **GOV + RACI + TFM + POL + STD** pack only (intent-level); it does **not** get a
+> DDD/TASD/Runbook claiming implemented behaviour until code exists.
+>
+> **Source split:** identity/ownership (canonical name, Lead AI, PID) → `PLATFORM_ENTITIES.md`
+> / `src/entities/platform.py`; implementation status (✅/🔧) → `CLAUDE.md` service table.
 
 ### 2.1 Status vocabulary → gate tier (normalization)
 
-`PLATFORM_ENTITIES.md` uses several canonical status labels. Docs keep that exact label
+The `CLAUDE.md` service table uses several status labels. Docs keep that exact label
 (it carries deployment nuance), but the honesty gate and any CI automation operate on the
 three **gate tiers** below. This is the single source of truth for the mapping:
 
-| Canonical status label (from `PLATFORM_ENTITIES.md`) | Gate tier | Required pack |
+| Canonical status label (from `CLAUDE.md`) | Gate tier | Required pack |
 |------------------------------------------------------|-----------|---------------|
 | `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 11-artifact pack, code-grounded |
 | `🔧 Partial`, `🔧 Migrating`, `🔧 Self-hosted` | **Partial** | Live pack, scoped to what exists; gaps flagged |
@@ -90,7 +94,7 @@ accountability for correctness rests with Platform Engineering and The Town Hall
 
 ## 4. Lifecycle
 
-```
+```text
  Draft ──► Peer Review ──► Governance Gate ──► Approved ──► Live
    ▲                          (Town Hall)                    │
    └──────────────── Quarterly re-verification ◄─────────────┘
@@ -132,7 +136,7 @@ Coverage is tracked in `docs/services/INDEX.md`. The honest rollout order is:
 1. **✅ In-repo services first** (The Spark, The Digital Grid, Infinity, The Nexus,
    The Observatory, The Workshop, The Town Hall) — full 11-artifact packs, code-grounded.
 2. **🔧 Partial services** — DDD/TASD scoped to what exists; gaps flagged, not faked.
-3. **🔧 Planned services** — Charter + Standards + Policy only, until code lands.
+3. **🔧 Planned services** — GOV + RACI + TFM + POL + STD only (per §2.1), until code lands.
 
 The Spark (`docs/services/the-spark/`) is the **reference implementation** of a complete,
 code-grounded pack. New packs are cloned from the template and from that exemplar.
