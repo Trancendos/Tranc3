@@ -1,8 +1,15 @@
 # Trancendos Documentation Index
 
 This file maps the full documentation landscape. Conceptual, governance, and historical
-docs live in the **GitHub Wiki** (trancendos/tranc3/wiki) to keep the repo tree clean.
-Code-adjacent docs (referenced by automation, tests, or CI) stay in the repo.
+docs are staged in **`wiki-content/`** (version-controlled in this repo) and published to
+the **GitHub Wiki** (trancendos/tranc3/wiki) via `scripts/publish-wiki.sh`. Code-adjacent
+docs (referenced by automation, tests, or CI) stay in the repo under `docs/`.
+
+> **Wiki publishing status.** The 62 pages under `wiki-content/` are the canonical source.
+> The live GitHub Wiki is populated by running `scripts/publish-wiki.sh` (requires push
+> access to `…/Tranc3.wiki.git`). Edit pages in `wiki-content/` on a branch, get them
+> reviewed, then re-run the script to publish — the wiki is a *mirror* of `wiki-content/`,
+> not an independently-edited source, so nothing can drift or be lost.
 
 ---
 
@@ -27,7 +34,10 @@ Code-adjacent docs (referenced by automation, tests, or CI) stay in the repo.
 
 ---
 
-## GitHub Wiki (living docs — navigate at trancendos/tranc3/wiki)
+## GitHub Wiki (source: `wiki-content/` → published via `scripts/publish-wiki.sh`)
+
+The following pages exist as real files under `wiki-content/` today and are published to the
+GitHub Wiki by the script above. Navigation is generated into `wiki-content/_Sidebar.md`.
 
 ### Platform Overview
 - **Home** — What is Trancendos / Tranc3?
@@ -65,21 +75,26 @@ Code-adjacent docs (referenced by automation, tests, or CI) stay in the repo.
 
 ---
 
-## Docs to Migrate to Wiki (planned — not yet moved)
+## Migration status — DONE (staged), publish pending
 
-The following files in this repo are candidates for Wiki migration once the Wiki is
-set up. They are kept here in the interim so nothing is lost:
+The historical/strategic/architecture docs listed above have **already been moved** into
+`wiki-content/` (62 files: `architecture/`, `strategy/`, `security/`, `historical/`,
+`todo/`, `Home.md`). These were `R100` (100%-identical) git renames in PR #184 — no content
+was lost, and full history is preserved. The former root/`docs/` copies no longer duplicate
+them.
 
-- `PHASE8-11_ARCHITECTURE.md`, `PHASE*` root files
-- `SWOT_PHASE24_FORENSIC.md`, `FORENSIC_REPORT_*`
-- `docs/PHASE25_*`, `docs/PHASE26_*`, `docs/PHASE27_*`, `docs/PHASE28_*`
-- `docs/DOC-01-*` through `docs/DOC-17-*` (project charter, mind maps, brainstorming)
-- `docs/BRANCH_*`, `docs/MERGE_STRATEGY.md` (historical branch reports)
-- `ARCHITECTURE_UPDATE.md`, `INFINITY_ARCHITECTURE.md`, `TIER_ARCHITECTURE.md`, `FRAMEWORK.md`
-- `CF_WORKER_MIGRATION_ROADMAP.md`, `CROSS_REPO_SYNERGY.md`
-- `VERIFICATION.md`, `REVERT_LOG.md`, `PROJECT_PULSE.md`
-- `todo.md`, `todo_infra.md`, `tranc3-ts/todo.md`
-- `SECURITY_ALERT_REGISTER.md`, `docs/SECURITY_ALERT_DISMISSALS.md`
+**To publish (or re-publish) to the live GitHub Wiki:**
 
-**Migration procedure:** Copy content to the Wiki page → delete file from repo → add
-the Wiki page title to the index above.
+```bash
+scripts/publish-wiki.sh          # mirrors wiki-content/ → the GitHub Wiki, then pushes
+DRY_RUN=1 scripts/publish-wiki.sh  # build the commit without pushing (preview)
+```
+
+Requires push access to `…/Tranc3.wiki.git`. To **add or edit** a wiki page: change the file
+under `wiki-content/` on a branch, get it reviewed, regenerate `_Sidebar.md` if you added a
+page, then re-run the script. The wiki is a mirror of `wiki-content/` — never edit it directly.
+
+**Automated publishing:** `.github/workflows/publish-wiki.yml` runs the script automatically
+on every push to `main` that touches `wiki-content/` (and supports manual dispatch), so the
+live wiki stays in sync hands-free. It authenticates with the default `GITHUB_TOKEN`, or a
+`WIKI_TOKEN` secret (PAT with `repo` scope) if the org restricts default-token wiki writes.

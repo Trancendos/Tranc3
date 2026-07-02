@@ -1,0 +1,50 @@
+# .github/workflows/publish-wiki.yml
+# Publish the repo's staged wiki content (wiki-content/) to the GitHub Wiki.
+#
+# Why GitHub Actions (not Forgejo): the wiki is a GitHub-native git repo
+# (…/Tranc3.wiki.git); GitHub Actions is the natural place to push it. This is a
+# deliberate, narrow exception to the Forgejo-first CI convention.
+#
+# Zero-cost: runs only when wiki-content/ (or the publish script) changes on main,
+# plus manual dispatch. Free-tier GitHub Actions.
+#
+# Auth: prefers a WIKI_TOKEN secret (PAT with `repo` scope) if set, else falls
+# back to the default GITHUB_TOKEN. If pushes 403, add a WIKI_TOKEN secret — some
+# orgs restrict the default token from writing wikis.
+
+name: Publish Wiki
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "wiki-content/**"
+      - "scripts/publish-wiki.sh"
+      - ".github/workflows/publish-wiki.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Mirror wiki-content/ → GitHub Wiki
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Publish wiki
+        env:
+          TOKEN: ${{ secrets.WIKI_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "trancendos-bot"
+          git config --global user.email "victicnor@gmail.com"
+          export WIKI_REMOTE="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          chmod +x scripts/publish-wiki.sh
+          scripts/publish-wiki.sh
