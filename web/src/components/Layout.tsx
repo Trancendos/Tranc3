@@ -9,7 +9,7 @@ interface LayoutProps {
 
 export default function Layout({ children, username, onLogout }: LayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-950 text-white">
+    <div className="flex h-screen overflow-hidden bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
       {/* Skip navigation — visible only on focus */}
       <a
         href="#main-content"

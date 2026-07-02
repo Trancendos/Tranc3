@@ -65,6 +65,7 @@ import UsersServicePage from './pages/UsersServicePage'
 import SparkDashboard from './components/spark/SparkDashboard'
 import AuthGuard from './components/AuthGuard'
 import Layout from './components/Layout'
+import { useAuthStore } from './store/authStore'
 import GlobalAccessibility from './components/GlobalAccessibility'
 import RealtimeStatusBar from './components/ui/RealtimeStatusBar'
 import LandingPage from './pages/LandingPage'
@@ -72,7 +73,14 @@ import LandingPage from './pages/LandingPage'
 const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development'
 
 function Protected({ children }: { children: React.ReactNode }) {
-  return <AuthGuard><Layout>{children}</Layout></AuthGuard>
+  const { user, logout } = useAuthStore()
+  return (
+    <AuthGuard>
+      <Layout username={user?.name} onLogout={logout}>
+        {children}
+      </Layout>
+    </AuthGuard>
+  )
 }
 
 export default function AppRouter() {
