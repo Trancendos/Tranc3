@@ -82,7 +82,8 @@ the duplication class this framework was created to eliminate.
 | Quarterly review | C | C | R | **A** |
 
 Lead AI ownership per service is defined in `PLATFORM_ENTITIES.md` (e.g. The Spark →
-Norman Hawkins). The Lead AI is **Consulted** on design and **Informed** on changes;
+Imfy, AID-SPK-01, with Norman Hawkins as its Tier-2 Prime). The Lead AI is **Consulted**
+on design and **Informed** on changes;
 accountability for correctness rests with Platform Engineering and The Town Hall.
 
 ---

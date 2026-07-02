@@ -4,7 +4,7 @@
 > is grounded in code under `src/mcp/`. Governed by
 > `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 
-**Service:** The Spark · **Slug:** `the-spark` · **Lead AI:** Norman Hawkins (Tier 3)
+**Service:** The Spark · **Slug:** `the-spark` · **Lead AI:** Imfy (AID-SPK-01, Tier 3) · **Prime:** Norman Hawkins (Tier 2)
 **Canonical status:** ✅ In repo (matches `PLATFORM_ENTITIES.md`)
 **Code root:** `src/mcp/` · **Routes prefix:** `/mcp` · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `60b3b18`
@@ -20,7 +20,7 @@
   Digital Grid status surfacing.
 - **Out of scope:** model inference (delegated to Luminous / AI Gateway), workflow
   execution (The Digital Grid), auth issuance (Infinity).
-- **Lead AI (Tier 3):** Norman Hawkins.
+- **Lead AI (Tier 3):** Imfy (AID-SPK-01); **Prime (Tier 2):** Norman Hawkins.
 - **SLOs (target):** availability 99.5%, p99 `/mcp/rpc` latency < 250 ms (excl. tool work),
   error budget 0.5%/30d.
 - **Review cadence:** Quarterly, or on any change to the JSON-RPC surface.
@@ -56,7 +56,7 @@
         (SSE subscribers notified via _SSEBus)
   ```
 - **Error handling:** JSON-RPC standard codes in `server.py`; platform canonical codes via
-  `src/errors/error_catalog.py` (358 defined). Scanner failures **fail open with logging**
+  `src/errors/error_catalog.py` (42 `ErrorCode` members defined). Scanner failures **fail open with logging**
   by design (documented in `payload_scanner.py`) so a scanner bug cannot deny all callers.
 - **Concurrency / state:** async FastAPI; `_SSEBus` fans events to subscribers; tool RAG
   index is in-process and ephemeral (rebuildable, no persistent state required to serve).
@@ -77,7 +77,7 @@
 
 ## 4. RACI Matrix
 
-| Activity | Platform Owner | Norman Hawkins (Lead AI) | Platform Eng | Town Hall | SRE/On-call |
+| Activity | Platform Owner | Imfy (Lead AI) | Platform Eng | Town Hall | SRE/On-call |
 |----------|:--:|:--:|:--:|:--:|:--:|
 | JSON-RPC surface change | A | C | R | C | I |
 | Deploy | A | I | R | I | C |

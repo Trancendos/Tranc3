@@ -16,10 +16,10 @@ Status column mirrors `PLATFORM_ENTITIES.md` — update both together.
 
 | Service | Status | Lead AI | Pack | Notes |
 |---------|--------|---------|------|-------|
-| **The Spark** | ✅ In repo | Norman Hawkins | ✅ **Complete** (reference) | `docs/services/the-spark/` |
+| **The Spark** | ✅ In repo | Imfy (Prime: Norman Hawkins) | ✅ **Complete** (reference) | `docs/services/the-spark/` |
 | The Digital Grid | ✅ In repo | Tyler Towncroft | ⬜ Pending | `src/workflow/` — next priority |
 | Infinity | ✅ Self-hosted | The Guardian | ⬜ Pending | `workers/infinity-auth/` (8005) |
-| The Nexus | 🔧 Self-hosted | The Nexus | ⬜ Pending | `workers/infinity-ws/` (8004) |
+| The Nexus | 🔧 Self-hosted | Nexus-Prime | ⬜ Pending | `workers/infinity-ws/` (8004) |
 | The Observatory | ✅ Self-hosted | Norman Hawkins | ⬜ Pending | `src/observability/` |
 | The Workshop | ✅ In repo | Larry Lowhammer | ⬜ Pending | `deploy/forgejo/` |
 | The Town Hall | ✅ Integrated | Tristuran | ⬜ Pending | `workers/cranbania/` (8071) |
