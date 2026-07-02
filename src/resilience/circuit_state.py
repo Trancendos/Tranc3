@@ -18,3 +18,13 @@ class CircuitState(str, Enum):
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "CircuitState | None":
+        # Backward compatibility: mesh formerly serialised HALF_OPEN as the
+        # hyphenated "half-open". Accept it on lookup/Pydantic validation so
+        # data serialised by an older instance (e.g. a ServiceCallResult in
+        # flight during a rolling deploy) still resolves. See TASD-001 Phase 1.
+        if value == "half-open":
+            return cls.HALF_OPEN
+        return None

@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 # Canonical CircuitState (TASD-001 Phase 1) — re-exported for backward compatibility.
 # NOTE: unifies mesh's former HALF_OPEN value "half-open" with canonical "half_open".
-from src.resilience.circuit_state import CircuitState  # noqa: F401
+from src.resilience.circuit_state import CircuitState
 
 # ── Enums ────────────────────────────────────────────────────
 

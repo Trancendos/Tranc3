@@ -524,6 +524,45 @@ class TestServiceMeshTypes:
         assert CircuitState.OPEN.value == "open"
         # TASD-001 Phase 1: canonicalised from "half-open" to "half_open".
         assert CircuitState.HALF_OPEN.value == "half_open"
+        # Backward compatibility: the legacy hyphenated value still resolves
+        # (via CircuitState._missing_) so older serialised data keeps parsing.
+        assert CircuitState("half-open") == CircuitState.HALF_OPEN
+
+    def test_circuit_state_is_str_enum(self):
+        # str-Enum: members compare equal to their string value and are str
+        # instances, so every existing `state == "open"` call site keeps working.
+        assert CircuitState.OPEN == "open"
+        assert CircuitState.CLOSED == "closed"
+        assert CircuitState.HALF_OPEN == "half_open"
+        assert isinstance(CircuitState.OPEN, str)
+
+    def test_circuit_state_canonical_identity(self):
+        # TASD-001 Phase 1: all subsystems must re-export the *same* enum object
+        # so the 3-state machine cannot drift again (catches future regressions).
+        from src.mesh.types import CircuitState as MeshCircuitState
+        from src.nanoservices.circuit_breaker.circuit_breaker import (
+            CircuitState as NanoCircuitState,
+        )
+        from src.resilience.circuit_breaker import CircuitState as ResilienceCircuitState
+        from src.resilience.circuit_state import CircuitState as CanonicalCircuitState
+        from src.validation.loop_validator import CircuitState as ValidatorCircuitState
+
+        assert (
+            MeshCircuitState
+            is ResilienceCircuitState
+            is NanoCircuitState
+            is ValidatorCircuitState
+            is CanonicalCircuitState
+        )
+
+        canonical_members = {m.name: m.value for m in CanonicalCircuitState}
+        for enum_cls in (
+            MeshCircuitState,
+            ResilienceCircuitState,
+            NanoCircuitState,
+            ValidatorCircuitState,
+        ):
+            assert {m.name: m.value for m in enum_cls} == canonical_members
 
     def test_health_status_enum_values(self):
         assert HealthStatus.HEALTHY.value == "healthy"

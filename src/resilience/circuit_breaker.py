@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, Optional
 from Dimensional.sanitize import sanitize_for_log
 
 # Canonical CircuitState (TASD-001 Phase 1) — re-exported for backward compatibility.
-from src.resilience.circuit_state import CircuitState  # noqa: F401
+from src.resilience.circuit_state import CircuitState
 
 logger = logging.getLogger(__name__)
 
