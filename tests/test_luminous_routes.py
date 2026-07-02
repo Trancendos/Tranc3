@@ -35,7 +35,9 @@ async def test_phi_returns_value_or_503():
 
 
 async def test_neuromorphic_requires_input():
-    res = await neuromorphic_process({"timesteps": 5})  # missing input → 400 (or 503 if torch absent)
+    res = await neuromorphic_process(
+        {"timesteps": 5}
+    )  # missing input → 400 (or 503 if torch absent)
     assert getattr(res, "status_code", None) in {400, 503}
 
 
