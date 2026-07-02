@@ -522,7 +522,8 @@ class TestServiceMeshTypes:
     def test_circuit_state_enum_values(self):
         assert CircuitState.CLOSED.value == "closed"
         assert CircuitState.OPEN.value == "open"
-        assert CircuitState.HALF_OPEN.value == "half-open"
+        # TASD-001 Phase 1: canonicalised from "half-open" to "half_open".
+        assert CircuitState.HALF_OPEN.value == "half_open"
 
     def test_health_status_enum_values(self):
         assert HealthStatus.HEALTHY.value == "healthy"
