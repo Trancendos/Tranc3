@@ -103,7 +103,11 @@
 - **Downstream:** audit store; archived events flow to The Basement (planned); metrics
   scraped by Prometheus.
 - **Events:** SSE `/sse` broadcasts live audit events; `ProactiveAlert` → `SelfHealer`.
-- **Auth boundary:** ingest/query behind platform auth (Infinity); actor extracted per event.
+- **Auth boundary (current):** ingest (`POST /events`) checks a shared `X-Internal-Secret`
+  header *only when* `INTERNAL_SECRET` is set (`routes.py`); the query/export/SSE routes
+  (`/recent`, `/stats`, `/search`, `/export`, `/sse`, `/verify`, `/health`) are **currently
+  unauthenticated** — front them with platform auth (Infinity) at the gateway (**PLANNED**).
+  Actor is taken from the event payload, not from an authenticated principal.
 - **Data classification:** audit payloads may contain PII/action detail — **sanitised**
   (`_sanitise`) before storage; secrets never recorded.
 

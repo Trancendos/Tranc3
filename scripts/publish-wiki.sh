@@ -27,12 +27,31 @@ if [[ ! -d "${SRC}" ]]; then
 fi
 
 echo "→ Cloning wiki: ${WIKI_REMOTE}"
-if ! git clone --quiet "${WIKI_REMOTE}" "${WORKDIR}/wiki" 2>/dev/null; then
-  # A brand-new wiki has no commits yet; init an empty repo to push into.
-  echo "  (wiki empty or unclonable — initialising fresh)"
+# Capture git's stderr rather than discarding it: a clone failure can be a
+# never-created wiki (legitimate first publish) OR a real error (auth, DNS,
+# permissions, bad remote). Silently treating every failure as "empty wiki"
+# hides the real cause and only surfaces later as a confusing push failure.
+CLONE_LOG="$(mktemp)"
+if git clone --quiet "${WIKI_REMOTE}" "${WORKDIR}/wiki" 2>"${CLONE_LOG}"; then
+  # Success — an existing-but-empty wiki clones with a warning and no commits;
+  # that is fine, the first commit is created below. Echo any git notices.
+  [[ -s "${CLONE_LOG}" ]] && cat "${CLONE_LOG}" >&2
+elif grep -qiE 'not found|does not exist|not exported|empty repository' "${CLONE_LOG}"; then
+  # The wiki repo has not been created yet (first publish). Initialise fresh,
+  # but still surface exactly what git reported so an auth/permission problem
+  # masquerading as "not found" is not lost.
+  echo "  (wiki not yet initialised — creating a fresh repo to push into)"
+  echo "  git reported:" >&2; cat "${CLONE_LOG}" >&2
   git init --quiet "${WORKDIR}/wiki"
   git -C "${WORKDIR}/wiki" remote add origin "${WIKI_REMOTE}"
+else
+  # Unrecognised failure (auth, DNS, permissions, bad remote) — fail loudly.
+  echo "error: failed to clone wiki repo (${WIKI_REMOTE}):" >&2
+  cat "${CLONE_LOG}" >&2
+  rm -f "${CLONE_LOG}"
+  exit 1
 fi
+rm -f "${CLONE_LOG}"
 
 echo "→ Mirroring wiki-content/ into the wiki (preserving structure)"
 # Remove previously-published pages so deletions propagate, but keep .git.

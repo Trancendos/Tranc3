@@ -118,8 +118,12 @@
 - **Scaling levers:** stateless token verification scales horizontally; cache JWKS at callers;
   keep the SQLite writer single and scale verification replicas.
 - **Bottlenecks:** SQLite write contention on registration/refresh; Argon2 CPU cost (intentional).
-- **Zero-cost limits & hard stops:** no paid IdP dependency. Rate limiting via in-memory
-  token-bucket (`RateLimiter`) enforces per-caller ceilings and fails closed on abuse.
+- **Zero-cost limits & hard stops:** no paid IdP dependency. Rate limiting via an in-memory
+  sliding-window limiter (`RateLimiter`, `service.py`) — a **per-instance** ceiling (per-process
+  `dict`, not shared across replicas nor persisted across restarts). It bounds each replica and
+  denies over-limit callers on that instance; under the horizontal scaling above it does **not**
+  enforce a single global per-caller total. A shared backend (the platform `rate-limit-service`,
+  port 8028) is required for a cluster-wide ceiling (**PLANNED**).
 - **Degradation:** if the DB is read-only/unavailable, already-issued tokens still verify
   (stateless JWT); new logins/refresh degrade until the DB recovers.
 
