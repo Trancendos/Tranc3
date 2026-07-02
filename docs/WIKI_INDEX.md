@@ -93,3 +93,8 @@ DRY_RUN=1 scripts/publish-wiki.sh  # build the commit without pushing (preview)
 Requires push access to `…/Tranc3.wiki.git`. To **add or edit** a wiki page: change the file
 under `wiki-content/` on a branch, get it reviewed, regenerate `_Sidebar.md` if you added a
 page, then re-run the script. The wiki is a mirror of `wiki-content/` — never edit it directly.
+
+**Automated publishing:** `.github/workflows/publish-wiki.yml` runs the script automatically
+on every push to `main` that touches `wiki-content/` (and supports manual dispatch), so the
+live wiki stays in sync hands-free. It authenticates with the default `GITHUB_TOKEN`, or a
+`WIKI_TOKEN` secret (PAT with `repo` scope) if the org restricts default-token wiki writes.
