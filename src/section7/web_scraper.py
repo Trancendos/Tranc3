@@ -48,13 +48,19 @@ def _fetch_url(
     if headers:
         hdrs.update(headers)
 
+    from urllib.parse import urlparse as _urlparse
+
+    _scheme = _urlparse(url).scheme
+    if _scheme not in ("http", "https"):
+        raise ValueError(f"_fetch_url: only http/https URLs are permitted, got scheme {_scheme!r}")
+
     last_exc: Exception = RuntimeError("no attempts made")
     for attempt in range(_MAX_RETRIES):
         if attempt > 0:
             _sleep(_BACKOFF_BASE**attempt)
         try:
             req = urllib.request.Request(url, headers=hdrs)
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 — scheme validated above
                 return resp.read()
         except Exception as exc:
             last_exc = exc

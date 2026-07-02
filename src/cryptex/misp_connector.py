@@ -20,6 +20,7 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,11 @@ class MISPConnector:
         timeout: int = 10,
         verify_ssl: bool = True,
     ) -> None:
-        self._url = (misp_url or _MISP_URL).rstrip("/")
+        raw_url = (misp_url or _MISP_URL).rstrip("/")
+        _scheme = urlparse(raw_url).scheme
+        if _scheme not in ("http", "https"):
+            raise ValueError(f"MISPConnector: URL scheme must be http or https, got {_scheme!r}")
+        self._url = raw_url
         self._api_key = api_key or _MISP_API_KEY
         self._timeout = timeout
         self._verify_ssl = verify_ssl
@@ -345,7 +350,7 @@ class MISPConnector:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
             self._record_request()
-            with urlopen(req, timeout=self._timeout, context=ctx) as resp:
+            with urlopen(req, timeout=self._timeout, context=ctx) as resp:  # nosec B310 — scheme validated in __init__
                 raw = resp.read()
                 return json.loads(raw) if raw else {}
         except URLError as exc:
@@ -375,7 +380,7 @@ class MISPConnector:
                 ctx = ssl.create_default_context()
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
-            with urlopen(req, timeout=self._timeout, context=ctx):
+            with urlopen(req, timeout=self._timeout, context=ctx):  # nosec B310 — scheme validated in __init__
                 self._available = True
                 logger.info("MISP is back online — flushing buffer")
                 self._flush_buffer()
@@ -415,7 +420,7 @@ class MISPConnector:
                 _CIRCL_FEED_URL,
                 headers={"Accept": "text/html,application/json"},
             )
-            with urlopen(req, timeout=self._timeout) as resp:
+            with urlopen(req, timeout=self._timeout) as resp:  # nosec B310 — _CIRCL_FEED_URL is hardcoded https://
                 _ = resp.read()
                 # CIRCL feed page is HTML documentation; treat as a signal that
                 # the fallback endpoint is reachable but does not serve raw JSON.
