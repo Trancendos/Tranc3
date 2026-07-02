@@ -204,18 +204,18 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | files-service | 8014 | P2 | `workers/files-service/` | infinity-files-api |
 | identity-service | 8015 | P2 | `workers/identity-service/` | infinity-os-identity |
 | analytics-service | 8016 | P3 | `workers/analytics-service/` | Analytics / metrics store |
-| audit-service | 8017 | P3 | `workers/audit-service/` | The Observatory audit trail |
-| cache-service | 8018 | P3 | `workers/cache-service/` | Distributed cache layer |
-| cdn-service | 8019 | P3 | `workers/cdn-service/` | Static asset delivery |
-| config-service | 8020 | P3 | `workers/config-service/` | Central configuration |
+| audit-service | 8025 | P3 | `workers/audit-service/` | The Observatory audit trail |
+| cache-service | 8023 | P3 | `workers/cache-service/` | Distributed cache layer |
+| cdn-service | 8028 | P3 | `workers/cdn-service/` | Static asset delivery |
+| config-service | 8024 | P3 | `workers/config-service/` | Central configuration |
 | cron-service | 8021 | P3 | `workers/cron-service/` | ChronosSphere task scheduler |
-| email-service | 8022 | P3 | `workers/email-service/` | Arcadia email hub |
-| geo-service | 8023 | P3 | `workers/geo-service/` | Geographic routing |
-| search-service | 8024 | P3 | `workers/search-service/` | Full-text + semantic search |
-| sms-service | 8025 | P3 | `workers/sms-service/` | SMS gateway |
-| storage-service | 8026 | P3 | `workers/storage-service/` | IPFS + local blob storage |
-| queue-service | 8027 | P3 | `workers/queue-service/` | The HIVE task queue |
-| rate-limit-service | 8028 | P3 | `workers/rate-limit-service/` | Token-bucket rate limiter |
+| email-service | 8018 | P3 | `workers/email-service/` | Arcadia email hub |
+| geo-service | 8027 | P3 | `workers/geo-service/` | Geographic routing |
+| search-service | 8017 | P3 | `workers/search-service/` | Full-text + semantic search |
+| sms-service | 8019 | P3 | `workers/sms-service/` | SMS gateway |
+| storage-service | 8020 | P3 | `workers/storage-service/` | IPFS + local blob storage |
+| queue-service | 8022 | P3 | `workers/queue-service/` | The HIVE task queue |
+| rate-limit-service | 8026 | P3 | `workers/rate-limit-service/` | Token-bucket rate limiter |
 | health-aggregator | 8029 | P3 | `workers/health-aggregator/` | Platform-wide health roll-up |
 | gbrain-bridge | 8030 | P3 | `workers/gbrain-bridge/` | GBrain AI bridge |
 | topology-service | 8031 | P3 | `workers/topology-service/` | Service topology graph |
@@ -228,7 +228,7 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | haystack-service | 8097 | P3 | `workers/haystack-service/` | Haystack — production RAG pipelines |
 | dspy-service | 8098 | P3 | `workers/dspy-service/` | DSPy — programmatic LLM prompt compiler |
 | deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
-| vault-service | 8086 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
+| vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
 | mlflow-service | 8039 | P3 | `workers/mlflow-service/` | MLflow experiment tracking |
 | litellm-service | 8040 | P3 | `workers/litellm-service/` | LiteLLM zero-cost AI proxy (x10 provider rotation) |
 | artifactory-service | 8047 | P2 | `workers/artifactory-service/` | The Artifactory — Zot OCI registry bridge |
@@ -239,30 +239,37 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | ice-box-service | 8052 | P3 | `workers/ice-box-service/` | The Ice Box — sandbox threat isolation |
 | cryptex | 8053 | P3 | `workers/cryptex/` | Cryptex — cyber defense / threat intel |
 | imaginarium | 8054 | P3 | `workers/imaginarium/` | Imaginarium — omni-creative orchestrator |
-| the-studio | 8055 | P3 | `workers/the-studio/` | The Studio — central creativity hub |
-| the-academy | 8056 | P3 | `workers/the-academy/` | The Academy — LMS / skill training |
-| the-dutchy | 8057 | P3 | `workers/the-dutchy/` | The Dutchy — intelligence & market analysis |
-| turings-hub-service | 8058 | P3 | `workers/turings-hub-service/` | Turing's Hub — AI personality creator |
-| tranceflow | 8059 | P3 | `workers/tranceflow/` | TranceFlow — 3D/game creation (Godot) |
-| vrar3d | 8060 | P3 | `workers/vrar3d/` | VRAR3D — Three.js / A-Frame immersion |
-| tateking | 8061 | P3 | `workers/tateking/` | TateKing — video creation/editing |
-| sashas-photo-studio | 8062 | P3 | `workers/sashas-photo-studio/` | Sashas Photo Studio — image generation |
-| fabulousa-service | 8063 | P3 | `workers/fabulousa-service/` | Fabulousa — UX/UI/design (Penpot) |
-| the-lab | 8064 | P3 | `workers/the-lab/` | The Lab — code creation platform |
-| observatory | 8065 | P3 | `workers/observatory/` | The Observatory — audit trail worker |
+| the-studio | TBD¹ | P3 | `workers/the-studio/` | The Studio — central creativity hub |
+| the-academy | TBD¹ | P3 | `workers/the-academy/` | The Academy — LMS / skill training |
+| the-dutchy | 8058 | P3 | `workers/the-dutchy/` | The Dutchy — intelligence & market analysis |
+| turings-hub-service | TBD¹ | P3 | `workers/turings-hub-service/` | Turing's Hub — AI personality creator |
+| tranceflow | TBD¹ | P3 | `workers/tranceflow/` | TranceFlow — 3D/game creation (Godot) |
+| vrar3d | 8063 | P3 | `workers/vrar3d/` | VRAR3D — Three.js / A-Frame immersion |
+| tateking | TBD¹ | P3 | `workers/tateking/` | TateKing — video creation/editing |
+| sashas-photo-studio | TBD¹ | P3 | `workers/sashas-photo-studio/` | Sashas Photo Studio — image generation |
+| fabulousa-service | TBD¹ | P3 | `workers/fabulousa-service/` | Fabulousa — UX/UI/design (Penpot) |
+| the-lab | 8055 | P3 | `workers/the-lab/` | The Lab — code creation platform |
+| observatory | TBD¹ | P3 | `workers/observatory/` | The Observatory — audit trail worker |
 | lab-service | 8066 | P3 | `workers/lab-service/` | The Lab extended service layer |
 | library-service | 8067 | P3 | `workers/library-service/` | The Library — knowledge base / wiki |
 | basement | 8068 | P3 | `workers/basement/` | The Basement — archived info store |
-| devocity | 8069 | P3 | `workers/devocity/` | DevOcity — development ops hub |
-| warp-tunnel | 8072 | P3 | `workers/warp-tunnel/` | The Warp Tunnel — crypto scanner / quarantine |
-| warp-radio | 8073 | P3 | `workers/warp-radio/` | Warp Radio — music/audio streaming |
-| taimra | 8074 | P3 | `workers/taimra/` | tAimra — opt-in digital twin |
-| imind | 8075 | P3 | `workers/imind/` | I-Mind — emotion sensitivity engine |
-| resonate | 8076 | P3 | `workers/resonate/` | Resonate — empathy engine |
+| devocity | 8059 | P3 | `workers/devocity/` | DevOcity — development ops hub |
+| warp-tunnel | 8056 | P3 | `workers/warp-tunnel/` | The Warp Tunnel — crypto scanner / quarantine |
+| warp-radio | 8057 | P3 | `workers/warp-radio/` | Warp Radio — music/audio streaming |
+| taimra | 8062 | P3 | `workers/taimra/` | tAimra — opt-in digital twin |
+| imind | 8061 | P3 | `workers/imind/` | I-Mind — emotion sensitivity engine |
+| resonate | 8064 | P3 | `workers/resonate/` | Resonate — empathy engine |
 | tranquility | 8077 | P3 | `workers/tranquility/` | Tranquility — wellbeing hub |
 | backup-service | 8078 | P3 | `workers/backup-service/` | Backup — automated data backup |
-| chaos-party | 8079 | P3 | `workers/chaos-party/` | The Chaos Party — central testing platform |
-| infinity-void | 8082 | P3 | `workers/infinity-void/` | The Void — self-hosted AES-GCM vault |
+| chaos-party | 8065 | P3 | `workers/chaos-party/` | The Chaos Party — central testing platform |
+| infinity-void | 8002 | P3 | `workers/infinity-void/` | The Void — self-hosted AES-GCM vault |
+
+> **Port source of truth:** the port column above is aligned to each worker's actual
+> `Dockerfile EXPOSE` (deployment truth), reconciled against `PLATFORM_ENTITIES.md`.
+> ¹ `TBD` marks a worker whose code port currently **collides** with another worker's
+> `EXPOSE` (11 duplicated ports across the fleet, e.g. `8053` is bound by three services)
+> or is otherwise unvalidated. These need a canonical assignment — tracked in the port
+> registry reconciliation issue; do not treat a `TBD` row as a usable port until resolved.
 
 ### Production Infrastructure Stack
 
