@@ -28,22 +28,7 @@ It exists to prevent two failure modes:
 >
 > **Source split:** identity/ownership (canonical name, Lead AI, PID) → `PLATFORM_ENTITIES.md`
 > / `src/entities/platform.py`; implementation status (✅/🔧) → `CLAUDE.md` service table.
-
-### 2.1 Status vocabulary → gate tier (normalization)
-
-The `CLAUDE.md` service table uses several status labels. Docs keep that exact label
-(it carries deployment nuance), but the honesty gate and any CI automation operate on the
-three **gate tiers** below. This is the single source of truth for the mapping:
-
-| Canonical status label (from `CLAUDE.md`) | Gate tier | Required pack |
-|------------------------------------------------------|-----------|---------------|
-| `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 11-artifact pack, code-grounded |
-| `🔧 Partial`, `🔧 Migrating`, `🔧 Self-hosted` | **Partial** | Live pack, scoped to what exists; gaps flagged |
-| `🔧 Planned` | **Planned** | GOV + RACI + TFM + POL + STD only |
-
-> A `✅` label always maps to **Live**; a `🔧` label maps to **Partial** unless it is
-> exactly `🔧 Planned`, which maps to **Planned**. Automation keys off the emoji + the
-> word `Planned`, so new nuance labels remain forward-compatible.
+> The status→gate-tier normalization that drives artifact requirements is defined in §2.1.
 
 ---
 
@@ -72,6 +57,22 @@ and procedures already in `docs/policies/`, `docs/procedures/`, `docs/defstan/` 
 **referenced**, not duplicated. A service Policy artifact records only the *deltas and
 applicability* for that service. This keeps the single-source-of-truth intact and avoids
 the duplication class this framework was created to eliminate.
+
+### 2.1 Status vocabulary → gate tier (normalization)
+
+The `CLAUDE.md` service table uses several status labels. Docs keep that exact label
+(it carries deployment nuance), but the honesty gate and any CI automation operate on the
+three **gate tiers** below. This is the single source of truth for the mapping:
+
+| Canonical status label (from `CLAUDE.md`) | Gate tier | Required pack |
+|------------------------------------------------------|-----------|---------------|
+| `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 11-artifact pack, code-grounded |
+| `🔧 Partial`, `🔧 Migrating`, `🔧 Self-hosted` | **Partial** | Live pack, scoped to what exists; gaps flagged |
+| `🔧 Planned` | **Planned** | GOV + RACI + TFM + POL + STD only |
+
+> A `✅` label always maps to **Live**; a `🔧` label maps to **Partial** unless it is
+> exactly `🔧 Planned`, which maps to **Planned**. Automation keys off the emoji + the
+> word `Planned`, so new nuance labels remain forward-compatible.
 
 ---
 
