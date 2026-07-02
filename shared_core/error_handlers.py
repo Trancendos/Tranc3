@@ -7,4 +7,4 @@ automation remediator scripts hard-code that import path.
 """
 
 from Dimensional.error_handlers import *  # noqa: F401, F403
-from Dimensional.error_handlers import safe_error_detail, SafeHTTPException  # noqa: F401
+from Dimensional.error_handlers import SafeHTTPException, safe_error_detail  # noqa: F401
