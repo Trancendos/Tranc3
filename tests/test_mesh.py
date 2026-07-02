@@ -527,6 +527,10 @@ class TestServiceMeshTypes:
         # Backward compatibility: the legacy hyphenated value still resolves
         # (via CircuitState._missing_) so older serialised data keeps parsing.
         assert CircuitState("half-open") == CircuitState.HALF_OPEN
+        # _missing_ only aliases the one legacy value — any other unknown value
+        # is still rejected (it must not silently coerce bad data to a state).
+        with pytest.raises(ValueError):
+            CircuitState("not-a-state")
 
     def test_circuit_state_is_str_enum(self):
         # str-Enum: members compare equal to their string value and are str
