@@ -122,8 +122,10 @@
   sliding-window limiter (`RateLimiter`, `service.py`) — a **per-instance** ceiling (per-process
   `dict`, not shared across replicas nor persisted across restarts). It bounds each replica and
   denies over-limit callers on that instance; under the horizontal scaling above it does **not**
-  enforce a single global per-caller total. A shared backend (the platform `rate-limit-service`,
-  port 8028) is required for a cluster-wide ceiling (**PLANNED**).
+  enforce a single global per-caller total. A shared backend (the platform `rate-limit-service`)
+  is required for a cluster-wide ceiling (**PLANNED**). *Registry note:* the port for that worker
+  is unreconciled — `CLAUDE.md` lists `8028`, `PLATFORM_ENTITIES.md` lists `8026` (with `8028`
+  assigned to `cdn-service`); resolve against the canonical registry before wiring.
 - **Degradation:** if the DB is read-only/unavailable, already-issued tokens still verify
   (stateless JWT); new logins/refresh degrade until the DB recovers.
 
