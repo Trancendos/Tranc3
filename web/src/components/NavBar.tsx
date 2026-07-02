@@ -105,14 +105,14 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
   return (
     <nav
       aria-label="Main navigation"
-      className={`flex flex-col h-full bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 ${
+      className={`flex flex-col h-full bg-card border-r border-border transition-all duration-200 ${
         collapsed ? 'w-14' : 'w-52'
       }`}
     >
       {/* Logo / collapse toggle */}
-      <div className="flex items-center justify-between px-3 py-4 border-b border-[hsl(var(--border))]">
+      <div className="flex items-center justify-between px-3 py-4 border-b border-border">
         {!collapsed && (
-          <span className="text-[hsl(var(--primary))] font-bold text-sm tracking-widest select-none" aria-hidden="true">
+          <span className="text-primary font-bold text-sm tracking-widest select-none" aria-hidden="true">
             TRANC3
           </span>
         )}
@@ -121,7 +121,7 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
           aria-expanded={!collapsed}
           aria-controls="sidebar-nav-list"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors ml-auto rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1 focus-visible:ring-offset-[hsl(var(--card))] p-0.5"
+          className="text-muted-foreground hover:text-foreground transition-colors ml-auto rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card p-0.5"
         >
           {collapsed
             ? <ChevronRight size={16} aria-hidden="true" />
@@ -152,10 +152,10 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
                     aria-current={active ? 'page' : undefined}
                     aria-label={collapsed ? item.label : undefined}
                     title={collapsed ? item.label : undefined}
-                    className={`flex items-center gap-3 px-2 py-2 text-sm rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] ${
+                    className={`flex items-center gap-3 px-2 py-2 text-sm rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       active
-                        ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-sm shadow-[hsl(var(--primary)/0.3)]'
-                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
                     <span className="flex-shrink-0" aria-hidden="true">{item.icon}</span>
@@ -178,16 +178,16 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
 
       {/* User footer */}
       {username && (
-        <div className="border-t border-[hsl(var(--border))] p-2">
+        <div className="border-t border-border p-2">
           <div className="flex items-center gap-2 px-1">
             <div
-              className="w-7 h-7 rounded-full bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0"
+              className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
               aria-hidden="true"
             >
-              <User size={14} className="text-[hsl(var(--primary-foreground))]" aria-hidden="true" />
+              <User size={14} className="text-primary-foreground" aria-hidden="true" />
             </div>
             {!collapsed && (
-              <span className="text-[hsl(var(--muted-foreground))] text-xs truncate flex-1" title={username}>
+              <span className="text-muted-foreground text-xs truncate flex-1" title={username}>
                 {username}
               </span>
             )}
@@ -196,7 +196,7 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
                 onClick={onLogout}
                 aria-label="Sign out"
                 title="Sign out"
-                className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] transition-colors flex-shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--destructive))] p-0.5"
+                className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive p-0.5"
               >
                 <LogOut size={14} aria-hidden="true" />
               </button>
