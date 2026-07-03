@@ -47,7 +47,7 @@
 ### Auth
 - **WebSocket:** JWT via `pyjwt` (`verify_token`, `algorithms=["HS256"]`, keyed by `JWT_SECRET`);
   `ExpiredSignatureError`/`InvalidTokenError` return `None` (rejected). `JWT_SECRET` is **required** —
-  the module warns loudly if it is unset.
+  the worker **raises a `RuntimeError` and fails fast at import/startup** if it is unset.
 - **Internal HTTP:** shared `X-Internal-Secret` header on `/stats` + `/channels`.
 
 ## 3. Technical Architecture Solutions Design (TASD)
@@ -104,7 +104,8 @@
 
 ## 10. Runbook (RUN)
 
-- **Startup warns about `JWT_SECRET`:** the env var is unset — the hub cannot authenticate sockets; set it.
+- **Startup crashes (`RuntimeError`) about `JWT_SECRET`:** the env var is unset — the worker fails fast
+  at import and will not start; set it (`python -c "import secrets; print(secrets.token_hex(32))"`).
 - **`/stats` / `/channels` return 401:** `INTERNAL_SECRET` is set and the caller's `X-Internal-Secret`
   header is missing/wrong.
 - **Clients silently rejected on connect:** JWT invalid/expired (`verify_token` returns `None`); verify
