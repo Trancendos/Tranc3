@@ -21,7 +21,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = 8038
+WORKER_PORT = int(os.getenv("PORT") or "8038")
 WORKER_NAME = "the-void"
 DB_PATH = Path(__file__).parent / "data" / "vault.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

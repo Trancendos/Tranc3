@@ -25,7 +25,7 @@ from typing import Optional
 from fastapi import APIRouter, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-WORKER_PORT = 8040
+WORKER_PORT = int(os.getenv("PORT") or "8040")
 WORKER_NAME = "warp-tunnel"
 DB_PATH = Path(__file__).parent / "data" / "warp_tunnel.db"
 QUARANTINE_DIR = Path(__file__).parent / "data" / "quarantine"

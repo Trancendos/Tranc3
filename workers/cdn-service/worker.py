@@ -34,7 +34,7 @@ from Dimensional.path_validation import (
 # validate_existing_file is an alias for existing_file_path_str
 validate_existing_file = existing_file_path_str
 
-WORKER_PORT = 8028
+WORKER_PORT = int(os.getenv("PORT") or "8028")
 WORKER_NAME = "cdn-service"
 DB_PATH = Path(__file__).parent / "data" / "cdn.db"
 ASSETS_ROOT = Path(__file__).parent / "data" / "assets"

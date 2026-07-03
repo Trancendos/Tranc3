@@ -25,7 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WORKER_PORT = 8011
+WORKER_PORT = int(os.getenv("PORT") or "8011")
 WORKER_NAME = "products-service"
 DB_PATH = Path(__file__).parent / "data" / "products.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

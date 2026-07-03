@@ -41,7 +41,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-WORKER_PORT = 8021
+WORKER_PORT = int(os.getenv("PORT") or "8021")
 WORKER_NAME = "cron-service"
 DB_PATH = Path(os.environ.get("CRON_DB_PATH", "/data/cron.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

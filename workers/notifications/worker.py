@@ -35,7 +35,7 @@ from Dimensional.url_validation import SSRFError, validate_webhook_url
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WORKER_PORT = 8008
+WORKER_PORT = int(os.getenv("PORT") or "8008")
 WORKER_NAME = "notifications-service"
 DB_PATH = Path(__file__).parent / "data" / "notifications.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
