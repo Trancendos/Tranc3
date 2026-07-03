@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-WORKER_PORT = 8026
+WORKER_PORT = int(os.getenv("PORT", "8026"))
 WORKER_NAME = "rate-limit-service"
 DB_PATH = Path(__file__).parent / "data" / "ratelimit.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

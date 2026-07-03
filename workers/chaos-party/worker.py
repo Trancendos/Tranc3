@@ -24,7 +24,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = 8063
+WORKER_PORT = int(os.getenv("PORT", "8063"))
 WORKER_NAME = "chaos-party"
 DB_PATH = Path(__file__).parent / "data" / "chaos.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

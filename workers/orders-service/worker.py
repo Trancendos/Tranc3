@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WORKER_PORT = 8012
+WORKER_PORT = int(os.getenv("PORT", "8012"))
 WORKER_NAME = "arcadian-exchange"
 DB_PATH = Path(__file__).parent / "data" / "exchange.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-WORKER_PORT = 8050
+WORKER_PORT = int(os.getenv("PORT", "8050"))
 WORKER_NAME = "blender-worker"
 
 RENDERS_DIR = Path(os.environ.get("RENDERS_DIR", "/app/renders"))

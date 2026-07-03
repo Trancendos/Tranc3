@@ -43,7 +43,7 @@ from pydantic import BaseModel, Field
 # Configuration
 # ---------------------------------------------------------------------------
 
-WORKER_PORT = 8030
+WORKER_PORT = int(os.getenv("PORT", "8030"))
 WORKER_NAME = "gbrain-bridge"
 DB_PATH = Path(__file__).parent / "data" / "gbrain.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

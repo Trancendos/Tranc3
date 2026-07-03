@@ -51,7 +51,7 @@ from src.entities.health_metadata import health_entity_block
 logger = logging.getLogger("tranc3.workers.backup-service")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 
-WORKER_PORT = 8039
+WORKER_PORT = int(os.getenv("PORT", "8039"))
 BACKUP_ROOT = Path(os.environ.get("BACKUP_ROOT", "/data/backups"))
 
 engine = BackupEngine(backup_root=BACKUP_ROOT, encrypt=True)
