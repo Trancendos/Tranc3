@@ -76,7 +76,7 @@ PLATFORM_INFRA_MODE=LOCAL_ONLY python scripts/citadel_deploy_all.py --local
 
 1. Set `PLATFORM_INFRA_MODE=LOCAL_ONLY` in `.env` / `.env.production`.
 2. Run `scripts/citadel_deploy_all.py --local` (or `make citadel-deploy-all` with local mode).
-3. Follow `deploy/traefik/DNS_CUTOVER.md` when cutting DNS to Citadel.
+3. Follow `deploy/DNS_CUTOVER.md` when cutting DNS to Citadel.
 
 Until then, stay on **CLOUD_ONLY** — cloud auto-rotation and proactive systems are designed for that path.
 
