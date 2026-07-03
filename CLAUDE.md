@@ -272,15 +272,23 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 > compose mapping (`email-service` `8018`, `search-service` `8017`, `queue-service` `8022`, …), which
 > also matches what those workers' code binds.
 >
-> **Known routing defects (issue #188) — code binds a port compose does not route to, and compose sets
-> no `PORT` env to override it, so the container is unreachable at the routed port** (same class as the
-> chaos-party defect). Confirmed for **5 workers**: `audit-service` (code 8017 vs compose 8025),
-> `hive-service` (8060 vs 8051), `queue-service` (8027 vs 8022), `search-service` (8083 vs 8017), and
-> `infinity-void` (8082 vs 8002 — entangled with the vault's documented `8082` app default; see
-> `docs/services/the-void/`). Each needs a per-worker decision (fix the code default to the compose
-> port, or set `PORT`/re-map compose) — not a bulk edit, since some code ports collide with other
-> workers' compose ports (`queue-service`'s 8027 == `geo-service`'s compose port). Tracked in **#188**.
-> `Dockerfile EXPOSE` values remain cosmetic (the app reads `PORT` at runtime); syncing them is also #188.
+> **Known routing defects (issue #188).** A worker's code binds `PORT` (default shown), but compose
+> routes to a different port and sets **no `PORT` env** to override it, so the container is unreachable
+> at the routed port (same class as the chaos-party defect). Confirmed for **4 workers**:
+>
+> | Worker | code binds (`PORT` default) | compose routes | note |
+> |---|---|---|---|
+> | `audit-service` | 8017 | 8025 | — |
+> | `queue-service` | 8027 | 8022 | code's 8027 == `geo-service`'s compose port (collision if adopted) |
+> | `search-service` | 8083 | 8017 | 8083 matches neither registry |
+> | `infinity-void` | 8082 | 8002 | entangled with the vault's documented `8082` app default (`docs/services/the-void/`) |
+>
+> Each needs a **per-worker decision** (fix the code default to the compose port, or set `PORT` / re-map
+> compose) — not a bulk edit, given the collision and the vault entanglement. Workers that read a
+> *custom* port env instead of `PORT` (e.g. `hive-service` → `HIVE_PORT=8051`, `cache-service` →
+> `CACHE_PORT`, `storage-service` → `STORAGE_PORT`) are **not** defects — compose sets that var, so they
+> route correctly. `Dockerfile EXPOSE` values remain cosmetic (the app reads its port env at runtime);
+> syncing them is also #188.
 
 ### Production Infrastructure Stack
 
