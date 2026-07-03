@@ -230,10 +230,23 @@ class EncryptedKVStore:
         self.db_path = db_path
         self.table = table
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        self._conn.execute(
-            f"CREATE TABLE IF NOT EXISTS {self.table} "
+
+        # SQL strings are built once here, immediately after the table name is
+        # validated by _TABLE_NAME_RE above — no user-controlled input reaches them.
+        _t = table
+        self._sql_create = (
+            f"CREATE TABLE IF NOT EXISTS {_t} "  # nosec B608
             "(key_hash TEXT PRIMARY KEY, value_enc TEXT NOT NULL, updated_at TEXT NOT NULL)"
         )
+        self._sql_upsert = (
+            f"INSERT INTO {_t} (key_hash, value_enc, updated_at) "  # nosec B608
+            "VALUES (?,?,?) ON CONFLICT(key_hash) DO UPDATE "
+            "SET value_enc=excluded.value_enc, updated_at=excluded.updated_at"
+        )
+        self._sql_select = f"SELECT value_enc FROM {_t} WHERE key_hash=?"  # nosec B608
+        self._sql_delete = f"DELETE FROM {_t} WHERE key_hash=?"  # nosec B608
+
+        self._conn.execute(self._sql_create)
         self._conn.commit()
 
     def _key_hash(self, key: str) -> str:
@@ -251,25 +264,19 @@ class EncryptedKVStore:
         h = self._key_hash(key)
         enc = encrypt_field(self.db_path, value)
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(  # nosec B608 -- table name is class-internal config, not user input
-            f"INSERT INTO {self.table} (key_hash, value_enc, updated_at) "
-            "VALUES (?,?,?) ON CONFLICT(key_hash) DO UPDATE SET value_enc=excluded.value_enc, updated_at=excluded.updated_at",
-            (h, enc, now),
-        )
+        self._conn.execute(self._sql_upsert, (h, enc, now))
         self._conn.commit()
 
     def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
         h = self._key_hash(key)
-        row = self._conn.execute(  # nosec B608 -- table name is class-internal config, not user input
-            f"SELECT value_enc FROM {self.table} WHERE key_hash=?", (h,)
-        ).fetchone()
+        row = self._conn.execute(self._sql_select, (h,)).fetchone()
         if row is None:
             return default
         return decrypt_field(self.db_path, row[0])
 
     def delete(self, key: str) -> bool:
         h = self._key_hash(key)
-        cur = self._conn.execute(f"DELETE FROM {self.table} WHERE key_hash=?", (h,))  # nosec B608 -- table name is class-internal config, not user input
+        cur = self._conn.execute(self._sql_delete, (h,))
         self._conn.commit()
         return cur.rowcount > 0
 

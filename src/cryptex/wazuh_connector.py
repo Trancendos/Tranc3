@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 _WAZUH_URL = os.getenv("WAZUH_URL", "http://localhost:55000")
 _WAZUH_USER = os.getenv("WAZUH_USER", "wazuh")
 _WAZUH_PASSWORD = os.getenv("WAZUH_PASSWORD", "")
-_BUFFER_DB = os.getenv("WAZUH_BUFFER_DB", "/tmp/wazuh_buffer.db")
+_BUFFER_DB = os.getenv("WAZUH_BUFFER_DB", "/app/data/wazuh_buffer.db")
 
 _RATE_LIMIT_PER_MIN = 100  # hard stop
 _TOKEN_TTL = 900  # Wazuh JWT expires after 15 minutes by default
@@ -47,6 +47,9 @@ _TOKEN_TTL = 900  # Wazuh JWT expires after 15 minutes by default
 
 def _init_buffer_db(db_path: str) -> sqlite3.Connection:
     """Create (or open) the offline alert buffer database."""
+    from pathlib import Path as _Path
+
+    _Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.execute(
         """

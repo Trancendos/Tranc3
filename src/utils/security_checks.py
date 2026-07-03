@@ -45,7 +45,7 @@ FREE_PROVIDERS: list[dict] = [
     },
 ]
 
-_USAGE_FILE = Path("/tmp/tranc3_provider_usage.json")
+_USAGE_FILE = Path(os.getenv("PROVIDER_USAGE_FILE", "/app/data/tranc3_provider_usage.json"))
 _USAGE_THRESHOLD = 0.80  # hard stop at 80 %
 
 
@@ -86,6 +86,7 @@ def _load_usage() -> dict[str, int]:
 
 def _save_usage(usage: dict[str, int]) -> None:
     try:
+        _USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
         payload = dict(usage)
         payload["_day"] = time.strftime("%Y-%m-%d")
         _USAGE_FILE.write_text(json.dumps(payload))
@@ -99,9 +100,15 @@ def _probe_provider(url: str, timeout: float = 2.0) -> bool:
     import urllib.request
 
     try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            logger.warning("_probe_provider: rejecting non-http(s) URL scheme: %s", parsed.scheme)
+            return False
         req = urllib.request.Request(url, method="GET")
         req.add_header("User-Agent", "tranc3-health-check/1.0")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 — scheme validated above
             return 200 <= resp.status < 300
     except urllib.error.HTTPError as exc:
         # 401/403 means the service is alive but requires auth — treat as healthy.
