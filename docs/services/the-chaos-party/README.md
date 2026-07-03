@@ -5,7 +5,13 @@
 | **Entity** | The Chaos Party (`PID-TCP`) — Alice-in-Wonderland themed |
 | **Lead AI** | The Mad Hatter (`AID-TCP-01`); Prime: The Doctor (Nikolai O'denhim) |
 | **Status** | 🔧 Partial (per `CLAUDE.md` service table) |
-| **Code** | `tests/test_chaos.py` (fault-injection suite). A `workers/chaos-party/` worker also exists (port 8079) |
+| **Code** | `tests/test_chaos.py` (fault-injection suite). A `workers/chaos-party/` worker also exists — see the port note below |
+
+> **Worker port — real inconsistency (flagged, not resolved here).** `workers/chaos-party/worker.py`
+> **hardcodes `WORKER_PORT = 8063`** and binds it (`uvicorn.run(..., port=WORKER_PORT)`), **ignoring** the
+> compose `PORT=8079` env; the Dockerfile `EXPOSE`s **8065**; while `docker-compose.production.yml`
+> (Traefik + `ports`) and `CLAUDE.md` use **8079**. So the app listens on 8063 while deployment routes
+> 8079 — a genuine defect (routing would not reach the app). Tracked in issue #188.
 | **Gate tier** | Partial → GOV + RACI + TFM + POL + STD + DDD scoped to the suite that exists |
 
 > **Truthfulness:** claims cite `tests/test_chaos.py`. The Chaos Party's in-repo foundation is a
@@ -18,7 +24,8 @@
   platform degrades gracefully (resilience proof).
 - **Owner (RACI-A):** The Mad Hatter (Lead AI); Prime The Doctor (Nikolai O'denhim).
 - **Scope (in-repo):** `pytest` chaos suite covering circuit-breaker, workflow, event-bus, and tool-timeout
-  fault paths. The dedicated `chaos-party` worker (8079) is the service-form of this capability.
+  fault paths. The dedicated `chaos-party` worker is the service-form of this capability (see the port
+  note above — code binds 8063, deployment expects 8079).
 
 ## 2. Detailed Design Document (DDD) — scoped to `tests/test_chaos.py`
 
@@ -58,7 +65,8 @@ The suite deliberately introduces failures and asserts graceful degradation:
 
 - **Load model:** a bounded, fast `pytest` suite; not a runtime service.
 - **Zero-cost limits & hard stops:** pure `pytest`/asyncio; no paid chaos tooling.
-- **Growth path:** the `chaos-party` worker (8079) can expose chaos runs as a service (out of scope of the
+- **Growth path:** the `chaos-party` worker (deployment port 8079; code currently binds 8063 — see the
+  port note) can expose chaos runs as a service (out of scope of the
   in-repo suite documented here).
 
 ## 7. Technology Framework Matrix (TFM)
