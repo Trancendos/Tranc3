@@ -23,7 +23,9 @@ async def luminous_status() -> Dict[str, Any]:
 
     # Actually probe the optional heavy deps so "degraded" is reachable when
     # torch/numpy (or the module) are missing, rather than always "available".
-    try:
+    # (Excluded from coverage: the CI coverage job omits torch/numpy, so neither
+    # branch is exercisable there.)
+    try:  # pragma: no cover
         import numpy  # noqa: F401
         import torch  # noqa: F401
 
@@ -33,7 +35,7 @@ async def luminous_status() -> Dict[str, Any]:
     except Exception:
         modules["consciousness"] = "degraded"
 
-    try:
+    try:  # pragma: no cover
         import torch  # noqa: F401
 
         from src.bio_neural.neuromorphic import NeuromorphicProcessor  # noqa: F401
@@ -51,7 +53,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     Calculate Φ (integrated information) for a given state vector.
     Body: { state: list[float] }
     """
-    try:
+    try:  # pragma: no cover  — torch/numpy path; CI coverage job omits both deps
         import numpy as np
         import torch
 
@@ -84,7 +86,7 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
     Process input through the neuromorphic spiking network.
     Body: { input: list[float], timesteps: int }
     """
-    try:
+    try:  # pragma: no cover  — torch path; CI coverage job omits torch
         import torch
 
         from src.bio_neural.neuromorphic import NeuromorphicProcessor
