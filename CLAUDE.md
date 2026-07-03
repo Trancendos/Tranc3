@@ -228,7 +228,7 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | haystack-service | 8097 | P3 | `workers/haystack-service/` | Haystack — production RAG pipelines |
 | dspy-service | 8098 | P3 | `workers/dspy-service/` | DSPy — programmatic LLM prompt compiler |
 | deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
-| vault-service | 8086 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
+| vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
 | mlflow-service | 8039 | P3 | `workers/mlflow-service/` | MLflow experiment tracking |
 | litellm-service | 8049 | P3 | `workers/litellm-service/` | LiteLLM zero-cost AI proxy (x10 provider rotation) |
 | artifactory-service | 8047 | P2 | `workers/artifactory-service/` | The Artifactory — Zot OCI registry bridge |

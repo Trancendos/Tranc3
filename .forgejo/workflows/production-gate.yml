@@ -64,6 +64,9 @@ jobs:
       - name: Citadel compose validate
         run: python3 scripts/citadel_compose_validate.py
 
+      - name: Port registry validate (CLAUDE.md vs compose)
+        run: python3 scripts/port_registry_validate.py
+
       - name: Docker compose config (production)
         run: |
           if command -v docker >/dev/null 2>&1; then
