@@ -29,7 +29,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT", "8019"))
+WORKER_PORT = int(os.getenv("PORT") or "8019")
 WORKER_NAME = "sms-service"
 DB_PATH = Path(__file__).parent / "data" / "sms.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

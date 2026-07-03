@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT", "8051"))
+WORKER_PORT = int(os.getenv("PORT") or "8051")
 WORKER_NAME = "sashas-photo-studio"
 DB_PATH = Path(__file__).parent / "data" / "studio.db"
 IMAGE_DIR = Path(__file__).parent / "data" / "images"

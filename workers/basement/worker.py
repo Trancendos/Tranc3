@@ -22,7 +22,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT", "8088"))
+WORKER_PORT = int(os.getenv("PORT") or "8088")
 WORKER_NAME = "basement"
 DB_PATH = Path(__file__).parent / "data" / "basement.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

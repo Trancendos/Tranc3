@@ -37,7 +37,7 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WORKER_PORT = int(os.getenv("PORT", "8014"))
+WORKER_PORT = int(os.getenv("PORT") or "8014")
 WORKER_NAME = "docutari"
 
 DB_PATH = Path(__file__).parent / "data" / "docutari.db"

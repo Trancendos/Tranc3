@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WORKER_PORT = int(os.getenv("PORT", "8013"))
+WORKER_PORT = int(os.getenv("PORT") or "8013")
 WORKER_NAME = "royal-bank-of-arcadia"
 DB_PATH = Path(__file__).parent / "data" / "royal_bank.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

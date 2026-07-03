@@ -30,7 +30,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT", "8018"))
+WORKER_PORT = int(os.getenv("PORT") or "8018")
 WORKER_NAME = "email-service"
 DB_PATH = Path(__file__).parent / "data" / "email.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

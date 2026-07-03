@@ -25,7 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WORKER_PORT = int(os.getenv("PORT", "8015"))
+WORKER_PORT = int(os.getenv("PORT") or "8015")
 WORKER_NAME = "identity-service"
 DB_PATH = Path(__file__).parent / "data" / "identities.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

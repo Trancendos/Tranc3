@@ -23,7 +23,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT", "8057"))
+WORKER_PORT = int(os.getenv("PORT") or "8057")
 WORKER_NAME = "warp-radio"
 DB_PATH = Path(__file__).parent / "data" / "radio.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)

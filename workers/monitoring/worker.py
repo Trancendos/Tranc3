@@ -43,7 +43,7 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-WORKER_PORT = int(os.getenv("PORT", "8007"))
+WORKER_PORT = int(os.getenv("PORT") or "8007")
 WORKER_NAME = "the-observatory"
 DB_PATH = Path(__file__).parent / "data" / "monitoring.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
