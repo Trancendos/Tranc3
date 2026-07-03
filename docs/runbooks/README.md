@@ -14,12 +14,15 @@ ITIL incident management and DEF STAN 00-600 supportability requirements.
 | Runbook | Service | Priority | Port |
 |---|---|---|---|
 | [api-backend.md](api-backend.md) | tranc3-backend (FastAPI) | P0 | 8000 |
-| [infinity-auth.md](infinity-auth.md) | Infinity Core Auth | P0 | 8005 |
-| [infinity-ws.md](infinity-ws.md) | The Nexus (WebSocket) | P0 | 8004 |
-| [infinity-portal.md](infinity-portal.md) | Infinity Portal + Gate | P1 | 8042 |
-| [ai-gateway.md](ai-gateway.md) | AI Gateway (infinity-ai) | P1 | 8009 |
-| [database.md](database.md) | PostgreSQL / SQLite stores | P1 | 5432 |
+| [disaster-recovery.md](disaster-recovery.md) | Platform-wide DR procedure | — | — |
 | [zero-downtime-deploy.md](zero-downtime-deploy.md) | Rolling deployment procedure | — | — |
+
+> **Not yet written:** runbooks for infinity-auth (P0, :8005), infinity-ws /
+> The Nexus (P0, :8004), infinity-portal (P1, :8042), ai-gateway / infinity-ai
+> (P1, :8009), and the database layer (P1, :5432) were previously listed here
+> but the files were never created — the links were broken. Removed until
+> written; see `docs/services/` for the closest existing coverage (The Nexus,
+> Infinity, Luminous doc-packs) in the interim.
 
 ## Runbook Template
 

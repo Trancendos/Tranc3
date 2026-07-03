@@ -28,6 +28,15 @@ locust -f tests/test_load.py --host=http://localhost:8000
 
 ## Kubernetes Deployment
 
+> **Not supported — documentation drift.** This section references
+> `deploy/k8s-baseline.yaml`, `deploy/k8s-network-policy.yaml`, and
+> `deploy/k8s-rbac.yaml`, none of which exist in this repo. A managed
+> EKS/GKE/AKS cluster is also a paid service, contradicting the platform's
+> zero-cost, self-hosted Docker Compose + Traefik architecture (see
+> `CLAUDE.md`, `docs/DEPLOYMENT_RUNBOOK.md`). Treat this as aspirational/stale
+> until the manifests are actually added — see `docker-compose.production.yml`
+> and `deploy/DNS_CUTOVER.md` for the supported production path.
+
 ### Prerequisites
 - EKS/GKE/AKS cluster (1.24+)
 - kubectl configured
