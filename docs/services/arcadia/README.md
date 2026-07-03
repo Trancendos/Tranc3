@@ -20,7 +20,8 @@
   static single-page app.
 - **Owner (RACI-A):** Lilli SC (Lead AI); Prime Dorris Fontaine.
 - **Scope (in-repo):** a React SPA (`tranc3-web`) plus its Nginx serving config. Supporting back-end
-  workers under `PID-ARC` — `notifications` (8008) and `email-service` (8018) — are separate services.
+  workers under `PID-ARC` — `notifications` (8008) and `email-service` (8022, per the compose-aligned
+  `CLAUDE.md` worker map) — are separate services.
 
 ## 2. Detailed Design Document (DDD) — `web/`
 
@@ -57,7 +58,7 @@
 ## 5. Solutions Integration Model (SIM)
 
 - **Upstream:** authenticated users (via Infinity) land here post-login; the SPA calls platform APIs.
-- **Downstream:** `notifications` (8008) and `email-service` (8018) back the comms features.
+- **Downstream:** `notifications` (8008) and `email-service` (8022) back the comms features.
 - **Auth boundary:** the SPA is a public bundle; auth is enforced by the APIs it calls, not the static host.
 
 ## 6. Architecture Scalability Document (ASD)

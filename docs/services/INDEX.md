@@ -61,10 +61,10 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | VRAR3D | 🔧 Planned | Entari | ⬜ Charter-only | Three.js |
 | Resonate | 🔧 Planned | Magdalena | ⬜ Charter-only | `src/resonate/` (TBD) |
 
-**Coverage:** **7 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
-Infinity, The Observatory, The Nexus, The Workshop, The Town Hall) · **5 Partial-tier packs**
-(Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · 43 / 43 entities status-tracked ·
-rollout order per framework §6.
+**Coverage:** **6 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
+Infinity, The Observatory, The Workshop, The Town Hall) · **6 Partial-tier packs**
+(The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · 43 / 43 entities
+status-tracked · rollout order per framework §6.
 
 ## Rollout log
 
