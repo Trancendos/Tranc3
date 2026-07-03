@@ -235,6 +235,7 @@ class TestPersonalityMatrix:
         from src.personality.spawner import PersonalitySpawner
 
         spawner = PersonalitySpawner()
+        assert spawner._profiles, "PersonalitySpawner loaded no profiles"
         missing = [pid for pid, prof in spawner._profiles.items() if "id" not in prof]
         assert not missing, f"profiles missing spawn-required 'id': {sorted(missing)}"
 
