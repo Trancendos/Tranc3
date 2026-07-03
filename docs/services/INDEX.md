@@ -22,18 +22,18 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **Infinity** | ✅ Self-hosted | The Guardian (Anchor: Orb of Orisis) (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/infinity/` |
 | **The Nexus** | 🔧 Self-hosted | Nexus-Prime (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-nexus/` |
 | **The Observatory** | ✅ Self-hosted | Norman Hawkins (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-observatory/` |
-| The Workshop | ✅ In repo | Larry Lowhammer | ⬜ Pending | `deploy/forgejo/` |
-| The Town Hall | ✅ Integrated | Tristuran | ⬜ Pending | `workers/cranbania/` (8071) |
+| **The Workshop** | ✅ In repo | Larry Lowhammer (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-workshop/` |
+| **The Town Hall** | ✅ Integrated | Tristuran (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-town-hall/` |
 | The Lighthouse | ✅ Deployed | Rocking Ricki | ⬜ Pending | CF `infinity-lighthouse` |
 | The HIVE | ✅ Deployed | The Queen | ⬜ Pending | CF `infinity-hive` |
 | Royal Bank of Arcadia | ✅ Deployed | Dorris Fontaine | ⬜ Pending | CF `arcadia-royal-bank` |
 | Arcadian Exchange | ✅ Deployed | The Porter Family | ⬜ Pending | CF `arcadia-exchange` |
 | The Citadel | ✅ Self-hosted | Trancendos | ⬜ Pending | Compose + Traefik |
-| The Void | 🔧 Migrating | Prometheus | ⬜ Pending | `workers/infinity-void/` (port 8082 [^void-port]) |
+| **The Void** | 🔧 Migrating | Prometheus (Prime: The Guardian) | ✅ **Complete** | `docs/services/the-void/` [^void-port] |
 | **Luminous** | 🔧 Partial | Cornelius MacIntyre | ✅ **Complete** | `docs/services/luminous/` |
 | **Turing's Hub** | 🔧 Partial | Samantha Turing | ✅ **Complete** | `docs/services/turings-hub/` |
-| Arcadia | 🔧 Partial | Lilli SC | ⬜ Pending | `web/` |
-| The Chaos Party | 🔧 Partial | The Mad Hatter | ⬜ Pending | `tests/test_chaos.py` |
+| **Arcadia** | 🔧 Partial | Lilli SC (Prime: Dorris Fontaine) | ✅ **Complete** | `docs/services/arcadia/` |
+| **The Chaos Party** | 🔧 Partial | The Mad Hatter (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-chaos-party/` |
 | The Library | 🔧 Planned | Zimik | ⬜ Charter-only | Outline |
 | The Academy | 🔧 Planned | Shimshi | ⬜ Charter-only | Custom LMS |
 | DocUtari | 🔧 Planned | TBD | ⬜ Charter-only | Paperless-ngx |
@@ -61,8 +61,10 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | VRAR3D | 🔧 Planned | Entari | ⬜ Charter-only | Three.js |
 | Resonate | 🔧 Planned | Magdalena | ⬜ Charter-only | `src/resonate/` (TBD) |
 
-**Coverage:** **4 / 11 required full packs** complete (Live-tier cohort) · 43 / 43 entities
-status-tracked · reference pack established · rollout order per framework §6.
+**Coverage:** **6 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
+Infinity, The Observatory, The Workshop, The Town Hall) · **6 Partial-tier packs**
+(The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · 43 / 43 entities
+status-tracked · rollout order per framework §6.
 
 ## Rollout log
 
@@ -73,12 +75,11 @@ status-tracked · reference pack established · rollout order per framework §6.
 | 2026-07-02 | Added Infinity + The Observatory packs, code-grounded against `workers/infinity-auth/` and `src/observability/` (4/11 required full packs). |
 | 2026-07-02 | Added Luminous + Turing's Hub packs (Partial-tier), code-grounded against `src/bio_neural/` + `src/core/` and `src/personality/`; review surfaced and repaired real route bugs (phi tensor type, neuromorphic kwarg, `/status` probe, `_matrix` import) and flagged remaining PARTIAL wiring. |
 | 2026-07-03 | Added The Nexus pack, code-grounded against `workers/infinity-ws/worker.py` (JWT WebSocket hub, `ConnectionManager`, internal-secret HTTP routes, port 8004). |
+| 2026-07-03 | Batch: added The Void, The Town Hall, The Chaos Party, The Workshop, Arcadia packs — code/config-grounded against `workers/infinity-void/worker.py`, `src/townhall/`, `tests/test_chaos.py`, `deploy/forgejo/`, `web/`. CranBania submodule scoped out (not checked out); The Void port clarified (app default 8082; `EXPOSE 8002` stale, per #188). |
 
-[^void-port]: **Source discrepancy (flagged, not silently resolved).** `CLAUDE.md`'s
-    self-hosted worker map lists The Void's self-hosted vault as `infinity-void` on **8082**
-    (the value used here, matching the real `workers/infinity-void/` path). `PLATFORM_ENTITIES.md`
-    instead maps The Void's "primary worker" to **8024 / `config-service`**, which appears to
-    be an error in that table (8024 is `search-service` and `config-service` is 8020 per
-    `CLAUDE.md`). This note records the conflict; reconciling the two canonical docs is
-    tracked as a separate cleanup, and The Void's own Doc-Pack will cite the authoritative
-    port once resolved.
+[^void-port]: **Port, clarified against code.** The vault worker `workers/infinity-void/worker.py`
+    binds `int(os.getenv("PORT","8082"))` — so **8082** (the `CLAUDE.md` value) is the app default and
+    authoritative; the worker's `Dockerfile EXPOSE 8002` is **stale/cosmetic** (sync tracked in #188).
+    Separately, `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
+    that is a **different** worker owned by the same entity (`PID-VOI`), not the vault, so it is not an
+    error. See `docs/services/the-void/` for the full pack.
