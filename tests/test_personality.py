@@ -209,7 +209,9 @@ class TestPersonalityMatrix:
 
         from src.personality.matrix import PersonalityMatrix
 
-        profiles_dir = Path("src/personality/profiles")
+        # Resolve relative to this file (repo_root/tests/…), not the CWD, so the
+        # test is robust to whatever directory the runner starts in.
+        profiles_dir = Path(__file__).resolve().parents[1] / "src/personality/profiles"
         json_files = sorted(profiles_dir.glob("*.json"))
         assert json_files, "no profile JSON files found on disk"
 
@@ -219,6 +221,18 @@ class TestPersonalityMatrix:
             f"{len(json_files) - len(loaded)} profile(s) failed to load: "
             f"{sorted({p.stem for p in json_files} - set(loaded))}"
         )
+
+    def test_all_shipped_profiles_have_spawn_required_id(self):
+        """Every shipped profile must carry an `id` — PersonalitySpawner.spawn()
+        indexes `profile["id"]` directly (spawner._write_config), so a profile
+        that loads into the matrix but lacks `id` would crash spawning. Guard the
+        precondition without doing the heavyweight file-writing spawn.
+        """
+        from src.personality.spawner import PersonalitySpawner
+
+        spawner = PersonalitySpawner()
+        missing = [pid for pid, prof in spawner._profiles.items() if "id" not in prof]
+        assert not missing, f"profiles missing spawn-required 'id': {sorted(missing)}"
 
     def test_get_existing_profile(self):
         """get() should return a PersonalityProfile for a known name."""
