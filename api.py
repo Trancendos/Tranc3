@@ -325,14 +325,17 @@ async def lifespan(app: FastAPI):
         logger.error("Tokenizer failed")
 
     # Personality matrix
-    try:
-        personality_matrix = EnhancedPersonalityMatrix(cfg.personality_dir)
-        logger.info("Personality matrix ready")
-    except Exception as e:
-        logger.error(
-            "Personality matrix failed: %s",
-            sanitize_for_log(e),
-        )  # codeql[py/cleartext-logging]
+    if EnhancedPersonalityMatrix is None:
+        logger.warning("Personality matrix unavailable (import failed)")
+    else:
+        try:
+            personality_matrix = EnhancedPersonalityMatrix(cfg.personality_dir)
+            logger.info("Personality matrix ready")
+        except Exception as e:
+            logger.error(
+                "Personality matrix failed: %s",
+                sanitize_for_log(e),
+            )  # codeql[py/cleartext-logging]
 
     # Quantum core
     if QuantumNeuralCore is not None:
@@ -1515,7 +1518,11 @@ async def chat(
         # The in-repo PersonalityMatrix (src/personality/matrix.py) is a JSON-profile
         # registry and does not compute vectors; degrade gracefully rather than crash.
         personality_vector = None
-        _get_vec = getattr(personality_matrix, "get_personality_vector", None)
+        _get_vec = (
+            getattr(personality_matrix, "get_personality_vector", None)
+            if personality_matrix
+            else None
+        )
         if callable(_get_vec):
             personality_vector = _get_vec(
                 chat_req.personality,
