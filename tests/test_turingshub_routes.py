@@ -28,19 +28,25 @@ async def test_matrix_active_returns_active_personality_key():
     assert "active_personality" in res
 
 
-def test_personality_matrix_constructs_with_profiles_dir():
+def test_personality_matrix_constructs_from_profiles_dir_path(tmp_path):
     # Regression: api.py's lifespan constructs the matrix as
     # EnhancedPersonalityMatrix(cfg.personality_dir) — a *path string*, not the
     # Config object. Passing a Config previously raised in Path(...) and left
     # personality_matrix = None (Turing's Hub dead). Assert the real contract:
-    # constructing with the profiles_dir loads profiles and exposes list_profiles().
-    import os
+    # a *path string* is accepted, *.json profiles load, and list_profiles()
+    # returns their names. Uses a controlled tmp dir so the test is deterministic
+    # and independent of the repo's shipped profile data.
+    import json
 
     from src.personality.matrix import PersonalityMatrix
 
-    personality_dir = os.getenv("PERSONALITY_DIR", "./src/personality/profiles")
-    matrix = PersonalityMatrix(personality_dir)
+    for name in ("alpha-profile", "beta-profile"):
+        (tmp_path / f"{name}.json").write_text(
+            json.dumps({"name": name, "system_prompt": "You are a test."}),
+            encoding="utf-8",
+        )
+
+    matrix = PersonalityMatrix(str(tmp_path))
     profiles = matrix.list_profiles()
     assert isinstance(profiles, list)
-    # The in-repo registry ships named-entity profiles; it must load at least one.
-    assert profiles, "PersonalityMatrix loaded no profiles from the profiles dir"
+    assert set(profiles) == {"alpha-profile", "beta-profile"}
