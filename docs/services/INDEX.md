@@ -28,7 +28,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | The HIVE | ✅ Deployed | The Queen | ⬜ Pending | CF `infinity-hive` |
 | Royal Bank of Arcadia | ✅ Deployed | Dorris Fontaine | ⬜ Pending | CF `arcadia-royal-bank` |
 | Arcadian Exchange | ✅ Deployed | The Porter Family | ⬜ Pending | CF `arcadia-exchange` |
-| The Citadel | ✅ Self-hosted | Trancendos | ⬜ Pending | Compose + Traefik |
+| **The Citadel** | ✅ Self-hosted | Trancendos | ✅ **Complete** | `docs/services/the-citadel/` |
 | **The Void** | 🔧 Migrating | Prometheus (Prime: The Guardian) | ✅ **Complete** | `docs/services/the-void/` [^void-port] |
 | **Luminous** | 🔧 Partial | Cornelius MacIntyre | ✅ **Complete** | `docs/services/luminous/` |
 | **Turing's Hub** | 🔧 Partial | Samantha Turing | ✅ **Complete** | `docs/services/turings-hub/` |
@@ -61,8 +61,8 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | VRAR3D | 🔧 Planned | Entari | ⬜ Charter-only | Three.js |
 | Resonate | 🔧 Planned | Magdalena | ⬜ Charter-only | `src/resonate/` (TBD) |
 
-**Coverage:** **6 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
-Infinity, The Observatory, The Workshop, The Town Hall) · **6 Partial-tier packs**
+**Coverage:** **7 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
+Infinity, The Observatory, The Workshop, The Town Hall, The Citadel) · **6 Partial-tier packs**
 (The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · 43 / 43 entities
 status-tracked · rollout order per framework §6.
 
@@ -77,6 +77,7 @@ status-tracked · rollout order per framework §6.
 | 2026-07-03 | Added The Nexus pack, code-grounded against `workers/infinity-ws/worker.py` (JWT WebSocket hub, `ConnectionManager`, internal-secret HTTP routes, port 8004). |
 | 2026-07-03 | Batch: added The Void, The Town Hall, The Chaos Party, The Workshop, Arcadia packs — code/config-grounded against `workers/infinity-void/worker.py`, `src/townhall/`, `tests/test_chaos.py`, `deploy/forgejo/`, `web/`. CranBania submodule scoped out (not checked out). |
 | 2026-07-03 | Follow-up: corrected The Void's port note — the earlier claim ("8082 is the app default and authoritative, `EXPOSE 8002` stale") was wrong. 8002 is the consistently-referenced, intended port (monitoring, `workers/README.md`, wiki, `docs/vault_security.md`); fixed by adding an explicit `PORT=8002` to compose rather than changing the port. See `docs/services/the-void/` verification log. |
+| 2026-07-03 | Added The Citadel pack (7th Live-tier full pack), code-grounded against `docker-compose.production.yml` (Traefik/Vault/Prometheus/Grafana/OTel), `deploy/citadel/deploy-production.sh`, and `scripts/citadel_preflight.py`. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
