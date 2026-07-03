@@ -204,18 +204,18 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | files-service | 8014 | P2 | `workers/files-service/` | infinity-files-api |
 | identity-service | 8015 | P2 | `workers/identity-service/` | infinity-os-identity |
 | analytics-service | 8016 | P3 | `workers/analytics-service/` | Analytics / metrics store |
-| audit-service | 8017 | P3 | `workers/audit-service/` | The Observatory audit trail |
-| cache-service | 8018 | P3 | `workers/cache-service/` | Distributed cache layer |
-| cdn-service | 8019 | P3 | `workers/cdn-service/` | Static asset delivery |
-| config-service | 8020 | P3 | `workers/config-service/` | Central configuration |
+| audit-service | 8025 | P3 | `workers/audit-service/` | The Observatory audit trail |
+| cache-service | 8023 | P3 | `workers/cache-service/` | Distributed cache layer |
+| cdn-service | 8028 | P3 | `workers/cdn-service/` | Static asset delivery |
+| config-service | 8024 | P3 | `workers/config-service/` | Central configuration |
 | cron-service | 8021 | P3 | `workers/cron-service/` | ChronosSphere task scheduler |
-| email-service | 8022 | P3 | `workers/email-service/` | Arcadia email hub |
-| geo-service | 8023 | P3 | `workers/geo-service/` | Geographic routing |
-| search-service | 8024 | P3 | `workers/search-service/` | Full-text + semantic search |
-| sms-service | 8025 | P3 | `workers/sms-service/` | SMS gateway |
-| storage-service | 8026 | P3 | `workers/storage-service/` | IPFS + local blob storage |
-| queue-service | 8027 | P3 | `workers/queue-service/` | The HIVE task queue |
-| rate-limit-service | 8028 | P3 | `workers/rate-limit-service/` | Token-bucket rate limiter |
+| email-service | 8018 | P3 | `workers/email-service/` | Arcadia email hub |
+| geo-service | 8027 | P3 | `workers/geo-service/` | Geographic routing |
+| search-service | 8017 | P3 | `workers/search-service/` | Full-text + semantic search |
+| sms-service | 8019 | P3 | `workers/sms-service/` | SMS gateway |
+| storage-service | 8020 | P3 | `workers/storage-service/` | IPFS + local blob storage |
+| queue-service | 8022 | P3 | `workers/queue-service/` | The HIVE task queue |
+| rate-limit-service | 8026 | P3 | `workers/rate-limit-service/` | Token-bucket rate limiter |
 | health-aggregator | 8029 | P3 | `workers/health-aggregator/` | Platform-wide health roll-up |
 | gbrain-bridge | 8030 | P3 | `workers/gbrain-bridge/` | GBrain AI bridge |
 | topology-service | 8031 | P3 | `workers/topology-service/` | Service topology graph |
@@ -228,7 +228,7 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | haystack-service | 8097 | P3 | `workers/haystack-service/` | Haystack — production RAG pipelines |
 | dspy-service | 8098 | P3 | `workers/dspy-service/` | DSPy — programmatic LLM prompt compiler |
 | deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
-| vault-service | 8086 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
+| vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault (AES-GCM) |
 | mlflow-service | 8039 | P3 | `workers/mlflow-service/` | MLflow experiment tracking |
 | litellm-service | 8049 | P3 | `workers/litellm-service/` | LiteLLM zero-cost AI proxy (x10 provider rotation) |
 | artifactory-service | 8047 | P2 | `workers/artifactory-service/` | The Artifactory — Zot OCI registry bridge |
@@ -265,10 +265,30 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | infinity-void | 8082 | P3 | `workers/infinity-void/` | The Void — self-hosted AES-GCM vault |
 
 > **Port source of truth:** the port column above is aligned to each worker's **mapped port in
-> `docker-compose.production.yml`** (the deployment truth — `PORT` env + Traefik
-> `loadbalancer.server.port` routing), reconciled against `PLATFORM_ENTITIES.md`. Some workers'
-> `Dockerfile EXPOSE` values are **stale** relative to the compose port (the app reads `PORT` at
-> runtime, so EXPOSE is cosmetic); syncing those Dockerfiles is tracked in issue **#188**.
+> `docker-compose.production.yml`** (the deployment truth — `PORT` env / Traefik
+> `loadbalancer.server.port` / published `ports:`), reconciled against `PLATFORM_ENTITIES.md` and
+> each worker's actual code bind port. The P3 block `8016–8029` was previously mis-paired here (it
+> had been assigned alphabetically, e.g. `email-service` shown as `8022`); it is now corrected to the
+> compose mapping (`email-service` `8018`, `search-service` `8017`, `queue-service` `8022`, …). Most of
+> these workers' code binds agree with compose, but **4 do not** — see the routing-defects table below.
+>
+> **Known routing defects (issue #188).** A worker's code binds `PORT` (default shown), but compose
+> routes to a different port and sets **no `PORT` env** to override it, so the container is unreachable
+> at the routed port (same class as the chaos-party defect). Confirmed for **4 workers**:
+>
+> | Worker | code binds (`PORT` default) | compose routes | note |
+> |---|---|---|---|
+> | `audit-service` | 8017 | 8025 | — |
+> | `queue-service` | 8027 | 8022 | code's 8027 == `geo-service`'s compose port (collision if adopted) |
+> | `search-service` | 8083 | 8017 | 8083 matches neither registry |
+> | `infinity-void` | 8082 | 8002 | entangled with the vault's documented `8082` app default (`docs/services/the-void/`) |
+>
+> Each needs a **per-worker decision** (fix the code default to the compose port, or set `PORT` / re-map
+> compose) — not a bulk edit, given the collision and the vault entanglement. Workers that read a
+> *custom* port env instead of `PORT` (e.g. `hive-service` → `HIVE_PORT=8051`, `cache-service` →
+> `CACHE_PORT`, `storage-service` → `STORAGE_PORT`) are **not** defects — compose sets that var, so they
+> route correctly. `Dockerfile EXPOSE` values remain cosmetic (the app reads its port env at runtime);
+> syncing them is also #188.
 
 ### Production Infrastructure Stack
 
