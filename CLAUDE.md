@@ -262,7 +262,7 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | tranquility | 8077 | P3 | `workers/tranquility/` | Tranquility — wellbeing hub |
 | backup-service | 8078 | P3 | `workers/backup-service/` | Backup — automated data backup |
 | chaos-party | 8079 | P3 | `workers/chaos-party/` | The Chaos Party — central testing platform |
-| infinity-void | 8082 | P3 | `workers/infinity-void/` | The Void — self-hosted AES-GCM vault |
+| infinity-void | 8002 | P3 | `workers/infinity-void/` | The Void — self-hosted AES-GCM vault |
 
 > **Port source of truth:** the port column above is aligned to each worker's **mapped port in
 > `docker-compose.production.yml`** (the deployment truth — `PORT` env / Traefik
@@ -272,19 +272,19 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 > compose mapping (`email-service` `8018`, `search-service` `8017`, `queue-service` `8022`, …). Most of
 > these workers' code binds agree with compose, but **4 do not** — see the routing-defects table below.
 >
-> **Known routing defects (issue #188).** A worker's code binds `PORT` (default shown), but compose
-> routes to a different port and sets **no `PORT` env** to override it, so the container is unreachable
-> at the routed port (same class as the chaos-party defect). Confirmed for **4 workers**:
->
-> | Worker | code binds (`PORT` default) | compose routes | note |
-> |---|---|---|---|
-> | `audit-service` | 8017 | 8025 | — |
-> | `queue-service` | 8027 | 8022 | code's 8027 == `geo-service`'s compose port (collision if adopted) |
-> | `search-service` | 8083 | 8017 | 8083 matches neither registry |
-> | `infinity-void` | 8082 | 8002 | entangled with the vault's documented `8082` app default (`docs/services/the-void/`) |
->
-> Each needs a **per-worker decision** (fix the code default to the compose port, or set `PORT` / re-map
-> compose) — not a bulk edit, given the collision and the vault entanglement. Workers that read a
+> **Routing defects (issue #188) — resolved.** A prior pass flagged 4 workers whose *code-level*
+> `PORT` default differed from the compose-routed port (`audit-service`, `queue-service`,
+> `search-service`, `infinity-void`) as unreachable. Re-verified against each worker's actual
+> **Dockerfile `CMD`**, not just its Python default: `audit-service`, `queue-service`, and
+> `search-service` all hardcode `uvicorn ... --port <N>` in their Dockerfile `CMD`, which overrides
+> the Python-level default at the container level — these were **never actually broken**; the
+> `os.getenv("PORT", ...)` fallback is dead code, only reachable if the CMD were changed to a bare
+> `python worker.py` invocation. Only `infinity-void` (`CMD ["python", "worker.py"]`, no CLI port
+> override) genuinely depended on the `PORT` env value; compose set none, so it fell back to the
+> code default (8082) while compose only routed to 8002. Fixed by adding an explicit `PORT=8002`
+> to its compose `environment:` block (matching the value 7+ other references — monitoring,
+> `workers/README.md`, wiki, `docs/vault_security.md` — already treated as canonical). Zero known
+> routing defects remain in this class. Workers that read a
 > *custom* port env instead of `PORT` (e.g. `hive-service` → `HIVE_PORT=8051`, `cache-service` →
 > `CACHE_PORT`, `storage-service` → `STORAGE_PORT`) are **not** defects — compose sets that var, so they
 > route correctly. `Dockerfile EXPOSE` values remain cosmetic (the app reads its port env at runtime);

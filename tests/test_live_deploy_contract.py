@@ -19,7 +19,7 @@ def test_live_deploy_scripts_exist():
         "scripts/citadel_compose_validate.py",
         "deploy/LIVE_DEPLOY.md",
         "deploy/vault/init-citadel.sh",
-        "deploy/traefik/DNS_CUTOVER.md",
+        "deploy/DNS_CUTOVER.md",
     ):
         assert (ROOT / path).is_file(), path
 
