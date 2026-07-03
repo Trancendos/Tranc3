@@ -197,6 +197,29 @@ class TestPersonalityMatrix:
             matrix = PersonalityMatrix(profiles_dir=tmpdir)
             assert "test-profile" in matrix.list_profiles()
 
+    def test_all_shipped_profiles_load(self):
+        """Every JSON in the shipped profiles dir must load — no silent drops.
+
+        Regression guard: the tranc3-empathetic/analytical/creative/multilingual
+        starter profiles lacked a system_prompt/system_prompt_prefix and were
+        silently skipped by the loader. Assert the count of successfully loaded
+        profiles equals the number of *.json files on disk.
+        """
+        from pathlib import Path
+
+        from src.personality.matrix import PersonalityMatrix
+
+        profiles_dir = Path("src/personality/profiles")
+        json_files = sorted(profiles_dir.glob("*.json"))
+        assert json_files, "no profile JSON files found on disk"
+
+        matrix = PersonalityMatrix(str(profiles_dir))
+        loaded = matrix.list_profiles()
+        assert len(loaded) == len(json_files), (
+            f"{len(json_files) - len(loaded)} profile(s) failed to load: "
+            f"{sorted({p.stem for p in json_files} - set(loaded))}"
+        )
+
     def test_get_existing_profile(self):
         """get() should return a PersonalityProfile for a known name."""
         from src.personality.matrix import PersonalityMatrix
