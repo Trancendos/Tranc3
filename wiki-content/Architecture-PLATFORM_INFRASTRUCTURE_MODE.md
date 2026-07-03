@@ -2,7 +2,7 @@
 
 You control where compute and storage run with **one setting**. Default is **CLOUD_ONLY** until your Citadel server is ready.
 
-For merge history, superseded PRs (#84–#89), and branch cleanup commands, see [BRANCH_CONSOLIDATION.md](./BRANCH_CONSOLIDATION.md).
+For merge history, superseded PRs (#84–#89), and branch cleanup commands, see [BRANCH_CONSOLIDATION.md](Historical-BRANCH_CONSOLIDATION).
 
 | Mode | When to use | Citadel Docker | AI rotation |
 |------|-------------|----------------|-------------|
@@ -80,4 +80,4 @@ PLATFORM_INFRA_MODE=LOCAL_ONLY python scripts/citadel_deploy_all.py --local
 
 Until then, stay on **CLOUD_ONLY** — cloud auto-rotation and proactive systems are designed for that path.
 
-For what rotates today vs OCI/Azure/GCP hosting plans, see [ADAPTIVE_PLATFORM_ROTATION.md](./ADAPTIVE_PLATFORM_ROTATION.md).
+For what rotates today vs OCI/Azure/GCP hosting plans, see [ADAPTIVE_PLATFORM_ROTATION.md](Strategy-ADAPTIVE_PLATFORM_ROTATION).

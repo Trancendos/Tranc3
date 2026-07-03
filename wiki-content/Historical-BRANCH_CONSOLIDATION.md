@@ -17,7 +17,7 @@ This document records what was merged into `main`, which open PRs were supersede
 | **MicroCeph shim** | `shared_core/architecture/microceph_provider.py` re-exports (cherry-picked) |
 | **Ecosystem mode** | `api_ecosystem.py` / `src/routers/ecosystem.py` map `LOCAL_ONLY` → `TRUE_NAS` |
 
-See also: [PLATFORM_INFRASTRUCTURE_MODE.md](./PLATFORM_INFRASTRUCTURE_MODE.md).
+See also: [PLATFORM_INFRASTRUCTURE_MODE.md](Architecture-PLATFORM_INFRASTRUCTURE_MODE).
 
 ## Merged commits (consolidation wave)
 

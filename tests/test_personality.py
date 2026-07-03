@@ -197,6 +197,48 @@ class TestPersonalityMatrix:
             matrix = PersonalityMatrix(profiles_dir=tmpdir)
             assert "test-profile" in matrix.list_profiles()
 
+    def test_all_shipped_profiles_load(self):
+        """Every JSON in the shipped profiles dir must load — no silent drops.
+
+        Regression guard: the tranc3-empathetic/analytical/creative/multilingual
+        starter profiles lacked a system_prompt/system_prompt_prefix and were
+        silently skipped by the loader. Assert the count of successfully loaded
+        profiles equals the number of *.json files on disk.
+        """
+        from pathlib import Path
+
+        from src.personality.matrix import PersonalityMatrix
+
+        # Resolve relative to this file (repo_root/tests/…), not the CWD, so the
+        # test is robust to whatever directory the runner starts in.
+        profiles_dir = Path(__file__).resolve().parents[1] / "src/personality/profiles"
+        json_files = sorted(profiles_dir.glob("*.json"))
+        assert json_files, "no profile JSON files found on disk"
+
+        matrix = PersonalityMatrix(str(profiles_dir))
+        # Compare exact name sets (not just counts): PersonalityMatrix registers
+        # each profile by profile.name, so this also catches a profile that loads
+        # under the wrong key, not only ones that fail to load entirely.
+        loaded = set(matrix.list_profiles())
+        expected = {p.stem for p in json_files}
+        assert loaded == expected, (
+            f"profile name/file mismatch — missing={sorted(expected - loaded)}, "
+            f"extra={sorted(loaded - expected)}"
+        )
+
+    def test_all_shipped_profiles_have_spawn_required_id(self):
+        """Every shipped profile must carry an `id` — PersonalitySpawner.spawn()
+        indexes `profile["id"]` directly (spawner._write_config), so a profile
+        that loads into the matrix but lacks `id` would crash spawning. Guard the
+        precondition without doing the heavyweight file-writing spawn.
+        """
+        from src.personality.spawner import PersonalitySpawner
+
+        spawner = PersonalitySpawner()
+        assert spawner._profiles, "PersonalitySpawner loaded no profiles"
+        missing = [pid for pid, prof in spawner._profiles.items() if "id" not in prof]
+        assert not missing, f"profiles missing spawn-required 'id': {sorted(missing)}"
+
     def test_get_existing_profile(self):
         """get() should return a PersonalityProfile for a known name."""
         from src.personality.matrix import PersonalityMatrix

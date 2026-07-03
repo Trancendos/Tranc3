@@ -1,105 +1,88 @@
 # Trancendos / Tranc3 — Wiki Home
 
-Welcome to the Trancendos platform wiki. This is the living knowledge base for the Tranc3 project — architecture decisions, service runbooks, governance, strategic analysis, and historical phase reports.
+Welcome to the Trancendos platform wiki — the living knowledge base for the Tranc3 project: architecture decisions, strategic analysis, security tracking, governance, and historical phase reports.
 
 > **Code-adjacent docs** (API reference, design system, deployment scripts, compliance controls) live in the **[repo](https://github.com/Trancendos/Tranc3)** under `docs/`. Everything conceptual or historical lives here.
+>
+> _Pages are flat (GitHub-Wiki-native) and named `Section-Name`; the sidebar mirrors this grouping. Every link below resolves to a real page._
 
 ---
 
-## Quick Navigation
+## 🏗️ Platform & Architecture
 
-### Platform & Architecture
-- [[Platform-Entities]] — All 43 named services, Lead AIs, ports, and status
-- [[Architecture-Overview]] — Self-hosted zero-cost stack, service mesh, inference pipeline
-- [[Deployment-Topology]] — Traefik, Docker Compose, Fly.io, Cloudflare Workers map
-- [[CF-Worker-Migration-Roadmap]] — 26+ workers migrating from CF to Python/FastAPI
-- [[Cross-Repo-Synergy]] — 29 infinity-adminOS packages mapped to Python equivalents
-- [[Infinity-Architecture]] — Infinity auth/SSO/identity architecture detail
-- [[Infinity-Ecosystem-Matrix]] — Full ecosystem service matrix
-- [[Tier-Architecture]] — Service tier breakdown (P0–P3)
-- [[Framework]] — Foundational framework decisions
+- [Tranc3 Architecture Update — Session 2 Enhancement Report](Architecture-ARCHITECTURE_UPDATE)
+- [Cloudflare Worker Migration Roadmap](Architecture-CF_WORKER_MIGRATION_ROADMAP)
+- [Cross-Repo Synergy Report: Trancendos Ecosystem](Architecture-CROSS_REPO_SYNERGY)
+- [Tranc3 — Master Framework Blueprint](Architecture-FRAMEWORK)
+- [Infinity Admin OS](Architecture-INFINITY_ADMIN_OS)
+- [Infinity Ecosystem Architecture — Canonical Reference](Architecture-INFINITY_ARCHITECTURE)
+- [Infinity Ecosystem Architecture Matrix](Architecture-INFINITY_ECOSYSTEM_MATRIX)
+- [Platform infrastructure modes](Architecture-PLATFORM_INFRASTRUCTURE_MODE)
+- [Trancendos 5-Tier AI Architecture](Architecture-TIER_ARCHITECTURE)
 
-### Development Guides
-- [[Getting-Started]] — Clone, env setup, first commit
-- [[Branch-and-PR-Workflow]] — Branch naming, CI gates, merge strategy
-- [[Worker-Development-Guide]] — How to add a new self-hosted Python worker
-- [[Integration-Scope-Plan]] — Service integration scope and priorities
+## 🎯 Strategy & Research
 
-### Service Runbooks (extended)
-- [[The-Spark-MCP]] — JSON-RPC 2.0, tool registry, SSE bus
-- [[The-Digital-Grid]] — DAG builder, workflow executor, event bus
-- [[Infinity-Auth]] — OAuth2, SSO, MFA setup and troubleshooting
-- [[The-Town-Hall]] — CranBania: Kanban, ITSM, PRINCE2, Agile tools
-- [[Vault-The-Void]] — AES-GCM secrets, Shamir unseal procedure
+- [Adaptive rotation — current state and roadmap](Strategy-ADAPTIVE_PLATFORM_ROTATION)
+- [TRANC3 Project Charter](Strategy-DOC-01-Project-Charter)
+- [TRANC3 System Architecture](Strategy-DOC-02-System-Architecture)
+- [TRANC3 API Reference](Strategy-DOC-03-API-Reference)
+- [TRANC3 — Strategic Analysis, Brainstorming & Future-Proof Roadmap](Strategy-DOC-13-Strategic-Analysis)
+- [TRANC3 — Zero Cost Hosting & Deployment Guide](Strategy-DOC-14-Zero-Cost-Hosting)
+- [TRANC3 — Complete Mind Map](Strategy-DOC-15-Mind-Map)
+- [TRANC3 — Lotus Diagram (Full Repository Analysis)](Strategy-DOC-16-Lotus-Diagram)
+- [TRANC3 — SCAMPER + 5 Whys Analysis](Strategy-DOC-17-SCAMPER-5Whys)
+- [Trancendos Zero-Cost Service Registry](Strategy-FREE_TIER_REGISTRY)
+- [Integration scope plan: `cursor/production-integration-8d67`](Strategy-INTEGRATION_SCOPE_PLAN)
+- [TRANC3 Knowledge Base](Strategy-KNOWLEDGE_BASE)
+- [Master Worker / Bot Swarm — Zero-Cost Architecture](Strategy-MASTER_WORKER_ZERO_COST)
+- [Research & advancement digest (May 2026)](Strategy-RESEARCH_ADVANCEMENT_2026)
+- [Zero-Cost Cloud Providers - Tranc3 Ecosystem](Strategy-ZERO_COST_CLOUD_PROVIDERS)
+- [Zero-Cost Vendor & Tool Matrix (Trancendos Fortiere)](Strategy-ZERO_COST_VENDOR_MATRIX)
+- [Tranc3 Repaired Entity Matrix — by Pillar](Strategy-matrix)
 
-### Strategy & Research
-- [[Zero-Cost-Strategy]] — Why self-hosted over paid cloud tiers
-- [[Zero-Cost-Cloud-Providers]] — Provider comparison and free tier limits
-- [[Zero-Cost-Vendor-Matrix]] — Vendor evaluation matrix
-- [[Free-Tier-Registry]] — Registry of all free-tier services in use
-- [[Adaptive-Platform-Rotation]] — Platform rotation strategy
-- [[Research-Advancement-2026]] — R&D advancement findings 2026
-- [[Master-Worker-Zero-Cost]] — Zero-cost worker implementation master plan
-- [[Knowledge-Base]] — Platform knowledge base overview
+## 🔒 Security
 
-### Governance & Compliance
-- [[Magna-Carta-Rules]] — 9 runtime compliance rules, enforcement points
-- [[Change-Management]] — CAB workflow, PROC-CHG-001
-- [[Data-Protection]] — GDPR/ROPA, PROC-DSR-001, Privacy Impact Assessment
-- [[Security-Policies]] — POL-AI-001, POL-OPS-002, POL-PRI-001
-- [[AI-Governance]] — EU AI Act classification, bias controls, explainability
+- [TRANC3 — CVE Vulnerability Remediation Report](Security-CVE_REMEDIATION_REPORT)
+- [Security Alert Dismissals (Tier 0)](Security-SECURITY_ALERT_DISMISSALS)
+- [Security Alert Register](Security-SECURITY_ALERT_REGISTER)
 
-### Security Tracking
-- [[Security-Alert-Register]] — Platform security alert register
-- [[Security-Alert-Dismissals]] — Dismissed/accepted risk register
-- [[CVE-Remediation-Report]] — CVE remediation history
+## 🗄️ Historical / Phase Reports
 
-### Project Documents (DOC series)
-- [[DOC-01-Project-Charter]] — Project charter and scope
-- [[DOC-02-System-Architecture]] — System architecture document
-- [[DOC-03-API-Reference]] — Initial API reference
-- [[DOC-13-Strategic-Analysis]] — Strategic analysis
-- [[DOC-14-Zero-Cost-Hosting]] — Zero-cost hosting analysis
-- [[DOC-15-Mind-Map]] — Platform mind map
-- [[DOC-16-Lotus-Diagram]] — Lotus diagram
-- [[DOC-17-SCAMPER-5Whys]] — SCAMPER & 5 Whys analysis
-- [[DOC-18-Brainstorming]] — Brainstorming sessions
+- [Branch consolidation (May 2026)](Historical-BRANCH_CONSOLIDATION)
+- [Branch integration report (Tranc3 / Trancendos)](Historical-BRANCH_INTEGRATION_REPORT)
+- [Forensic Assessment — Tranc3 Repository (31 May 2026)](Historical-FORENSIC_ASSESSMENT_2026-05-31)
+- [Trancendos Platform — Forensic Assessment & Production Readiness Roadmap](Historical-FORENSIC_REPORT_2026_05_28)
+- [Merge strategy (Tranc3 / Trancendos)](Historical-MERGE_STRATEGY)
+- [Tranc3 Phase 20 — SWOT Analysis & Forensic Assessment](Historical-PHASE20_SWOT_FORENSIC)
+- [Tranc3 Phase 21 — SWOT Analysis & Forensic Assessment](Historical-PHASE21_SWOT_FORENSIC)
+- [Phase 22 Enhancement — Infinity Ecosystem Architecture](Historical-PHASE22_ENHANCEMENT)
+- [Phase 23 Enhancement Report — Tranc3 Infinity Ecosystem](Historical-PHASE23_ENHANCEMENT)
+- [Phase 23 — Forensic Investigation & SWOT Analysis](Historical-PHASE23_FORENSIC_REPORT)
+- [TRANC3 INFINITY — Phase 25: Progress Percentage Calculation](Historical-PHASE25_PROGRESS_CALCULATION)
+- [TRANC3 INFINITY — Phase 25: Trancendos Organization Repository Review](Historical-PHASE25_REPO_REVIEW)
+- [TRANC3 INFINITY — Phase 25: UX/UI Enhancement Research](Historical-PHASE25_UXUI_ENHANCEMENT)
+- [TRANC3 INFINITY — Phase 25: Zero-Cost Infrastructure Assessment](Historical-PHASE25_ZERO_COST_ASSESSMENT)
+- [TRANC3 INFINITY — Comprehensive Directory Structure Document](Historical-PHASE26_DIRECTORY_STRUCTURE)
+- [Phase 27: Three-Bridge Architecture — Nexus, HIVE, and InfinityBridge](Historical-PHASE27_DIMENSIONAL_NEXUS)
+- [Phase 28 — Advanced Bridge Systems & Pillar Entity Architecture](Historical-PHASE28_ADVANCED_BRIDGE_SYSTEMS)
+- [Tranc3 Phase 7 — Advanced Architecture Documentation](Historical-PHASE7_ARCHITECTURE)
+- [Tranc3 Phase 7 — Deployment Guide](Historical-PHASE7_DEPLOYMENT)
+- [PHASE 8-11.1 ARCHITECTURE — Tranc3 Ecosystem](Historical-PHASE8-11_ARCHITECTURE)
+- [Phase 2 — P2 rollout (after P0 live)](Historical-PHASE_2_P2_ROLLOUT)
+- [Pre-deploy quality (846 IDE issues explained)](Historical-PRE_DEPLOY_QUALITY)
+- [Production forensic assessment (honest)](Historical-PRODUCTION_FORENSIC_ASSESSMENT)
+- [Production readiness status & roadmap](Historical-PRODUCTION_READINESS_STATUS)
+- [PROJECT PULSE — Tranc3 Zero-Cost Nanoservice Modernization](Historical-PROJECT_PULSE)
+- [REVERT LOG — Tranc3 Zero-Cost Nanoservice Modernization (TSK-004)](Historical-REVERT_LOG)
+- [Tranc3 Platform — SWOT Analysis (May 2026)](Historical-SWOT_ANALYSIS)
+- [SWOT Analysis & Forensic Assessment — Tranc3 Platform (Phase 24)](Historical-SWOT_PHASE24_FORENSIC)
 
-### Historical Phase Reports
-- [[Phase-2-P2-Rollout]] — Phase 2 P2 service rollout
-- [[Phase-7-Architecture]] — Phase 7 architecture
-- [[Phase-7-Deployment]] — Phase 7 deployment
-- [[Phase-8-11-Architecture]] — Phases 8–11 architecture evolution
-- [[Phase-20-SWOT-Forensic]] — Phase 20 SWOT & forensic report
-- [[Phase-21-SWOT-Forensic]] — Phase 21 SWOT & forensic report
-- [[Phase-22-Enhancement]] — Phase 22 enhancement report
-- [[Phase-23-Enhancement]] — Phase 23 enhancement report
-- [[Phase-23-Forensic-Report]] — Phase 23 forensic report
-- [[Phase-24-SWOT-Forensic]] — Phase 24 SWOT & forensic report
-- [[Phase-25-Progress-Calculation]] — Phase 25 progress calculation
-- [[Phase-25-Repo-Review]] — Phase 25 repository review
-- [[Phase-25-UX-Enhancement]] — Phase 25 UX/UI enhancement
-- [[Phase-25-Zero-Cost-Assessment]] — Phase 25 zero-cost assessment
-- [[Phase-26-Directory-Structure]] — Phase 26 directory structure
-- [[Phase-27-Dimensional-Nexus]] — Phase 27 Dimensional Nexus
-- [[Phase-28-Advanced-Bridge-Systems]] — Phase 28 advanced bridge systems
-- [[Forensic-Report-2026-05-28]] — Forensic report 2026-05-28
-- [[Forensic-Assessment-2026-05-31]] — Forensic assessment 2026-05-31
-- [[SWOT-Analysis]] — Platform SWOT analysis
-- [[Branch-Consolidation]] — Branch consolidation history
-- [[Branch-Integration-Report]] — Branch integration report
-- [[Production-Forensic-Assessment]] — Production forensic assessment
+## 📋 TODO
 
-### Operational History
-- [[Project-Pulse]] — Project health pulse snapshots
-- [[Revert-Log]] — Revert history and rollback log
-- [[Verification]] — Verification reports
-
-### Todo & Backlog
-- [[Todo-Platform]] — Platform-level todo items
-- [[Todo-Infrastructure]] — Infrastructure todo items
-- [[Todo-TypeScript]] — TypeScript sub-project todos
+- [Tranc3 — Phase 8-11.1 Implementation Plan](Todo-todo)
+- [Tranc3 Infrastructure Build — Task Tracker](Todo-todo_infra)
+- [Tranc3 Ecosystem — Hub Implementation Tracker](Todo-tranc3-ts-todo)
 
 ---
 
-*This wiki is the source of truth for conceptual and historical documentation. For code-level docs, see the [repo](https://github.com/Trancendos/Tranc3/tree/main/docs).*
+*Source of truth for conceptual & historical docs. For code-level docs, see the [repo `docs/`](https://github.com/Trancendos/Tranc3/tree/main/docs).*

@@ -75,6 +75,28 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | 8028 | `cdn-service` | The Studio | Voxx | PID-STD | Supporting layer |
 | 8029 | `health-aggregator` | DevOcity | Kitty | PID-DEV | Primary worker |
 
+> **Port authority & known drift (issue #188).** The deployment truth is
+> `docker-compose.production.yml`. **The 8004–8029 rows above match the compose
+> `ports:` host mapping for all 26 workers exactly** (verified) — so this table is
+> compose-accurate. The drift is on the **`CLAUDE.md` worker-map side**: for several
+> P2/P3 workers its port column diverges from compose (e.g. `email-service`
+> CLAUDE.md `8022` vs compose/here `8018`; `queue-service` `8027` vs `8022`;
+> `config-service` `8020` vs `8024`; `rate-limit-service` `8028` vs `8026`;
+> `search-service` `8024` vs `8017`; also `audit-service`, `cache-service`,
+> `storage-service`, `sms-service`, `cdn-service`, `geo-service`). A separate concern:
+> some workers' **code bind default** (`int(os.getenv("PORT") or "…")`) matches neither
+> registry, which — where compose maps `host:container` on the same number but the app
+> binds a different port — is a real routing risk (cf. the chaos-party defect). Full
+> reconciliation (code = `CLAUDE.md` = this table = compose) is tracked in **#188** and
+> is intentionally deferred to a dedicated, per-worker-verified change.
+>
+> **Confirmed-intentional shared internal ports** (not collisions): compose routes
+> several third-party images on their own container-internal default via Traefik —
+> `8000` (`tranc3-backend` host-published; `paperless` internal), `8065`
+> (`observatory` host-published; `mattermost` internal default), `8080` (`kestra` +
+> `stirling-pdf`, each its own image default, Traefik host-routed). Distinct
+> containers, disambiguated by Traefik — no host-port double-bind.
+
 ---
 
 ## Full Entity Table
