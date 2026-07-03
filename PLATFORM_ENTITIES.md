@@ -75,19 +75,20 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | 8028 | `cdn-service` | The Studio | Voxx | PID-STD | Supporting layer |
 | 8029 | `health-aggregator` | DevOcity | Kitty | PID-DEV | Primary worker |
 
-> **Port authority & known drift (issue #188).** For a worker wired into
-> `docker-compose.production.yml`, the **compose `PORT` env / Traefik
-> `loadbalancer.server.port` is authoritative** (that is what deploys and routes);
-> `CLAUDE.md`'s worker map is reconciled to it. The 8004–8029 rows above are the
-> **original sequential design assignment** for the P1–P3 fleet and are **not yet
-> reconciled to compose/`CLAUDE.md`** — several disagree (e.g. `email-service`,
-> `queue-service`, `config-service`, `rate-limit-service`, `search-service`,
-> `audit-service`, `cache-service`, `storage-service`, `sms-service`, `cdn-service`,
-> `geo-service`). Many of these workers are **not present in compose**, so their true
-> port is the value their code binds (`int(os.getenv("PORT") or "…")`), which in some
-> cases matches neither registry. Full reconciliation (code = `CLAUDE.md` =
-> this table = compose) is tracked in **#188** and is intentionally deferred to a
-> dedicated, per-worker-verified change rather than a bulk guess.
+> **Port authority & known drift (issue #188).** The deployment truth is
+> `docker-compose.production.yml`. **The 8004–8029 rows above match the compose
+> `ports:` host mapping for all 26 workers exactly** (verified) — so this table is
+> compose-accurate. The drift is on the **`CLAUDE.md` worker-map side**: for several
+> P2/P3 workers its port column diverges from compose (e.g. `email-service`
+> CLAUDE.md `8022` vs compose/here `8018`; `queue-service` `8027` vs `8022`;
+> `config-service` `8020` vs `8024`; `rate-limit-service` `8028` vs `8026`;
+> `search-service` `8024` vs `8017`; also `audit-service`, `cache-service`,
+> `storage-service`, `sms-service`, `cdn-service`, `geo-service`). A separate concern:
+> some workers' **code bind default** (`int(os.getenv("PORT") or "…")`) matches neither
+> registry, which — where compose maps `host:container` on the same number but the app
+> binds a different port — is a real routing risk (cf. the chaos-party defect). Full
+> reconciliation (code = `CLAUDE.md` = this table = compose) is tracked in **#188** and
+> is intentionally deferred to a dedicated, per-worker-verified change.
 >
 > **Confirmed-intentional shared internal ports** (not collisions): compose routes
 > several third-party images on their own container-internal default via Traefik —

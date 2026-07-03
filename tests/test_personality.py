@@ -216,10 +216,14 @@ class TestPersonalityMatrix:
         assert json_files, "no profile JSON files found on disk"
 
         matrix = PersonalityMatrix(str(profiles_dir))
-        loaded = matrix.list_profiles()
-        assert len(loaded) == len(json_files), (
-            f"{len(json_files) - len(loaded)} profile(s) failed to load: "
-            f"{sorted({p.stem for p in json_files} - set(loaded))}"
+        # Compare exact name sets (not just counts): PersonalityMatrix registers
+        # each profile by profile.name, so this also catches a profile that loads
+        # under the wrong key, not only ones that fail to load entirely.
+        loaded = set(matrix.list_profiles())
+        expected = {p.stem for p in json_files}
+        assert loaded == expected, (
+            f"profile name/file mismatch — missing={sorted(expected - loaded)}, "
+            f"extra={sorted(loaded - expected)}"
         )
 
     def test_all_shipped_profiles_have_spawn_required_id(self):

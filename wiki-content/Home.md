@@ -3,7 +3,7 @@
 Welcome to the Trancendos platform wiki — the living knowledge base for the Tranc3 project: architecture decisions, strategic analysis, security tracking, governance, and historical phase reports.
 
 > **Code-adjacent docs** (API reference, design system, deployment scripts, compliance controls) live in the **[repo](https://github.com/Trancendos/Tranc3)** under `docs/`. Everything conceptual or historical lives here.
-
+>
 > _Pages are flat (GitHub-Wiki-native) and named `Section-Name`; the sidebar mirrors this grouping. Every link below resolves to a real page._
 
 ---
