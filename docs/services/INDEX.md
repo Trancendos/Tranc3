@@ -75,11 +75,10 @@ status-tracked · rollout order per framework §6.
 | 2026-07-02 | Added Infinity + The Observatory packs, code-grounded against `workers/infinity-auth/` and `src/observability/` (4/11 required full packs). |
 | 2026-07-02 | Added Luminous + Turing's Hub packs (Partial-tier), code-grounded against `src/bio_neural/` + `src/core/` and `src/personality/`; review surfaced and repaired real route bugs (phi tensor type, neuromorphic kwarg, `/status` probe, `_matrix` import) and flagged remaining PARTIAL wiring. |
 | 2026-07-03 | Added The Nexus pack, code-grounded against `workers/infinity-ws/worker.py` (JWT WebSocket hub, `ConnectionManager`, internal-secret HTTP routes, port 8004). |
-| 2026-07-03 | Batch: added The Void, The Town Hall, The Chaos Party, The Workshop, Arcadia packs — code/config-grounded against `workers/infinity-void/worker.py`, `src/townhall/`, `tests/test_chaos.py`, `deploy/forgejo/`, `web/`. CranBania submodule scoped out (not checked out); The Void port clarified (app default 8082; `EXPOSE 8002` stale, per #188). |
+| 2026-07-03 | Batch: added The Void, The Town Hall, The Chaos Party, The Workshop, Arcadia packs — code/config-grounded against `workers/infinity-void/worker.py`, `src/townhall/`, `tests/test_chaos.py`, `deploy/forgejo/`, `web/`. CranBania submodule scoped out (not checked out). |
+| 2026-07-03 | Follow-up: corrected The Void's port note — the earlier claim ("8082 is the app default and authoritative, `EXPOSE 8002` stale") was wrong. 8002 is the consistently-referenced, intended port (monitoring, `workers/README.md`, wiki, `docs/vault_security.md`); fixed by adding an explicit `PORT=8002` to compose rather than changing the port. See `docs/services/the-void/` verification log. |
 
-[^void-port]: **Port, clarified against code.** The vault worker `workers/infinity-void/worker.py`
-    binds `int(os.getenv("PORT","8082"))` — so **8082** (the `CLAUDE.md` value) is the app default and
-    authoritative; the worker's `Dockerfile EXPOSE 8002` is **stale/cosmetic** (sync tracked in #188).
-    Separately, `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
-    that is a **different** worker owned by the same entity (`PID-VOI`), not the vault, so it is not an
-    error. See `docs/services/the-void/` for the full pack.
+[^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
+    that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
+    (`infinity-void`, port 8002), so it is not an error. See `docs/services/the-void/` for the
+    full pack.

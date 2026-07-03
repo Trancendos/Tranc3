@@ -82,15 +82,13 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 > (it was assigned alphabetically, e.g. `email-service` shown as `8022`); that has now
 > been **reconciled to this table / compose** in `CLAUDE.md`, so registry = registry = compose.
 >
-> **Remaining real defect (not just docs):** for **4 workers** the code binds `PORT` (default
-> shown) but compose routes elsewhere with **no `PORT` env to override it**, so the app is
-> unreachable at the routed port (same class as the chaos-party defect): `audit-service`
-> (8017 / 8025), `queue-service` (8027 / 8022), `search-service` (8083 / 8017), and
-> `infinity-void` (8082 / 8002 — entangled with the vault's documented 8082 default). These
-> need a per-worker code-or-compose fix (some code ports collide with other workers' compose
-> ports, so no bulk edit) — tracked in **#188**. Workers reading a *custom* port env instead of
-> `PORT` (e.g. `hive-service` → `HIVE_PORT=8051`, `cache-service` → `CACHE_PORT`) are **not**
-> defects — compose sets that var, so they route correctly.
+> **Routing defects (issue #188) — resolved.** A prior pass flagged 4 workers as unreachable based
+> on their Python-level `PORT` default alone. Re-verified against each worker's Dockerfile `CMD`:
+> `audit-service`, `queue-service`, and `search-service` all hardcode `--port <N>` in `CMD`
+> (matching compose), so their `os.getenv("PORT", ...)` default is dead code — never actually
+> broken. Only `infinity-void` genuinely depended on the `PORT` env (bare `CMD ["python",
+> "worker.py"]`, no compose override); fixed by adding an explicit `PORT=8002` to its compose
+> `environment:` block. Zero known routing defects remain.
 >
 > **Confirmed-intentional shared internal ports** (not collisions): compose routes
 > several third-party images on their own container-internal default via Traefik —

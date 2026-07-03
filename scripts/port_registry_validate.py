@@ -15,8 +15,10 @@ documented in CLAUDE.md's "Port source of truth" note:
 
 Workers that read a *custom* port env (e.g. HIVE_PORT, CACHE_PORT) are out of
 scope here — this only checks the documented/compose port pairing, not each
-worker's code bind (see docs/services/ and issue #188 for the 4 known code-bind
-routing defects, which this script deliberately does not attempt to detect).
+worker's code bind — see issue #188, resolved: none of the previously-suspected
+code-bind routing defects were real (3 had a Dockerfile CMD port override this
+script doesn't inspect; the 4th, infinity-void, is now fixed via an explicit
+compose PORT= override).
 """
 
 from __future__ import annotations
@@ -31,14 +33,13 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = ROOT / "docker-compose.production.yml"
 CLAUDE_MD = ROOT / "CLAUDE.md"
 
-# Workers with a *documented, deliberate* CLAUDE.md/compose port mismatch —
-# each is a known #188 routing defect (code binds a different port than compose
-# routes to) where CLAUDE.md intentionally states the app's actual bind port
-# rather than the (unreachable) compose-routed port. Do not add to this list
-# without a corresponding note in CLAUDE.md's "known routing defects" table.
-KNOWN_EXCEPTIONS = {
-    "infinity-void",  # code/CLAUDE.md 8082 vs compose 8002 — see docs/services/the-void/
-}
+# Workers with a *documented, deliberate* CLAUDE.md/compose port mismatch.
+# Empty as of #188's resolution — infinity-void was the only real case and is
+# now fixed via an explicit PORT= override in compose. Do not add to this list
+# without a corresponding note in CLAUDE.md's routing-defects section, and only
+# after confirming the mismatch isn't just a Dockerfile CMD port override this
+# script doesn't inspect (see module docstring).
+KNOWN_EXCEPTIONS: set[str] = set()
 
 
 def _compose_ports() -> dict[str, str]:

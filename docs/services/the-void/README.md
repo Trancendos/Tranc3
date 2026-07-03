@@ -6,7 +6,7 @@
 | **Lead AI** | Prometheus (`AID-VOI-01`); Prime: The Guardian (Marcus Magnolia) |
 | **Status** | 🔧 Migrating (per `CLAUDE.md` service table) — CF Worker → self-hosted |
 | **Code** | `workers/infinity-void/worker.py` (self-hosted); legacy `cloudflare/infinity-void/` |
-| **Port** | app default **8082** (`int(os.getenv("PORT","8082"))`). *Note:* the Dockerfile `EXPOSE`s **8002** (stale/cosmetic — the app binds `PORT`); sync tracked in issue #188 |
+| **Port** | **8002** — compose sets `PORT=8002` explicitly (`docker-compose.production.yml`), overriding the Python-level default of `int(os.getenv("PORT","8082"))` in `worker.py`. This was a real #188 routing defect (bare `CMD ["python","worker.py"]`, previously no compose `PORT` override → the container fell back to 8082 while compose only routed to 8002) — fixed by adding the explicit override. |
 
 > **Truthfulness:** claims cite `workers/infinity-void/worker.py` (`worker` v2.1.0). Status is owned by
 > the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`. `PLATFORM_ENTITIES.md` lists The
@@ -120,3 +120,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-03 | Claude (session) | `workers/infinity-void/worker.py` (routes, `get_auth_user_id`, AESGCM/PBKDF2, SQLite/`R2_DIR`, `RateLimiter`, fail-fast config, PORT default), Dockerfile | Routes, auth delegation, crypto, storage, rate limiting, and the 8082-vs-EXPOSE-8002 port note verified against code |
+| 2026-07-03 | Claude (session, follow-up) | `docker-compose.production.yml` (was missing an explicit `PORT` override) | Corrected: the earlier "8082 is the real app default, EXPOSE 8002 is stale" claim was wrong — 8002 is the consistently-referenced, intended port (matches monitoring scrape targets, `workers/README.md`, wiki, `docs/vault_security.md`). Fixed by adding `PORT=8002` to compose's `environment:` block rather than changing the port itself. |

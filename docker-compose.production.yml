@@ -442,6 +442,7 @@ services:
       dockerfile: Dockerfile
     container_name: infinity-void-worker
     environment:
+      - PORT=8002
       - MASTER_KEY_SEED=${MASTER_KEY_SEED}
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - ENVIRONMENT=production
