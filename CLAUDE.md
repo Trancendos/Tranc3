@@ -269,8 +269,8 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 > `loadbalancer.server.port` / published `ports:`), reconciled against `PLATFORM_ENTITIES.md` and
 > each worker's actual code bind port. The P3 block `8016–8029` was previously mis-paired here (it
 > had been assigned alphabetically, e.g. `email-service` shown as `8022`); it is now corrected to the
-> compose mapping (`email-service` `8018`, `search-service` `8017`, `queue-service` `8022`, …), which
-> also matches what those workers' code binds.
+> compose mapping (`email-service` `8018`, `search-service` `8017`, `queue-service` `8022`, …). Most of
+> these workers' code binds agree with compose, but **4 do not** — see the routing-defects table below.
 >
 > **Known routing defects (issue #188).** A worker's code binds `PORT` (default shown), but compose
 > routes to a different port and sets **no `PORT` env** to override it, so the container is unreachable
