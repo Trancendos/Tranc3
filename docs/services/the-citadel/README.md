@@ -8,8 +8,15 @@
 | **Code** | `docker-compose.production.yml`, `deploy/citadel/deploy-production.sh`, `scripts/citadel_preflight.py`, `deploy/vault/vault.hcl`, `deploy/runbook.md` |
 
 > **Truthfulness:** claims cite `docker-compose.production.yml`, `deploy/citadel/deploy-production.sh`,
-> `scripts/citadel_preflight.py`, and `deploy/runbook.md` directly. Status is owned by the
-> `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
+> `scripts/citadel_preflight.py`, `scripts/zero_cost_audit.py`, `scripts/branch_benefit_audit.py`,
+> `scripts/health_check.py`, and `deploy/runbook.md` directly. Status is owned by the `CLAUDE.md`
+> service table; identity by `PLATFORM_ENTITIES.md`.
+>
+> **Version drift note:** image versions and step-by-step script behavior below (e.g. Prometheus
+> `v2.50.0`, Grafana `10.3.0`, the preflight/deploy step order) are transcribed from the cited files
+> as of this pack's Verification Log date. They are **not** auto-synced — if `docker-compose.production.yml`
+> or the referenced scripts change, this pack must be re-verified and updated, same as any other
+> code-grounded doc-pack in this repo.
 
 ## 1. Service Governance Charter (GOV)
 
