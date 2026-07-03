@@ -20,7 +20,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Spark** | ✅ In repo | Imfy (Prime: Norman Hawkins) | ✅ **Complete** (reference) | `docs/services/the-spark/` |
 | **The Digital Grid** | ✅ In repo | Tyler Towncroft (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-digital-grid/` |
 | **Infinity** | ✅ Self-hosted | The Guardian (Anchor: Orb of Orisis) (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/infinity/` |
-| The Nexus | 🔧 Self-hosted | Nexus-Prime | ⬜ Pending | `workers/infinity-ws/` (8004) |
+| **The Nexus** | 🔧 Self-hosted | Nexus-Prime (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-nexus/` |
 | **The Observatory** | ✅ Self-hosted | Norman Hawkins (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-observatory/` |
 | The Workshop | ✅ In repo | Larry Lowhammer | ⬜ Pending | `deploy/forgejo/` |
 | The Town Hall | ✅ Integrated | Tristuran | ⬜ Pending | `workers/cranbania/` (8071) |
@@ -72,6 +72,7 @@ status-tracked · reference pack established · rollout order per framework §6.
 | 2026-07-02 | Added The Digital Grid pack, code-grounded against `src/workflow/` (2/43). |
 | 2026-07-02 | Added Infinity + The Observatory packs, code-grounded against `workers/infinity-auth/` and `src/observability/` (4/11 required full packs). |
 | 2026-07-02 | Added Luminous + Turing's Hub packs (Partial-tier), code-grounded against `src/bio_neural/` + `src/core/` and `src/personality/`; review surfaced and repaired real route bugs (phi tensor type, neuromorphic kwarg, `/status` probe, `_matrix` import) and flagged remaining PARTIAL wiring. |
+| 2026-07-03 | Added The Nexus pack, code-grounded against `workers/infinity-ws/worker.py` (JWT WebSocket hub, `ConnectionManager`, internal-secret HTTP routes, port 8004). |
 
 [^void-port]: **Source discrepancy (flagged, not silently resolved).** `CLAUDE.md`'s
     self-hosted worker map lists The Void's self-hosted vault as `infinity-void` on **8082**
