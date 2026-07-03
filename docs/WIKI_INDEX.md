@@ -78,10 +78,13 @@ GitHub Wiki by the script above. Navigation is generated into `wiki-content/_Sid
 ## Migration status — DONE (staged), publish pending
 
 The historical/strategic/architecture docs listed above have **already been moved** into
-`wiki-content/` (62 files: `architecture/`, `strategy/`, `security/`, `historical/`,
-`todo/`, `Home.md`). These were `R100` (100%-identical) git renames in PR #184 — no content
-was lost, and full history is preserved. The former root/`docs/` copies no longer duplicate
-them.
+`wiki-content/` and are now stored as **flat, GitHub-Wiki-native pages** named
+`Section-Name.md` (e.g. `Architecture-FRAMEWORK.md`, `Strategy-FREE_TIER_REGISTRY.md`,
+`Historical-PHASE7_ARCHITECTURE.md`) plus `Home.md` and `_Sidebar.md`. The original moves
+were `R100` (100%-identical) git renames in PR #184; the pages were later flattened from
+subdirectories (`architecture/`, `strategy/`, …) to flat `Section-` slugs so that GitHub
+Wiki links resolve reliably (subdirectory-style links rendered as empty "create this page"
+shells). No content was lost. The former root/`docs/` copies no longer duplicate them.
 
 **To publish (or re-publish) to the live GitHub Wiki:**
 
