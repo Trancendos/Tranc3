@@ -326,7 +326,7 @@ async def lifespan(app: FastAPI):
 
     # Personality matrix
     try:
-        personality_matrix = EnhancedPersonalityMatrix(cfg)  # type: ignore[arg-type]
+        personality_matrix = EnhancedPersonalityMatrix(cfg.personality_dir)
         logger.info("Personality matrix ready")
     except Exception as e:
         logger.error(
@@ -1511,10 +1511,13 @@ async def chat(
             conversation_length=len(history),
         )
 
-        # Personality vector
+        # Personality vector — only if the active matrix implementation exposes it.
+        # The in-repo PersonalityMatrix (src/personality/matrix.py) is a JSON-profile
+        # registry and does not compute vectors; degrade gracefully rather than crash.
         personality_vector = None
-        if personality_matrix:
-            personality_vector = personality_matrix.get_personality_vector(
+        _get_vec = getattr(personality_matrix, "get_personality_vector", None)
+        if callable(_get_vec):
+            personality_vector = _get_vec(
                 chat_req.personality,
                 emotion_scores,
                 chat_req.language,
@@ -1801,7 +1804,7 @@ async def languages():
 async def personalities():
     if not personality_matrix:
         raise HTTPException(status_code=503, detail="Service not ready")
-    return {"personalities": list(personality_matrix.personalities.keys())}
+    return {"personalities": personality_matrix.list_profiles()}
 
 
 @app.post(

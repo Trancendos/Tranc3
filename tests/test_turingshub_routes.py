@@ -26,3 +26,21 @@ async def test_matrix_active_returns_active_personality_key():
     # tracking yet, so active_personality is null — but the shape is stable.
     res = await active_personality()
     assert "active_personality" in res
+
+
+def test_personality_matrix_constructs_with_profiles_dir():
+    # Regression: api.py's lifespan constructs the matrix as
+    # EnhancedPersonalityMatrix(cfg.personality_dir) — a *path string*, not the
+    # Config object. Passing a Config previously raised in Path(...) and left
+    # personality_matrix = None (Turing's Hub dead). Assert the real contract:
+    # constructing with the profiles_dir loads profiles and exposes list_profiles().
+    import os
+
+    from src.personality.matrix import PersonalityMatrix
+
+    personality_dir = os.getenv("PERSONALITY_DIR", "./src/personality/profiles")
+    matrix = PersonalityMatrix(personality_dir)
+    profiles = matrix.list_profiles()
+    assert isinstance(profiles, list)
+    # The in-repo registry ships named-entity profiles; it must load at least one.
+    assert profiles, "PersonalityMatrix loaded no profiles from the profiles dir"
