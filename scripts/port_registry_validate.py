@@ -59,10 +59,20 @@ def _compose_ports() -> dict[str, str]:
             continue
 
         labels = svc.get("labels") or []
-        label_text = " ".join(labels) if isinstance(labels, list) else str(labels)
-        m = re.search(r"loadbalancer\.server\.port=(\d+)", label_text)
-        if m:
-            ports[name] = m.group(1)
+        traefik_port = None
+        if isinstance(labels, dict):
+            # e.g. {"traefik.http.services.<name>.loadbalancer.server.port": "8067"}
+            for key, value in labels.items():
+                if key.endswith("loadbalancer.server.port"):
+                    traefik_port = str(value)
+                    break
+        else:
+            label_text = " ".join(str(item) for item in labels)
+            m = re.search(r"loadbalancer\.server\.port=(\d+)", label_text)
+            if m:
+                traefik_port = m.group(1)
+        if traefik_port:
+            ports[name] = traefik_port
             continue
 
         for p in svc.get("ports") or []:
