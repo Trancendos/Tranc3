@@ -91,11 +91,11 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **The Citadel** | Trancendos | Strategic ops & DevOps fortress | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
 | **Think Tank** | Trancendos | R&D centre — solutions & forefront technologies | 🔧 Planned | `src/quantum/`, `src/deepmind/` |
 | **ChronosSphere / ArcStream** | Chronos | Task, time & scheduling management | 🔧 Planned | Cal.com (self-hosted) |
-| **DevOcity** | Kitty | Development operations hub | ✅ In repo | Custom dev portal |
+| **DevOcity** | Kitty | Development operations hub | ✅ In repo | `src/devocity/` (router registered in `api.py`); custom dev portal concept |
 | **Tranquility** | Savania | Wellbeing central hub | ✅ In repo | `src/tranquility/` (router registered in `api.py`) |
 | **I-Mind** | Elouise | Sensitivity to emotion engine | ✅ In repo | `src/imind/` (router registered in `api.py`) |
 | **tAimra** | tAImra | Opt-in digital twin & life assistant | ✅ In repo | `src/taimra/` (router registered in `api.py`) |
-| **VRAR3D** | Entari | Standalone 3D / VR immersion | ✅ In repo | Three.js / A-Frame |
+| **VRAR3D** | Entari | Standalone 3D / VR immersion | ✅ In repo | `src/vrar3d/` (router registered in `api.py`); Three.js / A-Frame planned frontend |
 | **Resonate** | Magdalena | Empathy engine | ✅ In repo | `src/resonate/` (router registered in `api.py`) |
 
 ### Already-deployed Cloudflare Workers (not yet in this repo)
