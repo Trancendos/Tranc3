@@ -69,34 +69,34 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **Arcadia** | Lilli SC | Front-end post-login, forum & email hub | 🔧 Partial | `web/` |
 | **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
 | **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | ✅ Integrated | `workers/cranbania/` (CranBania submodule, Port 8071), `src/townhall/`, `src/compliance/middleware.py` |
-| **The Library** | Zimik | Knowledge base & wiki | 🔧 Planned | Outline (self-hosted) |
+| **The Library** | Zimik | Knowledge base & wiki | ✅ In repo | Outline (self-hosted) |
 | **The Academy** | Shimshi | Learning management — education & skill training | 🔧 Planned | Custom LMS |
 | **DocUtari** | To be Defined | Document management hub | 🔧 Planned | Paperless-ngx |
-| **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | 🔧 Planned | `src/basement/` (to create) |
-| **The Studio** | Voxx | Central hub of the Creativity Center | 🔧 Planned | `src/studio/` (to create) |
+| **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | ✅ In repo | `src/basement/` (router registered in `api.py`) |
+| **The Studio** | Voxx | Central hub of the Creativity Center | ✅ In repo | `src/studio/` (router registered in `api.py`) |
 | **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | 🔧 Planned | Stable Diffusion + ComfyUI |
 | **TranceFlow** | Junior Cesar | 3D modeling & games creation studio | 🔧 Planned | Godot Engine integration |
 | **TateKing** | Benji Tate & Sam King | Video creation & editing platform | 🔧 Planned | FFmpeg + custom UI |
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | 🔧 Planned | Penpot (self-hosted) |
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | 🔧 Planned | Orchestrates above |
-| **The Lab** | The Dr. & Slime | Code creation platform (Claude Code-style) | 🔧 Planned | `src/lab/` (to create) |
+| **The Lab** | The Dr. & Slime | Code creation platform (Claude Code-style) | ✅ In repo | `src/lab/` (router registered in `api.py`) |
 | **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py` |
-| **The Artifactory** | Lunascene | Central artifact repository library | 🔧 Planned | Gitea packages / Zot |
+| **The Artifactory** | Lunascene | Central artifact repository library | ✅ In repo | Gitea packages / Zot |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | 🔧 Planned | Gravitee.io |
-| **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | 🔧 Planned | Wazuh + MISP |
+| **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | Wazuh + MISP |
 | **The Ice Box** | Neonach | Sandbox threat isolation & quarantine | 🔧 Planned | Cuckoo sandbox |
 | **The Warp Tunnel** | Rocking Ricki | Cryptographic scanner & quarantine transport | 🔧 Planned | `src/security/warp_tunnel/` (to create) |
 | **Warp Radio** | Rocking Ricki | Music & audio streaming integration | 🔧 Planned | `src/warp_radio/` (to create) |
-| **The Dutchy** | Predictive lore | Intelligence & market analysis | 🔧 Planned | `src/research/` |
+| **The Dutchy** | Predictive lore | Intelligence & market analysis | ✅ In repo | `src/research/` |
 | **The Citadel** | Trancendos | Strategic ops & DevOps fortress | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
 | **Think Tank** | Trancendos | R&D centre — solutions & forefront technologies | 🔧 Planned | `src/quantum/`, `src/deepmind/` |
 | **ChronosSphere / ArcStream** | Chronos | Task, time & scheduling management | 🔧 Planned | Cal.com (self-hosted) |
-| **DevOcity** | Kitty | Development operations hub | 🔧 Planned | Custom dev portal |
-| **Tranquility** | Savania | Wellbeing central hub | 🔧 Planned | `src/tranquility/` (to create) |
-| **I-Mind** | Elouise | Sensitivity to emotion engine | 🔧 Planned | `src/imind/` (to create) |
-| **tAimra** | tAImra | Opt-in digital twin & life assistant | 🔧 Planned | `src/taimra/` (to create) |
-| **VRAR3D** | Entari | Standalone 3D / VR immersion | 🔧 Planned | Three.js / A-Frame |
-| **Resonate** | Magdalena | Empathy engine | 🔧 Planned | `src/resonate/` (to create) |
+| **DevOcity** | Kitty | Development operations hub | ✅ In repo | Custom dev portal |
+| **Tranquility** | Savania | Wellbeing central hub | ✅ In repo | `src/tranquility/` (router registered in `api.py`) |
+| **I-Mind** | Elouise | Sensitivity to emotion engine | ✅ In repo | `src/imind/` (router registered in `api.py`) |
+| **tAimra** | tAImra | Opt-in digital twin & life assistant | ✅ In repo | `src/taimra/` (router registered in `api.py`) |
+| **VRAR3D** | Entari | Standalone 3D / VR immersion | ✅ In repo | Three.js / A-Frame |
+| **Resonate** | Magdalena | Empathy engine | ✅ In repo | `src/resonate/` (router registered in `api.py`) |
 
 ### Already-deployed Cloudflare Workers (not yet in this repo)
 
