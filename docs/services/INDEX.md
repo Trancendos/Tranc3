@@ -90,8 +90,9 @@ cases, just-corrected) status requires · rollout order per framework §6.
 >
 > **Known gap — CLAUDE.md `🔧 Planned` status was stale for all 26 originally-Planned entities;
 > all 26 now corrected.** A PR review (cubic) caught that 2 of the "no code exists" charter-only
-> packs were factually wrong; a full audit found **21 of the 26** `🔧 Planned` entities already
-> had real, substantial code. Of those 21, **15 have a router confirmed registered live in
+> packs were factually wrong; a full audit (extended by a later Gemini Code Assist find covering
+> the last 5) confirmed real code for all 26. Across all 26, **15 have a router confirmed registered
+> live in
 > `api.py`** — The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The
 > Dutchy (as `section7`), DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, Think Tank (as
 > `_thinktank_router`), and API Marketplace (as `_apimarket_router` from `src/apimarket/routes` —
