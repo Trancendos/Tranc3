@@ -17,7 +17,7 @@
 - **Mission:** central hub of the Creativity Center — coordinates the creative-tool cluster (Fabulousa, TateKing, TranceFlow, Sashas Photo Studio).
 - **In scope (when built):** the scope implied by the Foundation above; no implementation
   exists yet in this repo, though `src/studio/` is the planned code path.
-- **Out of scope:** anything not named in the mission above; scope will be re-charter'd once
+- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
   implementation begins, per the framework's Planned→Partial promotion process.
 - **Lead AI (Tier 3):** Voxx — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Voxx.

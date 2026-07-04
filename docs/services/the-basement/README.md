@@ -17,7 +17,7 @@
 - **Mission:** archived information store — long-term retention of records rolled off from The Observatory's active audit log.
 - **In scope (when built):** the scope implied by the Foundation above; no implementation
   exists yet in this repo, though `src/basement/` is the planned code path.
-- **Out of scope:** anything not named in the mission above; scope will be re-charter'd once
+- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
   implementation begins, per the framework's Planned→Partial promotion process.
 - **Lead AI (Tier 3):** Gary Glowman (Glow-Worm) — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Gary Glowman (Glow-Worm).

@@ -17,7 +17,7 @@
 - **Mission:** cryptographic scanner & quarantine transport for data moving between trust zones.
 - **In scope (when built):** the scope implied by the Foundation above; no implementation
   exists yet in this repo, though `src/security/warp_tunnel/` is the planned code path.
-- **Out of scope:** anything not named in the mission above; scope will be re-charter'd once
+- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
   implementation begins, per the framework's Planned→Partial promotion process.
 - **Lead AI (Tier 3):** Rocking Ricki — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Rocking Ricki.

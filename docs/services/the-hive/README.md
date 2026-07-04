@@ -17,7 +17,7 @@
 - **Mission:** data transport hub — agent and queue coordination.
 - **In scope (when built):** the scope implied by the Foundation above; no implementation
   exists yet in this repo — this is a deployed Cloudflare Worker with no source under version control here.
-- **Out of scope:** anything not named in the mission above; scope will be re-charter'd once
+- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
   implementation begins, per the framework's Planned→Partial promotion process.
 - **Lead AI (Tier 3):** The Queen — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to The Queen.
@@ -55,7 +55,7 @@ not a committed integration.
 
 - On implementation, The HIVE MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
   per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this Planned-tier pack is not a substitute and must not be treated as implementation sign-off.
+  this charter-only pack is not a substitute and must not be treated as implementation sign-off.
 - Naming: use the canonical name "The HIVE" exactly as it appears in `CLAUDE.md`'s service table
   and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
 

@@ -17,7 +17,7 @@
 - **Mission:** code creation platform — a Claude Code-style in-platform coding assistant/IDE.
 - **In scope (when built):** the scope implied by the Foundation above; no implementation
   exists yet in this repo, though `src/lab/` is the planned code path.
-- **Out of scope:** anything not named in the mission above; scope will be re-charter'd once
+- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
   implementation begins, per the framework's Planned→Partial promotion process.
 - **Lead AI (Tier 3):** The Dr. & Slime — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to The Dr. & Slime.
