@@ -9,7 +9,9 @@
 
 > **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
 > entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/RUN — no code exists yet for this entity).
+> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/RUN normally — **but see the correction immediately below: code
+> already exists here**, and this pack is charter-only as an interim gap, not because no
+> code exists).
 > Do not read this pack as describing implemented behaviour.
 
 > **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
@@ -31,11 +33,13 @@
   scope this section accurately — treat "the scope implied by the Foundation" as unverified
   against the real implementation.
 - **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  implementation begins, per the framework's Planned→Partial promotion process.
+  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
+  above — the pending step is the doc upgrade, not implementation).
 - **Lead AI (Tier 3):** Kitty — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Kitty.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when code first lands),
-  or quarterly per framework default, whichever is sooner.
+- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
+  upgraded to match the code that already exists — see correction above), or quarterly per
+  framework default, whichever is sooner.
 - **Dependencies (hard):** unverified — see correction above; not re-derived from the
   actual code in this pass.
 
