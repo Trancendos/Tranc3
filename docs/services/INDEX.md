@@ -24,47 +24,73 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Observatory** | ✅ Self-hosted | Norman Hawkins (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-observatory/` |
 | **The Workshop** | ✅ In repo | Larry Lowhammer (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-workshop/` |
 | **The Town Hall** | ✅ Integrated | Tristuran (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-town-hall/` |
-| The Lighthouse | ✅ Deployed | Rocking Ricki | ⬜ Pending | CF `infinity-lighthouse` |
-| The HIVE | ✅ Deployed | The Queen | ⬜ Pending | CF `infinity-hive` |
-| Royal Bank of Arcadia | ✅ Deployed | Dorris Fontaine | ⬜ Pending | CF `arcadia-royal-bank` |
-| Arcadian Exchange | ✅ Deployed | The Porter Family | ⬜ Pending | CF `arcadia-exchange` |
+| **The Lighthouse** | ✅ Deployed | Rocking Ricki | ✅ **Complete** (charter-only) | `docs/services/the-lighthouse/` |
+| **The HIVE** | ✅ Deployed | The Queen | ✅ **Complete** (charter-only) | `docs/services/the-hive/` |
+| **Royal Bank of Arcadia** | ✅ Deployed | Dorris Fontaine | ✅ **Complete** (charter-only) | `docs/services/royal-bank-of-arcadia/` |
+| **Arcadian Exchange** | ✅ Deployed | The Porter Family | ✅ **Complete** (charter-only) | `docs/services/arcadian-exchange/` |
 | **The Citadel** | ✅ Self-hosted | Trancendos | ✅ **Complete** | `docs/services/the-citadel/` |
 | **The Void** | 🔧 Migrating | Prometheus (Prime: The Guardian) | ✅ **Complete** | `docs/services/the-void/` [^void-port] |
 | **Luminous** | 🔧 Partial | Cornelius MacIntyre | ✅ **Complete** | `docs/services/luminous/` |
 | **Turing's Hub** | 🔧 Partial | Samantha Turing | ✅ **Complete** | `docs/services/turings-hub/` |
 | **Arcadia** | 🔧 Partial | Lilli SC (Prime: Dorris Fontaine) | ✅ **Complete** | `docs/services/arcadia/` |
 | **The Chaos Party** | 🔧 Partial | The Mad Hatter (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-chaos-party/` |
-| The Library | 🔧 Planned | Zimik | ⬜ Charter-only | Outline |
-| The Academy | 🔧 Planned | Shimshi | ⬜ Charter-only | Custom LMS |
-| DocUtari | 🔧 Planned | TBD | ⬜ Charter-only | Paperless-ngx |
-| The Basement | 🔧 Planned | Gary Glowman | ⬜ Charter-only | `src/basement/` (TBD) |
-| The Studio | 🔧 Planned | Voxx | ⬜ Charter-only | `src/studio/` (TBD) |
-| Sashas Photo Studio | 🔧 Planned | Madam Krystal | ⬜ Charter-only | SD + ComfyUI |
-| TranceFlow | 🔧 Planned | Junior Cesar | ⬜ Charter-only | Godot |
-| TateKing | 🔧 Planned | Benji Tate & Sam King | ⬜ Charter-only | FFmpeg |
-| Fabulousa | 🔧 Planned | Baron Von Hilton | ⬜ Charter-only | Penpot |
-| Imaginarium | 🔧 Planned | Voxx | ⬜ Charter-only | orchestrator |
-| The Lab | 🔧 Planned | The Dr. & Slime | ⬜ Charter-only | `src/lab/` (TBD) |
-| The Artifactory | 🔧 Planned | Lunascene | ⬜ Charter-only | Zot |
-| API Marketplace | 🔧 Planned | Solarscene | ⬜ Charter-only | Gravitee |
-| Cryptex | 🔧 Planned | Renik | ⬜ Charter-only | Wazuh + MISP |
-| The Ice Box | 🔧 Planned | Neonach | ⬜ Charter-only | Cuckoo |
-| The Warp Tunnel | 🔧 Planned | Rocking Ricki | ⬜ Charter-only | `src/security/warp_tunnel/` (TBD) |
-| Warp Radio | 🔧 Planned | Rocking Ricki | ⬜ Charter-only | `src/warp_radio/` (TBD) |
-| The Dutchy | 🔧 Planned | Predictive lore | ⬜ Charter-only | `src/research/` |
-| Think Tank | 🔧 Planned | Trancendos | ⬜ Charter-only | `src/quantum/`, `src/deepmind/` |
-| ChronosSphere / ArcStream | 🔧 Planned | Chronos | ⬜ Charter-only | Cal.com |
-| DevOcity | 🔧 Planned | Kitty | ⬜ Charter-only | Custom portal |
-| Tranquility | 🔧 Planned | Savania | ⬜ Charter-only | `src/tranquility/` (TBD) |
-| I-Mind | 🔧 Planned | Elouise | ⬜ Charter-only | `src/imind/` (TBD) |
-| tAimra | 🔧 Planned | tAImra | ⬜ Charter-only | `src/taimra/` (TBD) |
-| VRAR3D | 🔧 Planned | Entari | ⬜ Charter-only | Three.js |
-| Resonate | 🔧 Planned | Magdalena | ⬜ Charter-only | `src/resonate/` (TBD) |
+| **The Library** | 🔧 Planned | Zimik | ✅ **Complete** (charter-only) | `docs/services/the-library/` |
+| **The Academy** | 🔧 Planned | Shimshi | ✅ **Complete** (charter-only) | `docs/services/the-academy/` |
+| **DocUtari** | 🔧 Planned | To be Defined | ✅ **Complete** (charter-only) | `docs/services/docutari/` |
+| **The Basement** | 🔧 Planned | Gary Glowman (Glow-Worm) | ✅ **Complete** (charter-only) | `docs/services/the-basement/` |
+| **The Studio** | 🔧 Planned | Voxx | ✅ **Complete** (charter-only) | `docs/services/the-studio/` |
+| **Sashas Photo Studio** | 🔧 Planned | Madam Krystal | ✅ **Complete** (charter-only) | `docs/services/sashas-photo-studio/` |
+| **TranceFlow** | 🔧 Planned | Junior Cesar | ✅ **Complete** (charter-only) | `docs/services/tranceflow/` |
+| **TateKing** | 🔧 Planned | Benji Tate & Sam King | ✅ **Complete** (charter-only) | `docs/services/tateking/` |
+| **Fabulousa** | 🔧 Planned | Baron Von Hilton | ✅ **Complete** (charter-only) | `docs/services/fabulousa/` |
+| **Imaginarium** | 🔧 Planned | Voxx | ✅ **Complete** (charter-only) | `docs/services/imaginarium/` |
+| **The Lab** | 🔧 Planned | The Dr. & Slime | ✅ **Complete** (charter-only) | `docs/services/the-lab/` |
+| **The Artifactory** | 🔧 Planned | Lunascene | ✅ **Complete** (charter-only) | `docs/services/the-artifactory/` |
+| **API Marketplace** | 🔧 Planned | Solarscene | ✅ **Complete** (charter-only) | `docs/services/api-marketplace/` |
+| **Cryptex** | 🔧 Planned | Renik | ✅ **Complete** (charter-only) | `docs/services/cryptex/` |
+| **The Ice Box** | 🔧 Planned | Neonach | ✅ **Complete** (charter-only) | `docs/services/the-ice-box/` |
+| **The Warp Tunnel** | 🔧 Planned | Rocking Ricki | ✅ **Complete** (charter-only) | `docs/services/the-warp-tunnel/` |
+| **Warp Radio** | 🔧 Planned | Rocking Ricki | ✅ **Complete** (charter-only) | `docs/services/warp-radio/` |
+| **The Dutchy** | 🔧 Planned | Predictive lore | ✅ **Complete** (charter-only) | `docs/services/the-dutchy/` |
+| **Think Tank** | 🔧 Planned | Trancendos | ✅ **Complete** (charter-only) | `docs/services/think-tank/` |
+| **ChronosSphere / ArcStream** | 🔧 Planned | Chronos | ✅ **Complete** (charter-only) | `docs/services/chronosphere-arcstream/` |
+| **DevOcity** | 🔧 Planned | Kitty | ✅ **Complete** (charter-only) | `docs/services/devocity/` |
+| **Tranquility** | 🔧 Planned | Savania | ✅ **Complete** (charter-only) | `docs/services/tranquility/` |
+| **I-Mind** | 🔧 Planned | Elouise | ✅ **Complete** (charter-only) | `docs/services/i-mind/` |
+| **tAimra** | 🔧 Planned | tAImra | ✅ **Complete** (charter-only) | `docs/services/taimra/` |
+| **VRAR3D** | 🔧 Planned | Entari | ✅ **Complete** (charter-only) | `docs/services/vrar3d/` |
+| **Resonate** | 🔧 Planned | Magdalena | ✅ **Complete** (charter-only) | `docs/services/resonate/` |
 
 **Coverage:** **7 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
 Infinity, The Observatory, The Workshop, The Town Hall, The Citadel) · **6 Partial-tier packs**
-(The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · 43 / 43 entities
-status-tracked · rollout order per framework §6.
+(The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · **30 Planned-tier /
+charter-only packs** (GOV+RACI+TFM+POL+STD, intent-level, no fabricated DDD/RUN — 26 unbuilt
+Planned entities, correctly at their required tier) · **43 / 43 entities now have a doc-pack** ·
+rollout order per framework §6.
+
+> **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
+> Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
+> pack per §2.1 — but have no source code in this repo for their Cloudflare Workers to ground
+> DDD/TASD/SIM/ASD/PROC/RUN against. Their packs are charter-only (GOV+RACI+TFM+POL+STD) as an
+> **explicit, documented exception**, not a valid Planned-tier application — see each pack's
+> truthfulness header. This is a real compliance gap against §2.1, tracked here rather than
+> hidden, until either their source lands in this repo or the framework defines a
+> deployed-no-source tier explicitly.
+>
+> **Known gap — CLAUDE.md `🔧 Planned` status is stale for 21 entities.** A PR review (cubic)
+> caught that 2 of the "no code exists" charter-only packs were factually wrong; a full audit
+> found the real number is **21 of the 26** `🔧 Planned` entities already have real, substantial
+> code in this repo (`src/*` modules and/or `workers/*/worker.py`, in several cases 300+ lines),
+> despite `CLAUDE.md` still labelling them `🔧 Planned`: The Basement, The Studio, The Lab, The
+> Warp Tunnel, Warp Radio, The Dutchy, Think Tank, Tranquility (**router live-registered in
+> `api.py`**), I-Mind, tAimra, Resonate, The Library, The Artifactory, Cryptex, DevOcity, VRAR3D,
+> The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium. Each affected pack now
+> carries an explicit correction blockquote citing the real code and stating the "no code exists"
+> language below it is **not accurate and not yet fixed**. Only 5 of the 26 are genuinely
+> code-free: DocUtari, Fabulousa, API Marketplace, The Ice Box, ChronosSphere/ArcStream.
+> **Follow-up required:** re-verify `CLAUDE.md`'s status column against actual code for all 43
+> entities (not just these 21), then author real Partial/Live-tier packs (code-grounded DDD/TASD)
+> for the 21 confirmed here — this charter-only correction is a stopgap, not the fix.
 
 ## Rollout log
 
@@ -78,6 +104,7 @@ status-tracked · rollout order per framework §6.
 | 2026-07-03 | Batch: added The Void, The Town Hall, The Chaos Party, The Workshop, Arcadia packs — code/config-grounded against `workers/infinity-void/worker.py`, `src/townhall/`, `tests/test_chaos.py`, `deploy/forgejo/`, `web/`. CranBania submodule scoped out (not checked out). |
 | 2026-07-03 | Follow-up: corrected The Void's port note — the earlier claim ("8082 is the app default and authoritative, `EXPOSE 8002` stale") was wrong. 8002 is the consistently-referenced, intended port (monitoring, `workers/README.md`, wiki, `docs/vault_security.md`); fixed by adding an explicit `PORT=8002` to compose rather than changing the port. See `docs/services/the-void/` verification log. |
 | 2026-07-03 | Added The Citadel pack (7th Live-tier full pack), code-grounded against `docker-compose.production.yml` (Traefik/Vault/Prometheus/Grafana/OTel), `deploy/citadel/deploy-production.sh`, and `scripts/citadel_preflight.py`. |
+| 2026-07-04 | Batch: added charter-only (GOV+RACI+TFM+POL+STD) packs for all 30 remaining entities with no in-repo code — 26 `🔧 Planned` entities plus 4 `✅ Deployed`-but-source-absent Cloudflare Workers (The Lighthouse, The HIVE, Royal Bank of Arcadia, Arcadian Exchange). No DDD/TASD/SIM/ASD/RUN fabricated for any of them, per framework §2.1. All 43/43 platform entities now carry a doc-pack matching their gate tier. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
