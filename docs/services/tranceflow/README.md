@@ -26,15 +26,18 @@
 ## 1. Service Governance Charter (GOV)
 
 - **Mission:** 3D modeling & games creation studio.
-- **In scope (when built):** the scope implied by the Foundation above; no implementation
-  exists yet in this repo.
+- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
+  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
+  scope this section accurately — treat "the scope implied by the Foundation" as unverified
+  against the real implementation.
 - **Out of scope:** anything not named in the mission above; scope will be re-chartered once
   implementation begins, per the framework's Planned→Partial promotion process.
 - **Lead AI (Tier 3):** Junior Cesar — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Junior Cesar.
 - **Review cadence:** re-review at Planned→Partial promotion (i.e. when code first lands),
   or quarterly per framework default, whichever is sooner.
-- **Dependencies (hard):** none yet — no code exists to depend on anything.
+- **Dependencies (hard):** unverified — see correction above; not re-derived from the
+  actual code in this pass.
 
 ## 2. RACI Matrix
 
@@ -48,17 +51,18 @@
 
 | Concern | Planned choice | Zero-cost stance | Status |
 |---|---|---|---|
-| Foundation | Godot Engine integration | self-hosted / OSS | not yet integrated |
+| Foundation | Godot Engine integration | self-hosted / OSS | **code exists, integration unverified** — see correction above |
 
-No dependency has been added to this repo for TranceFlow; the Foundation column records
+NOTE: this claim is stale — code already exists in this repo for TranceFlow (see correction
+above); the Foundation column below has not yet been updated to cite it. It records
 platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
 not a committed integration.
 
 ## 4. Policy (POL)
 
 - Once implemented, TranceFlow MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`) — no service-specific policy delta is recorded yet because no implementation
-  exists to have deltas from the baseline.
+  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
+  service-specific policy delta has not yet been assessed against it.
 - Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
   before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
 
@@ -66,7 +70,8 @@ not a committed integration.
 
 - On implementation, TranceFlow MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
   per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this Planned-tier pack is not a substitute and must not be treated as implementation sign-off.
+  this charter-only pack — even as corrected — is not a substitute for that upgrade and
+  must not be treated as implementation sign-off.
 - Naming: use the canonical name "TranceFlow" exactly as it appears in `CLAUDE.md`'s service table
   and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
 
@@ -74,4 +79,5 @@ not a committed integration.
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), repo search confirming no `tranceflow` implementation exists | Confirmed Planned-tier / no-code status; pack intentionally scoped to GOV+RACI+TFM+POL+STD only per framework §2.1 |
+| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
+| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
