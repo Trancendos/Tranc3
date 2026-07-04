@@ -64,9 +64,18 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 **Coverage:** **7 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
 Infinity, The Observatory, The Workshop, The Town Hall, The Citadel) · **6 Partial-tier packs**
 (The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · **30 Planned-tier /
-charter-only packs** (GOV+RACI+TFM+POL+STD, intent-level, no fabricated DDD/RUN — 4 deployed-but-
-no-repo-source CF Workers + 26 unbuilt Planned entities) · **43 / 43 entities now have a doc-pack**
-of the tier their status requires · rollout order per framework §6.
+charter-only packs** (GOV+RACI+TFM+POL+STD, intent-level, no fabricated DDD/RUN — 26 unbuilt
+Planned entities, correctly at their required tier) · **43 / 43 entities now have a doc-pack** ·
+rollout order per framework §6.
+
+> **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
+> Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
+> pack per §2.1 — but have no source code in this repo for their Cloudflare Workers to ground
+> DDD/TASD/SIM/ASD/RUN against. Their packs are charter-only (GOV+RACI+TFM+POL+STD) as an
+> **explicit, documented exception**, not a valid Planned-tier application — see each pack's
+> truthfulness header. This is a real compliance gap against §2.1, tracked here rather than
+> hidden, until either their source lands in this repo or the framework defines a
+> deployed-no-source tier explicitly.
 
 ## Rollout log
 

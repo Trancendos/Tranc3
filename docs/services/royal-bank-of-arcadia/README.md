@@ -7,10 +7,16 @@
 | **Status** | ✅ Deployed (per `CLAUDE.md` service table) — but no source code in this repo |
 | **Foundation** | Cloudflare Worker `arcadia-royal-bank` (deployed; no source in this repo) |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Live (by label)** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/RUN — no source code exists in this repo for this CF Worker to ground a DDD/TASD/SIM/ASD/RUN against).
-> Do not read this pack as describing implemented behaviour.
+> **Truthfulness / gate-tier exception.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1,
+> this entity's `✅ Deployed` `CLAUDE.md` status maps to the **Live** gate tier, which normally
+> **requires the full 11-artifact, code-grounded pack** — not the 5-artifact set below. This pack
+> is an **explicit, temporary exception** to that requirement: no source code for this Cloudflare
+> Worker exists in this repo, so DDD/TASD/SIM/ASD/RUN cannot be honestly grounded and are omitted
+> rather than fabricated. This is a **known compliance gap against §2.1**, not a valid application
+> of the Planned-tier rule — it must be closed (full pack authored) if/when this worker's source is
+> ever brought into this repo, or the framework amended to define an explicit
+> deployed-no-source exception tier.
+> Do not read this pack as describing implemented behaviour, nor as §2.1-compliant for a Live-tier entity.
 
 ## 1. Service Governance Charter (GOV)
 
