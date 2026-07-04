@@ -52,7 +52,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Warp Tunnel** | 🔧 Planned | Rocking Ricki | ✅ **Complete** (charter-only) | `docs/services/the-warp-tunnel/` |
 | **Warp Radio** | 🔧 Planned | Rocking Ricki | ✅ **Complete** (charter-only) | `docs/services/warp-radio/` |
 | **The Dutchy** | ✅ In repo | Predictive lore | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-dutchy/` |
-| **Think Tank** | 🔧 Planned | Trancendos | ✅ **Complete** (charter-only) | `docs/services/think-tank/` |
+| **Think Tank** | ✅ In repo | Trancendos | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/think-tank/` |
 | **ChronosSphere / ArcStream** | 🔧 Planned | Chronos | ✅ **Complete** (charter-only) | `docs/services/chronosphere-arcstream/` |
 | **DevOcity** | ✅ In repo | Kitty | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/devocity/` |
 | **Tranquility** | ✅ In repo | Savania | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/tranquility/` |
@@ -61,12 +61,18 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/resonate/` |
 
-**Coverage:** **7 / 11 required full packs** complete (Live-tier: The Spark, The Digital Grid,
-Infinity, The Observatory, The Workshop, The Town Hall, The Citadel) · **6 Partial-tier packs**
-(The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party) · **30 Planned-tier /
-charter-only packs** (GOV+RACI+TFM+POL+STD, intent-level, no fabricated DDD/RUN — 26 unbuilt
-Planned entities, correctly at their required tier) · **43 / 43 entities now have a doc-pack** ·
-rollout order per framework §6.
+**Coverage:** **7 / 25 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel).
+The other **18 Live-tier (`✅`) entities are charter-only, not full-pack-complete** — 4 as a
+documented §2.1 exception (deployed CF Workers with no source in this repo) and **14 as an
+outstanding gap** (The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The
+Dutchy, DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, Think Tank — status corrected to
+`✅ In repo` but their doc-pack has not yet been upgraded to match). **6 Partial-tier packs**
+(The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party). **12 genuinely
+Planned-tier / charter-only packs** correctly at their required tier (GOV+RACI+TFM+POL+STD,
+intent-level, no fabricated DDD/RUN). **43 / 43 entities have a doc-pack**, but 18 of those packs
+do not yet match the tier their (in 14 cases, just-corrected) status requires · rollout order per
+framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
 > Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
@@ -77,23 +83,24 @@ rollout order per framework §6.
 > hidden, until either their source lands in this repo or the framework defines a
 > deployed-no-source tier explicitly.
 >
-> **Known gap — CLAUDE.md `🔧 Planned` status was stale for 21 entities; 13 now corrected.**
+> **Known gap — CLAUDE.md `🔧 Planned` status was stale for 21 entities; 14 now corrected.**
 > A PR review (cubic) caught that 2 of the "no code exists" charter-only packs were factually
 > wrong; a full audit found the real number was **21 of the 26** `🔧 Planned` entities already
-> had real, substantial code in this repo. Of those 21, **13 have a router confirmed registered
+> had real, substantial code in this repo. Of those 21, **14 have a router confirmed registered
 > live in `api.py`** — The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex,
-> The Dutchy (as `section7`), DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate — and
-> `CLAUDE.md`'s status column has been **corrected to `✅ In repo`** for all 13. Their doc-packs
-> below are marked **⚠️ Mis-tiered**: still charter-only (GOV+RACI+TFM+POL+STD) even though their
-> corrected Live-tier status now requires the full 11-artifact pack — this is the honest
-> **current** gap (a real Partial/Live-tier rewrite with code-grounded DDD/TASD is still owed for
-> all 13), not a stale-status problem anymore. The remaining **8** — The Warp Tunnel, Warp Radio,
-> Think Tank, The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium — have real code
-> (`src/*` and/or `workers/*/worker.py`) but **no confirmed `api.py` router registration**;
-> `CLAUDE.md`'s `🔧 Planned` label for these 8 has **not** been changed pending that check, so they
-> remain flagged but unresolved. Only 5 of the 26 are genuinely code-free: DocUtari, Fabulousa,
-> API Marketplace, The Ice Box, ChronosSphere/ArcStream.
-> **Follow-up required:** (1) determine the correct status label for the remaining 8 (wired
+> The Dutchy (as `section7`), DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, and
+> Think Tank (as `_thinktank_router` from `src/quantum/routes`, caught in a follow-up cubic pass
+> after the first 13 were corrected) — and `CLAUDE.md`'s status column has been **corrected to
+> `✅ In repo`** for all 14. Their doc-packs below are marked **⚠️ Mis-tiered**: still charter-only
+> (GOV+RACI+TFM+POL+STD) even though their corrected Live-tier status now requires the full
+> 11-artifact pack — this is the honest **current** gap (a real Partial/Live-tier rewrite with
+> code-grounded DDD/TASD is still owed for all 14), not a stale-status problem anymore. The
+> remaining **7** — The Warp Tunnel, Warp Radio, The Academy, Sashas Photo Studio, TranceFlow,
+> TateKing, Imaginarium — have real code (`src/*` and/or `workers/*/worker.py`) but **no confirmed
+> `api.py` router registration**; `CLAUDE.md`'s `🔧 Planned` label for these 7 has **not** been
+> changed pending that check, so they remain flagged but unresolved. Only 5 of the 26 are
+> genuinely code-free: DocUtari, Fabulousa, API Marketplace, The Ice Box, ChronosSphere/ArcStream.
+> **Follow-up required:** (1) determine the correct status label for the remaining 7 (wired
 > elsewhere? standalone worker only? truly dormant?); (2) author real Partial/Live-tier packs
 > (code-grounded DDD/TASD/SIM/ASD/PROC/RUN) for all 21 — the charter-only packs are a stopgap,
 > not the fix, for any of them.
@@ -111,7 +118,8 @@ rollout order per framework §6.
 | 2026-07-03 | Follow-up: corrected The Void's port note — the earlier claim ("8082 is the app default and authoritative, `EXPOSE 8002` stale") was wrong. 8002 is the consistently-referenced, intended port (monitoring, `workers/README.md`, wiki, `docs/vault_security.md`); fixed by adding an explicit `PORT=8002` to compose rather than changing the port. See `docs/services/the-void/` verification log. |
 | 2026-07-03 | Added The Citadel pack (7th Live-tier full pack), code-grounded against `docker-compose.production.yml` (Traefik/Vault/Prometheus/Grafana/OTel), `deploy/citadel/deploy-production.sh`, and `scripts/citadel_preflight.py`. |
 | 2026-07-04 | Batch: added charter-only (GOV+RACI+TFM+POL+STD) packs for all 30 remaining entities with no in-repo code — 26 `🔧 Planned` entities plus 4 `✅ Deployed`-but-source-absent Cloudflare Workers (The Lighthouse, The HIVE, Royal Bank of Arcadia, Arcadian Exchange). No DDD/TASD/SIM/ASD/RUN fabricated for any of them, per framework §2.1. All 43/43 platform entities now carry a doc-pack matching their gate tier. |
-| 2026-07-04 | Follow-up: corrected `CLAUDE.md`'s stale `🔧 Planned` status to `✅ In repo` for the 13 entities confirmed to have a router registered live in `api.py` (The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate). Their doc-packs are now marked ⚠️ Mis-tiered pending a real Live-tier rewrite. The remaining 8 "stale-Planned" entities (The Warp Tunnel, Warp Radio, Think Tank, The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium) have real code but no confirmed `api.py` wiring — left as `🔧 Planned` pending further investigation. |
+| 2026-07-04 | Follow-up: corrected `CLAUDE.md`'s stale `🔧 Planned` status to `✅ In repo` for 13 entities confirmed to have a router registered live in `api.py` (The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate). Their doc-packs are now marked ⚠️ Mis-tiered pending a real Live-tier rewrite. |
+| 2026-07-04 | cubic (PR #200 review) caught that Think Tank was missed — `app.include_router(_thinktank_router)` at `api.py:910` (`src/quantum/routes`) confirms it's also live-wired. Corrected `CLAUDE.md` and this index the same way (now **14** entities corrected, not 13). The remaining **7** "stale-Planned" entities (The Warp Tunnel, Warp Radio, The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium) have real code but no confirmed `api.py` wiring — left as `🔧 Planned` pending further investigation. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
