@@ -9,7 +9,7 @@
 
 > **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
 > entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/RUN — no code exists yet for this entity).
+> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN — no code exists yet for this entity).
 > Do not read this pack as describing implemented behaviour.
 
 ## 1. Service Governance Charter (GOV)
