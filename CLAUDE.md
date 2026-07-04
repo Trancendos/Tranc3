@@ -69,7 +69,7 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **Arcadia** | Lilli SC | Front-end post-login, forum & email hub | 🔧 Partial | `web/` |
 | **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
 | **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | ✅ Integrated | `workers/cranbania/` (CranBania submodule, Port 8071), `src/townhall/`, `src/compliance/middleware.py` |
-| **The Library** | Zimik | Knowledge base & wiki | ✅ In repo | Outline (self-hosted) |
+| **The Library** | Zimik | Knowledge base & wiki | ✅ In repo | `src/library/` (router registered in `api.py`); Outline (self-hosted) planned frontend |
 | **The Academy** | Shimshi | Learning management — education & skill training | 🔧 Planned | Custom LMS |
 | **DocUtari** | To be Defined | Document management hub | 🔧 Planned | Paperless-ngx |
 | **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | ✅ In repo | `src/basement/` (router registered in `api.py`) |
@@ -81,9 +81,9 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | 🔧 Planned | Orchestrates above |
 | **The Lab** | The Dr. & Slime | Code creation platform (Claude Code-style) | ✅ In repo | `src/lab/` (router registered in `api.py`) |
 | **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py` |
-| **The Artifactory** | Lunascene | Central artifact repository library | ✅ In repo | Gitea packages / Zot |
+| **The Artifactory** | Lunascene | Central artifact repository library | ✅ In repo | `src/artifactory/` (router registered in `api.py`); Gitea packages / Zot planned backend |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | 🔧 Planned | Gravitee.io |
-| **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | Wazuh + MISP |
+| **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | `src/cryptex/` (router registered in `api.py`); Wazuh + MISP planned integration |
 | **The Ice Box** | Neonach | Sandbox threat isolation & quarantine | 🔧 Planned | Cuckoo sandbox |
 | **The Warp Tunnel** | Rocking Ricki | Cryptographic scanner & quarantine transport | 🔧 Planned | `src/security/warp_tunnel/` (to create) |
 | **Warp Radio** | Rocking Ricki | Music & audio streaming integration | 🔧 Planned | `src/warp_radio/` (to create) |
