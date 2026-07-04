@@ -12,6 +12,17 @@
 > **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/RUN — no code exists yet for this entity).
 > Do not read this pack as describing implemented behaviour.
 
+> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
+> (cubic) caught that this pack asserted no implementation exists, when in fact `src/quantum/` (`quantum_engine.py` 267 lines, `quantum_core.py`, `quantum_inference.py`, `routes.py`) and `src/deepmind/` (`planning.py` 580 lines, `world_model.py` 332 lines, `mcts.py` 311 lines, `gemini_multimodal.py`)
+> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
+> it has not been updated to reflect the code above. This pack remains charter-only
+> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
+> describe intent rather than the real implementation, because a proper Partial/Live-tier
+> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
+> applicable — worker service) has not yet been authored. Do not treat the "no implementation
+> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
+> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+
 ## 1. Service Governance Charter (GOV)
 
 - **Mission:** R&D centre — solutions and forefront-technology research for the platform.

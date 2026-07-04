@@ -11,7 +11,7 @@
 > this entity's `✅ Deployed` `CLAUDE.md` status maps to the **Live** gate tier, which normally
 > **requires the full 11-artifact, code-grounded pack** — not the 5-artifact set below. This pack
 > is an **explicit, temporary exception** to that requirement: no source code for this Cloudflare
-> Worker exists in this repo, so DDD/TASD/SIM/ASD/RUN cannot be honestly grounded and are omitted
+> Worker exists in this repo, so DDD/TASD/SIM/ASD/PROC/RUN cannot be honestly grounded and are omitted
 > rather than fabricated. This is a **known compliance gap against §2.1**, not a valid application
 > of the Planned-tier rule — it must be closed (full pack authored) if/when this worker's source is
 > ever brought into this repo, or the framework amended to define an explicit

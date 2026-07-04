@@ -71,11 +71,26 @@ rollout order per framework §6.
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
 > Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
 > pack per §2.1 — but have no source code in this repo for their Cloudflare Workers to ground
-> DDD/TASD/SIM/ASD/RUN against. Their packs are charter-only (GOV+RACI+TFM+POL+STD) as an
+> DDD/TASD/SIM/ASD/PROC/RUN against. Their packs are charter-only (GOV+RACI+TFM+POL+STD) as an
 > **explicit, documented exception**, not a valid Planned-tier application — see each pack's
 > truthfulness header. This is a real compliance gap against §2.1, tracked here rather than
 > hidden, until either their source lands in this repo or the framework defines a
 > deployed-no-source tier explicitly.
+>
+> **Known gap — CLAUDE.md `🔧 Planned` status is stale for 21 entities.** A PR review (cubic)
+> caught that 2 of the "no code exists" charter-only packs were factually wrong; a full audit
+> found the real number is **21 of the 26** `🔧 Planned` entities already have real, substantial
+> code in this repo (`src/*` modules and/or `workers/*/worker.py`, in several cases 300+ lines),
+> despite `CLAUDE.md` still labelling them `🔧 Planned`: The Basement, The Studio, The Lab, The
+> Warp Tunnel, Warp Radio, The Dutchy, Think Tank, Tranquility (**router live-registered in
+> `api.py`**), I-Mind, tAimra, Resonate, The Library, The Artifactory, Cryptex, DevOcity, VRAR3D,
+> The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium. Each affected pack now
+> carries an explicit correction blockquote citing the real code and stating the "no code exists"
+> language below it is **not accurate and not yet fixed**. Only 5 of the 26 are genuinely
+> code-free: DocUtari, Fabulousa, API Marketplace, The Ice Box, ChronosSphere/ArcStream.
+> **Follow-up required:** re-verify `CLAUDE.md`'s status column against actual code for all 43
+> entities (not just these 21), then author real Partial/Live-tier packs (code-grounded DDD/TASD)
+> for the 21 confirmed here — this charter-only correction is a stopgap, not the fix.
 
 ## Rollout log
 
