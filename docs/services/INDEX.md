@@ -36,24 +36,24 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Chaos Party** | 🔧 Partial | The Mad Hatter (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-chaos-party/` |
 | **The Library** | ✅ In repo | Zimik | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-library/` |
 | **The Academy** | ✅ In repo | Shimshi | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-academy/` |
-| **DocUtari** | 🔧 Planned | To be Defined | ✅ **Complete** (charter-only) | `docs/services/docutari/` |
+| **DocUtari** | ✅ In repo | To be Defined | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/docutari/` |
 | **The Basement** | ✅ In repo | Gary Glowman (Glow-Worm) | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-basement/` |
 | **The Studio** | ✅ In repo | Voxx | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-studio/` |
 | **Sashas Photo Studio** | ✅ In repo | Madam Krystal | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/sashas-photo-studio/` |
 | **TranceFlow** | ✅ In repo | Junior Cesar | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/tranceflow/` |
 | **TateKing** | ✅ In repo | Benji Tate & Sam King | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/tateking/` |
-| **Fabulousa** | 🔧 Planned | Baron Von Hilton | ✅ **Complete** (charter-only) | `docs/services/fabulousa/` |
+| **Fabulousa** | ✅ In repo | Baron Von Hilton | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/fabulousa/` |
 | **Imaginarium** | ✅ In repo | Voxx | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/imaginarium/` |
 | **The Lab** | ✅ In repo | The Dr. & Slime | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-lab/` |
 | **The Artifactory** | ✅ In repo | Lunascene | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-artifactory/` |
-| **API Marketplace** | 🔧 Planned | Solarscene | ✅ **Complete** (charter-only) | `docs/services/api-marketplace/` |
+| **API Marketplace** | ✅ In repo | Solarscene | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/api-marketplace/` |
 | **Cryptex** | ✅ In repo | Renik | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/cryptex/` |
-| **The Ice Box** | 🔧 Planned | Neonach | ✅ **Complete** (charter-only) | `docs/services/the-ice-box/` |
+| **The Ice Box** | ✅ In repo | Neonach | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-ice-box/` |
 | **The Warp Tunnel** | ✅ In repo | Rocking Ricki | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-warp-tunnel/` |
 | **Warp Radio** | ✅ In repo | Rocking Ricki | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/warp-radio/` |
 | **The Dutchy** | ✅ In repo | Predictive lore | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-dutchy/` |
 | **Think Tank** | ✅ In repo | Trancendos | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/think-tank/` |
-| **ChronosSphere / ArcStream** | 🔧 Planned | Chronos | ✅ **Complete** (charter-only) | `docs/services/chronosphere-arcstream/` |
+| **ChronosSphere / ArcStream** | ✅ In repo | Chronos | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/chronosphere-arcstream/` |
 | **DevOcity** | ✅ In repo | Kitty | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/devocity/` |
 | **Tranquility** | ✅ In repo | Savania | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/tranquility/` |
 | **I-Mind** | ✅ In repo | Elouise | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/i-mind/` |
@@ -61,21 +61,23 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/resonate/` |
 
-**Coverage:** **7 / 32 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **7 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel).
-The other **25 Live-tier (`✅`) entities are charter-only, not full-pack-complete** — 4 as a
-documented §2.1 exception (deployed CF Workers with no source in this repo) and **21 as an
+The other **30 Live-tier (`✅`) entities are charter-only, not full-pack-complete** — 4 as a
+documented §2.1 exception (deployed CF Workers with no source in this repo) and **26 as an
 outstanding gap**: The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The
-Dutchy, DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, Think Tank (router-mounted in
-`api.py`), plus The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium, The Warp
-Tunnel, Warp Radio (standalone `workers/*/worker.py` deployed via `docker-compose.production.yml`,
-not mounted in `api.py`) — status corrected to `✅ In repo` but their doc-pack has not yet been
-upgraded to match. **6 Partial-tier packs** (The Nexus, Luminous, Turing's Hub, The Void, Arcadia,
-The Chaos Party). **5 genuinely Planned-tier / charter-only packs** correctly at their required
-tier (DocUtari, Fabulousa, API Marketplace, The Ice Box, ChronosSphere/ArcStream — GOV+RACI+TFM+
-POL+STD, intent-level, no fabricated DDD/RUN). **43 / 43 entities have a doc-pack**, but 25 of
-those packs do not yet match the tier their (in 21 cases, just-corrected) status requires ·
-rollout order per framework §6.
+Dutchy, DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace
+(router-mounted in `api.py`), plus The Academy, Sashas Photo Studio, TranceFlow, TateKing,
+Imaginarium, The Warp Tunnel, Warp Radio, DocUtari, Fabulousa, The Ice Box,
+ChronosSphere/ArcStream (standalone `workers/*/worker.py` deployed via
+`docker-compose.production.yml`, not mounted in `api.py`) — status corrected to `✅ In repo` but
+their doc-pack has not yet been upgraded to match. **6 Partial-tier packs** (The Nexus, Luminous,
+Turing's Hub, The Void, Arcadia, The Chaos Party). **0 genuinely Planned-tier entities remain** —
+all 26 originally-`🔧 Planned` entities have been confirmed to have real, deployable code (a
+Gemini Code Assist review on this PR caught the last 5 via non-obvious worker naming: `apimarket`,
+`files-service`/`storage-service`, `fabulousa-service`, `ice-box-service`, `cron-service`).
+**43 / 43 entities have a doc-pack**, but 30 of those packs do not yet match the tier their (in 26
+cases, just-corrected) status requires · rollout order per framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
 > Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
@@ -86,25 +88,30 @@ rollout order per framework §6.
 > hidden, until either their source lands in this repo or the framework defines a
 > deployed-no-source tier explicitly.
 >
-> **Known gap — CLAUDE.md `🔧 Planned` status was stale for 21 entities; all 21 now corrected.**
-> A PR review (cubic) caught that 2 of the "no code exists" charter-only packs were factually
-> wrong; a full audit found the real number was **21 of the 26** `🔧 Planned` entities already
-> had real, substantial code in this repo. Of those 21, **14 have a router confirmed registered
-> live in `api.py`** — The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex,
-> The Dutchy (as `section7`), DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, and Think
-> Tank (as `_thinktank_router` from `src/quantum/routes`). The remaining **7** — The Warp Tunnel,
-> Warp Radio, The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium — are **not**
-> mounted in `api.py`, but each has a real, standalone `workers/<name>/worker.py` with its own
-> Dockerfile **and a live service block in `docker-compose.production.yml`** (confirmed by grep for
-> each service key), i.e. deployable independently of the monolith rather than absent. `CLAUDE.md`'s
-> status column has been **corrected to `✅ In repo`** for all 21. Their doc-packs below are marked
-> **⚠️ Mis-tiered**: still charter-only (GOV+RACI+TFM+POL+STD) even though their corrected
-> Live-tier status now requires the full 11-artifact pack — this is the honest **current** gap (a
-> real Partial/Live-tier rewrite with code-grounded DDD/TASD is still owed for all 21), not a
-> stale-status problem anymore. Only 5 of the 26 originally-Planned entities are genuinely
-> code-free: DocUtari, Fabulousa, API Marketplace, The Ice Box, ChronosSphere/ArcStream.
+> **Known gap — CLAUDE.md `🔧 Planned` status was stale for all 26 originally-Planned entities;
+> all 26 now corrected.** A PR review (cubic) caught that 2 of the "no code exists" charter-only
+> packs were factually wrong; a full audit found **21 of the 26** `🔧 Planned` entities already
+> had real, substantial code. Of those 21, **15 have a router confirmed registered live in
+> `api.py`** — The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The
+> Dutchy (as `section7`), DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, Think Tank (as
+> `_thinktank_router`), and API Marketplace (as `_apimarket_router` from `src/apimarket/routes` —
+> caught by a Gemini Code Assist review on this PR alongside the remaining 4). The other **11** —
+> The Warp Tunnel, Warp Radio, The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium,
+> DocUtari (`workers/files-service/`, `workers/storage-service/`), Fabulousa
+> (`workers/fabulousa-service/`), The Ice Box (`workers/ice-box-service/`), and
+> ChronosSphere/ArcStream (`workers/cron-service/`) — are **not** mounted in `api.py`, but each has
+> a real, standalone `workers/<name-or-mapped-service>/worker.py` with its own Dockerfile **and a
+> live service block in `docker-compose.production.yml`** (confirmed by grep for each service key;
+> the DocUtari/Fabulousa/Ice-Box/ChronosSphere mappings were missed on the first pass because the
+> compose service names — `files-service`, `fabulousa-service`, `ice-box-service`, `cron-service` —
+> don't match the entity names). `CLAUDE.md`'s status column has been **corrected to `✅ In repo`**
+> for all 26. Their doc-packs below are marked **⚠️ Mis-tiered**: still charter-only
+> (GOV+RACI+TFM+POL+STD) even though their corrected Live-tier status now requires the full
+> 11-artifact pack — this is the honest **current** gap (a real Partial/Live-tier rewrite with
+> code-grounded DDD/TASD is still owed for all 26), not a stale-status problem anymore. **Zero**
+> of the originally-Planned entities remain genuinely code-free.
 > **Follow-up required:** author real Partial/Live-tier packs (code-grounded DDD/TASD/SIM/ASD/
-> PROC/RUN) for all 21 corrected entities — the charter-only packs are a stopgap, not the fix.
+> PROC/RUN) for all 26 corrected entities — the charter-only packs are a stopgap, not the fix.
 
 ## Rollout log
 
@@ -121,7 +128,8 @@ rollout order per framework §6.
 | 2026-07-04 | Batch: added charter-only (GOV+RACI+TFM+POL+STD) packs for all 30 remaining entities with no in-repo code — 26 `🔧 Planned` entities plus 4 `✅ Deployed`-but-source-absent Cloudflare Workers (The Lighthouse, The HIVE, Royal Bank of Arcadia, Arcadian Exchange). No DDD/TASD/SIM/ASD/RUN fabricated for any of them, per framework §2.1. All 43/43 platform entities now carry a doc-pack matching their gate tier. |
 | 2026-07-04 | Follow-up: corrected `CLAUDE.md`'s stale `🔧 Planned` status to `✅ In repo` for 13 entities confirmed to have a router registered live in `api.py` (The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate). Their doc-packs are now marked ⚠️ Mis-tiered pending a real Live-tier rewrite. |
 | 2026-07-04 | cubic (PR #200 review) caught that Think Tank was missed — `app.include_router(_thinktank_router)` at `api.py:910` (`src/quantum/routes`) confirms it's also live-wired. Corrected `CLAUDE.md` and this index the same way (now **14** entities corrected, not 13). The remaining **7** "stale-Planned" entities (The Warp Tunnel, Warp Radio, The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium) have real code but no confirmed `api.py` wiring — left as `🔧 Planned` pending further investigation. |
-| 2026-07-04 | Follow-up: investigated the remaining 7 "stale-Planned, unresolved-wiring" entities directly against `docker-compose.production.yml` — confirmed each has its own service block (`tranceflow:`, `imaginarium:`, `tateking:`, `sashas-photo-studio:`, `the-academy:`, `warp-tunnel:`, `warp-radio:`), a real `Dockerfile`, and `workers/<name>/worker.py`, i.e. deployed as standalone services rather than mounted in `api.py`. Corrected `CLAUDE.md`'s status to `✅ In repo` for all 7 (Fabulousa excluded — confirmed genuinely code-free, no `workers/fabulousa/` directory exists). All 21 originally-stale-Planned entities are now status-corrected; recalculated coverage summary to 7/32 full Live-tier packs, 25 Live-tier charter-only (4 §2.1 exception + 21 outstanding gap), 6 Partial-tier, 5 genuinely Planned. |
+| 2026-07-04 | Follow-up: investigated the remaining 7 "stale-Planned, unresolved-wiring" entities directly against `docker-compose.production.yml` — confirmed each has its own service block (`tranceflow:`, `imaginarium:`, `tateking:`, `sashas-photo-studio:`, `the-academy:`, `warp-tunnel:`, `warp-radio:`), a real `Dockerfile`, and `workers/<name>/worker.py`, i.e. deployed as standalone services rather than mounted in `api.py`. Corrected `CLAUDE.md`'s status to `✅ In repo` for all 7. Recalculated coverage summary to 7/32 full Live-tier packs, 25 Live-tier charter-only (4 §2.1 exception + 21 outstanding gap), 6 Partial-tier, 5 (claimed, later found wrong — see next entry) genuinely Planned. |
+| 2026-07-04 | Gemini Code Assist and cubic (independently, same PR #201 review) caught that the remaining "5 genuinely code-free" claim was wrong: API Marketplace has `_apimarket_router` mounted in `api.py` (`src/apimarket/routes`), and DocUtari, Fabulousa, The Ice Box, and ChronosSphere/ArcStream each have a real standalone worker under a compose service name that doesn't match the entity name (`files-service`+`storage-service`, `fabulousa-service`, `ice-box-service`, `cron-service` respectively — confirmed via `docker-compose.production.yml` and cross-checked against `CLAUDE.md`'s worker-map table). **All 26** originally-`🔧 Planned` entities are now confirmed to have real code and status-corrected to `✅ In repo` — zero genuinely-Planned entities remain among them. Recalculated: 7/37 full Live-tier packs, 30 Live-tier charter-only (4 §2.1 exception + 26 outstanding gap), 6 Partial-tier, 0 genuinely Planned. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
