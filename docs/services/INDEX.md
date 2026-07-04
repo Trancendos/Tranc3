@@ -36,8 +36,8 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Chaos Party** | 🔧 Partial | The Mad Hatter (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-chaos-party/` |
 | **The Library** | 🔧 Planned | Zimik | ✅ **Complete** (charter-only) | `docs/services/the-library/` |
 | **The Academy** | 🔧 Planned | Shimshi | ✅ **Complete** (charter-only) | `docs/services/the-academy/` |
-| **DocUtari** | 🔧 Planned | TBD | ✅ **Complete** (charter-only) | `docs/services/docutari/` |
-| **The Basement** | 🔧 Planned | Gary Glowman | ✅ **Complete** (charter-only) | `docs/services/the-basement/` |
+| **DocUtari** | 🔧 Planned | To be Defined | ✅ **Complete** (charter-only) | `docs/services/docutari/` |
+| **The Basement** | 🔧 Planned | Gary Glowman (Glow-Worm) | ✅ **Complete** (charter-only) | `docs/services/the-basement/` |
 | **The Studio** | 🔧 Planned | Voxx | ✅ **Complete** (charter-only) | `docs/services/the-studio/` |
 | **Sashas Photo Studio** | 🔧 Planned | Madam Krystal | ✅ **Complete** (charter-only) | `docs/services/sashas-photo-studio/` |
 | **TranceFlow** | 🔧 Planned | Junior Cesar | ✅ **Complete** (charter-only) | `docs/services/tranceflow/` |
