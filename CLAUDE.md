@@ -70,23 +70,23 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
 | **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | ✅ Integrated | `workers/cranbania/` (CranBania submodule, Port 8071), `src/townhall/`, `src/compliance/middleware.py` |
 | **The Library** | Zimik | Knowledge base & wiki | ✅ In repo | `src/library/` (router registered in `api.py`); Outline (self-hosted) planned frontend |
-| **The Academy** | Shimshi | Learning management — education & skill training | 🔧 Planned | Custom LMS |
+| **The Academy** | Shimshi | Learning management — education & skill training | ✅ In repo | `workers/the-academy/worker.py` (standalone worker, port 8056); Custom LMS |
 | **DocUtari** | To be Defined | Document management hub | 🔧 Planned | Paperless-ngx |
 | **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | ✅ In repo | `src/basement/` (router registered in `api.py`) |
 | **The Studio** | Voxx | Central hub of the Creativity Center | ✅ In repo | `src/studio/` (router registered in `api.py`) |
-| **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | 🔧 Planned | Stable Diffusion + ComfyUI |
-| **TranceFlow** | Junior Cesar | 3D modeling & games creation studio | 🔧 Planned | Godot Engine integration |
-| **TateKing** | Benji Tate & Sam King | Video creation & editing platform | 🔧 Planned | FFmpeg + custom UI |
+| **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | ✅ In repo | `workers/sashas-photo-studio/worker.py` (standalone worker); Stable Diffusion + ComfyUI planned backend |
+| **TranceFlow** | Junior Cesar | 3D modeling & games creation studio | ✅ In repo | `workers/tranceflow/worker.py` (standalone worker); Godot Engine integration planned |
+| **TateKing** | Benji Tate & Sam King | Video creation & editing platform | ✅ In repo | `workers/tateking/worker.py` (standalone worker); FFmpeg + custom UI planned |
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | 🔧 Planned | Penpot (self-hosted) |
-| **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | 🔧 Planned | Orchestrates above |
+| **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | ✅ In repo | `workers/imaginarium/worker.py` (standalone worker); orchestrates the others |
 | **The Lab** | The Dr. & Slime | Code creation platform (Claude Code-style) | ✅ In repo | `src/lab/` (router registered in `api.py`) |
 | **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py` |
 | **The Artifactory** | Lunascene | Central artifact repository library | ✅ In repo | `src/artifactory/` (router registered in `api.py`); Gitea packages / Zot planned backend |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | 🔧 Planned | Gravitee.io |
 | **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | `src/cryptex/` (router registered in `api.py`); Wazuh + MISP planned integration |
 | **The Ice Box** | Neonach | Sandbox threat isolation & quarantine | 🔧 Planned | Cuckoo sandbox |
-| **The Warp Tunnel** | Rocking Ricki | Cryptographic scanner & quarantine transport | 🔧 Planned | `src/security/warp_tunnel/` (to create) |
-| **Warp Radio** | Rocking Ricki | Music & audio streaming integration | 🔧 Planned | `src/warp_radio/` (to create) |
+| **The Warp Tunnel** | Rocking Ricki | Cryptographic scanner & quarantine transport | ✅ In repo | `src/security/warp_tunnel/tunnel.py`; `workers/warp-tunnel/worker.py` (standalone worker, port 8072) |
+| **Warp Radio** | Rocking Ricki | Music & audio streaming integration | ✅ In repo | `src/warp_radio/station.py`; `workers/warp-radio/worker.py` (standalone worker) |
 | **The Dutchy** | Predictive lore | Intelligence & market analysis | ✅ In repo | `src/research/` |
 | **The Citadel** | Trancendos | Strategic ops & DevOps fortress | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
 | **Think Tank** | Trancendos | R&D centre — solutions & forefront technologies | ✅ In repo | `src/quantum/` (router registered in `api.py`), `src/deepmind/` |
