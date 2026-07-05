@@ -56,17 +56,17 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **ChronosSphere / ArcStream** | ✅ In repo | Chronos | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/chronosphere-arcstream/` |
 | **DevOcity** | ✅ In repo | Kitty | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/devocity/` |
 | **Tranquility** | ✅ In repo | Savania | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/tranquility/` |
-| **I-Mind** | ✅ In repo | Elouise | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/i-mind/` |
+| **I-Mind** | ✅ In repo | Elouise | ✅ **Complete** | `docs/services/i-mind/` |
 | **tAimra** | ✅ In repo | tAImra | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/taimra/` |
 | **VRAR3D** | ✅ In repo | Entari | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/resonate/` |
 
-**Coverage:** **9 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **10 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
-**The Basement, The Studio**). The other **28 Live-tier (`✅`) entities are charter-only, not
+**The Basement, The Studio, I-Mind**). The other **27 Live-tier (`✅`) entities are charter-only, not
 full-pack-complete** — 4 as a documented §2.1 exception (deployed CF Workers with no source in
-this repo) and **24 as an outstanding gap**: The Library, The Lab, The Artifactory, Cryptex, The
-Dutchy, DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace
+this repo) and **23 as an outstanding gap**: The Library, The Lab, The Artifactory, Cryptex, The
+Dutchy, DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace
 (router-mounted in `api.py`), plus The Academy, Sashas Photo Studio, TranceFlow, TateKing,
 Imaginarium, The Warp Tunnel, Warp Radio, DocUtari, Fabulousa, The Ice Box,
 ChronosSphere/ArcStream (standalone `workers/*/worker.py` deployed via
@@ -76,8 +76,8 @@ Turing's Hub, The Void, Arcadia, The Chaos Party). **0 genuinely Planned-tier en
 all 26 originally-`🔧 Planned` entities have been confirmed to have real, deployable code (a
 Gemini Code Assist review on this PR caught the last 5 via non-obvious worker naming: `apimarket`,
 `files-service`/`storage-service`, `fabulousa-service`, `ice-box-service`, `cron-service`).
-**43 / 43 entities have a doc-pack**, but 28 of those packs do not yet match the tier their status
-requires · 2 of the 26 corrected entities (The Basement, The Studio) have now received a real
+**43 / 43 entities have a doc-pack**, but 27 of those packs do not yet match the tier their status
+requires · 3 of the 26 corrected entities (The Basement, The Studio, I-Mind) have now received a real
 Live-tier rewrite · rollout order per framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
@@ -133,6 +133,7 @@ Live-tier rewrite · rollout order per framework §6.
 | 2026-07-04 | Follow-up: investigated the remaining 7 "stale-Planned, unresolved-wiring" entities directly against `docker-compose.production.yml` — confirmed each has its own service block (`tranceflow:`, `imaginarium:`, `tateking:`, `sashas-photo-studio:`, `the-academy:`, `warp-tunnel:`, `warp-radio:`), a real `Dockerfile`, and `workers/<name>/worker.py`, i.e. deployed as standalone services rather than mounted in `api.py`. Corrected `CLAUDE.md`'s status to `✅ In repo` for all 7. Recalculated coverage summary to 7/32 full Live-tier packs, 25 Live-tier charter-only (4 §2.1 exception + 21 outstanding gap), 6 Partial-tier, 5 (claimed, later found wrong — see next entry) genuinely Planned. |
 | 2026-07-04 | Gemini Code Assist and cubic (independently, same PR #201 review) caught that the remaining "5 genuinely code-free" claim was wrong: API Marketplace has `_apimarket_router` mounted in `api.py` (`src/apimarket/routes`), and DocUtari, Fabulousa, The Ice Box, and ChronosSphere/ArcStream each have a real standalone worker under a compose service name that doesn't match the entity name (`files-service`+`storage-service`, `fabulousa-service`, `ice-box-service`, `cron-service` respectively — confirmed via `docker-compose.production.yml` and cross-checked against `CLAUDE.md`'s worker-map table). **All 26** originally-`🔧 Planned` entities are now confirmed to have real code and status-corrected to `✅ In repo` — zero genuinely-Planned entities remain among them. Recalculated: 7/37 full Live-tier packs, 30 Live-tier charter-only (4 §2.1 exception + 26 outstanding gap), 6 Partial-tier, 0 genuinely Planned. |
 | 2026-07-05 | Started the real Live-tier rewrite for the 26 Mis-tiered entities. First batch: The Basement (`src/basement/archive.py` + `routes.py` — archive/search layer, FAISS-optional, no auth on routes) and The Studio (`src/studio/hub.py` + `routes.py` — job-tracking orchestration shell; code-grounded finding: every sub-service is self-labelled `"planned"`/`"scaffold"` in its own capability manifest and no job ever leaves `queued`, documented explicitly). Both promoted from Mis-tiered to Complete (9/37 full Live-tier packs). 24 entities remain in the outstanding gap. |
+| 2026-07-05 | Added I-Mind pack, code-grounded against `src/imind/protocol.py` (169 lines) and `routes.py` (28 lines). While grounding the pack, found and fixed a genuine safety-relevant bug: the self-harm severity-escalation guard compared `SensitivityLevel` string enum values with `<` (`level.value < SensitivityLevel.HIGH.value`), which is lexical string comparison, not severity ordering — since `"none" > "high"` alphabetically, the guard was always false and self-harm detections never escalated past `NONE`. Fixed by removing the faulty guard (the branch only runs when level is still `NONE`). Also flagged, unfixed: no confirmed caller of `IMind.assess()` from the inference pipeline was found — routable but integration into the real chat flow is unverified. Promoted from Mis-tiered to Complete (10/37 full Live-tier packs). 23 entities remain in the outstanding gap. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault

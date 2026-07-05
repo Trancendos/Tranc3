@@ -95,8 +95,7 @@ class IMind:
             for pat in _CRISIS_PATTERNS[1:]:
                 if pat.search(text):
                     categories.append(SensitivityCategory.SELF_HARM)
-                    if level.value < SensitivityLevel.HIGH.value:
-                        level = SensitivityLevel.HIGH
+                    level = SensitivityLevel.HIGH
                     break
 
         # Mental health
