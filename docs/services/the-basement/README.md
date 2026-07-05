@@ -28,7 +28,7 @@
 | Method | Route | Backing |
 |---|---|---|
 | GET | `/basement/stats` | `Basement.stats()` — record counts, retained count, by-source breakdown, vector-search availability |
-| GET | `/basement/records` | `Basement.by_source()` / `Basement.recent()` — paginated listing, `limit` 1–500, optional `source` filter |
+| GET | `/basement/records` | `Basement.by_source()` / `Basement.recent()` — limit-bounded listing, `limit` 1–500, optional `source` filter |
 | GET | `/basement/search` | `Basement.search()` — semantic (FAISS) or keyword fallback, `top_k` 1–50 |
 | GET | `/basement/records/{record_id}` | `Basement.get()` — single record incl. full content; 404 `JSONResponse` if missing |
 
@@ -124,7 +124,7 @@
 - **Query the archive:** `GET /basement/search?q=<query>&top_k=<n>` — returns semantic matches if
   FAISS is active, else keyword-overlap matches.
 - **Inspect a record:** `GET /basement/records/{record_id}` for full content; `GET
-  /basement/records` for a paginated preview list.
+  /basement/records` for a limit-bounded preview list.
 - **Add vector search:** install `faiss` and `sentence-transformers` in the runtime environment —
   no code change needed; `_try_init_faiss()` activates automatically on next process start.
 
