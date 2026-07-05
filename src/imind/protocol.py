@@ -84,11 +84,9 @@ class IMind:
         level = SensitivityLevel.NONE
 
         # Crisis detection — highest priority
-        for pat in _CRISIS_PATTERNS:
-            if pat.search(text):
-                categories.append(SensitivityCategory.CRISIS)
-                level = SensitivityLevel.CRITICAL
-                break
+        if _CRISIS_PATTERNS[0].search(text):
+            categories.append(SensitivityCategory.CRISIS)
+            level = SensitivityLevel.CRITICAL
 
         # Self-harm
         if SensitivityCategory.CRISIS not in categories:

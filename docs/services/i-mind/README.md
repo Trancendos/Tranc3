@@ -9,12 +9,19 @@
 
 > **Truthfulness:** claims cite `src/imind/protocol.py` and `src/imind/routes.py` directly. Status
 > is owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
-> **Bug found and fixed while authoring this pack:** the self-harm escalation branch compared
-> `SensitivityLevel` **string enum values** with `<` (e.g. `"none" < "high"`), which is lexical
-> string comparison, not severity ordering. Because `"none" > "high"` alphabetically, the guard
-> was always false and self-harm detections never escalated the level past `NONE` — a real safety
-> defect in crisis-detection logic. Fixed in this same change (see Verification Log) by removing
-> the faulty guard, since the branch only runs when level is still `NONE` anyway.
+> **Two bugs found and fixed in `src/imind/protocol.py` while authoring this pack:**
+> 1. The self-harm escalation guard originally compared `SensitivityLevel` **string enum values**
+>    with `<` (e.g. `"none" < "high"`), which is lexical string comparison, not severity ordering.
+>    Because `"none" > "high"` alphabetically, the guard was always false.
+> 2. (Caught by Gemini Code Assist review, on top of fix #1) The crisis-detection loop iterated
+>    over **all** of `_CRISIS_PATTERNS` — including the self-harm patterns at `_CRISIS_PATTERNS[1:]`
+>    — not just the crisis pattern at index `0`. Any self-harm-pattern match therefore also matched
+>    the crisis loop first, setting `SensitivityCategory.CRISIS`/`SensitivityLevel.CRITICAL` and
+>    tripping the `if SensitivityCategory.CRISIS not in categories:` guard on the self-harm block,
+>    making the self-harm branch **entirely unreachable dead code** regardless of bug #1. Fixed by
+>    scoping the crisis check to `_CRISIS_PATTERNS[0]` only, so self-harm-only text (no crisis
+>    phrase) now correctly falls through to the self-harm branch and escalates to
+>    `SensitivityLevel.HIGH` / `SensitivityCategory.SELF_HARM` (see Verification Log).
 
 ## 1. Service Governance Charter (GOV)
 
@@ -37,11 +44,12 @@
 | POST | `/imind/assess` | `IMind.assess(text, actor)` — 400 if `text` missing; returns `SensitivityAssessment.to_dict()` |
 
 ### Detection logic (`protocol.py`)
-- **Crisis** (`_CRISIS_PATTERNS[0]`): suicide/self-harm-intent phrases (e.g. "kill myself", "want
-  to die") → `SensitivityCategory.CRISIS`, `SensitivityLevel.CRITICAL`, immediately breaks out of
-  further category checks for this call.
-- **Self-harm** (`_CRISIS_PATTERNS[1:]`): "self-harm", "cut myself", "hurt myself" — only checked
-  if CRISIS wasn't already matched → `SensitivityCategory.SELF_HARM`, `SensitivityLevel.HIGH`.
+- **Crisis** (`_CRISIS_PATTERNS[0]` only): suicide/self-harm-intent phrases (e.g. "kill myself",
+  "want to die") → `SensitivityCategory.CRISIS`, `SensitivityLevel.CRITICAL`. Checked via a single
+  `if`, not a loop over the whole pattern list — see truthfulness header bug #2.
+- **Self-harm** (`_CRISIS_PATTERNS[1:]`): "self-harm", "cut myself", "hurt myself" — checked only
+  if CRISIS wasn't already matched → `SensitivityCategory.SELF_HARM`, `SensitivityLevel.HIGH`. Prior
+  to the fix in this pass, this branch was unreachable dead code (see truthfulness header).
 - **Mental health** (`_MENTAL_HEALTH_PATTERNS`): depression/anxiety/therapy-related terms →
   `SensitivityCategory.MENTAL_HEALTH`, `SensitivityLevel.MEDIUM` (only if level is still `NONE`).
 - `escalate = level in (CRITICAL, HIGH)`.
@@ -64,9 +72,11 @@
 - **Decision: regex over ML classification.** Zero-cost, zero-latency, fully deterministic and
   auditable — trades recall/precision against a trained classifier for simplicity and no inference
   cost. Documented as-is, not evaluated for accuracy in this pack.
-- **Fixed defect:** the self-harm level-upgrade guard used enum-value string comparison
-  (`level.value < SensitivityLevel.HIGH.value`) instead of a severity ordering — see truthfulness
-  header. Removed the guard since the branch is unreachable with any prior level other than `NONE`.
+- **Fixed defects:** (1) the self-harm level-upgrade guard used enum-value string comparison
+  (`level.value < SensitivityLevel.HIGH.value`) instead of a severity ordering; (2) the crisis loop
+  scanned all of `_CRISIS_PATTERNS` instead of only index `0`, making the self-harm branch
+  unreachable regardless of fix (1) — see truthfulness header. Fixed by removing the string-value
+  guard and scoping the crisis check to `_CRISIS_PATTERNS[0]`.
 
 ## 4. RACI Matrix
 
@@ -113,14 +123,18 @@
 
 - **Assess text:** `POST /imind/assess` with `{"text": "...", "actor": "<optional>"}` — returns
   level, categories, escalate flag, and response modifier string.
-- **Add a new crisis pattern:** append a compiled regex to `_CRISIS_PATTERNS` or
-  `_MENTAL_HEALTH_PATTERNS` — no other code change needed.
+- **Add a new crisis-severity pattern:** insert at `_CRISIS_PATTERNS[0]`'s position (the only index
+  the CRITICAL crisis check scans) — appending elsewhere in the list only reaches `HIGH`/self-harm
+  classification, not `CRITICAL`. Add a new self-harm pattern anywhere in `_CRISIS_PATTERNS[1:]`, or
+  a mental-health pattern to `_MENTAL_HEALTH_PATTERNS` — no other code change needed.
 
 ## 10. Runbook (RUN)
 
-- **Assessments never escalate for self-harm text:** this was the exact bug fixed in this pass
-  (string-vs-severity comparison) — confirm the fix (removal of the `level.value <
-  SensitivityLevel.HIGH.value` guard) is present in the deployed version if this recurs.
+- **Assessments never escalate for self-harm text:** this was the exact bug fixed in this pass —
+  two compounding defects: the string-vs-severity `level.value < SensitivityLevel.HIGH.value` guard,
+  and the crisis loop scanning all of `_CRISIS_PATTERNS` (not just index `0`) which made the
+  self-harm branch unreachable regardless of the first fix. Confirm both fixes (guard removed,
+  crisis check scoped to `_CRISIS_PATTERNS[0]`) are present in the deployed version if this recurs.
 - **`/imind/assess` returns 400:** `text` field missing from the request body.
 - **No Observatory event for a detection:** `_emit()` swallows exceptions silently — check The
   Observatory's own health, not this module.
