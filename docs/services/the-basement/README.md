@@ -4,84 +4,150 @@
 |---|---|
 | **Entity** | The Basement |
 | **Lead AI** | Gary Glowman (Glow-Worm) |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | custom (planned `src/basement/`) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `src/basement/archive.py`, `src/basement/routes.py`; router registered in `api.py` (`app.include_router(_basement_router)`, line 790) |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `src/basement/` (`routes.py` 47 lines, `archive.py` 251 lines) + `workers/basement/worker.py`
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `src/basement/archive.py` and `src/basement/routes.py` directly.
+> Status is owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`. This pack
+> supersedes the earlier charter-only placeholder (see Verification Log) once code was confirmed
+> to exist and be live-wired.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** archived information store — long-term retention of records rolled off from The Observatory's active audit log.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Gary Glowman (Glow-Worm) — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Gary Glowman (Glow-Worm).
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** archived intelligence layer — retains records that age out of The Observatory's
+  active ring buffer, plus anything flagged for long-term retention, with semantic search over the
+  archive.
+- **Owner (RACI-A):** Gary Glowman (Glow-Worm); Platform Owner Trancendos.
+- **Scope:** ingest archived records from four upstream sources (Observatory overflow, retired
+  Library articles, completed workflow runs, inference logs), always retain SECURITY/CRITICAL
+  events regardless of TTL, and expose read/search endpoints.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Gary Glowman (Glow-Worm) | Platform Engineering | The Town Hall |
+### HTTP surface (`src/basement/routes.py`, prefix `/basement`)
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/basement/stats` | `Basement.stats()` — record counts, retained count, by-source breakdown, vector-search availability |
+| GET | `/basement/records` | `Basement.by_source()` / `Basement.recent()` — paginated listing, `limit` 1–500, optional `source` filter |
+| GET | `/basement/search` | `Basement.search()` — semantic (FAISS) or keyword fallback, `top_k` 1–50 |
+| GET | `/basement/records/{record_id}` | `Basement.get()` — single record incl. full content; 404 `JSONResponse` if missing |
+
+### Data model (`ArchiveRecord`, `archive.py`)
+- Fields: `id` (uuid4), `timestamp`, `source` (`ArchiveSource` enum: `observatory`, `library`,
+  `workflow`, `inference`, `security`), `event_type`, `content`, `metadata`, `embedding`
+  (optional, not serialized to dict), `retained` (bool — never auto-purged).
+- `to_dict()` truncates `content` to a 200-char `content_preview`; full `content` only returned by
+  the single-record endpoint.
+
+### Ingest paths
+- `Basement.ingest()` — generic entry point; auto-sets `retained=True` if `source ==
+  ArchiveSource.SECURITY` or `"security" in event_type`.
+- `Basement.ingest_observatory_event()` — accepts an Observatory `AuditEvent` object, builds a
+  content string (`"{event_type} | actor={actor} | target={target} | outcome={outcome}"`), and
+  retains it if `event.severity in ("critical", "security")`.
+- On ingest, if the embedder is available, the record is encoded and added to the FAISS index;
+  embedding failures are caught and logged at debug level (ingest never fails on embedding error).
+
+### Storage & eviction
+- In-memory `Dict[str, ArchiveRecord]` plus a `source → [record_id]` index; no external DB.
+- `MAX_RECORDS = 100_000`; `_evict()` removes the oldest **non-retained** records down to 90% of
+  the cap when exceeded — retained (security/critical) records are never evicted by this path.
+
+### Search (`Basement.search()`)
+- If an embedder + FAISS index are active: `_faiss_search()` encodes the query, does a cosine
+  (`IndexFlatIP`) top-k lookup, and returns `[(record, score)]` sorted by the index's own ordering.
+- Fallback `_keyword_search()`: token-overlap scoring (`hits / len(terms)`), used whenever
+  `faiss`/`sentence-transformers` aren't installed or FAISS init failed.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** single in-process module with a module-level singleton (`get_basement()`); no
+  separate worker process or database — state lives in the FastAPI process's memory.
+- **Decision: graceful vector-search degradation.** `_try_init_faiss()` wraps `import faiss` /
+  `sentence-transformers` in a `try/except ImportError`; if unavailable, the module logs at debug
+  level and falls back to keyword search rather than failing to start. This is a deliberate
+  zero-cost/zero-hard-dependency choice.
+- **Decision: retention overrides eviction.** Security/critical events are exempted from the
+  `MAX_RECORDS` eviction path — trades memory growth risk for never silently losing an audit trail
+  event, consistent with the entity's stated mission.
+- **Rejected/deferred:** persistent storage (SQLite/disk) — current implementation is in-memory
+  only and does not survive a process restart; this is a known gap, not yet addressed.
+
+## 4. RACI Matrix
+
+| Activity | Gary Glowman (Lead) | Platform Owner | The Observatory | Platform Engineering |
 |---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+| Archive ingest logic changes | **R** | A | C | C |
+| Retention policy (security/critical exemption) | **R/A** | C | C | I |
+| Vector search / FAISS dependency changes | **R** | A | I | C |
+| Persistence (in-memory → disk) migration | C | **A** | I | **R** |
 
-## 3. Technology Framework Matrix (TFM)
+## 5. Solutions Integration Model (SIM)
 
-| Concern | Planned choice | Zero-cost stance | Status |
-|---|---|---|---|
-| Foundation | custom (planned `src/basement/`) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+- **Upstream:** The Observatory (overflow events beyond its ring buffer, via
+  `ingest_observatory_event()`); no other confirmed caller of `ingest()` in this codebase pass.
+- **Downstream:** none — this is a terminal archive/read layer.
+- **Auth boundary:** none of the 4 routes in `routes.py` carry an auth dependency — all are
+  currently open on the mounted `/basement` prefix. This is a real, code-grounded finding, not a
+  claim about intended behavior — if authentication is expected here, it is not yet implemented.
 
-NOTE: this claim is stale — code already exists in this repo for The Basement (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 6. Architecture Scalability Document (ASD)
 
-## 4. Policy (POL)
+- **Load model:** read/search-heavy, low-write; single-process in-memory store with a hard cap
+  (`MAX_RECORDS = 100_000`).
+- **Bottleneck:** no horizontal scaling — state is process-local; a second replica would not share
+  archive contents. No persistence means a restart loses all non-retained history.
+- **Zero-cost limits:** FAISS + sentence-transformers are optional dependencies; the service
+  degrades to keyword search with zero added cost/infra when they're absent.
+- **Degradation:** embedding/FAISS failures during ingest are swallowed (logged, not raised) — a
+  record is still stored even if it can't be vector-indexed.
 
-- Once implemented, The Basement MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 7. Technology Framework Matrix (TFM)
 
-## 5. Standards (STD)
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI `APIRouter` | mounted into the main `api.py` app |
+| Vector search | FAISS `IndexFlatIP` (optional) | OSS, in-process, degrades gracefully if absent |
+| Embeddings | `sentence-transformers` `all-MiniLM-L6-v2` (optional) | OSS, local |
+| Storage | in-memory `dict` (no persistence) | zero infra cost, but no durability |
 
-- On implementation, The Basement MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "The Basement" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 8. Policy (POL)
+
+- No route-level auth is currently implemented (see SIM §5) — reuse platform policy
+  (`POL-AI-001`, `docs/defstan/`) if/when auth is added; this pack does not assert a policy that
+  isn't reflected in code.
+- Security/critical Observatory events MUST remain retained (never evicted) per the hard-coded
+  `retained` exemption in `ingest()`/`ingest_observatory_event()`.
+
+## 9. Procedure (PROC)
+
+- **Query the archive:** `GET /basement/search?q=<query>&top_k=<n>` — returns semantic matches if
+  FAISS is active, else keyword-overlap matches.
+- **Inspect a record:** `GET /basement/records/{record_id}` for full content; `GET
+  /basement/records` for a paginated preview list.
+- **Add vector search:** install `faiss` and `sentence-transformers` in the runtime environment —
+  no code change needed; `_try_init_faiss()` activates automatically on next process start.
+
+## 10. Runbook (RUN)
+
+- **`/basement/stats` shows `vector_search: false`:** `faiss`/`sentence-transformers` aren't
+  installed, or FAISS init raised — check logs for `"basement: FAISS init failed"` at WARNING
+  level; the service still functions via keyword search.
+- **Memory growth:** watch `total_records` vs `MAX_RECORDS` (100,000); eviction only removes
+  non-retained records, so a workload dominated by security/critical events won't be capped —
+  this is expected behavior per the retention policy, not a bug.
+- **404 on `/basement/records/{id}`:** record was evicted (non-retained, aged out) or the ID never
+  existed — check `/basement/stats.total_records` and `by_source` breakdown.
+
+## 11. Standards (STD)
+
+- Naming: canonical name "The Basement" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; code module is
+  `src/basement/` (lowercase, matches convention used by other in-repo entities).
+- `ArchiveSource` enum values are the single source of truth for valid `source` query-param
+  values on `/basement/records` — any change must update both the enum and this doc.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-04 | Claude (session) | `src/basement/archive.py` (251 lines), `src/basement/routes.py` (47 lines), `api.py` router registration (line 790) | Confirmed Live-tier, full pack authored — DDD/TASD/SIM/ASD grounded in actual code; no auth on routes is a genuine finding (SIM §5), not fabricated. Supersedes the prior charter-only placeholder pack (see PR #199–#201 history in `docs/services/INDEX.md`). |

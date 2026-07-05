@@ -4,84 +4,139 @@
 |---|---|
 | **Entity** | The Studio |
 | **Lead AI** | Voxx |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | custom (planned `src/studio/`) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `src/studio/hub.py`, `src/studio/routes.py`; router registered in `api.py` (`app.include_router(_studio_router)`, line 838) |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `src/studio/` (`routes.py` 56 lines, `hub.py` 185 lines) + `workers/the-studio/worker.py`
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `src/studio/hub.py` and `src/studio/routes.py` directly. Status is
+> owned by the `CLAUDE.md` service table (Live tier); identity by `PLATFORM_ENTITIES.md`.
+> **Important scope note:** the code itself describes this module as a **scaffold/orchestration
+> shell** — every sub-service capability manifest is self-labelled `"status": "planned"` except
+> Imaginarium's own manifest entry, which is labelled `"scaffold"`. This pack documents the
+> orchestration layer that genuinely exists (job submission, tracking, capability listing); it does
+> **not** claim the underlying creative backends (ComfyUI, FFmpeg, Godot, Penpot) are wired in,
+> because the code says they are not.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** central hub of the Creativity Center — coordinates the creative-tool cluster (Fabulousa, TateKing, TranceFlow, Sashas Photo Studio).
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Voxx — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Voxx.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** central hub of the Creativity Center — job-submission/orchestration shell for
+  Sashas Photo Studio, TateKing, TranceFlow, Fabulousa, and Imaginarium.
+- **Owner (RACI-A):** Voxx; Platform Owner Trancendos.
+- **Scope:** accept and track creative jobs tagged by sub-service, expose a capability manifest per
+  sub-service, and (per code comments) eventually dispatch jobs to real backends once those are
+  wired in. Actual dispatch/backend integration is **out of current scope** — not implemented.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Voxx | Platform Engineering | The Town Hall |
+### HTTP surface (`src/studio/routes.py`, prefix `/studio`)
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/studio/status` | `TheStudio.stats()` — total jobs, by-status counts, sub-service enum list |
+| GET | `/studio/capabilities` | `TheStudio.capabilities()` — static manifest per `StudioServiceType` |
+| POST | `/studio/jobs` | `TheStudio.submit_job()` — body `{"service": <enum value>, "payload": {...}}`; 400 on unknown service |
+| GET | `/studio/jobs` | `TheStudio.list_jobs()` — optional `service` filter, most-recent-50 |
+| GET | `/studio/jobs/{job_id}` | `TheStudio.get_job()` — 404 `JSONResponse` if not found |
+
+### Data model
+- `StudioServiceType` enum: `sashas-photo-studio`, `tatekings` (note: literal enum value is
+  `"tatekings"`, plural, not `"tateking"` — a real naming inconsistency in the code, cited as-is),
+  `tranceflow`, `fabulousa`, `imaginarium`.
+- `StudioJob`: `id` (uuid4), `service`, `created_at`, `status` (`JobStatus`: queued/processing/
+  complete/failed), `payload`, `result`, `error`.
+- `_CAPABILITIES` dict: static, hard-coded manifest per service — name, description, foundation
+  (e.g. "Stable Diffusion / ComfyUI"), capability list, and a `"status"` field that is
+  `"planned"` for all four creative sub-services and `"scaffold"` for Imaginarium.
+
+### Job lifecycle
+- `submit_job()` creates a `StudioJob` in `QUEUED` status, stores it, fires an Observatory event
+  (`studio.job.submitted`), and returns it. **There is no code path that transitions a job out of
+  `QUEUED`** — no worker, dispatcher, or status-update logic exists in this module. Jobs will
+  remain `queued` indefinitely unless something external updates them (nothing in this repo does).
+- `_emit()` wraps the Observatory `observe()` call in a bare `except Exception: pass` (annotated
+  `# nosec B110`) — event emission failures are silently swallowed by design.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** in-process orchestration shell with a module-level singleton (`get_studio()`); no
+  external queue, worker, or persistence.
+- **Decision: job tracking without execution.** The module intentionally models the job
+  submission/tracking API ahead of backend integration — this is a legitimate scaffolding pattern,
+  but it means `POST /studio/jobs` currently creates records that never progress past `queued`.
+  Any caller expecting async processing will not observe status changes.
+- **Decision: capability manifest as static data**, not a live backend health check — the
+  `"status": "planned"` fields are literal source, not derived from probing ComfyUI/FFmpeg/Godot/
+  Penpot availability.
+
+## 4. RACI Matrix
+
+| Activity | Voxx (Lead) | Platform Owner | Sub-service Leads (Krystal/Benji/Cesar/Von Hilton) | Platform Engineering |
 |---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+| Job-tracking API changes | **R** | A | I | C |
+| Backend dispatch implementation (future) | C | **A** | **R** (per sub-service) | C |
+| Capability manifest updates | **R/A** | I | C | I |
 
-## 3. Technology Framework Matrix (TFM)
+## 5. Solutions Integration Model (SIM)
 
-| Concern | Planned choice | Zero-cost stance | Status |
-|---|---|---|---|
-| Foundation | custom (planned `src/studio/`) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+- **Upstream:** any caller of `POST /studio/jobs` — no auth on any route in `routes.py`.
+- **Downstream:** The Observatory, via a best-effort `observe()` call on job submission (failures
+  silently swallowed); **no downstream call to any creative backend** — dispatch is not
+  implemented.
+- **Cross-entity note:** the sub-services this module names (Sashas Photo Studio, TateKing,
+  TranceFlow, Fabulousa, Imaginarium) each have their own separate `workers/<name>/worker.py`
+  standalone service (see their own doc-packs) — The Studio's `hub.py` does **not** call into any
+  of those workers; they are entirely independent code paths today.
 
-NOTE: this claim is stale — code already exists in this repo for The Studio (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 6. Architecture Scalability Document (ASD)
 
-## 4. Policy (POL)
+- **Load model:** in-memory job dict, no cap defined (`_jobs: Dict[str, StudioJob]` grows
+  unbounded — no eviction logic, unlike The Basement's `MAX_RECORDS` pattern).
+- **Bottleneck:** single-process, no persistence; a restart loses all job history.
+- **Zero-cost limits:** no external dependency at all in this module — the cost is entirely
+  deferred to whichever backend (ComfyUI/FFmpeg/Godot/Penpot) is eventually wired in.
+- **Degradation:** none needed yet — there is no live backend to degrade from.
 
-- Once implemented, The Studio MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 7. Technology Framework Matrix (TFM)
 
-## 5. Standards (STD)
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI `APIRouter` | mounted into the main `api.py` app |
+| Job storage | in-memory `dict`, no persistence | zero infra cost, no durability |
+| Backend dispatch | **not implemented** | N/A — deferred to future ComfyUI/FFmpeg/Godot/Penpot integration |
 
-- On implementation, The Studio MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "The Studio" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 8. Policy (POL)
+
+- No route-level auth currently implemented — see SIM §5.
+- Zero-cost mandate: any future backend integration (ComfyUI, FFmpeg, Godot, Penpot) must pass
+  `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
+
+## 9. Procedure (PROC)
+
+- **Submit a job:** `POST /studio/jobs` with `{"service": "sashas-photo-studio", "payload": {...}}`
+  — returns a job record in `queued` status that will not currently progress further.
+- **List capabilities:** `GET /studio/capabilities` — static manifest, useful for discovering
+  which sub-services exist and their intended feature set (not their live availability).
+
+## 10. Runbook (RUN)
+
+- **Jobs stuck in `queued` forever:** expected — no dispatcher exists yet. This is not a bug to
+  triage; it's the current (pre-backend-integration) state of the module.
+- **`POST /studio/jobs` returns 400 "Unknown service":** the `service` value in the request body
+  doesn't match a `StudioServiceType` enum value — valid values are listed in the error response.
+- **Observatory events missing for a job:** `_emit()` swallows all exceptions silently
+  (`# nosec B110`) — check The Observatory's own logs/health, not this module, for emission
+  failures.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "The Studio" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; note the
+  `StudioServiceType.VIDEO` enum value is literally `"tatekings"` (plural) while the canonical
+  entity name is "TateKing" (singular) — a real inconsistency in the code, flagged here rather
+  than silently normalized in this doc.
+- Any future dispatch implementation MUST update this pack's DDD/TASD before being considered
+  part of "The Studio" per the framework's honesty gate — do not let real backend wiring land
+  without a corresponding doc update.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-04 | Claude (session) | `src/studio/hub.py` (185 lines), `src/studio/routes.py` (56 lines), `api.py` router registration (line 838) | Confirmed Live-tier per `CLAUDE.md` status, full pack authored. Code-grounded finding: the orchestration shell is real and live-wired, but all sub-service backends are self-labelled "planned"/"scaffold" in the capability manifest, and no job ever transitions out of `queued` — documented explicitly rather than glossed over. `tatekings` enum-value/naming inconsistency also flagged. |
