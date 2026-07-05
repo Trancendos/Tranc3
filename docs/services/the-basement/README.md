@@ -25,6 +25,7 @@
 ## 2. Detailed Design Document (DDD)
 
 ### HTTP surface (`src/basement/routes.py`, prefix `/basement`)
+
 | Method | Route | Backing |
 |---|---|---|
 | GET | `/basement/stats` | `Basement.stats()` — record counts, retained count, by-source breakdown, vector-search availability |

@@ -28,6 +28,7 @@
 ## 2. Detailed Design Document (DDD)
 
 ### HTTP surface (`src/studio/routes.py`, prefix `/studio`)
+
 | Method | Route | Backing |
 |---|---|---|
 | GET | `/studio/status` | `TheStudio.stats()` — total jobs, by-status counts, sub-service enum list |
