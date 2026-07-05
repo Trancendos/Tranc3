@@ -5,10 +5,16 @@
 | **Entity** | The Studio |
 | **Lead AI** | Voxx |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
-| **Code** | `src/studio/hub.py`, `src/studio/routes.py`; router registered in `api.py` (`app.include_router(_studio_router)`, line 838) |
+| **Code** | `src/studio/hub.py`, `src/studio/routes.py`; router registered in `api.py` (`app.include_router(_studio_router)`, line 838) — **plus a separate standalone worker**, `workers/the-studio/worker.py` (SQLite: projects/assets/collaborators/time_entries/feedback) |
 
 > **Truthfulness:** claims cite `src/studio/hub.py` and `src/studio/routes.py` directly. Status is
 > owned by the `CLAUDE.md` service table (Live tier); identity by `PLATFORM_ENTITIES.md`.
+> **Scope note (cubic-flagged):** The Studio has **two independent implementations** — the
+> `src/studio/` module mounted into the main `api.py` app (documented below in full), and a
+> separate standalone `workers/the-studio/worker.py` with its own SQLite persistence (projects,
+> creative assets, collaborators, time entries, feedback) that this pack does **not** cover in
+> detail. Every claim below that says "no worker" or "no persistence" refers specifically to the
+> `src/studio/*` path, not to the entity as a whole.
 > **Important scope note:** the code itself describes this module as a **scaffold/orchestration
 > shell** — every sub-service capability manifest is self-labelled `"status": "planned"` except
 > Imaginarium's own manifest entry, which is labelled `"scaffold"`. This pack documents the
@@ -57,8 +63,10 @@
 
 ## 3. Technical Architecture Solutions Design (TASD)
 
-- **Style:** in-process orchestration shell with a module-level singleton (`get_studio()`); no
-  external queue, worker, or persistence.
+- **Style (`src/studio/*` API path only):** in-process orchestration shell with a module-level
+  singleton (`get_studio()`) — no external queue or persistence on this path. A separate
+  `workers/the-studio/worker.py` standalone service also exists for this entity and does use
+  SQLite persistence — see the scope note above; this DDD/TASD does not cover it.
 - **Decision: job tracking without execution.** The module intentionally models the job
   submission/tracking API ahead of backend integration — this is a legitimate scaffolding pattern,
   but it means `POST /studio/jobs` currently creates records that never progress past `queued`.

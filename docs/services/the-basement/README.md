@@ -5,12 +5,18 @@
 | **Entity** | The Basement |
 | **Lead AI** | Gary Glowman (Glow-Worm) |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
-| **Code** | `src/basement/archive.py`, `src/basement/routes.py`; router registered in `api.py` (`app.include_router(_basement_router)`, line 790) |
+| **Code** | `src/basement/archive.py`, `src/basement/routes.py`; router registered in `api.py` (`app.include_router(_basement_router)`, line 790) — **plus a separate standalone worker**, `workers/basement/worker.py` (SQLite + FTS5, port 8088) |
 
 > **Truthfulness:** claims cite `src/basement/archive.py` and `src/basement/routes.py` directly.
 > Status is owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`. This pack
 > supersedes the earlier charter-only placeholder (see Verification Log) once code was confirmed
 > to exist and be live-wired.
+> **Scope note (cubic-flagged):** The Basement has **two independent implementations** — the
+> `src/basement/` module mounted into the main `api.py` app (documented below in full), and a
+> separate standalone `workers/basement/worker.py` (FastAPI + SQLite/FTS5, port 8088) that this
+> pack does **not** cover in detail. Every claim below that says "no worker" or "no database"
+> refers specifically to the `src/basement/*` path, not to the entity as a whole — the standalone
+> worker genuinely has both.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -62,8 +68,10 @@
 
 ## 3. Technical Architecture Solutions Design (TASD)
 
-- **Style:** single in-process module with a module-level singleton (`get_basement()`); no
-  separate worker process or database — state lives in the FastAPI process's memory.
+- **Style (`src/basement/*` API path only):** in-process module with a module-level singleton
+  (`get_basement()`) — this path stores state in the main FastAPI process's memory, with no
+  database of its own. A separate `workers/basement/worker.py` standalone service also exists for
+  this entity and does use SQLite/FTS5 — see the scope note above; this DDD/TASD does not cover it.
 - **Decision: graceful vector-search degradation.** `_try_init_faiss()` wraps `import faiss` /
   `sentence-transformers` in a `try/except ImportError`; if unavailable, the module logs at debug
   level and falls back to keyword search rather than failing to start. This is a deliberate
@@ -97,7 +105,9 @@
 - **Load model:** read/search-heavy, low-write; single-process in-memory store with a hard cap
   (`MAX_RECORDS = 100_000`).
 - **Bottleneck:** no horizontal scaling — state is process-local; a second replica would not share
-  archive contents. No persistence means a restart loses all non-retained history.
+  archive contents. No persistence in this in-process store means a restart loses **all** of its
+  records, including retained security/critical events — `retained` only exempts a record from
+  the `_evict()` eviction path, not from process-restart loss.
 - **Zero-cost limits:** FAISS + sentence-transformers are optional dependencies; the service
   degrades to keyword search with zero added cost/infra when they're absent.
 - **Degradation:** embedding/FAISS failures during ingest are swallowed (logged, not raised) — a
