@@ -3618,8 +3618,8 @@ services:
   # ── The Ice Box — sandbox threat isolation (Port 8046) ──────────────────────────────────────────────
   ice-box-service:
     build:
-      context: ./workers/ice-box-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/ice-box-service/Dockerfile
     container_name: tranc3-ice-box-service
     <<: *worker-common
     environment:
@@ -3635,6 +3635,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.ice-box-service.rule=PathPrefix(`/ice-box`)"
       - "traefik.http.routers.ice-box-service.entrypoints=websecure"
+      - "traefik.http.routers.ice-box-service.middlewares=strip-ice-box@docker"
+      - "traefik.http.middlewares.strip-ice-box.stripprefix.prefixes=/ice-box"
       - "traefik.http.services.ice-box-service.loadbalancer.server.port=8046"
 
   # ── Fabulousa — UX/UI/design hub (Port 8048) ──────────────────────────────────────────────
