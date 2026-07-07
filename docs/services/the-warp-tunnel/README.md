@@ -5,7 +5,7 @@
 | **Entity** | The Warp Tunnel |
 | **Lead AI** | Rocking Ricki |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
-| **Code** | `workers/warp-tunnel/main.py` (54 lines, honest stub) — the deployed implementation. `worker.py` (334 lines, real regex-pattern file scanner with `X-Internal-Secret` auth) exists but is not deployed. A **third**, independent implementation, `src/security/warp_tunnel/tunnel.py` (163 lines, real Ice-Box-integrated content scanner), also exists and is never imported by anything. |
+| **Code** | `workers/warp-tunnel/main.py` (54 lines, honest stub) — the deployed implementation for this compose service. `worker.py` (334 lines, real regex-pattern file scanner with `X-Internal-Secret` auth) exists but is not built into this Dockerfile. A **third**, independent implementation, `src/security/warp_tunnel/tunnel.py` (163 lines, real Ice-Box-integrated content scanner), is genuinely wired up — but into a *different* compose service, `workers/ice-box-service/worker.py`, not into `workers/warp-tunnel/`. |
 
 > **Truthfulness:** claims cite `workers/warp-tunnel/main.py`, `worker.py`,
 > `src/security/warp_tunnel/tunnel.py`, `Dockerfile`, and `docker-compose.production.yml`
@@ -24,10 +24,17 @@
 > all) is a **third**, entirely independent implementation — genuine integration with The Ice
 > Box's `ThreatAnalyser`/`QuarantineStore` for scanning arbitrary text/content (not file uploads)
 > before it reaches downstream services, with configurable block/warn verdict thresholds.
-> Confirmed via repo-wide `grep` that `WarpTunnel`/`warp_tunnel` is **never imported anywhere
-> outside its own module** — this third implementation is completely orphaned, unlike
-> `worker.py` which at least has its own deployable Dockerfile-adjacent surface (even if not
-> currently built).
+>
+> **Correction (2026-07-07, same day, caught while auditing The Ice Box):** an earlier version
+> of this pack claimed `WarpTunnel`/`warp_tunnel` has "zero callers anywhere in the
+> repository" and is "fully orphaned." That was **wrong** — the grep behind that claim only
+> searched `src/` and `api.py`, and missed `workers/`. `workers/ice-box-service/worker.py`
+> (a *separate* compose service, port 8046, entity "The Ice Box") directly imports and
+> instantiates `WarpTunnel`/`TunnelConfig` from this exact module and calls `_tunnel.scan()` on
+> every `POST /scan` request. `tunnel.py` is real, live, wired code — it is simply deployed
+> under a *different* entity's worker (The Ice Box), not under `workers/warp-tunnel/` itself.
+> The "orphaned" framing has been removed below; see `docs/services/the-ice-box/README.md` for
+> the consuming side.
 > **Also found and fixed this pass, the same defect class found repeatedly across this doc-pack
 > series:** `workers/warp-tunnel/Dockerfile` hardcoded `EXPOSE 8056` / `HEALTHCHECK ...
 > localhost:8056`, and `main.py`'s own `PORT` default also fell back to `8056`, while
@@ -81,14 +88,17 @@
   `"suspicious"`, or `"clean"`. Files scored `critical`/`suspicious` are written to a real
   `QUARANTINE_DIR` on disk and logged. This is genuine, working logic — not a scaffold.
 
-### `WarpTunnel` class (`src/security/warp_tunnel/tunnel.py`) — real, orphaned, third implementation
+### `WarpTunnel` class (`src/security/warp_tunnel/tunnel.py`) — real, third implementation, wired into a different entity's worker
 - `WarpTunnel.scan(content, source=...)` calls The Ice Box's real `ThreatAnalyser` and
   `QuarantineStore` (per its own module docstring: "Intercepts inbound content before it enters
   the main execution path"), with configurable `block_verdicts`/`warn_verdicts`/
   `max_content_bytes`/`strict_mode` via `TunnelConfig`. This is real, well-structured
-  integration code — but **confirmed via repo-wide `grep` that nothing outside its own module
-  ever imports `WarpTunnel` or references `warp_tunnel`**. It has no caller anywhere in the
-  request path, `api.py`, or any worker. Fully dormant.
+  integration code, and it **is genuinely called** — `workers/ice-box-service/worker.py`
+  (compose service `ice-box-service`, port 8046) imports `TunnelConfig, WarpTunnel` and
+  instantiates `_tunnel = WarpTunnel(...)` at module load, then calls `_tunnel.scan()` inside
+  its `POST /scan` handler. It has **no caller within `workers/warp-tunnel/`** — the compose
+  service documented in this pack — which is the accurate framing: this code lives in one
+  entity's `src/` tree but is deployed exclusively via a different entity's worker.
 
 ## 3. Technical Architecture Solutions Design (TASD)
 
@@ -117,8 +127,10 @@
   `dev-secret` fallback is fixed.
 - **Downstream (`tunnel.py` only, if wired):** The Ice Box's `ThreatAnalyser`/`QuarantineStore`
   — a real, self-hosted, zero-cost dependency already present in this repo.
-- **Not integrated:** none of the three implementations call each other; `tunnel.py` has zero
-  callers anywhere in the repo.
+- **Not integrated within this entity's own worker:** none of the three implementations call
+  each other, and none of `worker.py`/`tunnel.py` is wired into `workers/warp-tunnel/`'s
+  deployed `main.py`. `tunnel.py` does have a real caller — but it's The Ice Box's worker, a
+  separate compose service — not anything under `workers/warp-tunnel/`.
 
 ## 6. Architecture Scalability Document (ASD)
 
@@ -134,7 +146,7 @@
 |---|---|---|
 | Web framework (deployed) | FastAPI, standalone, honest stub | self-hosted, port 8072 (fixed this pass) |
 | File scanning (undeployed) | Regex-pattern signature matching (`worker.py`) | zero-cost, in-process |
-| Content interception (orphaned) | Ice Box `ThreatAnalyser`/`QuarantineStore` integration (`tunnel.py`) | zero-cost, self-hosted |
+| Content interception (real, deployed — but via The Ice Box's worker, not this one) | Ice Box `ThreatAnalyser`/`QuarantineStore` integration (`tunnel.py`) | zero-cost, self-hosted |
 | Auth | none in deployed `main.py`; `worker.py`'s unused alt has `X-Internal-Secret` with an insecure fallback | zero cost, currently unenforced |
 
 ## 8. Policy (POL)
@@ -151,8 +163,9 @@
   honest design, not a bug.
 - **(Not currently reachable) Scan a file for real:** would be `POST /scan` on `worker.py`, if
   promoted to deployed status.
-- **(Not currently reachable) Intercept inline content:** would require wiring `WarpTunnel` into
-  a real request path — currently has zero callers anywhere.
+- **Intercept inline content:** already live — via The Ice Box's `POST /scan` (port 8046, not
+  this entity's own port 8072). `WarpTunnel` has no caller *within `workers/warp-tunnel/`
+  itself*, but is not dormant platform-wide.
 
 ## 10. Runbook (RUN)
 
@@ -163,10 +176,12 @@
   middleware, while `main.py`'s routes are unprefixed) — fixed this pass by adding a
   `strip-warp-tunnel` middleware to the compose labels; confirm it's still present if this
   recurs.
-- **Someone asks "why isn't anything actually being scanned?":** two real scanning
-  implementations exist (`worker.py` for files, `tunnel.py` for content) but neither is
-  deployed/wired — see truthfulness header for the full finding and the owner decision this
-  requires.
+- **Someone asks "why isn't anything actually being scanned by *this* worker?":** `worker.py`
+  (file scanning) is real but not deployed here; `tunnel.py` (content scanning) is real and
+  **is** deployed — but via The Ice Box's worker (port 8046), not `workers/warp-tunnel/`
+  (port 8072). See truthfulness header for the full finding and the owner decision on whether
+  `workers/warp-tunnel/` should also get a real implementation, or whether The Ice Box's
+  coverage is considered sufficient for this platform capability.
 
 ## 11. Standards (STD)
 
@@ -182,4 +197,5 @@
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
 | 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
-| 2026-07-07 | Claude (session) | `workers/warp-tunnel/main.py` (54 lines), `worker.py` (334 lines), `src/security/warp_tunnel/tunnel.py` (163 lines), `Dockerfile`, `docker-compose.production.yml`, repo-wide `grep` for `WarpTunnel`/`warp_tunnel` usage | Confirmed Live-tier, full pack authored. Major finding: **three** independent implementations exist for this entity — an honest stub (deployed `main.py`), a real regex-pattern file scanner (`worker.py`, undeployed), and a real Ice-Box-integrated content scanner (`tunnel.py`, confirmed via repo-wide grep to have zero callers anywhere — fully orphaned). Not fixed (requires an owner decision on which scanning model to deploy) but flagged clearly. Also fixed the same two defect classes found repeatedly this session: a cosmetic Dockerfile port mismatch (8056 vs compose's 8072, fixed for robustness) and a genuine, live Traefik `PathPrefix`-without-`StripPrefix` routing bug (the sixth instance this session), fixed with a `strip-warp-tunnel` middleware. `scripts/port_registry_validate.py` re-run and passes (73 workers). |
+| 2026-07-07 | Claude (session) | `workers/warp-tunnel/main.py` (54 lines), `worker.py` (334 lines), `src/security/warp_tunnel/tunnel.py` (163 lines), `Dockerfile`, `docker-compose.production.yml`, repo-wide `grep` for `WarpTunnel`/`warp_tunnel` usage | Confirmed Live-tier, full pack authored. Major finding: **three** independent implementations exist for this entity — an honest stub (deployed `main.py`), a real regex-pattern file scanner (`worker.py`, undeployed), and a real Ice-Box-integrated content scanner (`tunnel.py`) initially believed to be fully orphaned. Not fixed (requires an owner decision on which scanning model to deploy) but flagged clearly. Also fixed the same two defect classes found repeatedly this session: a cosmetic Dockerfile port mismatch (8056 vs compose's 8072, fixed for robustness) and a genuine, live Traefik `PathPrefix`-without-`StripPrefix` routing bug (the sixth instance this session), fixed with a `strip-warp-tunnel` middleware. `scripts/port_registry_validate.py` re-run and passes (73 workers). |
+| 2026-07-07 (same day, correction) | Claude (session), while auditing The Ice Box | `workers/ice-box-service/worker.py` (225 lines) | **Corrected a factual error in this pack.** The prior entry's "fully orphaned, zero callers anywhere" claim for `WarpTunnel`/`tunnel.py` was wrong — the grep behind it only checked `src/` and `api.py`, missing `workers/`. `workers/ice-box-service/worker.py` (a separate compose service, port 8046) imports and calls `WarpTunnel` directly on every `POST /scan`. Corrected every affected section of this pack (header, DDD, SIM, TFM, PROC, RUN) to state the accurate finding: `tunnel.py` has no caller within `workers/warp-tunnel/` itself, but is genuinely live via The Ice Box's worker. |
