@@ -146,9 +146,9 @@
 ## 8. Policy (POL)
 
 - **Security gap, not fixed:** no route-level auth on any `src/artifactory/*` route, including the
-  mutating ones — `POST /artifacts`, `POST /artifacts/{id}/versions`, `DELETE /artifacts/{id}`, and
-  `POST /retention/apply` can all be called by any caller reaching `api.py` with no credential
-  check. See SIM §5.
+  mutating ones — `POST /artifactory/artifacts`, `POST /artifactory/artifacts/{id}/versions`,
+  `DELETE /artifactory/artifacts/{id}`, and `POST /artifactory/retention/apply` can all be called
+  by any caller reaching `api.py` with no credential check. See SIM §5.
 - Any Dockerfile-less worker directory referenced by `docker-compose.production.yml` MUST be
   treated as a build-breaking defect, not a cosmetic gap — see the broader-gap note in the
   truthfulness header; a follow-up pass should audit and fix the remaining 8.

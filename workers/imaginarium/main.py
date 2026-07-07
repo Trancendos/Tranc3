@@ -19,7 +19,7 @@ START_TIME = time.time()
 CAPABILITIES = [
     {"name": "The Studio", "slug": "the-studio", "port": 8050, "role": "Central creativity hub"},
     {"name": "TateKing", "slug": "tateking", "port": 8053, "role": "Video creation & editing"},
-    {"name": "TranceFlow", "slug": "tranceflow", "port": 8059, "role": "3D modeling & games"},
+    {"name": "TranceFlow", "slug": "tranceflow", "port": 8052, "role": "3D modeling & games"},
     {
         "name": "Sashas Photo Studio",
         "slug": "sashas-photo-studio",

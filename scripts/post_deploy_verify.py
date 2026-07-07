@@ -87,7 +87,7 @@ ALL_ENTITIES: list[dict] = [
     {"name": "basement", "port": 8041, "tier": "planned", "path": "/health"},
     {"name": "the-studio", "port": 8050, "tier": "planned", "path": "/health"},
     {"name": "sashas-photo-studio", "port": 8051, "tier": "planned", "path": "/health"},
-    {"name": "tranceflow", "port": 8059, "tier": "planned", "path": "/health"},
+    {"name": "tranceflow", "port": 8052, "tier": "planned", "path": "/health"},
     {"name": "tateking", "port": 8053, "tier": "planned", "path": "/health"},
     {"name": "imaginarium", "port": 8054, "tier": "planned", "path": "/health"},
     {"name": "the-lab", "port": 8055, "tier": "planned", "path": "/health"},

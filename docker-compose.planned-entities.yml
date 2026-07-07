@@ -80,7 +80,7 @@ services:
       PENPOT_URL: "${PENPOT_URL:-http://fabulousa-frontend}"
       SD_URL: "${SD_URL:-http://stable-diffusion:7860}"
       TATEKING_URL: "http://tateking:8053"
-      TRANCEFLOW_URL: "http://tranceflow:8059"
+      TRANCEFLOW_URL: "http://tranceflow:8052"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
       <<: *default-hc
@@ -115,7 +115,7 @@ services:
       - "traefik.http.routers.photo.entrypoints=web"
       - "traefik.http.services.photo.loadbalancer.server.port=8051"
 
-  # ── TranceFlow — Junior Cesar — Port 8059 ────────────────────
+  # ── TranceFlow — Junior Cesar — Port 8052 ────────────────────
   tranceflow:
     build:
       context: ./workers/tranceflow
@@ -123,20 +123,20 @@ services:
     container_name: tranceflow
     <<: *worker-defaults
     profiles: ["tranceflow", "all"]
-    ports: ["8059:8059"]
+    ports: ["8052:8052"]
     environment:
-      PORT: "8059"
+      PORT: "8052"
       ASSET_DIR: "/data/assets"
     volumes:
       - tranceflow-assets:/data/assets
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8059/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8052/health')"]
       <<: *default-hc
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
       - "traefik.http.routers.tranceflow.entrypoints=web"
-      - "traefik.http.services.tranceflow.loadbalancer.server.port=8059"
+      - "traefik.http.services.tranceflow.loadbalancer.server.port=8052"
 
   # ── TateKing — Benji Tate & Sam King — Port 8053 ─────────────
   tateking:
@@ -175,7 +175,7 @@ services:
       PORT: "8054"
       PHOTO_URL: "http://sashas-photo-studio:8051"
       VIDEO_URL: "http://tateking:8053"
-      THREED_URL: "http://tranceflow:8059"
+      THREED_URL: "http://tranceflow:8052"
       DESIGN_URL: "http://fabulousa-frontend:80"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8054/health')"]

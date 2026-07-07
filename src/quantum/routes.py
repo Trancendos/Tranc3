@@ -23,7 +23,7 @@ def _quantum_status() -> Dict[str, Any]:
 
         return {"quantum_core": "available", "backend": "qiskit-aer"}
     except Exception as exc:
-        return {"quantum_core": "degraded", "note": str(exc)}
+        return {"quantum_core": "degraded", "note": safe_error_detail(exc, 503)}
 
 
 def _deepmind_status() -> Dict[str, Any]:
@@ -32,7 +32,7 @@ def _deepmind_status() -> Dict[str, Any]:
 
         return {"mcts": "available"}
     except Exception as exc:
-        return {"mcts": "degraded", "note": str(exc)}
+        return {"mcts": "degraded", "note": safe_error_detail(exc, 503)}
 
 
 @router.get("/status")
