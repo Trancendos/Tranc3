@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.deepmind import planning
-from src.quantum.routes import _deepmind_status, _quantum_status, deepmind_plan, thinktank_status
+from src.quantum import routes as quantum_routes
+from src.quantum.routes import deepmind_plan, thinktank_status
 
 
 @pytest.mark.asyncio
@@ -59,8 +60,6 @@ async def test_deepmind_plan_end_to_end_real_planner():
 
 @pytest.mark.asyncio
 async def test_thinktank_status_shape():
-    _quantum_status.cache_clear()
-    _deepmind_status.cache_clear()
     result = await thinktank_status()
     assert result["service"] == "think-tank"
     assert set(result["modules"]) == {"quantum", "deepmind"}
@@ -78,16 +77,14 @@ async def test_thinktank_status_reports_degraded_on_import_failure(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", _blocked_import)
-    _quantum_status.cache_clear()
-    _deepmind_status.cache_clear()
+    # Only a successful import result is cached (module-level globals) — a
+    # prior test run may have already populated these, which would make this
+    # test see the cached "available" result instead of exercising the
+    # forced-failure path. Reset before and after so tests stay order-independent.
+    monkeypatch.setattr(quantum_routes, "_quantum_available_cache", None)
+    monkeypatch.setattr(quantum_routes, "_deepmind_available_cache", None)
 
     result = await thinktank_status()
-
-    # Availability is cached (lru_cache) to avoid repeated import machinery on
-    # every poll — clear it again so later tests aren't affected by this
-    # forced-failure result.
-    _quantum_status.cache_clear()
-    _deepmind_status.cache_clear()
 
     assert result["modules"]["quantum"]["quantum_core"] == "degraded"
     assert isinstance(result["modules"]["quantum"]["note"], str)
@@ -95,3 +92,27 @@ async def test_thinktank_status_reports_degraded_on_import_failure(monkeypatch):
     assert result["modules"]["deepmind"]["mcts"] == "degraded"
     assert isinstance(result["modules"]["deepmind"]["note"], str)
     assert result["modules"]["deepmind"]["note"]
+
+
+@pytest.mark.asyncio
+async def test_thinktank_status_recovers_after_transient_import_failure(monkeypatch):
+    """A degraded result must not be cached, so a later successful poll can recover."""
+    real_import = builtins.__import__
+    responses = iter([ImportError("transient failure"), None])
+
+    def _fail_once_then_succeed(name, *args, **kwargs):
+        if name == "qiskit_aer":
+            outcome = next(responses)
+            if outcome is not None:
+                raise outcome
+            return object()  # simulate a successful "import qiskit_aer"
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _fail_once_then_succeed)
+    monkeypatch.setattr(quantum_routes, "_quantum_available_cache", None)
+
+    first = quantum_routes._quantum_status()
+    assert first["quantum_core"] == "degraded"
+
+    second = quantum_routes._quantum_status()
+    assert second["quantum_core"] == "available"
