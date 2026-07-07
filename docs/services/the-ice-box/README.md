@@ -34,12 +34,14 @@
 >    this doc, which imports cleanly.
 > 3. Adding `requirements.txt` (fastapi, uvicorn, pydantic) — none existed for this worker.
 >
-> Also fixed the same Traefik `StripPrefix` defect class found in 7 other entities this
-> session: bare ``PathPrefix(`/ice-box`)`` with no `StripPrefix`, while `worker.py`'s routes
-> (`/health`, `/scan`, `/quarantine`, `/quarantine/{id}`, `/quarantine/{id}/release`, `/stats`)
-> are unprefixed — fixed with a `strip-ice-box` middleware (the 9th instance this session,
-> after The Academy, Sashas Photo Studio, Taimra, TateKing, Imaginarium, The Warp Tunnel,
-> Warp Radio, DocUtari having none-applicable — count includes all genuinely-fixed instances).
+> Also fixed the same Traefik `StripPrefix` defect class found repeatedly this session: bare
+> ``PathPrefix(`/ice-box`)`` with no `StripPrefix`, while `worker.py`'s routes (`/health`,
+> `/scan`, `/quarantine`, `/quarantine/{id}`, `/quarantine/{id}/release`, `/stats`) are
+> unprefixed — fixed with a `strip-ice-box` middleware. This is the **8th genuinely-fixed
+> instance this session** (The Academy, Sashas Photo Studio, Taimra, TateKing, Imaginarium,
+> The Warp Tunnel, Warp Radio, and now The Ice Box; DocUtari and Fabulousa were both checked
+> and correctly found not to need this fix — DocUtari's two workers have no Traefik label at
+> all, and Fabulousa's routes are already self-prefixed).
 >
 > **A related, broader defect noted but explicitly out of scope for this pass:** while fixing
 > this, `workers/swarm-coordinator-service/Dockerfile` was found to have the **same class of
@@ -192,4 +194,4 @@ in-repo client.
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `CLAUDE.md` service table, `PLATFORM_ENTITIES.md`, repo search | **SUPERSEDED — was wrong.** Concluded no implementation exists. |
-| 2026-07-07 | Claude (session) | direct read of `workers/ice-box-service/worker.py` (225 lines), `src/security/ice_box/{analyser,quarantine,signatures}.py`, `src/security/warp_tunnel/tunnel.py`, the (missing, now added) Dockerfile + `requirements.txt`, and the `ice-box-service` block in `docker-compose.production.yml` | **Full rewrite to Live-tier (11 sections).** Fixed a genuine build-breaking defect requiring more than a drive-by copy: no Dockerfile existed, and the worker imports repo-level `src/` packages, so the compose build context had to be widened to the repo root (matching the `infinity-portal`/`infinity-one`/`infinity-admin` pattern) with a Dockerfile preserving the source tree's relative depth so `worker.py`'s own `sys.path.insert(parents[2])` logic resolves correctly — verified by executing the module directly before writing this doc. Also fixed the Traefik StripPrefix defect (9th instance this session). Discovered and corrected a factual error in The Warp Tunnel's pack: its `WarpTunnel`/`tunnel.py` "fully orphaned" claim was wrong — this worker is a real, live caller, confirmed here and cross-corrected in that entity's own doc-pack. Flagged, not fixed: the same context-mismatch defect class also affects `workers/swarm-coordinator-service/Dockerfile` — out of scope for this pass. Documented, not fixed: no auth on any route, most notably the quarantine-release write. |
+| 2026-07-07 | Claude (session) | direct read of `workers/ice-box-service/worker.py` (225 lines), `src/security/ice_box/{analyser,quarantine,signatures}.py`, `src/security/warp_tunnel/tunnel.py`, the (missing, now added) Dockerfile + `requirements.txt`, and the `ice-box-service` block in `docker-compose.production.yml` | **Full rewrite to Live-tier (11 sections).** Fixed a genuine build-breaking defect requiring more than a drive-by copy: no Dockerfile existed, and the worker imports repo-level `src/` packages, so the compose build context had to be widened to the repo root (matching the `infinity-portal`/`infinity-one`/`infinity-admin` pattern) with a Dockerfile preserving the source tree's relative depth so `worker.py`'s own `sys.path.insert(parents[2])` logic resolves correctly — verified by executing the module directly before writing this doc. Also fixed the Traefik StripPrefix defect (8th genuinely-fixed instance this session). Discovered and corrected a factual error in The Warp Tunnel's pack: its `WarpTunnel`/`tunnel.py` "fully orphaned" claim was wrong — this worker is a real, live caller, confirmed here and cross-corrected in that entity's own doc-pack. Flagged, not fixed: the same context-mismatch defect class also affects `workers/swarm-coordinator-service/Dockerfile` — out of scope for this pass. Documented, not fixed: no auth on any route, most notably the quarantine-release write. |

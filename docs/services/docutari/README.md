@@ -57,8 +57,16 @@
 > can't guess a fixed default value — there simply is no auth unless an operator sets one) but
 > it means **both DocUtari workers are unauthenticated by default in this compose file**, since
 > neither `INTERNAL_SERVICE_TOKEN` nor `INTERNAL_SECRET` is set in `docker-compose.production.yml`
-> or `.env.example` for these two services. Flagged for the entity owner; not changed here since
-> setting a real secret is a deployment-config decision, not a code fix.
+> or `.env.example` for these two services. To be precise about where the risk lives: the
+> fail-open `""` default is a **code-level choice**, not merely a missing deployment setting —
+> `worker.py`'s own `_auth()` treats an unset secret as "auth disabled" rather than failing
+> closed. Flagged for the entity owner, same as the other insecure-default findings in this
+> series (TateKing/Imaginarium/The Warp Tunnel/Warp Radio's `dev-secret` fallbacks): both
+> represent an intentional choice to leave auth enforcement to deployment configuration, and
+> both warrant fixing before either worker is trusted with production document/object traffic.
+> Not changed unilaterally here — flipping to fail-closed would be a behavior change with
+> operational impact (anyone currently relying on the open-by-default access would break) and
+> is an owner decision, not a docs-pass fix.
 
 ## 1. Service Governance Charter (GOV)
 

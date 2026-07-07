@@ -54,7 +54,7 @@
 | Method | Route | Backing |
 |---|---|---|
 | GET | `/health` | static uptime/version — not a real dependency probe |
-| GET | `/status` | reports `ffmpeg_available` (via `shutil.which`), `remotion_configured` (via `REMOTION_SERVE_URL` truthiness) — genuinely reflects real backend availability |
+| GET | `/status` | reports `ffmpeg_available` (via `shutil.which`), `remotion_configured` (via `REMOTION_SERVE_URL` truthiness) — reflects configuration readiness and binary presence, not runtime health |
 | POST | `/video/create` | creates a video job — tries Remotion first (if configured), falls back to FFmpeg; both real |
 | POST | `/video/compose` | concatenates prior job outputs by ID, resolved server-side from `_jobs` (not caller-supplied paths — a real, correct trust-boundary decision) |
 | POST | `/video/thumbnail` | extracts a thumbnail frame via FFmpeg |

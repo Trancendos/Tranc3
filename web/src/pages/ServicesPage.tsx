@@ -179,7 +179,7 @@ const PLANNED_SERVICES: ServiceDef[] = [
     leadAI: 'Voxx',
     description: 'Omni-creative wizard — routes to image, video, 3D, or design based on intent.',
     path: '/imaginarium',
-    port: 8054,
+    port: 8064,
     icon: '✨',
     profile: 'imaginarium',
     tier: 'planned',

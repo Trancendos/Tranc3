@@ -67,10 +67,10 @@
 |---|---|---|
 | GET | `/health` | static |
 | GET | `/metrics` | Prometheus-format counters |
-| POST | `/create` | creates a project row, kicks off `_fan_out_creation()` as a background task — **genuinely calls out to other services** |
+| POST | `/create` | creates a project row, kicks off `_fan_out_creation()` as a background task — **genuinely calls out to other services**; internal-secret authed |
 | GET | `/projects` | list; internal-secret authed |
 | GET | `/projects/{id}` | detail; internal-secret authed |
-| GET / POST | `/templates` | list/create project templates (SQLite-backed, real seed data: "Game Asset Pack", "Brand Kit", etc.) |
+| GET / POST | `/templates` | list/create project templates (SQLite-backed, real seed data: "Game Asset Pack", "Brand Kit", etc.); internal-secret authed |
 | GET | `/services/status` | internal-secret authed |
 
 ### `_fan_out_creation()` — real, working orchestration logic

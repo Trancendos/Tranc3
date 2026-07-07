@@ -201,8 +201,9 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
 ## 9. Procedures (PROC)
 
 - **Local dev:** `cd workers/warp-radio && pip install -r requirements.txt && python main.py`
-  (runs the deployed stub) or `python worker.py` (runs the alternate, unauth'd unless
-  `INTERNAL_SECRET` is set).
+  (runs the deployed stub) or `python worker.py` (runs the alternate — its `_auth()` check is
+  always active, but falls back to the insecure hardcoded `"dev-secret"` unless `INTERNAL_SECRET`
+  is set).
 - **Promotion path (if approved):** (1) fix `INTERNAL_SECRET`/`icecast_admin_password` insecure
   defaults, (2) decide `worker.py` vs. `station.py` vs. a merge, (3) update Dockerfile `COPY`/
   `CMD` to build the chosen file, (4) re-run this doc-pack's DDD section against the newly

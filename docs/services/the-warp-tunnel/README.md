@@ -49,15 +49,17 @@
 ## 1. Service Governance Charter (GOV)
 
 - **Mission:** cryptographic scanner & quarantine transport for data moving between trust
-  zones. **As deployed**, this mission is not live (the deployed `main.py` is an honest stub);
-  two separate, real implementations of scanning logic exist (`worker.py` for file uploads,
-  `src/security/warp_tunnel/tunnel.py` for text content) but neither is wired into the live
-  request path.
+  zones. **As deployed under `workers/warp-tunnel/` itself**, this mission is not live (the
+  deployed `main.py` is an honest stub); `worker.py`'s file-upload scanner is real but
+  undeployed. `src/security/warp_tunnel/tunnel.py`'s content scanner is also real, and — unlike
+  `worker.py` — **is genuinely live in production**, just not via this compose service: it is
+  called by The Ice Box's worker (`workers/ice-box-service/worker.py`) on every `POST /scan`.
 - **Owner (RACI-A):** Platform Owner Trancendos.
 - **Lead AI:** Rocking Ricki.
 - **Scope:** `workers/warp-tunnel/main.py` (deployed) + `worker.py` (real, undeployed) +
-  `src/security/warp_tunnel/tunnel.py` (real, orphaned) — all three documented in this pack
-  given the unusual three-implementation finding.
+  `src/security/warp_tunnel/tunnel.py` (real, and live — but deployed via a different entity's
+  worker, The Ice Box, not via `workers/warp-tunnel/` itself) — all three documented in this
+  pack given the unusual three-implementation finding.
 
 ## 2. Detailed Design Document (DDD)
 
@@ -106,10 +108,12 @@
   of which call each other.
 - **Fixed defects:** Dockerfile port mismatch (cosmetic, fixed for robustness) + Traefik
   `StripPrefix` missing (genuine, live routing defect) — see truthfulness header.
-- **Not fixed, flagged as an opportunity:** neither real scanner (`worker.py`'s file scanner nor
-  `tunnel.py`'s content scanner) is deployed/wired. Promoting either requires an owner decision
-  on which scanning model (file-upload vs. inline-content-interception) actually matches the
-  entity's intended role, plus fixing `worker.py`'s `dev-secret` fallback if it's the one chosen.
+- **Not fixed, flagged as an opportunity:** `worker.py`'s file scanner is real but not
+  deployed/wired anywhere. `tunnel.py`'s content scanner, by contrast, **is already deployed
+  and live** — via The Ice Box's worker, not `workers/warp-tunnel/` itself. Whether
+  `workers/warp-tunnel/` should also get a real implementation (and if so, which model —
+  file-upload vs. inline-content-interception) is an owner decision, plus fixing `worker.py`'s
+  `dev-secret` fallback if it's the one chosen.
 
 ## 4. RACI Matrix
 
@@ -125,8 +129,9 @@
   `/quarantine` — no auth, but both mutating-sounding routes are stubs that do nothing.
 - **Upstream (undeployed `worker.py`, if promoted):** would require `X-Internal-Secret` once the
   `dev-secret` fallback is fixed.
-- **Downstream (`tunnel.py` only, if wired):** The Ice Box's `ThreatAnalyser`/`QuarantineStore`
-  — a real, self-hosted, zero-cost dependency already present in this repo.
+- **Downstream (`tunnel.py`, already wired — via The Ice Box's worker, not this one):** The Ice
+  Box's `ThreatAnalyser`/`QuarantineStore` — a real, self-hosted, zero-cost dependency already
+  present in this repo and genuinely called on every `POST /scan` to The Ice Box.
 - **Not integrated within this entity's own worker:** none of the three implementations call
   each other, and none of `worker.py`/`tunnel.py` is wired into `workers/warp-tunnel/`'s
   deployed `main.py`. `tunnel.py` does have a real caller — but it's The Ice Box's worker, a
