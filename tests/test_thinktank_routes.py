@@ -1,11 +1,12 @@
-"""Tests for Think Tank's /thinktank/deepmind/plan route (src/quantum/routes.py)."""
+"""Tests for Think Tank's /thinktank/deepmind/plan and /thinktank/status routes (src/quantum/routes.py)."""
 
+import builtins
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.deepmind import planning
-from src.quantum.routes import deepmind_plan
+from src.quantum.routes import deepmind_plan, thinktank_status
 
 
 @pytest.mark.asyncio
@@ -44,3 +45,33 @@ async def test_deepmind_plan_end_to_end_real_planner():
     assert result["depth"] == 2
     assert result["plan"] is not None
     assert "error" not in result
+
+
+@pytest.mark.asyncio
+async def test_thinktank_status_shape():
+    result = await thinktank_status()
+    assert result["service"] == "think-tank"
+    assert set(result["modules"]) == {"quantum", "deepmind"}
+    assert result["modules"]["quantum"]["quantum_core"] in ("available", "degraded")
+    assert result["modules"]["deepmind"]["mcts"] in ("available", "degraded")
+
+
+@pytest.mark.asyncio
+async def test_thinktank_status_reports_degraded_on_import_failure(monkeypatch):
+    real_import = builtins.__import__
+
+    def _blocked_import(name, *args, **kwargs):
+        if name in ("qiskit_aer", "src.deepmind.planning"):
+            raise ImportError(f"blocked for test: {name}")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _blocked_import)
+
+    result = await thinktank_status()
+
+    assert result["modules"]["quantum"] == {
+        "quantum_core": "degraded",
+        "note": "blocked for test: qiskit_aer",
+    }
+    assert result["modules"]["deepmind"]["mcts"] == "degraded"
+    assert "blocked for test" in result["modules"]["deepmind"]["note"]
