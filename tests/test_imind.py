@@ -18,6 +18,14 @@ def test_self_harm_only_text_escalates_to_high_not_critical():
     assert result.escalate is True
 
 
+def test_hopelessness_phrase_classified_as_self_harm_high():
+    result = IMind().assess("I have no reason to live anymore")
+    assert result.level == SensitivityLevel.HIGH
+    assert SensitivityCategory.SELF_HARM in result.categories
+    assert SensitivityCategory.CRISIS not in result.categories
+    assert result.escalate is True
+
+
 def test_mental_health_text_escalates_to_medium():
     result = IMind().assess("I've been feeling really anxious and depressed lately")
     assert result.level == SensitivityLevel.MEDIUM

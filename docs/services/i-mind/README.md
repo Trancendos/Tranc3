@@ -47,9 +47,12 @@
 - **Crisis** (`_CRISIS_PATTERNS[0]` only): suicide/self-harm-intent phrases (e.g. "kill myself",
   "want to die") → `SensitivityCategory.CRISIS`, `SensitivityLevel.CRITICAL`. Checked via a single
   `if`, not a loop over the whole pattern list — see truthfulness header bug #2.
-- **Self-harm** (`_CRISIS_PATTERNS[1:]`): "self-harm", "cut myself", "hurt myself" — checked only
-  if CRISIS wasn't already matched → `SensitivityCategory.SELF_HARM`, `SensitivityLevel.HIGH`. Prior
-  to the fix in this pass, this branch was unreachable dead code (see truthfulness header).
+- **Self-harm** (`_CRISIS_PATTERNS[1:]`): "self-harm", "cut myself", "hurt myself" (index 1), plus
+  "no reason to live", "can't go on", "give up on life" (index 2 — hopelessness/suicidal-ideation
+  phrasing, not literally self-harm, but classified in this same bucket by the code) — checked
+  only if CRISIS wasn't already matched → `SensitivityCategory.SELF_HARM`,
+  `SensitivityLevel.HIGH`. Before the fix in this pass, this branch was unreachable dead code
+  (see truthfulness header).
 - **Mental health** (`_MENTAL_HEALTH_PATTERNS`): depression/anxiety/therapy-related terms →
   `SensitivityCategory.MENTAL_HEALTH`, `SensitivityLevel.MEDIUM` (only if level is still `NONE`).
 - `escalate = level in (CRITICAL, HIGH)`.
