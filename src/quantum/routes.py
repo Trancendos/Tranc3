@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body
@@ -17,7 +18,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/thinktank", tags=["think-tank"])
 
 
+@lru_cache(maxsize=1)
 def _quantum_status() -> Dict[str, Any]:
+    # Cached: a missing dependency doesn't get added to sys.modules, so an
+    # uncached call would re-attempt the full import machinery on every poll.
     try:
         import qiskit_aer  # noqa: F401
 
@@ -26,6 +30,7 @@ def _quantum_status() -> Dict[str, Any]:
         return {"quantum_core": "degraded", "note": safe_error_detail(exc, 503)}
 
 
+@lru_cache(maxsize=1)
 def _deepmind_status() -> Dict[str, Any]:
     try:
         from src.deepmind.planning import StrategicPlanner  # noqa: F401
@@ -93,8 +98,13 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         plan = await engine.plan_action(problem, state={}, constraints=[])
         return {"problem": problem, "depth": depth, "plan": plan}
     except Exception as exc:
+        try:
+            depth = max(1, min(int(body.get("depth", 3)), 10))
+        except (TypeError, ValueError):
+            depth = None
         return {
             "problem": body.get("problem", ""),
+            "depth": depth,
             "plan": None,
             "error": safe_error_detail(exc, 500),
         }

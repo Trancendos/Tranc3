@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.deepmind import planning
-from src.quantum.routes import deepmind_plan, thinktank_status
+from src.quantum.routes import _deepmind_status, _quantum_status, deepmind_plan, thinktank_status
 
 
 @pytest.mark.asyncio
@@ -30,10 +30,20 @@ async def test_deepmind_plan_returns_error_on_exception():
     with patch.object(planning, "StrategicPlanner") as MockPlanner:
         MockPlanner.return_value.plan_action = AsyncMock(side_effect=RuntimeError("boom"))
 
-        result = await deepmind_plan({"problem": "test"})
+        result = await deepmind_plan({"problem": "test", "depth": 5})
 
     assert result["plan"] is None
     assert "error" in result
+    assert result["depth"] == 5
+
+
+@pytest.mark.asyncio
+async def test_deepmind_plan_error_payload_has_depth_key_even_on_bad_depth_input():
+    result = await deepmind_plan({"problem": "test", "depth": "not-a-number"})
+
+    assert result["plan"] is None
+    assert "error" in result
+    assert result["depth"] is None
 
 
 @pytest.mark.integration
@@ -49,6 +59,8 @@ async def test_deepmind_plan_end_to_end_real_planner():
 
 @pytest.mark.asyncio
 async def test_thinktank_status_shape():
+    _quantum_status.cache_clear()
+    _deepmind_status.cache_clear()
     result = await thinktank_status()
     assert result["service"] == "think-tank"
     assert set(result["modules"]) == {"quantum", "deepmind"}
@@ -66,8 +78,16 @@ async def test_thinktank_status_reports_degraded_on_import_failure(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", _blocked_import)
+    _quantum_status.cache_clear()
+    _deepmind_status.cache_clear()
 
     result = await thinktank_status()
+
+    # Availability is cached (lru_cache) to avoid repeated import machinery on
+    # every poll — clear it again so later tests aren't affected by this
+    # forced-failure result.
+    _quantum_status.cache_clear()
+    _deepmind_status.cache_clear()
 
     assert result["modules"]["quantum"]["quantum_core"] == "degraded"
     assert isinstance(result["modules"]["quantum"]["note"], str)

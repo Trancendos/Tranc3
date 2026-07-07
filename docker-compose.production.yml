@@ -992,8 +992,6 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
       - "traefik.http.routers.vrar3d.entrypoints=websecure"
-      - "traefik.http.routers.vrar3d.middlewares=strip-vrar3d@docker"
-      - "traefik.http.middlewares.strip-vrar3d.stripprefix.prefixes=/vrar3d"
       - "traefik.http.services.vrar3d.loadbalancer.server.port=8060"
 
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
