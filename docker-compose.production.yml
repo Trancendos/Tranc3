@@ -992,6 +992,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
       - "traefik.http.routers.vrar3d.entrypoints=websecure"
+      - "traefik.http.routers.vrar3d.middlewares=strip-vrar3d@docker"
+      - "traefik.http.middlewares.strip-vrar3d.stripprefix.prefixes=/vrar3d"
       - "traefik.http.services.vrar3d.loadbalancer.server.port=8060"
 
   # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
@@ -3089,6 +3091,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.sashas-photo-studio.rule=PathPrefix(`/sashas-photo-studio`)"
       - "traefik.http.routers.sashas-photo-studio.entrypoints=websecure"
+      - "traefik.http.routers.sashas-photo-studio.middlewares=strip-sashas-photo-studio@docker"
+      - "traefik.http.middlewares.strip-sashas-photo-studio.stripprefix.prefixes=/sashas-photo-studio"
       - "traefik.http.services.sashas-photo-studio.loadbalancer.server.port=8062"
 
   # ── The Lab — code creation platform (Port 8055) ──────────────────────────────────────────────
@@ -3155,6 +3159,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.taimra.rule=PathPrefix(`/taimra`)"
       - "traefik.http.routers.taimra.entrypoints=websecure"
+      - "traefik.http.routers.taimra.middlewares=strip-taimra@docker"
+      - "traefik.http.middlewares.strip-taimra.stripprefix.prefixes=/taimra"
       - "traefik.http.services.taimra.loadbalancer.server.port=8074"
 
   # ── I-Mind — emotion sensitivity engine (Port 8059) ──────────────────────────────────────────────
@@ -3221,6 +3227,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.tranquility.rule=PathPrefix(`/tranquility`)"
       - "traefik.http.routers.tranquility.entrypoints=websecure"
+      - "traefik.http.routers.tranquility.middlewares=strip-tranquility@docker"
+      - "traefik.http.middlewares.strip-tranquility.stripprefix.prefixes=/tranquility"
       - "traefik.http.services.tranquility.loadbalancer.server.port=8077"
 
   # ── The Studio — central creativity hub (Port 8069) ──────────────────────────────────────────────

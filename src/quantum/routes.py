@@ -19,16 +19,20 @@ router = APIRouter(prefix="/thinktank", tags=["think-tank"])
 
 def _quantum_status() -> Dict[str, Any]:
     try:
+        import qiskit_aer  # noqa: F401
+
         return {"quantum_core": "available", "backend": "qiskit-aer"}
-    except Exception:
-        return {"quantum_core": "degraded", "note": "degraded"}
+    except Exception as exc:
+        return {"quantum_core": "degraded", "note": str(exc)}
 
 
 def _deepmind_status() -> Dict[str, Any]:
     try:
+        from src.deepmind.planning import StrategicPlanner  # noqa: F401
+
         return {"mcts": "available"}
-    except Exception:
-        return {"mcts": "degraded", "note": "degraded"}
+    except Exception as exc:
+        return {"mcts": "degraded", "note": str(exc)}
 
 
 @router.get("/status")
@@ -84,7 +88,7 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         from src.deepmind.planning import PlanningConfig, StrategicPlanner
 
         problem = body.get("problem", "")
-        depth = int(body.get("depth", 3))
+        depth = max(1, min(int(body.get("depth", 3)), 10))
         engine = StrategicPlanner(PlanningConfig(horizon=depth))
         plan = await engine.plan_action(problem, state={}, constraints=[])
         return {"problem": problem, "depth": depth, "plan": plan}

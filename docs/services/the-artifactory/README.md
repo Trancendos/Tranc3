@@ -145,7 +145,10 @@
 
 ## 8. Policy (POL)
 
-- No route-level auth on `src/artifactory/*` routes — see SIM §5.
+- **Security gap, not fixed:** no route-level auth on any `src/artifactory/*` route, including the
+  mutating ones — `POST /artifacts`, `POST /artifacts/{id}/versions`, `DELETE /artifacts/{id}`, and
+  `POST /retention/apply` can all be called by any caller reaching `api.py` with no credential
+  check. See SIM §5.
 - Any Dockerfile-less worker directory referenced by `docker-compose.production.yml` MUST be
   treated as a build-breaking defect, not a cosmetic gap — see the broader-gap note in the
   truthfulness header; a follow-up pass should audit and fix the remaining 8.
@@ -187,3 +190,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/artifactory/registry.py` (256 lines), `src/artifactory/routes.py` (100 lines), `api.py` router registration (line 871), `workers/artifactory-service/worker.py`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine build-breaking defect: `workers/artifactory-service/` had no Dockerfile despite being referenced by compose's build block. Also discovered, and explicitly flagged rather than rushed-fixed, the same defect in 8 other worker directories across the repo (2 Go services, 1 submodule, 1 ambiguous CF-vs-container case, 4 plain Python workers) — a real, previously undocumented platform-wide gap. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `src/artifactory/routes.py` | Elevated the "no route-level auth" POL bullet from a flat fact to an explicit security-gap callout, naming the specific unauthenticated mutation routes (`POST /artifacts`, `POST /artifacts/{id}/versions`, `DELETE /artifacts/{id}`, `POST /retention/apply`). |

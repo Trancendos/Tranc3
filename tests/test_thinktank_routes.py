@@ -35,6 +35,7 @@ async def test_deepmind_plan_returns_error_on_exception():
     assert "error" in result
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_deepmind_plan_end_to_end_real_planner():
     """No mocking — exercises the real StrategicPlanner/PlanningConfig wiring."""

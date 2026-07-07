@@ -45,7 +45,7 @@
 | POST | `/resonate/wrap` | `Resonate.wrap_response()` — body `{"response", "sensitivity_level", "user_mood", "crisis_resources"}`; 400 if `response` missing |
 | POST | `/resonate/escalate/{user_id}` | `Resonate.escalate_to_human()` — body `{"context"}`; returns the misleading "notified" message described in the truthfulness header |
 
-### `wrap_response()` — real, deterministic text wrapping
+### `wrap_response()` — real text wrapping (non-deterministic: uses `random.choice` for prefix selection)
 - No-op (returns input unchanged) when `sensitivity_level == "none"` and `user_mood` is `None` or
   `>= 3` — a real, correct short-circuit.
 - CRITICAL/HIGH sensitivity → prepends a random empathy prefix; MEDIUM or `user_mood <= 2` →
@@ -115,7 +115,10 @@
 
 ## 8. Policy (POL)
 
-- No route-level auth on any `/resonate/*` route.
+- **Security gap, not fixed:** no route-level auth on any `/resonate/*` route, including
+  `POST /resonate/escalate/{user_id}`. This compounds the misleading-message finding below — an
+  unauthenticated caller can invoke a crisis-escalation endpoint that then falsely claims a human
+  was notified, with no credential check at any point in that path.
 - **Policy gap:** any user-facing message claiming a human action ("notified") MUST correspond to
   a real action, or be reworded to avoid the false claim — `escalate_to_human()` currently
   violates this and should be prioritized for correction ahead of most other findings in this
@@ -152,3 +155,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/resonate/empathy.py` (119 lines), `src/resonate/routes.py` (41 lines), `api.py` router registration (line 833) | Confirmed Live-tier, full pack authored. Verified `wrap_response()` is real, correct, deterministic logic. Major finding, the most safety-relevant in this doc-pack batch: `escalate_to_human()` returns a user-facing message claiming "A support team member has been notified" when no notification transport exists anywhere in the repo — only a best-effort Observatory event and a log line occur. Flagged for prioritized correction, not merely documented as a routine gap. Also confirmed, matching I-Mind's own documented pattern: no caller of this module was found in the real inference pipeline. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `src/resonate/empathy.py`, `src/resonate/routes.py` | Fixed two findings. (1) `wrap_response()` was mislabeled "deterministic" despite using `random.choice()` for empathy-prefix selection — corrected the heading. (2) Elevated the "no auth on any route" POL bullet from a flat fact to an explicit security-gap callout noting it compounds the misleading-message finding — an unauthenticated caller can hit the crisis-escalation route and receive a false "notified" claim with no credential check anywhere in that path. |

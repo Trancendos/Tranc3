@@ -38,8 +38,12 @@
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** R&D centre merging quantum circuit simulation (Qiskit) and deep-agent planning
-  (beam search / chain-of-thought / MCTS-guided world-model planning) under one HTTP surface.
+- **Mission (as coded):** R&D centre merging quantum circuit simulation (Qiskit) and deep-agent
+  planning under one HTTP surface. The live `deepmind_plan` route only exercises beam search +
+  chain-of-thought reasoning (`StrategicPlanner.plan_action()`); MCTS and world-model planning
+  exist as real code (`src/deepmind/mcts.py`, `world_model.py`) but are never called from
+  `plan_action()` — `PlanningConfig.mcts_simulations`/`use_world_model` are dead fields. "MCTS-
+  guided world-model planning" is therefore not a live capability of this endpoint.
 - **Owner (RACI-A):** Trancendos; Platform Owner Trancendos.
 - **Scope:** `src/quantum/routes.py`'s two live endpoints only. The bulk of `src/quantum/*` and
   `src/deepmind/*` (quantum_core, quantum_engine, quantum_inference, MCTS, world model, Gemini
@@ -52,17 +56,20 @@
 
 | Method | Route | Backing |
 |---|---|---|
-| GET | `/thinktank/status` | `_quantum_status()`/`_deepmind_status()` — **fake health checks**, see below |
+| GET | `/thinktank/status` | `_quantum_status()`/`_deepmind_status()` — fixed this pass to perform real import checks, see below |
 | POST | `/thinktank/quantum/simulate` | Real Qiskit Aer circuit simulation; 503 if qiskit unavailable |
 | POST | `/thinktank/deepmind/plan` | `StrategicPlanner.plan_action()` — fixed in this pass, see truthfulness header |
 
-### `/thinktank/status` — always reports "available", never actually checks anything
-- `_quantum_status()` and `_deepmind_status()` each wrap a hard-coded return value (`{"quantum_core":
-  "available", ...}`) in a `try/except` whose `try` block contains **no code that can actually
-  fail** — no import, no connectivity probe, nothing. The `except` branch reporting "degraded" is
-  dead code; these functions structurally cannot report anything other than "available". This is
-  a real defect distinct from The Studio's/Cryptex's "flag with no enforcement" pattern — here
-  it's a health probe that cannot ever detect a real outage.
+### `/thinktank/status` — fixed: now performs real import checks
+- **Fixed this pass.** `_quantum_status()` and `_deepmind_status()` previously wrapped a
+  hard-coded return value (`{"quantum_core": "available", ...}`) in a `try/except` whose `try`
+  block contained no code that could actually fail — the "degraded" branch was dead code and the
+  probe structurally could not detect a real outage. Fixed by having each function attempt a real
+  import (`qiskit_aer` for quantum; `src.deepmind.planning.StrategicPlanner` for deepmind) inside
+  the `try` block, so a genuinely missing/broken dependency now surfaces as `"degraded"` with the
+  real exception message in `note`. Verified in this sandbox (`qiskit_aer` not installed here):
+  the endpoint now correctly reports `{"quantum_core": "degraded", "note": "No module named
+  'qiskit_aer'"}` instead of falsely claiming "available".
 
 ### `/thinktank/quantum/simulate` — real, but `circuit_type` is a dead parameter
 - Genuinely builds and runs a Qiskit `QuantumCircuit` via `AerSimulator`, returning real measurement
@@ -82,10 +89,8 @@
 - **Style:** stateless route handlers; `StrategicPlanner` is instantiated fresh per request (no
   module-level singleton, unlike most other entities in this series).
 - **Fixed defect:** `PlanningEngine` import — see truthfulness header.
-- **Not fixed:** the always-"available" health checks in `/thinktank/status` — making them real
-  would mean actually attempting a qiskit import / deepmind import and reporting failure, a
-  small, safe follow-up not made in this pass since it wasn't the primary defect found; flagged
-  for a future pass.
+- **Fixed this pass:** the always-"available" health checks in `/thinktank/status` now attempt a
+  real qiskit/deepmind import and report failure genuinely — see DDD above.
 - **Not fixed:** `circuit_type`'s dead-parameter status — implementing real circuit-type selection
   is a feature addition, not a bug fix, out of scope for this pass.
 
@@ -151,9 +156,9 @@
   bug fixed here (`PlanningEngine` didn't exist) — confirm the fix (import of `StrategicPlanner`/
   `PlanningConfig`, `await`ed `plan_action()` call) is present in the deployed version if this
   recurs.
-- **`/thinktank/status` reports "available" during an actual outage:** expected — the health
-  checks are structurally incapable of detecting failure; this is a known, documented gap, not
-  new information to chase.
+- **`/thinktank/status` reports "degraded" for `quantum_core`:** expected if `qiskit_aer` isn't
+  installed in the running environment — the health check now performs a real import (fixed this
+  pass) and will correctly reflect real outages; check the `note` field for the actual exception.
 - **`deepmind_plan` fails with `ModuleNotFoundError: No module named 'torch'`:** `torch` is a
   declared `requirements.txt` dependency (`torch==2.12.1`) — ensure it's actually installed in
   the running environment; this is an install/environment issue, not a code defect.
@@ -174,3 +179,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/quantum/routes.py` (101 lines), `src/deepmind/planning.py` (580 lines), grep-verified import analysis of `src/quantum/quantum_core.py`/`quantum_engine.py`/`quantum_inference.py` and `src/deepmind/mcts.py`/`world_model.py`/`gemini_multimodal.py`, `api.py` router registration (line 910) | Confirmed Live-tier, full pack authored. Found and fixed a genuine, fully-broken endpoint: `POST /thinktank/deepmind/plan` imported a class (`PlanningEngine`) that does not exist anywhere in the codebase, so it always errored; fixed by switching to the real `StrategicPlanner`/`PlanningConfig` API with proper `await`. Verified the fix via `py_compile` and `ruff check` (both clean); full runtime verification blocked by `torch` not being installed in this sandbox (a real, declared dependency — not a code issue). Also found: `/thinktank/status`'s health checks structurally cannot detect failure (always report "available"); `circuit_type` is a dead parameter on the simulate endpoint; and 6 of 8 files in `src/quantum/`+`src/deepmind/` are orphaned from the live app, reachable only via an unused DI container and an unused alternate entrypoint. |
+| 2026-07-07 | Claude (session, cubic/CodeRabbit review triage) | `src/quantum/routes.py`, `src/deepmind/planning.py` (`mcts_simulations`/`use_world_model` fields, no corresponding usage) | Fixed three findings, all verified by installing dependencies and running the test suite. (1) `/thinktank/status`'s health checks were structurally incapable of detecting failure — fixed by having `_quantum_status()`/`_deepmind_status()` attempt real imports (`qiskit_aer`, `src.deepmind.planning.StrategicPlanner`); confirmed via direct call that a missing `qiskit_aer` now correctly reports `"degraded"` with the real exception in `note`. (2) `deepmind_plan`'s `depth` parameter was unbounded, allowing arbitrarily expensive beam-search/chain-of-thought computation on the request thread — clamped to `[1, 10]`. (3) GOV's mission statement claimed live "MCTS-guided world-model planning"; confirmed via `grep` that `PlanningConfig.mcts_simulations`/`use_world_model` have no reads anywhere in `planning.py` and `plan_action()` never imports `mcts.py`/`world_model.py` — reworded to state only beam search + chain-of-thought are actually live. Also marked the no-mocking end-to-end test with `@pytest.mark.integration` per a CodeRabbit nitpick, separating it from the two mocked unit tests. All 3 tests in `tests/test_thinktank_routes.py` re-run and pass; `ruff check` clean. |

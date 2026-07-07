@@ -62,8 +62,12 @@ This is one of the more substantively wired entities audited in this series:
   `Library.create()`** (`src/library/knowledge_base.py`), confirming the module header's claim
   "Feeds findings into The Library as KB articles" is real, not aspirational (unlike similar
   claims found unimplemented in other entities' code comments during this series — see The
-  Library's own doc-pack for a counter-example). Also emits an Observatory `AUDIT`-category event,
-  both wrapped in bare `except Exception: pass` (`# nosec B110`).
+  Library's own doc-pack for a counter-example). Also emits an Observatory `AUDIT`-category event.
+  **Fixed this pass:** the `Library.create()` failure path was a bare `except Exception: pass`
+  with a comment claiming "error logged upstream" that didn't actually log anything — publish
+  failures were silently invisible. Fixed by adding a `logger.warning(..., exc_info=True)` call so
+  failures are now diagnosable. The Observatory-emission `except` block is unchanged (a secondary,
+  lower-priority telemetry path).
 
 ### `bci_interface.py` — self-declared stub, not wired
 - Module header: "Stub with real interface — swap implementation when hardware available." Not
@@ -159,4 +163,5 @@ This is one of the more substantively wired entities audited in this series:
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-05 | Claude (session) | `src/research/section7.py` (285 lines), `src/research/routes.py` (53 lines), `src/research/bci_interface.py` (132 lines), `api.py` router registration (line 804) and startup wiring (line ~521), `src/section7/` package (6 files) | Confirmed Live-tier, full pack authored. Verified genuine cross-entity integration: `generate_platform_health_report()`/`generate_security_report()` make real calls into 5 other live entities, and `_store_and_publish()` genuinely writes to The Library (confirmed via `Library.create()` call), unlike similar "feeds into X" claims found unimplemented elsewhere in this series. Major finding: a completely separate, unrelated `src/section7/` package (CVE/OSV/CISA threat-intel polling, live-wired via `api.py` startup) shares the "Section 7" name with this entity's actual code path — a genuine naming collision, not previously documented, flagged for future disambiguation. |
+| 2026-07-05 | Claude (session) | `src/research/section7.py` (285 lines), `src/research/routes.py` (53 lines), `src/research/bci_interface.py` (132 lines), `api.py` router registration (line 804) and startup wiring (line ~521), `src/section7/` package (6 files) | Confirmed Live-tier, full pack authored for the `src/research/*` path (the standalone `workers/the-dutchy/worker.py` was explicitly out of scope for this pass — see Code row above — so "full pack" should be read as scoped to the audited path, not entity-wide). Verified genuine cross-entity integration: `generate_platform_health_report()`/`generate_security_report()` make real calls into 5 other live entities, and `_store_and_publish()` genuinely writes to The Library (confirmed via `Library.create()` call), unlike similar "feeds into X" claims found unimplemented elsewhere in this series. Major finding: a completely separate, unrelated `src/section7/` package (CVE/OSV/CISA threat-intel polling, live-wired via `api.py` startup) shares the "Section 7" name with this entity's actual code path — a genuine naming collision, not previously documented, flagged for future disambiguation. |
+| 2026-07-07 | Claude (session, cubic/CodeRabbit review triage) | `src/research/section7.py` | Fixed the bare `except Exception: pass` around `Library.create()` in `_store_and_publish()` — its comment claimed "error logged upstream" but nothing actually logged the failure, making publish errors invisible. Added `logger.warning(..., exc_info=True)`. Verified via `py_compile`/`ruff check` (both clean); no existing test covers this path to re-run. |
