@@ -25,13 +25,17 @@
 > **No auth on any route in the deployed `main.py`** — unlike The Academy's `worker.py` (which
 > does enforce `X-Internal-Secret`), nothing in `main.py` checks any header or credential on any
 > route, including `/photo/generate`.
-> **Dockerfile `EXPOSE`/embedded `HEALTHCHECK` reference port 8051, while compose routes this
-> service to port 8062** — but `main.py` is invoked via bare `python main.py` (not a `uvicorn` CLI
+> **Dockerfile `EXPOSE`/embedded `HEALTHCHECK` referenced port 8051, while compose routes this
+> service to port 8062** — `main.py` is invoked via bare `python main.py` (not a `uvicorn` CLI
 > with a hardcoded `--port`), so it correctly reads `PORT` from the environment at runtime, and
 > compose's own `healthcheck:` block (which overrides the Dockerfile's embedded one) correctly
-> targets 8062. Per `CLAUDE.md`'s own §188 precedent for this exact "CMD reads env var directly"
-> pattern, this is a cosmetic Dockerfile mismatch, not a live routing defect — not fixed in this
-> pass, consistent with that established precedent.
+> targets 8062, so this was not a live routing defect in the deployed compose stack — consistent
+> with `CLAUDE.md`'s §188 precedent for this "CMD reads env var directly" pattern. **However,** the
+> embedded `HEALTHCHECK` still hardcoded 8051, which would report the container unhealthy under any
+> orchestrator that doesn't override it (a bare `docker run` with `PORT=8062`, for instance) — this
+> part of CodeRabbit's finding was valid and is **fixed this pass**: the embedded healthcheck now
+> reads `PORT` from the environment (falling back to 8051) at check time, matching how `main.py`
+> itself resolves its port.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -127,7 +131,10 @@
 
 ## 8. Policy (POL)
 
-- No route-level auth on any `/photo/*` route in the deployed `main.py`.
+- **Security gap, not fixed:** no route-level auth on any `/photo/*` route in the deployed
+  `main.py`, and this service is routed via Traefik's `websecure` entrypoint (internet-reachable,
+  not internal-only) — confirmed via `docker-compose.production.yml`. Any caller can invoke image
+  generation with no credential check.
 - Zero-cost mandate: fully honored — ComfyUI/A1111 are self-hosted, the final fallback is a
   zero-cost stub, matching `CLAUDE.md`'s Recommended Open Source Foundations table.
 
@@ -161,3 +168,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `workers/sashas-photo-studio/main.py` (370 lines), `worker.py` (291 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Verified the deployed `main.py` is a real, working implementation with a genuine 3-tier fallback chain (ComfyUI → A1111 → honestly-labeled offline placeholder) — explicitly ruled out The Academy's placeholder-vs-real defect pattern here. Found a second, real, currently-unused implementation (`worker.py`, Pollinations.ai + SQLite + real auth) with no documented rationale for why it isn't the deployed one. Also confirmed a Dockerfile port mismatch (8051 vs compose's 8062) is cosmetic only, not a live defect, per the established `CLAUDE.md` §188 precedent for workers invoked via bare `python <file>.py` (env var respected at runtime; compose's own healthcheck overrides the Dockerfile's). |
+| 2026-07-07 | Claude (session, cubic/CodeRabbit review triage) | `Dockerfile`, `docker-compose.production.yml` | Fixed three findings. (1) While the compose-level port mismatch was correctly ruled a non-defect in the prior pass, CodeRabbit correctly identified that the embedded `HEALTHCHECK` itself still hardcoded 8051 — a real gap for any orchestrator that doesn't apply compose's override (bare `docker run`, alternate compose file). Fixed by having the embedded healthcheck read `PORT` from the environment at check time, matching `main.py`'s own port resolution. (2) Elevated the "no route-level auth" POL bullet to an explicit security-gap callout, noting this service is reachable via Traefik's `websecure` (internet-facing) entrypoint per compose. (3) Found and fixed the same Traefik PathPrefix-without-StripPrefix defect already fixed for The Academy — `main.py`'s routes (`/photo/generate`, `/health`, etc.) are unprefixed but compose's rule was bare `PathPrefix(\`/sashas-photo-studio\`)` with no middleware; added a matching `strip-sashas-photo-studio` middleware. |
