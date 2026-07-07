@@ -30,7 +30,8 @@
 - **Mission (as coded):** AR/VR wellbeing scene library — guided meditation, breathing exercises,
   and nature-immersion environments as WebXR (Three.js/A-Frame) scenes, with session tracking and
   mood-before/after capture.
-- **Owner (RACI-A):** Entari; Platform Owner Trancendos.
+- **Owner (RACI-A):** Platform Owner Trancendos.
+- **Lead AI:** Entari.
 - **Scope:** `src/vrar3d/*` covers scene catalogue and session lifecycle only. Actual WebXR scene
   rendering is client-side (Three.js/A-Frame HTML referenced via `aframe_url`) and not part of
   this backend module. No cross-entity calls to Tranquility, Resonate, or I-Mind exist — see
@@ -83,11 +84,11 @@
 
 ## 4. RACI Matrix
 
-| Activity | Entari (Lead) | Platform Owner | Tranquility | Resonate |
-|---|---|---|---|---|
-| Scene catalogue / session logic changes | **R** | A | I | I |
-| Wiring real Tranquility/Resonate/I-Mind integration (future) | C | **A** | **R** | **R** |
-| Populating `aframe_url` with real WebXR assets (future) | **R** | A | I | I |
+| Activity | Entari (Lead) | Platform Owner | Tranquility | Resonate | I-Mind |
+|---|---|---|---|---|---|
+| Scene catalogue / session logic changes | **R** | A | I | I | I |
+| Wiring real Tranquility/Resonate/I-Mind integration (future) | C | **A** | **R** | **R** | **R** |
+| Populating `aframe_url` with real WebXR assets (future) | **R** | A | I | I | I |
 
 ## 5. Solutions Integration Model (SIM)
 
@@ -149,13 +150,18 @@
   current code implements (a wellbeing scene library specifically) — future work expanding
   VRAR3D beyond wellbeing use cases should either update `CLAUDE.md`'s description to scope it
   down, or genuinely broaden the code to match.
-- Any entity's module header claiming integration with another named entity (Tranquility,
-  Resonate, I-Mind) MUST have a corresponding import/call in the same module before being
-  described as implemented — the gap documented here is a repeat instance of the same standard
-  established in Tranquility's and tAimra's doc-packs this session.
+- **Doc-pack authoring note, not a platform-wide code standard:** when a module header claims
+  integration with another named entity (here: Tranquility, Resonate, I-Mind), this doc-pack
+  should verify a real call path exists before describing that integration as implemented, rather
+  than repeating the header's claim at face value — the gap documented here is a repeat instance
+  of the same authoring discipline applied in Tranquility's and tAimra's doc-packs this session.
+  (A stricter "same module" requirement isn't appropriate as a codebase rule — legitimate
+  cross-module integration patterns in FastAPI, e.g. a caller supplying an upstream result rather
+  than the callee re-fetching it itself, are not inherently defects.)
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/vrar3d/wellbeing_centre.py` (237 lines), `src/vrar3d/routes.py` (76 lines), `api.py` router registration (line 888) | Confirmed Live-tier, full pack authored. Major finding: `CLAUDE.md`'s "standalone 3D/VR immersion" entity description is broader than the actual code, which implements a wellbeing-scene library specifically (per the module's own filename and header). Also confirmed the Tranquility/Resonate/I-Mind integrations named in the module header are unimplemented — `recommend_scene()` takes a caller-supplied `sensitivity_level` string rather than calling I-Mind itself, and no code path currently supplies a real "critical" value in practice. Additionally found all 6 seed scenes have an unset `aframe_url`, meaning the catalogue currently has no renderable WebXR content wired up. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | GOV §1 vs. RACI §4; STD §11 | Fixed two findings. (1) RACI contradiction: GOV named both Entari and Platform Owner as "RACI-A"; reworded to a single Accountable party (Platform Owner) with Entari as Lead AI, matching the table — also added a missing I-Mind column to the RACI table itself (an I-Mind-relevant activity row existed with no I-Mind column). (2) The STD section's "MUST have a corresponding import/call in the same module" wording was overly prescriptive as a codebase-wide rule and misplaced in a service README; reworded as a doc-pack authoring note (verify integration claims before repeating them) rather than a binding code standard, and noted that legitimate cross-module call patterns (e.g. caller-supplied results) aren't inherently defects. |

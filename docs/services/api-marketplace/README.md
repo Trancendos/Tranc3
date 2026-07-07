@@ -35,7 +35,8 @@
   auth type, tags, and a manually-added endpoint list per connector. Genuinely useful as a
   discoverable catalogue; not an API gateway, proxy, credential vault, or rate limiter despite its
   own header describing all four.
-- **Owner (RACI-A):** Solarscene; Platform Owner Trancendos.
+- **Owner (RACI-A):** Platform Owner Trancendos.
+- **Lead AI:** Solarscene.
 - **Scope:** `src/apimarket/*` — registry CRUD only.
 
 ## 2. Detailed Design Document (DDD)
@@ -155,3 +156,4 @@ code with zero callers.
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/apimarket/marketplace.py` (265 lines), `src/apimarket/routes.py` (85 lines), `api.py` router registration (line 878) | Confirmed Live-tier, full pack authored — supersedes the prior stale Planned-tier "no code exists" placeholder (corrected to `✅ In repo` during PR #201's Gemini Code Assist review, but never given a full rewrite until now). Major finding: of the module's own 5 claimed capabilities (call external APIs, OAuth credential management, webhook subscriptions, rate limiting, MCP-tool auto-generation), only connector registration and discovery are actually implemented — the other 3, plus `record_call()`, are entirely absent or dead code. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | GOV §1 vs. RACI §4 | Fixed an internal contradiction: GOV prose named both Solarscene and Platform Owner Trancendos as "RACI-A" (ambiguous — RACI defines exactly one Accountable party), while the RACI table below correctly assigned "A" only to Platform Owner. Reworded GOV to separate "Owner (RACI-A): Platform Owner Trancendos" from "Lead AI: Solarscene", matching the table. |
