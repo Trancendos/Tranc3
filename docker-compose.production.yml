@@ -679,7 +679,7 @@ services:
     ports:
       - "8014:8014"
     volumes:
-      - files-data:/data
+      - files-data:/app/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8014/health', timeout=5).read()\""]
       <<: *healthcheck-default
@@ -744,6 +744,8 @@ services:
     build: { context: ./workers/storage-service, dockerfile: Dockerfile }
     container_name: storage-service-worker
     ports: ["8020:8020"]
+    volumes:
+      - storage-data:/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8020/health', timeout=5).read()\""]
       <<: *healthcheck-default
@@ -3940,6 +3942,8 @@ volumes:
   payments-data:
     driver: local
   files-data:
+    driver: local
+  storage-data:
     driver: local
   identity-data:
     driver: local
