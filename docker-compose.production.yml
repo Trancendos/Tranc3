@@ -3265,6 +3265,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.the-academy.rule=PathPrefix(`/the-academy`)"
       - "traefik.http.routers.the-academy.entrypoints=websecure"
+      - "traefik.http.routers.the-academy.middlewares=strip-the-academy@docker"
+      - "traefik.http.middlewares.strip-the-academy.stripprefix.prefixes=/the-academy"
       - "traefik.http.services.the-academy.loadbalancer.server.port=8056"
 
   # ── Turing's Hub — AI personality creator (Port 8085) ──────────────────────────────────────────────

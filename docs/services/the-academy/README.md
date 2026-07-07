@@ -27,13 +27,28 @@
 > `EXPOSE`/`HEALTHCHECK` to port 8056 (`worker.py`'s real default, matching compose) instead of
 > 8040 (`main.py`'s default). Verified the fix by importing `worker.py` directly — it loads
 > cleanly and registers its full route set.
-> **Secondary finding, not fixed:** `worker.py`'s `_auth()` dependency falls back to a hard-coded
-> default `INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")` — if the `INTERNAL_SECRET`
-> environment variable isn't actually set in the deployed environment (compose's
-> `worker-common` anchor requires `INTERNAL_SECRET: ${INTERNAL_SECRET:?required}` for most other
-> workers audited in this series, but this specific service's compose block was not verified in
-> depth for whether that requirement is enforced here too), every write route would accept the
-> literal string `"dev-secret"` as valid auth.
+> **Blocking finding, not yet fixed — confirmed live in production, not merely speculative.**
+> `worker.py`'s `_auth()` dependency falls back to a hard-coded default
+> `INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")`. Checked this service's own
+> `docker-compose.production.yml` block directly: unlike most other workers in this series, its
+> `environment:` only sets `PORT=8056` — there is no `INTERNAL_SECRET: ${INTERNAL_SECRET:?required}`
+> entry, and `worker-common` does not inject one either. **The fallback is therefore live**: every
+> write route on the deployed service currently accepts the literal string `"dev-secret"` as valid
+> auth. This should be treated as a pre-existing production auth bypass, not a caveat — fix by
+> adding `INTERNAL_SECRET: ${INTERNAL_SECRET:?required}` to this service's compose `environment:`
+> block (matching the pattern most other workers already use) as soon as a real secret value is
+> provisioned for it.
+> **Second infra defect found and fixed this pass:** compose's Traefik rule for this service was
+> `PathPrefix(\`/the-academy\`)` with **no StripPrefix middleware**, while `worker.py`'s routes are
+> all unprefixed (`/health`, `/courses`, `/enrolments`, `/progress`, …). Unlike several other
+> path-prefixed services in the same compose file (`cranbania`/`/townhall`, `/prefect`, `/temporal`,
+> `/dagster`, `/kestra`, `/jaeger`, `/netdata` — each of which defines its own
+> `stripprefix` middleware), The Academy's router had none, so every external request to
+> `/the-academy/<anything>` would have been forwarded to the container with the prefix intact,
+> which `worker.py` does not understand — a real 404 on every route in production. Fixed by adding
+> `traefik.http.routers.the-academy.middlewares=strip-the-academy@docker` and
+> `traefik.http.middlewares.strip-the-academy.stripprefix.prefixes=/the-academy` to the compose
+> labels, matching the established pattern used elsewhere in the same file.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -142,8 +157,13 @@
   the exact symptom of the pre-fix defect (the placeholder `main.py` being deployed instead of
   `worker.py`) — confirm the Dockerfile's `COPY`/`CMD` reference `worker.py` if this recurs.
 - **A write route returns 401:** confirm the caller sends a correct `X-Internal-Secret` header
-  matching the deployed `INTERNAL_SECRET` env var — do not assume the `dev-secret` fallback is
-  acceptable outside local development.
+  matching the deployed `INTERNAL_SECRET` env var. **Until `INTERNAL_SECRET` is added to this
+  service's compose `environment:` block, the literal string `dev-secret` is currently accepted in
+  production — this is a known, unfixed auth bypass, not acceptable-by-design behavior.**
+- **Every route 404s in production despite the container being healthy:** was the exact symptom of
+  the pre-fix Traefik defect (`PathPrefix(\`/the-academy\`)` with no `StripPrefix` middleware,
+  while `worker.py`'s routes are unprefixed) — fixed this pass by adding a `strip-the-academy`
+  middleware to the compose labels; confirm it's still present if this recurs.
 - **Course completion isn't detected:** check that every lesson under the course has a
   corresponding `progress` row with `completed=1` for that user — completion is computed by
   comparing counts, not a stored flag.
@@ -161,4 +181,5 @@
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-05 | Claude (session) | `workers/the-academy/worker.py` (391 lines), `main.py` (52 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed the most severe defect in this doc-pack series: the Dockerfile only copied and ran the placeholder `main.py` (hard-coded "coming soon" responses), never the real, fully-functional SQLite-backed LMS in `worker.py` — meaning the deployed service served fabricated stub responses while a complete implementation sat unused in the same directory. Fixed by changing the Dockerfile to copy/run `worker.py` and aligning its port to 8056 (matching compose and `worker.py`'s own default). Verified the fix by importing `worker.py` directly — loads cleanly, registers its full route set. Also flagged, not fixed: a hard-coded `"dev-secret"` fallback for `INTERNAL_SECRET` if the env var isn't set in deployment. |
+| 2026-07-05 | Claude (session) | `workers/the-academy/worker.py` (391 lines), `main.py` (52 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed the most severe defect in this doc-pack series: the Dockerfile only copied and ran the placeholder `main.py` (hard-coded "coming soon" responses), never the real, fully-functional SQLite-backed LMS in `worker.py` — meaning the deployed service served fabricated stub responses while a complete implementation sat unused in the same directory. Fixed by changing the Dockerfile to copy/run `worker.py` and aligning its port to 8056 (matching compose and `worker.py`'s own default). Verified the fix by importing `worker.py` directly — loads cleanly, registers its full route set. Import-only verification does not confirm the Docker build, container `CMD`, healthcheck, or Traefik routing actually work end-to-end in a real deployment — flagged as a scope limit of this check, not claimed as full E2E verification. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `docker-compose.production.yml` (this service's block), `workers/the-academy/worker.py` route table | Verified and fixed two further defects raised by cubic. (1) Confirmed via `grep` that compose's `the-academy` block set only `PORT=8056` in `environment:`, with no `INTERNAL_SECRET` entry and no injection from `worker-common` — the `"dev-secret"` fallback in `worker.py`'s `_auth()` is therefore live in production, not speculative; re-classified from "secondary finding" to a blocking, unfixed auth bypass (fix requires provisioning a real secret and adding `INTERNAL_SECRET: ${INTERNAL_SECRET:?required}` to this service's environment block — not done in this pass since it requires a real secret value). (2) Confirmed compose's Traefik rule used `PathPrefix(\`/the-academy\`)` with no `StripPrefix` middleware, while `worker.py`'s routes (`/health`, `/courses`, `/enrolments`, `/progress`, …) are unprefixed — cross-checked against `worker-common`'s shared labels (confirmed it defines no middleware at all) and against other path-prefixed services in the same file (`cranbania`, `prefect`, `temporal`, `dagster`, `kestra`, `jaeger`, `netdata` — each defines its own `stripprefix` middleware), confirming The Academy was the outlier and every route would 404 in production. Fixed by adding a `strip-the-academy` middleware to the compose labels. |
