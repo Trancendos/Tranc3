@@ -116,3 +116,18 @@ async def test_thinktank_status_recovers_after_transient_import_failure(monkeypa
 
     second = quantum_routes._quantum_status()
     assert second["quantum_core"] == "available"
+
+    # A third call must hit the module-level cache directly rather than
+    # attempting another import — `responses` is now exhausted, so a fresh
+    # import attempt for "qiskit_aer" would raise StopIteration.
+    third = quantum_routes._quantum_status()
+    assert third is second
+
+
+def test_deepmind_status_cache_hit_returns_same_object(monkeypatch):
+    sentinel = {"mcts": "available"}
+    monkeypatch.setattr(quantum_routes, "_deepmind_available_cache", sentinel)
+
+    result = quantum_routes._deepmind_status()
+
+    assert result is sentinel
