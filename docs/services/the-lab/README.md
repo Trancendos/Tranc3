@@ -4,84 +4,177 @@
 |---|---|
 | **Entity** | The Lab |
 | **Lead AI** | The Dr. & Slime |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | custom (planned `src/lab/`) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `src/lab/code_lab.py`, `src/lab/routes.py`; router registered in `api.py` (`app.include_router(_lab_router)`, line 843) — **plus two separate standalone workers**: `workers/the-lab/worker.py` (SQLite, sandboxed subprocess code execution, port 8055) and `workers/lab-service/` (SQLite, Ollama/Tabby/HuggingFace/OpenRouter code-model backend, port 8066) |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `src/lab/` (`code_lab.py` 203 lines, `routes.py` 111 lines) + `workers/the-lab/worker.py`
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `src/lab/code_lab.py` and `src/lab/routes.py` directly. Status is
+> owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
+> **Scope note (established pattern, three-way this time):** The Lab has **three independent
+> implementations** — the `src/lab/` module mounted into the main `api.py` app (documented below
+> in full: an in-memory session/message store with **no AI generation call anywhere in it**),
+> `workers/the-lab/worker.py` (a standalone sandboxed-subprocess code-execution service — real
+> `python3`/`node`/`bash` execution behind an allowlist and internal-secret auth), and
+> `workers/lab-service/` (a standalone worker that talks to Ollama/Tabby/HuggingFace/OpenRouter
+> code models — the actual "AI code generation" backend). None of the three call into each other;
+> they are entirely separate code paths sharing only the "The Lab" name. This pack documents the
+> `src/lab/*` path in full and the other two only at the level needed for the port-defect fix
+> below — claims about "no AI generation" refer specifically to `src/lab/*`.
+> **Bug found and fixed while authoring this pack:** `workers/lab-service/Dockerfile` hardcoded
+> `EXPOSE 8039` / `HEALTHCHECK ... localhost:8039` / `CMD ["uvicorn", ..., "--port", "8039"]`,
+> while `docker-compose.production.yml` maps `"8066:8066"` and healthchecks `localhost:8066` for
+> this service (compose sets no `LAB_PORT` env var, so `config.py`'s own default was the only
+> thing that could have aligned it, and it also defaulted to 8039). Same class of defect as
+> `workers/library-service` fixed in the prior pass in this series: the Dockerfile `CMD`'s
+> hardcoded `--port` flag wins, so the container actually bound 8039 while compose routed to
+> 8066 — meaning the port mapping, Traefik implications, and compose's own healthcheck would all
+> have failed. Fixed by changing the Dockerfile's `EXPOSE`/`HEALTHCHECK`/`CMD --port` and
+> `config.py`'s `LAB_PORT` default to `8066`. (`workers/the-lab/worker.py`'s compose block, by
+> contrast, consistently uses `PORT=8055` everywhere — no defect there.)
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** code creation platform — a Claude Code-style in-platform coding assistant/IDE.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** The Dr. & Slime — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to The Dr. & Slime.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** in-platform code creation — a Claude Code-style coding assistant surface for
+  session-based, multi-turn code generation, review, and scaffolding tasks.
+- **Owner (RACI-A):** The Dr. & Slime; Platform Owner Trancendos.
+- **Scope:** `src/lab/*` provides session/message/context-file/artifact CRUD only — it is a
+  storage and bookkeeping layer, not a code-generation engine. Actual AI code generation (against
+  Ollama/Tabby/HuggingFace/OpenRouter code models) and actual sandboxed code execution live
+  entirely in the two separate standalone workers named above, not in this module.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | The Dr. & Slime | Platform Engineering | The Town Hall |
+### HTTP surface (`src/lab/routes.py`, prefix `/lab`)
+
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/lab/status` | `TheLab.stats()` — total sessions, by-status counts |
+| POST | `/lab/sessions` | `TheLab.create_session()` — body `{"user_id", "language", "task_type"}`; 400 on unknown `task_type` |
+| GET | `/lab/sessions` | `TheLab.list_sessions()` — optional `user_id` filter, most-recent-100 |
+| GET | `/lab/sessions/{id}` | `TheLab.get_session()` — 404 `JSONResponse` if not found |
+| POST | `/lab/sessions/{id}/messages` | `TheLab.send_message()` — 400 if `content` missing, 404 if session missing/inactive |
+| POST | `/lab/sessions/{id}/context` | `TheLab.add_context_file()` — stores a client-supplied `filename`/`content` pair |
+| POST | `/lab/sessions/{id}/artifacts` | `TheLab.save_artifact()` — stores a client-supplied `filename`/`content` pair |
+| POST | `/lab/sessions/{id}/close` | `TheLab.close_session()` — sets status to `COMPLETE` |
+| DELETE | `/lab/sessions/{id}` | `TheLab.delete_session()` — 404 if missing |
+
+### Data model
+- `LabSession`: `id` (uuid4), `user_id`, `status` (`LabSessionStatus`: active/paused/complete/
+  archived), `language`, `task_type` (`TaskType`: generate/refactor/review/debug/scaffold/test),
+  `messages` (`List[LabMessage]`), `context_files` (`Dict[filename, content]`),
+  `generated_artifacts` (`Dict[filename, content]`).
+- `LabMessage`: `role`, `content`, `timestamp`, `metadata`.
+
+### No AI generation in this module — a real gap, not an oversight
+- The module docstring states "Generation delegates to the active inference tier (Tranc3Engine →
+  Ollama → OpenRouter → stub) via the Spark MCP or direct engine call," and `TheLab`'s class
+  docstring repeats this. **No such call exists anywhere in `src/lab/code_lab.py` or
+  `routes.py`.** `send_message()` only appends the given `content` as a stored message and
+  returns it verbatim — there is no assistant-generated reply, no call to any inference tier, no
+  Spark MCP tool invocation.
+- `save_artifact()` / `generated_artifacts` are similarly misnamed: the endpoint stores whatever
+  `filename`/`content` the **caller** supplies directly — nothing in this module generates that
+  content. A client could call `POST /lab/sessions/{id}/artifacts` with arbitrary text and it
+  would be accepted and stored as if it were AI-generated.
+- **Conclusion:** `src/lab/*` is a session/message/artifact bookkeeping CRUD layer only. The
+  "AI-powered code creation" behavior described in its own comments and this entity's mission
+  is implemented, if at all, in the separate `workers/the-lab/` (sandboxed execution) and
+  `workers/lab-service/` (AI code-model backend) workers — not here.
+
+### Observatory emission (`_emit()`)
+- Fires on session creation and artifact save only (not on message send, context-file add,
+  close, or delete).
+- Wrapped in a bare `except Exception: pass` (`# nosec B110`) — same graceful-degradation pattern
+  as other entities in this series.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style (`src/lab/*` API path):** in-process module with a module-level singleton
+  (`get_lab()`); in-memory dict storage, no persistence, no external DB, no AI backend call.
+- **Decision (implicit, undocumented in code):** the split between bookkeeping (`src/lab/*`),
+  execution (`workers/the-lab/`), and generation (`workers/lab-service/`) is not explained
+  anywhere in comments or this repo's docs — whether `src/lab/*` is meant to orchestrate calls to
+  the other two workers (and simply hasn't been wired up yet) or is an independent, obsolete
+  scaffold is unverified. Documented as an honest unknown rather than assumed either way.
+- **Fixed defect:** `workers/lab-service/Dockerfile` hardcoded port 8039 while compose routed to
+  8066 — see truthfulness header. Fixed by aligning the Dockerfile and `config.py`'s default to
+  8066.
+
+## 4. RACI Matrix
+
+| Activity | The Dr. & Slime (Lead) | Platform Owner | Platform Engineering | The Observatory |
 |---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+| Session/message CRUD changes (`src/lab/*`) | **R** | A | C | I |
+| AI generation wiring (connecting `src/lab/*` to `workers/lab-service/`) | C | **A** | **R** | I |
+| Sandboxed execution changes (`workers/the-lab/`) | **R** | A | **R** | I |
 
-## 3. Technology Framework Matrix (TFM)
+## 5. Solutions Integration Model (SIM)
 
-| Concern | Planned choice | Zero-cost stance | Status |
-|---|---|---|---|
-| Foundation | custom (planned `src/lab/`) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+- **Upstream:** any caller of `/lab/*` routes — no auth on any route in `src/lab/routes.py` (both
+  standalone workers, by contrast, require `X-Internal-Secret`).
+- **Downstream:** best-effort Observatory `observe()` call on session-create and artifact-save
+  only; **no call to any AI inference tier, MCP tool, or the other two Lab workers** — despite
+  the module's own docstring describing such delegation.
+- **Not integrated:** `src/lab/*`, `workers/the-lab/`, and `workers/lab-service/` do not call
+  into each other — three independent implementations under one entity name, per the scope note
+  above.
 
-NOTE: this claim is stale — code already exists in this repo for The Lab (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 6. Architecture Scalability Document (ASD)
 
-## 4. Policy (POL)
+- **Load model:** in-memory dict store (`_sessions`), no cap defined — unbounded growth, no
+  eviction, unlike The Basement's `MAX_RECORDS` pattern.
+- **Bottleneck:** single-process, no persistence; a restart loses all sessions, messages, context
+  files, and artifacts stored via `src/lab/*`.
+- **Zero-cost limits:** `src/lab/*` has no external dependency; `workers/lab-service/` targets
+  free-tier/self-hosted code models (Ollama primary, Tabby/HuggingFace/OpenRouter fallback) per
+  its `config.py`.
+- **Degradation:** Observatory emission failures don't block the CRUD response.
 
-- Once implemented, The Lab MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 7. Technology Framework Matrix (TFM)
 
-## 5. Standards (STD)
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI `APIRouter` | mounted into the main `api.py` app |
+| Storage (`src/lab/*`) | in-memory `dict`, no persistence | zero infra cost, no durability |
+| Code execution (`workers/the-lab/`) | sandboxed `subprocess` (python3/node/bash allowlist) | self-hosted, port 8055 |
+| Code generation (`workers/lab-service/`) | Ollama → Tabby → HuggingFace → OpenRouter fallback | self-hosted-first, free-tier fallback, port 8066 |
 
-- On implementation, The Lab MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "The Lab" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 8. Policy (POL)
+
+- No route-level auth on `src/lab/*` routes — see SIM §5. Both standalone workers enforce
+  `X-Internal-Secret` auth.
+- Zero-cost mandate: `workers/lab-service/`'s free-tier fallback chain (HuggingFace/OpenRouter)
+  must stay within `scripts/zero_cost_audit.py`'s gate per The Citadel's deploy policy.
+
+## 9. Procedure (PROC)
+
+- **Create a session:** `POST /lab/sessions` with `{"language": "python", "task_type":
+  "generate"}` — returns a session record; no AI response is generated by this call.
+- **Send a message:** `POST /lab/sessions/{id}/messages` with `{"content": "..."}` — stores the
+  message only; does not produce an assistant reply (see DDD gap).
+- **Run real code:** use `workers/the-lab/`'s execution endpoints directly (internal-secret
+  authed) — not reachable via `src/lab/*`.
+
+## 10. Runbook (RUN)
+
+- **`/lab/sessions/{id}/messages` never returns an AI-generated reply:** expected — `src/lab/*`
+  has no generation call at all (see DDD). Do not treat this as a broken inference pipeline; it
+  is a scope gap in this specific module.
+- **`workers/lab-service` unreachable at port 8066:** was a genuine Dockerfile/compose port
+  mismatch (container bound 8039, compose routed 8066) — fixed in this pass; confirm the fix is
+  present in the deployed image if this recurs.
+- **Sessions/messages disappear after a restart:** expected — `src/lab/*` has no persistence.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "The Lab" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; be precise in
+  code reviews about which of the three implementations (`src/lab/*`, `workers/the-lab/`,
+  `workers/lab-service/`) a change targets — they do not share code or state.
+- Any Dockerfile that hardcodes a `--port` CLI flag MUST match the port routed in
+  `docker-compose.production.yml` for that service — see The Library's doc-pack (`docs/services/
+  the-library/`) for the first instance of this standard; this pack's fix is the second.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-05 | Claude (session) | `src/lab/code_lab.py` (203 lines), `src/lab/routes.py` (111 lines), `api.py` router registration (line 843), `workers/the-lab/worker.py`, `workers/lab-service/` (Dockerfile, config.py), `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine production defect: `workers/lab-service/Dockerfile` hardcoded port 8039 while compose routed to 8066 (same class of bug as The Library's, fixed in the prior pass). Documented a significant, code-grounded finding: `src/lab/*` has no AI-generation call anywhere despite its own docstring claiming delegation to Tranc3Engine/Ollama/OpenRouter/Spark MCP — it is a pure session/message/artifact CRUD layer; real code generation and execution live in two entirely separate standalone workers that do not call into it. |

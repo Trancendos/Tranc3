@@ -13,9 +13,9 @@ RUN mkdir -p /data && chown lab:lab /data
 
 USER lab
 
-EXPOSE 8039
+EXPOSE 8066
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8039/health', timeout=4).read()"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8066/health', timeout=4).read()"
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8039"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8066"]

@@ -6,7 +6,7 @@ import os
 import warnings
 
 WORKER_NAME = "lab-service"
-WORKER_PORT = int(os.environ.get("LAB_PORT", "8039"))
+WORKER_PORT = int(os.environ.get("LAB_PORT", "8066"))
 DB_PATH = os.environ.get("LAB_DB_PATH", "/data/lab.db")
 
 # ── Code AI backend endpoints (all free/self-hosted) ──────────────────────────
