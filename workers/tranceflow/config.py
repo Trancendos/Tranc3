@@ -6,7 +6,7 @@ import os
 import warnings
 
 WORKER_NAME = "tranceflow"
-WORKER_PORT = int(os.environ.get("TRANCEFLOW_PORT", "8052"))
+WORKER_PORT = int(os.environ.get("PORT", os.environ.get("TRANCEFLOW_PORT", "8059")))
 DB_PATH = os.environ.get("TRANCEFLOW_DB_PATH", "/data/tranceflow.db")
 ASSET_DIR = os.environ.get("TRANCEFLOW_ASSET_DIR", "/data/tranceflow-assets")
 

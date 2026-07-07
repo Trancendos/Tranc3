@@ -40,7 +40,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Basement** | ✅ In repo | Gary Glowman (Glow-Worm) | ✅ **Complete** | `docs/services/the-basement/` |
 | **The Studio** | ✅ In repo | Voxx | ✅ **Complete** | `docs/services/the-studio/` |
 | **Sashas Photo Studio** | ✅ In repo | Madam Krystal | ✅ **Complete** | `docs/services/sashas-photo-studio/` |
-| **TranceFlow** | ✅ In repo | Junior Cesar | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/tranceflow/` |
+| **TranceFlow** | ✅ In repo | Junior Cesar | ✅ **Complete** | `docs/services/tranceflow/` |
 | **TateKing** | ✅ In repo | Benji Tate & Sam King | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/tateking/` |
 | **Fabulousa** | ✅ In repo | Baron Von Hilton | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/fabulousa/` |
 | **Imaginarium** | ✅ In repo | Voxx | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/imaginarium/` |
@@ -61,24 +61,24 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ✅ **Complete** | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ✅ **Complete** | `docs/services/resonate/` |
 
-**Coverage:** **24 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **25 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
 **The Basement, The Studio, I-Mind, The Library, The Lab, The Artifactory, Cryptex, The Dutchy,
 DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace, The Academy, Sashas
-Photo Studio**). The other **13 Live-tier (`✅`) entities are charter-only, not
+Photo Studio, TranceFlow**). The other **12 Live-tier (`✅`) entities are charter-only, not
 full-pack-complete** — 4 as a documented §2.1 exception (deployed CF Workers with no source in
-this repo) and **9 as an outstanding gap**: TranceFlow, TateKing, Imaginarium, The Warp Tunnel,
-Warp Radio, DocUtari, Fabulousa, The Ice Box, ChronosSphere/ArcStream (standalone
-`workers/*/worker.py` deployed via `docker-compose.production.yml`, not mounted in `api.py`) —
-status corrected to `✅ In repo` but their doc-pack has not yet been upgraded to match. **6
-Partial-tier packs** (The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party). **0
-genuinely Planned-tier entities remain** — all 26 originally-`🔧 Planned` entities have been
-confirmed to have real, deployable code (a Gemini Code Assist review on this PR caught the last 5
-via non-obvious worker naming: `apimarket`, `files-service`/`storage-service`, `fabulousa-service`,
-`ice-box-service`, `cron-service`). **43 / 43 entities have a doc-pack**, but 13 of those packs do
-not yet match the tier their status requires · 17 of the 26 corrected entities (The Basement, The
-Studio, I-Mind, The Library, The Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility,
-tAimra, VRAR3D, Resonate, Think Tank, API Marketplace, The Academy, Sashas Photo Studio) have now
+this repo) and **8 as an outstanding gap**: TateKing, Imaginarium, The Warp Tunnel, Warp Radio,
+DocUtari, Fabulousa, The Ice Box, ChronosSphere/ArcStream (standalone `workers/*/worker.py`
+deployed via `docker-compose.production.yml`, not mounted in `api.py`) — status corrected to
+`✅ In repo` but their doc-pack has not yet been upgraded to match. **6 Partial-tier packs** (The
+Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party). **0 genuinely Planned-tier
+entities remain** — all 26 originally-`🔧 Planned` entities have been confirmed to have real,
+deployable code (a Gemini Code Assist review on this PR caught the last 5 via non-obvious worker
+naming: `apimarket`, `files-service`/`storage-service`, `fabulousa-service`, `ice-box-service`,
+`cron-service`). **43 / 43 entities have a doc-pack**, but 12 of those packs do not yet match the
+tier their status requires · 18 of the 26 corrected entities (The Basement, The Studio, I-Mind,
+The Library, The Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, tAimra, VRAR3D,
+Resonate, Think Tank, API Marketplace, The Academy, Sashas Photo Studio, TranceFlow) have now
 received a real Live-tier rewrite · rollout order per framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
@@ -149,6 +149,7 @@ received a real Live-tier rewrite · rollout order per framework §6.
 | 2026-07-05 | Added API Marketplace pack (superseding a stale Planned-tier placeholder never fully rewritten after its `✅ In repo` status correction in PR #201), code-grounded against `src/apimarket/marketplace.py` (265 lines) and `routes.py` (85 lines). Major finding: of the module's own 5 claimed capabilities (call external APIs, OAuth credential management, webhook subscriptions, rate limiting, MCP-tool auto-generation), **only connector registration and discovery are actually implemented** — there is no outbound-call execution code anywhere, `AuthType` is metadata-only with no credential storage, no webhook model exists at all, `rate_limit_per_min` is never enforced, and `record_call()` (which would track usage) has zero callers, so `call_count`/`error_count` are permanently zero. Promoted from Mis-tiered to Complete (22/37 full Live-tier packs). 11 entities remain in the outstanding gap. |
 | 2026-07-05 | Added The Academy pack — the first of the standalone `workers/*/worker.py` batch (no `src/*` module, no `api.py` mount). Found and fixed **the most severe defect in this doc-pack series**: `workers/the-academy/`'s Dockerfile only copied and ran the placeholder `main.py` (hard-coded "coming soon" responses on every route) — the real, fully-functional SQLite-backed LMS (`worker.py`, 391 lines: courses/lessons/enrolments/progress with real internal-secret auth and automatic course-completion detection) was **never copied into the container image at all**, meaning production traffic was served entirely by the fake stub while a complete implementation sat unused in the same directory. Fixed by changing the Dockerfile to copy/run `worker.py` and aligning its port to 8056 (matching compose); verified by importing `worker.py` directly (loads cleanly, full route set registered). Also flagged, not fixed: a hard-coded `"dev-secret"` fallback if `INTERNAL_SECRET` isn't set in deployment. Promoted from Mis-tiered to Complete (23/37 full Live-tier packs). 10 entities remain in the outstanding gap. |
 | 2026-07-05 | Added Sashas Photo Studio pack, code-grounded against `workers/sashas-photo-studio/main.py` (370 lines — the actually-deployed implementation per the Dockerfile). Explicitly verified this entity does **not** have The Academy's placeholder-vs-real defect: `main.py` is real, with a genuine 3-tier fallback chain (ComfyUI → AUTOMATIC1111 → an honestly-labeled offline placeholder). Found a second, real, currently-undeployed implementation (`worker.py`, Pollinations.ai + SQLite + real `X-Internal-Secret` auth) with no documented rationale for why `main.py` was chosen for deployment instead — flagged as an open question. Also confirmed a Dockerfile port mismatch (8051 vs compose's 8062) is cosmetic only, not a live defect, since `main.py` is invoked via bare `python main.py` and reads `PORT` from the environment correctly at runtime — consistent with `CLAUDE.md`'s own §188 precedent for this pattern. No auth exists on any route in the deployed `main.py`, unlike `worker.py`. Promoted from Mis-tiered to Complete (24/37 full Live-tier packs). 9 entities remain in the outstanding gap. |
+| 2026-07-05 | Added TranceFlow pack, code-grounded against `workers/tranceflow/main.py`+`config.py`+`router.py` (the deployed modular implementation). Found and fixed a third instance of the Dockerfile-hardcoded-port defect class (after `library-service`, `lab-service`): Dockerfile hardcoded port 8052 while compose routes 8059 — **compounded** by `config.py` reading the wrong env var name (`TRANCEFLOW_PORT` instead of compose's actual `PORT`), meaning even a direct-run invocation would never have picked up the intended port. Fixed both the Dockerfile and `config.py`; verified via reload that the default now resolves to 8059. Positive finding: real, enforced `X-Internal-Secret` auth with a correct warn-don't-fallback pattern for a missing secret (`config.py` emits `warnings.warn()` rather than defaulting to an insecure `"dev-secret"` like The Academy/Sashas Photo Studio). A second, real, undeployed alternate implementation (`worker.py`, 388 lines) also exists, matching the "two independent implementations" pattern from Sashas Photo Studio. Promoted from Mis-tiered to Complete (25/37 full Live-tier packs). 8 entities remain in the outstanding gap. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
