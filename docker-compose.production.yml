@@ -3345,6 +3345,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.warp-radio.rule=PathPrefix(`/warp-radio`)"
       - "traefik.http.routers.warp-radio.entrypoints=websecure"
+      - "traefik.http.routers.warp-radio.middlewares=strip-warp-radio@docker"
+      - "traefik.http.middlewares.strip-warp-radio.stripprefix.prefixes=/warp-radio"
       - "traefik.http.services.warp-radio.loadbalancer.server.port=8073"
 
   # ── The Dutchy — intelligence / market analysis (Port 8061) ──────────────────────────────────────────────

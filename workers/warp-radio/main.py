@@ -1,4 +1,4 @@
-"""Warp Radio — Port 8057.
+"""Warp Radio — Port 8073.
 
 Music & audio streaming integration.
 """
@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Warp Radio", version="1.0.0")
 
-PORT = int(os.getenv("PORT", "8057"))
+PORT = int(os.getenv("PORT", "8073"))
 START_TIME = time.time()
 NAVIDROME_URL = os.getenv("NAVIDROME_URL", "http://navidrome:4533")
 
