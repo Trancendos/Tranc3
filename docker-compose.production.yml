@@ -2950,6 +2950,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.tateking.rule=PathPrefix(`/tateking`)"
       - "traefik.http.routers.tateking.entrypoints=websecure"
+      - "traefik.http.routers.tateking.middlewares=strip-tateking@docker"
+      - "traefik.http.middlewares.strip-tateking.stripprefix.prefixes=/tateking"
       - "traefik.http.services.tateking.loadbalancer.server.port=8061"
 
   # ── Remotion render service — Remotion serverless render tier for TateKing (Port 8093) ──────────────
