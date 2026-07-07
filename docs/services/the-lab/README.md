@@ -109,8 +109,12 @@
 
 ## 5. Solutions Integration Model (SIM)
 
-- **Upstream:** any caller of `/lab/*` routes — no auth on any route in `src/lab/routes.py` (both
-  standalone workers, by contrast, require `X-Internal-Secret`).
+- **Upstream:** any caller of `/lab/*` routes — no auth on any route in `src/lab/routes.py`. Both
+  standalone workers require `X-Internal-Secret` on their functional routes, but **not** on
+  `/health` (both workers) or `/metrics` (`workers/the-lab/worker.py` only) — confirmed via
+  `grep` that neither route calls `_auth()`. This is a common, low-risk pattern (health/metrics
+  endpoints are typically probe targets, not data-mutating), but the blanket claim "require
+  X-Internal-Secret auth" overstated actual coverage and is corrected here.
 - **Downstream:** best-effort Observatory `observe()` call on session-create and artifact-save
   only; **no call to any AI inference tier, MCP tool, or the other two Lab workers** — despite
   the module's own docstring describing such delegation.
@@ -141,7 +145,7 @@
 ## 8. Policy (POL)
 
 - No route-level auth on `src/lab/*` routes — see SIM §5. Both standalone workers enforce
-  `X-Internal-Secret` auth.
+  `X-Internal-Secret` auth on their functional routes, but not on `/health`/`/metrics` — see SIM §5.
 - Zero-cost mandate: `workers/lab-service/`'s free-tier fallback chain (HuggingFace/OpenRouter)
   must stay within `scripts/zero_cost_audit.py`'s gate per The Citadel's deploy policy.
 
@@ -178,3 +182,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/lab/code_lab.py` (203 lines), `src/lab/routes.py` (111 lines), `api.py` router registration (line 843), `workers/the-lab/worker.py`, `workers/lab-service/` (Dockerfile, config.py), `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine production defect: `workers/lab-service/Dockerfile` hardcoded port 8039 while compose routed to 8066 (same class of bug as The Library's, fixed in the prior pass). Documented a significant, code-grounded finding: `src/lab/*` has no AI-generation call anywhere despite its own docstring claiming delegation to Tranc3Engine/Ollama/OpenRouter/Spark MCP — it is a pure session/message/artifact CRUD layer; real code generation and execution live in two entirely separate standalone workers that do not call into it. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `workers/the-lab/worker.py`, `workers/lab-service/main.py`, `.env.example`, `monitoring/prometheus.yml` | Verified and fixed two further cubic findings. (1) Confirmed via `grep` that neither worker's `_auth()` is called on `/health` (both workers) or `/metrics` (`workers/the-lab/worker.py`) — the blanket "both standalone workers require X-Internal-Secret auth" claim overstated coverage; corrected in SIM §5 and POL. (2) The 8039→8066 port fix from the prior pass had not been propagated to `.env.example`'s `LAB_PORT` default or `monitoring/prometheus.yml`'s scrape target — both updated to 8066; `scripts/port_registry_validate.py` re-run and passes. |

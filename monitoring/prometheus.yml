@@ -361,33 +361,33 @@ scrape_configs:
           service: 'node-exporter'
           category: 'observability'
 
-  # ── library-service — The Library ACO wiki router (Port 8053) ────────
+  # ── library-service — The Library ACO wiki router (Port 8067) ────────
   - job_name: 'library-service'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['library-service:8053']
+      - targets: ['library-service:8067']
         labels:
           service: 'library-service'
           named: 'The Library'
           lead_ai: 'Zimik'
           category: 'knowledge'
 
-  # ── lab-service — The Lab code generation platform (Port 8039) ────────
+  # ── lab-service — The Lab code generation platform (Port 8066) ────────
   - job_name: 'lab-service'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['lab-service:8039']
+      - targets: ['lab-service:8066']
         labels:
           service: 'lab-service'
           named: 'The Lab'
           lead_ai: 'The Dr. & Slime'
           category: 'code-generation'
 
-  # ── tranceflow — TranceFlow 3D/games studio (Port 8052) ───────────────
+  # ── tranceflow — TranceFlow 3D/games studio (Port 8059) ───────────────
   - job_name: 'tranceflow'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['tranceflow:8052']
+      - targets: ['tranceflow:8059']
         labels:
           service: 'tranceflow'
           named: 'TranceFlow'

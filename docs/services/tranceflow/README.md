@@ -42,13 +42,13 @@
 
 | Method | Route | Backing |
 |---|---|---|
-| GET | `/health` | static worker/entity metadata, not a real dependency probe |
+| GET | `/health` | static worker/entity metadata, not a real dependency probe — the only route not gated by `_auth()` |
 | POST | `/projects` | `create_project()` — internal-secret authed |
-| GET | `/projects` | `list_projects()` |
-| GET | `/projects/{id}` | `get_project()` |
-| DELETE | `/projects/{id}` | `delete_project()` |
-| POST | `/projects/{id}/export` | `export_asset()` — async, presumably triggers the Godot/Blender export pipeline per `config.py`'s `GODOT_BIN`/`BLENDER_BIN` settings (not traced in depth in this pass) |
-| GET | `/status` | worker status |
+| GET | `/projects` | `list_projects()` — internal-secret authed |
+| GET | `/projects/{id}` | `get_project()` — internal-secret authed |
+| DELETE | `/projects/{id}` | `delete_project()` — internal-secret authed |
+| POST | `/projects/{id}/export` | `export_asset()` — internal-secret authed — async, presumably triggers the Godot/Blender export pipeline per `config.py`'s `GODOT_BIN`/`BLENDER_BIN` settings (not traced in depth in this pass) |
+| GET | `/status` | worker status — internal-secret authed |
 
 ### Auth (`_auth()`)
 - Real `X-Internal-Secret` header check, matching `config.INTERNAL_SECRET`. Unlike The
@@ -149,3 +149,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `workers/tranceflow/main.py` (74 lines), `config.py` (38 lines), `router.py` (83 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine, third-instance-in-series routing defect: Dockerfile hardcoded port 8052 (compose routes 8059) AND `config.py` read the wrong env var name (`TRANCEFLOW_PORT` instead of compose's `PORT`) — a compounding double defect. Fixed both. Verified via reload that `config.py`'s default now resolves to 8059. Positive finding: real, enforced `X-Internal-Secret` auth with a correct warn-don't-fallback pattern for a missing secret, better security posture than several other entities audited in this series. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `router.py` route table, `monitoring/prometheus.yml`, `docker-compose.planned-entities.yml`, `scripts/post_deploy_verify.py`, `.env.example`, `workers/imaginarium/main.py` | Verified and fixed two further cubic findings. (1) The HTTP-surface table only marked `POST /projects` as auth-required; confirmed via `grep` that `router.py` calls `_auth()` on every route except `GET /health` — table corrected to mark all six non-health routes as internal-secret authed. (2) Confirmed the 8052→8059 port fix from the prior pass had not been propagated to 5 other files that still referenced the old port: `monitoring/prometheus.yml`'s scrape target, `docker-compose.planned-entities.yml` (its own `tranceflow` service block, `TRANCEFLOW_URL`, and `THREED_URL` references), `scripts/post_deploy_verify.py`'s health-check port list, `.env.example`'s `TRANCEFLOW_PORT` default, and `workers/imaginarium/main.py`'s `CAPABILITIES` port entry. All six updated to 8059; `scripts/port_registry_validate.py` re-run and passes (73 workers). |

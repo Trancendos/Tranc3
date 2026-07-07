@@ -162,8 +162,12 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 
 ## 8. Policy (POL)
 
-- No route-level auth on `src/library/*` routes — see SIM §5. The standalone worker enforces
-  `X-Internal-Secret` auth on its own routes.
+- **Security gap, not fixed:** `src/library/*` routes (mounted in `api.py`, including create/
+  update/delete mutations) have no route-level auth at all — any caller reaching `api.py` can
+  mutate the knowledge base with no credential check. See SIM §5. The standalone worker
+  (`workers/library-service`) enforces `X-Internal-Secret` auth on its own routes, but that path is
+  a separate, currently-unaudited implementation (see scope note above) — it does not protect
+  `src/library/*`.
 - Zero-cost mandate: any future Outline/BookStack/etc. backend wiring must pass
   `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
@@ -203,3 +207,4 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/library/knowledge_base.py` (277 lines), `src/library/routes.py` (62 lines), `src/observability/library_pipeline.py`, `workers/library-service/` (Dockerfile, config.py, router.py), `api.py` router registration (line 783), `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine production defect: `workers/library-service/Dockerfile` hardcoded port 8053 while compose routed to 8067, making the container unreachable at its intended port. Also documented (not fixed, architectural): the Observatory→Library pipeline is dead code (`ingest()` never called, and its target `/kb/ingest` endpoint doesn't exist anywhere); the RAG/FAISS and Outline-sync integrations claimed in source comments are not implemented in `src/library/*`; `Library.update()` has no HTTP route. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `monitoring/prometheus.yml`, `docker-compose.production.yml` (this service's comment block), `src/library/routes.py` | Verified and fixed two further cubic findings. (1) The 8052/8053→8067 port fix from the prior pass had not been propagated to `monitoring/prometheus.yml`'s scrape target (still `library-service:8053`) or to a stale "(Port 8053...)" comment on this service's compose block — both updated to 8067; `scripts/port_registry_validate.py` re-run and passes. (2) The POL section stated "no route-level auth" as a neutral fact rather than flagging it as a gap — reworded to explicitly call out the unauthenticated mutation routes as a security gap, and clarified that the standalone worker's auth does not cover `src/library/*`. |
