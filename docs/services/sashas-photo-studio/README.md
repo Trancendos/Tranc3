@@ -4,84 +4,160 @@
 |---|---|
 | **Entity** | Sashas Photo Studio |
 | **Lead AI** | Madam Krystal |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | Stable Diffusion + ComfyUI (self-hosted) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `workers/sashas-photo-studio/main.py` (370 lines — the deployed implementation, per the Dockerfile's `COPY main.py .` / `CMD ["python", "main.py"]`) — standalone worker, no `src/*` module, no `api.py` mount |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `workers/sashas-photo-studio/worker.py` (291 lines)
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `workers/sashas-photo-studio/main.py`, `worker.py`, `Dockerfile`,
+> and `docker-compose.production.yml` directly. Status is owned by the `CLAUDE.md` service table;
+> identity by `PLATFORM_ENTITIES.md`.
+> **Two genuinely independent implementations exist, unlike The Academy's placeholder-vs-real
+> pattern found earlier in this batch.** `workers/sashas-photo-studio/` contains `main.py` (370
+> lines — ComfyUI-primary, AUTOMATIC1111-fallback, offline-stub-last-resort image generation, no
+> persistence) and `worker.py` (291 lines — a separate, real implementation using Pollinations.ai
+> (zero-cost, no API key) with SQLite job storage and local image caching). **Verified this is not
+> the same bug as The Academy's**: the Dockerfile's `COPY main.py .` / `CMD ["python", "main.py"]`
+> correctly deploys `main.py`, which is itself a complete, real implementation (not a placeholder
+> stub) — its 3-tier fallback chain (ComfyUI → A1111 → offline placeholder) is honestly documented
+> in its own header and genuinely implemented with real HTTP calls to each backend. `worker.py`
+> is a real but currently-unused alternate implementation, matching the "two independent
+> implementations" pattern already established for several other entities in this doc-pack series
+> — not a defect, just an unresolved architectural choice between two working backends.
+> **No auth on any route in the deployed `main.py`** — unlike The Academy's `worker.py` (which
+> does enforce `X-Internal-Secret`), nothing in `main.py` checks any header or credential on any
+> route, including `/photo/generate`.
+> **Dockerfile `EXPOSE`/embedded `HEALTHCHECK` reference port 8051, while compose routes this
+> service to port 8062** — but `main.py` is invoked via bare `python main.py` (not a `uvicorn` CLI
+> with a hardcoded `--port`), so it correctly reads `PORT` from the environment at runtime, and
+> compose's own `healthcheck:` block (which overrides the Dockerfile's embedded one) correctly
+> targets 8062. Per `CLAUDE.md`'s own §188 precedent for this exact "CMD reads env var directly"
+> pattern, this is a cosmetic Dockerfile mismatch, not a live routing defect — not fixed in this
+> pass, consistent with that established precedent.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** photo & image generation center for platform creative assets.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Madam Krystal — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Madam Krystal.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** image generation via a self-hosted-first fallback chain (ComfyUI → AUTOMATIC1111 →
+  offline placeholder), per `main.py` (the actually-deployed implementation).
+- **Owner (RACI-A):** Madam Krystal; Platform Owner Trancendos.
+- **Scope:** `main.py` only, since that's what the Dockerfile deploys. `worker.py`'s
+  Pollinations.ai-based alternate implementation is real but not covered in depth here — see
+  scope note above.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Madam Krystal | Platform Engineering | The Town Hall |
-|---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+### HTTP surface (`main.py`, no route prefix)
 
-## 3. Technology Framework Matrix (TFM)
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/health` | static health response |
+| GET | `/status` | worker metadata |
+| POST | `/photo/generate` | real 3-tier generation: ComfyUI → A1111 → offline placeholder (see below) |
+| POST | `/generate` | legacy alias, delegates to `/photo/generate` |
+| GET | `/photo/status/{job_id}` | in-memory job status lookup |
+| GET | `/photo/result/{job_id}` | fetches the generated image |
+| GET | `/photo/models` | lists ComfyUI models, or a hard-coded 3-item fallback list if ComfyUI is unreachable |
+| POST | `/photo/upscale` | **always returns 501** — "Upscale is not yet implemented. ComfyUI upscale pipeline coming soon." (honest, not a bug) |
+| GET | `/gallery` | lists completed jobs from the in-memory `_jobs` dict |
 
-| Concern | Planned choice | Zero-cost stance | Status |
+### Generation logic — real, genuinely tiered fallback
+- `/photo/generate` tries `_comfyui_generate()` first (real HTTP call to `COMFYUI_URL`); on any
+  exception, falls back to `_a1111_generate()` (real HTTP call to `A1111_URL`); on any exception
+  there too, falls back to an honestly-labeled offline stub (`"placeholder": True` in the
+  response) rather than silently pretending success. This 3-tier design is real and matches the
+  module's own documented intent — a genuine positive finding.
+- In an environment with neither ComfyUI nor AUTOMATIC1111 actually running (the likely state for
+  most deployments per `CLAUDE.md`'s "planned" framing of these backends elsewhere in the
+  platform), **every call to `/photo/generate` falls through to the offline placeholder** — this
+  is expected, documented behavior, not silent failure.
+
+### `worker.py` — real, unused alternate implementation
+- Uses Pollinations.ai (a genuinely zero-cost, no-API-key image generation service) with SQLite
+  job persistence and local image file caching under `data/images/`. Enforces
+  `X-Internal-Secret` auth (via `INTERNAL_SECRET` env var, same `dev-secret` fallback caveat
+  noted for The Academy). Not deployed — the Dockerfile never references it.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** standalone FastAPI worker (`main.py`), fully in-memory (`_jobs` dict), no
+  persistence — a real gap relative to `worker.py`'s SQLite approach, though `main.py` is what's
+  actually deployed.
+- **Decision (undocumented in code):** why `main.py` (ComfyUI/A1111, no persistence, no auth) was
+  chosen over `worker.py` (Pollinations.ai, SQLite, real auth) for deployment is not explained
+  anywhere in this repo — both are genuinely functional. Documented as an open question, not
+  resolved in this pass.
+- **Not fixed:** no auth on `main.py`'s routes; no persistence (job history lost on restart); the
+  cosmetic Dockerfile port mismatch (see truthfulness header, matches an already-established
+  non-defect precedent).
+
+## 4. RACI Matrix
+
+| Activity | Madam Krystal (Lead) | Platform Owner | Platform Engineering |
 |---|---|---|---|
-| Foundation | Stable Diffusion + ComfyUI (self-hosted) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+| Generation pipeline changes (`main.py`) | **R** | A | C |
+| Deciding between `main.py`/`worker.py` as the canonical implementation (future) | C | **A** | **R** |
+| Implementing the `/photo/upscale` pipeline (future) | **R** | A | C |
 
-NOTE: this claim is stale — code already exists in this repo for Sashas Photo Studio (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 5. Solutions Integration Model (SIM)
 
-## 4. Policy (POL)
+- **Upstream:** any caller of `/photo/*` — no auth on any route in the deployed `main.py`.
+- **Downstream:** real HTTP calls to `COMFYUI_URL` (default `localhost:8188`) and `A1111_URL`
+  (default `localhost:7860`) — both self-hosted, zero-cost per the module's own header. Neither
+  is confirmed running in any environment audited in this pass.
+- **Not integrated:** `worker.py`'s Pollinations.ai path is a real, independent alternative not
+  wired into `main.py` at all — the two never call each other.
 
-- Once implemented, Sashas Photo Studio MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 6. Architecture Scalability Document (ASD)
 
-## 5. Standards (STD)
+- **Load model:** in-memory `_jobs` dict in `main.py`, no cap, no persistence — a restart loses
+  all job history and generated-image references (images themselves may still exist on ComfyUI's
+  own storage, not verified in this pass).
+- **Bottleneck:** single-process; no queueing beyond the in-memory dict.
+- **Zero-cost limits:** ComfyUI/A1111 are self-hosted OSS; the offline placeholder has zero cost
+  by construction.
+- **Degradation:** the 3-tier fallback chain **is** the degradation strategy — a genuinely
+  well-designed pattern for this entity, in contrast to several other entities' unenforced-flag
+  findings in this series.
 
-- On implementation, Sashas Photo Studio MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "Sashas Photo Studio" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 7. Technology Framework Matrix (TFM)
+
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI, standalone (no `api.py` mount) | self-hosted, port 8062 (per compose) |
+| Generation backend | ComfyUI → AUTOMATIC1111 → offline placeholder | self-hosted-first, zero-cost fallback chain |
+| Storage | in-memory `_jobs` dict, no persistence | zero infra cost, no durability |
+
+## 8. Policy (POL)
+
+- No route-level auth on any `/photo/*` route in the deployed `main.py`.
+- Zero-cost mandate: fully honored — ComfyUI/A1111 are self-hosted, the final fallback is a
+  zero-cost stub, matching `CLAUDE.md`'s Recommended Open Source Foundations table.
+
+## 9. Procedure (PROC)
+
+- **Generate an image:** `POST /photo/generate` with `{"prompt": "..."}` — tries ComfyUI, then
+  A1111, then returns an honestly-labeled offline placeholder if neither backend is reachable.
+- **Check job status:** `GET /photo/status/{job_id}` — in-memory only, lost on restart.
+- **Attempt an upscale:** currently always 501s — not yet implemented, by design.
+
+## 10. Runbook (RUN)
+
+- **Every generation returns `"source": "offline", "placeholder": true`:** expected if neither
+  ComfyUI nor AUTOMATIC1111 is reachable at their configured URLs — check `COMFYUI_URL`/
+  `A1111_URL` connectivity, not this module's logic.
+- **Job history disappears after a restart:** expected — `main.py` has no persistence
+  (`worker.py`'s SQLite-backed alternative does, but isn't deployed).
+- **`/photo/upscale` always returns 501:** expected, not a bug — explicitly not yet implemented.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "Sashas Photo Studio" per `CLAUDE.md`/`PLATFORM_ENTITIES.md` (no
+  apostrophe — see `CLAUDE.md`'s naming rules).
+- When a worker directory contains two independently-real implementations (as here, contrast with
+  The Academy's placeholder-vs-real pair), the choice of which one the Dockerfile deploys SHOULD
+  be documented in a code comment or this doc-pack — this pack now serves as that record until a
+  decision is made to consolidate or officially adopt one.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-05 | Claude (session) | `workers/sashas-photo-studio/main.py` (370 lines), `worker.py` (291 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Verified the deployed `main.py` is a real, working implementation with a genuine 3-tier fallback chain (ComfyUI → A1111 → honestly-labeled offline placeholder) — explicitly ruled out The Academy's placeholder-vs-real defect pattern here. Found a second, real, currently-unused implementation (`worker.py`, Pollinations.ai + SQLite + real auth) with no documented rationale for why it isn't the deployed one. Also confirmed a Dockerfile port mismatch (8051 vs compose's 8062) is cosmetic only, not a live defect, per the established `CLAUDE.md` §188 precedent for workers invoked via bare `python <file>.py` (env var respected at runtime; compose's own healthcheck overrides the Dockerfile's). |
