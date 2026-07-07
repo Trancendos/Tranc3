@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 WORKER_NAME = "library-service"
-WORKER_PORT = int(os.environ.get("LIBRARY_PORT", "8053"))
+WORKER_PORT = int(os.environ.get("LIBRARY_PORT", "8067"))
 DB_PATH = os.environ.get("LIBRARY_DB_PATH", "/data/library.db")
 
 # ── ACO backend endpoints ──────────────────────────────────────────────────────
