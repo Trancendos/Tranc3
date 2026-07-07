@@ -57,16 +57,16 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **DevOcity** | ✅ In repo | Kitty | ✅ **Complete** | `docs/services/devocity/` |
 | **Tranquility** | ✅ In repo | Savania | ✅ **Complete** | `docs/services/tranquility/` |
 | **I-Mind** | ✅ In repo | Elouise | ✅ **Complete** | `docs/services/i-mind/` |
-| **tAimra** | ✅ In repo | tAImra | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/taimra/` |
+| **tAimra** | ✅ In repo | tAImra | ✅ **Complete** | `docs/services/taimra/` |
 | **VRAR3D** | ✅ In repo | Entari | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/resonate/` |
 
-**Coverage:** **17 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **18 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
 **The Basement, The Studio, I-Mind, The Library, The Lab, The Artifactory, Cryptex, The Dutchy,
-DevOcity, Tranquility**). The other **20 Live-tier (`✅`) entities are charter-only, not
+DevOcity, Tranquility, tAimra**). The other **19 Live-tier (`✅`) entities are charter-only, not
 full-pack-complete** — 4 as a documented §2.1 exception (deployed CF Workers with no source in
-this repo) and **16 as an outstanding gap**: tAimra, VRAR3D, Resonate, Think Tank, API Marketplace
+this repo) and **15 as an outstanding gap**: VRAR3D, Resonate, Think Tank, API Marketplace
 (router-mounted in `api.py`), plus The Academy, Sashas Photo Studio, TranceFlow, TateKing,
 Imaginarium, The Warp Tunnel, Warp Radio, DocUtari, Fabulousa, The Ice Box,
 ChronosSphere/ArcStream (standalone `workers/*/worker.py` deployed via
@@ -76,10 +76,10 @@ Turing's Hub, The Void, Arcadia, The Chaos Party). **0 genuinely Planned-tier en
 all 26 originally-`🔧 Planned` entities have been confirmed to have real, deployable code (a
 Gemini Code Assist review on this PR caught the last 5 via non-obvious worker naming: `apimarket`,
 `files-service`/`storage-service`, `fabulousa-service`, `ice-box-service`, `cron-service`).
-**43 / 43 entities have a doc-pack**, but 20 of those packs do not yet match the tier their status
-requires · 10 of the 26 corrected entities (The Basement, The Studio, I-Mind, The Library, The
-Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility) have now received a real
-Live-tier rewrite · rollout order per framework §6.
+**43 / 43 entities have a doc-pack**, but 19 of those packs do not yet match the tier their status
+requires · 11 of the 26 corrected entities (The Basement, The Studio, I-Mind, The Library, The
+Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, tAimra) have now received a
+real Live-tier rewrite · rollout order per framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
 > Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
@@ -142,6 +142,7 @@ Live-tier rewrite · rollout order per framework §6.
 | 2026-07-05 | Added The Dutchy pack, code-grounded against `src/research/section7.py` (285 lines), `routes.py` (53 lines), and `bci_interface.py` (132 lines, self-declared unwired stub). Verified genuine cross-entity integration — `generate_platform_health_report()`/`generate_security_report()` make real calls into 5 other live entities (Observatory, Town Hall, Cryptex, Basement, Nexus), and `_store_and_publish()` genuinely writes to The Library (confirmed via `Library.create()` call) — one of the more substantively wired entities audited in this series, not a scaffold. Major finding: a completely separate, unrelated `src/section7/` package (6 files, live-wired CVE/OSV/CISA threat-intel polling loop, started from `api.py`'s startup) shares the "Section 7" name with this entity's actual code path (`src/research/section7.py`) — a genuine, previously undocumented naming collision, flagged for future disambiguation rather than conflated. Promoted from Mis-tiered to Complete (15/37 full Live-tier packs). 18 entities remain in the outstanding gap. |
 | 2026-07-05 | Added DevOcity pack, code-grounded against `src/devocity/portal.py` (350 lines) and `routes.py` (103 lines). Verified real, well-practiced API key generation (SHA-256 hashed, one-time plaintext reveal) and genuine Redis persistence (rarer than most entities audited in this series, which are pure in-memory). Major finding: **no code anywhere in the repo validates a DevOcity-issued key against any protected route** — the `SPARK`/`GRID`/`ADMIN`/`FULL` scopes are purely descriptive with zero enforcement effect (confirmed via grep cross-check against `src/security/security_framework.py`'s unrelated key-validation mechanism). Also flagged: unauthenticated account creation with an unverified `user_id` (contradicts the module's own "wired to Infinity SSO" claim), unauthenticated key issuance for any known account ID, and four dead counters (`usage`, `request_count`, `delivery_count`, `failure_count`) declared but never incremented. None code-fixed — each requires an architectural auth decision out of scope for a docs pass. Promoted from Mis-tiered to Complete (16/37 full Live-tier packs). 17 entities remain in the outstanding gap. |
 | 2026-07-05 | Added Tranquility pack, code-grounded against `src/tranquility/wellbeing.py` (179 lines) and `routes.py` (71 lines). Verified a genuine, working cross-entity integration: `log_mood()` really calls `IMind.assess()` on low/very-low mood entries. Major finding, documented not fixed: **no auth on any route, most consequentially `GET /tranquility/export/{user_id}` (full mood-history export) and `DELETE /tranquility/data/{user_id}`** — any caller who knows a `user_id` can read or delete another user's wellbeing data, a materially sensitive gap given the module's own "governed by Magna Carta + I-Mind protocols" claim. Also documented: two of the module's four stated capabilities (Resonate empathy routing, tAimra burnout signals) exist only as comments, never implemented. Promoted from Mis-tiered to Complete (17/37 full Live-tier packs). 16 entities remain in the outstanding gap. |
+| 2026-07-05 | Added tAimra pack, code-grounded against `src/taimra/digital_twin.py` (165 lines) and `routes.py` (74 lines). Verified the twin lifecycle state machine (OFFLINE→LEARNING→ACTIVE, offline-by-default no-op behavior) is real and correctly implemented. Major finding, documented not fixed: **no auth on any route — including export and delete of another user's digital twin** — and the module's own stated privacy guarantee ("the twin never infers or stores sensitive I-Mind flagged content") has zero enforcement in code, since no I-Mind import or call exists anywhere in this module (unlike Tranquility's genuine I-Mind integration, found in the prior entry in this same batch). Also noted a dead `TwinStatus.PAUSED` enum member never assigned anywhere. Promoted from Mis-tiered to Complete (18/37 full Live-tier packs). 15 entities remain in the outstanding gap. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
