@@ -1,4 +1,4 @@
-"""The Warp Tunnel — Port 8056.
+"""The Warp Tunnel — Port 8072.
 
 Cryptographic scanner & quarantine transport.
 """
@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="The Warp Tunnel", version="1.0.0")
 
-PORT = int(os.getenv("PORT", "8056"))
+PORT = int(os.getenv("PORT", "8072"))
 START_TIME = time.time()
 
 

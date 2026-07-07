@@ -49,7 +49,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **API Marketplace** | ✅ In repo | Solarscene | ✅ **Complete** | `docs/services/api-marketplace/` |
 | **Cryptex** | ✅ In repo | Renik | ✅ **Complete** | `docs/services/cryptex/` |
 | **The Ice Box** | ✅ In repo | Neonach | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-ice-box/` |
-| **The Warp Tunnel** | ✅ In repo | Rocking Ricki | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-warp-tunnel/` |
+| **The Warp Tunnel** | ✅ In repo | Rocking Ricki | ✅ **Complete** | `docs/services/the-warp-tunnel/` |
 | **Warp Radio** | ✅ In repo | Rocking Ricki | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/warp-radio/` |
 | **The Dutchy** | ✅ In repo | Predictive lore | ✅ **Complete** | `docs/services/the-dutchy/` |
 | **Think Tank** | ✅ In repo | Trancendos | ✅ **Complete** | `docs/services/think-tank/` |
@@ -61,13 +61,13 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ✅ **Complete** | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ✅ **Complete** | `docs/services/resonate/` |
 
-**Coverage:** **27 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **28 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
 **The Basement, The Studio, I-Mind, The Library, The Lab, The Artifactory, Cryptex, The Dutchy,
 DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace, The Academy, Sashas
-Photo Studio, TranceFlow, TateKing, Imaginarium**). The other **10 Live-tier (`✅`) entities are
-charter-only, not full-pack-complete** — 4 as a documented §2.1 exception (deployed CF Workers
-with no source in this repo) and **6 as an outstanding gap**: The Warp Tunnel, Warp Radio,
+Photo Studio, TranceFlow, TateKing, Imaginarium, The Warp Tunnel**). The other **9 Live-tier
+(`✅`) entities are charter-only, not full-pack-complete** — 4 as a documented §2.1 exception
+(deployed CF Workers with no source in this repo) and **5 as an outstanding gap**: Warp Radio,
 DocUtari, Fabulousa, The Ice Box, ChronosSphere/ArcStream (standalone `workers/*/worker.py`
 deployed via `docker-compose.production.yml`, not mounted in `api.py`) — status corrected to
 `✅ In repo` but their doc-pack has not yet been upgraded to match. **6 Partial-tier packs** (The
@@ -75,11 +75,12 @@ Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party). **0 genuinel
 entities remain** — all 26 originally-`🔧 Planned` entities have been confirmed to have real,
 deployable code (a Gemini Code Assist review on this PR caught the last 5 via non-obvious worker
 naming: `apimarket`, `files-service`/`storage-service`, `fabulousa-service`, `ice-box-service`,
-`cron-service`). **43 / 43 entities have a doc-pack**, but 10 of those packs do not yet match the
-tier their status requires · 20 of the 26 corrected entities (The Basement, The Studio, I-Mind,
+`cron-service`). **43 / 43 entities have a doc-pack**, but 9 of those packs do not yet match the
+tier their status requires · 21 of the 26 corrected entities (The Basement, The Studio, I-Mind,
 The Library, The Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, tAimra, VRAR3D,
 Resonate, Think Tank, API Marketplace, The Academy, Sashas Photo Studio, TranceFlow, TateKing,
-Imaginarium) have now received a real Live-tier rewrite · rollout order per framework §6.
+Imaginarium, The Warp Tunnel) have now received a real Live-tier rewrite · rollout order per
+framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
 > Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
@@ -154,6 +155,7 @@ Imaginarium) have now received a real Live-tier rewrite · rollout order per fra
 | 2026-07-07 | **Self-correction, caught by CodeRabbit:** the VRAR3D StripPrefix "fix" from the entry above was wrong and has been reverted. It was based on checking `workers/vrar3d/worker.py` (a separate, unprefixed, undeployed alternate file), not the actually-deployed `workers/vrar3d/main.py`+`router.py` — whose Dockerfile (`COPY config.py models.py database.py service.py router.py main.py`, `CMD ["uvicorn", "main:app", ...]`) confirms `main.py`+`router.py` is what's built, and `router.py`'s `APIRouter(prefix="/vrar3d", ...)` already matches compose's ``PathPrefix(`/vrar3d`)`` rule correctly — adding a StripPrefix middleware would have broken routing by stripping a prefix the deployed app expects to receive. Removed the erroneous middleware from `docker-compose.production.yml`. Sashas Photo Studio and Taimra were re-verified against their actual deployed single-file `main.py` (no separate `router.py`, genuinely unprefixed routes) and remain correctly fixed. |
 | 2026-07-07 | Resumed the doc-pack rewrite for the remaining 8 standalone-worker entities. Added TateKing pack, code-grounded against `workers/tateking/main.py` (505 lines — the deployed implementation) and `worker.py` (459 lines, real but undeployed alternate with genuine `X-Internal-Secret` auth, same insecure `"dev-secret"` fallback pattern flagged elsewhere in this series). Found and fixed two defects: a cosmetic Dockerfile port mismatch (8053 vs compose's 8061, fixed anyway per recent practice) and a **genuine, live** Traefik `PathPrefix`-without-`StripPrefix` routing bug — the fourth instance of this exact class found this session (after The Academy, Sashas Photo Studio, Taimra), fixed with a `strip-tateking` middleware. Verified a real FFmpeg→Remotion 2-tier fallback design and a basic input-URL scheme allowlist; confirmed no auth on any route plus wildcard CORS on the deployed `main.py`. Promoted from Mis-tiered to Complete (26/37 full Live-tier packs). 7 entities remain in the outstanding gap. |
 | 2026-07-07 | Added Imaginarium pack, code-grounded against `workers/imaginarium/main.py` (65 lines, deployed) and `worker.py` (343 lines, undeployed). Major finding, a notable inversion of the usual "two implementations" pattern in this series: the **deployed** file is an honest, intentional stub (`/orchestrate` always returns `"orchestrated": false` verbatim), while the **undeployed** file is a genuinely real cross-service orchestrator — SQLite-backed projects/templates, real `httpx` calls with `X-Internal-Secret` auth fanning out to Sashas Photo Studio, TranceFlow, TateKing, and Warp Radio. Not fixed (a deployment/promotion decision, not a docs-pass fix) but flagged as a clear opportunity, contingent on first fixing `worker.py`'s `dev-secret` auth fallback. Also fixed the same two defect classes found repeatedly this session: a cosmetic Dockerfile port mismatch (8054 vs compose's 8064, fixed for robustness) and a genuine, live Traefik `PathPrefix`-without-`StripPrefix` routing bug (the fifth instance this session), fixed with a `strip-imaginarium` middleware. Promoted from Mis-tiered to Complete (27/37 full Live-tier packs). 6 entities remain in the outstanding gap. |
+| 2026-07-07 | Added The Warp Tunnel pack, code-grounded against `workers/warp-tunnel/main.py` (54 lines, deployed stub), `worker.py` (334 lines, undeployed real file scanner), and `src/security/warp_tunnel/tunnel.py` (163 lines, real Ice-Box-integrated content scanner). Major finding: **three** independent implementations exist for this one entity — a new pattern in this series (previous entities had at most two). The deployed `main.py` is an honest stub; `worker.py` is a genuine regex-pattern file-upload scanner (SHA-256 hashing, SQLite scan history, real quarantine directory, `X-Internal-Secret` auth with the same insecure `dev-secret` fallback flagged elsewhere); `tunnel.py`'s `WarpTunnel` class is a real, separate content-interception scanner integrated with The Ice Box's `ThreatAnalyser`/`QuarantineStore` — confirmed via repo-wide `grep` to have **zero callers anywhere**, fully orphaned. Not fixed (requires an owner decision on which scanning model to deploy) but flagged clearly. Also fixed the same two defect classes found repeatedly this session: a cosmetic Dockerfile port mismatch (8056 vs compose's 8072, fixed for robustness) and a genuine, live Traefik `PathPrefix`-without-`StripPrefix` routing bug (the sixth instance this session), fixed with a `strip-warp-tunnel` middleware. Promoted from Mis-tiered to Complete (28/37 full Live-tier packs). 5 entities remain in the outstanding gap. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault

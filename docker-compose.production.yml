@@ -3321,6 +3321,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.warp-tunnel.rule=PathPrefix(`/warp-tunnel`)"
       - "traefik.http.routers.warp-tunnel.entrypoints=websecure"
+      - "traefik.http.routers.warp-tunnel.middlewares=strip-warp-tunnel@docker"
+      - "traefik.http.middlewares.strip-warp-tunnel.stripprefix.prefixes=/warp-tunnel"
       - "traefik.http.services.warp-tunnel.loadbalancer.server.port=8072"
 
   # ── Warp Radio — music/audio streaming (Port 8057) ──────────────────────────────────────────────
