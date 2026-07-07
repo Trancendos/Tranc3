@@ -53,7 +53,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **Warp Radio** | ✅ In repo | Rocking Ricki | ✅ **Complete** | `docs/services/warp-radio/` |
 | **The Dutchy** | ✅ In repo | Predictive lore | ✅ **Complete** | `docs/services/the-dutchy/` |
 | **Think Tank** | ✅ In repo | Trancendos | ✅ **Complete** | `docs/services/think-tank/` |
-| **ChronosSphere / ArcStream** | ✅ In repo | Chronos | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/chronosphere-arcstream/` |
+| **ChronosSphere / ArcStream** | ✅ In repo | Chronos | ✅ **Complete** | `docs/services/chronosphere-arcstream/` |
 | **DevOcity** | ✅ In repo | Kitty | ✅ **Complete** | `docs/services/devocity/` |
 | **Tranquility** | ✅ In repo | Savania | ✅ **Complete** | `docs/services/tranquility/` |
 | **I-Mind** | ✅ In repo | Elouise | ✅ **Complete** | `docs/services/i-mind/` |
@@ -61,16 +61,15 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ✅ **Complete** | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ✅ **Complete** | `docs/services/resonate/` |
 
-**Coverage:** **32 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **33 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
 **The Basement, The Studio, I-Mind, The Library, The Lab, The Artifactory, Cryptex, The Dutchy,
 DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace, The Academy, Sashas
 Photo Studio, TranceFlow, TateKing, Imaginarium, The Warp Tunnel, Warp Radio, DocUtari,
-Fabulousa, The Ice Box**). The other **5 Live-tier (`✅`) entities are charter-only, not
-full-pack-complete** — 4 as a documented §2.1 exception (deployed CF Workers with no source in
-this repo) and **1 as an outstanding gap**: ChronosSphere/ArcStream (standalone
-`workers/*/worker.py` deployed via `docker-compose.production.yml`, not mounted in `api.py`) —
-status corrected to `✅ In repo` but its doc-pack has not yet been upgraded to match. **6
+Fabulousa, The Ice Box, ChronosSphere/ArcStream**). The other **4 Live-tier (`✅`) entities are
+charter-only, not full-pack-complete** — all 4 are the documented §2.1 exception (deployed CF
+Workers with no source in this repo). **Zero entities remain in the outstanding gap** — every
+originally mis-tiered entity from the 2026-07-04/05 audit now has a full Live-tier pack. **6
 Partial-tier packs** (The Nexus, Luminous, Turing's Hub, The Void, Arcadia, The Chaos Party).
 **0 genuinely Planned-tier
 entities remain** — all 26 originally-`🔧 Planned` entities have been confirmed to have real,
@@ -92,31 +91,34 @@ framework §6.
 > hidden, until either their source lands in this repo or the framework defines a
 > deployed-no-source tier explicitly.
 >
-> **Known gap — CLAUDE.md `🔧 Planned` status was stale for all 26 originally-Planned entities;
-> all 26 now corrected.** A PR review (cubic) caught that 2 of the "no code exists" charter-only
-> packs were factually wrong; a full audit (extended by a later Gemini Code Assist find covering
-> the last 5) confirmed real code for all 26. Across all 26, **15 have a router confirmed registered
-> live in
-> `api.py`** — The Library, The Basement, The Studio, The Lab, The Artifactory, Cryptex, The
-> Dutchy (as `section7`), DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate, Think Tank (as
-> `_thinktank_router`), and API Marketplace (as `_apimarket_router` from `src/apimarket/routes` —
-> caught by a Gemini Code Assist review on this PR alongside the remaining 4). The other **11** —
-> The Warp Tunnel, Warp Radio, The Academy, Sashas Photo Studio, TranceFlow, TateKing, Imaginarium,
-> DocUtari (`workers/files-service/`, `workers/storage-service/`), Fabulousa
-> (`workers/fabulousa-service/`), The Ice Box (`workers/ice-box-service/`), and
-> ChronosSphere/ArcStream (`workers/cron-service/`) — are **not** mounted in `api.py`, but each has
-> a real, standalone `workers/<name-or-mapped-service>/worker.py` with its own Dockerfile **and a
-> live service block in `docker-compose.production.yml`** (confirmed by grep for each service key;
-> the DocUtari/Fabulousa/Ice-Box/ChronosSphere mappings were missed on the first pass because the
-> compose service names — `files-service`, `fabulousa-service`, `ice-box-service`, `cron-service` —
-> don't match the entity names). `CLAUDE.md`'s status column has been **corrected to `✅ In repo`**
-> for all 26. Their doc-packs below are marked **⚠️ Mis-tiered**: still charter-only
-> (GOV+RACI+TFM+POL+STD) even though their corrected Live-tier status now requires the full
-> 11-artifact pack — this is the honest **current** gap (a real Partial/Live-tier rewrite with
-> code-grounded DDD/TASD is still owed for all 26), not a stale-status problem anymore. **Zero**
-> of the originally-Planned entities remain genuinely code-free.
-> **Follow-up required:** author real Partial/Live-tier packs (code-grounded DDD/TASD/SIM/ASD/
-> PROC/RUN) for all 26 corrected entities — the charter-only packs are a stopgap, not the fix.
+> **Known gap (updated 2026-07-07) — CLAUDE.md `🔧 Planned` status was stale for all 26
+> originally-Planned entities; all 26 now corrected, and 25 of the 26 now have full Live-tier
+> packs.** A PR review (cubic) caught that 2 of the "no code exists" charter-only packs were
+> factually wrong; a full audit (extended by a later Gemini Code Assist find covering the last
+> 5) confirmed real code for all 26. Across all 26, **15 have a router confirmed registered
+> live in `api.py`** — The Library, The Basement, The Studio, The Lab, The Artifactory,
+> Cryptex, The Dutchy (as `section7`), DevOcity, Tranquility, I-Mind, tAimra, VRAR3D, Resonate,
+> Think Tank (as `_thinktank_router`), and API Marketplace (as `_apimarket_router` from
+> `src/apimarket/routes`). The other **11** — The Warp Tunnel, Warp Radio, The Academy, Sashas
+> Photo Studio, TranceFlow, TateKing, Imaginarium, DocUtari (`workers/files-service/`,
+> `workers/storage-service/`), Fabulousa (`workers/fabulousa-service/`), The Ice Box
+> (`workers/ice-box-service/`), and ChronosSphere/ArcStream (`workers/cron-service/`) — are
+> **not** mounted in `api.py`, but each has a real, standalone
+> `workers/<name-or-mapped-service>/worker.py` with a live service block in
+> `docker-compose.production.yml` (the DocUtari/Fabulousa/Ice-Box/ChronosSphere mappings were
+> missed on the first pass because the compose service names — `files-service`,
+> `fabulousa-service`, `ice-box-service`, `cron-service` — don't match the entity names).
+> `CLAUDE.md`'s status column has been **corrected to `✅ In repo`** for all 26.
+>
+> **Not every one of these 11 originally had its own Dockerfile** — that claim, made in an
+> earlier version of this blockquote, was itself wrong: `fabulousa-service` and
+> `ice-box-service` had **no Dockerfile at all** until this pass, a genuine build-breaking gap
+> for two of the 26 (see the rollout log below for the fix details, including the repo-root
+> build-context change `ice-box-service` needed).
+>
+> **All 25 of the 26 now have a real Partial/Live-tier rewrite** (code-grounded DDD/TASD/SIM/
+> ASD/PROC/RUN) — see the Coverage line above for the full list. **1 remains** — ChronosSphere/
+> ArcStream — tracked as the sole entry in the current outstanding gap.
 
 ## Rollout log
 
@@ -161,6 +163,7 @@ framework §6.
 | 2026-07-07 | Added DocUtari pack, code-grounded against `workers/files-service/worker.py` (733 lines, deployed) and `workers/storage-service/worker.py` (719 lines, deployed) — unlike every other entity in this batch, DocUtari maps to **two separate compose services** rather than one `main.py`+`worker.py` pair, and both files build directly (no undeployed alternate). Found and fixed a new defect class for this series (data-durability, not routing): `files-service`'s compose volume was mounted at `/data` while the app writes to `/app/data` (dead mount — fixed by re-pointing it); `storage-service` had **no volume at all** despite writing SQLite+objects to `/data` (fixed by adding a `storage-data` volume). Documented, not fixed: both services are unauthenticated by default (empty-string token defaults, no secret set anywhere in compose/`.env.example`). No Traefik-StripPrefix defect applies — neither service has a Traefik label (both internal-only). Promoted from Mis-tiered to Complete (30/37 full Live-tier packs). 3 entities remain in the outstanding gap. |
 | 2026-07-07 | Added Fabulousa pack, code-grounded against `workers/fabulousa-service/worker.py` (287 lines, the only implementation — no separate `main.py`). Found and fixed a genuine build-breaking defect: `workers/fabulousa-service/` had **no Dockerfile at all**, despite compose referencing one — the same class of defect fixed for The Artifactory earlier in this session, and previously flagged (but left unfixed) for this exact directory in that pack's "8 other worker directories missing a Dockerfile" list. Fixed by adding a Dockerfile matching the established convention. Also explicitly checked for, and correctly ruled out, the Traefik StripPrefix defect class fixed in 7 other entities this session: `worker.py`'s routes are already self-prefixed with `/fabulousa`, so adding StripPrefix would have stripped a prefix the app still expects — a middleware was added, recognized as a regression, and reverted before committing (the exact class of mistake this series' VRAR3D lesson exists to prevent). Documented, not fixed: no auth on any route including both write endpoints; `/health` is unreachable via the public Traefik path since it's the one unprefixed route. Promoted from Mis-tiered to Complete (31/37 full Live-tier packs). 2 entities remain in the outstanding gap. |
 | 2026-07-07 | Added The Ice Box pack, code-grounded against `workers/ice-box-service/worker.py` (225 lines, real static threat analysis + quarantine) and `src/security/ice_box/{analyser,quarantine,signatures}.py`. Found and fixed a build-breaking defect requiring more than a drive-by Dockerfile copy: `worker.py` imports repo-level `src.security.*` packages (including The Warp Tunnel's `WarpTunnel` class) and computes its `sys.path` insertion via `parents[2]`, so a Dockerfile alone wasn't enough — the compose build context had to be widened from `./workers/ice-box-service` to the repo root (`context: .`), matching the existing `infinity-portal`/`infinity-one`/`infinity-admin` pattern, with a Dockerfile preserving the source tree's relative depth so the `sys.path` logic still resolves; verified by executing the module directly before writing the doc-pack. Also fixed the Traefik StripPrefix defect (9th instance this session). **Corrected a factual error in The Warp Tunnel's pack** discovered while investigating this entity: `WarpTunnel`/`tunnel.py` is not orphaned — this worker is its real, live caller (the earlier grep behind that claim missed `workers/`); both packs updated. Flagged, not fixed: the same build-context defect class also affects `workers/swarm-coordinator-service/Dockerfile` (out of scope for this pass); no auth on any route including the quarantine-release write. Promoted from Mis-tiered to Complete (32/37 full Live-tier packs). 1 entity remains in the outstanding gap. |
+| 2026-07-07 | Added ChronosSphere/ArcStream pack — the 26th and final entity in this session's mis-tiered backlog — code-grounded against `workers/cron-service/worker.py` (698 lines, a genuine 8-backend ACO-pheromone-routed cron scheduler with an in-process asyncio fallback). Found and fixed a startup-crash-risk defect, a new class not seen elsewhere this session: `DB_PATH` resolves to `/data/cron.db`, but the Dockerfile only created/chowned `/app/data` (the wrong, unused path) before dropping to a non-root user — `mkdir /data` at the container filesystem root would raise `PermissionError` and crash the worker on every start. Fixed the Dockerfile's mkdir/chown target and added a previously-nonexistent `cron-data` volume for durability (same pattern as DocUtari's fix). No StripPrefix defect applies (no Traefik label — internal-only service). Also corrected a stale "Known gap" blockquote elsewhere in this file that still claimed all 26 entities needed rewrites and that every worker "has its own Dockerfile" (untrue at the time for `fabulousa-service`/`ice-box-service`, both fixed this session) — updated to reflect the current, accurate state. Promoted from Mis-tiered to Complete (33/37 full Live-tier packs). **0 entities remain in the outstanding gap** — this closes out the entire mis-tiered-entity backlog from the 2026-07-04/05 audit. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault

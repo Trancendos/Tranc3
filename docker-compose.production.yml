@@ -755,6 +755,8 @@ services:
     build: { context: ./workers/cron-service, dockerfile: Dockerfile }
     container_name: cron-service-worker
     ports: ["8021:8021"]
+    volumes:
+      - cron-data:/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8021/health', timeout=5).read()\""]
       <<: *healthcheck-default
@@ -3946,6 +3948,8 @@ volumes:
   files-data:
     driver: local
   storage-data:
+    driver: local
+  cron-data:
     driver: local
   identity-data:
     driver: local
