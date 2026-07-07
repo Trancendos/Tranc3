@@ -4,84 +4,173 @@
 |---|---|
 | **Entity** | Think Tank |
 | **Lead AI** | Trancendos |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | custom (planned `src/quantum/`, `src/deepmind/`) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `src/quantum/routes.py` (mounted `/thinktank`), `src/quantum/quantum_core.py`, `quantum_engine.py`, `quantum_inference.py`; `src/deepmind/planning.py`, `mcts.py`, `world_model.py`, `gemini_multimodal.py`; router registered in `api.py` (`app.include_router(_thinktank_router)`, line 910) |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `src/quantum/` (`quantum_engine.py` 267 lines, `quantum_core.py`, `quantum_inference.py`, `routes.py`) and `src/deepmind/` (`planning.py` 580 lines, `world_model.py` 332 lines, `mcts.py` 311 lines, `gemini_multimodal.py`)
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `src/quantum/routes.py` and `src/deepmind/planning.py` directly,
+> plus grep-verified import analysis of the rest of `src/quantum/` and `src/deepmind/`. Status is
+> owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
+> **Bug found and fixed while authoring this pack:** `POST /thinktank/deepmind/plan` imported
+> `from src.deepmind.planning import PlanningEngine` — **no class named `PlanningEngine` exists
+> anywhere in this codebase.** `planning.py` defines `BeamSearchPlanner`, `ChainOfThoughtReasoner`,
+> and `StrategicPlanner`, none of which are named `PlanningEngine`. This import raised
+> `ImportError` on every single call, caught by the route's own `except Exception`, meaning
+> **this endpoint always returned an error response, 100% of the time, regardless of input** —
+> a genuine, fully-broken endpoint, not a partial degradation. Compounding the bug: even had the
+> import succeeded, the code called `engine.plan(problem, depth=depth)` without `await`, and
+> `StrategicPlanner`'s real entry point (`plan_action`) is `async def` with a `(goal, state,
+> constraints)` signature — `depth` isn't a valid parameter. Fixed by switching to the real
+> `StrategicPlanner`/`PlanningConfig` classes, calling `await engine.plan_action(problem,
+> state={}, constraints=[])`, and passing `depth` through as `PlanningConfig(horizon=depth)`.
+> Verified the fix compiles and lints cleanly; full runtime verification blocked in this session
+> by `torch` (a real, declared `requirements.txt` dependency) not being installed in this
+> sandbox — `src/deepmind/__init__.py` eagerly imports `world_model.py`, which requires `torch`,
+> as a side effect of importing anything from the `deepmind` package at all.
+> **Major finding: most of Think Tank's code is orphaned from the live `/thinktank/*` API.** Of
+> the ~2,187 lines across `src/quantum/*` and `src/deepmind/*`, only `quantum_simulate()` (uses
+> `qiskit`/`qiskit_aer` directly, not `quantum_core.py`) and the now-fixed `deepmind_plan()` (uses
+> `planning.py`) are reachable from `routes.py`. `quantum_core.py`, `quantum_engine.py`,
+> `quantum_inference.py`, `mcts.py`, `world_model.py`, and `gemini_multimodal.py` (6 of 8 files,
+> ~1,740 lines) are referenced only from `src/dependencies.py` (a DI container never imported by
+> `api.py`) and `src/main_enhanced.py` (an alternate entrypoint not used by the live app,
+> `Makefile`, or any Procfile) — the same "real code, zero live wiring" pattern documented for
+> Cryptex earlier in this series.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** R&D centre — solutions and forefront-technology research for the platform.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Trancendos — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Trancendos.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** R&D centre merging quantum circuit simulation (Qiskit) and deep-agent planning
+  (beam search / chain-of-thought / MCTS-guided world-model planning) under one HTTP surface.
+- **Owner (RACI-A):** Trancendos; Platform Owner Trancendos.
+- **Scope:** `src/quantum/routes.py`'s two live endpoints only. The bulk of `src/quantum/*` and
+  `src/deepmind/*` (quantum_core, quantum_engine, quantum_inference, MCTS, world model, Gemini
+  multimodal) exists as real code but is not reachable from the live app — see truthfulness
+  header.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Trancendos | Platform Engineering | The Town Hall |
-|---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+### HTTP surface (`src/quantum/routes.py`, prefix `/thinktank`)
 
-## 3. Technology Framework Matrix (TFM)
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/thinktank/status` | `_quantum_status()`/`_deepmind_status()` — **fake health checks**, see below |
+| POST | `/thinktank/quantum/simulate` | Real Qiskit Aer circuit simulation; 503 if qiskit unavailable |
+| POST | `/thinktank/deepmind/plan` | `StrategicPlanner.plan_action()` — fixed in this pass, see truthfulness header |
 
-| Concern | Planned choice | Zero-cost stance | Status |
+### `/thinktank/status` — always reports "available", never actually checks anything
+- `_quantum_status()` and `_deepmind_status()` each wrap a hard-coded return value (`{"quantum_core":
+  "available", ...}`) in a `try/except` whose `try` block contains **no code that can actually
+  fail** — no import, no connectivity probe, nothing. The `except` branch reporting "degraded" is
+  dead code; these functions structurally cannot report anything other than "available". This is
+  a real defect distinct from The Studio's/Cryptex's "flag with no enforcement" pattern — here
+  it's a health probe that cannot ever detect a real outage.
+
+### `/thinktank/quantum/simulate` — real, but `circuit_type` is a dead parameter
+- Genuinely builds and runs a Qiskit `QuantumCircuit` via `AerSimulator`, returning real measurement
+  counts. `qubits`/`shots` from the request body are honored. **`circuit_type` is documented in the
+  route's own docstring (`Body: { qubits, shots, circuit_type }`) but never read from the request
+  body or used anywhere in the function** — every call builds the same hard-coded
+  Hadamard+CNOT-chain circuit regardless of what `circuit_type` value is sent.
+
+### `/thinktank/deepmind/plan` — fixed in this pass
+- See truthfulness header for the full defect and fix. Post-fix, this calls the real
+  `StrategicPlanner.plan_action()`, which itself runs `BeamSearchPlanner` and
+  `ChainOfThoughtReasoner` concurrently via `asyncio.gather` and fuses their outputs — genuine,
+  non-trivial planning logic, now actually reachable.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** stateless route handlers; `StrategicPlanner` is instantiated fresh per request (no
+  module-level singleton, unlike most other entities in this series).
+- **Fixed defect:** `PlanningEngine` import — see truthfulness header.
+- **Not fixed:** the always-"available" health checks in `/thinktank/status` — making them real
+  would mean actually attempting a qiskit import / deepmind import and reporting failure, a
+  small, safe follow-up not made in this pass since it wasn't the primary defect found; flagged
+  for a future pass.
+- **Not fixed:** `circuit_type`'s dead-parameter status — implementing real circuit-type selection
+  is a feature addition, not a bug fix, out of scope for this pass.
+
+## 4. RACI Matrix
+
+| Activity | Trancendos (Lead) | Platform Owner | Platform Engineering |
 |---|---|---|---|
-| Foundation | custom (planned `src/quantum/`, `src/deepmind/`) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+| `/thinktank/*` route logic changes | **R** | A | C |
+| Making `/thinktank/status` a real health probe (future) | **R** | A | C |
+| Wiring the 6 orphaned quantum/deepmind modules into a live path (future) | **R** | A | **R** |
 
-NOTE: this claim is stale — code already exists in this repo for Think Tank (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 5. Solutions Integration Model (SIM)
 
-## 4. Policy (POL)
+- **Upstream:** any caller of `/thinktank/*` — no auth on any route.
+- **Downstream:** `quantum_simulate()` calls real Qiskit Aer; `deepmind_plan()` (post-fix) calls
+  real `StrategicPlanner` logic, which transitively depends on `torch` per `src/deepmind/
+  __init__.py`'s eager import of `world_model.py`.
+- **Not integrated:** `quantum_core.py`, `quantum_engine.py`, `quantum_inference.py`, `mcts.py`,
+  `world_model.py` (beyond the transitive import), `gemini_multimodal.py` — none are called from
+  `routes.py`; only reachable via a DI container and an alternate entrypoint that the live `api.py`
+  app never imports.
 
-- Once implemented, Think Tank MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 6. Architecture Scalability Document (ASD)
 
-## 5. Standards (STD)
+- **Load model:** stateless per-request; no shared state across calls.
+- **Bottleneck:** Qiskit Aer simulation cost scales with `qubits`/`shots`, both caller-controlled
+  with no upper bound enforced in `quantum_simulate()` — a potential resource-exhaustion vector
+  given no auth exists on the route (flagged, not fixed — a rate-limit/auth decision out of scope
+  for this pass).
+- **Zero-cost limits:** Qiskit Aer is OSS/local; `StrategicPlanner`'s `torch` dependency runs
+  locally, no paid inference API involved per this module's own code.
+- **Degradation:** `quantum_simulate()` returns 503 if qiskit isn't installed; `deepmind_plan()`
+  (post-fix) returns a structured error via `safe_error_detail()` on any exception, including a
+  missing `torch` install.
 
-- On implementation, Think Tank MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "Think Tank" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 7. Technology Framework Matrix (TFM)
+
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI `APIRouter` | mounted into the main `api.py` app |
+| Quantum simulation | Qiskit + Qiskit Aer | OSS, local, zero cost |
+| Planning | Beam search + chain-of-thought + (transitively) `torch`-based world model | OSS, local, zero cost |
+
+## 8. Policy (POL)
+
+- No route-level auth on any `/thinktank/*` route — combined with unbounded `qubits`/`shots` on
+  the simulate endpoint, this is a real resource-exhaustion exposure worth prioritizing alongside
+  the auth gaps found elsewhere in this doc-pack series.
+- Zero-cost mandate: both Qiskit and the planning stack run locally with no paid API calls, per
+  code inspection in this pass.
+
+## 9. Procedure (PROC)
+
+- **Run a quantum simulation:** `POST /thinktank/quantum/simulate` with `{"qubits": 3, "shots":
+  1024}` — `circuit_type` is currently ignored.
+- **Generate a plan:** `POST /thinktank/deepmind/plan` with `{"problem": "...", "depth": 3}` —
+  now functional post-fix; requires `torch` to be installed in the runtime environment (declared
+  in `requirements.txt`).
+
+## 10. Runbook (RUN)
+
+- **`/thinktank/deepmind/plan` always returned an error before this pass:** this was the exact
+  bug fixed here (`PlanningEngine` didn't exist) — confirm the fix (import of `StrategicPlanner`/
+  `PlanningConfig`, `await`ed `plan_action()` call) is present in the deployed version if this
+  recurs.
+- **`/thinktank/status` reports "available" during an actual outage:** expected — the health
+  checks are structurally incapable of detecting failure; this is a known, documented gap, not
+  new information to chase.
+- **`deepmind_plan` fails with `ModuleNotFoundError: No module named 'torch'`:** `torch` is a
+  declared `requirements.txt` dependency (`torch==2.12.1`) — ensure it's actually installed in
+  the running environment; this is an install/environment issue, not a code defect.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "Think Tank" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
+- Any route wrapping a call in `try/except` for health-check purposes MUST have code inside the
+  `try` block capable of actually failing (a real import, connectivity probe, or method call) —
+  the always-"available" defect documented here is the reason for this standard.
+- Class names referenced in `import` statements MUST be verified to exist before merging — the
+  `PlanningEngine` defect (a name that never existed anywhere in the codebase) went undetected
+  because the route's own `except Exception` silently absorbed the resulting `ImportError` on
+  every call, masking a 100%-broken endpoint as a "sometimes returns an error" one.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-05 | Claude (session) | `src/quantum/routes.py` (101 lines), `src/deepmind/planning.py` (580 lines), grep-verified import analysis of `src/quantum/quantum_core.py`/`quantum_engine.py`/`quantum_inference.py` and `src/deepmind/mcts.py`/`world_model.py`/`gemini_multimodal.py`, `api.py` router registration (line 910) | Confirmed Live-tier, full pack authored. Found and fixed a genuine, fully-broken endpoint: `POST /thinktank/deepmind/plan` imported a class (`PlanningEngine`) that does not exist anywhere in the codebase, so it always errored; fixed by switching to the real `StrategicPlanner`/`PlanningConfig` API with proper `await`. Verified the fix via `py_compile` and `ruff check` (both clean); full runtime verification blocked by `torch` not being installed in this sandbox (a real, declared dependency — not a code issue). Also found: `/thinktank/status`'s health checks structurally cannot detect failure (always report "available"); `circuit_type` is a dead parameter on the simulate endpoint; and 6 of 8 files in `src/quantum/`+`src/deepmind/` are orphaned from the live app, reachable only via an unused DI container and an unused alternate entrypoint. |

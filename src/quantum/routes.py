@@ -81,16 +81,12 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     Body: { problem: str, depth: int }
     """
     try:
-        from src.deepmind.planning import PlanningEngine
+        from src.deepmind.planning import PlanningConfig, StrategicPlanner
 
-        engine = PlanningEngine()
         problem = body.get("problem", "")
         depth = int(body.get("depth", 3))
-        plan = (
-            engine.plan(problem, depth=depth)
-            if hasattr(engine, "plan")
-            else {"note": "planning engine scaffold — wire problem space to activate"}
-        )
+        engine = StrategicPlanner(PlanningConfig(horizon=depth))
+        plan = await engine.plan_action(problem, state={}, constraints=[])
         return {"problem": problem, "depth": depth, "plan": plan}
     except Exception as exc:
         return {

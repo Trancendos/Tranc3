@@ -52,7 +52,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Warp Tunnel** | ✅ In repo | Rocking Ricki | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-warp-tunnel/` |
 | **Warp Radio** | ✅ In repo | Rocking Ricki | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/warp-radio/` |
 | **The Dutchy** | ✅ In repo | Predictive lore | ✅ **Complete** | `docs/services/the-dutchy/` |
-| **Think Tank** | ✅ In repo | Trancendos | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/think-tank/` |
+| **Think Tank** | ✅ In repo | Trancendos | ✅ **Complete** | `docs/services/think-tank/` |
 | **ChronosSphere / ArcStream** | ✅ In repo | Chronos | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/chronosphere-arcstream/` |
 | **DevOcity** | ✅ In repo | Kitty | ✅ **Complete** | `docs/services/devocity/` |
 | **Tranquility** | ✅ In repo | Savania | ✅ **Complete** | `docs/services/tranquility/` |
@@ -61,12 +61,12 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ✅ **Complete** | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ✅ **Complete** | `docs/services/resonate/` |
 
-**Coverage:** **20 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **21 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
 **The Basement, The Studio, I-Mind, The Library, The Lab, The Artifactory, Cryptex, The Dutchy,
-DevOcity, Tranquility, tAimra, VRAR3D, Resonate**). The other **17 Live-tier (`✅`) entities are
-charter-only, not full-pack-complete** — 4 as a documented §2.1 exception (deployed CF Workers
-with no source in this repo) and **13 as an outstanding gap**: Think Tank, API Marketplace
+DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think Tank**). The other **16 Live-tier (`✅`)
+entities are charter-only, not full-pack-complete** — 4 as a documented §2.1 exception (deployed
+CF Workers with no source in this repo) and **12 as an outstanding gap**: API Marketplace
 (router-mounted in `api.py`), plus The Academy, Sashas Photo Studio, TranceFlow, TateKing,
 Imaginarium, The Warp Tunnel, Warp Radio, DocUtari, Fabulousa, The Ice Box,
 ChronosSphere/ArcStream (standalone `workers/*/worker.py` deployed via
@@ -76,10 +76,10 @@ Turing's Hub, The Void, Arcadia, The Chaos Party). **0 genuinely Planned-tier en
 all 26 originally-`🔧 Planned` entities have been confirmed to have real, deployable code (a
 Gemini Code Assist review on this PR caught the last 5 via non-obvious worker naming: `apimarket`,
 `files-service`/`storage-service`, `fabulousa-service`, `ice-box-service`, `cron-service`).
-**43 / 43 entities have a doc-pack**, but 17 of those packs do not yet match the tier their status
-requires · 13 of the 26 corrected entities (The Basement, The Studio, I-Mind, The Library, The
-Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, tAimra, VRAR3D, Resonate) have
-now received a real Live-tier rewrite · rollout order per framework §6.
+**43 / 43 entities have a doc-pack**, but 16 of those packs do not yet match the tier their status
+requires · 14 of the 26 corrected entities (The Basement, The Studio, I-Mind, The Library, The
+Lab, The Artifactory, Cryptex, The Dutchy, DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think
+Tank) have now received a real Live-tier rewrite · rollout order per framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
 > Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
@@ -145,6 +145,7 @@ now received a real Live-tier rewrite · rollout order per framework §6.
 | 2026-07-05 | Added tAimra pack, code-grounded against `src/taimra/digital_twin.py` (165 lines) and `routes.py` (74 lines). Verified the twin lifecycle state machine (OFFLINE→LEARNING→ACTIVE, offline-by-default no-op behavior) is real and correctly implemented. Major finding, documented not fixed: **no auth on any route — including export and delete of another user's digital twin** — and the module's own stated privacy guarantee ("the twin never infers or stores sensitive I-Mind flagged content") has zero enforcement in code, since no I-Mind import or call exists anywhere in this module (unlike Tranquility's genuine I-Mind integration, found in the prior entry in this same batch). Also noted a dead `TwinStatus.PAUSED` enum member never assigned anywhere. Promoted from Mis-tiered to Complete (18/37 full Live-tier packs). 15 entities remain in the outstanding gap. |
 | 2026-07-05 | Added VRAR3D pack, code-grounded against `src/vrar3d/wellbeing_centre.py` (237 lines) and `routes.py` (76 lines). Major finding: `CLAUDE.md`'s "standalone 3D/VR immersion" entity description is broader than the actual code, which implements a wellbeing-scene library specifically (meditation/breathing/nature/focus/sleep/crisis-calm) per the module's own filename and header — flagged as a scope mismatch, not silently reconciled. Confirmed the module's claimed Tranquility/Resonate/I-Mind integrations are unimplemented: `recommend_scene()` takes a caller-supplied `sensitivity_level` string rather than calling I-Mind itself, and no code path in the repo currently supplies a real "critical" value. Also found all 6 seed scenes have an unset `aframe_url` — the catalogue currently has no renderable WebXR content wired up. Promoted from Mis-tiered to Complete (19/37 full Live-tier packs). 14 entities remain in the outstanding gap. |
 | 2026-07-05 | Added Resonate pack, code-grounded against `src/resonate/empathy.py` (119 lines) and `routes.py` (41 lines). Verified `wrap_response()` is real, correct, deterministic empathy-framing logic. **Most safety-relevant finding across this doc-pack batch:** `escalate_to_human()` returns a user-facing message claiming "A support team member has been notified" when **no notification transport exists anywhere in this repo** — only a best-effort Observatory event and a log line occur. Flagged for prioritized correction rather than merely documented as a routine gap, since a false "you've been helped" claim in a crisis-support context is more serious than the platform's other unenforced-flag findings (The Studio, I-Mind). Also confirmed, matching I-Mind's own pattern: no caller of this module was found in the real inference pipeline. Promoted from Mis-tiered to Complete (20/37 full Live-tier packs). 13 entities remain in the outstanding gap. |
+| 2026-07-05 | Added Think Tank pack, code-grounded against `src/quantum/routes.py` (101 lines) and `src/deepmind/planning.py` (580 lines), plus import analysis of the module's other 6 files. Found and fixed a fully-broken endpoint: `POST /thinktank/deepmind/plan` imported `PlanningEngine`, a class that **does not exist anywhere in the codebase** — the endpoint always errored, on every call, silently masked by its own `except Exception`. Fixed by switching to the real `StrategicPlanner`/`PlanningConfig` API with a proper `await`. Verified via `py_compile`/`ruff check` (clean); full runtime verification blocked by `torch` (a real, declared dependency) not being installed in this sandbox. Also documented: `/thinktank/status`'s health checks structurally cannot detect failure (always report "available"); `circuit_type` is a dead parameter on the quantum-simulate endpoint; and 6 of 8 files across `src/quantum/`+`src/deepmind/` are orphaned from the live app (same pattern as Cryptex earlier in this series), reachable only via an unused DI container and an unused alternate entrypoint. Promoted from Mis-tiered to Complete (21/37 full Live-tier packs). 12 entities remain in the outstanding gap. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
