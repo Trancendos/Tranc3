@@ -4,84 +4,186 @@
 |---|---|
 | **Entity** | The Artifactory |
 | **Lead AI** | Lunascene |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | Gitea packages / Zot (`project-zot/zot`) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `src/artifactory/registry.py`, `src/artifactory/routes.py`; router registered in `api.py` (`app.include_router(_artifactory_router)`, line 871) — **plus a separate standalone worker**, `workers/artifactory-service/worker.py` (real Zot OCI registry bridge, port 8047) |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `src/artifactory/` + `workers/artifactory-service/worker.py`
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `src/artifactory/registry.py`, `src/artifactory/routes.py`, and
+> `workers/artifactory-service/worker.py` directly. Status is owned by the `CLAUDE.md` service
+> table; identity by `PLATFORM_ENTITIES.md`.
+> **Scope note (established pattern):** The Artifactory has **two independent implementations**
+> — the `src/artifactory/` module mounted into the main `api.py` app (documented below in full:
+> a pure in-memory metadata registry with **no call to Zot, Gitea, or any binary storage
+> backend**), and a separate standalone `workers/artifactory-service/worker.py` that **does**
+> make real Zot v2 API calls (catalog listing, tag listing, SSRF-guarded path validation) with a
+> Gitea-then-local-filesystem fallback chain. The two do not call each other.
+> **Bug found and fixed while authoring this pack:** `workers/artifactory-service/` had **no
+> Dockerfile at all** — `docker-compose.production.yml` references `dockerfile: Dockerfile` for
+> its build context, but the directory contained only `worker.py`, `requirements.txt`, and a
+> `__pycache__` directory. `docker compose build artifactory-service` would fail outright; the
+> service could not be built or deployed via the documented production stack. Fixed by adding a
+> Dockerfile matching the convention used by comparable single-file workers (`python:3.12-slim`,
+> non-root user, port 8047 matching `WORKER_PORT = int(os.getenv("PORT", "8047"))` in
+> `worker.py` and compose's `PORT=8047`/`8047:8047`/Traefik routing).
+> **Broader gap found, not fixed (out of scope for this pass):** the same missing-Dockerfile
+> defect exists in **8 other** `workers/*/` directories referenced by
+> `docker-compose.production.yml`: `backup-service`, `cranbania` (git submodule — may be
+> intentional), `fabulousa-service`, `ice-box-service`, `litellm-service`, `queue-service-go`,
+> `rate-limit-service-go` (the last two are Go services requiring a different Dockerfile
+> template — not verified in this pass), and `the-void` (ambiguous — may be Cloudflare-Worker-only
+> per `CLAUDE.md`'s "migrating to self-hosted" note, not necessarily meant to have a container
+> Dockerfile). This pack fixes only `artifactory-service`'s instance, in scope for this entity;
+> the other 8 are flagged here as a real, previously-undocumented platform-wide gap for a
+> dedicated follow-up pass — fixing 8 Dockerfiles across two languages and a submodule without
+> individually verifying each one's runtime would risk introducing new defects.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** central artifact repository library for build outputs, containers, and packages.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Lunascene — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Lunascene.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** central artifact repository — tracks build outputs, container images, packages,
+  and ML model weights with versioning and TTL-based retention.
+- **Owner (RACI-A):** Lunascene; Platform Owner Trancendos.
+- **Scope:** `src/artifactory/*` provides artifact/version metadata CRUD and retention-policy
+  application only — no binary storage of its own. The standalone `workers/artifactory-service/`
+  worker bridges to the real Zot OCI registry (with Gitea/filesystem fallback) for actual
+  repository/tag listing.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Lunascene | Platform Engineering | The Town Hall |
+### HTTP surface (`src/artifactory/routes.py`, prefix `/artifactory`)
+
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/artifactory/status` | `TheArtifactory.stats()` — total artifacts/versions, by-type counts |
+| GET | `/artifactory/artifacts` | `TheArtifactory.list_artifacts()` — optional `type`/`namespace` filters; 400 on unknown type |
+| POST | `/artifactory/artifacts` | `TheArtifactory.create_artifact()` — body `{"name", "type", "namespace", "description", "ttl_days"}`; 400 if `name` missing or `type` unknown |
+| GET | `/artifactory/artifacts/{id}` | `TheArtifactory.get_artifact()` — 404 `JSONResponse` if missing; only endpoint returning full version list |
+| POST | `/artifactory/artifacts/{id}/versions` | `TheArtifactory.push_version()` — body `{"version", "digest", "size_bytes", "tags", "metadata"}`; 400 if `version` missing, 404 if artifact missing/deleted |
+| DELETE | `/artifactory/artifacts/{id}` | `TheArtifactory.delete_artifact()` — soft-delete (sets status to `DELETED`, not removed from the dict) |
+| POST | `/artifactory/retention/apply` | `TheArtifactory.apply_retention()` — manually triggered only, not scheduled/cron |
+
+### Data model (`registry.py`)
+- `ArtifactType` enum: docker/python/npm/model/generic/cloudflare.
+- `ArtifactStatus` enum: available/uploading/deleted/expired — `UPLOADING` and `EXPIRED` are
+  defined but never set anywhere in `registry.py` (dead enum members, no upload-progress or
+  auto-expiry code path exists).
+- `Artifact`: `id` (uuid4), `name`, `namespace` (default `"trancendos"`), `artifact_type`,
+  `status`, `versions` (`List[ArtifactVersion]`), `description`, `ttl_days` (`None` = retain
+  forever).
+- `ArtifactVersion`: `version`, `digest`, `size_bytes`, `created_at`, `tags`, `metadata` — all
+  caller-supplied on `push_version()`; **no actual bytes are ever uploaded or stored** — `digest`
+  and `size_bytes` are metadata fields trusted from the request body, not computed from real
+  content.
+- Seeded on startup with 6 hard-coded platform artifact records (tranc3-backend,
+  tranc3-bots, tranc3-engine, tranc3-ai-worker, infinity-void-worker, trancendos-api-gateway) —
+  metadata placeholders only, no real versions pushed.
+
+### `apply_retention()` — TTL-based version pruning
+- Iterates all artifacts with a non-`None` `ttl_days`, removes versions older than
+  `ttl_days * 86400` seconds. Only runs when `POST /artifactory/retention/apply` is called
+  manually — no scheduled/cron trigger exists in this module.
+
+### Standalone worker (`workers/artifactory-service/worker.py`) — real Zot bridge
+- Makes actual HTTP calls to a Zot OCI registry (`/v2/_catalog`, tag listing) via
+  `_zot_get()`/`_zot_list_tags()`, with SSRF-guarded path validation (`_validate_zot_path()`
+  restricts calls to known-safe path prefixes).
+- Falls back to Gitea packages API, then local filesystem scan, when Zot is unreachable.
+- Exposes a `/health` route reporting `zot_reachable` — a real connectivity probe, unlike
+  `src/artifactory/*`'s `/status` which only reports in-memory metadata counts.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style (`src/artifactory/*` API path):** in-process module with a module-level singleton
+  (`get_artifactory()`); in-memory dict storage, no persistence, no external DB, no Zot/Gitea
+  call. The separate `workers/artifactory-service/` worker makes the real registry calls — see
+  scope note above.
+- **Decision: metadata layer ahead of storage backend.** `registry.py`'s own module header states
+  "This scaffold tracks artefact metadata. Actual binary storage delegates to Zot OCI registry or
+  local filesystem" — an honest, self-declared scaffold, consistent with what the code actually
+  does.
+- **Fixed defect:** `workers/artifactory-service/` had no Dockerfile at all, so it could not be
+  built via `docker compose build` — see truthfulness header. Fixed by adding one matching the
+  established single-file-worker convention.
+- **Documented, not fixed:** the same missing-Dockerfile defect exists in 8 other worker
+  directories — see truthfulness header for the full list and rationale for scoping the fix to
+  this entity only.
+
+## 4. RACI Matrix
+
+| Activity | Lunascene (Lead) | Platform Owner | Platform Engineering | The Workshop |
 |---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+| Artifact/version metadata CRUD changes | **R** | A | C | I |
+| Zot/Gitea bridge changes (`workers/artifactory-service/`) | **R** | A | **R** | C |
+| Retention policy scheduling (currently manual-only) | C | **A** | **R** | I |
 
-## 3. Technology Framework Matrix (TFM)
+## 5. Solutions Integration Model (SIM)
 
-| Concern | Planned choice | Zero-cost stance | Status |
-|---|---|---|---|
-| Foundation | Gitea packages / Zot (`project-zot/zot`) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+- **Upstream:** any caller of `/artifactory/*` routes — no auth on any route in
+  `src/artifactory/routes.py`. The standalone worker's routes were not audited for auth in this
+  pass (out of the in-depth scope for this pack).
+- **Downstream:** best-effort Observatory `observe()` call on artifact-create and version-push,
+  wrapped in bare `except Exception: pass` (`# nosec B110`).
+- **Not integrated:** `src/artifactory/*` never calls the standalone `workers/artifactory-service/`
+  worker, Zot, or Gitea — the "artifact repository" described in this entity's mission is real
+  only in the standalone worker; the API-mounted path is metadata bookkeeping only.
 
-NOTE: this claim is stale — code already exists in this repo for The Artifactory (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 6. Architecture Scalability Document (ASD)
 
-## 4. Policy (POL)
+- **Load model:** in-memory dict store (`_artifacts`), no cap defined — unbounded growth, no
+  eviction beyond manually-triggered `apply_retention()`.
+- **Bottleneck:** single-process, no persistence; a restart loses all artifact/version metadata
+  except the 6 hard-coded seed records.
+- **Zero-cost limits:** `src/artifactory/*` has no external dependency; the standalone worker
+  targets Zot (self-hosted OCI registry, zero-cost) with Gitea/filesystem fallback.
+- **Degradation:** Observatory emission failures don't block the CRUD response.
 
-- Once implemented, The Artifactory MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 7. Technology Framework Matrix (TFM)
 
-## 5. Standards (STD)
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI `APIRouter` (`src/artifactory/*`) / FastAPI app (`workers/artifactory-service/`) | mounted / standalone respectively |
+| Metadata storage | in-memory `dict` (`src/artifactory/*`), no persistence | zero infra cost, no durability |
+| Binary storage | Zot OCI registry (self-hosted) → Gitea packages → local filesystem | OSS, self-hosted, zero-cost fallback chain |
 
-- On implementation, The Artifactory MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "The Artifactory" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 8. Policy (POL)
+
+- No route-level auth on `src/artifactory/*` routes — see SIM §5.
+- Any Dockerfile-less worker directory referenced by `docker-compose.production.yml` MUST be
+  treated as a build-breaking defect, not a cosmetic gap — see the broader-gap note in the
+  truthfulness header; a follow-up pass should audit and fix the remaining 8.
+
+## 9. Procedure (PROC)
+
+- **Register an artifact:** `POST /artifactory/artifacts` with `{"name": "...", "type":
+  "docker", "description": "..."}` — creates a metadata record only, does not upload any bytes.
+- **Push a version:** `POST /artifactory/artifacts/{id}/versions` with `{"version": "1.0.0",
+  "digest": "sha256:...", "size_bytes": 1234}` — `digest`/`size_bytes` are trusted caller input,
+  not computed from real content.
+- **Apply retention:** `POST /artifactory/retention/apply` — must be called manually or by an
+  external scheduler; nothing in this repo triggers it automatically.
+- **Query the real registry:** use `workers/artifactory-service/`'s `/repositories` and
+  `/repositories/{repo}/tags` endpoints, which proxy to the actual Zot instance.
+
+## 10. Runbook (RUN)
+
+- **Artifact metadata disappears after a restart:** expected — `src/artifactory/*` has no
+  persistence; only the 6 seed records reappear.
+- **`workers/artifactory-service` fails to build:** was a genuine missing-Dockerfile defect —
+  fixed in this pass; confirm `workers/artifactory-service/Dockerfile` exists in the deployed
+  checkout if this recurs. Check the other 8 flagged directories (truthfulness header) for the
+  same class of failure if their builds fail too.
+- **`push_version()` accepted a bogus digest:** expected — `src/artifactory/*` never validates
+  `digest`/`size_bytes` against real content; this module is metadata-only by design.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "The Artifactory" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
+- Every service referenced in `docker-compose.production.yml` with a `build: { dockerfile:
+  Dockerfile }` block MUST have a corresponding `Dockerfile` in its build context — a missing
+  Dockerfile is a build-breaking defect, not a documentation gap. The defect fixed here is the
+  reason for this standard; the 8 remaining instances are tracked as a known gap pending a
+  dedicated follow-up.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-05 | Claude (session) | `src/artifactory/registry.py` (256 lines), `src/artifactory/routes.py` (100 lines), `api.py` router registration (line 871), `workers/artifactory-service/worker.py`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine build-breaking defect: `workers/artifactory-service/` had no Dockerfile despite being referenced by compose's build block. Also discovered, and explicitly flagged rather than rushed-fixed, the same defect in 8 other worker directories across the repo (2 Go services, 1 submodule, 1 ambiguous CF-vs-container case, 4 plain Python workers) — a real, previously undocumented platform-wide gap. |

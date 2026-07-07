@@ -45,7 +45,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **Fabulousa** | ✅ In repo | Baron Von Hilton | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/fabulousa/` |
 | **Imaginarium** | ✅ In repo | Voxx | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/imaginarium/` |
 | **The Lab** | ✅ In repo | The Dr. & Slime | ✅ **Complete** | `docs/services/the-lab/` |
-| **The Artifactory** | ✅ In repo | Lunascene | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-artifactory/` |
+| **The Artifactory** | ✅ In repo | Lunascene | ✅ **Complete** | `docs/services/the-artifactory/` |
 | **API Marketplace** | ✅ In repo | Solarscene | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/api-marketplace/` |
 | **Cryptex** | ✅ In repo | Renik | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/cryptex/` |
 | **The Ice Box** | ✅ In repo | Neonach | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/the-ice-box/` |
@@ -61,11 +61,11 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ⚠️ **Mis-tiered** (charter-only, needs Live-tier upgrade) | `docs/services/resonate/` |
 
-**Coverage:** **12 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **13 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
-**The Basement, The Studio, I-Mind, The Library, The Lab**). The other **25 Live-tier (`✅`)
-entities are charter-only, not full-pack-complete** — 4 as a documented §2.1 exception (deployed
-CF Workers with no source in this repo) and **21 as an outstanding gap**: The Artifactory,
+**The Basement, The Studio, I-Mind, The Library, The Lab, The Artifactory**). The other **24
+Live-tier (`✅`) entities are charter-only, not full-pack-complete** — 4 as a documented §2.1
+exception (deployed CF Workers with no source in this repo) and **20 as an outstanding gap**:
 Cryptex, The Dutchy, DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace
 (router-mounted in `api.py`), plus The Academy, Sashas Photo Studio, TranceFlow, TateKing,
 Imaginarium, The Warp Tunnel, Warp Radio, DocUtari, Fabulousa, The Ice Box,
@@ -76,9 +76,9 @@ Turing's Hub, The Void, Arcadia, The Chaos Party). **0 genuinely Planned-tier en
 all 26 originally-`🔧 Planned` entities have been confirmed to have real, deployable code (a
 Gemini Code Assist review on this PR caught the last 5 via non-obvious worker naming: `apimarket`,
 `files-service`/`storage-service`, `fabulousa-service`, `ice-box-service`, `cron-service`).
-**43 / 43 entities have a doc-pack**, but 25 of those packs do not yet match the tier their status
-requires · 5 of the 26 corrected entities (The Basement, The Studio, I-Mind, The Library, The Lab)
-have now received a real Live-tier rewrite · rollout order per framework §6.
+**43 / 43 entities have a doc-pack**, but 24 of those packs do not yet match the tier their status
+requires · 6 of the 26 corrected entities (The Basement, The Studio, I-Mind, The Library, The Lab,
+The Artifactory) have now received a real Live-tier rewrite · rollout order per framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
 > Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
@@ -136,6 +136,7 @@ have now received a real Live-tier rewrite · rollout order per framework §6.
 | 2026-07-05 | Added I-Mind pack, code-grounded against `src/imind/protocol.py` (169 lines) and `routes.py` (28 lines). While grounding the pack, found and fixed a genuine safety-relevant bug: the self-harm severity-escalation guard compared `SensitivityLevel` string enum values with `<` (`level.value < SensitivityLevel.HIGH.value`), which is lexical string comparison, not severity ordering — since `"none" > "high"` alphabetically, the guard was always false and self-harm detections never escalated past `NONE`. Fixed by removing the faulty guard (the branch only runs when level is still `NONE`). A follow-up Gemini Code Assist review (PR #203) caught a second, deeper defect: the crisis-detection loop scanned all of `_CRISIS_PATTERNS` (including the self-harm patterns), making the self-harm branch unreachable regardless of the first fix — fixed by scoping the crisis check to `_CRISIS_PATTERNS[0]` only, and added `tests/test_imind.py` (previously untested). Also flagged, unfixed: no confirmed caller of `IMind.assess()` from the inference pipeline was found — routable but integration into the real chat flow is unverified. Promoted from Mis-tiered to Complete (10/37 full Live-tier packs). 23 entities remain in the outstanding gap. |
 | 2026-07-05 | Added The Library pack, code-grounded against `src/library/knowledge_base.py` (277 lines), `routes.py` (62 lines), `src/observability/library_pipeline.py`, and `workers/library-service/`. Found and fixed a genuine production defect: `workers/library-service/Dockerfile` hardcoded port 8053 (EXPOSE/HEALTHCHECK/CMD) while `docker-compose.production.yml` routed the service to 8067 — since the Dockerfile CMD's `--port` flag overrides the `LIBRARY_PORT` env var, the container was unreachable at its compose-routed port; fixed by aligning the Dockerfile and `config.py`'s default to 8067. Also documented (not fixed, architectural): the Observatory→Library pipeline is dead code (`ingest()` is never called, and its target `/kb/ingest` endpoint doesn't exist on either implementation); the RAG/FAISS and Outline-sync integrations claimed in source comments aren't implemented in `src/library/*`; `Library.update()` has no HTTP route. Promoted from Mis-tiered to Complete (11/37 full Live-tier packs). 22 entities remain in the outstanding gap. |
 | 2026-07-05 | Added The Lab pack, code-grounded against `src/lab/code_lab.py` (203 lines), `routes.py` (111 lines), and its two separate standalone workers (`workers/the-lab/`, `workers/lab-service/`). Found and fixed the same class of production defect as The Library's: `workers/lab-service/Dockerfile` hardcoded port 8039 while compose routed to 8066 — fixed by aligning the Dockerfile and `config.py`'s default to 8066. Also documented a significant, code-grounded finding: `src/lab/*` has no AI-generation call anywhere despite its own docstring claiming delegation to Tranc3Engine/Ollama/OpenRouter/Spark MCP — it is a pure session/message/artifact CRUD layer; real code generation (`workers/lab-service/`) and sandboxed execution (`workers/the-lab/`) live in two entirely separate workers that never call into `src/lab/*`. Promoted from Mis-tiered to Complete (12/37 full Live-tier packs). 21 entities remain in the outstanding gap. |
+| 2026-07-05 | Added The Artifactory pack, code-grounded against `src/artifactory/registry.py` (256 lines), `routes.py` (100 lines), and `workers/artifactory-service/worker.py`. Found and fixed a genuine build-breaking defect: `workers/artifactory-service/` had **no Dockerfile at all** despite compose referencing one — `docker compose build` would fail outright. Fixed by adding a Dockerfile matching the established single-file-worker convention. Discovered, and explicitly flagged rather than rushed-fixed, the same missing-Dockerfile defect in **8 other** worker directories (`backup-service`, `cranbania`, `fabulousa-service`, `ice-box-service`, `litellm-service`, `queue-service-go`, `rate-limit-service-go`, `the-void`) — a real, previously undocumented platform-wide gap, tracked for a dedicated follow-up pass rather than rushed here (2 are Go services, 1 is a submodule, 1 is CF-worker-ambiguous). Promoted from Mis-tiered to Complete (13/37 full Live-tier packs). 20 entities remain in the outstanding gap. |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault
