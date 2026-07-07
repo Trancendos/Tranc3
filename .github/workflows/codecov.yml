@@ -20,7 +20,9 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements-test.txt || pip install pytest pytest-cov || true
+        run: |
+          pip install -r requirements.txt || true
+          pip install -r requirements-test.txt || pip install pytest pytest-cov || true
 
       - name: Run tests with coverage
         run: |
