@@ -289,7 +289,7 @@ const PLANNED_SERVICES: ServiceDef[] = [
     leadAI: 'Magdalena',
     description: 'Empathy engine — scores and rewrites text for maximum empathetic resonance.',
     path: '/resonate',
-    port: 8064,
+    port: 8076,
     icon: '💜',
     profile: 'resonate',
     tier: 'planned',
