@@ -1,4 +1,4 @@
-"""Imaginarium — Port 8054.
+"""Imaginarium — Port 8064.
 
 Omni-creative masterpiece wizard (orchestrates Studio, TateKing, TranceFlow, Photo).
 """
@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Imaginarium", version="1.0.0")
 
-PORT = int(os.getenv("PORT", "8054"))
+PORT = int(os.getenv("PORT", "8064"))
 START_TIME = time.time()
 
 CAPABILITIES = [

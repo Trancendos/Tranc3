@@ -2923,6 +2923,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.imaginarium.rule=PathPrefix(`/imaginarium`)"
       - "traefik.http.routers.imaginarium.entrypoints=websecure"
+      - "traefik.http.routers.imaginarium.middlewares=strip-imaginarium@docker"
+      - "traefik.http.middlewares.strip-imaginarium.stripprefix.prefixes=/imaginarium"
       - "traefik.http.services.imaginarium.loadbalancer.server.port=8064"
 
   # ── TateKing — video creation / editing (Port 8066) ──────────────────────────────────────────────
