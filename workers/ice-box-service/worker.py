@@ -52,6 +52,7 @@ def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
     if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden")
 
+
 app = FastAPI(
     title="The Ice Box",
     description="Threat Isolation & Static Analysis Engine — Neonach",
