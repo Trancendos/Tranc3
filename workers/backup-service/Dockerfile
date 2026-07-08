@@ -17,6 +17,8 @@ COPY workers/backup-service/worker.py worker.py
 COPY src/__init__.py src/__init__.py
 COPY src/backup/ src/backup/
 COPY src/entities/ src/entities/
+COPY src/database/ src/database/
+COPY src/observability/ src/observability/
 
 RUN mkdir -p /app/data && chown -R worker:worker /app
 

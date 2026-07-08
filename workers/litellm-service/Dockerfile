@@ -9,6 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY worker.py .
 
+RUN mkdir -p /app/data && chown -R litellm:litellm /app
+
 USER litellm
 
 EXPOSE 8049

@@ -107,7 +107,7 @@ class ReleaseRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/scan", response_model=ScanResponse)
+@app.post("/scan", response_model=ScanResponse, dependencies=[Depends(_require_internal_auth)])
 def scan(req: ScanRequest):
     if req.auto_quarantine:
         result = _tunnel.scan(req.content, source=req.source)

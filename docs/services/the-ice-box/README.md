@@ -55,8 +55,11 @@
 > /quarantine/{id}/release` had zero authentication, allowing any caller to release
 > potentially-malicious content and spoof `reviewed_by`. Fixed by adding an
 > `INTERNAL_SECRET`-gated `_require_internal_auth()` dependency to that route, matching
-> `storage-service`'s optional-auth pattern (no-op if unset, enforced once configured). `POST
-> /scan` and the GET routes remain open by design.
+> `storage-service`'s optional-auth pattern (no-op if unset, enforced once configured). A
+> follow-up review flagged (P2) that `POST /scan` was still open, letting any caller trigger
+> persistent SQLite writes via `auto_quarantine=true` (a DoS/data-pollution vector) — the same
+> auth dependency was added to `/scan` too, for consistency. Both remain open until an operator
+> sets `INTERNAL_SECRET`; the GET routes remain open by design.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -84,7 +87,7 @@
 
 | Method | Path | Auth | Behaviour |
 |---|---|---|---|
-| POST | `/scan` | none | analyse `content`; if `auto_quarantine=true` (default), routes through `WarpTunnel.scan()` (which itself calls `ThreatAnalyser` + `QuarantineStore` internally) |
+| POST | `/scan` | `X-Internal-Secret`* | analyse `content`; if `auto_quarantine=true` (default), routes through `WarpTunnel.scan()` (which itself calls `ThreatAnalyser` + `QuarantineStore` internally) |
 | GET | `/quarantine` | none | list active (non-released) quarantine records, paginated via `limit` |
 | GET | `/quarantine/{quarantine_id}` | none | single record incl. findings JSON, entropy, release metadata |
 | POST | `/quarantine/{quarantine_id}/release` | `X-Internal-Secret`* | mark released with `reason`/`reviewed_by` (both free-text, unvalidated) |
@@ -92,10 +95,10 @@
 | GET | `/health` | none | liveness + signature count + uptime |
 
 \* Enforced only if `INTERNAL_SECRET` is set — currently unset in compose/`.env.example`, so
-the release route remains open until an operator configures a secret (see truthfulness
-header). `reviewed_by` is still free-text and unvalidated even once auth is enforced — the
-secret authenticates the *caller*, not the claimed reviewer identity. `POST /scan` and the GET
-routes have no auth by design.
+both `POST /scan` and the release route remain open until an operator configures a secret (see
+truthfulness header). `reviewed_by` is still free-text and unvalidated even once auth is
+enforced — the secret authenticates the *caller*, not the claimed reviewer identity. GET routes
+have no auth by design.
 
 ## 3. Technical Architecture & Solution Design (TASD)
 

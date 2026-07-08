@@ -38,4 +38,4 @@ async def escalate(
     body: Dict[str, Any] = Body(...),
 ) -> Dict[str, Any]:
     context: str = body.get("context", "")
-    return get_resonate().escalate_to_human(user_id=user_id, context=context)
+    return await get_resonate().escalate_to_human(user_id=user_id, context=context)
