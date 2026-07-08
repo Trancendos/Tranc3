@@ -33,7 +33,7 @@ try:
 except ImportError:
     yaml = None  # type: ignore
 
-WORKER_PORT = int(os.environ.get("SWARM_COORDINATOR_PORT", "8053"))
+WORKER_PORT = int(os.environ.get("PORT") or os.environ.get("SWARM_COORDINATOR_PORT", "8109"))
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 WORKER_NAME = "swarm-coordinator"
 ROOT = Path(__file__).resolve().parents[2]

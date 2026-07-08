@@ -3576,8 +3576,8 @@ services:
   # ── Swarm Coordinator — agent swarm management (Port 8053) ──────────────────────────────────────────────
   swarm-coordinator-service:
     build:
-      context: ./workers/swarm-coordinator-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/swarm-coordinator-service/Dockerfile
     container_name: tranc3-swarm-coordinator-service
     <<: *worker-common
     environment:
@@ -3593,6 +3593,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.swarm-coordinator-service.rule=PathPrefix(`/swarm-coordinator`)"
       - "traefik.http.routers.swarm-coordinator-service.entrypoints=websecure"
+      - "traefik.http.routers.swarm-coordinator-service.middlewares=strip-swarm-coordinator@docker"
+      - "traefik.http.middlewares.strip-swarm-coordinator.stripprefix.prefixes=/swarm-coordinator"
       - "traefik.http.services.swarm-coordinator-service.loadbalancer.server.port=8109"
 
   # ── The HIVE — task queue / agent coordination (Port 8051) ──────────────────────────────────────────────
