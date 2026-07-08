@@ -3444,8 +3444,8 @@ services:
   # ── Backup Service — automated data backup (Port 8039) ──────────────────────────────────────────────
   backup-service:
     build:
-      context: ./workers/backup-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/backup-service/Dockerfile
     container_name: tranc3-backup-service
     <<: *worker-common
     environment:
