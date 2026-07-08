@@ -9,14 +9,13 @@
 
 > **Truthfulness:** claims cite `src/tranquility/wellbeing.py` and `src/tranquility/routes.py`
 > directly. Status is owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
-> **No auth on user wellbeing data — a materially sensitive gap.** Every route in
-> `src/tranquility/routes.py` — including `GET /tranquility/export/{user_id}` (full mood-entry
-> export) and `DELETE /tranquility/data/{user_id}` — takes `user_id` as a raw path parameter with
-> **zero verification that the caller is that user or an authorized admin.** Any caller who knows
-> or guesses a `user_id` string can read or delete another user's full mood-tracking history. This
-> is more consequential here than most no-auth findings in this series, since the module's own
-> header explicitly claims this data is "governed by Magna Carta + I-Mind protocols" — the
-> data-sensitivity intent is stated, but the access control to back it is absent.
+> **Fixed:** every route in `src/tranquility/routes.py` taking a `user_id` path parameter now
+> requires `Depends(get_current_user)` plus a `_require_self_or_enterprise()` ownership check
+> (mirrors `api.py`'s `gdpr_erase()` pattern) — callers can only act on their own data unless they
+> hold the `enterprise` tier. `GET /tranquility/status` remains intentionally public (no per-user
+> data). This closes the previously-documented gap where any caller who knew a `user_id` could
+> read or delete another user's full mood-tracking history despite the module's own
+> "governed by Magna Carta + I-Mind protocols" claim.
 > **Two of four "Provides" claims in the module header are unimplemented.** "Routes to Resonate
 > for empathy services" and "Burnout pattern detection (overuse signals from tAimra)" appear only
 > as comments — no import of or call to Resonate or tAimra exists anywhere in `wellbeing.py`. The
@@ -42,8 +41,8 @@
 | POST | `/tranquility/message/{user_id}` | `Tranquility.record_message()` — increments session message counter |
 | GET | `/tranquility/break/{user_id}` | `Tranquility.get_break_prompt()` — returns a random mindfulness prompt if a break is due, else `null` |
 | GET | `/tranquility/profile/{user_id}` | Reaches directly into `Tranquility()._profiles` (a private attribute) rather than a public getter — see TASD; 404 `JSONResponse` if no profile exists yet (unlike other routes, does **not** implicitly create one via `get_or_create()`) |
-| GET | `/tranquility/export/{user_id}` | `Tranquility.export_user_data()` — full mood-entry export; **no auth** |
-| DELETE | `/tranquility/data/{user_id}` | `Tranquility.delete_user_data()` — deletes the whole profile; **no auth** |
+| GET | `/tranquility/export/{user_id}` | `Tranquility.export_user_data()` — full mood-entry export; auth-gated, self-or-enterprise |
+| DELETE | `/tranquility/data/{user_id}` | `Tranquility.delete_user_data()` — deletes the whole profile; auth-gated, self-or-enterprise |
 
 ### Mood tracking and break logic (`wellbeing.py`) — real
 - `MoodLevel` int enum (1–5); `log_mood()` clamps out-of-range input to the valid range rather
@@ -78,22 +77,22 @@
   behaviorally inconsistent with the rest of the module: every other route implicitly creates a
   profile via `get_or_create()` on first access, but this one returns 404 instead, since it
   bypasses that method.
-- **Not fixed:** the no-auth export/delete endpoints — adding real per-user auth is an
-  architectural change (would need integration with Infinity's session/JWT layer) out of scope
-  for a docs pass, but flagged as a materially sensitive gap given the data involved.
+- **Fixed:** export/delete (and every other `user_id`-scoped route) now require
+  `Depends(get_current_user)` plus the `_require_self_or_enterprise()` ownership check, matching
+  `api.py`'s `gdpr_erase()` pattern. Covered by `tests/test_tranquility_taimra_auth.py`.
 
 ## 4. RACI Matrix
 
 | Activity | Savania (Lead) | Platform Owner | I-Mind | Platform Engineering |
 |---|---|---|---|---|
 | Mood tracking / break-prompt logic changes | **R** | A | I | C |
-| Wiring real per-user auth on export/delete (future) | C | **A** | I | **R** |
 | Resonate / tAimra integration (future, currently unimplemented) | C | **A** | I | **R** |
 
 ## 5. Solutions Integration Model (SIM)
 
-- **Upstream:** any caller of `/tranquility/*` routes — **no auth on any route**, most notably
-  the export and delete endpoints (see truthfulness header).
+- **Upstream:** any caller of `/tranquility/*` routes except `/status` now requires
+  `Depends(get_current_user)` plus the self-or-enterprise ownership check (see truthfulness
+  header) — closed the previously-documented no-auth gap.
 - **Downstream:** genuinely calls `IMind.assess()` on low/very-low mood entries; best-effort
   Observatory `observe()` on mood-logged events.
 - **Not integrated:** Resonate, tAimra — both named in the module's own mission comment but never
@@ -117,20 +116,21 @@
 
 ## 8. Policy (POL)
 
-- No route-level auth on any `/tranquility/*` route — see SIM §5. Given the module's own
-  "governed by Magna Carta + I-Mind protocols" claim, this is a real compliance gap against that
-  stated intent, not just a generic missing-auth finding.
+- Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-enterprise
+  ownership check — resolves the compliance gap against the module's own "governed by Magna
+  Carta + I-Mind protocols" claim. `GET /status` remains intentionally public.
 - Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
 
 ## 9. Procedure (PROC)
 
-- **Log a mood check-in:** `POST /tranquility/mood/{user_id}` with `{"mood": 1-5, "notes": "...",
-  "tags": [...]}`. A `LOW`/`VERY_LOW` mood triggers an I-Mind assessment automatically.
+- **Log a mood check-in:** `POST /tranquility/mood/{user_id}` (as the same user, or an
+  `enterprise`-tier caller) with `{"mood": 1-5, "notes": "...", "tags": [...]}`. A `LOW`/`VERY_LOW`
+  mood triggers an I-Mind assessment automatically.
 - **Check for a break prompt:** `GET /tranquility/break/{user_id}` — returns `null` unless the
   session has exceeded 90 minutes or 100 messages since the last prompt.
 - **Export or delete a user's data:** `GET /tranquility/export/{user_id}` / `DELETE
-  /tranquility/data/{user_id}` — currently reachable by anyone who knows the `user_id`; no
-  confirmation or ownership check.
+  /tranquility/data/{user_id}` — auth-gated; returns `403` unless the caller is that user or holds
+  the `enterprise` tier.
 
 ## 10. Runbook (RUN)
 
@@ -138,19 +138,19 @@
 - **`GET /tranquility/profile/{user_id}` returns 404 for a user who has logged moods elsewhere:**
   check whether the profile was created via a route that calls `get_or_create()` — the profile
   route itself does not create one; see TASD code-quality note.
-- **Sensitive mood data was exported/deleted by an unexpected caller:** expected given the current
-  no-auth state — see POL §8; this is a genuine security gap, not a misconfiguration.
+- **A caller gets `403` on export/delete:** expected — they are not the target `user_id` and do
+  not hold the `enterprise` tier; see POL §8.
 
 ## 11. Standards (STD)
 
 - Naming: canonical entity name "Tranquility" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any route exposing per-user personal data export or deletion MUST verify caller identity
-  against the `user_id` in the path before this entity can be considered compliant with its own
-  stated Magna Carta/I-Mind governance claim — the gap documented here is the reason for this
-  standard.
+  against the `user_id` in the path — now enforced via `Depends(get_current_user)` +
+  `_require_self_or_enterprise()`, consistent with `api.py`'s `gdpr_erase()`.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/tranquility/wellbeing.py` (179 lines), `src/tranquility/routes.py` (71 lines), `api.py` router registration (line 826) | Confirmed Live-tier, full pack authored. Verified a genuine, working cross-entity integration: `log_mood()` really calls `IMind.assess()` on low-mood entries. Major finding, documented not fixed: no auth on any route, most consequentially the full-history export and delete-all-data endpoints, which any caller can invoke for any `user_id` — a materially sensitive gap given the module's own "governed by Magna Carta + I-Mind protocols" claim. Also documented: two of the module's four stated capabilities (Resonate routing, tAimra burnout signals) are unimplemented comments only. |
+| 2026-07-08 | Claude (session) | `src/tranquility/routes.py` (102 lines, post-fix) | Closed the no-auth gap: every `user_id`-scoped route now requires `Depends(get_current_user)` plus `_require_self_or_enterprise()`, mirroring `api.py`'s `gdpr_erase()`. Verified via `tests/test_tranquility_taimra_auth.py` (own-data access, cross-user 403, enterprise-tier override, unauthenticated 401/403). |

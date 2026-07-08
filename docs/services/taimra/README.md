@@ -9,12 +9,12 @@
 
 > **Truthfulness:** claims cite `src/taimra/digital_twin.py` and `src/taimra/routes.py` directly.
 > Status is owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
-> **No auth on any route — including activate, export, and delete of a user's digital twin.**
-> Every route takes `user_id` as a raw path parameter with zero verification that the caller is
-> that user. Any caller who knows or guesses a `user_id` string can activate/deactivate another
-> user's twin, record fabricated interactions into it, export its full contents, or permanently
-> delete it. This is the same class of gap found in Tranquility (this session, same batch), but
-> arguably more consequential here given the module's own stated privacy guarantees.
+> **Fixed:** every route in `src/taimra/routes.py` taking a `user_id` path parameter now requires
+> `Depends(get_current_user)` plus a `_require_self_or_enterprise()` ownership check (mirrors
+> `api.py`'s `gdpr_erase()` pattern) — callers can only activate/deactivate/record/export/delete
+> their own twin unless they hold the `enterprise` tier. `GET /taimra/status` remains
+> intentionally public. This closes the previously-documented gap where any caller who knew a
+> `user_id` could act on another user's digital twin.
 > **The stated privacy guarantee "the twin never infers or stores sensitive I-Mind flagged
 > content" is not enforced by any code.** No import of or call to `src.imind` exists anywhere in
 > `src/taimra/digital_twin.py`. `record_interaction()` stores whatever `topics` list the caller
@@ -29,8 +29,8 @@
   consent.
 - **Owner (RACI-A):** tAImra; Platform Owner Trancendos.
 - **Scope:** `src/taimra/*` implements twin lifecycle (activate/deactivate/record/suggest/export/
-  delete) with in-memory storage. The I-Mind content-filtering guarantee described in the
-  module's own comments is not implemented — see truthfulness header.
+  delete) with in-memory storage, now auth-gated per truthfulness header. The I-Mind
+  content-filtering guarantee described in the module's own comments is still not implemented.
 
 ## 2. Detailed Design Document (DDD)
 
@@ -44,8 +44,8 @@
 | GET | `/taimra/twin/{user_id}` | Reaches directly into `TAimra()._twins` (private attribute) rather than a public getter — see TASD; 404 if no twin exists |
 | POST | `/taimra/record/{user_id}` | `TAimra.record_interaction()` — no-op if twin is `OFFLINE` or doesn't exist |
 | GET | `/taimra/suggest/{user_id}` | `TAimra.suggest_personality()` — highest-affinity personality, or `null` |
-| GET | `/taimra/export/{user_id}` | `TAimra.export()` — full twin data (GDPR portability, per comment); 404 if missing |
-| DELETE | `/taimra/twin/{user_id}` | `TAimra.delete()` — full erasure (GDPR right to erasure, per comment); 404 if missing |
+| GET | `/taimra/export/{user_id}` | `TAimra.export()` — full twin data (GDPR portability, per comment); auth-gated, self-or-enterprise; 404 if missing |
+| DELETE | `/taimra/twin/{user_id}` | `TAimra.delete()` — full erasure (GDPR right to erasure, per comment); auth-gated, self-or-enterprise; 404 if missing |
 
 ### Twin lifecycle (`digital_twin.py`) — real, self-consistent state machine
 - `TwinStatus`: OFFLINE (default) → LEARNING (on `activate()`) → ACTIVE (auto-promoted once
@@ -61,13 +61,11 @@
 - "The twin never infers or stores sensitive I-Mind flagged content" — **not implemented**. No
   I-Mind import or call anywhere in this file. `record_interaction()`'s `topics` parameter is
   stored verbatim with no content screening.
-- "Governed by Trancendos Magna Carta policy" — no route-level auth exists to back this claim in
-  practice (see truthfulness header); Magna Carta governance is not verifiable from this code
-  alone.
-- The GDPR export/erasure functions (`export()`, `delete()`) are real and functionally correct in
-  isolation, but since no auth gates who can call them for a given `user_id`, they don't actually
-  deliver GDPR-compliant self-service data rights as currently wired — anyone could trigger
-  another user's "right to erasure" without that user's involvement.
+- "Governed by Trancendos Magna Carta policy" — route-level auth now exists (see truthfulness
+  header), which backs the access-control half of this claim; content-filtering does not.
+- The GDPR export/erasure functions (`export()`, `delete()`) are real and functionally correct,
+  and now auth-gated (self-or-enterprise), so they deliver genuine GDPR-compliant self-service
+  data rights as wired.
 
 ## 3. Technical Architecture Solutions Design (TASD)
 
@@ -80,22 +78,25 @@
   `digital_twin.py` — `deactivate()` uses `OFFLINE` instead. Either `PAUSED` is vestigial or a
   planned "pause without losing LEARNING/ACTIVE progress" feature was never wired up; not
   resolved in this pass.
-- **Not fixed:** no-auth routes and the unenforced I-Mind content-filtering claim — both require
-  architectural decisions (real per-user auth; a content-screening call before storage) out of
-  scope for a docs pass, but flagged clearly given the module's own explicit privacy promises.
+- **Fixed:** every `user_id`-scoped route now requires `Depends(get_current_user)` plus
+  `_require_self_or_enterprise()`, matching `api.py`'s `gdpr_erase()` pattern. Covered by
+  `tests/test_tranquility_taimra_auth.py`.
+- **Not fixed:** the unenforced I-Mind content-filtering claim — wiring a content-screening call
+  before `record_interaction()` stores `topics` is a separate architectural change, out of scope
+  for this auth fix.
 
 ## 4. RACI Matrix
 
 | Activity | tAImra (Lead) | Platform Owner | I-Mind | Platform Engineering |
 |---|---|---|---|---|
 | Twin lifecycle logic changes | **R** | A | I | C |
-| Wiring real per-user auth (future) | C | **A** | I | **R** |
 | Wiring the I-Mind content-filtering guarantee (future) | C | **A** | **R** | C |
 
 ## 5. Solutions Integration Model (SIM)
 
-- **Upstream:** any caller of `/taimra/*` routes — **no auth on any route**, including
-  activate/export/delete of another user's twin data (see truthfulness header).
+- **Upstream:** any caller of `/taimra/*` routes except `/status` now requires
+  `Depends(get_current_user)` plus the self-or-enterprise ownership check (see truthfulness
+  header) — closed the previously-documented no-auth gap.
 - **Downstream:** best-effort Observatory `observe()` on activate/deactivate/delete events. **No
   call to I-Mind** despite the module's own stated privacy guarantee referencing it.
 - **Not integrated:** I-Mind (content filtering), and no verified integration with Infinity for
@@ -120,17 +121,19 @@
 
 ## 8. Policy (POL)
 
-- No route-level auth on any `/taimra/*` route — see SIM §5; materially sensitive given this
-  module's own "Governed by Trancendos Magna Carta policy" and I-Mind-filtering claims.
+- Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-enterprise
+  ownership check — resolves the access-control half of the module's own "Governed by Trancendos
+  Magna Carta policy" claim. The I-Mind content-filtering half remains unenforced (see DDD).
 - Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
 
 ## 9. Procedure (PROC)
 
-- **Activate a twin:** `POST /taimra/activate/{user_id}` — sets status to `LEARNING`.
+- **Activate a twin:** `POST /taimra/activate/{user_id}` (as the same user, or an
+  `enterprise`-tier caller) — sets status to `LEARNING`.
 - **Record an interaction:** `POST /taimra/record/{user_id}` with `{"message", "topics",
   "personality_used"}` — no-op unless already activated; no content filtering applied.
 - **Export or delete a twin:** `GET /taimra/export/{user_id}` / `DELETE /taimra/twin/{user_id}` —
-  currently reachable by anyone who knows the `user_id`.
+  auth-gated; returns `403` unless the caller is that user or holds the `enterprise` tier.
 
 ## 10. Runbook (RUN)
 
@@ -138,8 +141,8 @@
 - **`GET /taimra/twin/{user_id}` returns 404 for a user with recorded interactions elsewhere:**
   the twin must have been created via `activate()` first — `record_interaction()` is a no-op for
   a twin that was never activated.
-- **Twin data was exported/deleted/activated by an unexpected caller:** expected given the
-  current no-auth state — see POL §8; a genuine security/privacy gap, not a misconfiguration.
+- **A caller gets `403` on activate/export/delete:** expected — they are not the target
+  `user_id` and do not hold the `enterprise` tier; see POL §8.
 - **Sensitive topics appear in a user's twin despite the "never stores I-Mind flagged content"
   claim:** expected — this guarantee is not enforced in code (see DDD).
 
@@ -150,10 +153,11 @@
   `CLAUDE.md`'s own naming-rules section).
 - Any privacy guarantee stated in a module's own header comment (e.g. "never stores I-Mind
   flagged content") MUST be backed by actual code before being repeated as fact in user-facing
-  documentation — the gap documented here is the reason for this standard.
+  documentation — the access-control half of this is now backed by code; content-filtering is not.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/taimra/digital_twin.py` (165 lines), `src/taimra/routes.py` (74 lines), `api.py` router registration (line 819) | Confirmed Live-tier, full pack authored. Verified the twin lifecycle state machine (OFFLINE→LEARNING→ACTIVE) and offline-by-default no-op behavior are real and correctly implemented. Major finding, documented not fixed: no auth on any route (including export/delete of another user's twin), and the module's own stated privacy guarantee ("never infers or stores sensitive I-Mind flagged content") has zero enforcement in code — no I-Mind import or call exists anywhere in this module. Also noted a dead `TwinStatus.PAUSED` enum member never assigned anywhere. |
+| 2026-07-08 | Claude (session) | `src/taimra/routes.py` (109 lines, post-fix) | Closed the no-auth gap: every `user_id`-scoped route now requires `Depends(get_current_user)` plus `_require_self_or_enterprise()`, mirroring `api.py`'s `gdpr_erase()`. Verified via `tests/test_tranquility_taimra_auth.py`. The I-Mind content-filtering gap remains open — unchanged, unrelated to this fix. |
