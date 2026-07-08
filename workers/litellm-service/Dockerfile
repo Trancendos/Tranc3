@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY worker.py .
 
-RUN mkdir -p /app/data && chown -R litellm:litellm /app
+RUN mkdir -p /app/data && chown -R litellm:litellm /app/data
 
 USER litellm
 

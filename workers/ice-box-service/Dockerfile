@@ -18,7 +18,7 @@ COPY src/security/ice_box/ src/security/ice_box/
 COPY src/security/warp_tunnel/ src/security/warp_tunnel/
 COPY src/observability/worker_setup.py src/observability/worker_setup.py
 
-RUN mkdir -p /app/workers/ice-box-service/data && chown -R worker:worker /app
+RUN mkdir -p /app/workers/ice-box-service/data && chown -R worker:worker /app/workers/ice-box-service/data
 
 USER worker
 WORKDIR /app/workers/ice-box-service
