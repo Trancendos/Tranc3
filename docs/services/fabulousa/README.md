@@ -41,6 +41,16 @@
 > `worker.py` does *not* prefix) is unreachable at `/fabulousa/health` externally — only at
 > the bare `/health` internally. Documented below, not changed, since altering the health-check
 > path is a minor behavioural change outside a pure infra-defect fix.
+>
+> **Auth added this pass (follow-up, 2026-07-08):** cubic flagged (P1) that both write routes
+> (`POST /fabulousa/projects`, `POST /fabulousa/export`) had zero authentication. Fixed by
+> adding an `INTERNAL_SECRET`-gated dependency to both routes, matching the same
+> optional-but-available pattern already used by `storage-service`/`files-service`
+> (`_require_internal_auth()` — a no-op if `INTERNAL_SECRET` is unset, enforced once an
+> operator sets it). This is non-breaking (no secret is currently set in
+> `docker-compose.production.yml`, so behaviour is unchanged until one is configured) while
+> giving operators a way to close the gap without a code change. Read routes remain open by
+> design (no PII, no write side-effects).
 
 ## 1. Service Governance Charter (GOV)
 
@@ -70,12 +80,13 @@
 | GET | `/health` | none | liveness (note: unprefixed — see truthfulness header) |
 | GET | `/fabulousa/status` | none | Penpot reachability probe + Figma-fallback-configured flag |
 | GET | `/fabulousa/projects` | none | Penpot teams→files; on failure, Figma `/me` profile stub; on that failure, cached data with `degraded: true` |
-| POST | `/fabulousa/projects` | none | create a Penpot file (503 if Penpot unreachable — no fallback for writes) |
+| POST | `/fabulousa/projects` | `X-Internal-Secret`* | create a Penpot file (503 if Penpot unreachable — no fallback for writes) |
 | GET | `/fabulousa/assets` | none | Penpot libraries; cached-degraded fallback on failure |
-| POST | `/fabulousa/export` | none | trigger a Penpot export job (503 if Penpot unreachable — no fallback for writes) |
+| POST | `/fabulousa/export` | `X-Internal-Secret`* | trigger a Penpot export job (503 if Penpot unreachable — no fallback for writes) |
 
-No route in this worker has any authentication — every endpoint is open to any caller that can
-reach the container, including the write endpoints (`create_project`, `trigger_export`).
+\* Enforced only if `INTERNAL_SECRET` is set — currently unset in compose/`.env.example`, so
+both write routes remain open until an operator configures a secret (see truthfulness header).
+Read routes have no auth by design.
 
 ## 3. Technical Architecture & Solution Design (TASD)
 
@@ -98,7 +109,7 @@ reach the container, including the write endpoints (`create_project`, `trigger_e
 | Charter approval / scope changes | **A** | C | R | I |
 | Deployed-worker maintenance | I | **A** | R | I |
 | Provisioning a real Penpot container | I | C | **R/A** | I |
-| Adding auth to write routes | I | C | **R/A** | I |
+| Setting `INTERNAL_SECRET` in production to enforce write-route auth | I | C | **R/A** | I |
 | Incident response | I | C | **R/A** | I |
 
 ## 5. Service Interaction Map (SIM)
@@ -131,9 +142,9 @@ No confirmed caller of this service was found elsewhere in the repo.
 
 ## 8. Policy & Compliance (POL)
 
-- No auth on any route, including both write endpoints — any caller reaching the container can
-  create Penpot files or trigger exports. No PII is inherently handled, but design assets may
-  be sensitive depending on tenant use; flagged for the entity owner.
+- Both write endpoints are now gated behind an optional `INTERNAL_SECRET` check (fixed this
+  pass) — enforcement is live once an operator sets the env var, open until then. No PII is
+  inherently handled, but design assets may be sensitive depending on tenant use.
 - Zero-cost mandate is honoured: no paid API is called (Figma's fallback is explicitly the free
   read-only tier).
 
@@ -169,3 +180,4 @@ No confirmed caller of this service was found elsewhere in the repo.
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `CLAUDE.md` service table, `PLATFORM_ENTITIES.md`, repo search | **SUPERSEDED — was wrong.** Concluded no implementation exists. |
 | 2026-07-07 | Claude (session) | direct read of `workers/fabulousa-service/worker.py` (287 lines, the only implementation), the (missing, now added) Dockerfile, and the `fabulousa-service` block in `docker-compose.production.yml` | **Full rewrite to Live-tier (11 sections).** Fixed a genuine build-breaking defect: no Dockerfile existed for this worker (previously flagged, not yet fixed, in The Artifactory's doc-pack). Checked for the StripPrefix defect class found in 7 other entities this session and correctly determined it does NOT apply here — `worker.py`'s routes are already self-prefixed with `/fabulousa`, so adding StripPrefix would have been a regression; the incorrect middleware was added then reverted before committing. Documented, not fixed: no auth on any route (including both write endpoints); `/health` is unreachable via the public Traefik path. |
+| 2026-07-08 | Claude (session), follow-up after cubic review (P1) | `workers/fabulousa-service/worker.py` | **Fixed.** Added an `INTERNAL_SECRET`-gated `_require_internal_auth()` dependency to `POST /fabulousa/projects` and `POST /fabulousa/export`, matching `storage-service`'s optional-auth pattern (no-op if unset, enforced once configured). Verified via direct module import that both routes now carry the auth dependency and GET routes are unaffected. |

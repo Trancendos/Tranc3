@@ -43,13 +43,20 @@
 > and correctly found not to need this fix — DocUtari's two workers have no Traefik label at
 > all, and Fabulousa's routes are already self-prefixed).
 >
-> **A related, broader defect noted but explicitly out of scope for this pass:** while fixing
-> this, `workers/swarm-coordinator-service/Dockerfile` was found to have the **same class of
-> bug** — its compose block uses `context: ./workers/swarm-coordinator-service` (a narrow
-> context) yet its own Dockerfile does `COPY src/entities/ ...`, which cannot resolve from
-> that context. This looks like the same defect pattern, but touches a different entity
-> (Swarm Coordinator, not yet doc-packed in this series) and was left unfixed here to keep
-> this pass scoped to The Ice Box — flagged for a future pass.
+> **A related, broader defect noted at the time and since fixed:** while fixing this,
+> `workers/swarm-coordinator-service/Dockerfile` was found to have the same class of bug —
+> its compose block used a narrow build context yet its own Dockerfile did `COPY
+> src/entities/ ...`, which couldn't resolve from that context. Left unfixed here to keep this
+> pass scoped to The Ice Box; fixed in a follow-up pass (2026-07-08), which also found and
+> fixed two further compounding bugs in that same worker (a hardcoded-wrong port and a missing
+> `StripPrefix`) — see `workers/swarm-coordinator-service/` directly, not yet doc-packed.
+>
+> **Auth added this pass (follow-up, 2026-07-08):** cubic flagged (P1) that `POST
+> /quarantine/{id}/release` had zero authentication, allowing any caller to release
+> potentially-malicious content and spoof `reviewed_by`. Fixed by adding an
+> `INTERNAL_SECRET`-gated `_require_internal_auth()` dependency to that route, matching
+> `storage-service`'s optional-auth pattern (no-op if unset, enforced once configured). `POST
+> /scan` and the GET routes remain open by design.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -80,14 +87,15 @@
 | POST | `/scan` | none | analyse `content`; if `auto_quarantine=true` (default), routes through `WarpTunnel.scan()` (which itself calls `ThreatAnalyser` + `QuarantineStore` internally) |
 | GET | `/quarantine` | none | list active (non-released) quarantine records, paginated via `limit` |
 | GET | `/quarantine/{quarantine_id}` | none | single record incl. findings JSON, entropy, release metadata |
-| POST | `/quarantine/{quarantine_id}/release` | none | mark released with `reason`/`reviewed_by` (both free-text, unvalidated) |
+| POST | `/quarantine/{quarantine_id}/release` | `X-Internal-Secret`* | mark released with `reason`/`reviewed_by` (both free-text, unvalidated) |
 | GET | `/stats` | none | quarantine counts + total loaded signatures + `strict_mode` flag |
 | GET | `/health` | none | liveness + signature count + uptime |
 
-No route has any authentication — `POST /quarantine/{id}/release` in particular is a
-consequential write (marks potentially-malicious content as reviewed-and-safe) reachable by
-any caller that can reach the container, with no verification that `reviewed_by` reflects a
-real reviewer identity.
+\* Enforced only if `INTERNAL_SECRET` is set — currently unset in compose/`.env.example`, so
+the release route remains open until an operator configures a secret (see truthfulness
+header). `reviewed_by` is still free-text and unvalidated even once auth is enforced — the
+secret authenticates the *caller*, not the claimed reviewer identity. `POST /scan` and the GET
+routes have no auth by design.
 
 ## 3. Technical Architecture & Solution Design (TASD)
 
@@ -154,9 +162,10 @@ in-repo client.
 
 ## 8. Policy & Compliance (POL)
 
-- No auth on any route, including the release-from-quarantine write — flagged for the entity
-  owner as the most consequential gap (a caller can both submit and clear quarantine flags
-  with no identity verification).
+- The release-from-quarantine write is now gated behind an optional `INTERNAL_SECRET` check
+  (fixed this pass) — enforcement is live once an operator sets the env var, open until then.
+  `POST /scan` (which can also create quarantine records via `auto_quarantine`) remains
+  unauthenticated by design.
 - Zero-cost mandate honoured — no paid AV/sandbox API is called; the "Cuckoo sandbox"
   Foundation entry in `CLAUDE.md`'s recommended-foundations table is aspirational and not
   reflected in the actual (static-analysis-only) implementation.
@@ -195,3 +204,4 @@ in-repo client.
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `CLAUDE.md` service table, `PLATFORM_ENTITIES.md`, repo search | **SUPERSEDED — was wrong.** Concluded no implementation exists. |
 | 2026-07-07 | Claude (session) | direct read of `workers/ice-box-service/worker.py` (225 lines), `src/security/ice_box/{analyser,quarantine,signatures}.py`, `src/security/warp_tunnel/tunnel.py`, the (missing, now added) Dockerfile + `requirements.txt`, and the `ice-box-service` block in `docker-compose.production.yml` | **Full rewrite to Live-tier (11 sections).** Fixed a genuine build-breaking defect requiring more than a drive-by copy: no Dockerfile existed, and the worker imports repo-level `src/` packages, so the compose build context had to be widened to the repo root (matching the `infinity-portal`/`infinity-one`/`infinity-admin` pattern) with a Dockerfile preserving the source tree's relative depth so `worker.py`'s own `sys.path.insert(parents[2])` logic resolves correctly — verified by executing the module directly before writing this doc. Also fixed the Traefik StripPrefix defect (8th genuinely-fixed instance this session). Discovered and corrected a factual error in The Warp Tunnel's pack: its `WarpTunnel`/`tunnel.py` "fully orphaned" claim was wrong — this worker is a real, live caller, confirmed here and cross-corrected in that entity's own doc-pack. Flagged, not fixed: the same context-mismatch defect class also affects `workers/swarm-coordinator-service/Dockerfile` — out of scope for this pass. Documented, not fixed: no auth on any route, most notably the quarantine-release write. |
+| 2026-07-08 | Claude (session), follow-up after cubic review (P1) | `workers/ice-box-service/worker.py` | **Fixed.** Added an `INTERNAL_SECRET`-gated `_require_internal_auth()` dependency to `POST /quarantine/{quarantine_id}/release`, matching `storage-service`'s optional-auth pattern. Also separately fixed (same day, different pass): `workers/swarm-coordinator-service`'s build-context defect noted above, plus two further bugs found while fixing it (hardcoded-wrong port, missing StripPrefix) — see that worker directly. |

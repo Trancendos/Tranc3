@@ -24,7 +24,7 @@ from typing import Any, Optional
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))  # noqa: E402
 
-from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi import Depends, FastAPI, Header, HTTPException  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 from src.security.ice_box.analyser import ThreatAnalyser, ThreatVerdict  # noqa: E402
@@ -39,6 +39,18 @@ from src.security.warp_tunnel.tunnel import TunnelConfig, WarpTunnel  # noqa: E4
 PORT = int(os.getenv("ICE_BOX_PORT", "8046"))
 QUARANTINE_DB = os.getenv("ICE_BOX_QUARANTINE_DB", "data/ice_box_quarantine.db")
 STRICT_MODE = os.getenv("ICE_BOX_STRICT_MODE", "false").lower() == "true"
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    """Gate the quarantine-release write behind INTERNAL_SECRET when configured.
+
+    No-op (open) if INTERNAL_SECRET is unset, matching the platform's other
+    optional-auth workers (e.g. storage-service) — operators must set the
+    env var to actually enforce this.
+    """
+    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 app = FastAPI(
     title="The Ice Box",
@@ -182,7 +194,7 @@ def get_quarantine(quarantine_id: str):
     }
 
 
-@app.post("/quarantine/{quarantine_id}/release")
+@app.post("/quarantine/{quarantine_id}/release", dependencies=[Depends(_require_internal_auth)])
 def release_quarantine(quarantine_id: str, req: ReleaseRequest):
     ok = _quarantine.release(quarantine_id, reason=req.reason, reviewed_by=req.reviewed_by)
     if not ok:

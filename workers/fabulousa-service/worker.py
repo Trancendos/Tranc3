@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,7 @@ VERSION = "1.0.0"
 PENPOT_URL = os.getenv("PENPOT_URL", "http://localhost:9001").rstrip("/")
 PENPOT_TOKEN = os.getenv("PENPOT_TOKEN", "")
 FIGMA_TOKEN = os.getenv("FIGMA_TOKEN", "")
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
 
 STARTED_AT = datetime.now(timezone.utc)
 
@@ -88,6 +89,17 @@ async def _penpot_post(path: str, payload: dict[str, Any]) -> Any:
         resp = await client.post(f"{PENPOT_URL}{path}", json=payload, headers=headers)
         resp.raise_for_status()
         return resp.json()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    """Gate mutating routes behind INTERNAL_SECRET when it's configured.
+
+    No-op (open) if INTERNAL_SECRET is unset, matching the platform's other
+    optional-auth workers (e.g. storage-service) — operators must set the
+    env var to actually enforce this.
+    """
+    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 async def _figma_get(path: str) -> Any:
@@ -223,7 +235,7 @@ async def list_projects() -> dict[str, Any]:
     return {"projects": cached, "total": len(cached), "degraded": degraded}
 
 
-@app.post("/fabulousa/projects")
+@app.post("/fabulousa/projects", dependencies=[Depends(_require_internal_auth)])
 async def create_project(body: ProjectCreate) -> dict[str, Any]:
     """Create a new Penpot project/file."""
     try:
@@ -261,7 +273,7 @@ async def list_assets() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.post("/fabulousa/export")
+@app.post("/fabulousa/export", dependencies=[Depends(_require_internal_auth)])
 async def trigger_export(body: ExportRequest) -> dict[str, Any]:
     """Trigger a Penpot export job."""
     try:
