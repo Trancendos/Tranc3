@@ -80,9 +80,7 @@ monitoring_mod = _import_worker(
 notifications_mod = _import_worker(
     "notifications_worker", _TRANC3_ROOT / "workers" / "notifications" / "worker.py"
 )
-ai_mod = _import_worker(
-    "infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "main.py"
-)
+ai_mod = _import_worker("infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "main.py")
 # main.py's own top-level imports cascade-execute its sibling modules
 # (models.py, service.py, database.py, config.py); grab them from
 # sys.modules here (before any later _import_worker call purges them) so
