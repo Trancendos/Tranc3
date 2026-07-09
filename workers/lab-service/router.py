@@ -7,10 +7,10 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from models import CodeRequest, CodeResponse, LabStatus
+from service import LabRouter
 
 import config
 from database import LabDatabase
-from service import LabRouter
 
 logger = logging.getLogger(config.WORKER_NAME)
 

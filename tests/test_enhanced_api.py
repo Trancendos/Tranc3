@@ -41,9 +41,8 @@ def client():
         patch("src.core.startup_validator.validate_startup"),
         patch("src.main_enhanced.enhanced", enhanced_mock),
     ):
-        from fastapi.testclient import TestClient
-
         from api_enhanced import app
+        from fastapi.testclient import TestClient
 
         # Manually inject mock into app state (lifespan won't run in TestClient)
         app.state.enhanced = enhanced_mock

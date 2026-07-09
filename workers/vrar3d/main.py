@@ -7,11 +7,11 @@ import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from router import _make_vrar3d_router
+from service import VRARRouter
 
 import config
 from database import VRARDatabase
-from router import _make_vrar3d_router
-from service import VRARRouter
 
 _START = time.time()
 

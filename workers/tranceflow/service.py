@@ -10,8 +10,6 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import config
-from database import TranceFlowDatabase
 from models import (
     BackendStatus,
     ExportRequest,
@@ -21,6 +19,9 @@ from models import (
     ProjectResponse,
     TranceFlowStatus,
 )
+
+import config
+from database import TranceFlowDatabase
 
 
 class ThresholdGuard:

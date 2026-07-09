@@ -5,9 +5,6 @@ from __future__ import annotations
 from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
-
-import config
-from database import VRARDatabase
 from models import (
     AssetProcessRequest,
     AssetProcessResponse,
@@ -16,6 +13,9 @@ from models import (
     VRARStatus,
 )
 from service import VRARRouter
+
+import config
+from database import VRARDatabase
 
 
 def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:

@@ -34,12 +34,26 @@ _TRANC3_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _import_worker(module_dotted: str, file_path: Path):
-    """Import a worker module from a hyphenated path via importlib."""
-    spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[module_dotted] = mod
-    spec.loader.exec_module(mod)
-    return mod
+    """Import a worker module from a hyphenated path via importlib.
+
+    Adds the worker's own directory to sys.path for the duration of the
+    import so shim-style workers (e.g. the-grid's worker.py -> main.py)
+    can resolve their bare sibling imports, matching how the Dockerfile
+    COPYs them flat into the container's WORKDIR.
+    """
+    worker_dir = str(file_path.parent)
+    inserted = worker_dir not in sys.path
+    if inserted:
+        sys.path.insert(0, worker_dir)
+    try:
+        spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[module_dotted] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    finally:
+        if inserted:
+            sys.path.remove(worker_dir)
 
 
 analytics_mod = _import_worker(
@@ -499,7 +513,7 @@ class TestStorageService:
         storage_path = tmp_path / "objects"
         with (
             patch.object(storage_mod, "DB_PATH", db_path),
-            patch.object(storage_mod, "STORAGE_ROOT", storage_path),
+            patch.object(storage_mod, "LOCAL_ROOT", storage_path),
         ):
             storage_mod.init_db()
             secret = getattr(storage_mod, "_INTERNAL_SECRET", "")

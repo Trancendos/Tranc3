@@ -5,9 +5,6 @@ from __future__ import annotations
 from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
-
-import config
-from database import TranceFlowDatabase
 from models import (
     ExportRequest,
     ExportResponse,
@@ -16,6 +13,9 @@ from models import (
     TranceFlowStatus,
 )
 from service import TranceFlowRouter
+
+import config
+from database import TranceFlowDatabase
 
 
 def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:

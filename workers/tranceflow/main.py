@@ -7,11 +7,11 @@ import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from router import _make_tranceflow_router
+from service import TranceFlowRouter
 
 import config
 from database import TranceFlowDatabase
-from router import _make_tranceflow_router
-from service import TranceFlowRouter
 
 _START = time.time()
 
