@@ -27,12 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
-from Dimensional.path_validation import (
-    existing_file_path_str,
-)
-
-# validate_existing_file is an alias for existing_file_path_str
-validate_existing_file = existing_file_path_str
+from Dimensional.path_validation import PathTraversalError, safe_join
 
 WORKER_PORT = int(os.getenv("PORT") or "8028")
 WORKER_NAME = "cdn-service"
@@ -255,7 +250,10 @@ async def serve_asset(
     if_modified_since: Optional[str] = Header(None),
 ):
     asset_path = f"/{path}"
-    full_path = ASSETS_ROOT / path
+    try:
+        full_path = safe_join(ASSETS_ROOT, path)
+    except (PathTraversalError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail="Asset not found") from exc
 
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -313,7 +311,10 @@ async def serve_asset(
 
 @_router.post("/register")
 async def register_asset(req: AssetRegister):
-    full_path = ASSETS_ROOT / req.path.lstrip("/")
+    try:
+        full_path = safe_join(ASSETS_ROOT, req.path.lstrip("/"))
+    except (PathTraversalError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail="File not found in assets root") from exc
     if not full_path.exists():
         raise HTTPException(status_code=404, detail="File not found in assets root")
     with get_conn() as conn:

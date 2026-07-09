@@ -241,7 +241,9 @@ class TestInstrumentWorker:
     def test_instrument_worker_prometheus_branch(self):
         """Prometheus branch executes when prometheus_fastapi_instrumentator is present."""
         import sys
+
         from fastapi import FastAPI
+
         from src.observability.worker_setup import instrument_worker
 
         fake_pfi, fake_inst = self._make_fake_instrumentator()
@@ -272,9 +274,11 @@ class TestInstrumentWorker:
 
     def test_instrument_worker_prometheus_disabled_via_env(self):
         """PROMETHEUS_ENABLED=false skips Prometheus branch."""
-        import sys
         import os
+        import sys
+
         from fastapi import FastAPI
+
         from src.observability.worker_setup import instrument_worker
 
         fake_pfi, fake_inst = self._make_fake_instrumentator()
@@ -291,6 +295,7 @@ class TestInstrumentWorker:
     def test_instrument_worker_idempotent(self):
         """Calling instrument_worker twice on the same app is a no-op on second call."""
         from fastapi import FastAPI
+
         from src.observability.worker_setup import instrument_worker
 
         app = FastAPI()
@@ -301,7 +306,9 @@ class TestInstrumentWorker:
     def test_instrument_worker_prometheus_import_error(self):
         """ImportError on prometheus package degrades gracefully."""
         import sys
+
         from fastapi import FastAPI
+
         from src.observability.worker_setup import instrument_worker
 
         app = FastAPI()
@@ -313,7 +320,9 @@ class TestInstrumentWorker:
     def test_instrument_worker_exclude_paths(self):
         """Custom exclude_paths are merged with default exclusions."""
         import sys
+
         from fastapi import FastAPI
+
         from src.observability.worker_setup import instrument_worker
 
         fake_pfi, fake_inst = self._make_fake_instrumentator()

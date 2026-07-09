@@ -344,11 +344,11 @@ class MultiSetRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-        from opentelemetry import trace
 
         otel_ep = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
         if otel_ep:

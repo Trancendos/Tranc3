@@ -9,10 +9,10 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from router import _make_lab_router
+from service import LabRouter
 
 import config
 from database import LabDatabase
-from service import LabRouter
 
 logging.basicConfig(
     level=logging.INFO,
