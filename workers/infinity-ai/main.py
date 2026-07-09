@@ -7,17 +7,20 @@ Uvicorn/Docker should point at   main:app   (or worker:app via shim).
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from router import router
-from service import adaptive_rotation
+from router import init_router, protected_router, public_router
+from service import AIGatewayRouter
 
-from config import WORKER_NAME, WORKER_PORT
-from database import db
+from config import DB_PATH, WORKER_NAME, WORKER_PORT
+from database import AIDatabase
+
+db = AIDatabase(DB_PATH)
+gateway = AIGatewayRouter(db)
+init_router(db, gateway)
 
 logger = logging.getLogger(WORKER_NAME)
 
@@ -31,30 +34,9 @@ async def _lifespan(app: FastAPI):
     except Exception:
         pass
     logger.info("%s starting on port %d", WORKER_NAME, WORKER_PORT)
-    db._init_tables()
-    logger.info(
-        "%s ready — %d providers configured ✨", WORKER_NAME, len(adaptive_rotation.providers)
-    )
-
-    async def _bg():
-        while True:
-            try:
-                await asyncio.sleep(300)
-                adaptive_rotation.reset_daily_counts_if_needed()
-            except asyncio.CancelledError:
-                break
-            except Exception as exc:
-                logger.debug("BG loop: %s", exc)
-
-    _bg_task = asyncio.create_task(_bg())
+    logger.info("%s ready — %d providers configured ✨", WORKER_NAME, len(gateway.providers))
     yield
     logger.info("%s shutting down...", WORKER_NAME)
-    _bg_task.cancel()
-    try:
-        await _bg_task
-    except asyncio.CancelledError:
-        pass
-    logger.info("%s stopped", WORKER_NAME)
 
 
 app = FastAPI(
@@ -70,7 +52,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(router)
+app.include_router(public_router)
+app.include_router(protected_router)
 
 if __name__ == "__main__":
     import uvicorn

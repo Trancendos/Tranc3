@@ -323,7 +323,7 @@ async def register_asset(req: AssetRegister):
         raise HTTPException(status_code=404, detail="File not found in assets root") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid asset path") from exc
-    if not full_path.exists():
+    if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="File not found in assets root")
 
     # Derive the canonical asset_path from the resolved full_path (not the

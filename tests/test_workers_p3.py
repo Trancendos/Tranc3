@@ -40,20 +40,43 @@ def _import_worker(module_dotted: str, file_path: Path):
     import so shim-style workers (e.g. the-grid's worker.py -> main.py)
     can resolve their bare sibling imports, matching how the Dockerfile
     COPYs them flat into the container's WORKDIR.
+
+    Different workers commonly share sibling filenames (main.py, router.py,
+    config.py, database.py, service.py, models.py). A bare `import router`
+    inside one worker's main.py caches under sys.modules["router"], which
+    would then be reused (wrongly) by a later worker's own `import router` in
+    the same pytest session. To keep workers isolated, any such stale
+    bare-name modules left over from a *previously* imported worker are
+    purged right before importing this one, so this worker's own bare
+    imports resolve fresh from its own directory.
+
+    The purge happens *before* the import (not after) so that this worker's
+    own sibling modules stay cached afterwards — any *lazy* same-worker
+    imports deferred until request-handling time (e.g. the-grid's router.py
+    doing `from models import WorkflowStep` inside a route function body)
+    then resolve to the exact same module/class objects the worker's
+    top-level code already bound, preserving type identity for things like
+    Pydantic isinstance checks.
+
+    The worker's own directory is left on sys.path permanently (never
+    removed) — mirroring how each worker's own directory is the sole entry
+    on PYTHONPATH inside its real container.
     """
+    _COMMON_SIBLING_NAMES = {"main", "router", "config", "database", "models", "service"}
+    for name in _COMMON_SIBLING_NAMES:
+        sys.modules.pop(name, None)
+
     worker_dir = str(file_path.parent)
-    inserted = worker_dir not in sys.path
-    if inserted:
+    if worker_dir not in sys.path:
         sys.path.insert(0, worker_dir)
-    try:
-        spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[module_dotted] = mod
-        spec.loader.exec_module(mod)
-        return mod
-    finally:
-        if inserted:
-            sys.path.remove(worker_dir)
+    else:
+        sys.path.remove(worker_dir)
+        sys.path.insert(0, worker_dir)
+    spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[module_dotted] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
 
 analytics_mod = _import_worker(

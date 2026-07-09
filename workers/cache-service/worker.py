@@ -390,7 +390,7 @@ _router = APIRouter(dependencies=[Depends(_auth)])
 
 
 @app.get("/health", include_in_schema=False)
-def health() -> JSONResponse:
+async def health() -> JSONResponse:
     now = time.time()
     active = sum(1 for _, (_, exp) in _mem.items() if exp is None or exp > now)
     return JSONResponse(
@@ -405,7 +405,7 @@ def health() -> JSONResponse:
 
 
 @_router.get("/cache/status")
-def cache_status() -> Dict[str, Any]:
+async def cache_status() -> Dict[str, Any]:
     now = time.time()
     active = sum(1 for _, (_, exp) in _mem.items() if exp is None or exp > now)
     return {
@@ -506,7 +506,7 @@ async def delete_key(key: str) -> None:
 
 
 @_router.get("/cache/{key}/exists")
-def key_exists(key: str) -> Dict[str, Any]:
+async def key_exists(key: str) -> Dict[str, Any]:
     now = time.time()
     in_mem = key in _mem and (_mem[key][1] is None or _mem[key][1] > now)
     if not in_mem:
@@ -527,7 +527,7 @@ async def mset(req: MultiSetRequest) -> Dict[str, Any]:
 
 
 @_router.post("/cache/mget")
-def mget(keys: List[str]) -> Dict[str, Any]:
+async def mget(keys: List[str]) -> Dict[str, Any]:
     now = time.time()
     result: Dict[str, Any] = {}
     for key in keys:
@@ -539,7 +539,7 @@ def mget(keys: List[str]) -> Dict[str, Any]:
 
 
 @_router.get("/cache")
-def list_keys(pattern: Optional[str] = Query(None)) -> Dict[str, Any]:
+async def list_keys(pattern: Optional[str] = Query(None)) -> Dict[str, Any]:
     now = time.time()
     keys = [k for k, (_, exp) in _mem.items() if exp is None or exp > now]
     if pattern:
@@ -548,7 +548,7 @@ def list_keys(pattern: Optional[str] = Query(None)) -> Dict[str, Any]:
 
 
 @_router.delete("/cache", status_code=204)
-def flush() -> None:
+async def flush() -> None:
     _mem.clear()
     try:
         with _db_conn() as c:

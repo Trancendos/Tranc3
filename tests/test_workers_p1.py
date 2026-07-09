@@ -28,7 +28,42 @@ _TRANC3_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _import_worker(module_dotted: str, file_path: Path):
-    """Import a worker module with hyphenated path using importlib."""
+    """Import a worker module with hyphenated path using importlib.
+
+    Adds the worker's own directory to sys.path for the duration of the
+    import so shim-style workers (e.g. infinity-ai's worker.py -> main.py)
+    can resolve their bare sibling imports, matching how the Dockerfile
+    COPYs them flat into the container's WORKDIR.
+
+    Different workers commonly share sibling filenames (main.py, router.py,
+    config.py, database.py, service.py, models.py). A bare `import router`
+    inside one worker's main.py caches under sys.modules["router"], which
+    would then be reused (wrongly) by a later worker's own `import router` in
+    the same pytest session. To keep workers isolated, any such stale
+    bare-name modules left over from a *previously* imported worker are
+    purged right before importing this one, so this worker's own bare
+    imports resolve fresh from its own directory.
+
+    The purge happens *before* the import (not after) so that this worker's
+    own sibling modules stay cached afterwards — any *lazy* same-worker
+    imports deferred until request-handling time then resolve to the exact
+    same module/class objects the worker's top-level code already bound,
+    preserving type identity for things like Pydantic isinstance checks.
+
+    The worker's own directory is left on sys.path permanently (never
+    removed) — mirroring how each worker's own directory is the sole entry
+    on PYTHONPATH inside its real container.
+    """
+    _COMMON_SIBLING_NAMES = {"main", "router", "config", "database", "models", "service"}
+    for name in _COMMON_SIBLING_NAMES:
+        sys.modules.pop(name, None)
+
+    worker_dir = str(file_path.parent)
+    if worker_dir not in sys.path:
+        sys.path.insert(0, worker_dir)
+    else:
+        sys.path.remove(worker_dir)
+        sys.path.insert(0, worker_dir)
     spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
     mod = importlib.util.module_from_spec(spec)
     sys.modules[module_dotted] = mod
@@ -46,8 +81,18 @@ notifications_mod = _import_worker(
     "notifications_worker", _TRANC3_ROOT / "workers" / "notifications" / "worker.py"
 )
 ai_mod = _import_worker(
-    "infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "worker.py"
+    "infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "main.py"
 )
+# main.py's own top-level imports cascade-execute its sibling modules
+# (models.py, service.py, database.py, config.py); grab them from
+# sys.modules here (before any later _import_worker call purges them) so
+# tests can construct these types directly with the exact same class
+# objects main.py itself is using.
+ai_models_mod = sys.modules["models"]
+ai_service_mod = sys.modules["service"]
+ai_database_mod = sys.modules["database"]
+ai_config_mod = sys.modules["config"]
+ai_router_mod = sys.modules["router"]
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -910,15 +955,15 @@ class TestAIModels:
     """Test Pydantic models for the AI gateway."""
 
     def test_chat_message_model(self):
-        msg = ai_mod.ChatMessage(role="user", content="Hello")
+        msg = ai_models_mod.ChatMessage(role="user", content="Hello")
         assert msg.role == "user"
         assert msg.content == "Hello"
 
     def test_chat_completion_request_model(self):
-        req = ai_mod.ChatCompletionRequest(
+        req = ai_models_mod.ChatCompletionRequest(
             model="llama3.2",
             messages=[
-                ai_mod.ChatMessage(role="user", content="Hello"),
+                ai_models_mod.ChatMessage(role="user", content="Hello"),
             ],
             max_tokens=100,
         )
@@ -926,11 +971,11 @@ class TestAIModels:
         assert len(req.messages) == 1
 
     def test_chat_completion_response_model(self):
-        response = ai_mod.ChatCompletionResponse(
+        response = ai_models_mod.ChatCompletionResponse(
             model="llama3.2",
             choices=[
-                ai_mod.ChatCompletionChoice(
-                    message=ai_mod.ChatMessage(role="assistant", content="Hi there!"),
+                ai_models_mod.ChatCompletionChoice(
+                    message=ai_models_mod.ChatMessage(role="assistant", content="Hi there!"),
                 ),
             ],
             provider="ollama",
@@ -940,7 +985,7 @@ class TestAIModels:
         assert len(response.choices) == 1
 
     def test_token_budget_model(self):
-        budget = ai_mod.TokenBudget(
+        budget = ai_models_mod.TokenBudget(
             tenant_id="tenant-123",
             daily_limit=100_000,
             used_today=5000,
@@ -955,18 +1000,18 @@ class TestAILRUCache:
     """Test the LRU cache for AI responses."""
 
     def test_cache_put_and_get(self):
-        cache = ai_mod.LRUCache(max_size=10)
+        cache = ai_service_mod.LRUCache(max_size=10)
         cache.put("key1", {"response": "test"})
         result = cache.get("key1")
         assert result == {"response": "test"}
 
     def test_cache_miss(self):
-        cache = ai_mod.LRUCache()
+        cache = ai_service_mod.LRUCache()
         result = cache.get("nonexistent")
         assert result is None
 
     def test_cache_eviction(self):
-        cache = ai_mod.LRUCache(max_size=3)
+        cache = ai_service_mod.LRUCache(max_size=3)
         cache.put("key1", "value1")
         cache.put("key2", "value2")
         cache.put("key3", "value3")
@@ -977,7 +1022,7 @@ class TestAILRUCache:
         assert cache.get("key4") == "value4"
 
     def test_cache_clear(self):
-        cache = ai_mod.LRUCache()
+        cache = ai_service_mod.LRUCache()
         cache.put("key1", "value1")
         cache.clear()
         assert cache.get("key1") is None
@@ -989,7 +1034,7 @@ class TestAIDatabase:
     @pytest.fixture
     def ai_db(self, tmp_path):
         db_path = tmp_path / "test_ai.db"
-        db = ai_mod.AIDatabase(db_path=db_path)
+        db = ai_database_mod.AIDatabase(db_path=db_path)
         yield db
 
     def test_tables_created(self, ai_db):
@@ -1047,14 +1092,23 @@ class TestAIHTTPEndpoints:
 
     @pytest.fixture
     def ai_client(self, tmp_path):
-        """Create a TestClient with a temporary database."""
-        db_path = tmp_path / "test_ai.db"
-        test_db = ai_mod.AIDatabase(db_path=db_path)
+        """Create a TestClient with a temporary database.
 
-        with patch.object(ai_mod, "db", test_db):
+        The db instance is referenced from three places (main.py's own
+        `db`, the gateway's `.db`, and router.py's module-level `_db` set
+        via init_router()), so all three must be patched for isolation.
+        """
+        db_path = tmp_path / "test_ai.db"
+        test_db = ai_database_mod.AIDatabase(db_path=db_path)
+
+        with (
+            patch.object(ai_mod, "db", test_db),
+            patch.object(ai_mod.gateway, "db", test_db),
+            patch.object(ai_router_mod, "_db", test_db),
+        ):
             client = TestClient(
                 ai_mod.app,
-                headers={"X-Internal-Secret": ai_mod._INTERNAL_SECRET},
+                headers={"X-Internal-Secret": ai_config_mod.INTERNAL_SECRET},
             )
             yield client
 
