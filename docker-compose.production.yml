@@ -114,7 +114,7 @@ services:
   # ── Prometheus — Metrics Collection ──────────────────────────────────
   # Replaces: Cloudflare Analytics, CF Worker Analytics
   prometheus:
-    image: prom/prometheus:v2.50.0
+    image: prom/prometheus:v2.50.1@sha256:bc1794e85c9e00293351b967efa267ce6af1c824ac875a9d0c7ac84700a8b53e
     container_name: tranc3-prometheus
     <<: *common
     ports:
@@ -174,7 +174,7 @@ services:
   # ── Grafana — Observability Dashboard ────────────────────────────────
   # Replaces: Cloudflare Dashboard, CF Analytics
   grafana:
-    image: grafana/grafana:10.3.0
+    image: grafana/grafana:10.3.12@sha256:0b9a007bcf831c0d9840b28588f6bcfa12d79fbf4defa8412f9f78329abe211c
     container_name: tranc3-grafana
     <<: *common
     environment:
@@ -198,7 +198,7 @@ services:
   # ── Loki — Log Aggregation ───────────────────────────────────────────
   # Replaces: Cloudflare Logs, CF Logpush
   loki:
-    image: grafana/loki:2.9.0
+    image: grafana/loki:2.9.17@sha256:c4a25af6f2709fa625d88ee5df494a332a85f30e9575854031667823ecc5be04
     container_name: tranc3-loki
     <<: *common
     ports:
@@ -213,7 +213,7 @@ services:
 
   # ── Promtail — Log Shipper ───────────────────────────────────────────
   promtail:
-    image: grafana/promtail:2.9.0
+    image: grafana/promtail:2.9.17@sha256:b28495fdab552b183428c5b5cebbf258231fc5f00be7724be2bc091ad21ac390
     container_name: tranc3-promtail
     <<: *common
     volumes:
@@ -1697,7 +1697,7 @@ services:
   # UI: http://localhost:3301  Backend: ClickHouse + query-service
   # ─────────────────────────────────────────────────────────────────────────
   signoz-clickhouse:
-    image: clickhouse/clickhouse-server:24.1.2-alpine
+    image: clickhouse/clickhouse-server:24.1.8-alpine@sha256:3b37c56d912f2b13eab1ba58bfce4b9a1d40ef1bc8cfa772f7920e29da560817
     container_name: trancendos-signoz-clickhouse
     environment:
       CLICKHOUSE_DB: signoz_traces
@@ -2241,7 +2241,7 @@ services:
 # Default creds: admin/admin — override via AIRFLOW_USER / AIRFLOW_PASS
 # ═══════════════════════════════════════════════════════════════════════════
   airflow:
-    image: apache/airflow:2.9.0
+    image: apache/airflow:2.9.3@sha256:0188b06abb250caccc48bb6d00fde5e74a211273f78b0d143bc4d63f2b67412d
     container_name: trancendos-airflow
     restart: unless-stopped
     entrypoint: >
@@ -2337,7 +2337,7 @@ services:
 # Requires: vm.max_map_count=262144 on host (sysctl -w vm.max_map_count=262144)
 # ═══════════════════════════════════════════════════════════════════════════
   wazuh-manager:
-    image: wazuh/wazuh-manager:4.8.0
+    image: wazuh/wazuh-manager:4.8.2@sha256:ae4bef121658fe2868914fe20a8ebd25ee6a4378df56b3e59e6e40ec5976e0a0
     container_name: trancendos-wazuh-manager
     restart: unless-stopped
     environment:
@@ -2356,7 +2356,7 @@ services:
       - tranc3-net
 
   wazuh-dashboard:
-    image: wazuh/wazuh-dashboard:4.8.0
+    image: wazuh/wazuh-dashboard:4.8.2@sha256:38891174e822a459e3b21c16ddd633dea68dedcd892241410b5f6bd7a9cecf8a
     container_name: trancendos-wazuh-dashboard
     restart: unless-stopped
     depends_on:
@@ -2379,7 +2379,7 @@ services:
       - "traefik.http.services.wazuh.loadbalancer.server.port=5601"
 
   wazuh-indexer:
-    image: wazuh/wazuh-indexer:4.8.0
+    image: wazuh/wazuh-indexer:4.8.2@sha256:9e9ae4157d71e3f0b6120a93eb6c21aac247a0e962c24732e4f37652276af23b
     container_name: trancendos-wazuh-indexer
     restart: unless-stopped
     environment:
@@ -2851,7 +2851,7 @@ services:
   # ── cAdvisor — Container resource usage metrics ───────────────────────────
   # Google, Apache 2.0. Per-container CPU/RAM/disk/network → Prometheus.
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: gcr.io/cadvisor/cadvisor:v0.49.2@sha256:aea169b3b211216d9d61c33455ec3a85d2b6f63d8889b1ebf41b97163cffbbc5
     container_name: tranc3-cadvisor
     restart: unless-stopped
     privileged: true
