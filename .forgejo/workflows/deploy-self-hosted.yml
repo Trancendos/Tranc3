@@ -37,7 +37,7 @@ jobs:
     name: Build Worker Images
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Build tranc3-ai worker
         run: |
@@ -80,7 +80,7 @@ jobs:
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install flyctl
         run: |

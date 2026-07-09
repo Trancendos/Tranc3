@@ -13,7 +13,7 @@ when:
 steps:
   # ── Ruff lint + format check (matches GitHub Actions CI gate) ───────────────
   ruff-lint:
-    image: python:3.11-slim
+    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
     commands:
       - pip install --quiet ruff
       - ruff check --select E,F,W,B --ignore E501,B008,B904 .
@@ -21,7 +21,7 @@ steps:
 
   # ── Full pytest suite ────────────────────────────────────────────────────────
   pytest:
-    image: python:3.11-slim
+    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
     environment:
       SECRET_KEY: woodpecker-ci-test-key-not-real
       DATABASE_URL: sqlite:///./test.db
@@ -36,7 +36,7 @@ steps:
 
   # ── Security: Python dependencies + SAST ────────────────────────────────────
   python-security:
-    image: python:3.11-slim
+    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
     commands:
       - pip install --quiet pip-audit bandit
       - pip-audit --requirement requirements.txt --vulnerability-service osv || true
@@ -48,7 +48,7 @@ steps:
 
   # ── Docker Compose lint (Checkov IaC scanner) ────────────────────────────────
   docker-lint:
-    image: python:3.11-slim
+    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
     commands:
       - pip install --quiet checkov
       - checkov -f docker-compose.production.yml --quiet || true
@@ -57,7 +57,7 @@ steps:
 
   # ── Node.js audit (web frontend) ─────────────────────────────────────────────
   npm-audit:
-    image: node:20-slim
+    image: node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
     directory: web
     commands:
       - npm ci --silent
@@ -67,7 +67,7 @@ steps:
 
   # ── Mattermost notification (main branch only) ────────────────────────────────
   notify-mattermost:
-    image: plugins/webhook
+    image: plugins/webhook@sha256:2d54c2299f55e00846626924cfdfba81c41fd4130faa381d418c1d64eaa1917b
     settings:
       urls:
         from_secret: MATTERMOST_WEBHOOK_URL

@@ -60,7 +60,7 @@ services:
 
   # ── Redis ─────────────────────────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: tranc3-uat-redis
     <<: *uat-common
     env_file: []
@@ -73,7 +73,7 @@ services:
 
   # ── Vault (simplified — file backend, auto-unsealed for CI/UAT) ──────────
   vault:
-    image: hashicorp/vault:1.18
+    image: hashicorp/vault:1.18@sha256:750bb37c1638fa194ab37053a81618c61bb0491ddec6fccac87c07a8e6cd8166
     container_name: tranc3-uat-vault
     <<: *uat-common
     env_file: []
@@ -240,7 +240,7 @@ services:
 
   # ── Prometheus ────────────────────────────────────────────────────────────
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.1.0@sha256:6559acbd5d770b15bb3c954629ce190ac3cbbdb2b7f1c30f0385c4e05104e218
     container_name: tranc3-uat-prometheus
     <<: *uat-common
     env_file: []
@@ -274,7 +274,7 @@ services:
 
   # ── MailHog — email testing ───────────────────────────────────────────────
   mailhog:
-    image: mailhog/mailhog:v1.0.1
+    image: mailhog/mailhog:v1.0.1@sha256:8d76a3d4ffa32a3661311944007a415332c4bb855657f4f6c57996405c009bea
     container_name: tranc3-uat-mailhog
     networks:
       - tranc3-uat
@@ -288,7 +288,7 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   seed-data:
     <<: *uat-common
-    image: python:3.11-slim
+    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
     container_name: tranc3-uat-seed
     working_dir: /app
     volumes:

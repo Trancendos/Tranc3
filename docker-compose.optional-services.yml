@@ -33,7 +33,7 @@ x-restart: &default-restart
 # ──────────────────────────────────────────────────────────────
 services:
   outline:
-    image: outlinewiki/outline:latest
+    image: outlinewiki/outline:latest@sha256:6744a369271ce3c5a37316e5bfc5311d8d4452eb5ee4ca9560c96c15fd718a39
     container_name: the-library
     <<: *default-restart
     profiles: ["library", "all"]
@@ -78,7 +78,7 @@ services:
       <<: *default-healthcheck
 
   outline-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: outline-db
     <<: *default-restart
     profiles: ["library", "all"]
@@ -97,7 +97,7 @@ services:
       - tranc3-network
 
   outline-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: outline-redis
     <<: *default-restart
     profiles: ["library", "all"]
@@ -109,7 +109,7 @@ services:
   # Profile: documents
   # ──────────────────────────────────────────────────────────────
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:6c86cad803970ea782683a8e80e7403444c5bf3cf70de63b4d3c8e87500db92f
     container_name: docutari
     <<: *default-restart
     profiles: ["documents", "all"]
@@ -153,7 +153,7 @@ services:
       <<: *default-healthcheck
 
   paperless-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: paperless-db
     <<: *default-restart
     profiles: ["documents", "all"]
@@ -172,7 +172,7 @@ services:
       - tranc3-network
 
   paperless-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: paperless-redis
     <<: *default-restart
     profiles: ["documents", "all"]
@@ -184,7 +184,7 @@ services:
   # Profile: design
   # ──────────────────────────────────────────────────────────────
   penpot-frontend:
-    image: penpotapp/frontend:latest
+    image: penpotapp/frontend:latest@sha256:4725b4698d8d1bd25ee1666e0d900d20da8937fea845c6a088f76cd69293560b
     container_name: fabulousa-frontend
     <<: *default-restart
     profiles: ["design", "all"]
@@ -207,7 +207,7 @@ services:
       <<: *default-healthcheck
 
   penpot-backend:
-    image: penpotapp/backend:latest
+    image: penpotapp/backend:latest@sha256:6c8e3851f3734e98e48d5a4a68e2c64485f6bd67a1ffec809aa9f1847d90a646
     container_name: fabulousa-backend
     <<: *default-restart
     profiles: ["design", "all"]
@@ -233,7 +233,7 @@ services:
       - tranc3-network
 
   penpot-exporter:
-    image: penpotapp/exporter:latest
+    image: penpotapp/exporter:latest@sha256:b370f14927050fb05ac646441b5993d9337dda7eec60d944aa112819c88207bc
     container_name: fabulousa-exporter
     <<: *default-restart
     profiles: ["design", "all"]
@@ -244,7 +244,7 @@ services:
       - tranc3-network
 
   penpot-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: penpot-db
     <<: *default-restart
     profiles: ["design", "all"]
@@ -265,7 +265,7 @@ services:
       - tranc3-network
 
   penpot-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: penpot-redis
     <<: *default-restart
     profiles: ["design", "all"]
@@ -344,7 +344,7 @@ services:
   # Profile: scheduling
   # ──────────────────────────────────────────────────────────────
   calcom:
-    image: calcom/cal.com:latest
+    image: calcom/cal.com:latest@sha256:ace3bb1219fb7306585ab9f4d94d41af7ee064c343db0498173436bbe857bd49
     container_name: chronossphere
     <<: *default-restart
     profiles: ["scheduling", "all"]
@@ -372,7 +372,7 @@ services:
       <<: *default-healthcheck
 
   calcom-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: calcom-db
     <<: *default-restart
     profiles: ["scheduling", "all"]
@@ -395,7 +395,7 @@ services:
   # Profile: registry
   # ──────────────────────────────────────────────────────────────
   zot:
-    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    image: ghcr.io/project-zot/zot-linux-amd64:latest@sha256:34f18f783037f967dba10df02f9d4086c4d626f5643ef9f5e51e4a4547280a0b
     container_name: the-artifactory
     <<: *default-restart
     profiles: ["registry", "all"]
@@ -420,7 +420,7 @@ services:
   # Profile: api-marketplace
   # ──────────────────────────────────────────────────────────────
   gravitee-gateway:
-    image: graviteeio/apim-gateway:4
+    image: graviteeio/apim-gateway:4@sha256:433c976e976459743e96f6c71ace611b2618a892d59a6c75d239dbfd9239528f
     container_name: api-marketplace-gateway
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -442,7 +442,7 @@ services:
       - "traefik.http.services.gravitee-gw.loadbalancer.server.port=8082"
 
   gravitee-management-api:
-    image: graviteeio/apim-management-api:4
+    image: graviteeio/apim-management-api:4@sha256:41a6c3ead322d952494beb3baa39d3cca4a315b7180e76bec353461744d1e94c
     container_name: api-marketplace-mgmt
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -458,7 +458,7 @@ services:
       - tranc3-network
 
   gravitee-portal:
-    image: graviteeio/apim-portal-ui:4
+    image: graviteeio/apim-portal-ui:4@sha256:dc197f03bb9537d149a9d7a6dd61f857cd8bc1916972593d5ee0ac65b526359d
     container_name: api-marketplace-portal
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -477,7 +477,7 @@ services:
       - "traefik.http.services.gravitee-portal.loadbalancer.server.port=8080"
 
   gravitee-mongo:
-    image: mongo:6-jammy
+    image: mongo:6-jammy@sha256:a90cef0143bed76540c2b7e6f299a02165e59b07e459b2fd7fef031c5accf5fd
     container_name: gravitee-mongo
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
@@ -496,7 +496,7 @@ services:
   # Profile: sandbox
   # ──────────────────────────────────────────────────────────────
   icebox:
-    image: python:3.11-slim
+    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
     container_name: the-ice-box
     <<: *default-restart
     profiles: ["sandbox", "all"]

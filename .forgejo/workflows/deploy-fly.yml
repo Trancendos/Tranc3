@@ -22,7 +22,7 @@ jobs:
     name: Deploy trancendos-backend
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install flyctl
         run: |
@@ -80,7 +80,7 @@ jobs:
       run:
         working-directory: tranc3-bots
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install flyctl
         run: |

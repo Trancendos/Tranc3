@@ -5,7 +5,7 @@ version: "3.8"
 
 services:
   gravitee-gateway:
-    image: graviteeio/apim-gateway:4
+    image: graviteeio/apim-gateway:4@sha256:433c976e976459743e96f6c71ace611b2618a892d59a6c75d239dbfd9239528f
     container_name: api-marketplace-gateway
     restart: unless-stopped
     ports:
@@ -26,7 +26,7 @@ services:
       - "traefik.http.services.gravitee-gw.loadbalancer.server.port=8082"
 
   gravitee-management-api:
-    image: graviteeio/apim-management-api:4
+    image: graviteeio/apim-management-api:4@sha256:41a6c3ead322d952494beb3baa39d3cca4a315b7180e76bec353461744d1e94c
     container_name: api-marketplace-mgmt
     restart: unless-stopped
     ports:
@@ -41,7 +41,7 @@ services:
       - tranc3-network
 
   gravitee-portal:
-    image: graviteeio/apim-portal-ui:4
+    image: graviteeio/apim-portal-ui:4@sha256:dc197f03bb9537d149a9d7a6dd61f857cd8bc1916972593d5ee0ac65b526359d
     container_name: api-marketplace-portal
     restart: unless-stopped
     ports:
@@ -59,7 +59,7 @@ services:
       - "traefik.http.services.gravitee-portal.loadbalancer.server.port=8080"
 
   gravitee-mongo:
-    image: mongo:6-jammy
+    image: mongo:6-jammy@sha256:a90cef0143bed76540c2b7e6f299a02165e59b07e459b2fd7fef031c5accf5fd
     container_name: gravitee-mongo
     restart: unless-stopped
     volumes:

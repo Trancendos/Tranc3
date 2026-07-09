@@ -46,7 +46,7 @@ jobs:
     name: Python — pip-audit + bandit + safety + ruff
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Python security tools
         run: |
@@ -101,7 +101,7 @@ jobs:
             --author-url "https://trancendos.ai" || true
 
       - name: Upload Python security reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: python-security-${{ github.run_number }}
@@ -115,7 +115,7 @@ jobs:
     name: Node.js — npm audit (CF Workers + bots)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: npm audit — tranc3-ai
         working-directory: cloudflare/tranc3-ai
@@ -156,7 +156,7 @@ jobs:
     name: Semgrep OSS SAST (CodeQL replacement)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install semgrep
         run: python3 -m pip install semgrep --quiet
@@ -186,7 +186,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload semgrep results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: semgrep-${{ github.run_number }}
@@ -201,7 +201,7 @@ jobs:
     name: Trivy — misconfig + vulnerability scan
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Trivy
         run: |
@@ -233,7 +233,7 @@ jobs:
             . || true
 
       - name: Upload Trivy reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: trivy-${{ github.run_number }}
@@ -247,7 +247,7 @@ jobs:
     name: Secret Detection (gitleaks + TruffleHog)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
@@ -288,7 +288,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload secret detection reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: secret-detection-${{ github.run_number }}
@@ -305,7 +305,7 @@ jobs:
     name: OSV-Scanner (multi-ecosystem SCA)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install OSV-Scanner
         run: |
@@ -338,7 +338,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload OSV-Scanner results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: osv-scanner-${{ github.run_number }}
@@ -354,7 +354,7 @@ jobs:
     name: Checkov (IaC + Docker Compose)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Checkov
         run: python3 -m pip install checkov --quiet
@@ -394,7 +394,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Checkov results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: checkov-${{ github.run_number }}
@@ -412,7 +412,7 @@ jobs:
     name: SBOM Generation (syft CycloneDX + grype)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install syft
         run: |
@@ -456,7 +456,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload SBOM and grype reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: sbom-${{ github.run_number }}
@@ -508,7 +508,7 @@ jobs:
       - sbom-generation
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Generate summary
         run: |
@@ -533,7 +533,7 @@ jobs:
           echo "NOTE: Safety removed — no longer free for commercial use." | tee -a logs/security-dashboard.txt
 
       - name: Upload dashboard
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: security-dashboard-${{ github.run_number }}
@@ -548,7 +548,7 @@ jobs:
     runs-on: self-hosted
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Generate OpenAPI spec (if server running)
         run: |
@@ -586,7 +586,7 @@ jobs:
 
       - name: Upload ZAP results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: zap-dast-results
           path: logs/zap-report.*
