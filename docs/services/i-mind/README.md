@@ -95,10 +95,18 @@
 - **Downstream:** The Observatory, via a best-effort `observe()` call (failures silently
   swallowed).
 - **Auth boundary:** none — `/imind/status` and `/imind/assess` are both open.
-- **Not integrated:** no confirmed caller of `IMind.assess()` from the inference pipeline
-  (`src/core/tranc3_inference.py` or `src/ai_gateway/`) was found in this pass — the module exists
-  and is routable, but whether it's actually invoked before every inference call (per its stated
-  mission) is unverified. This is a real gap, not a claim either way.
+- **One confirmed caller, outside the main pipeline:** `src/tranquility/wellbeing.py`'s
+  `log_mood()` genuinely calls `IMind.assess()` — verified by direct code read — whenever a
+  logged mood is `LOW`/`VERY_LOW`, passing `f"User reported mood: {mood_level.name}"` as the text
+  to assess. This is real, working, and confirmed (see Tranquility's own doc-pack).
+- **Still not integrated: the main chat/inference pipeline.** Re-checked this pass via
+  `grep -n "imind\|IMind\|assess" api.py` against `chat()`, `chat_stream()`, and `ws_chat()`
+  (`api.py` lines 1436, 1684, 2009) — none of them call `IMind.assess()` or import from
+  `src.imind`. `src/core/tranc3_inference.py` and `src/ai_gateway/` were also grepped with no
+  match. So I-Mind's stated mission — "scans user messages ... **before inference**" — is not
+  true for the platform's actual chat/generate/stream/websocket entry points; the only live path
+  into I-Mind is the narrower, message-content-free Tranquility mood-escalation trigger above.
+  This is confirmed, not merely unverified: the gap is real.
 
 ## 6. Architecture Scalability Document (ASD)
 
@@ -154,3 +162,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/imind/protocol.py` (169 lines), `src/imind/routes.py` (28 lines), `api.py` router registration (line 814) | Confirmed Live-tier, full pack authored. Found and fixed a real bug: the self-harm level-upgrade check used string comparison (`level.value < SensitivityLevel.HIGH.value`) instead of severity ordering, so self-harm detections never actually escalated past `NONE`. Also flagged (not fixed, unverified): no confirmed caller of `IMind.assess()` from the inference pipeline was found — routable but integration into the actual chat flow is unconfirmed. |
+| 2026-07-09 | Claude (session) | `src/tranquility/wellbeing.py`, `api.py` (`chat()` line 1436, `chat_stream()` line 1684, `ws_chat()` line 2009), `src/core/tranc3_inference.py`, `src/ai_gateway/`, `src/platform/entity_rotation.py`, `src/platform/zero_cost_service_map.py`, `src/entities/platform.py` | Resolved the "unconfirmed" status from the prior entry with a direct investigation. **Confirmed:** `Tranquility.log_mood()` genuinely calls `IMind.assess()` on `LOW`/`VERY_LOW` moods (already independently verified in Tranquility's own doc-pack). **Also confirmed (not merely unverified):** none of the platform's actual chat entry points (`chat()`, `chat_stream()`, `ws_chat()`) or the inference/gateway layers call `IMind.assess()` or import `src.imind` — grep-verified with zero matches. The three other files referencing "imind" (`entity_rotation.py`, `zero_cost_service_map.py`, `entities/platform.py`) are registry/rotation metadata only, not real callers. No code changed this pass — this was a documentation-accuracy investigation per the go-live punch list, resolving the module's "unverified" wiring status to a definite finding: I-Mind does not screen messages before inference, contrary to its stated mission. |
