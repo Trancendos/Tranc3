@@ -58,25 +58,32 @@ def _import_worker(module_dotted: str, file_path: Path):
     top-level code already bound, preserving type identity for things like
     Pydantic isinstance checks.
 
-    The worker's own directory is left on sys.path permanently (never
-    removed) — mirroring how each worker's own directory is the sole entry
-    on PYTHONPATH inside its real container.
+    The worker's own directory is only on sys.path for the duration of this
+    import — it's removed again afterward so a later worker's own bare
+    imports can't accidentally resolve here instead of its own directory.
+    This is safe for lazy same-worker imports too: once a worker's sibling
+    module (e.g. the-grid's "models") is cached in sys.modules during this
+    import, it stays cached — a later `from models import X` inside that
+    worker's own route handler hits the sys.modules cache directly and
+    never needs to fall back to sys.path.
     """
     _COMMON_SIBLING_NAMES = {"main", "router", "config", "database", "models", "service"}
     for name in _COMMON_SIBLING_NAMES:
         sys.modules.pop(name, None)
 
     worker_dir = str(file_path.parent)
-    if worker_dir not in sys.path:
+    inserted = worker_dir not in sys.path
+    if inserted:
         sys.path.insert(0, worker_dir)
-    else:
-        sys.path.remove(worker_dir)
-        sys.path.insert(0, worker_dir)
-    spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[module_dotted] = mod
-    spec.loader.exec_module(mod)
-    return mod
+    try:
+        spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[module_dotted] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    finally:
+        if inserted:
+            sys.path.remove(worker_dir)
 
 
 analytics_mod = _import_worker(
