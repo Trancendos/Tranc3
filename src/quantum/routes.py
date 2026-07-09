@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
@@ -16,19 +16,41 @@ from Dimensional.error_handlers import safe_error_detail
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/thinktank", tags=["think-tank"])
 
+# Once a dependency import succeeds it stays importable for the life of the
+# process, so only the "available" result is worth caching permanently.
+# A missing dependency is *not* added to sys.modules on failure, so an
+# uncached call would otherwise re-attempt the full import machinery on
+# every poll — but caching a failure would also hide recovery (e.g. the
+# dependency gets installed and the process isn't restarted), so failures
+# are retried on every call instead of cached.
+_quantum_available_cache: Optional[Dict[str, Any]] = None
+_deepmind_available_cache: Optional[Dict[str, Any]] = None
+
 
 def _quantum_status() -> Dict[str, Any]:
+    global _quantum_available_cache
+    if _quantum_available_cache is not None:
+        return _quantum_available_cache
     try:
-        return {"quantum_core": "available", "backend": "qiskit-aer"}
-    except Exception:
-        return {"quantum_core": "degraded", "note": "degraded"}
+        import qiskit_aer  # noqa: F401
+
+        _quantum_available_cache = {"quantum_core": "available", "backend": "qiskit-aer"}
+        return _quantum_available_cache
+    except Exception as exc:
+        return {"quantum_core": "degraded", "note": safe_error_detail(exc, 503)}
 
 
 def _deepmind_status() -> Dict[str, Any]:
+    global _deepmind_available_cache
+    if _deepmind_available_cache is not None:
+        return _deepmind_available_cache
     try:
-        return {"mcts": "available"}
-    except Exception:
-        return {"mcts": "degraded", "note": "degraded"}
+        from src.deepmind.planning import StrategicPlanner  # noqa: F401
+
+        _deepmind_available_cache = {"mcts": "available"}
+        return _deepmind_available_cache
+    except Exception as exc:
+        return {"mcts": "degraded", "note": safe_error_detail(exc, 503)}
 
 
 @router.get("/status")
@@ -81,20 +103,21 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     Body: { problem: str, depth: int }
     """
     try:
-        from src.deepmind.planning import PlanningEngine
+        from src.deepmind.planning import PlanningConfig, StrategicPlanner
 
-        engine = PlanningEngine()
         problem = body.get("problem", "")
-        depth = int(body.get("depth", 3))
-        plan = (
-            engine.plan(problem, depth=depth)
-            if hasattr(engine, "plan")
-            else {"note": "planning engine scaffold — wire problem space to activate"}
-        )
+        depth = max(1, min(int(body.get("depth", 3)), 10))
+        engine = StrategicPlanner(PlanningConfig(horizon=depth))
+        plan = await engine.plan_action(problem, state={}, constraints=[])
         return {"problem": problem, "depth": depth, "plan": plan}
     except Exception as exc:
+        try:
+            depth = max(1, min(int(body.get("depth", 3)), 10))
+        except (TypeError, ValueError, OverflowError):
+            depth = None
         return {
             "problem": body.get("problem", ""),
+            "depth": depth,
             "plan": None,
             "error": safe_error_detail(exc, 500),
         }

@@ -4,84 +4,149 @@
 |---|---|
 | **Entity** | TranceFlow |
 | **Lead AI** | Junior Cesar |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | Godot Engine integration |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `workers/tranceflow/main.py` + `config.py`/`database.py`/`service.py`/`router.py` (the deployed implementation) — standalone worker, no `src/*` module, no `api.py` mount. `worker.py` (388 lines, separate single-file alternate) exists but is not deployed. |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `workers/tranceflow/worker.py` (388 lines)
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `workers/tranceflow/main.py`, `config.py`, `router.py`,
+> `Dockerfile`, and `docker-compose.production.yml` directly. Status is owned by the `CLAUDE.md`
+> service table; identity by `PLATFORM_ENTITIES.md`.
+> **Bug found and fixed while authoring this pack — same class as `workers/library-service` and
+> `workers/lab-service` earlier in this series.** `workers/tranceflow/Dockerfile` hardcoded
+> `EXPOSE 8052` / `HEALTHCHECK ... localhost:8052` / `CMD [..., "--port", "8052"]`, while
+> `docker-compose.production.yml` sets `PORT: "8059"`, maps `"8059:8059"`, and routes Traefik to
+> container port 8059. Compounding the defect: `config.py`'s `WORKER_PORT` read from
+> `TRANCEFLOW_PORT`, not `PORT` — the exact env var name compose actually sets — so even a
+> direct-run (`python main.py`) invocation would never have picked up compose's intended port.
+> Both issues meant the container would bind 8052 regardless of compose's configuration, making
+> it unreachable at the routed port 8059. Fixed by changing the Dockerfile's
+> `EXPOSE`/`HEALTHCHECK`/`CMD --port` to 8059, and `config.py`'s `WORKER_PORT` to read `PORT`
+> first (falling back to `TRANCEFLOW_PORT`, then `8059`). Verified by reloading `config.py` with
+> no env override — confirms it now defaults to 8059.
+> **Scope note:** `workers/tranceflow/worker.py` (388 lines) is a separate, single-file,
+> genuinely real alternate implementation (own SQLite schema, its own routes) not referenced by
+> the Dockerfile at all — the same "two independent implementations, one deployed" pattern found
+> in Sashas Photo Studio earlier in this batch. Not audited in depth here since it isn't deployed.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** 3D modeling & games creation studio.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Junior Cesar — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Junior Cesar.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** 3D modeling & games creation studio — project/asset management with a Godot Engine
+  export pipeline.
+- **Owner (RACI-A):** Junior Cesar; Platform Owner Trancendos.
+- **Scope:** the modular `main.py`+`config.py`+`database.py`+`service.py`+`router.py` stack — the
+  actually-deployed implementation. `worker.py`'s independent implementation is out of scope for
+  this pack's depth (real but unused).
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Junior Cesar | Platform Engineering | The Town Hall |
-|---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+### HTTP surface (`router.py`, mounted via `main.py`)
 
-## 3. Technology Framework Matrix (TFM)
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/health` | static worker/entity metadata, not a real dependency probe — the only route not gated by `_auth()` |
+| POST | `/projects` | `create_project()` — internal-secret authed |
+| GET | `/projects` | `list_projects()` — internal-secret authed |
+| GET | `/projects/{id}` | `get_project()` — internal-secret authed |
+| DELETE | `/projects/{id}` | `delete_project()` — internal-secret authed |
+| POST | `/projects/{id}/export` | `export_asset()` — internal-secret authed — async, presumably triggers the Godot/Blender export pipeline per `config.py`'s `GODOT_BIN`/`BLENDER_BIN` settings (not traced in depth in this pass) |
+| GET | `/status` | worker status — internal-secret authed |
 
-| Concern | Planned choice | Zero-cost stance | Status |
+### Auth (`_auth()`)
+- Real `X-Internal-Secret` header check, matching `config.INTERNAL_SECRET`. Unlike The
+  Academy/Sashas Photo Studio's `"dev-secret"` insecure-fallback pattern, `config.py` here
+  **correctly leaves `INTERNAL_SECRET` empty by default and emits a `warnings.warn()`** if unset
+  — a materially better security posture than the fallback-string pattern seen elsewhere in this
+  series. A positive finding worth noting explicitly.
+
+### Processing backends (`config.py`)
+- `GODOT_BIN`/`GODOT_ENABLED`, `BLENDER_BIN`/`BLENDER_ENABLED`, plus optional `trimesh`/`meshio`/
+  `open3d`/`pyvista` toggles — all real, self-hosted, zero-cost tooling per the module's own
+  config, consistent with the platform's zero-cost mandate. Whether `export_asset()` actually
+  invokes these binaries was not traced line-by-line in this pass given the fixed defect's
+  priority; flagged as unverified rather than assumed working.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** standalone FastAPI worker, modular file layout (config/models/database/service/
+  router/main) — a cleaner separation of concerns than most single-file workers audited in this
+  series.
+- **Fixed defect:** Dockerfile port hardcoding + wrong env var name in `config.py` — see
+  truthfulness header. This is now the third instance of the Dockerfile-hardcoded-port defect
+  class found in this doc-pack series (after `library-service` and `lab-service`), suggesting it
+  may be worth a dedicated audit pass across all remaining workers rather than finding them one
+  at a time.
+- **Not evaluated:** whether `export_asset()`'s Godot/Blender invocation actually works in a
+  real environment (neither binary confirmed present in this sandbox) — out of scope for this
+  pass's priority (the port defect).
+
+## 4. RACI Matrix
+
+| Activity | Junior Cesar (Lead) | Platform Owner | Platform Engineering |
 |---|---|---|---|
-| Foundation | Godot Engine integration | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+| Project/asset CRUD logic changes | **R** | A | C |
+| Godot/Blender export pipeline changes | **R** | A | C |
+| Deciding between `main.py`/`worker.py` as canonical (future, same open question as Sashas Photo Studio) | C | **A** | **R** |
 
-NOTE: this claim is stale — code already exists in this repo for TranceFlow (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 5. Solutions Integration Model (SIM)
 
-## 4. Policy (POL)
+- **Upstream:** any caller with a correct `X-Internal-Secret` header — real, enforced auth.
+- **Downstream:** local Godot/Blender binary invocation (per `config.py`, not traced in depth);
+  SQLite via `TranceFlowDatabase`.
+- **Not integrated:** `worker.py`'s independent implementation is never called from `main.py` or
+  vice versa.
 
-- Once implemented, TranceFlow MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 6. Architecture Scalability Document (ASD)
 
-## 5. Standards (STD)
+- **Load model:** SQLite-backed (`database.py`), single-process.
+- **Bottleneck:** Godot/Blender export operations are presumably synchronous/CPU-bound subprocess
+  calls (not traced in depth) — `PROCESS_TIMEOUT` (120s default) and `QUOTA_MAX_CALLS`/
+  `QUOTA_WINDOW_SECONDS` config values suggest rate-limiting intent, not verified as enforced in
+  this pass.
+- **Zero-cost limits:** Godot, Blender, trimesh, meshio, open3d, pyvista are all free/OSS.
+- **Degradation:** OTel instrumentation is optional (wrapped in `try/except`, never blocks
+  startup) — a good, established pattern also seen in other entities this series.
 
-- On implementation, TranceFlow MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "TranceFlow" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 7. Technology Framework Matrix (TFM)
+
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI, standalone (no `api.py` mount) | self-hosted, port 8059 (fixed this pass) |
+| Storage | SQLite (`database.py`) | zero infra cost |
+| 3D/asset processing | Godot Engine, Blender, trimesh, meshio, open3d, pyvista | all free/OSS |
+| Auth | `X-Internal-Secret`, no insecure fallback | zero cost, genuinely enforced |
+
+## 8. Policy (POL)
+
+- Real internal-secret auth enforced, with a correct warn-not-fallback pattern for missing
+  secrets — a positive finding relative to several other entities in this series.
+- Zero-cost mandate: fully honored per `config.py`'s tool choices.
+
+## 9. Procedure (PROC)
+
+- **Create a project:** `POST /projects` with the required internal-secret header.
+- **Export an asset:** `POST /projects/{id}/export` — presumably triggers Godot/Blender per
+  config; not traced end-to-end in this pass.
+
+## 10. Runbook (RUN)
+
+- **The service was unreachable at port 8059 before this pass:** was a genuine Dockerfile/config
+  port mismatch (container bound 8052; compose routed 8059; `config.py` also read the wrong env
+  var name) — fixed in this pass; confirm the fix (Dockerfile `8059` throughout, `config.py`
+  reading `PORT` first) is present in the deployed image if this recurs.
+- **Startup warns `INTERNAL_SECRET is not set`:** expected if the env var genuinely isn't
+  configured — set `INTERNAL_SECRET` in the deployment environment; this is correct, intentional
+  behavior, not a bug.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "TranceFlow" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
+- Config modules MUST read the exact environment variable name that
+  `docker-compose.production.yml` sets for that service — the `TRANCEFLOW_PORT` vs. compose's
+  `PORT` mismatch fixed here is the reason for this standard, compounding the already-established
+  Dockerfile-hardcoded-port standard from `workers/library-service`'s doc-pack.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-05 | Claude (session) | `workers/tranceflow/main.py` (74 lines), `config.py` (38 lines), `router.py` (83 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine, third-instance-in-series routing defect: Dockerfile hardcoded port 8052 (compose routes 8059) AND `config.py` read the wrong env var name (`TRANCEFLOW_PORT` instead of compose's `PORT`) — a compounding double defect. Fixed both. Verified via reload that `config.py`'s default now resolves to 8059. Positive finding: real, enforced `X-Internal-Secret` auth with a correct warn-don't-fallback pattern for a missing secret, better security posture than several other entities audited in this series. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `router.py` route table, `monitoring/prometheus.yml`, `docker-compose.planned-entities.yml`, `scripts/post_deploy_verify.py`, `.env.example`, `workers/imaginarium/main.py` | Verified and fixed two further cubic findings. (1) The HTTP-surface table only marked `POST /projects` as auth-required; confirmed via `grep` that `router.py` calls `_auth()` on every route except `GET /health` — table corrected to mark all six non-health routes as internal-secret authed. (2) Confirmed the 8052→8059 port fix from the prior pass had not been propagated to 5 other files that still referenced the old port: `monitoring/prometheus.yml`'s scrape target, `docker-compose.planned-entities.yml` (its own `tranceflow` service block, `TRANCEFLOW_URL`, and `THREED_URL` references), `scripts/post_deploy_verify.py`'s health-check port list, `.env.example`'s `TRANCEFLOW_PORT` default, and `workers/imaginarium/main.py`'s `CAPABILITIES` port entry. All six updated to 8059; `scripts/port_registry_validate.py` re-run and passes (73 workers). |

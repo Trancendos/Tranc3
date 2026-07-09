@@ -3,7 +3,7 @@ Trancendos Backup Service — Automated DR Worker
 =================================================
 Self-hosted backup daemon for all SQLite worker databases.
 
-Port: 8087
+Port: 8078
 Zero-cost: FastAPI + asyncio scheduler + sqlite3 hot-backup API.
 
 Schedules
@@ -51,7 +51,7 @@ from src.entities.health_metadata import health_entity_block
 logger = logging.getLogger("tranc3.workers.backup-service")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 
-WORKER_PORT = int(os.getenv("PORT") or "8039")
+WORKER_PORT = int(os.getenv("PORT") or "8078")
 BACKUP_ROOT = Path(os.environ.get("BACKUP_ROOT", "/data/backups"))
 
 engine = BackupEngine(backup_root=BACKUP_ROOT, encrypt=True)

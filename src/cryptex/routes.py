@@ -3,12 +3,20 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Body, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
+from auth import get_current_user
 from src.cryptex.threat_detector import ThreatSeverity, get_cryptex
 
 router = APIRouter(prefix="/cryptex", tags=["cryptex"])
+
+
+def _require_admin(current_user: dict = Depends(get_current_user)) -> None:
+    """IP blocking and bounty-scan triggering are platform-wide security actions,
+    not per-user data — gate them to admins rather than a self-or-enterprise check."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="admin_required")
 
 
 @router.get("/stats")
@@ -63,13 +71,13 @@ async def analyse_request(request: Request, actor: Optional[str] = Query(None)):
 
 
 @router.post("/block/{ip}")
-async def block_ip(ip: str):
+async def block_ip(ip: str, _admin: None = Depends(_require_admin)):
     get_cryptex().block_ip(ip)
     return {"blocked": ip}
 
 
 @router.delete("/block/{ip}")
-async def unblock_ip(ip: str):
+async def unblock_ip(ip: str, _admin: None = Depends(_require_admin)):
     get_cryptex().unblock_ip(ip)
     return {"unblocked": ip}
 
@@ -78,19 +86,21 @@ async def unblock_ip(ip: str):
 
 
 @router.post("/bounty/scan")
-async def run_bounty_scan(background_tasks: BackgroundTasks, target: Optional[str] = Query(None)):
-    """Trigger a full bounty scan (nuclei + pip-audit) in the background."""
+async def run_bounty_scan(
+    background_tasks: BackgroundTasks, _admin: None = Depends(_require_admin)
+):
+    """Trigger a full bounty scan (nuclei + pip-audit) against own infrastructure
+    in the background. The scan target is fixed server-side (BOUNTY_TARGET_URL) —
+    no caller-supplied target is accepted, per this module's own "own infrastructure
+    only, never scan third parties" invariant."""
     from src.cryptex.bounty_hunter import run_full_scan
 
-    def _scan():
-        run_full_scan(target)
-
-    background_tasks.add_task(_scan)
-    return {"status": "scan_started", "target": target or "default"}
+    background_tasks.add_task(run_full_scan)
+    return {"status": "scan_started"}
 
 
 @router.get("/bounty/candidates")
-async def bounty_candidates():
+async def bounty_candidates(_admin: None = Depends(_require_admin)):
     """Return bounty-eligible findings not yet reported."""
     from src.cryptex.bounty_hunter import get_bounty_candidates
 
@@ -98,7 +108,7 @@ async def bounty_candidates():
 
 
 @router.get("/bounty/summary")
-async def bounty_summary():
+async def bounty_summary(_admin: None = Depends(_require_admin)):
     """Return aggregate finding statistics."""
     from src.cryptex.bounty_hunter import get_summary
 

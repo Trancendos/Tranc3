@@ -10,11 +10,22 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict, Optional
 
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
+
+NOTIFICATIONS_URL = os.getenv("NOTIFICATIONS_URL", "http://notifications:8008").rstrip("/")
+_INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+# If set, escalations are dispatched as a real outbound webhook (e.g. to a
+# support team's Slack/PagerDuty/Ops-Genie inbox) via the notifications
+# worker's webhook channel — the only channel in that worker with genuine
+# pass/fail delivery semantics. Every other channel there (email/sms/push/
+# in_app) is a zero-cost logging stub that always reports success, so it
+# cannot be used to justify telling a user "a human was notified."
+_ESCALATION_WEBHOOK_URL = os.getenv("RESONATE_ESCALATION_WEBHOOK_URL", "")
 
 _EMPATHY_PREFIXES = [
     "I hear you, and what you're feeling is completely valid.",
@@ -78,10 +89,13 @@ class Resonate:
 
         return "\n\n".join(p.strip() for p in parts if p.strip())
 
-    def escalate_to_human(self, user_id: str, context: str) -> Dict[str, Any]:
+    async def escalate_to_human(self, user_id: str, context: str) -> Dict[str, Any]:
         """
-        Flag for human support escalation. Emits Observatory SECURITY event.
-        In production this would trigger a notification to the support team.
+        Flag for human support escalation. Emits an Observatory SECURITY event
+        (always) and attempts a real dispatch through the notifications worker
+        (best-effort). The returned message reflects what actually happened —
+        it must never claim a human was notified unless dispatch genuinely
+        succeeded, since this path is reached from crisis-support contexts.
         """
         try:
             from src.observability.observatory import EventCategory, EventSeverity, observe
@@ -100,10 +114,70 @@ class Resonate:
         logger.warning(
             "resonate: human escalation triggered for user=%s", sanitize_for_log(user_id)
         )  # codeql[py/cleartext-logging]
+
+        dispatched = await self._dispatch_notification(user_id, context)
+
+        if dispatched:
+            return {
+                "escalated": True,
+                "message": (
+                    "Your message has been flagged for urgent review by the support team. "
+                    "You are not alone."
+                ),
+            }
         return {
             "escalated": True,
-            "message": "A support team member has been notified. You are not alone.",
+            "message": (
+                "Your message has been logged and flagged internally, but we could not "
+                "confirm live delivery to a support team member right now. If you are in "
+                "immediate danger, please contact emergency services or a crisis line "
+                "directly — see the resources below."
+            ),
+            "notification_dispatched": False,
         }
+
+    async def _dispatch_notification(self, user_id: str, context: str) -> bool:
+        """Best-effort real dispatch via the notifications worker. Never raises.
+
+        Only returns True if a `RESONATE_ESCALATION_WEBHOOK_URL` is configured
+        and the notifications worker's webhook channel confirms genuine
+        delivery (`{"ok": true}` in the response body — this endpoint always
+        returns HTTP 200 even on failure, so the status code alone can't be
+        trusted). Without a configured webhook target there is no channel
+        available that provides a real delivery guarantee, so this always
+        returns False in that case rather than reporting a false positive.
+        """
+        if not _ESCALATION_WEBHOOK_URL:
+            logger.warning(
+                "resonate: no RESONATE_ESCALATION_WEBHOOK_URL configured — "
+                "escalation cannot be confirmed delivered to a human"
+            )
+            return False
+        try:
+            import httpx
+
+            headers = {"X-Internal-Secret": _INTERNAL_SECRET} if _INTERNAL_SECRET else {}
+            async with httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=2.0)) as client:
+                resp = await client.post(
+                    f"{NOTIFICATIONS_URL}/notifications/send",
+                    json={
+                        "user_id": user_id,
+                        "channel": "webhook",
+                        "priority": "urgent",
+                        "subject": "Resonate human escalation",
+                        "body": context[:500],
+                        "metadata": {
+                            "source": "resonate",
+                            "user_id": user_id,
+                            "webhook_url": _ESCALATION_WEBHOOK_URL,
+                        },
+                    },
+                    headers=headers,
+                )
+                return bool(resp.json().get("ok", False))
+        except Exception as exc:
+            logger.warning("resonate: notification dispatch failed: %s", exc)
+            return False
 
     def stats(self) -> Dict[str, Any]:
         return {"service": "resonate", "status": "active"}

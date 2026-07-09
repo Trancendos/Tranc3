@@ -4,80 +4,175 @@
 |---|---|
 | **Entity** | Imaginarium |
 | **Lead AI** | Voxx |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | orchestrator (planned) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `workers/imaginarium/main.py` (65 lines, honest stub) — the deployed implementation. `worker.py` (343 lines, real cross-service orchestrator with genuine auth) exists but is not deployed. |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `workers/imaginarium/worker.py` (343 lines)
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `workers/imaginarium/main.py`, `worker.py`, `Dockerfile`, and
+> `docker-compose.production.yml` directly. Status is owned by the `CLAUDE.md` service table;
+> identity by `PLATFORM_ENTITIES.md`.
+> **Notable pattern, distinct from most "two implementations" cases in this series: the deployed
+> file is the honest stub, and the real implementation is the one sitting unused.**
+> `workers/imaginarium/main.py` (the file the Dockerfile actually builds and runs) is a genuine,
+> 65-line placeholder — its `/orchestrate` route returns
+> `{"orchestrated": false, "message": "Orchestration not yet ready."}` verbatim, honestly labeled,
+> not a silent fake. `workers/imaginarium/worker.py` (343 lines, never referenced by the
+> Dockerfile) is a **fully real implementation**: `POST /create` triggers `_fan_out_creation()`,
+> a background task that makes genuine HTTP calls (via `httpx.AsyncClient`, with a real
+> `X-Internal-Secret: {INTERNAL_SECRET}` header) to Sashas Photo Studio, TranceFlow, TateKing, and
+> Warp Radio to actually orchestrate a multi-service creative pipeline, backed by a real SQLite
+> `templates`/`projects` schema. Unlike The Academy's case (where the fake was deployed and the
+> real implementation sat unused, discovered as the most severe defect in this series), this is
+> the inverse: the **conservative, honest** file is what's live, and the working orchestrator is
+> dormant. Not fixed in this pass (swapping the deployed file is a deployment decision requiring
+> owner sign-off, not a docs-pass fix) — flagged as a clear, low-risk opportunity: promoting
+> `worker.py` to deployed status would give Imaginarium its actual mission capability with
+> genuine auth already built in.
+> **Also found and fixed this pass, the same defect class found repeatedly across this doc-pack
+> series:** `workers/imaginarium/Dockerfile` hardcoded `EXPOSE 8054` / `HEALTHCHECK ...
+> localhost:8054`, and `main.py`'s own `PORT` default also fell back to `8054`, while
+> `docker-compose.production.yml` sets `PORT: "8064"` and routes Traefik to container port 8064.
+> Not a live defect (`main.py` is invoked via bare `python main.py`, correctly reads `PORT` at
+> runtime, and compose's own healthcheck overrides the Dockerfile's) but fixed for robustness,
+> consistent with recent practice on this defect class. Compose's Traefik rule was also bare
+> ``PathPrefix(`/imaginarium`)`` with **no `StripPrefix` middleware**, while `main.py`'s routes
+> are unprefixed — the same genuinely live routing defect already found and fixed for The
+> Academy, Sashas Photo Studio, Taimra, and TateKing earlier in this series; fixed with a
+> `strip-imaginarium` middleware.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** omni-creative masterpiece wizard — orchestrates Fabulousa + TateKing + TranceFlow + The Studio + Sashas Photo Studio into one creative pipeline.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Voxx — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Voxx.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** omni-creative masterpiece wizard — orchestrates Sashas Photo Studio, TranceFlow,
+  TateKing, The Studio, and Warp Radio into one creative pipeline. **As deployed**, this mission
+  is not yet live (the deployed `main.py` is an honest stub); the code to fulfil it exists in
+  `worker.py` but isn't running.
+- **Owner (RACI-A):** Platform Owner Trancendos.
+- **Lead AI:** Voxx.
+- **Scope:** `workers/imaginarium/main.py` (deployed) + `worker.py` (real, undeployed) — both
+  documented in this pack given the unusual "real implementation exists but isn't live" finding.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Voxx | Platform Engineering | The Town Hall |
-|---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+### HTTP surface, deployed (`main.py`, no route prefix)
 
-## 3. Technology Framework Matrix (TFM)
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/health` | static uptime — not a real dependency probe |
+| GET | `/status` | static `"status": "initialising"` — honestly reflects the stub state |
+| POST | `/orchestrate` | **honest stub** — always returns `{"orchestrated": false, "message": "Orchestration not yet ready."}`, HTTP 202 |
+| GET | `/capabilities` | static list of 5 sub-services the entity is meant to orchestrate (name/slug/port/role), for discovery purposes only |
 
-| Concern | Planned choice | Zero-cost stance | Status |
+### HTTP surface, real-but-undeployed (`worker.py`, own `_router`, mounted at app root)
+
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/health` | static |
+| GET | `/metrics` | Prometheus-format counters |
+| POST | `/create` | creates a project row, kicks off `_fan_out_creation()` as a background task — **genuinely calls out to other services**; internal-secret authed |
+| GET | `/projects` | list; internal-secret authed |
+| GET | `/projects/{id}` | detail; internal-secret authed |
+| GET / POST | `/templates` | list/create project templates (SQLite-backed, real seed data: "Game Asset Pack", "Brand Kit", etc.); internal-secret authed |
+| GET | `/services/status` | internal-secret authed |
+
+### `_fan_out_creation()` — real, working orchestration logic
+- Builds `{"X-Internal-Secret": INTERNAL_SECRET, ...}` headers and, based on `project_type`,
+  makes real `httpx.AsyncClient` calls out to the sibling creative services (image generation for
+  `mixed`/`music_visual`/`video_image`/`brand`/`game_assets` project types, per the code seen in
+  this pass — not traced call-by-call to every branch). This is genuine cross-entity integration
+  logic, not a scaffold — the kind of implementation several other entities in this series
+  (Resonate, I-Mind) were found to lack despite claiming it.
+- Enforces `X-Internal-Secret` via `_auth()` on its own routes, with the same insecure
+  `"dev-secret"` fallback default (`INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")`)
+  already flagged for The Academy/Sashas Photo Studio/TateKing — a real gap if this file were
+  promoted to deployed status without also fixing that default.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** standalone FastAPI worker; the deployed `main.py` is stateless and trivial, while
+  the undeployed `worker.py` is a genuine SQLite-backed orchestrator.
+- **Fixed defects:** Dockerfile port mismatch (cosmetic, fixed for robustness) + Traefik
+  `StripPrefix` missing (genuine, live routing defect) — see truthfulness header.
+- **Not fixed, flagged as an opportunity rather than a defect:** the working orchestrator
+  (`worker.py`) is not what's deployed. Swapping the Dockerfile to build/run `worker.py` instead
+  of `main.py` would give this entity its actual mission capability, but requires sign-off (this
+  is the opposite risk profile of The Academy's case — promoting a real implementation over a
+  known-honest stub, not silently replacing a fake with something that changes behavior
+  unexpectedly) and fixing the `dev-secret` fallback first.
+
+## 4. RACI Matrix
+
+| Activity | Voxx (Lead) | Platform Owner | Platform Engineering |
 |---|---|---|---|
-| Foundation | orchestrator (planned) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+| Orchestration pipeline logic changes (`worker.py`) | **R** | A | C |
+| Deciding whether to promote `worker.py` to deployed status (future) | C | **A** | **R** |
+| Fixing `worker.py`'s `dev-secret` fallback before any promotion (future) | **R** | A | C |
 
-NOTE: this claim is stale — code already exists in this repo for Imaginarium (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 5. Solutions Integration Model (SIM)
 
-## 4. Policy (POL)
+- **Upstream (deployed `main.py`):** any caller of `/health`, `/status`, `/orchestrate`,
+  `/capabilities` — no auth, but `/orchestrate` does nothing harmful since it's a stub.
+- **Upstream (undeployed `worker.py`, if promoted):** callers of `/create` etc. would need a
+  correct `X-Internal-Secret` header once the `dev-secret` fallback is fixed.
+- **Downstream (undeployed `worker.py` only):** real HTTP calls to Sashas Photo Studio,
+  TranceFlow, TateKing, Warp Radio (all self-hosted, zero-cost per their own doc-packs).
+- **Not integrated:** the deployed `main.py` never calls `worker.py` or vice versa — they are
+  fully independent files sharing a directory.
 
-- Once implemented, Imaginarium MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 6. Architecture Scalability Document (ASD)
 
-## 5. Standards (STD)
+- **Load model (deployed):** trivial — no state, no real work performed.
+- **Load model (undeployed `worker.py`):** SQLite-backed `projects`/`templates` tables, real
+  background-task fan-out via `httpx`.
+- **Zero-cost limits:** fully honored on both sides — no paid dependencies in either file.
+- **Degradation:** N/A for the deployed stub (nothing to degrade); `worker.py`'s fan-out logic
+  was not traced for its own failure-handling depth in this pass.
 
-- On implementation, Imaginarium MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "Imaginarium" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 7. Technology Framework Matrix (TFM)
+
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework (deployed) | FastAPI, standalone, honest stub | self-hosted, port 8064 (fixed this pass) |
+| Web framework (undeployed) | FastAPI, standalone, real orchestrator | self-hosted |
+| Storage (undeployed only) | SQLite (`templates`/`projects`) | zero infra cost |
+| Auth (undeployed only) | `X-Internal-Secret` via `_auth()`, insecure `dev-secret` fallback | zero cost, currently would-be-unenforced if the fallback isn't fixed first |
+
+## 8. Policy (POL)
+
+- No route-level auth on the deployed `main.py` — low risk given `/orchestrate` is an honest
+  no-op stub.
+- **If `worker.py` is ever promoted to deployed status, its `dev-secret` fallback MUST be fixed
+  first** — otherwise every write route (`/create`, `/templates`) would accept the literal
+  string `"dev-secret"` as valid auth, same as the already-documented pattern for The Academy,
+  Sashas Photo Studio, and TateKing.
+- Zero-cost mandate: fully honored on both files.
+
+## 9. Procedure (PROC)
+
+- **Check orchestration status (deployed):** `POST /orchestrate` — always returns "not yet
+  ready", by honest design, not a bug.
+- **List orchestratable sub-services:** `GET /capabilities`.
+- **(Not currently reachable) Create a real multi-service project:** would be `POST /create` on
+  `worker.py`, if promoted to deployed status.
+
+## 10. Runbook (RUN)
+
+- **`/orchestrate` always returns `"orchestrated": false`:** expected — this is the deployed
+  file's honest, intentional stub behavior, not a bug to chase.
+- **Every route 404s in production despite the container being healthy:** was the exact symptom
+  of the pre-fix Traefik defect (``PathPrefix(`/imaginarium`)`` with no `StripPrefix`
+  middleware, while `main.py`'s routes are unprefixed) — fixed this pass by adding a
+  `strip-imaginarium` middleware to the compose labels; confirm it's still present if this
+  recurs.
+- **Someone asks "why doesn't Imaginarium actually orchestrate anything?":** the real
+  orchestration logic exists (`worker.py`) but isn't deployed — see truthfulness header for the
+  full finding and the owner decision this requires before promotion.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "Imaginarium" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
+- Config modules invoked via bare `python <file>.py` correctly read `PORT` from the environment
+  at runtime; Dockerfile `EXPOSE`/embedded `HEALTHCHECK` mismatches against compose's routed port
+  are cosmetic in that case (per `CLAUDE.md`'s §188 precedent) but SHOULD still be kept in sync
+  for robustness — fixed here as a matter of consistency with recent practice.
 
 ## Verification Log
 
@@ -85,3 +180,4 @@ not a committed integration.
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
 | 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-07 | Claude (session) | `workers/imaginarium/main.py` (65 lines), `worker.py` (343 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Major finding, a notable inversion of the usual "two implementations" pattern in this series: the **deployed** file (`main.py`) is an honest, intentional stub, while the **undeployed** file (`worker.py`) is a genuinely real cross-service orchestrator (SQLite-backed projects/templates, real `httpx` calls with `X-Internal-Secret` auth to Sashas Photo Studio/TranceFlow/TateKing/Warp Radio). Not fixed (a deployment/promotion decision, not a docs-pass fix) but flagged as a clear opportunity, contingent on first fixing `worker.py`'s `dev-secret` auth fallback. Also fixed two defects: a cosmetic Dockerfile port mismatch (8054 vs compose's 8064, fixed anyway for robustness) and a genuine, live Traefik `PathPrefix`-without-`StripPrefix` routing bug — the fifth instance of this exact class found this session — fixed with a `strip-imaginarium` middleware. `scripts/port_registry_validate.py` re-run and passes (73 workers). |

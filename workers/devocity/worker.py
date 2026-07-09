@@ -27,7 +27,7 @@ WORKER_NAME = "devocity"
 DB_PATH = Path(__file__).parent / "data" / "devocity.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)

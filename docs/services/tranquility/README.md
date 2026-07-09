@@ -4,84 +4,153 @@
 |---|---|
 | **Entity** | Tranquility |
 | **Lead AI** | Savania |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | custom (planned `src/tranquility/`) |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `src/tranquility/wellbeing.py`, `src/tranquility/routes.py`; router registered in `api.py` (`app.include_router(_tranquility_router)`, line 826) — **plus a separate standalone worker**, `workers/tranquility/worker.py` (374 lines) not audited in detail by this pack |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `src/tranquility/` (`routes.py`, `wellbeing.py` 179 lines) + `workers/tranquility/worker.py` (374 lines) — **and the router is registered live** in `api.py` (`from src.tranquility.routes import router as _tranquility_router` / `app.include_router(_tranquility_router)`, ~line 822-826)
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `src/tranquility/wellbeing.py` and `src/tranquility/routes.py`
+> directly. Status is owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
+> **Fixed:** every route in `src/tranquility/routes.py` taking a `user_id` path parameter now
+> requires `Depends(get_current_user)` plus a `_require_self_or_admin()` ownership check
+> (mirrors `api.py`'s `gdpr_erase()` pattern) — callers can only act on their own data unless they
+> hold the `admin` role. `GET /tranquility/status` remains intentionally public (no per-user
+> data). This closes the previously-documented gap where any caller who knew a `user_id` could
+> read or delete another user's full mood-tracking history despite the module's own
+> "governed by Magna Carta + I-Mind protocols" claim.
+> **Two of four "Provides" claims in the module header are unimplemented.** "Routes to Resonate
+> for empathy services" and "Burnout pattern detection (overuse signals from tAimra)" appear only
+> as comments — no import of or call to Resonate or tAimra exists anywhere in `wellbeing.py`. The
+> other two claims (mood check-in tracking, wellbeing score) are real and implemented.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** wellbeing central hub for platform users.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Savania — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Savania.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** wellbeing hub — mood check-in tracking, session-length/message-volume-based break
+  prompts, and (per stated but unimplemented intent) burnout detection and empathy routing.
+- **Owner (RACI-A):** Savania; Platform Owner Trancendos.
+- **Scope:** `src/tranquility/*` implements mood logging and break-prompt logic only. Resonate and
+  tAimra integration, and any GDPR-grade access control on the export/delete endpoints, are not
+  implemented — see truthfulness header.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Savania | Platform Engineering | The Town Hall |
+### HTTP surface (`src/tranquility/routes.py`, prefix `/tranquility`)
+
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/tranquility/status` | `Tranquility.stats()` — total users, total mood entries |
+| POST | `/tranquility/mood/{user_id}` | `Tranquility.log_mood()` — body `{"mood": 1-5, "notes", "tags"}`; 400 if `mood` missing |
+| POST | `/tranquility/message/{user_id}` | `Tranquility.record_message()` — increments session message counter |
+| GET | `/tranquility/break/{user_id}` | `Tranquility.get_break_prompt()` — returns a random mindfulness prompt if a break is due, else `null` |
+| GET | `/tranquility/profile/{user_id}` | Reaches directly into `Tranquility()._profiles` (a private attribute) rather than a public getter — see TASD; 404 `JSONResponse` if no profile exists yet (unlike other routes, does **not** implicitly create one via `get_or_create()`) |
+| GET | `/tranquility/export/{user_id}` | `Tranquility.export_user_data()` — full mood-entry export; auth-gated, self-or-admin |
+| DELETE | `/tranquility/data/{user_id}` | `Tranquility.delete_user_data()` — deletes the whole profile; auth-gated, self-or-admin |
+
+### Mood tracking and break logic (`wellbeing.py`) — real
+- `MoodLevel` int enum (1–5); `log_mood()` clamps out-of-range input to the valid range rather
+  than rejecting it (`max(1, min(5, mood))`), falling back to `NEUTRAL` only on a non-numeric
+  value.
+- `WellbeingProfile.needs_break()`: session > 90 minutes OR > 100 messages since the last break
+  prompt — both counters reset on `get_break_prompt()` being called (not on the break actually
+  being taken, which the module can't know).
+- `average_mood()` — simple mean of the last 7 entries, defaulting to 3.0 (neutral) if none exist.
+
+### Genuine I-Mind cross-entity call — real, not aspirational
+- `log_mood()` calls `IMind.assess()` (`src/imind/protocol.py`) whenever a logged mood is
+  `VERY_LOW` or `LOW`, passing `f"User reported mood: {mood_level.name}"` as the text to assess.
+  This is a real, working cross-entity integration — confirmed by direct code read, consistent
+  with the module header's "governed by ... I-Mind protocols" claim for this specific behavior
+  (unlike the Resonate/tAimra claims, which are not backed by code).
+
+### Unimplemented claims (module header vs. code)
+- "Routes to Resonate for empathy services" — no `import` or call referencing Resonate anywhere
+  in `src/tranquility/wellbeing.py`.
+- "Burnout pattern detection (overuse signals from tAimra)" — no `import` or call referencing
+  tAimra anywhere in this module. `needs_break()`'s session-length heuristic is the closest
+  existing behavior, but it does not consume any tAimra signal.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** in-process module with a module-level singleton (`get_tranquility()`); in-memory
+  `_profiles` dict, no persistence, no external DB.
+- **Code-quality note:** `GET /tranquility/profile/{user_id}` accesses
+  `get_tranquility()._profiles.get(user_id)` directly from `routes.py` — reaching into a private
+  (`_`-prefixed) attribute of the singleton rather than calling a public method. This is also
+  behaviorally inconsistent with the rest of the module: every other route implicitly creates a
+  profile via `get_or_create()` on first access, but this one returns 404 instead, since it
+  bypasses that method.
+- **Fixed:** export/delete (and every other `user_id`-scoped route) now require
+  `Depends(get_current_user)` plus the `_require_self_or_admin()` ownership check, matching
+  `api.py`'s `gdpr_erase()` pattern. Covered by `tests/test_tranquility_taimra_auth.py`.
+
+## 4. RACI Matrix
+
+| Activity | Savania (Lead) | Platform Owner | I-Mind | Platform Engineering |
 |---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+| Mood tracking / break-prompt logic changes | **R** | A | I | C |
+| Resonate / tAimra integration (future, currently unimplemented) | C | **A** | I | **R** |
 
-## 3. Technology Framework Matrix (TFM)
+## 5. Solutions Integration Model (SIM)
 
-| Concern | Planned choice | Zero-cost stance | Status |
-|---|---|---|---|
-| Foundation | custom (planned `src/tranquility/`) | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+- **Upstream:** any caller of `/tranquility/*` routes except `/status` now requires
+  `Depends(get_current_user)` plus the self-or-admin ownership check (see truthfulness
+  header) — closed the previously-documented no-auth gap.
+- **Downstream:** genuinely calls `IMind.assess()` on low/very-low mood entries; best-effort
+  Observatory `observe()` on mood-logged events.
+- **Not integrated:** Resonate, tAimra — both named in the module's own mission comment but never
+  called.
 
-NOTE: this claim is stale — code already exists in this repo for Tranquility (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 6. Architecture Scalability Document (ASD)
 
-## 4. Policy (POL)
+- **Load model:** in-memory `_profiles` dict, no cap defined — unbounded growth, no eviction.
+- **Bottleneck:** single-process, no persistence; a restart loses all mood history for every user.
+- **Zero-cost limits:** no external dependency in this module.
+- **Degradation:** Observatory emission and I-Mind assessment calls are both wrapped in
+  `except Exception: pass` — failures don't block mood logging.
 
-- Once implemented, Tranquility MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 7. Technology Framework Matrix (TFM)
 
-## 5. Standards (STD)
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI `APIRouter` | mounted into the main `api.py` app |
+| Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
+| Cross-entity call | direct in-process call to `IMind.assess()` | zero cost |
 
-- On implementation, Tranquility MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "Tranquility" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 8. Policy (POL)
+
+- Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-admin
+  ownership check — resolves the compliance gap against the module's own "governed by Magna
+  Carta + I-Mind protocols" claim. `GET /status` remains intentionally public.
+- Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
+
+## 9. Procedure (PROC)
+
+- **Log a mood check-in:** `POST /tranquility/mood/{user_id}` (as the same user, or an admin) with `{"mood": 1-5, "notes": "...", "tags": [...]}`. A `LOW`/`VERY_LOW`
+  mood triggers an I-Mind assessment automatically.
+- **Check for a break prompt:** `GET /tranquility/break/{user_id}` — returns `null` unless the
+  session has exceeded 90 minutes or 100 messages since the last prompt.
+- **Export or delete a user's data:** `GET /tranquility/export/{user_id}` / `DELETE
+  /tranquility/data/{user_id}` — auth-gated; returns `403` unless the caller is that user or holds
+  the `admin` role.
+
+## 10. Runbook (RUN)
+
+- **A user's mood history is missing after a restart:** expected — no persistence in this module.
+- **`GET /tranquility/profile/{user_id}` returns 404 for a user who has logged moods elsewhere:**
+  check whether the profile was created via a route that calls `get_or_create()` — the profile
+  route itself does not create one; see TASD code-quality note.
+- **A caller gets `403` on export/delete:** expected — they are not the target `user_id` and do
+  not hold the `admin` role; see POL §8.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "Tranquility" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
+- Any route exposing per-user personal data export or deletion MUST verify caller identity
+  against the `user_id` in the path — now enforced via `Depends(get_current_user)` +
+  `_require_self_or_admin()`, consistent with `api.py`'s `gdpr_erase()`.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-05 | Claude (session) | `src/tranquility/wellbeing.py` (179 lines), `src/tranquility/routes.py` (71 lines), `api.py` router registration (line 826) | Confirmed Live-tier, full pack authored. Verified a genuine, working cross-entity integration: `log_mood()` really calls `IMind.assess()` on low-mood entries. Major finding, documented not fixed: no auth on any route, most consequentially the full-history export and delete-all-data endpoints, which any caller can invoke for any `user_id` — a materially sensitive gap given the module's own "governed by Magna Carta + I-Mind protocols" claim. Also documented: two of the module's four stated capabilities (Resonate routing, tAimra burnout signals) are unimplemented comments only. |
+| 2026-07-08 | Claude (session) | `src/tranquility/routes.py` (102 lines, post-fix) | Closed the no-auth gap: every `user_id`-scoped route now requires `Depends(get_current_user)` plus `_require_self_or_admin()`, mirroring `api.py`'s `gdpr_erase()`. Verified via `tests/test_tranquility_taimra_auth.py` (own-data access, cross-user 403, admin override, unauthenticated 401/403). |
+| 2026-07-09 | Claude (session) | `src/tranquility/routes.py` (post-fix, renamed helper), `src/auth/tokens.py` | cubic correctly flagged that the initial fix's cross-user override checked `tier == "enterprise"`, but real JWTs (`src/auth/tokens.py`) carry `tier` as a numeric int and never that string — the override was dead for every real token. Renamed `_require_self_or_enterprise()` to `_require_self_or_admin()` and switched the check to `role == "admin"`, a claim real tokens do carry, matching the admin-check convention already used elsewhere (`api.py`'s `ai_provider_reset`, Cryptex's `_require_admin`). Tests updated to assert real-shaped payloads. |

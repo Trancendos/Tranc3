@@ -5,7 +5,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     adduser --disabled-password --gecos "" appuser
 COPY main.py .
 USER appuser
-EXPOSE 8053
+EXPOSE 8061
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8053/health')"
+  CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", \"8061\")}/health')"
 CMD ["python", "main.py"]

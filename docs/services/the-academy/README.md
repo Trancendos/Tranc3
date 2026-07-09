@@ -4,84 +4,182 @@
 |---|---|
 | **Entity** | The Academy |
 | **Lead AI** | Shimshi |
-| **Status** | 🔧 Planned (per `CLAUDE.md` service table) |
-| **Foundation** | Custom LMS |
+| **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
+| **Code** | `workers/the-academy/worker.py` (391 lines, real SQLite-backed LMS, port 8056) — standalone worker, no `src/*` module, no `api.py` mount |
 
-> **Truthfulness / gate tier.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1, this
-> entity's `CLAUDE.md` status maps to the **Planned** gate tier, which requires only
-> **GOV + RACI + TFM + POL + STD** (intent-level; no DDD/TASD/SIM/ASD/PROC/RUN normally — **but see the correction immediately below: code
-> already exists here**, and this pack is charter-only as an interim gap, not because no
-> code exists).
-> Do not read this pack as describing implemented behaviour.
-
-> **Correction (2026-07-04) — this pack's "no code exists" claims are FALSE.** A PR review
-> (cubic) caught that this pack asserted no implementation exists, when in fact `workers/the-academy/worker.py` (391 lines)
-> is already in this repo. `CLAUDE.md`'s `🔧 Planned` status label for this entity is **stale** —
-> it has not been updated to reflect the code above. This pack remains charter-only
-> (GOV+RACI+TFM+POL+STD) as an **interim, honestly-flagged gap**: the sections below still
-> describe intent rather than the real implementation, because a proper Partial/Live-tier
-> upgrade (code-grounded DDD/TASD/SIM/ASD/RUN citing the actual routes, modules, and — where
-> applicable — worker service) has not yet been authored. Do not treat the "no implementation
-> exists" language in the sections below as accurate; treat it as **not yet corrected** pending
-> that upgrade. Tracked as a known follow-up in `docs/services/INDEX.md`.
+> **Truthfulness:** claims cite `workers/the-academy/worker.py`, `workers/the-academy/main.py`,
+> `workers/the-academy/Dockerfile`, and `docker-compose.production.yml` directly. Status is owned
+> by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
+> **The most severe defect found in this doc-pack series — the real implementation was never
+> deployed.** `workers/the-academy/` contains two files with an `app = FastAPI(...)` object:
+> `worker.py` (391 lines — a genuine, working SQLite-backed LMS with courses, lessons,
+> enrolments, and progress tracking, internal-secret auth on every write route, and completion-
+> percentage logic) and `main.py` (52 lines — a placeholder stub whose `/courses` route always
+> returns `{"courses": [], "message": "No courses available yet."}` and whose `/enroll` route
+> always returns `{"enrolled": false, "message": "Enrollment not yet open."}`, both hard-coded).
+> **The Dockerfile's `COPY main.py .` and `CMD ["python", "main.py"]` meant only the placeholder
+> was ever built into the container image and run — `worker.py` was never copied in at all**,
+> despite compose's `PORT=8056` env var (which only `worker.py`, not `main.py`, defaults to) and
+> the `/the-academy` Traefik route being configured as if the real service were live. In
+> production, every request to The Academy would have been served entirely fabricated "coming
+> soon" responses, while a complete, working LMS sat unused in the same directory. **Fixed** by
+> changing the Dockerfile to copy and run `worker.py` instead of `main.py`, and aligning
+> `EXPOSE`/`HEALTHCHECK` to port 8056 (`worker.py`'s real default, matching compose) instead of
+> 8040 (`main.py`'s default). Verified the fix by importing `worker.py` directly — it loads
+> cleanly and registers its full route set.
+> **Blocking finding, not yet fixed — confirmed live in production, not merely speculative.**
+> `worker.py`'s `_auth()` dependency falls back to a hard-coded default
+> `INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")`. Checked this service's own
+> `docker-compose.production.yml` block directly: unlike most other workers in this series, its
+> `environment:` only sets `PORT=8056` — there is no `INTERNAL_SECRET: ${INTERNAL_SECRET:?required}`
+> entry, and `worker-common` does not inject one either. **The fallback is therefore live**: every
+> write route on the deployed service currently accepts the literal string `"dev-secret"` as valid
+> auth. This should be treated as a pre-existing production auth bypass, not a caveat — fix by
+> adding `INTERNAL_SECRET: ${INTERNAL_SECRET:?required}` to this service's compose `environment:`
+> block (matching the pattern most other workers already use) as soon as a real secret value is
+> provisioned for it.
+> **Second infra defect found and fixed this pass:** compose's Traefik rule for this service was
+> ``PathPrefix(`/the-academy`)`` with **no StripPrefix middleware**, while `worker.py`'s routes are
+> all unprefixed (`/health`, `/courses`, `/enrolments`, `/progress`, …). Unlike several other
+> path-prefixed services in the same compose file (`cranbania`/`/townhall`, `/prefect`, `/temporal`,
+> `/dagster`, `/kestra`, `/jaeger`, `/netdata` — each of which defines its own
+> `stripprefix` middleware), The Academy's router had none, so every external request to
+> `/the-academy/<anything>` would have been forwarded to the container with the prefix intact,
+> which `worker.py` does not understand — a real 404 on every route in production. Fixed by adding
+> `traefik.http.routers.the-academy.middlewares=strip-the-academy@docker` and
+> `traefik.http.middlewares.strip-the-academy.stripprefix.prefixes=/the-academy` to the compose
+> labels, matching the established pattern used elsewhere in the same file.
 
 ## 1. Service Governance Charter (GOV)
 
-- **Mission:** learning management system for education and skill training across the platform.
-- **In scope (when built):** the scope implied by the Foundation above. NOTE: code already
-  exists in this repo (see the correction blockquote above) but has not yet been reviewed to
-  scope this section accurately — treat "the scope implied by the Foundation" as unverified
-  against the real implementation.
-- **Out of scope:** anything not named in the mission above; scope will be re-chartered once
-  the Partial/Live-tier doc-pack upgrade is authored (code already exists — see correction
-  above — the pending step is the doc upgrade, not implementation).
-- **Lead AI (Tier 3):** Shimshi — role per `PLATFORM_ENTITIES.md`.
-- **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Shimshi.
-- **Review cadence:** re-review at Planned→Partial promotion (i.e. when the doc-pack is
-  upgraded to match the code that already exists — see correction above), or quarterly per
-  framework default, whichever is sooner.
-- **Dependencies (hard):** unverified — see correction above; not re-derived from the
-  actual code in this pass.
+- **Mission:** learning management system — course/lesson authoring, enrolment, and progress
+  tracking with automatic course-completion detection.
+- **Owner (RACI-A):** Shimshi; Platform Owner Trancendos.
+- **Scope:** `workers/the-academy/worker.py` — the only real implementation. `main.py` is a
+  placeholder that, per this pass's fix, is no longer what's deployed.
 
-## 2. RACI Matrix
+## 2. Detailed Design Document (DDD)
 
-| Activity | Platform Owner | Shimshi | Platform Engineering | The Town Hall |
-|---|---|---|---|---|
-| Charter approval / scope changes | **A** | C | R | I |
-| Initial implementation kickoff | **A** | **R** | C | I |
-| Promotion to Partial/Live tier (doc-pack upgrade) | **A** | C | **R** | I |
+### HTTP surface (`worker.py`, no route prefix)
 
-## 3. Technology Framework Matrix (TFM)
+| Method | Route | Backing |
+|---|---|---|
+| GET | `/health` | live course/enrolment counts from SQLite — a real health probe, not static |
+| GET | `/metrics` | Prometheus-format `requests_total`/`errors_total`/`uptime_seconds` counters |
+| POST | `/courses` | create a course; internal-secret authed |
+| GET | `/courses` | list with `category`/`difficulty`/`published` filters, pagination |
+| GET | `/courses/{id}` | course detail including its ordered lessons; 404 if missing |
+| PATCH | `/courses/{id}/publish` | sets `published=1` |
+| POST | `/courses/{id}/lessons` | add a lesson; 404 if course missing |
+| POST | `/enrolments` | enrol a user; idempotent — returns the existing row with `already_enrolled: true` on a duplicate (`UNIQUE(user_id, course_id)` constraint) rather than erroring |
+| GET | `/enrolments` | filter by `user_id`/`course_id` |
+| POST | `/progress` | mark a lesson complete; **auto-detects course completion** by comparing completed-lesson count to total-lesson count, and stamps `enrolments.completed_at` when the course is finished |
+| GET | `/progress/{user_id}` | per-user progress, optional `course_id` filter |
 
-| Concern | Planned choice | Zero-cost stance | Status |
+### Auth (`_auth()`)
+- Every write route (and most read routes) requires `X-Internal-Secret` matching `INTERNAL_SECRET`
+  — real, functioning auth, unlike the majority of `src/*`-mounted entities audited earlier in
+  this series which had none at all. See the `dev-secret` fallback caveat in the truthfulness
+  header.
+- `_auth()` also increments module-level `_req_count`/`_err_count` counters, feeding `/metrics`.
+
+### Data model (SQLite, `init_db()`)
+- 4 tables: `courses`, `lessons` (FK → courses), `enrolments` (FK → courses, unique per user+course),
+  `progress` (FK → lessons, unique per user+lesson). WAL journal mode + `synchronous=NORMAL` — a
+  reasonable, real durability/performance tradeoff for a single-writer SQLite workload.
+- Indexes on `lessons.course_id`, `enrolments.user_id`, `progress.user_id` — real, sensible schema
+  design, not a scaffold.
+
+## 3. Technical Architecture Solutions Design (TASD)
+
+- **Style:** standalone FastAPI + SQLite worker, no shared state with the main `api.py` app or
+  any `src/*` module — genuinely self-contained.
+- **Fixed defect:** the deployed container ran the placeholder `main.py` instead of the real
+  `worker.py` — see truthfulness header. This is categorically the most severe class of defect in
+  this doc-pack series: not a broken endpoint or a missing feature, but the entire real service
+  being unreachable while a fake one served all traffic under the same name and route.
+- **Not fixed:** the `INTERNAL_SECRET` default-fallback risk — verifying and enforcing that the
+  compose deployment actually sets a real secret (rather than relying on the code-level fallback)
+  is an infrastructure/ops verification task, not a code change, and wasn't confirmed either way
+  in this pass.
+
+## 4. RACI Matrix
+
+| Activity | Shimshi (Lead) | Platform Owner | Platform Engineering |
 |---|---|---|---|
-| Foundation | Custom LMS | self-hosted / OSS | **code exists, integration unverified** — see correction above |
+| Course/lesson/enrolment/progress logic changes | **R** | A | C |
+| Deployment/Dockerfile correctness (fixed this pass) | C | **A** | **R** |
+| `INTERNAL_SECRET` provisioning verification (future) | I | **A** | **R** |
 
-NOTE: this claim is stale — code already exists in this repo for The Academy (see correction
-above); the Foundation column below has not yet been updated to cite it. It records
-platform intent (per `CLAUDE.md`'s Recommended Open Source Foundations table where applicable),
-not a committed integration.
+## 5. Solutions Integration Model (SIM)
 
-## 4. Policy (POL)
+- **Upstream:** any caller with the correct `X-Internal-Secret` header — genuinely authed, unlike
+  most entities in this series.
+- **Downstream:** none — self-contained SQLite worker with no calls to other platform entities.
+- **Deployment:** Traefik routes `/the-academy` (per compose labels) to this worker's port 8056 —
+  now correctly serving the real implementation post-fix.
 
-- Once implemented, The Academy MUST comply with platform-wide policy (`docs/defstan/`,
-  `POL-AI-001`). NOTE: code already exists in this repo (see correction above); any
-  service-specific policy delta has not yet been assessed against it.
-- Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
-  before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
+## 6. Architecture Scalability Document (ASD)
 
-## 5. Standards (STD)
+- **Load model:** SQLite with WAL mode — suitable for the platform's stated low/moderate LMS load;
+  not designed for high-concurrency writes.
+- **Bottleneck:** single SQLite file, single container — no read replicas or horizontal scaling.
+- **Zero-cost limits:** SQLite is zero-cost, self-hosted, no external dependency.
+- **Degradation:** none needed — no external calls exist to degrade from.
 
-- On implementation, The Academy MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
-  per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —
-  this charter-only pack — even as corrected — is not a substitute for that upgrade and
-  must not be treated as implementation sign-off.
-- Naming: use the canonical name "The Academy" exactly as it appears in `CLAUDE.md`'s service table
-  and `PLATFORM_ENTITIES.md` — no informal aliases in code, routes, or logs once built.
+## 7. Technology Framework Matrix (TFM)
+
+| Concern | Choice | Zero-cost stance |
+|---|---|---|
+| Web framework | FastAPI, standalone (no `api.py` mount) | self-hosted, port 8056 |
+| Storage | SQLite (WAL mode) | zero infra cost, durable |
+| Auth | `X-Internal-Secret` header check | zero cost, real enforcement (with the fallback caveat above) |
+
+## 8. Policy (POL)
+
+- Auth is real and enforced on write routes — a positive finding relative to most entities in
+  this series.
+- **Deployment policy gap (fixed):** a Dockerfile that copies and runs the wrong source file is a
+  deploy-breaking class of defect that should be caught by an integration/smoke test hitting real
+  routes post-deploy (e.g. confirming `/courses` returns real data, not a hard-coded "coming
+  soon" stub) — no such test currently exists for this worker.
+
+## 9. Procedure (PROC)
+
+- **Create and publish a course:** `POST /courses`, then `POST /courses/{id}/lessons` per lesson,
+  then `PATCH /courses/{id}/publish`.
+- **Enrol and track progress:** `POST /enrolments`, then `POST /progress` per completed lesson —
+  course completion is detected automatically once all lessons are marked complete.
+
+## 10. Runbook (RUN)
+
+- **`/courses` always returns an empty list / `/enroll` always says "not yet open":** this was
+  the exact symptom of the pre-fix defect (the placeholder `main.py` being deployed instead of
+  `worker.py`) — confirm the Dockerfile's `COPY`/`CMD` reference `worker.py` if this recurs.
+- **A write route returns 401:** confirm the caller sends a correct `X-Internal-Secret` header
+  matching the deployed `INTERNAL_SECRET` env var. **Until `INTERNAL_SECRET` is added to this
+  service's compose `environment:` block, the literal string `dev-secret` is currently accepted in
+  production — this is a known, unfixed auth bypass, not acceptable-by-design behavior.**
+- **Every route 404s in production despite the container being healthy:** was the exact symptom of
+  the pre-fix Traefik defect (``PathPrefix(`/the-academy`)`` with no `StripPrefix` middleware,
+  while `worker.py`'s routes are unprefixed) — fixed this pass by adding a `strip-the-academy`
+  middleware to the compose labels; confirm it's still present if this recurs.
+- **Course completion isn't detected:** check that every lesson under the course has a
+  corresponding `progress` row with `completed=1` for that user — completion is computed by
+  comparing counts, not a stored flag.
+
+## 11. Standards (STD)
+
+- Naming: canonical entity name "The Academy" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
+- Any worker directory containing more than one file with an `app = FastAPI(...)` object MUST have
+  its Dockerfile's `COPY`/`CMD` reviewed explicitly to confirm which one is actually deployed —
+  the defect fixed here (a placeholder silently shipped instead of the real implementation) is
+  the reason for this standard. A basic post-deploy smoke test asserting non-placeholder responses
+  would have caught this immediately.
 
 ## Verification Log
 
 | Date | Verifier | Against | Result |
 |---|---|---|---|
-| 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), initial repo search | **SUPERSEDED — was wrong.** Initial search incorrectly concluded no implementation exists. |
-| 2026-07-04 | Claude (session), corrected after cubic PR review | actual repo contents (`src/*`, `workers/*/worker.py` — see correction blockquote above) | **Correction: code DOES exist.** `CLAUDE.md`'s Planned label is stale. Pack remains charter-only as an interim, honestly-flagged gap pending a real Partial/Live-tier rewrite — not a valid Planned-tier no-code determination. |
+| 2026-07-05 | Claude (session) | `workers/the-academy/worker.py` (391 lines), `main.py` (52 lines), `Dockerfile`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed the most severe defect in this doc-pack series: the Dockerfile only copied and ran the placeholder `main.py` (hard-coded "coming soon" responses), never the real, fully-functional SQLite-backed LMS in `worker.py` — meaning the deployed service served fabricated stub responses while a complete implementation sat unused in the same directory. Fixed by changing the Dockerfile to copy/run `worker.py` and aligning its port to 8056 (matching compose and `worker.py`'s own default). Verified the fix by importing `worker.py` directly — loads cleanly, registers its full route set. Import-only verification does not confirm the Docker build, container `CMD`, healthcheck, or Traefik routing actually work end-to-end in a real deployment — flagged as a scope limit of this check, not claimed as full E2E verification. |
+| 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `docker-compose.production.yml` (this service's block), `workers/the-academy/worker.py` route table | Verified and fixed two further defects raised by cubic. (1) Confirmed via `grep` that compose's `the-academy` block set only `PORT=8056` in `environment:`, with no `INTERNAL_SECRET` entry and no injection from `worker-common` — the `"dev-secret"` fallback in `worker.py`'s `_auth()` is therefore live in production, not speculative; re-classified from "secondary finding" to a blocking, unfixed auth bypass (fix requires provisioning a real secret and adding `INTERNAL_SECRET: ${INTERNAL_SECRET:?required}` to this service's environment block — not done in this pass since it requires a real secret value). (2) Confirmed compose's Traefik rule used ``PathPrefix(`/the-academy`)`` with no `StripPrefix` middleware, while `worker.py`'s routes (`/health`, `/courses`, `/enrolments`, `/progress`, …) are unprefixed — cross-checked against `worker-common`'s shared labels (confirmed it defines no middleware at all) and against other path-prefixed services in the same file (`cranbania`, `prefect`, `temporal`, `dagster`, `kestra`, `jaeger`, `netdata` — each defines its own `stripprefix` middleware), confirming The Academy was the outlier and every route would 404 in production. Fixed by adding a `strip-the-academy` middleware to the compose labels. |

@@ -245,7 +245,11 @@ class Section7:
                 source="section7",
             )
         except Exception:
-            pass  # nosec B110 — graceful degradation; error logged upstream
+            logger.warning(
+                "section7._store_and_publish: failed to publish report %s to The Library",
+                report.id,
+                exc_info=True,
+            )
 
         # Emit Observatory event
         try:

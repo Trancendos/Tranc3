@@ -679,7 +679,7 @@ services:
     ports:
       - "8014:8014"
     volumes:
-      - files-data:/data
+      - files-data:/app/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8014/health', timeout=5).read()\""]
       <<: *healthcheck-default
@@ -744,6 +744,8 @@ services:
     build: { context: ./workers/storage-service, dockerfile: Dockerfile }
     container_name: storage-service-worker
     ports: ["8020:8020"]
+    volumes:
+      - storage-data:/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8020/health', timeout=5).read()\""]
       <<: *healthcheck-default
@@ -753,6 +755,8 @@ services:
     build: { context: ./workers/cron-service, dockerfile: Dockerfile }
     container_name: cron-service-worker
     ports: ["8021:8021"]
+    volumes:
+      - cron-data:/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8021/health', timeout=5).read()\""]
       <<: *healthcheck-default
@@ -1639,7 +1643,7 @@ services:
       retries: 3
 
   # ─────────────────────────────────────────────────────────────────────────
-  # library-service — The Library ACO router (Port 8053, Lead AI: Zimik)
+  # library-service — The Library ACO router (Port 8067, Lead AI: Zimik)
   # Routes: Outline→BookStack→Wiki.js→Gollum→DokuWiki→MkDocs→Gitea→TiddlyWiki
   # ─────────────────────────────────────────────────────────────────────────
   library-service:
@@ -2923,6 +2927,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.imaginarium.rule=PathPrefix(`/imaginarium`)"
       - "traefik.http.routers.imaginarium.entrypoints=websecure"
+      - "traefik.http.routers.imaginarium.middlewares=strip-imaginarium@docker"
+      - "traefik.http.middlewares.strip-imaginarium.stripprefix.prefixes=/imaginarium"
       - "traefik.http.services.imaginarium.loadbalancer.server.port=8064"
 
   # ── TateKing — video creation / editing (Port 8066) ──────────────────────────────────────────────
@@ -2950,6 +2956,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.tateking.rule=PathPrefix(`/tateking`)"
       - "traefik.http.routers.tateking.entrypoints=websecure"
+      - "traefik.http.routers.tateking.middlewares=strip-tateking@docker"
+      - "traefik.http.middlewares.strip-tateking.stripprefix.prefixes=/tateking"
       - "traefik.http.services.tateking.loadbalancer.server.port=8061"
 
   # ── Remotion render service — Remotion serverless render tier for TateKing (Port 8093) ──────────────
@@ -3089,6 +3097,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.sashas-photo-studio.rule=PathPrefix(`/sashas-photo-studio`)"
       - "traefik.http.routers.sashas-photo-studio.entrypoints=websecure"
+      - "traefik.http.routers.sashas-photo-studio.middlewares=strip-sashas-photo-studio@docker"
+      - "traefik.http.middlewares.strip-sashas-photo-studio.stripprefix.prefixes=/sashas-photo-studio"
       - "traefik.http.services.sashas-photo-studio.loadbalancer.server.port=8062"
 
   # ── The Lab — code creation platform (Port 8055) ──────────────────────────────────────────────
@@ -3155,6 +3165,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.taimra.rule=PathPrefix(`/taimra`)"
       - "traefik.http.routers.taimra.entrypoints=websecure"
+      - "traefik.http.routers.taimra.middlewares=strip-taimra@docker"
+      - "traefik.http.middlewares.strip-taimra.stripprefix.prefixes=/taimra"
       - "traefik.http.services.taimra.loadbalancer.server.port=8074"
 
   # ── I-Mind — emotion sensitivity engine (Port 8059) ──────────────────────────────────────────────
@@ -3221,6 +3233,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.tranquility.rule=PathPrefix(`/tranquility`)"
       - "traefik.http.routers.tranquility.entrypoints=websecure"
+      - "traefik.http.routers.tranquility.middlewares=strip-tranquility@docker"
+      - "traefik.http.middlewares.strip-tranquility.stripprefix.prefixes=/tranquility"
       - "traefik.http.services.tranquility.loadbalancer.server.port=8077"
 
   # ── The Studio — central creativity hub (Port 8069) ──────────────────────────────────────────────
@@ -3265,6 +3279,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.the-academy.rule=PathPrefix(`/the-academy`)"
       - "traefik.http.routers.the-academy.entrypoints=websecure"
+      - "traefik.http.routers.the-academy.middlewares=strip-the-academy@docker"
+      - "traefik.http.middlewares.strip-the-academy.stripprefix.prefixes=/the-academy"
       - "traefik.http.services.the-academy.loadbalancer.server.port=8056"
 
   # ── Turing's Hub — AI personality creator (Port 8085) ──────────────────────────────────────────────
@@ -3309,6 +3325,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.warp-tunnel.rule=PathPrefix(`/warp-tunnel`)"
       - "traefik.http.routers.warp-tunnel.entrypoints=websecure"
+      - "traefik.http.routers.warp-tunnel.middlewares=strip-warp-tunnel@docker"
+      - "traefik.http.middlewares.strip-warp-tunnel.stripprefix.prefixes=/warp-tunnel"
       - "traefik.http.services.warp-tunnel.loadbalancer.server.port=8072"
 
   # ── Warp Radio — music/audio streaming (Port 8057) ──────────────────────────────────────────────
@@ -3331,6 +3349,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.warp-radio.rule=PathPrefix(`/warp-radio`)"
       - "traefik.http.routers.warp-radio.entrypoints=websecure"
+      - "traefik.http.routers.warp-radio.middlewares=strip-warp-radio@docker"
+      - "traefik.http.middlewares.strip-warp-radio.stripprefix.prefixes=/warp-radio"
       - "traefik.http.services.warp-radio.loadbalancer.server.port=8073"
 
   # ── The Dutchy — intelligence / market analysis (Port 8061) ──────────────────────────────────────────────
@@ -3424,8 +3444,8 @@ services:
   # ── Backup Service — automated data backup (Port 8039) ──────────────────────────────────────────────
   backup-service:
     build:
-      context: ./workers/backup-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/backup-service/Dockerfile
     container_name: tranc3-backup-service
     <<: *worker-common
     environment:
@@ -3556,8 +3576,8 @@ services:
   # ── Swarm Coordinator — agent swarm management (Port 8053) ──────────────────────────────────────────────
   swarm-coordinator-service:
     build:
-      context: ./workers/swarm-coordinator-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/swarm-coordinator-service/Dockerfile
     container_name: tranc3-swarm-coordinator-service
     <<: *worker-common
     environment:
@@ -3573,6 +3593,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.swarm-coordinator-service.rule=PathPrefix(`/swarm-coordinator`)"
       - "traefik.http.routers.swarm-coordinator-service.entrypoints=websecure"
+      - "traefik.http.routers.swarm-coordinator-service.middlewares=strip-swarm-coordinator@docker"
+      - "traefik.http.middlewares.strip-swarm-coordinator.stripprefix.prefixes=/swarm-coordinator"
       - "traefik.http.services.swarm-coordinator-service.loadbalancer.server.port=8109"
 
   # ── The HIVE — task queue / agent coordination (Port 8051) ──────────────────────────────────────────────
@@ -3600,8 +3622,8 @@ services:
   # ── The Ice Box — sandbox threat isolation (Port 8046) ──────────────────────────────────────────────
   ice-box-service:
     build:
-      context: ./workers/ice-box-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/ice-box-service/Dockerfile
     container_name: tranc3-ice-box-service
     <<: *worker-common
     environment:
@@ -3617,6 +3639,8 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.ice-box-service.rule=PathPrefix(`/ice-box`)"
       - "traefik.http.routers.ice-box-service.entrypoints=websecure"
+      - "traefik.http.routers.ice-box-service.middlewares=strip-ice-box@docker"
+      - "traefik.http.middlewares.strip-ice-box.stripprefix.prefixes=/ice-box"
       - "traefik.http.services.ice-box-service.loadbalancer.server.port=8046"
 
   # ── Fabulousa — UX/UI/design hub (Port 8048) ──────────────────────────────────────────────
@@ -3924,6 +3948,10 @@ volumes:
   payments-data:
     driver: local
   files-data:
+    driver: local
+  storage-data:
+    driver: local
+  cron-data:
     driver: local
   identity-data:
     driver: local

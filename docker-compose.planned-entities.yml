@@ -416,7 +416,7 @@ services:
       - "traefik.http.routers.vrar3d.entrypoints=web"
       - "traefik.http.services.vrar3d.loadbalancer.server.port=8063"
 
-  # ── Resonate — Magdalena — Port 8064 ─────────────────────────
+  # ── Resonate — Magdalena — Port 8076 ─────────────────────────
   resonate:
     build:
       context: ./workers/resonate
@@ -424,20 +424,20 @@ services:
     container_name: resonate
     <<: *worker-defaults
     profiles: ["resonate", "all"]
-    ports: ["8064:8064"]
+    ports: ["8076:8076"]
     environment:
-      PORT: "8064"
+      PORT: "8076"
       DB_PATH: "/data/resonate.db"
     volumes:
       - resonate-data:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8064/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8076/health')"]
       <<: *default-hc
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.resonate.rule=PathPrefix(`/resonate`)"
       - "traefik.http.routers.resonate.entrypoints=web"
-      - "traefik.http.services.resonate.loadbalancer.server.port=8064"
+      - "traefik.http.services.resonate.loadbalancer.server.port=8076"
 
   # ── The Chaos Party — The Mad Hatter — Port 8065 ─────────────
   chaos-party:

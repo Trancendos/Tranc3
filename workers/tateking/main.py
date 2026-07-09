@@ -33,7 +33,7 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-PORT = int(os.getenv("PORT", "8053"))
+PORT = int(os.getenv("PORT", "8061"))
 WORKER_NAME = "tateking"
 VERSION = "2.0.0"
 

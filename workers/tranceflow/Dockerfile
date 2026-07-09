@@ -13,9 +13,9 @@ RUN mkdir -p /data/tranceflow-assets && chown tranceflow:tranceflow /data /data/
 
 USER tranceflow
 
-EXPOSE 8052
+EXPOSE 8059
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=4).read()"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8059/health', timeout=4).read()"
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8052"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8059"]

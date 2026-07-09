@@ -1,4 +1,4 @@
-"""Resonate — Port 8064.
+"""Resonate — Port 8076.
 
 Empathy engine.
 """
@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Resonate", version="1.0.0")
 
-PORT = int(os.getenv("PORT", "8064"))
+PORT = int(os.getenv("PORT", "8076"))
 START_TIME = time.time()
 
 

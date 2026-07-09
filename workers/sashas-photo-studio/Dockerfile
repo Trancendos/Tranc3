@@ -7,5 +7,5 @@ COPY main.py .
 USER appuser
 EXPOSE 8051
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"
+  CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", \"8051\")}/health')"
 CMD ["python", "main.py"]
