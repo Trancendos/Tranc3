@@ -117,8 +117,8 @@ identity_mod = _import_worker(
     _TRANC3_ROOT / "workers" / "identity-service" / "worker.py",
 )
 grid_mod = _import_worker(
-    "the_grid_worker",
-    _TRANC3_ROOT / "workers" / "the-grid" / "worker.py",
+    "the_grid_main",
+    _TRANC3_ROOT / "workers" / "the-grid" / "main.py",
 )
 
 
@@ -799,26 +799,36 @@ class TestQueueService:
 
 
 class TestCacheService:
-    """Tests for cache-service: TTL-backed in-memory + SQLite cache."""
+    """Tests for cache-service: multi-tier cache (in-memory _mem + SQLite/
+    DuckDB/Valkey/diskcache backend, selected via ACO ThresholdGuard).
+
+    NOTE: this worker was rewritten from a simple in-memory `_store` dict to
+    the multi-tier architecture described above; these tests were rewritten
+    to match (see the go-live test-debt audit). SQLite is the reachable
+    backend in this harness (no Valkey/Dragonfly/diskcache services running),
+    so _select_backend() is patched to force it deterministically.
+    """
 
     @pytest.fixture
     def client(self, tmp_path):
-        # cache-service uses _store dict (module-level) + DB
         db_path = str(tmp_path / "cache.db")
-        saved_store = dict(cache_mod._store)
-        with patch.object(cache_mod, "DB_PATH", db_path):
-            cache_mod._store.clear()
-            cache_mod.init_db()
-            secret = getattr(cache_mod, "_INTERNAL_SECRET", "")
+        saved_mem = dict(cache_mod._mem)
+        with (
+            patch.object(cache_mod, "DB_PATH", Path(db_path)),
+            patch.object(cache_mod, "_select_backend", lambda: "sqlite"),
+        ):
+            cache_mod._mem.clear()
+            cache_mod._init_sqlite()
+            secret = getattr(cache_mod, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
             yield TestClient(cache_mod.app, headers=headers)
-        cache_mod._store.clear()
-        cache_mod._store.update(saved_store)
+        cache_mod._mem.clear()
+        cache_mod._mem.update(saved_mem)
 
     def test_health(self, client):
         r = client.get("/health")
         assert r.status_code == 200
-        assert r.json()["status"] == "healthy"
+        assert r.json()["status"] == "ok"
 
     def test_set_and_get(self, client):
         client.put("/cache/mykey", json={"value": "hello-world"})
@@ -826,12 +836,10 @@ class TestCacheService:
         assert r.status_code == 200
         data = r.json()
         assert data["value"] == "hello-world"
-        # Cache get returns {key, value, ttl_remaining}
         assert "key" in data
 
     def test_get_missing_key(self, client):
         r = client.get("/cache/nonexistent-key-xyz")
-        # Returns 404 for missing keys
         assert r.status_code == 404
 
     def test_set_with_ttl(self, client):
@@ -843,7 +851,7 @@ class TestCacheService:
     def test_delete(self, client):
         client.put("/cache/del-key", json={"value": "to-delete"})
         r = client.delete("/cache/del-key")
-        assert r.status_code == 200
+        assert r.status_code == 204
         gone = client.get("/cache/del-key")
         assert gone.status_code == 404
 
@@ -886,13 +894,13 @@ class TestCacheService:
     def test_flush_all(self, client):
         client.put("/cache/flush-key", json={"value": "flush-me"})
         r = client.delete("/cache")
-        assert r.status_code == 200
+        assert r.status_code == 204
 
     def test_stats(self, client):
-        r = client.get("/stats")
+        r = client.get("/cache/status")
         assert r.status_code == 200
         data = r.json()
-        assert "total_keys" in data
+        assert "active_backend" in data
 
 
 # ===========================================================================
@@ -1337,7 +1345,7 @@ class TestHealthAggregator:
         with patch.object(health_agg_mod, "DB_PATH", db_path):
             health_agg_mod._latest.clear()
             health_agg_mod.init_db()
-            secret = getattr(health_agg_mod, "_INTERNAL_SECRET", "")
+            secret = getattr(health_agg_mod, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
             yield TestClient(health_agg_mod.app, headers=headers)
         health_agg_mod._latest.clear()
@@ -1515,17 +1523,23 @@ class TestIdentityService:
 
 
 class TestTheGrid:
-    """Tests for The Digital Grid: DAG-based workflow orchestration."""
+    """Tests for The Digital Grid: DAG-based workflow orchestration.
+
+    NOTE: main.py builds `app` at import time via create_app(), which closes
+    over a GridDatabase bound to config.DB_PATH. To isolate tests, patch
+    config.DB_PATH to a tmp file and call create_app() again to get a fresh
+    app/db pair rather than reusing the module-level app (see go-live
+    test-debt audit).
+    """
 
     @pytest.fixture
     def client(self, tmp_path):
         db_path = tmp_path / "grid.db"
-        with patch.object(grid_mod, "DB_PATH", db_path):
-            grid_mod.db = grid_mod.GridDatabase(db_path)
-            grid_mod.engine = grid_mod.WorkflowEngine(grid_mod.db)
-            secret = getattr(grid_mod, "_INTERNAL_SECRET", "")
+        with patch.object(grid_mod.config, "DB_PATH", db_path):
+            fresh_app = grid_mod.create_app()
+            secret = getattr(grid_mod.config, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(grid_mod.app, headers=headers)
+            yield TestClient(fresh_app, headers=headers)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -1599,7 +1613,7 @@ class TestTheGrid:
             },
         ).json()
         wf_id = created["workflow_id"]
-        r = client.post(f"/workflows/{wf_id}/execute", json={"input": {"x": 42}})
+        r = client.post(f"/workflows/{wf_id}/execute", json={"x": 42})
         assert r.status_code in (200, 202)
         data = r.json()
         assert "execution_id" in data
@@ -1627,7 +1641,7 @@ class TestTheGrid:
             },
         ).json()
         wf_id = created["workflow_id"]
-        exec_resp = client.post(f"/workflows/{wf_id}/execute", json={"input": {}}).json()
+        exec_resp = client.post(f"/workflows/{wf_id}/execute", json={}).json()
         exec_id = exec_resp["execution_id"]
         r = client.get(f"/executions/{exec_id}")
         assert r.status_code == 200
