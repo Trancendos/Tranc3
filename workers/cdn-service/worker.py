@@ -249,11 +249,17 @@ async def serve_asset(
     if_none_match: Optional[str] = Header(None),
     if_modified_since: Optional[str] = Header(None),
 ):
-    asset_path = f"/{path}"
     try:
         full_path = safe_join(ASSETS_ROOT, path)
-    except (PathTraversalError, ValueError) as exc:
+    except PathTraversalError as exc:
         raise HTTPException(status_code=404, detail="Asset not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid asset path") from exc
+
+    # Derive asset_path from the resolved, canonical full_path (not the raw
+    # caller input) so equivalent requests (e.g. "./logo.png" vs "logo.png")
+    # map to the same DB row instead of registering duplicates.
+    asset_path = "/" + str(full_path.relative_to(ASSETS_ROOT)).replace(os.sep, "/")
 
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -313,18 +319,25 @@ async def serve_asset(
 async def register_asset(req: AssetRegister):
     try:
         full_path = safe_join(ASSETS_ROOT, req.path.lstrip("/"))
-    except (PathTraversalError, ValueError) as exc:
+    except PathTraversalError as exc:
         raise HTTPException(status_code=404, detail="File not found in assets root") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid asset path") from exc
     if not full_path.exists():
         raise HTTPException(status_code=404, detail="File not found in assets root")
+
+    # Derive the canonical asset_path from the resolved full_path (not the
+    # raw request input) so equivalent paths register/update the same row.
+    asset_path = "/" + str(full_path.relative_to(ASSETS_ROOT)).replace(os.sep, "/")
+
     with get_conn() as conn:
-        meta = _register_file(conn, req.path, full_path)
+        meta = _register_file(conn, asset_path, full_path)
         if req.cache_policy:
             conn.execute(
-                "UPDATE assets SET cache_policy=? WHERE path=?", (req.cache_policy, req.path)
+                "UPDATE assets SET cache_policy=? WHERE path=?", (req.cache_policy, asset_path)
             )
         conn.commit()
-    return {"registered": req.path, **meta}
+    return {"registered": asset_path, **meta}
 
 
 @_router.get("/serve-log/{path:path}")
