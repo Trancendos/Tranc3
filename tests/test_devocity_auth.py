@@ -17,13 +17,15 @@ app.include_router(devocity_router)
 client = TestClient(app)
 
 
-def _override(user_id: str, tier: str = "free"):
+def _override(user_id: str, role: str = "user"):
     """Real JWT payloads (src/auth/tokens.py) carry the caller's identity under
-    "sub", not "id" — override with "sub" so these tests exercise the actual
-    shape callers get, not a shape that happens to match the code under test."""
+    "sub", not "id", and "tier" as a numeric int, never the string
+    "enterprise" — override with the real shape so these tests exercise what
+    callers actually get, not a shape that happens to match the code under
+    test."""
 
     def _dep():
-        return {"sub": user_id, "tier": tier}
+        return {"sub": user_id, "tier": 0, "role": role}
 
     return _dep
 
@@ -105,14 +107,14 @@ def test_owner_can_issue_key_on_own_account():
         app.dependency_overrides.pop(get_current_user, None)
 
 
-def test_enterprise_can_access_any_account():
+def test_admin_can_access_any_account():
     app.dependency_overrides[get_current_user] = _override("owner4")
     try:
         account_id = client.post("/devocity/accounts", json={"user_id": "owner4"}).json()["id"]
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
-    app.dependency_overrides[get_current_user] = _override("admin", tier="enterprise")
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
     try:
         resp = client.get(f"/devocity/accounts/{account_id}")
         assert resp.status_code == 200

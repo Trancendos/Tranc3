@@ -23,8 +23,13 @@ def _caller_id(current_user: dict) -> Any:
 
 def _require_account_owner(account: DeveloperAccount, current_user: dict) -> None:
     """Mirrors api.py's gdpr_erase() ownership check: users may act on their own
-    developer account; enterprise-tier users may act on any account."""
-    if account.user_id != _caller_id(current_user) and current_user.get("tier") != "enterprise":
+    developer account; admins may act on any account.
+
+    The "enterprise" override this originally mirrored from gdpr_erase()
+    checked `tier == "enterprise"`, but real tokens carry `tier` as a numeric
+    int (never that string) — checking `role == "admin"` instead uses a
+    claim real tokens actually carry."""
+    if account.user_id != _caller_id(current_user) and current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Can only access your own developer account")
 
 
@@ -55,7 +60,7 @@ async def create_account(
     display_name = body.get("display_name", "Developer")
     if not user_id:
         return JSONResponse({"error": "user_id is required"}, status_code=400)
-    if user_id != _caller_id(current_user) and current_user.get("tier") != "enterprise":
+    if user_id != _caller_id(current_user) and current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Can only create your own developer account")
     account = get_devocity().create_account(user_id=user_id, display_name=display_name)
     return account.to_dict()

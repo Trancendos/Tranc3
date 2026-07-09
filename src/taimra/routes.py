@@ -14,15 +14,18 @@ from src.taimra.digital_twin import get_taimra
 router = APIRouter(prefix="/taimra", tags=["taimra"])
 
 
-def _require_self_or_enterprise(user_id: str, current_user: dict) -> None:
+def _require_self_or_admin(user_id: str, current_user: dict) -> None:
     """Mirrors api.py's gdpr_erase() ownership check: users may act on their
-    own twin; enterprise-tier users may act on any user's twin.
+    own twin; admins may act on any user's twin.
 
     Real JWT payloads (src/auth/tokens.py) carry the caller's identity under
     the standard "sub" claim, not "id" — accept either so this doesn't 500
-    for genuine callers with real tokens."""
+    for genuine callers with real tokens. The "enterprise" override this
+    originally mirrored from gdpr_erase() checked `tier == "enterprise"`, but
+    real tokens carry `tier` as a numeric int (never that string) — checking
+    `role == "admin"` instead uses a claim real tokens actually carry."""
     caller_id = current_user.get("id") or current_user.get("sub")
-    if caller_id != user_id and current_user.get("tier") != "enterprise":
+    if caller_id != user_id and current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Can only access your own digital twin")
 
 
@@ -36,7 +39,7 @@ async def activate(
     user_id: str = Path(...),
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_self_or_enterprise(user_id, current_user)
+    _require_self_or_admin(user_id, current_user)
     twin = get_taimra().activate(user_id)
     return twin.to_dict()
 
@@ -46,7 +49,7 @@ async def deactivate(
     user_id: str = Path(...),
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_self_or_enterprise(user_id, current_user)
+    _require_self_or_admin(user_id, current_user)
     get_taimra().deactivate(user_id)
     return {"deactivated": user_id}
 
@@ -56,7 +59,7 @@ async def get_twin(
     user_id: str = Path(...),
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_self_or_enterprise(user_id, current_user)
+    _require_self_or_admin(user_id, current_user)
     twin = get_taimra()._twins.get(user_id)
     if not twin:
         return JSONResponse({"error": "Twin not found"}, status_code=404)
@@ -69,7 +72,7 @@ async def record_interaction(
     body: Dict[str, Any] = Body(...),
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_self_or_enterprise(user_id, current_user)
+    _require_self_or_admin(user_id, current_user)
     get_taimra().record_interaction(
         user_id,
         message=body.get("message", ""),
@@ -84,7 +87,7 @@ async def suggest_personality(
     user_id: str = Path(...),
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_self_or_enterprise(user_id, current_user)
+    _require_self_or_admin(user_id, current_user)
     suggestion = get_taimra().suggest_personality(user_id)
     return {"suggested_personality": suggestion}
 
@@ -94,7 +97,7 @@ async def export_twin(
     user_id: str = Path(...),
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_self_or_enterprise(user_id, current_user)
+    _require_self_or_admin(user_id, current_user)
     data = get_taimra().export(user_id)
     if data is None:
         return JSONResponse({"error": "Twin not found"}, status_code=404)
@@ -106,7 +109,7 @@ async def delete_twin(
     user_id: str = Path(...),
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_self_or_enterprise(user_id, current_user)
+    _require_self_or_admin(user_id, current_user)
     deleted = get_taimra().delete(user_id)
     if not deleted:
         return JSONResponse({"error": "Twin not found"}, status_code=404)
