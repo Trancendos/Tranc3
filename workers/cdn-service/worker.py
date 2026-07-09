@@ -16,7 +16,6 @@ import logging
 import mimetypes
 import os
 import sqlite3
-import stat
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -90,24 +89,8 @@ def init_db() -> None:
 def _is_regular_file(path: Path) -> bool:
     """Check that a *validated* path (already passed through safe_join)
     exists and is a regular file.
-
-    Opens via a raw file descriptor + os.fstat rather than Path.exists()/
-    Path.is_file(), matching Dimensional.path_validation's own convention
-    (see read_validated_file_text) of keeping the validated Path object's
-    string form out of the taint flow static analyzers such as CodeQL
-    track from user-supplied input — Path.exists()/is_file() called
-    directly on a path built from request data is flagged as "uncontrolled
-    data used in path expression" even after safe_join has already
-    resolved and bounds-checked it.
     """
-    try:
-        fd = os.open(str(path), os.O_RDONLY)
-    except OSError:
-        return False
-    try:
-        return stat.S_ISREG(os.fstat(fd).st_mode)
-    finally:
-        os.close(fd)
+    return path.exists() and path.is_file()
 
 
 def _file_etag(path: Path) -> str:
