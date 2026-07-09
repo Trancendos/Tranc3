@@ -601,6 +601,13 @@ services:
       - "8009:8009"
     volumes:
       - ai-data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-ai.rule=PathPrefix(`/api/infinity-ai`)"
+      - "traefik.http.routers.infinity-ai.entrypoints=web"
+      - "traefik.http.routers.infinity-ai.middlewares=strip-infinity-ai@docker"
+      - "traefik.http.middlewares.strip-infinity-ai.stripprefix.prefixes=/api/infinity-ai"
+      - "traefik.http.services.infinity-ai.loadbalancer.server.port=8009"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8009/health', timeout=5).read()\""]
       <<: *healthcheck-default
