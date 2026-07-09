@@ -259,7 +259,7 @@ async def serve_asset(
     # Derive asset_path from the resolved, canonical full_path (not the raw
     # caller input) so equivalent requests (e.g. "./logo.png" vs "logo.png")
     # map to the same DB row instead of registering duplicates.
-    asset_path = "/" + str(full_path.relative_to(ASSETS_ROOT)).replace(os.sep, "/")
+    asset_path = "/" + str(full_path.relative_to(ASSETS_ROOT.resolve())).replace(os.sep, "/")
 
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -328,7 +328,7 @@ async def register_asset(req: AssetRegister):
 
     # Derive the canonical asset_path from the resolved full_path (not the
     # raw request input) so equivalent paths register/update the same row.
-    asset_path = "/" + str(full_path.relative_to(ASSETS_ROOT)).replace(os.sep, "/")
+    asset_path = "/" + str(full_path.relative_to(ASSETS_ROOT.resolve())).replace(os.sep, "/")
 
     with get_conn() as conn:
         meta = _register_file(conn, asset_path, full_path)
