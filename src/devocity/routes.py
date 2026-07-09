@@ -14,10 +14,17 @@ from src.devocity.portal import ApiKeyScope, DeveloperAccount, get_devocity
 router = APIRouter(prefix="/devocity", tags=["devocity"])
 
 
+def _caller_id(current_user: dict) -> Any:
+    """Real JWT payloads (src/auth/tokens.py) carry the caller's identity under
+    the standard "sub" claim, not "id" — accept either so ownership checks
+    don't 500 for genuine callers with real tokens."""
+    return current_user.get("id") or current_user.get("sub")
+
+
 def _require_account_owner(account: DeveloperAccount, current_user: dict) -> None:
     """Mirrors api.py's gdpr_erase() ownership check: users may act on their own
     developer account; enterprise-tier users may act on any account."""
-    if account.user_id != current_user["id"] and current_user.get("tier") != "enterprise":
+    if account.user_id != _caller_id(current_user) and current_user.get("tier") != "enterprise":
         raise HTTPException(status_code=403, detail="Can only access your own developer account")
 
 
@@ -48,7 +55,7 @@ async def create_account(
     display_name = body.get("display_name", "Developer")
     if not user_id:
         return JSONResponse({"error": "user_id is required"}, status_code=400)
-    if user_id != current_user["id"] and current_user.get("tier") != "enterprise":
+    if user_id != _caller_id(current_user) and current_user.get("tier") != "enterprise":
         raise HTTPException(status_code=403, detail="Can only create your own developer account")
     account = get_devocity().create_account(user_id=user_id, display_name=display_name)
     return account.to_dict()

@@ -16,8 +16,13 @@ router = APIRouter(prefix="/tranquility", tags=["tranquility"])
 
 def _require_self_or_enterprise(user_id: str, current_user: dict) -> None:
     """Mirrors api.py's gdpr_erase() ownership check: users may act on their
-    own data; enterprise-tier users may act on any user's data."""
-    if current_user["id"] != user_id and current_user.get("tier") != "enterprise":
+    own data; enterprise-tier users may act on any user's data.
+
+    Real JWT payloads (src/auth/tokens.py) carry the caller's identity under
+    the standard "sub" claim, not "id" — accept either so this doesn't 500
+    for genuine callers with real tokens."""
+    caller_id = current_user.get("id") or current_user.get("sub")
+    if caller_id != user_id and current_user.get("tier") != "enterprise":
         raise HTTPException(status_code=403, detail="Can only access your own data")
 
 

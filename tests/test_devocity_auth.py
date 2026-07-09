@@ -18,8 +18,12 @@ client = TestClient(app)
 
 
 def _override(user_id: str, tier: str = "free"):
+    """Real JWT payloads (src/auth/tokens.py) carry the caller's identity under
+    "sub", not "id" — override with "sub" so these tests exercise the actual
+    shape callers get, not a shape that happens to match the code under test."""
+
     def _dep():
-        return {"id": user_id, "tier": tier}
+        return {"sub": user_id, "tier": tier}
 
     return _dep
 

@@ -48,37 +48,35 @@
 | GET | `/cryptex/signals` | `Cryptex.recent_signals()` — `limit` 1–200, optional `min_severity` filter |
 | POST | `/cryptex/analyse` | `Cryptex.analyse()` — runs all rules against an arbitrary caller-supplied context dict |
 | POST | `/cryptex/analyse/request` | `Cryptex.analyse_request()` — analyses the calling HTTP request itself (path/body/headers/IP) |
-| POST | `/cryptex/block/{ip}` | `Cryptex.block_ip()` — adds IP to an in-memory blocklist set |
-| DELETE | `/cryptex/block/{ip}` | `Cryptex.unblock_ip()` |
-| POST | `/cryptex/bounty/scan` | Triggers `bounty_hunter.run_full_scan()` as a FastAPI `BackgroundTask` |
-| GET | `/cryptex/bounty/candidates` | `bounty_hunter.get_bounty_candidates()` |
-| GET | `/cryptex/bounty/summary` | `bounty_hunter.get_summary()` |
+| POST | `/cryptex/block/{ip}` | `Cryptex.block_ip()` — adds IP to an in-memory blocklist set; admin-only |
+| DELETE | `/cryptex/block/{ip}` | `Cryptex.unblock_ip()`; admin-only |
+| POST | `/cryptex/bounty/scan` | Triggers `bounty_hunter.run_full_scan()` (fixed server-side target, no caller override) as a FastAPI `BackgroundTask`; admin-only |
+| GET | `/cryptex/bounty/candidates` | `bounty_hunter.get_bounty_candidates()`; admin-only |
+| GET | `/cryptex/bounty/summary` | `bounty_hunter.get_summary()`; admin-only |
 
 ### Threat detection (`threat_detector.py`) — real, but opt-in only
 - `Cryptex.analyse()` runs a fixed list of `ThreatRule`s (registered in `_register_default_rules()`)
   against a caller-supplied context dict, emits a `ThreatSignal` per match, and applies
   mitigations (adds IP/actor to an in-memory blocklist if the rule's mitigation includes `BLOCK`).
-- **`is_blocked()` is never consulted by anything outside this module.** No middleware in `api.py`
-  calls `Cryptex.is_blocked()` before routing a request — blocking an IP via
-  `POST /cryptex/block/{ip}` (or via a rule's `BLOCK` mitigation) has **zero effect on real
-  platform traffic**. It only updates an in-memory set that `GET /cryptex/stats` and
-  `is_blocked()`'s own return value in `/cryptex/analyse/request`'s response expose — nothing
-  enforces it. Threat "detection" only happens when a caller explicitly POSTs a context to
-  `/analyse` or `/analyse/request`; Cryptex does not passively inspect platform traffic.
-- No auth on `/cryptex/block/{ip}`, `/cryptex/analyse*`, or `/cryptex/bounty/scan` — any caller
-  can flood the unbounded `_signals` list (no cap, unlike The Basement's `MAX_RECORDS`), or (see
-  below) trigger a scan against an arbitrary caller-chosen target.
+- **Correction to a prior claim in this pack: `is_blocked()` IS consulted by request-handling
+  middleware.** `src/security/middleware.py`'s `RBACMiddleware` (wired via
+  `app.add_middleware(RBACMiddleware)` in `api.py`) calls `cx.is_blocked(ip=ip)` on every
+  POST/PUT/PATCH to a non-exempt path and returns `403` if blocked — verified by direct code read.
+  Blocking an IP via `POST /cryptex/block/{ip}` (now admin-gated, see below) does have a real
+  enforcement effect on platform traffic.
+- `/cryptex/block/{ip}`, `/cryptex/bounty/*` now require `Depends(get_current_user)` plus an
+  admin-role check (`current_user.get("role") == "admin"`) — see DDD below. `/cryptex/analyse*`
+  remain unauthenticated by design (they analyse caller-supplied or the calling request's own
+  context; there is no meaningful "ownership" to check, and the unbounded `_signals` list flood
+  risk from repeated calls is a separate, unaddressed rate-limiting concern).
 
 ### Bug bounty / CVE scanning (`bounty_hunter.py`) — real subprocess execution
 - `run_nuclei_scan()` shells out to the `nuclei` CLI (list-form `subprocess`, **not** `shell=True`
   — no shell-injection vector) plus a `pip-audit` dependency scan; findings persisted to SQLite.
-- `POST /cryptex/bounty/scan?target=<url>` accepts a **caller-supplied, unauthenticated** `target`
-  parameter that is passed straight to the nuclei scan. There is no allowlist restricting which
-  hosts can be scanned. This means an unauthenticated caller can direct the platform's own
-  scanning infrastructure at an arbitrary third-party target — a real scan-abuse/SSRF-adjacent
-  risk, not fixed in this pass (would require adding auth and/or a target allowlist, an
-  architectural/policy decision out of scope for a docs pass). Flagged here rather than silently
-  accepted.
+- **Fixed:** `POST /cryptex/bounty/scan` no longer accepts a caller-supplied `target` at all — the
+  route now calls `run_full_scan()` with no argument, so the scan always targets the server-side
+  `BOUNTY_TARGET_URL` default, consistent with the module's own "own infrastructure only, never
+  scan third parties" header comment. The route also now requires admin auth (see DDD above).
 
 ### Orphaned modules — real code, zero live wiring
 The following exist as complete, non-trivial implementations but are imported by nothing in the
@@ -109,25 +107,25 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 | Activity | Renik (Lead) | Platform Owner | Platform Engineering | The Observatory |
 |---|---|---|---|---|
 | Threat rule / detection logic changes | **R** | A | C | I |
-| Wiring `is_blocked()` into real request middleware (future) | C | **A** | **R** | I |
-| Bounty/CVE scan target authorization (future) | C | **A** | **R** | C |
 | Wiring the 6 orphaned modules into a live path (future) | **R** | A | **R** | I |
 
 ## 5. Solutions Integration Model (SIM)
 
-- **Upstream:** any caller of `/cryptex/*` — no auth on any route.
+- **Upstream:** `/cryptex/analyse*` and `/cryptex/stats`/`signals` remain unauthenticated by
+  design (see DDD). `/cryptex/block/{ip}` and `/cryptex/bounty/*` now require
+  `Depends(get_current_user)` plus an admin-role check.
 - **Downstream:** best-effort Observatory `observe()` call on signal emission (pattern consistent
-  with other entities in this series, not individually re-verified here).
-- **Not integrated:** `is_blocked()` is not consulted by any request-handling code path; the 6
-  orphaned modules are not integrated with anything.
+  with other entities in this series, not individually re-verified here). `RBACMiddleware`
+  genuinely consults `is_blocked()` on every POST/PUT/PATCH to a non-exempt path.
+- **Not integrated:** the 6 orphaned modules are not integrated with anything.
 
 ## 6. Architecture Scalability Document (ASD)
 
 - **Load model:** in-memory `_signals` list, no cap — unbounded growth under sustained
   `/analyse` calls, unlike The Basement's `MAX_RECORDS` pattern.
 - **Bottleneck:** single-process, no persistence for threat signals; a restart loses all signal
-  history and the in-memory blocklists (which, per the finding above, don't enforce anything
-  regardless).
+  history and the in-memory blocklist, which `RBACMiddleware` genuinely consults for enforcement
+  (see DDD) — a restart silently drops active blocks.
 - **Zero-cost limits:** `nuclei` and `pip-audit` are free/OSS CLI tools; MISP/Wazuh (unwired) are
   self-hosted per `CLAUDE.md`'s Recommended Open Source Foundations table.
 - **Degradation:** none needed for the wired paths beyond standard Observatory best-effort emission.
@@ -145,29 +143,28 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 
 ## 8. Policy (POL)
 
-- No route-level auth on any `/cryptex/*` route — see SIM §5. This is a materially higher-risk
-  gap for a security-mission entity than for most others in this series, given the unauthenticated
-  arbitrary-target bounty-scan finding above.
+- `POST /cryptex/block/{ip}`, `DELETE /cryptex/block/{ip}`, and every `/cryptex/bounty/*` route
+  require admin auth — see DDD/SIM. `/cryptex/analyse*` remain intentionally unauthenticated.
 - Zero-cost mandate: `nuclei`/`pip-audit` scanning must stay within `scripts/zero_cost_audit.py`'s
   gate.
 
 ## 9. Procedure (PROC)
 
 - **Analyse content for threats:** `POST /cryptex/analyse` with `{"context": {...}, "actor":
-  "..."}` — returns matched signals; does not block anything automatically in a way that affects
-  real traffic (see DDD).
-- **Trigger a bounty scan:** `POST /cryptex/bounty/scan?target=<url>` — runs in the background;
-  no auth, no target allowlist currently enforced.
+  "..."}` — returns matched signals; a `BLOCK` mitigation genuinely affects future traffic via
+  `RBACMiddleware`'s `is_blocked()` check (see DDD).
+- **Trigger a bounty scan:** `POST /cryptex/bounty/scan` (as an admin) — runs in the background
+  against the fixed `BOUNTY_TARGET_URL`; no caller-supplied target is accepted.
 - **Wire an orphaned module into the live path:** import it from `threat_detector.py` or add a
   new route in `routes.py` — no orphaned module currently has any caller in this repo.
 
 ## 10. Runbook (RUN)
 
-- **Blocking an IP via `/cryptex/block/{ip}` doesn't actually stop its traffic:** expected —
-  `is_blocked()` is never consulted by any middleware; this is a real, documented gap, not a bug
-  to troubleshoot as if enforcement were intended to already work.
-- **`POST /cryptex/bounty/scan` was called against an unexpected target:** expected given no
-  auth/allowlist exists — see POL §8; this is a genuine security gap, not a misconfiguration.
+- **Blocking an IP via `/cryptex/block/{ip}` doesn't stop its traffic:** check whether the
+  request path is in `RBACMiddleware._SCAN_SKIP` or `ENVIRONMENT=test` is set — both bypass the
+  `is_blocked()` check by design; otherwise this would be a real bug, not expected behavior.
+- **A non-admin caller gets `403` on `/cryptex/block/{ip}` or `/cryptex/bounty/*`:** expected —
+  see POL §8.
 - **Signal history disappears after a restart:** expected — `_signals` is in-memory only.
 
 ## 11. Standards (STD)
@@ -185,3 +182,4 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/cryptex/threat_detector.py` (351 lines), `bounty_hunter.py` (413 lines), `routes.py` (105 lines), `api.py` router registration (line 797), plus grep-verified import analysis of the remaining 6 files in `src/cryptex/` (2,806 lines total across all 9 files) | Confirmed Live-tier, full pack authored. Major finding: ~69% of this module's code (6 of 9 files) is never imported by any live code path — real, substantial implementations (MISP, Wazuh, CVE scanning, genetic rules, graph anomaly detection, ML detection) that simply don't run. Also flagged, not fixed: `is_blocked()` is never consulted by request-handling middleware (blocking has no real enforcement effect), and the unauthenticated bounty-scan endpoint accepts an arbitrary caller-supplied target with no allowlist. |
+| 2026-07-08 | Claude (session) | `src/cryptex/routes.py` (post-fix), `src/security/middleware.py` | Two fixes plus one correction. **Corrected a factual error in this pack:** `is_blocked()` IS consulted — `RBACMiddleware` (wired via `app.add_middleware(RBACMiddleware)` in `api.py`) calls `cx.is_blocked(ip=ip)` on every POST/PUT/PATCH to a non-exempt path, returning `403` if blocked; the prior claim that blocking had "zero effect on real platform traffic" was wrong. **Fixed:** `POST`/`DELETE /cryptex/block/{ip}` and every `/cryptex/bounty/*` route now require `Depends(get_current_user)` plus an admin-role check; `POST /cryptex/bounty/scan` no longer accepts any caller-supplied `target` — it always scans the fixed `BOUNTY_TARGET_URL`, closing the scan-abuse/SSRF-adjacent gap. Verified via `tests/test_cryptex_auth.py`. `/cryptex/analyse*` remain intentionally unauthenticated (no meaningful ownership to check). The 6-orphaned-module finding is unrelated and remains open. |
