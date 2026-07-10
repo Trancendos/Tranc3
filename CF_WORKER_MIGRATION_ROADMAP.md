@@ -26,9 +26,17 @@ with JWT verification against `infinity-auth-api` and stub fallbacks.
 Two self-hosted things exist:
 
 - **`workers/tranc3-ai/`** (port 8001) — a near-verbatim Python port of the CF
-  Worker, including the emotion/consciousness/tokenize/predict routes. This
-  **is** Traefik-routed (`PathPrefix(/api/ai)`) and functional — it is the
-  worker actually reachable at the CF Worker's old path today.
+  Worker, exposing the same paths the CF Worker did
+  (`/api/v1/ai/{chat,embeddings,analyze-emotion,consciousness,tokenize,predict}`).
+  Its own Traefik router rule, `PathPrefix(/api/ai)`, does **not** actually
+  match those paths (`/api/v1/ai/...` doesn't start with `/api/ai`), so this
+  route is currently unreachable. The paths work anyway because
+  `workers/api-gateway/`'s catch-all router (`PathPrefix(/api/)`, explicit
+  `priority=1`) matches first and proxies `/api/v1/ai/*` to
+  `TRANC3_AI_SERVICE_URL` → `tranc3-ai`, confirmed in
+  `workers/api-gateway/router.py`. So the legacy CF paths are reachable
+  today, but via the api-gateway proxy, not the dedicated `tranc3-ai`
+  Traefik route as originally stated here.
 - **`workers/infinity-ai/`** (port 8009) — a different, more modern design
   (5-tier `AIGatewayRouter`, LRU cache, token budgets) exposing an
   OpenAI-compatible `/v1/chat/completions` surface. This is the worker
@@ -67,20 +75,27 @@ genuinely dead one:
   Deployed, Traefik-routed at `/vault-rs`. Functionally the same concept as
   `infinity-void` (AES-GCM, no external unseal step) but a second,
   independent implementation of it in a different language.
-- **`workers/the-void/`** — a standalone 289-line Python implementation.
-  **Not** referenced anywhere in `docker-compose.production.yml`. Not
-  mentioned in `CLAUDE.md`. This is the only one of the four that is
-  genuinely dead code.
+- **`workers/the-void/`** — a standalone 289-line Python implementation. Not
+  referenced anywhere in `docker-compose.production.yml`. Not mentioned in
+  `CLAUDE.md`'s routing table — **but** `SECURITY.md` (line 112) explicitly
+  names it the "canonical vault," and `workers/vault-service/DEPRECATED.md`
+  names it as that migration's intended target. So this is not dead code by
+  design intent — it's the documented target state of an apparently
+  never-completed deployment. It is simply not currently deployed in
+  production compose, which itself contradicts `SECURITY.md`'s "canonical"
+  claim.
 
-**This needs an explicit decision, not a cleanup**: three different vault
-services are live simultaneously (`infinity-void` behind the gateway,
-`vault-service` reachable only directly, `vault-service-rs` behind a
-separate un-gatewayed path). Which one secrets actually get written to
-today is unclear from the code alone — that depends on which URL each
-consumer worker was configured to call, which this audit did not trace.
-Deleting any of the three live services without first confirming no
-consumer depends on it risks silent data loss. Only `workers/the-void/`
-(never deployed) is safe to remove outright.
+**This needs an explicit decision, not a cleanup**: four vault-related
+artifacts disagree with each other. Three services are live simultaneously
+in production (`infinity-void` behind the gateway, `vault-service` reachable
+only directly, `vault-service-rs` behind a separate un-gatewayed path), none
+of which is `SECURITY.md`'s stated canonical (`the-void`, which isn't
+deployed at all). Which service secrets actually get written to today is
+unclear from the code alone — that depends on which URL each consumer
+worker was configured to call, which this audit did not trace. Do not
+delete any of these four without first (a) reconciling `SECURITY.md`'s
+claim against actual deployment, and (b) confirming no consumer depends on
+whichever is removed.
 
 ## 3. `trancendos-api-gateway` (routing / auth / rate-limiting)
 
@@ -94,10 +109,13 @@ Three self-hosted mechanisms exist, each partially overlapping:
   rate-limiting, or circuit-breaker logic.
 - **`workers/api-gateway/`** (port 8003) — a Python port of the CF gateway's
   auth/rate-limit/circuit-breaker logic, itself also Traefik-routed at a
-  catch-all `PathPrefix(/api/)` (lower priority than the dedicated
-  `/api/backend`, `/api/ai`, `/api/void`, `/api/infinity-ai` routers, so it
-  doesn't currently conflict — Traefik's longest-prefix-wins default
-  handles the overlap correctly).
+  catch-all `PathPrefix(/api/)` with an explicit `priority=1` label — lower
+  than the default rule-length-based priorities of the dedicated
+  `/api/backend`, `/api/void`, `/api/infinity-ai` routers, so it doesn't
+  currently conflict with them. It's worth noting this catch-all is also
+  what actually makes `tranc3-ai`'s legacy paths reachable today (see §1
+  above) — `workers/api-gateway/` isn't purely redundant with the dedicated
+  routers, it's load-bearing for at least one of them.
 - **KrakenD** (`config/krakend/krakend.json`, port 8099/8090) — also
   implements JWT + rate-limiting, explicitly commented in its config as
   "replaces CF trancendos-api-gateway," but is not behind Traefik and is not
