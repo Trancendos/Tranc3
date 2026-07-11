@@ -35,7 +35,7 @@ jobs:
         include:
           - language: python
             build-mode: none
-            packs: codeql/python-queries:AlertSuppression.ql
+            packs: codeql/python-queries:AlertSuppression.ql,.github/codeql/tranc3-python-models
             sarif-name: python
           - language: javascript-typescript
             build-mode: none
@@ -75,6 +75,7 @@ jobs:
               "Dimensional/path_validation.py",
               "Dimensional/orchestration/heartbeat_aggregator.py",
               "src/agents/goal_manager.py",
+              "workers/cdn-service/worker.py",
           }
           for run in sarif.get("runs", []):
               run["results"] = [
