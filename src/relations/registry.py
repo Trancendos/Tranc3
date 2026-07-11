@@ -37,7 +37,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from shared_core.sanitize import sanitize_for_log
 from src.entities.platform import PLATFORM_ENTITIES, get_job_description
 from src.relations.personality import get_quirks
 
@@ -438,12 +437,15 @@ class RelationsRegistry:
             current_resident = None
         except Exception:
             # `location` is already an allowlisted PLATFORM_ENTITIES key by
-            # this point (the method raises KeyError above otherwise), but
-            # sanitize before logging anyway — defense-in-depth against log
-            # injection (CWE-117) and a barrier CodeQL recognizes.
+            # this point (the method raises KeyError above otherwise). Strip
+            # CR/LF before logging anyway as defense-in-depth against log
+            # injection (CWE-117) — inline .replace() so the barrier is one
+            # CodeQL's py/log-injection query models directly (it does not
+            # trace through the shared_core.sanitize re-export shim).
+            safe_location = location.replace("\r", "").replace("\n", "")
             logger.warning(
                 "get_location_brochure: role registry lookup failed for %r",
-                sanitize_for_log(location),
+                safe_location,
                 exc_info=True,
             )
             current_resident = None
