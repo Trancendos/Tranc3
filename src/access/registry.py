@@ -67,6 +67,24 @@ class LocationSubscription:
     def is_active(self) -> bool:
         return self.status == "active"
 
+    def is_active_on_current_terms(self, current_terms_version: str) -> bool:
+        """Active *and* consented to the current policy version — the check
+        an authorization gate must use, so a terms bump forces re-consent."""
+        return self.status == "active" and self.terms_version == current_terms_version
+
+
+@dataclass
+class SubscriptionEvent:
+    """One immutable row in the append-only consent audit trail."""
+
+    id: int
+    user_id: str
+    location: str
+    action: str  # "subscribe" | "revoke"
+    terms_version: str
+    actor: str  # principal who performed the action (the user, or an admin id)
+    ts: float
+
 
 class AccessRegistry:
     """SQLite-backed registry of User -> subscribed Locations."""
@@ -104,7 +122,40 @@ class AccessRegistry:
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_subs_location ON location_subscriptions(location)"
         )
+        # Append-only consent audit trail, analogous to the Role Registry's
+        # role_assignment_history. location_subscriptions holds one mutable
+        # current-state row per (user, location) for fast gate lookups; this
+        # table records every subscribe/revoke event immutably so historical
+        # consent (prior versions, timestamps, revocation evidence, who acted)
+        # stays queryable even after a re-subscription overwrites current state.
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS subscription_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                location TEXT NOT NULL,
+                action TEXT NOT NULL,
+                terms_version TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                ts REAL NOT NULL
+            )
+            """
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_subhist_user_loc "
+            "ON subscription_history(user_id, location)"
+        )
         self._conn.commit()
+
+    def _append_history(
+        self, user_id: str, location: str, action: str, terms_version: str, actor: str, ts: float
+    ) -> None:
+        """Append one immutable audit row. Caller must hold self._lock."""
+        self._conn.execute(
+            "INSERT INTO subscription_history "
+            "(user_id, location, action, terms_version, actor, ts) VALUES (?, ?, ?, ?, ?, ?)",
+            (user_id, location, action, terms_version, actor, ts),
+        )
 
     def _row_to_subscription(self, row: sqlite3.Row) -> LocationSubscription:
         return LocationSubscription(
@@ -114,6 +165,17 @@ class AccessRegistry:
             terms_version=row["terms_version"],
             subscribed_at=row["subscribed_at"],
             revoked_at=row["revoked_at"],
+        )
+
+    def _row_to_event(self, row: sqlite3.Row) -> SubscriptionEvent:
+        return SubscriptionEvent(
+            id=row["id"],
+            user_id=row["user_id"],
+            location=row["location"],
+            action=row["action"],
+            terms_version=row["terms_version"],
+            actor=row["actor"],
+            ts=row["ts"],
         )
 
     def get_subscription(self, user_id: str, location: str) -> Optional[LocationSubscription]:
@@ -126,8 +188,17 @@ class AccessRegistry:
         return self._row_to_subscription(row) if row else None
 
     def is_subscribed(self, user_id: str, location: str) -> bool:
+        """Authorization gate: True only when the user has an active
+        subscription **and** it consented to the current terms version.
+
+        This is what enforces the module's re-consent guarantee — once
+        `CURRENT_TERMS_VERSION` is bumped, a subscriber whose stored
+        `terms_version` is now stale stops passing the gate until they
+        re-subscribe against the new policy, even though their row physically
+        remains (so the bump alone never silently deletes anyone's history).
+        """
         sub = self.get_subscription(user_id, location)
-        return sub is not None and sub.is_active
+        return sub is not None and sub.is_active_on_current_terms(CURRENT_TERMS_VERSION)
 
     def subscribe(
         self,
@@ -164,14 +235,24 @@ class AccessRegistry:
                 "subscribed_at = excluded.subscribed_at, revoked_at = NULL",
                 (user_id, location, terms_version, now),
             )
+            # A user always consents for themselves, so the actor is the user.
+            self._append_history(user_id, location, "subscribe", terms_version, user_id, now)
             self._conn.commit()
             return self.get_subscription(user_id, location)  # type: ignore[return-value]
 
-    def unsubscribe(self, user_id: str, location: str) -> LocationSubscription:
+    def unsubscribe(
+        self, user_id: str, location: str, actor: Optional[str] = None
+    ) -> LocationSubscription:
         """Revoke a user's subscription — the row is kept (status='revoked'),
-        never deleted, matching this platform's audit-trail conventions."""
+        never deleted, matching this platform's audit-trail conventions.
+
+        `actor` records *who* performed the revocation (the user themselves by
+        default, or an administrator's id when an admin revokes on the user's
+        behalf); it defaults to `user_id` for self-service revocation.
+        """
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
+        actor = actor or user_id
         now = time.time()
         with self._lock:
             self._conn.execute(
@@ -179,7 +260,6 @@ class AccessRegistry:
                 "WHERE user_id = ? AND location = ?",
                 (now, user_id, location),
             )
-            self._conn.commit()
             existing = self.get_subscription(user_id, location)
             if existing is None:
                 # Never subscribed — record an explicit revoked row anyway so
@@ -191,8 +271,11 @@ class AccessRegistry:
                     "VALUES (?, ?, 'revoked', '', ?, ?)",
                     (user_id, location, now, now),
                 )
-                self._conn.commit()
                 existing = self.get_subscription(user_id, location)
+            self._append_history(
+                user_id, location, "revoke", existing.terms_version if existing else "", actor, now
+            )
+            self._conn.commit()
             return existing  # type: ignore[return-value]
 
     def list_user_subscriptions(
@@ -232,6 +315,26 @@ class AccessRegistry:
                 )
             rows = cur.fetchall()
         return [self._row_to_subscription(row) for row in rows]
+
+    def get_subscription_history(
+        self, user_id: str, location: Optional[str] = None
+    ) -> List[SubscriptionEvent]:
+        """Immutable consent audit trail for a user, newest first — every
+        subscribe/revoke event, optionally filtered to one Location."""
+        with self._lock:
+            if location is not None:
+                cur = self._conn.execute(
+                    "SELECT * FROM subscription_history WHERE user_id = ? AND location = ? "
+                    "ORDER BY ts DESC, id DESC",
+                    (user_id, location),
+                )
+            else:
+                cur = self._conn.execute(
+                    "SELECT * FROM subscription_history WHERE user_id = ? ORDER BY ts DESC, id DESC",
+                    (user_id,),
+                )
+            rows = cur.fetchall()
+        return [self._row_to_event(row) for row in rows]
 
     def close(self) -> None:
         self._conn.close()

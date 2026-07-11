@@ -65,13 +65,26 @@ def _load_profile_dict(path: Path) -> Optional[Dict[str, Any]]:
     """Read+parse one profile file, returning None on any I/O, JSON, or
     shape problem — this loader's whole contract is "never raise, always
     fall back to neutral," so a malformed profile (unreadable file, invalid
-    JSON, a JSON array instead of an object, `"style": null`, etc.) is
-    handled the same way as a missing one."""
+    JSON, invalid UTF-8, a JSON array instead of an object, `"style": null`,
+    etc.) is handled the same way as a missing one. A `logger.warning` is
+    still emitted so operators can spot genuine data corruption rather than
+    the module silently switching an AI to neutral forever.
+
+    `ValueError` covers both `json.JSONDecodeError` and `UnicodeDecodeError`
+    (raised by `read_text()` on invalid UTF-8) — both are `ValueError`
+    subclasses.
+    """
     try:
         data = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError) as exc:
+        logger.warning("personality profile %s could not be read/parsed: %s", path, exc)
         return None
     if not isinstance(data, dict):
+        logger.warning(
+            "personality profile %s is not a JSON object (got %s) — ignoring",
+            path,
+            type(data).__name__,
+        )
         return None
     return data
 
@@ -85,7 +98,13 @@ def _build_index() -> Dict[str, Path]:
         if data is None:
             continue
         code_name = data.get("code_name")
-        if not code_name:
+        # Must be a non-empty string: a non-string (e.g. a list) would be
+        # unhashable and crash on `code_name in index`, and an empty string
+        # is meaningless as a key.
+        if not isinstance(code_name, str) or not code_name:
+            logger.warning(
+                "personality profile %s has a missing or non-string code_name — ignoring", path
+            )
             continue
         if code_name in index:
             logger.warning(

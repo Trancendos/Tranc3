@@ -76,6 +76,31 @@ class TestMalformedProfiles:
         assert quirks.found is True
         assert quirks.description == ""
 
+    def test_invalid_utf8_falls_back_to_neutral(self, monkeypatch, tmp_path):
+        # read_text() raises UnicodeDecodeError (a ValueError subclass) — the
+        # loader must catch it and fall back rather than propagate.
+        (tmp_path / "badenc.json").write_bytes(b"\xff\xfe not utf-8 at all")
+        monkeypatch.setattr(personality_module, "_PROFILES_DIR", tmp_path)
+        quirks = get_quirks("Anyone")
+        assert quirks.found is False
+
+    def test_non_string_code_name_is_skipped_not_crashed(self, monkeypatch, tmp_path):
+        # An unhashable (list) code_name must not crash `code_name in index`.
+        (tmp_path / "listname.json").write_text(json.dumps({"code_name": ["not", "a", "string"]}))
+        (tmp_path / "good.json").write_text(
+            json.dumps({"code_name": "Good AI", "description": "ok"})
+        )
+        monkeypatch.setattr(personality_module, "_PROFILES_DIR", tmp_path)
+        # The good profile still resolves; the bad one is ignored.
+        assert get_quirks("Good AI").found is True
+
+    def test_malformed_profile_logs_warning(self, monkeypatch, tmp_path, caplog):
+        (tmp_path / "broken.json").write_text("{not valid json")
+        monkeypatch.setattr(personality_module, "_PROFILES_DIR", tmp_path)
+        with caplog.at_level("WARNING"):
+            get_quirks("Anyone")
+        assert any("could not be read/parsed" in rec.message for rec in caplog.records)
+
 
 class TestDuplicateCodeName:
     def test_duplicate_code_name_logs_warning_and_still_resolves(

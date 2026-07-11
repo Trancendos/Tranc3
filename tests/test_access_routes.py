@@ -141,6 +141,87 @@ class TestReadOwnStatus:
         finally:
             client.app.dependency_overrides.pop(get_current_user, None)
 
+    def test_get_my_subscription_unknown_location_404s(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("u1")
+        try:
+            resp = client.get("/access/Nonexistent Place")
+            assert resp.status_code == 404
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+    def test_history_route_returns_events(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("u1")
+        try:
+            client.post(
+                "/access/The Lab/subscribe",
+                json={"accepted_terms": True, "terms_version": CURRENT_TERMS_VERSION},
+            )
+            client.request("DELETE", "/access/The Lab/subscribe")
+            resp = client.get("/access/The Lab/history")
+            assert resp.status_code == 200
+            actions = [e["action"] for e in resp.json()]
+            assert actions == ["revoke", "subscribe"]  # newest first
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+    def test_history_route_unknown_location_404s(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("u1")
+        try:
+            resp = client.get("/access/Nonexistent Place/history")
+            assert resp.status_code == 404
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+
+class TestAdminRevokeRoute:
+    def test_non_admin_forbidden(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("u1", role="user")
+        try:
+            resp = client.request("DELETE", "/access/The Lab/subscribers/u2")
+            assert resp.status_code == 403
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+    def test_admin_can_revoke_another_users_subscription(self, client):
+        # u1 subscribes to a gated location.
+        client.app.dependency_overrides[get_current_user] = _override("u1", role="user")
+        try:
+            client.post(
+                "/access/The Lab/subscribe",
+                json={"accepted_terms": True, "terms_version": CURRENT_TERMS_VERSION},
+            )
+            assert client.get("/gated/the-lab").status_code == 200
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+        # An admin revokes u1's subscription on their behalf.
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
+        try:
+            resp = client.request("DELETE", "/access/The Lab/subscribers/u1")
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "revoked"
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+        # u1 is now blocked by the gate again.
+        client.app.dependency_overrides[get_current_user] = _override("u1", role="user")
+        try:
+            assert client.get("/gated/the-lab").status_code == 402
+            # And the admin is recorded as the revoking actor in u1's history.
+            history = client.get("/access/The Lab/history").json()
+            revoke = next(e for e in history if e["action"] == "revoke")
+            assert revoke["actor"] == "admin1"
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+    def test_admin_revoke_unknown_location_404s(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
+        try:
+            resp = client.request("DELETE", "/access/Nonexistent Place/subscribers/u1")
+            assert resp.status_code == 404
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
 
 class TestSubscribersRoute:
     def test_non_admin_forbidden(self, client):

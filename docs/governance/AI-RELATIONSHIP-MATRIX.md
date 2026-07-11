@@ -101,11 +101,14 @@ flavor and sharper nudges, it's never required.
 - `positivity_multiplier` — driven by `agreeableness`/`empathy` (≈0.7×–1.3×).
 - `negativity_multiplier` — driven by `assertiveness`/`neuroticism` (≈0.7×–1.3×).
 - Brochure flavor text pulls the resident's `description` and `style.tone` when a profile is found.
-- Malformed profiles (invalid JSON, a JSON array instead of an object, `"style": null`, non-dict
-  `"traits"`) are treated the same as a missing profile — logged nowhere, silently neutral — since
-  the module's whole contract is "never raise, always fall back." Two profile files sharing the
-  same `code_name` **is** logged (a `logger.warning` naming both files) since that's a genuine data
-  problem worth surfacing, not an expected "profile missing" case.
+- Malformed profiles (invalid JSON, invalid UTF-8, a JSON array instead of an object, a missing or
+  non-string `code_name`) are treated the same as a missing profile — the lookup still falls back to
+  neutral rather than raising, since the module's whole contract is "never raise, always fall back."
+  A `logger.warning` **is** emitted for each parse/shape failure (and for two profile files sharing
+  the same `code_name`) so operators can spot genuine data corruption instead of an AI silently
+  switching to neutral forever. Softer per-field shape issues on an otherwise-valid profile
+  (`"style": null`, non-dict `"traits"`) fall back to the neutral default for just that field
+  without a warning — they're expected optionality, not corruption.
 - The profiles directory is resolved as a path relative to this repo's own source tree
   (`Path(__file__).resolve().parents[2] / "src" / "personality" / "profiles"`), not via
   `importlib.resources` package-data lookup. This matches how every other in-repo module on this

@@ -418,6 +418,12 @@ class RelationsRegistry:
                 "WHERE location = ? GROUP BY actor_ai ORDER BY n DESC",
                 (location,),
             ).fetchall()
+            # Read the highlight feed inside the *same* lock so the aggregates
+            # above and recent_highlights come from one consistent snapshot —
+            # otherwise a concurrent record_event() could commit in between,
+            # leaving a highlight that the totals don't yet count. RLock is
+            # reentrant, so get_feed()'s own lock acquisition is fine.
+            recent_highlights = self.get_feed(location=location, limit=10)
         for row in sentiment_rows:
             sentiment_counts[row["sentiment"]] = row["n"]
         for row in visitor_rows:
@@ -425,7 +431,6 @@ class RelationsRegistry:
 
         top_visitors = [{"ai": row["actor_ai"], "visits": row["n"]} for row in visitor_rows[:5]]
         total_events = sum(sentiment_counts.values())
-        recent_highlights = self.get_feed(location=location, limit=10)
 
         current_resident = None
         try:
@@ -499,23 +504,29 @@ class RelationsRegistry:
                 "GROUP BY location",
                 (since_ts,),
             ).fetchall()
+            # Aggregate the net sentiment per directional pair in SQL rather
+            # than pulling one Python row per event — the window can span up
+            # to 90 days of append-only history, so an unbounded per-event
+            # fetchall() (holding the lock the whole time) could grow huge.
+            # GROUP BY caps this at one row per distinct (actor, target) pair.
             interaction_rows = self._conn.execute(
-                "SELECT actor_ai, target_ai, sentiment FROM activity_events "
-                "WHERE ts >= ? AND event_type = 'ai_interaction' AND target_ai IS NOT NULL",
+                "SELECT actor_ai, target_ai, "
+                "SUM(CASE WHEN sentiment = 'positive' THEN 1 "
+                "WHEN sentiment = 'negative' THEN -1 ELSE 0 END) AS net "
+                "FROM activity_events "
+                "WHERE ts >= ? AND event_type = 'ai_interaction' AND target_ai IS NOT NULL "
+                "GROUP BY actor_ai, target_ai",
                 (since_ts,),
             ).fetchall()
 
         location_counts: Dict[str, int] = {row["location"]: row["n"] for row in location_rows}
         location_negative: Dict[str, int] = {row["location"]: row["n"] for row in negative_rows}
+        # Fold the two directional rows for a pair (a→b and b→a) into one
+        # canonical undirected key, summing their net sentiment.
         pair_deltas: Dict[tuple[str, str], float] = {}
         for row in interaction_rows:
             key = _pair_key(row["actor_ai"], row["target_ai"])
-            sign = (
-                1
-                if row["sentiment"] == "positive"
-                else (-1 if row["sentiment"] == "negative" else 0)
-            )
-            pair_deltas[key] = pair_deltas.get(key, 0.0) + sign
+            pair_deltas[key] = pair_deltas.get(key, 0.0) + row["net"]
 
         if location_counts:
             busiest = max(location_counts.items(), key=lambda kv: kv[1])
@@ -578,13 +589,21 @@ class RelationsRegistry:
         now_ts = time.time()
         restricted_counts: Dict[str, int] = {}
         for row in all_rel_rows:
-            baseline = _baseline_for_pair(row["ai_a"], row["ai_b"])
+            ai_a, ai_b = row["ai_a"], row["ai_b"]
+            # Preserve the original list_relationships() scope: only count a
+            # pairing when it is between two *distinct* known Lead AIs.
+            # record_event accepts free-text actors, so the table can hold
+            # non-lead identities and even self-rows (ai_a == ai_b); counting
+            # those would inflate a lead's total (and double-count a self-row,
+            # since it would match both endpoints).
+            if ai_a == ai_b or ai_a not in _LEAD_AIS or ai_b not in _LEAD_AIS:
+                continue
+            baseline = _baseline_for_pair(ai_a, ai_b)
             elapsed_days = (now_ts - row["updated_at"]) / 86400.0
             effective = _clamp_score(_decay_toward_baseline(row["score"], baseline, elapsed_days))
             if permission_tier(effective) in ("restricted", "blocked"):
-                for ai in (row["ai_a"], row["ai_b"]):
-                    if ai in _LEAD_AIS:
-                        restricted_counts[ai] = restricted_counts.get(ai, 0) + 1
+                restricted_counts[ai_a] = restricted_counts.get(ai_a, 0) + 1
+                restricted_counts[ai_b] = restricted_counts.get(ai_b, 0) + 1
         at_risk: List[tuple[str, int]] = [
             (ai, count) for ai, count in restricted_counts.items() if count >= 3
         ]

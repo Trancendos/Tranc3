@@ -218,3 +218,68 @@ class TestMarkProgressIntegration:
             resp = client.get("/badges", headers={"X-Internal-Secret": academy.INTERNAL_SECRET})
         assert resp.status_code == 200
         assert len(resp.json()) == 4
+
+
+class TestBadgeBackfill:
+    def _complete_a_course(self, academy, user_id):
+        course_id, _ = _make_course_with_lessons(academy, n_lessons=1)
+        _enrol(academy, user_id, course_id)
+        now = time.time()
+        with academy.get_conn() as conn:
+            conn.execute(
+                "UPDATE enrolments SET completed_at=? WHERE user_id=? AND course_id=?",
+                (now, user_id, course_id),
+            )
+            conn.commit()
+
+    def test_reevaluate_awards_badges_for_pre_existing_completion(self, academy):
+        from fastapi.testclient import TestClient
+
+        # A learner completed a course before badges existed — no /progress
+        # call ever ran the awarder, so they have no badges yet.
+        self._complete_a_course(academy, "old-user")
+        with academy.get_conn() as conn:
+            existing = conn.execute(
+                "SELECT COUNT(*) FROM user_badges WHERE user_id='old-user'"
+            ).fetchone()[0]
+        assert existing == 0
+
+        with TestClient(academy.app) as client:
+            resp = client.post(
+                "/users/old-user/badges/reevaluate",
+                headers={"X-Internal-Secret": academy.INTERNAL_SECRET},
+            )
+        assert resp.status_code == 200
+        codes = {b["code"] for b in resp.json()["newly_awarded_badges"]}
+        assert "first_steps" in codes
+
+    def test_reevaluate_is_idempotent(self, academy):
+        from fastapi.testclient import TestClient
+
+        self._complete_a_course(academy, "old-user")
+        with TestClient(academy.app) as client:
+            first = client.post(
+                "/users/old-user/badges/reevaluate",
+                headers={"X-Internal-Secret": academy.INTERNAL_SECRET},
+            ).json()
+            second = client.post(
+                "/users/old-user/badges/reevaluate",
+                headers={"X-Internal-Secret": academy.INTERNAL_SECRET},
+            ).json()
+        assert first["newly_awarded_badges"]
+        assert second["newly_awarded_badges"] == []
+
+    def test_backfill_all_evaluates_every_learner(self, academy):
+        from fastapi.testclient import TestClient
+
+        self._complete_a_course(academy, "user-a")
+        self._complete_a_course(academy, "user-b")
+        with TestClient(academy.app) as client:
+            resp = client.post(
+                "/badges/backfill", headers={"X-Internal-Secret": academy.INTERNAL_SECRET}
+            )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["users_evaluated"] >= 2
+        assert body["users_awarded"] == 2
+        assert set(body["awarded_by_user"].keys()) == {"user-a", "user-b"}

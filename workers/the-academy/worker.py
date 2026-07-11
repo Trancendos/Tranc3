@@ -117,6 +117,16 @@ def init_db() -> None:
 
 
 # code, name, description, criteria_type, criteria_value, reward_type, reward_description
+#
+# `reward_type` ("badge" | "easter_egg" | "enhancement") is the machine-readable
+# entitlement signal this worker *publishes* — earned rows are returned by
+# `GET /users/{user_id}/badges`, and a downstream profile/recommendations surface
+# is expected to consume `reward_type` to actually render a title or toggle a
+# feature. This worker only records and exposes the entitlement; it does not
+# itself own a profile-title or recommendation subsystem to flip. The
+# `reward_description` text is therefore written to state what the user has
+# *achieved* and what the entitlement grants once a consuming surface honors it,
+# rather than asserting a title/feature has been switched on here and now.
 _DEFAULT_BADGES = [
     (
         "first_steps",
@@ -134,7 +144,8 @@ _DEFAULT_BADGES = [
         "courses_completed",
         5,
         "easter_egg",
-        "Unlocks the 'Veteran Learner' title on your Academy profile.",
+        "You've completed 5 courses — this grants the 'Veteran Learner' profile "
+        "title (reward_type='easter_egg') for profile surfaces to display.",
     ),
     (
         "perfectionist",
@@ -152,7 +163,9 @@ _DEFAULT_BADGES = [
         "distinct_categories_completed",
         3,
         "enhancement",
-        "Unlocks cross-category course recommendations.",
+        "You've completed courses across 3 categories — this grants a "
+        "cross-category recommendations entitlement (reward_type='enhancement') "
+        "for recommendation surfaces to honor.",
     ),
 ]
 
@@ -503,16 +516,7 @@ async def mark_progress(body: ProgressIn, x_internal_secret: str = Header(defaul
         "course_progress_pct": round(completed_lessons / total_lessons * 100, 1)
         if total_lessons
         else 0,
-        "newly_awarded_badges": [
-            {
-                "code": b["code"],
-                "name": b["name"],
-                "description": b["description"],
-                "reward_type": b["reward_type"],
-                "reward_description": b["reward_description"],
-            }
-            for b in newly_awarded_badges
-        ],
+        "newly_awarded_badges": _serialize_awarded(newly_awarded_badges),
     }
 
 
@@ -554,6 +558,60 @@ async def get_user_badges(user_id: str, x_internal_secret: str = Header(default=
             (user_id,),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def _serialize_awarded(badges: list[dict]) -> list[dict]:
+    return [
+        {
+            "code": b["code"],
+            "name": b["name"],
+            "description": b["description"],
+            "reward_type": b["reward_type"],
+            "reward_description": b["reward_description"],
+        }
+        for b in badges
+    ]
+
+
+@_router.post("/users/{user_id}/badges/reevaluate")
+async def reevaluate_user_badges(user_id: str, x_internal_secret: str = Header(default="")):
+    """Re-run every badge criterion for one user and award any now-earned but
+    not-yet-granted badges. Badge evaluation otherwise only happens on a
+    /progress call, so a learner who completed courses *before* the badge
+    feature existed (or before a new badge was added) would never receive
+    their earned badges without this. Idempotent — already-earned badges are
+    skipped by _check_and_award_badges."""
+    _auth(x_internal_secret)
+    now = time.time()
+    with get_conn() as conn:
+        newly = _check_and_award_badges(conn, user_id, now)
+    return {"user_id": user_id, "newly_awarded_badges": _serialize_awarded(newly)}
+
+
+@_router.post("/badges/backfill")
+async def backfill_all_badges(x_internal_secret: str = Header(default="")):
+    """One-shot backfill across all existing learners — re-evaluates badge
+    criteria for every user who has any enrolment or progress history, so a
+    deploy of this feature retroactively grants badges historical completions
+    already qualify for. Idempotent and safe to re-run."""
+    _auth(x_internal_secret)
+    now = time.time()
+    awarded_by_user: dict[str, list[dict]] = {}
+    with get_conn() as conn:
+        user_rows = conn.execute(
+            "SELECT user_id FROM enrolments UNION SELECT user_id FROM progress"
+        ).fetchall()
+        for row in user_rows:
+            newly = _check_and_award_badges(conn, row["user_id"], now)
+            if newly:
+                awarded_by_user[row["user_id"]] = _serialize_awarded(newly)
+    total = sum(len(v) for v in awarded_by_user.values())
+    return {
+        "users_evaluated": len(user_rows),
+        "users_awarded": len(awarded_by_user),
+        "badges_awarded": total,
+        "awarded_by_user": awarded_by_user,
+    }
 
 
 app.include_router(_router)

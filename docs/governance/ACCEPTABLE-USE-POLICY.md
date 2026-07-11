@@ -28,12 +28,19 @@ This exists so that:
   merely having an account.
 - If this policy changes (a new version is published and `CURRENT_TERMS_VERSION` is bumped),
   existing subscriptions are **not** silently carried forward under the new terms — every
-  previously-subscribed user must re-consent (`terms_version` in their next `subscribe` call must
-  match the new `CURRENT_TERMS_VERSION`, or the call is rejected with `422`).
-- There's an auditable record of who agreed to what, and when — every subscribe/unsubscribe
-  action is recorded in `location_subscriptions` (never deleted, only marked `revoked`), matching
-  this platform's audit-trail conventions (the Role Registry's `role_assignment_history`, the
-  Relations Registry's `activity_events`).
+  previously-subscribed user must re-consent. This is enforced at the gate: `is_subscribed()`
+  requires both an active subscription **and** a stored `terms_version` equal to the current one,
+  so once the version is bumped a stale subscriber stops passing `require_location_subscription`
+  until their next `subscribe` call cites the new `CURRENT_TERMS_VERSION` (a `subscribe` with the
+  old version is rejected with `422`). The stale row is never deleted — access is gated off, not
+  the record erased.
+- There's an auditable record of who agreed to what, and when — the current state lives in
+  `location_subscriptions` (never deleted, only marked `revoked`), and **every** subscribe/revoke
+  action additionally appends an immutable row to `subscription_history` (recording the action,
+  the `terms_version` consented to, the acting principal, and a timestamp), so re-consents and
+  revocations that overwrite current state still leave a permanent trail. This matches the
+  platform's audit-trail conventions (the Role Registry's `role_assignment_history`, the Relations
+  Registry's `activity_events`).
 
 ## 2. What subscribing means
 
@@ -47,8 +54,11 @@ Subscribing to a Location means the user agrees to:
    (e.g. financial functionality may require additional KYC/AML-style steps outside this
    registry's scope) — subscribing here is a platform-level gate, not a substitute for any
    Location-specific compliance flow that may exist independently.
-4. Have their subscription revoked (`unsubscribe`) at any time, by themselves or an administrator,
-   which immediately deactivates that Location's functionality for their account.
+4. Have their subscription revoked at any time — by themselves via `DELETE
+   /access/{location}/subscribe`, or by an administrator via `DELETE
+   /access/{location}/subscribers/{user_id}` — which immediately deactivates that Location's
+   functionality for their account. Either path appends a `revoke` row to `subscription_history`
+   recording who performed it.
 
 ## 3. Admin bypass
 
@@ -62,14 +72,18 @@ Registries' own "admin can always act" convention.
 | Method | Route | Purpose | Auth |
 |---|---|---|---|
 | GET | `/access/me` | List the caller's own active subscriptions | any authenticated user |
-| GET | `/access/{location}` | Get the caller's own subscription status for one Location | any authenticated user |
+| GET | `/access/{location}` | Get the caller's own subscription status for one Location (`404` if the Location is unknown) | any authenticated user |
+| GET | `/access/{location}/history` | The caller's own immutable consent history for one Location | any authenticated user |
 | POST | `/access/{location}/subscribe` | Subscribe — body `{"accepted_terms": true, "terms_version": "1.0"}` | any authenticated user (self only) |
 | DELETE | `/access/{location}/subscribe` | Unsubscribe (self only) | any authenticated user (self only) |
 | GET | `/access/{location}/subscribers` | List every subscriber to a Location (compliance/audit) | **admin role required** |
+| DELETE | `/access/{location}/subscribers/{user_id}` | Revoke another user's subscription on their behalf | **admin role required** |
 
-`POST`/`DELETE` are self-service by design — a user consents to (or withdraws from) a Location's
-terms on their own behalf, not an admin's. `GET /subscribers` is admin-only since it exposes other
-users' subscription data.
+The self-service `POST`/`DELETE .../subscribe` routes let a user consent to (or withdraw from) a
+Location's terms on their own behalf. The admin-only routes operate on *other* users' data: `GET
+/subscribers` exposes the full subscriber list, and `DELETE /subscribers/{user_id}` is the
+administrator revocation path (e.g. a compliance-driven removal), recording the acting admin as the
+`actor` in the audit trail.
 
 Like the Role and Relations Registries, single-Location routes use FastAPI's `:path` converter
 internally so "ChronosSphere / ArcStream" (the one canonical Location with a literal `/`) resolves
@@ -104,8 +118,12 @@ To publish a new version:
 
 1. Update this document's **Version** field and rewrite the affected sections.
 2. Bump `CURRENT_TERMS_VERSION` in `src/access/registry.py` to match.
-3. Every user's next `subscribe` call for any Location must cite the new version — old
-   subscriptions remain `active` (so existing access isn't silently revoked by the bump alone) but
-   any *new* subscribe attempt with the old version is rejected, and operators should communicate
-   the change and prompt existing subscribers to re-consent through whatever front-end surfaces
-   this flow.
+3. The bump takes effect immediately at the gate: every stale subscriber (stored `terms_version` no
+   longer equal to the current one) stops passing `require_location_subscription`, so the affected
+   Locations' functionality deactivates for them until they re-consent. Their existing rows are
+   **not** deleted — `location_subscriptions` keeps the (now-stale) row and `subscription_history`
+   keeps the full trail — so re-consent is a fresh `subscribe` citing the new version, and a
+   `subscribe` still citing the old version is rejected with `422`. Operators should communicate the
+   change and prompt existing subscribers to re-consent through whatever front-end surfaces this
+   flow. This is consistent with §1: a terms change requires affirmative re-consent before access
+   resumes; it is not carried forward automatically.

@@ -389,6 +389,37 @@ class TestInsights:
         insights = registry.get_insights(limit=1)
         assert len(insights) == 1
 
+    def test_ai_at_risk_insight(self, registry):
+        """An AI that has soured into the restricted/blocked tier with >= 3
+        other Lead AIs should surface an `ai_at_risk` insight. Exercises the
+        batch relationship scan added to get_insights."""
+        # All three targets are distinct Lead AIs on Pillars different from
+        # Royal Bank of Arcadia's, so each pair starts at baseline 0. Ten
+        # negative interactions per pair drop the score well below the -20
+        # restricted threshold even at the lowest negativity multiplier.
+        targets = ["Larry Lowhammer", "Renik", "Zimik"]
+        for target in targets:
+            for i in range(10):
+                registry.record_event(
+                    actor_ai="Dorris Fontaine",
+                    event_type="ai_interaction",
+                    target_ai=target,
+                    sentiment="negative",
+                    summary=f"friction with {target} {i}",
+                )
+            # Confirm the setup actually pushed the pair into restricted/blocked
+            # (independent of the exact per-quirk multiplier).
+            rel = registry.get_relationship("Dorris Fontaine", target)
+            assert rel.tier in ("restricted", "blocked")
+
+        insights = registry.get_insights(limit=50)
+        at_risk = [i for i in insights if i.kind == "ai_at_risk"]
+        assert at_risk, "expected an ai_at_risk insight"
+        flagged_ais = {i.data["ai"] for i in at_risk}
+        assert "Dorris Fontaine" in flagged_ais
+        dorris = next(i for i in at_risk if i.data["ai"] == "Dorris Fontaine")
+        assert dorris.data["restricted_or_blocked_count"] >= 3
+
 
 class TestReconnectPersistence:
     def test_relationship_survives_reconnect(self, tmp_path):

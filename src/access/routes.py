@@ -28,10 +28,12 @@ from src.access.registry import (
     CURRENT_TERMS_VERSION,
     LocationSubscription,
     StaleTermsVersionError,
+    SubscriptionEvent,
     TermsNotAcceptedError,
     UnknownLocationError,
     get_access_registry,
 )
+from src.entities.platform import PLATFORM_ENTITIES
 
 router = APIRouter(prefix="/access", tags=["access"])
 
@@ -53,6 +55,18 @@ def _serialize(sub: LocationSubscription) -> Dict[str, Any]:
         "terms_version": sub.terms_version,
         "subscribed_at": sub.subscribed_at,
         "revoked_at": sub.revoked_at,
+    }
+
+
+def _serialize_event(evt: SubscriptionEvent) -> Dict[str, Any]:
+    return {
+        "id": evt.id,
+        "user_id": evt.user_id,
+        "location": evt.location,
+        "action": evt.action,
+        "terms_version": evt.terms_version,
+        "actor": evt.actor,
+        "ts": evt.ts,
     }
 
 
@@ -125,6 +139,39 @@ def list_subscribers(
     return [_serialize(s) for s in subs]
 
 
+@router.delete("/{location:path}/subscribers/{user_id}")
+def admin_revoke_subscription(
+    location: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Admin-only: revoke another user's subscription on their behalf (e.g. a
+    compliance-driven removal). Self-service revocation is DELETE
+    /access/{location}/subscribe; this endpoint is the administrator path the
+    Acceptable Use Policy references. The acting admin is recorded as the
+    `actor` in the append-only consent audit trail."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    try:
+        sub = get_access_registry().unsubscribe(user_id, location, actor=_user_id(current_user))
+    except UnknownLocationError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
+    return _serialize(sub)
+
+
+@router.get("/{location:path}/history")
+def get_my_subscription_history(
+    location: str,
+    current_user: dict = Depends(get_current_user),
+) -> List[Dict[str, Any]]:
+    """The caller's own immutable consent audit trail for one Location —
+    every subscribe/revoke event, newest first."""
+    if location not in PLATFORM_ENTITIES:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
+    events = get_access_registry().get_subscription_history(_user_id(current_user), location)
+    return [_serialize_event(e) for e in events]
+
+
 @router.post("/{location:path}/subscribe")
 def subscribe(
     location: str,
@@ -162,6 +209,12 @@ def get_my_subscription(
     location: str,
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
+    # 404 for unknown/misspelled locations, aligning with every other
+    # location-scoped route (subscribe/unsubscribe/subscribers), rather than
+    # returning 200 status:'none' which can't be told apart from a known but
+    # unsubscribed Location.
+    if location not in PLATFORM_ENTITIES:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
     sub = get_access_registry().get_subscription(_user_id(current_user), location)
     if sub is None:
         return {

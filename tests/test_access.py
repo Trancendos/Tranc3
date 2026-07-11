@@ -97,6 +97,67 @@ class TestIsSubscribed:
         assert registry.is_subscribed("user-1", "The Lab") is True
 
 
+class TestTermsVersionGating:
+    def test_is_subscribed_false_when_terms_version_is_stale(self, registry, monkeypatch):
+        registry.subscribe(
+            "user-1", "The Lab", accepted_terms=True, terms_version=CURRENT_TERMS_VERSION
+        )
+        assert registry.is_subscribed("user-1", "The Lab") is True
+        # Simulate a policy bump: the stored row now carries a stale version,
+        # so the authorization gate must stop granting access until re-consent.
+        monkeypatch.setattr("src.access.registry.CURRENT_TERMS_VERSION", "2.0")
+        assert registry.is_subscribed("user-1", "The Lab") is False
+        # The row itself is not deleted — history/state are preserved.
+        assert registry.get_subscription("user-1", "The Lab") is not None
+
+    def test_reconsent_restores_access_after_bump(self, registry, monkeypatch):
+        registry.subscribe(
+            "user-1", "The Lab", accepted_terms=True, terms_version=CURRENT_TERMS_VERSION
+        )
+        monkeypatch.setattr("src.access.registry.CURRENT_TERMS_VERSION", "2.0")
+        assert registry.is_subscribed("user-1", "The Lab") is False
+        registry.subscribe("user-1", "The Lab", accepted_terms=True, terms_version="2.0")
+        assert registry.is_subscribed("user-1", "The Lab") is True
+
+
+class TestSubscriptionHistory:
+    def test_subscribe_and_revoke_leave_immutable_events(self, registry):
+        registry.subscribe(
+            "user-1", "The Lab", accepted_terms=True, terms_version=CURRENT_TERMS_VERSION
+        )
+        registry.unsubscribe("user-1", "The Lab")
+        # Re-subscribe overwrites current state but history must retain all three.
+        registry.subscribe(
+            "user-1", "The Lab", accepted_terms=True, terms_version=CURRENT_TERMS_VERSION
+        )
+        history = registry.get_subscription_history("user-1", "The Lab")
+        actions = [e.action for e in history]
+        # newest-first: subscribe, revoke, subscribe
+        assert actions == ["subscribe", "revoke", "subscribe"]
+        assert all(e.actor == "user-1" for e in history)
+
+    def test_admin_revoke_records_admin_as_actor(self, registry):
+        registry.subscribe(
+            "user-1", "The Lab", accepted_terms=True, terms_version=CURRENT_TERMS_VERSION
+        )
+        registry.unsubscribe("user-1", "The Lab", actor="admin-9")
+        history = registry.get_subscription_history("user-1", "The Lab")
+        revoke_event = next(e for e in history if e.action == "revoke")
+        assert revoke_event.actor == "admin-9"
+
+    def test_history_filtered_by_location(self, registry):
+        registry.subscribe(
+            "user-1", "The Lab", accepted_terms=True, terms_version=CURRENT_TERMS_VERSION
+        )
+        registry.subscribe(
+            "user-1", "The Workshop", accepted_terms=True, terms_version=CURRENT_TERMS_VERSION
+        )
+        lab_history = registry.get_subscription_history("user-1", "The Lab")
+        assert {e.location for e in lab_history} == {"The Lab"}
+        all_history = registry.get_subscription_history("user-1")
+        assert {e.location for e in all_history} == {"The Lab", "The Workshop"}
+
+
 class TestListing:
     def test_list_user_subscriptions_active_only(self, registry):
         registry.subscribe(
