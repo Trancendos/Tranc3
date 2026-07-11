@@ -7,6 +7,10 @@ require an authenticated admin — reassigning which AI holds a platform-wide
 Job Description is a governance action, not a per-user-owned resource, so
 this does not follow the "owner or admin" pattern used by e.g. DevOcity;
 only `role == "admin"` is accepted.
+
+Handlers are plain `def`, not `async def` — they call the synchronous
+SQLite-backed RoleRegistry directly, and FastAPI runs sync route handlers
+in a threadpool instead of on the event loop, so this avoids blocking it.
 """
 
 from __future__ import annotations
@@ -51,20 +55,22 @@ def _serialize(assignment: RoleAssignment) -> Dict[str, Any]:
 
 
 @router.get("/")
-async def list_roles() -> List[Dict[str, Any]]:
+def list_roles() -> List[Dict[str, Any]]:
     return [_serialize(r) for r in get_registry().list_roles()]
 
 
-@router.get("/{location}")
-async def get_role(location: str) -> Dict[str, Any]:
-    role = get_registry().get_role(location)
-    if role is None:
-        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
-    return _serialize(role)
+# One of the 43 canonical locations ("ChronosSphere / ArcStream") contains a
+# literal "/". `{location:path}` lets these routes match it — Starlette's
+# path converter is greedy but still backtracks to satisfy a route's
+# trailing literal segment (e.g. "/history"), so it resolves correctly.
+# That greediness is also why `role_history`/`assign_role`/`unassign_role`
+# (which have a literal suffix after `location`) must be registered before
+# the bare `get_role` route below: an unsuffixed `{location:path}` GET route
+# would otherwise swallow "<location>/history" whole if tried first.
 
 
-@router.get("/{location}/history")
-async def role_history(location: str) -> List[Dict[str, Any]]:
+@router.get("/{location:path}/history")
+def role_history(location: str) -> List[Dict[str, Any]]:
     try:
         history = get_registry().get_history(location)
     except UnknownLocationError as exc:
@@ -82,8 +88,8 @@ async def role_history(location: str) -> List[Dict[str, Any]]:
     ]
 
 
-@router.post("/{location}/assign")
-async def assign_role(
+@router.post("/{location:path}/assign")
+def assign_role(
     location: str,
     body: AssignRequest,
     current_user: dict = Depends(get_current_user),
@@ -99,8 +105,8 @@ async def assign_role(
     return _serialize(role)
 
 
-@router.delete("/{location}/assign")
-async def unassign_role(
+@router.delete("/{location:path}/assign")
+def unassign_role(
     location: str,
     body: Optional[UnassignRequest] = None,
     current_user: dict = Depends(get_current_user),
@@ -112,4 +118,12 @@ async def unassign_role(
         role = get_registry().remove_ai(location, changed_by=str(changed_by), reason=reason)
     except UnknownLocationError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
+    return _serialize(role)
+
+
+@router.get("/{location:path}")
+def get_role(location: str) -> Dict[str, Any]:
+    role = get_registry().get_role(location)
+    if role is None:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
     return _serialize(role)

@@ -90,10 +90,13 @@ class RoleRegistry:
         self._conn.commit()
 
     def _seed_defaults(self) -> None:
-        """Seed one row per platform entity, initial holder = its canonical `lead_ai`."""
-        cur = self._conn.execute("SELECT COUNT(*) AS n FROM role_assignments")
-        if cur.fetchone()["n"] > 0:
-            return
+        """Seed one row per platform entity, initial holder = its canonical `lead_ai`.
+
+        Uses INSERT OR IGNORE per-location rather than a table-level
+        COUNT(*) skip-guard, so a location added to PLATFORM_ENTITIES after
+        this registry's DB file already exists still gets backfilled on the
+        next startup instead of being silently skipped forever.
+        """
         now = time.time()
         rows = [
             (
@@ -106,7 +109,7 @@ class RoleRegistry:
             for location, entity in PLATFORM_ENTITIES.items()
         ]
         self._conn.executemany(
-            "INSERT INTO role_assignments "
+            "INSERT OR IGNORE INTO role_assignments "
             "(location, job_description, assigned_ai, assigned_at, assigned_by) "
             "VALUES (?, ?, ?, ?, ?)",
             rows,
@@ -199,7 +202,8 @@ class RoleRegistry:
             raise UnknownLocationError(location)
         cur = self._conn.execute(
             "SELECT location, previous_ai, new_ai, changed_at, changed_by, reason "
-            "FROM role_assignment_history WHERE location = ? ORDER BY changed_at DESC",
+            "FROM role_assignment_history WHERE location = ? "
+            "ORDER BY changed_at DESC, id DESC",
             (location,),
         )
         return [

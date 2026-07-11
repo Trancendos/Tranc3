@@ -44,6 +44,19 @@ class TestReadRoutes:
         assert body["job_description"] == "Chief Financial Officer"
         assert body["assigned_ai"] == "Dorris Fontaine"
 
+    def test_get_role_with_slash_in_location_name(self, client):
+        """ChronosSphere / ArcStream is the one canonical location whose name
+        contains a literal '/' — the {location:path} route converter must
+        resolve it instead of 404ing or matching the wrong route."""
+        resp = client.get("/roles/ChronosSphere / ArcStream")
+        assert resp.status_code == 200
+        assert resp.json()["location"] == "ChronosSphere / ArcStream"
+
+    def test_history_for_slash_location_does_not_shadow_get(self, client):
+        resp = client.get("/roles/ChronosSphere / ArcStream/history")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
     def test_get_unknown_role_404s(self, client):
         resp = client.get("/roles/Nonexistent Place")
         assert resp.status_code == 404

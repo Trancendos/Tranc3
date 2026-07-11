@@ -89,15 +89,21 @@ actually holds it right now."
 | Method | Route | Purpose | Auth |
 |---|---|---|---|
 | GET | `/roles/` | List all 43 current assignments | none |
-| GET | `/roles/{location}` | Get one Location's current assignment | none |
-| GET | `/roles/{location}/history` | Full reassignment history for one Location, newest first | none |
-| POST | `/roles/{location}/assign` | Assign or reassign an AI — body `{"ai_name": "...", "reason": "..."}` | **admin role required** |
-| DELETE | `/roles/{location}/assign` | Vacate the role (sets `assigned_ai` to `null`) — optional body `{"reason": "..."}` | **admin role required** |
+| GET | `/roles/{location:path}` | Get one Location's current assignment | none |
+| GET | `/roles/{location:path}/history` | Full reassignment history for one Location, newest first | none |
+| POST | `/roles/{location:path}/assign` | Assign or reassign an AI — body `{"ai_name": "...", "reason": "..."}` | **admin role required** |
+| DELETE | `/roles/{location:path}/assign` | Vacate the role (sets `assigned_ai` to `null`) — optional body `{"reason": "..."}` | **admin role required** |
 
 Read routes are open, matching most other registry-style modules on this platform (The Library,
 API Marketplace, etc.). Mutating routes require `role == "admin"` on the caller's JWT
 (`Depends(get_current_user)`, same dependency used by DevOcity and others) — reassigning who holds
 a platform-wide Job Description is a governance action, not a self-service, per-user operation.
+
+All four single-location routes use FastAPI's `:path` converter (not the default segment
+converter) because **ChronosSphere / ArcStream** — one of the 43 canonical locations — contains a
+literal `/`. `role_history`/`assign_role`/`unassign_role` are registered before the bare `get_role`
+route in `src/roles/routes.py` so their trailing `/history` and `/assign` literals are matched
+correctly instead of being swallowed by the unsuffixed route's greedy path segment.
 
 Every assignment change is recorded in `role_assignment_history` (previous AI, new AI, timestamp,
 who made the change, and an optional free-text reason) and is never overwritten — the full audit

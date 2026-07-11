@@ -88,7 +88,11 @@
 
 ## 5. Solutions Integration Model (SIM)
 
-- **Upstream:** any caller of `/resonate/*` routes — no auth on any route.
+- **Upstream:** any caller of the monolith's `/resonate/*` routes — no auth on any route. (The
+  standalone `resonate` worker, `workers/resonate/worker.py`, is a separate surface and does
+  enforce auth — it checks an `X-Internal-Secret` header against `INTERNAL_SECRET` on every route
+  via its `_auth()` dependency. This gap is scoped to the monolith router this pack audits, not
+  both surfaces — see the DSM's Runtime placement note above for the two-surfaces split.)
 - **Downstream:** best-effort Observatory `observe()` on escalation only (not on every
   `wrap_response()` call).
 - **Not integrated:** no confirmed caller of `wrap_response()`/`escalate_to_human()` from the real
@@ -115,7 +119,7 @@
 |---|---|---|---|
 | **Cloud-Only** | both surfaces run on a single cloud host (the monolith's `tranc3-backend` block and the standalone `resonate` block, now running the real `worker.py`); Traefik/edge in front for the standalone worker | monolith router ephemeral by design; standalone worker's SQLite now persists via its attached volume as long as the disk is preserved | none beyond standard single-host durability |
 | **Hybrid** | same two surfaces; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, the monolith's other data can sync to local TrueNAS, and the standalone `resonate` worker's SQLite volume exists, but live file-level syncing (TrueNAS/Syncthing) is not safe for an actively-written SQLite database — a consistent copy requires quiescing the worker first (stop, snapshot/copy, restart) or an application-level replication approach, not naive background file sync | monolith ephemeral; worker's SQLite requires quiesced backup/restore, not live file sync | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
-| **Local-Only** | same two surfaces, run entirely on local/Citadel hardware | monolith side still stateless by design; standalone worker fully local, volume-backed | none beyond standard local-hardware ops; not mode-specific, but note the standing gaps regardless of mode: no auth on any route, including crisis-escalation triggers, and no real notification delivery behind the "escalate" flag (see SIM/POL) |
+| **Local-Only** | same two surfaces, run entirely on local/Citadel hardware | monolith side still stateless by design; standalone worker fully local, volume-backed | none beyond standard local-hardware ops; not mode-specific, but note the standing gaps regardless of mode: no auth on the monolith's `/resonate/*` routes (including crisis-escalation triggers — the standalone worker's own routes DO enforce `X-Internal-Secret`, see SIM above), and no real notification delivery behind the "escalate" flag (see SIM/POL) |
 
 - **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
 - **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
@@ -142,10 +146,11 @@
 
 ## 10. Policy (POL)
 
-- **Security gap, not fixed:** no route-level auth on any `/resonate/*` route, including
+- **Security gap, not fixed:** no route-level auth on any monolith `/resonate/*` route, including
   `POST /resonate/escalate/{user_id}`. This compounds the misleading-message finding below — an
   unauthenticated caller can invoke a crisis-escalation endpoint that then falsely claims a human
-  was notified, with no credential check at any point in that path.
+  was notified, with no credential check at any point in that path. (Scoped to the monolith router
+  only — the standalone `resonate` worker's equivalent routes do enforce `X-Internal-Secret`.)
 - **Policy gap:** any user-facing message claiming a human action ("notified") MUST correspond to
   a real action, or be reworded to avoid the false claim — `escalate_to_human()` currently
   violates this and should be prioritized for correction ahead of most other findings in this
@@ -184,3 +189,4 @@
 | 2026-07-05 | Claude (session) | `src/resonate/empathy.py` (119 lines), `src/resonate/routes.py` (41 lines), `api.py` router registration (line 833) | Confirmed Live-tier, full pack authored. Verified `wrap_response()` is real, correct, deterministic logic. Major finding, the most safety-relevant in this doc-pack batch: `escalate_to_human()` returns a user-facing message claiming "A support team member has been notified" when no notification transport exists anywhere in the repo — only a best-effort Observatory event and a log line occur. Flagged for prioritized correction, not merely documented as a routine gap. Also confirmed, matching I-Mind's own documented pattern: no caller of this module was found in the real inference pipeline. |
 | 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `src/resonate/empathy.py`, `src/resonate/routes.py` | Fixed two findings. (1) `wrap_response()` was mislabeled "deterministic" despite using `random.choice()` for empathy-prefix selection — corrected the heading. (2) Elevated the "no auth on any route" POL bullet from a flat fact to an explicit security-gap callout noting it compounds the misleading-message finding — an unauthenticated caller can hit the crisis-escalation route and receive a false "notified" claim with no credential check anywhere in that path. |
 | 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/resonate/Dockerfile`, `workers/resonate/main.py`, `workers/resonate/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/resonate/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy/The Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, hardcoded empty/placeholder responses) while a genuinely more complete SQLite-backed `worker.py` sat unused in the same directory. **Fixed this time** (unlike Academy's prior pass, this was caught and corrected in the same session rather than left for a follow-up): changed the Dockerfile to build/run `worker.py` and added a named volume (`resonate-data:/app/data`) to `docker-compose.production.yml`. DSM rewritten to reflect the fix. Note this is independent of the `src/resonate/empathy.py` monolith-router finding above (empathy-wrapping logic) — two separate surfaces, two separate fixes. |
+| 2026-07-11 | Claude (session, cubic-dev-ai review triage) | `workers/resonate/worker.py` (`_auth()`, line 240) | Fixed an overstated claim: the SIM/DSM/POL "no auth on any route" bullets read as covering both surfaces, but `workers/resonate/worker.py` genuinely enforces `X-Internal-Secret` via its `_auth()` dependency on every route. Rescoped all three bullets to explicitly name the monolith `/resonate/*` router as the audited surface with the gap, and note the standalone worker's real auth check alongside each. |

@@ -109,11 +109,11 @@
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
-| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment, and no local run command is documented in §11 PROC either |
-| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment |
 | **Production** | Yes | full detail in the DSM above | — |
 
-- **Gap:** this entity has **no non-Production environment at all** — `forgejo / forgejo-runner` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks, nor is a local run command documented in §11 PROC — Production is genuinely the first place it runs. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+- **Gap:** this entity has **no compose-orchestrated non-Production environment** — `forgejo / forgejo-runner` only exists in `docker-compose.production.yml`, not in the shared Dev/UAT compose stacks. It does have a documented local/manual startup path outside of compose — §11 PROC's `bash deploy/forgejo/setup.sh` (or `bootstrap.sh`) — so "no environment but Production" means no *compose-orchestrated* Dev/UAT coverage, not that Production is the only place it can ever run. This lack of compose-orchestrated pre-production coverage is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
 
 ## 10. Policy (POL)
 
@@ -144,3 +144,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-03 | Claude (session) | `deploy/forgejo/docker-compose.yml`, `setup.sh`/`bootstrap.sh`, `nginx-the-workshop.conf`, `runner.Dockerfile` | Compose services, ports (3456→3000), proxy path, scripts, and runner image verified against config |
+| 2026-07-11 | Claude (session, cubic-dev-ai review triage) | ESM §9, PROC §11 | Fixed an internal contradiction: the ESM Gap bullet said "no local run command is documented in §11 PROC either," but §11 explicitly documents `bash deploy/forgejo/setup.sh`/`bootstrap.sh` as a local startup procedure. Reworded the Dev/UAT rows and Gap bullet to say "no compose-orchestrated pre-production environment" instead of implying no local run path exists at all. |
