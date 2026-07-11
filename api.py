@@ -891,6 +891,13 @@ from src.relations.routes import (
 
 app.include_router(_relations_router)
 
+# ── Location Access & Subscription Registry (opt-in per-Location gating) ─────
+from src.access.routes import (
+    router as _access_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_access_router)
+
 # ── Search & RAG API (hybrid BM25+vector, Meilisearch+Qdrant+Weaviate+Chroma) ─
 from src.routers.search_api import (
     router as _search_router,  # noqa: F401  # intentional top-level import

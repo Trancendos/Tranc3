@@ -91,8 +91,137 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_lessons_course ON lessons(course_id);
             CREATE INDEX IF NOT EXISTS idx_enrol_user ON enrolments(user_id);
             CREATE INDEX IF NOT EXISTS idx_progress_user ON progress(user_id);
+            CREATE TABLE IF NOT EXISTS badges (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                code        TEXT UNIQUE NOT NULL,
+                name        TEXT NOT NULL,
+                description TEXT NOT NULL,
+                criteria_type  TEXT NOT NULL,
+                criteria_value REAL NOT NULL,
+                reward_type TEXT NOT NULL DEFAULT 'badge',
+                reward_description TEXT NOT NULL DEFAULT ''
+            );
+            CREATE TABLE IF NOT EXISTS user_badges (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    TEXT NOT NULL,
+                badge_id   INTEGER NOT NULL,
+                awarded_at REAL NOT NULL,
+                course_id  INTEGER,
+                UNIQUE(user_id, badge_id),
+                FOREIGN KEY(badge_id) REFERENCES badges(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
         """)
         conn.commit()
+        _seed_badges(conn)
+
+
+# code, name, description, criteria_type, criteria_value, reward_type, reward_description
+_DEFAULT_BADGES = [
+    (
+        "first_steps",
+        "First Steps",
+        "Complete your first course.",
+        "courses_completed",
+        1,
+        "badge",
+        "",
+    ),
+    (
+        "dedicated_learner",
+        "Dedicated Learner",
+        "Complete 5 courses.",
+        "courses_completed",
+        5,
+        "easter_egg",
+        "Unlocks the 'Veteran Learner' title on your Academy profile.",
+    ),
+    (
+        "perfectionist",
+        "Perfectionist",
+        "Score 100% on a lesson.",
+        "perfect_score",
+        100,
+        "badge",
+        "",
+    ),
+    (
+        "well_rounded",
+        "Well Rounded",
+        "Complete courses in 3 different categories.",
+        "distinct_categories_completed",
+        3,
+        "enhancement",
+        "Unlocks cross-category course recommendations.",
+    ),
+]
+
+
+def _seed_badges(conn: sqlite3.Connection) -> None:
+    for (
+        code,
+        name,
+        description,
+        criteria_type,
+        criteria_value,
+        reward_type,
+        reward_desc,
+    ) in _DEFAULT_BADGES:
+        conn.execute(
+            "INSERT OR IGNORE INTO badges "
+            "(code, name, description, criteria_type, criteria_value, reward_type, "
+            "reward_description) VALUES (?,?,?,?,?,?,?)",
+            (code, name, description, criteria_type, criteria_value, reward_type, reward_desc),
+        )
+    conn.commit()
+
+
+def _check_and_award_badges(conn: sqlite3.Connection, user_id: str, now: float) -> list[dict]:
+    """Evaluate every badge's criteria for `user_id` and award any not yet
+    earned. Returns the list of newly-awarded badge dicts (empty if none)."""
+    courses_completed = conn.execute(
+        "SELECT COUNT(*) FROM enrolments WHERE user_id=? AND completed_at IS NOT NULL",
+        (user_id,),
+    ).fetchone()[0]
+    best_score = conn.execute(
+        "SELECT MAX(score) FROM progress WHERE user_id=? AND score IS NOT NULL",
+        (user_id,),
+    ).fetchone()[0]
+    distinct_categories = conn.execute(
+        "SELECT COUNT(DISTINCT c.category) FROM enrolments e "
+        "JOIN courses c ON c.id = e.course_id "
+        "WHERE e.user_id=? AND e.completed_at IS NOT NULL",
+        (user_id,),
+    ).fetchone()[0]
+
+    metrics = {
+        "courses_completed": courses_completed,
+        "perfect_score": best_score or 0,
+        "distinct_categories_completed": distinct_categories,
+    }
+
+    already_earned = {
+        row["badge_id"]
+        for row in conn.execute(
+            "SELECT badge_id FROM user_badges WHERE user_id=?", (user_id,)
+        ).fetchall()
+    }
+
+    newly_awarded = []
+    for badge in conn.execute("SELECT * FROM badges").fetchall():
+        if badge["id"] in already_earned:
+            continue
+        metric_value = metrics.get(badge["criteria_type"])
+        if metric_value is None or metric_value < badge["criteria_value"]:
+            continue
+        conn.execute(
+            "INSERT INTO user_badges (user_id, badge_id, awarded_at, course_id) VALUES (?,?,?,NULL)",
+            (user_id, badge["id"], now),
+        )
+        newly_awarded.append(dict(badge))
+    if newly_awarded:
+        conn.commit()
+    return newly_awarded
 
 
 @asynccontextmanager
@@ -355,6 +484,10 @@ async def mark_progress(body: ProgressIn, x_internal_secret: str = Header(defaul
                 (now, body.user_id, lesson["course_id"]),
             )
             conn.commit()
+        # Re-evaluate badge criteria on every progress update, not just on
+        # course completion — e.g. "Perfectionist" (a single 100% lesson
+        # score) can be earned mid-course, before any course finishes.
+        newly_awarded_badges = _check_and_award_badges(conn, body.user_id, now)
     return {
         "user_id": body.user_id,
         "lesson_id": body.lesson_id,
@@ -364,6 +497,16 @@ async def mark_progress(body: ProgressIn, x_internal_secret: str = Header(defaul
         "course_progress_pct": round(completed_lessons / total_lessons * 100, 1)
         if total_lessons
         else 0,
+        "newly_awarded_badges": [
+            {
+                "code": b["code"],
+                "name": b["name"],
+                "description": b["description"],
+                "reward_type": b["reward_type"],
+                "reward_description": b["reward_description"],
+            }
+            for b in newly_awarded_badges
+        ],
     }
 
 
@@ -380,6 +523,30 @@ async def get_user_progress(
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         rows = conn.execute(f"SELECT * FROM progress {where}", params).fetchall()
+    return [dict(r) for r in rows]
+
+
+# --- Badges & Achievements ---
+
+
+@_router.get("/badges")
+async def list_badges(x_internal_secret: str = Header(default="")):
+    _auth(x_internal_secret)
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM badges ORDER BY id").fetchall()
+    return [dict(r) for r in rows]
+
+
+@_router.get("/users/{user_id}/badges")
+async def get_user_badges(user_id: str, x_internal_secret: str = Header(default="")):
+    _auth(x_internal_secret)
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT b.code, b.name, b.description, b.reward_type, b.reward_description, "
+            "ub.awarded_at FROM user_badges ub JOIN badges b ON b.id = ub.badge_id "
+            "WHERE ub.user_id=? ORDER BY ub.awarded_at",
+            (user_id,),
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
