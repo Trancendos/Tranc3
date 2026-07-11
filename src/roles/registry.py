@@ -52,6 +52,34 @@ class UnknownLocationError(KeyError):
     """Raised when a location name is not one of the 43 canonical entities."""
 
 
+def _emit_relations_event(
+    actor_ai: str, location: str, sentiment: str, summary: str, reason: str
+) -> None:
+    """Best-effort trigger into the AI-to-AI Relations activity feed.
+
+    Role reassignment is exactly the kind of platform event the Relations
+    feed / Location brochure want to surface ("X was assigned as the new
+    Chief Financial Officer of Royal Bank of Arcadia"). Kept decoupled and
+    swallowing all errors — `src/relations` is a separate, independently
+    testable module, and a reassignment must never fail because the
+    Relations registry is unavailable, mid-migration, or simply not
+    imported in a given test/runtime context.
+    """
+    try:
+        from src.relations.registry import get_relations_registry
+
+        get_relations_registry().record_event(
+            actor_ai=actor_ai,
+            event_type="system",
+            location=location,
+            sentiment=sentiment,
+            summary=summary,
+            details={"reason": reason} if reason else {},
+        )
+    except Exception:
+        pass
+
+
 class RoleRegistry:
     """SQLite-backed registry of Location -> Job Description -> assigned AI."""
 
@@ -63,10 +91,15 @@ class RoleRegistry:
         # `check_same_thread=False` plus FastAPI's threadpool (routes are
         # plain `def`, not `async def`) means assign_ai/remove_ai's
         # read-modify-write (SELECT current -> UPDATE -> INSERT history ->
-        # commit) can genuinely interleave across threads. This lock makes
-        # each call atomic so a concurrent reassignment can't record a
-        # `previous_ai` that's already stale by the time it commits.
-        self._lock = threading.Lock()
+        # commit) can genuinely interleave across threads. Reads and writes
+        # share one connection, so an uncommitted UPDATE is visible to any
+        # other statement on that same connection — an unlocked reader could
+        # observe a row that's been UPDATEd but not yet committed (and would
+        # vanish if the transaction rolled back). An RLock (not a plain
+        # Lock) guards every method, reads included, and is reentrant so
+        # assign_ai/remove_ai can call the locked get_role() from within
+        # their own critical section without deadlocking.
+        self._lock = threading.RLock()
         self._init_schema()
         self._seed_defaults()
 
@@ -137,20 +170,22 @@ class RoleRegistry:
         )
 
     def list_roles(self) -> List[RoleAssignment]:
-        cur = self._conn.execute(
-            "SELECT location, job_description, assigned_ai, assigned_at, assigned_by "
-            "FROM role_assignments ORDER BY location"
-        )
-        return [self._row_to_assignment(row) for row in cur.fetchall()]
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT location, job_description, assigned_ai, assigned_at, assigned_by "
+                "FROM role_assignments ORDER BY location"
+            )
+            return [self._row_to_assignment(row) for row in cur.fetchall()]
 
     def get_role(self, location: str) -> Optional[RoleAssignment]:
-        cur = self._conn.execute(
-            "SELECT location, job_description, assigned_ai, assigned_at, assigned_by "
-            "FROM role_assignments WHERE location = ?",
-            (location,),
-        )
-        row = cur.fetchone()
-        return self._row_to_assignment(row) if row else None
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT location, job_description, assigned_ai, assigned_at, assigned_by "
+                "FROM role_assignments WHERE location = ?",
+                (location,),
+            )
+            row = cur.fetchone()
+            return self._row_to_assignment(row) if row else None
 
     def assign_ai(
         self,
@@ -178,7 +213,15 @@ class RoleRegistry:
                 (location, previous_ai, ai_name, now, changed_by, reason),
             )
             self._conn.commit()
-            return self.get_role(location)  # type: ignore[return-value]
+            result: RoleAssignment = self.get_role(location)  # type: ignore[assignment]
+        _emit_relations_event(
+            actor_ai=ai_name,
+            location=location,
+            sentiment="positive",
+            summary=f"{ai_name} was assigned as {result.job_description} of {location}",
+            reason=reason,
+        )
+        return result
 
     def remove_ai(
         self,
@@ -205,17 +248,28 @@ class RoleRegistry:
                 (location, previous_ai, now, changed_by, reason or "unassigned"),
             )
             self._conn.commit()
-            return self.get_role(location)  # type: ignore[return-value]
+            result: RoleAssignment = self.get_role(location)  # type: ignore[assignment]
+        if previous_ai:
+            _emit_relations_event(
+                actor_ai=previous_ai,
+                location=location,
+                sentiment="neutral",
+                summary=f"{previous_ai} was vacated from {result.job_description} of {location}",
+                reason=reason,
+            )
+        return result
 
     def get_history(self, location: str) -> List[AssignmentHistoryEntry]:
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
-        cur = self._conn.execute(
-            "SELECT location, previous_ai, new_ai, changed_at, changed_by, reason "
-            "FROM role_assignment_history WHERE location = ? "
-            "ORDER BY changed_at DESC, id DESC",
-            (location,),
-        )
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT location, previous_ai, new_ai, changed_at, changed_by, reason "
+                "FROM role_assignment_history WHERE location = ? "
+                "ORDER BY changed_at DESC, id DESC",
+                (location,),
+            )
+            rows = cur.fetchall()
         return [
             AssignmentHistoryEntry(
                 location=row["location"],
@@ -225,7 +279,7 @@ class RoleRegistry:
                 changed_by=row["changed_by"],
                 reason=row["reason"],
             )
-            for row in cur.fetchall()
+            for row in rows
         ]
 
     def close(self) -> None:

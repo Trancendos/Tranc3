@@ -884,6 +884,13 @@ from src.roles.routes import (
 
 app.include_router(_roles_router)
 
+# ── AI-to-AI Relationship Matrix + Activity Feed + Location Brochure ─────────
+from src.relations.routes import (
+    router as _relations_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_relations_router)
+
 # ── Search & RAG API (hybrid BM25+vector, Meilisearch+Qdrant+Weaviate+Chroma) ─
 from src.routers.search_api import (
     router as _search_router,  # noqa: F401  # intentional top-level import
