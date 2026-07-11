@@ -67,7 +67,22 @@
 - **Zero-cost limits & hard stops:** static hosting via Nginx; no paid front-end platform.
 - **Growth path:** code-split routes as `pages/` grows; the bundle is already Vite-optimised.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** front-end (`web/`), Partial tier — no `docker-compose.production.yml` service block exists for it (confirmed: no `arcadia`/`web`/`frontend`/`dashboard` compose entry). It is built and served as a static bundle or dev/preview server, not a long-running backend process.
+- **Persistence:** none — a front-end has no server-side state of its own; all data comes from API calls to other entities.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | static build (Vite) served from Cloudflare R2/Pages or an equivalent free-tier static host — matches `docs/architecture/infrastructure-modes.md`'s Cloud-Only "R2_ASSETS" node | n/a — static assets only | no build pipeline/CI target for this is confirmed in this pack; treat as PLANNED until a concrete static-hosting deploy step is code-grounded |
+| **Hybrid** | static build served from cloud storage, with a local dev/preview server available for the team | n/a — static assets only | same PLANNED caveat as Cloud-Only |
+| **Local-Only** | local Vite dev/preview server (`GD` node in `docs/architecture/infrastructure-modes.md`'s Local-Only diagram) | n/a — static assets only | fine for development; not a production serving strategy on its own |
+
+- **Zero-cost posture per mode:** static hosting is free-tier-compatible in all three modes; no AI-Gateway rotation applies to a front-end.
+- **Switching modes:** no runtime mode-switch applies — this is a build/deploy-target choice, not a running process that reads `PLATFORM_INFRA_MODE`.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -77,24 +92,24 @@
 | UI | Radix UI + Tailwind + lucide-react | OSS |
 | Serve | Nginx static (port 8080) | OSS |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - No secrets in the client bundle; auth handled server-side. Security headers set in `nginx.conf`.
   Reuses platform policy (`POL-AI-001`, `docs/defstan/`).
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Local dev:** `pnpm dev` (Vite). **Build:** `pnpm build` (`tsc && vite build`) → static bundle served by
   the `web/Dockerfile` Nginx image. Add routes in `AppRouter.tsx` + `pages/`.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **Blank page / 404 on deep links:** SPA fallback misconfigured — confirm `try_files ... /index.html` in
   `nginx.conf`.
 - **`/healthz` fails:** the Nginx container isn't serving — check the `web/Dockerfile` build/static assets.
 - **Stale assets after deploy:** `/assets/` is cached — ensure Vite content-hashed filenames (default).
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - TypeScript strict build (`tsc` before `vite build`); accessible Radix primitives; security headers on the
   static host; no client-side secrets.

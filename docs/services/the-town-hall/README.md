@@ -74,7 +74,23 @@
 - **Zero-cost limits & hard stops:** in-repo modules are pure Python; no paid governance SaaS.
 - **Caveat:** the board's scaling characteristics live in the CranBania repo and are out of scope here.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`cranbania`, port 8071) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `cranbania` compose service — state survives container restarts/redeploys in any mode
+- **Note:** `cranbania` is a git submodule (`https://github.com/Trancendos/CranBania`) — deploying it in any mode requires the submodule to be checked out, not just the parent repo.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `cranbania` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `cranbania` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `cranbania` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -83,23 +99,23 @@
 | Board / ITSM / Kanban | CranBania submodule | self-hosted |
 | Governance rules | Magna Carta (`src/compliance/`) | in-repo submodule |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`) and Magna Carta runtime rules. Framework
   definitions are config-driven (`frameworks.yaml`), not hard-coded.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Add a policy check:** implement in `governance.py`, expose via `routes.py` if it needs an HTTP surface;
   register any new framework in `config/townhall/frameworks.yaml`.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **`/townhall/policies` empty:** check the governance store / `frameworks.yaml` loaded (`framework_registry`).
 - **Board unreachable at `/townhall` (8071):** that is CranBania (submodule) — check the submodule service,
   not `src/townhall/` (the in-repo router is separate and serves `/townhall/status|policies|check`).
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Framework definitions are config-driven; compliance decisions flow through `src/compliance/middleware.py`.
 - In-repo router scope is deliberately minimal; board functionality is owned by CranBania.

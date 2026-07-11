@@ -73,7 +73,38 @@
   x6–x8 alternates, threshold at which the service sheds load / fails safe>`
 - **Degradation strategy:** `<what still works when a dependency is down>`
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+> The platform recognizes exactly three deployment scopes, defined in code by
+> `src/platform/infrastructure_mode.py` (`PlatformInfraMode.CLOUD_ONLY` / `.HYBRID` /
+> `.LOCAL_ONLY`, selected via `PLATFORM_INFRA_MODE`, legacy alias `SYSTEM_MODE`) and
+> illustrated platform-wide in `docs/architecture/infrastructure-modes.md`. State facts, not
+> aspiration — if the service doesn't branch on the mode itself, say so plainly rather than
+> implying it does.
+
+- **Mode awareness:** `<does this service's own code call PlatformInfraMode / branch on the
+  mode directly? YES/NO — cite the grep/import. Most entities are NO: the mode is an
+  externally-applied deployment-topology choice (which compose block runs, and where), not
+  in-process branching.>`
+- **Code root → runtime placement:** `<src/<x>/ mounted in api.py → runs wherever the
+  tranc3-backend monolith runs; OR workers/<x>/ → standalone docker-compose service block with
+  its own port>`
+- **Persistence:** `<SQLite file / named volume / in-memory-only — cite the compose volume
+  entry if one exists, or state plainly that none is configured>`
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | `<same docker-compose.production.yml block, deployed to a cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front>` | `<ephemeral unless a named volume is attached>` | `<e.g. no persistent volume ⇒ state lost on redeploy; any hardware-only dependency (GPU/Ollama/local device) has no cloud equivalent>` |
+| **Hybrid** | `<same block, split per docs/architecture/infrastructure-modes.md's Hybrid diagram — persistent data local (TrueNAS/Syncthing), compute/edge in cloud>` | `<local for data, cloud for edge/compute>` | `<requires CITADEL_LOCAL_STACK=true / local Docker reachable from the cloud edge, per should_run_citadel_docker() in infrastructure_mode.py>` |
+| **Local-Only** | `<same block, run entirely on local/Citadel hardware behind local Traefik>` | `<fully local, volume-backed>` | `<none beyond standard local-hardware ops, unless noted above>` |
+
+- **Zero-cost posture per mode:** `<cite this pack's own ASD zero-cost limits; note whether
+  Cloud-Only relies on the platform's free-tier AI rotation chain (`zero_cost_cloud`) versus
+  Hybrid/Local-Only (`zero_cost_full`) per `config/platform/infrastructure_mode.yaml`>`
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`);
+  `<state whether this service needs anything beyond a redeploy-target change>`
+
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Technology | Version | Licence | Zero-cost? | CVE posture |
 |-------|-----------|---------|---------|:----------:|-------------|
@@ -82,7 +113,7 @@
 | Storage | `<SQLite / IPFS / …>` | | | | |
 | Transport | `<HTTP+SSE / WS / JSON-RPC>` | | | | |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 > Reference platform policies; record only service-specific deltas.
 
@@ -91,14 +122,14 @@
 - **Data handling:** `<retention, PII, GDPR basis>`
 - **Access policy:** `<who, tiers, MFA requirement>`
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Deploy:** `<steps / command / CI workflow>`
 - **Configuration change:** `<steps + approval gate>`
 - **Secret rotation:** `<steps — cite The Void / Vault>`
 - **Onboarding a consumer:** `<steps>`
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 > Only for ✅ live services.
 
@@ -113,7 +144,7 @@
 - **Rollback:** `<how to revert safely>`
 - **Recovery from data loss:** `<backup restore steps>`
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - **Applicable platform standards:** `<docs/defstan/… links>`
 - **API standard:** `<JSON-RPC 2.0 / REST conventions>`

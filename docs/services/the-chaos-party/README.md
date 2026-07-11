@@ -69,7 +69,22 @@ The suite deliberately introduces failures and asserts graceful degradation:
   port note) can expose chaos runs as a service (out of scope of the
   in-repo suite documented here).
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** not a deployable service — `tests/test_chaos.py` is a test suite executed by CI (Forgejo runner, per `CLAUDE.md`'s "All CI/CD runs through Forgejo — NO GitHub Actions"), not a long-running `docker-compose.production.yml` service block.
+- **Persistence:** none — test runs are stateless; results go to `logs/test_results.jsonl` on the runner's own filesystem, not a dedicated volume for this entity.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | runs on a Forgejo CI runner hosted on a cloud VM — see The Workshop's own DSM for where `forgejo-runner` itself is deployed | n/a — CI job output only | depends entirely on The Workshop's Cloud-Only deployment; no independent blocker for this entity |
+| **Hybrid** | runs on whichever Forgejo runner (cloud or local) picks up the job | n/a | depends on The Workshop's Hybrid deployment |
+| **Local-Only** | runs on a local Forgejo runner | n/a | depends on The Workshop's Local-Only deployment |
+
+- **Zero-cost posture per mode:** a test suite has no AI-Gateway or paid-dependency exposure of its own.
+- **Switching modes:** not applicable to this entity directly — it inherits whatever mode The Workshop's CI runners are deployed under.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -77,24 +92,24 @@ The suite deliberately introduces failures and asserts graceful degradation:
 | Fault injection | in-test exceptions/timeouts/cancellation | in-process |
 | Assertions on behaviour | `caplog` + state checks | in-process |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - Chaos tests must exercise **real** platform primitives (no mocking the unit under test) and assert
   graceful degradation, not just failure. Reuses platform test standards.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Add a chaos scenario:** add a test to the relevant `Test*Chaos` class, inject a concrete fault
   (exception / timeout / cancellation), and assert the system degrades gracefully (state + log signal).
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **A chaos test fails in CI:** a resilience guarantee regressed — inspect which class
   (circuit-breaker / workflow / event-bus / tool-timeout) and treat as a real defect, not flakiness.
 - **`test_concurrent_executions_isolated` failing:** historically a `NodeType.OUTPUT` workflow-executor
   issue — verify against the workflow executor, not the chaos harness.
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Deterministic fault injection; assertions on both state and log output; no mocking the SUT.
 

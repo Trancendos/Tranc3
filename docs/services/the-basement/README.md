@@ -113,7 +113,22 @@
 - **Degradation:** embedding/FAISS failures during ingest are swallowed (logged, not raised) — a
   record is still stored even if it can't be vector-indexed.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** mounted in the `tranc3-backend` monolith (`api.py`); runs wherever that monolith's `docker-compose.production.yml` service block is deployed, on whatever port/host the monolith uses (compose service `tranc3-backend`)
+- **Persistence:** SQLite/volume shared with the rest of the monolith (`tranc3-backend` has a named volume in compose)
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tranc3-backend` compose block runs on a single cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front | backed by the monolith's attached volume — persists across redeploys as long as the volume is preserved | no entity-specific blocker beyond whatever applies to the monolith as a whole |
+| **Hybrid** | same monolith block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the monolith itself still runs wherever it's deployed | monolith volume, optionally mirrored to local TrueNAS via Syncthing | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one, per `should_run_citadel_docker()` in `infrastructure_mode.py` |
+| **Local-Only** | same monolith block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops (backup, power, network) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -122,7 +137,7 @@
 | Embeddings | `sentence-transformers` `all-MiniLM-L6-v2` (optional) | OSS, local |
 | Storage | in-memory `dict` (no persistence) | zero infra cost, but no durability |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - No route-level auth is currently implemented (see SIM §5) — reuse platform policy
   (`POL-AI-001`, `docs/defstan/`) if/when auth is added; this pack does not assert a policy that
@@ -130,7 +145,7 @@
 - Security/critical Observatory events MUST remain retained (never evicted) per the hard-coded
   `retained` exemption in `ingest()`/`ingest_observatory_event()`.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Query the archive:** `GET /basement/search?q=<query>&top_k=<n>` — returns semantic matches if
   FAISS is active, else keyword-overlap matches.
@@ -139,7 +154,7 @@
 - **Add vector search:** install `faiss` and `sentence-transformers` in the runtime environment —
   no code change needed; `_try_init_faiss()` activates automatically on next process start.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **`/basement/stats` shows `vector_search: false`:** `faiss`/`sentence-transformers` aren't
   installed, or FAISS init raised — check logs for `"basement: FAISS init failed"` at WARNING
@@ -150,7 +165,7 @@
 - **404 on `/basement/records/{id}`:** record was evicted (non-retained, aged out) or the ID never
   existed — check `/basement/stats.total_records` and `by_source` breakdown.
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Naming: canonical name "The Basement" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; code module is
   `src/basement/` (lowercase, matches convention used by other in-repo entities).

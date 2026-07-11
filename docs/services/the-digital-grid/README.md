@@ -113,7 +113,23 @@
 - **Degradation:** a failing node fails its branch; independent branches continue; partial
   results are retained on `ExecutionState`.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`the-grid`, port 8010) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `the-grid` compose service — state survives container restarts/redeploys in any mode
+- **Note:** this entity has **two** deployment surfaces — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a separate standalone worker (`the-grid`, port 8010). The table below describes the standalone worker; the monolith-mounted router follows the monolith's own placement (see the monolith pattern noted across this platform's other entities) and shares its volume.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `the-grid` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `the-grid` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `the-grid` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Technology | Version | Licence | Zero-cost? | CVE posture |
 |-------|-----------|---------|---------|:----------:|-------------|
@@ -123,7 +139,7 @@
 | Validation | Pydantic v2 | pinned | MIT | ✅ | clean |
 | Design target (OSS) | n8n (reference) | — | Fair-code (self-host free) | ✅ | — |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - **Applicable platform policies:** `POL-AI-001`, `POL-OPS-002` — see `docs/policies/`.
 - **Service-specific rules:** `code` nodes execute logic — must run within platform
@@ -132,7 +148,7 @@
 - **Access:** workflow routes require a valid platform token (Infinity); tier limits per
   `src/monetisation/`.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Deploy:** as the `the-grid` worker (port 8010) and/or mounted routes; CI via
   `.forgejo/workflows/`.
@@ -142,7 +158,7 @@
   (`ml_training_workflow`, `self_healing_workflow`, `spark_ignition_workflow`).
 - **Config change:** through change gate (`docs/procedures/PROC-CHG-001-Change-Request.md`).
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **Health check:** `GET /status` → grid status body.
 - **Key alerts → action:**
@@ -157,7 +173,7 @@
 - **Rollback:** redeploy previous image; workflow API is versioned/backward-compatible by policy.
 - **Recovery:** re-register workflows from source factories; in-flight executions are re-runnable.
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - **API standard:** REST conventions (`src/workflow/routes.py`).
 - **Error standard:** canonical `ErrorCode` enum — `src/errors/error_catalog.py`.

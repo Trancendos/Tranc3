@@ -111,7 +111,22 @@
   since `aframe_url` is currently unset for all seed scenes.
 - **Degradation:** Observatory emission failures don't block session start/end.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`vrar3d`, port 8060) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `vrar3d` compose service — state survives container restarts/redeploys in any mode
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `vrar3d` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `vrar3d` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `vrar3d` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -119,13 +134,13 @@
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Client rendering (referenced, not implemented here) | Three.js / A-Frame WebXR | OSS, browser-based |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - No route-level auth on any `/vrar3d/*` route — anyone can start/end a wellbeing session for
   any `user_id`.
 - Zero-cost mandate: Three.js/A-Frame are free/OSS; no paid asset-hosting dependency introduced.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **List available scenes:** `GET /vrar3d/scenes?type=meditation` (optional filter).
 - **Get a recommendation:** `GET /vrar3d/recommend?mood=2&sensitivity_level=critical` — caller
@@ -133,7 +148,7 @@
 - **Track a session:** `POST /vrar3d/sessions` to start, `POST /vrar3d/sessions/{id}/end` to end
   and record `mood_after`.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **The crisis-calm scene never gets recommended in practice:** expected unless some other
   service explicitly calls `/vrar3d/recommend` with `sensitivity_level="critical"` sourced from a
@@ -143,7 +158,7 @@
 - **Session data disappears after a restart:** expected — no persistence; the scene catalogue
   itself re-seeds from the hard-coded list, so only session/mood history is lost.
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Naming: canonical entity name "VRAR3D" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`. Note the
   platform-level entity description ("standalone 3D/VR immersion") is broader than what the

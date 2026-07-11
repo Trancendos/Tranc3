@@ -69,7 +69,22 @@
 - **Zero-cost limits & hard stops:** self-hosted Forgejo + SQLite; no paid CI minutes.
 - **Bottleneck:** single-host SQLite Forgejo; DR is by data-volume backup (`forgejo-data`).
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** self-hosted Forgejo git+CI/CD — two compose services, `forgejo` (server) and `forgejo-runner` (act-runner); not part of the `tranc3-backend` monolith.
+- **Persistence:** both `forgejo` and `forgejo-runner` have named volumes attached in compose (repos, CI artefacts, runner state).
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | both compose blocks run on a single cloud host; Traefik routes `trancendos.com/the-workshop` to it | persists via each service's attached volume as long as the disk is preserved | no entity-specific blocker beyond standard single-host durability |
+| **Hybrid** | `forgejo` server can run centrally (cloud or local) while `forgejo-runner` instances run in either location and pick up jobs from the same server — a genuinely useful split for this entity specifically | server data central; runner state wherever each runner instance lives | requires network reachability between runner and server regardless of which side is local vs cloud |
+| **Local-Only** | both compose blocks run entirely on local/Citadel hardware | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); no code change needed, though runner placement is worth deciding deliberately given the Hybrid split noted above.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -79,17 +94,17 @@
 | Reverse proxy | Nginx / Caddy | OSS |
 | Deploy tooling | `flyctl`, `wrangler` (in runner image) | free tiers |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - All CI/CD flows through The Workshop (no GitHub Actions for platform pipelines). Org secrets
   (`CF_API_TOKEN`, `FLY_API_TOKEN`) are set via `set-org-secrets.sh`, never committed.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Stand up The Workshop:** `bash deploy/forgejo/setup.sh` (or `bootstrap.sh` for full setup), add the
   Nginx block from `nginx-the-workshop.conf`, then `runner-setup.sh` to register the runner.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **Forgejo unhealthy:** the compose healthcheck hits `http://localhost:3000/-/health`; check the
   `forgejo` container and the `forgejo-data` volume.
@@ -98,7 +113,7 @@
 - **Deploy step fails on missing `flyctl`/`wrangler`:** the custom `runner.Dockerfile` image wasn't built —
   either build it or accept the upstream `runner:3` image (no deploy tooling).
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Forgejo bound to localhost + reverse-proxied on `/the-workshop`; secrets via org-secret script; runner
   image pins its deploy toolchain.

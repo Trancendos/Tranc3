@@ -118,7 +118,24 @@
 - **Degradation:** Redis unavailability degrades to in-memory-only for the running process's
   lifetime (both hydration and persist wrapped in `except Exception`).
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`devocity`, port 8110) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** **no named volume** on the `devocity` compose service — any on-disk state is lost on container replace/redeploy in every mode alike
+- **Note:** this entity has **two** deployment surfaces — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a separate standalone worker (`devocity`, port 8110). The table below describes the standalone worker; the monolith-mounted router follows the monolith's own placement (see the monolith pattern noted across this platform's other entities) and shares its volume.
+- **Note:** unlike most no-volume workers on this platform, DevOcity's real persistence is via the shared platform Redis service (a separate compose block), not a volume on its own service — so its actual durability depends on that Redis instance's own persistence configuration, not on this worker having a volume.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `devocity` compose block runs on a single cloud host; Traefik/edge in front | ephemeral — no volume means state does not survive a redeploy | if this worker writes any local file it needs to keep, that data is at risk on every mode until a volume is added |
+| **Hybrid** | same `devocity` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `devocity` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local (still no volume — same durability gap as Cloud-Only) | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -127,14 +144,14 @@
 | Persistence | Redis (`src/core/redis_store`), 1-year TTL | existing platform dependency, zero new cost |
 | Key validation (missing) | none | N/A — not implemented anywhere |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - Every `/devocity/accounts*` route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the account-creation and key-issuance auth gap. The key-*validation*
   gap (issued keys not being checked against The Spark/Grid) remains open; see TASD.
 - Zero-cost mandate: Redis usage stays within the existing platform budget; no new dependency.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Create a developer account:** `POST /devocity/accounts` with `{"user_id": "...",
   "display_name": "..."}` as the same user (or an admin) — `user_id` must
@@ -146,7 +163,7 @@
 - **Register a webhook:** `POST /devocity/accounts/{id}/webhooks` — stores the endpoint and a
   signing secret; no delivery mechanism exists to actually call it.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **Issued API keys don't grant any real access:** expected — see the major finding in the
   truthfulness header; this is not a bug to chase, it's an unimplemented enforcement layer.
@@ -157,7 +174,7 @@
 - **Account data missing after a restart:** check Redis connectivity — `_ensure_loaded()`
   degrades to empty in-memory state silently if Redis is unreachable.
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Naming: canonical entity name "DevOcity" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any DevOcity-issued API key that is documented as granting a `scope` MUST have a corresponding

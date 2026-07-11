@@ -103,7 +103,22 @@
   deferred to whichever backend (ComfyUI/FFmpeg/Godot/Penpot) is eventually wired in.
 - **Degradation:** none needed yet — there is no live backend to degrade from.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** mounted in the `tranc3-backend` monolith (`api.py`); runs wherever that monolith's `docker-compose.production.yml` service block is deployed, on whatever port/host the monolith uses (compose service `tranc3-backend`)
+- **Persistence:** SQLite/volume shared with the rest of the monolith (`tranc3-backend` has a named volume in compose)
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tranc3-backend` compose block runs on a single cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front | backed by the monolith's attached volume — persists across redeploys as long as the volume is preserved | no entity-specific blocker beyond whatever applies to the monolith as a whole |
+| **Hybrid** | same monolith block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the monolith itself still runs wherever it's deployed | monolith volume, optionally mirrored to local TrueNAS via Syncthing | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one, per `should_run_citadel_docker()` in `infrastructure_mode.py` |
+| **Local-Only** | same monolith block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops (backup, power, network) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -111,20 +126,20 @@
 | Job storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Backend dispatch | **not implemented** | N/A — deferred to future ComfyUI/FFmpeg/Godot/Penpot integration |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - No route-level auth currently implemented — see SIM §5.
 - Zero-cost mandate: any future backend integration (ComfyUI, FFmpeg, Godot, Penpot) must pass
   `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Submit a job:** `POST /studio/jobs` with `{"service": "sashas-photo-studio", "payload": {...}}`
   — returns a job record in `queued` status that will not currently progress further.
 - **List capabilities:** `GET /studio/capabilities` — static manifest, useful for discovering
   which sub-services exist and their intended feature set (not their live availability).
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **Jobs stuck in `queued` forever:** expected — no dispatcher exists yet. This is not a bug to
   triage; it's the current (pre-backend-integration) state of the module.
@@ -134,7 +149,7 @@
   (`# nosec B110`) — check The Observatory's own logs/health, not this module, for emission
   failures.
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Naming: canonical entity name "The Studio" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; note the
   `StudioServiceType.VIDEO` enum value is literally `"tatekings"` (plural) while the canonical

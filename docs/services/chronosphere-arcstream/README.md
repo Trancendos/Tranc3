@@ -141,7 +141,22 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
   worker's own loop) whenever no external backend passes its rate-limit gate — there is no
   scenario where a job silently fails to be scheduled at all.
 
-## 7. Technology & Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`cron-service`, port 8021) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `cron-service` compose service — state survives container restarts/redeploys in any mode
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `cron-service` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `cron-service` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `cron-service` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology & Framework Matrix (TFM)
 
 | Layer | Choice | Cost |
 |---|---|---|
@@ -150,7 +165,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
 | Scheduling backends (optional, none provisioned) | Cal.com, Kestra, n8n, Forgejo, NATS JetStream, Valkey | zero (self-hosted OSS) |
 | Fallback scheduler | in-process asyncio loop (this worker's own code, not python-crontab or APScheduler despite the label) | zero |
 
-## 8. Policy & Compliance (POL)
+## 9. Policy & Compliance (POL)
 
 - All `/jobs*` routes are unauthenticated by default in this compose file (empty-string
   `INTERNAL_SECRET`) — any caller reaching the container can create, trigger, or delete
@@ -159,7 +174,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
   server) and should be treated as sensitive until auth is enabled.
 - Zero-cost mandate honoured — no paid scheduling API is called.
 
-## 9. Procedures (PROC)
+## 10. Procedures (PROC)
 
 - **Local dev:** `cd workers/cron-service && pip install -r requirements-worker.txt &&
   uvicorn worker:app --port 8021`.
@@ -169,7 +184,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
   add the backend's own container to `docker-compose.production.yml` — none of the 6
   network-based optional backends are provisioned there today.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **Health check:** `GET http://cron-service:8021/health` — includes per-backend pheromone
   status inline, useful for diagnosing why jobs keep landing on the in-process fallback.
@@ -183,7 +198,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
   Expected while none of the 6 network backends are provisioned — every dispatch attempt fails
   its reachability check and falls through; not a bug.
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn/SQLite-WAL conventions as other standalone workers audited
   this session.

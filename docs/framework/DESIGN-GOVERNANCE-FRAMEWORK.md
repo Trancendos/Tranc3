@@ -46,11 +46,28 @@ comprises the following artifacts. The template for each lives in
 | 4 | **Solutions Integration Model** | SIM | *What does it talk to?* Upstream/downstream contracts, events, auth | ✅ / 🔧 Partial |
 | 5 | **Architecture Scalability Document** | ASD | *How does it grow?* Load model, scaling levers, zero-cost limits | ✅ / 🔧 Partial |
 | 6 | **Technology Framework Matrix** | TFM | *What is it made of?* Languages, libs, licences, versions, CVE posture | All |
-| 7 | **Policy** | POL | *What rules govern it?* Security, data, AI, access policies | All |
-| 8 | **Procedure** | PROC | *What are the repeatable steps?* Deploy, rotate, onboard, incident | ✅ / 🔧 Partial |
-| 9 | **Runbook** | RUN | *What do I do at 3am?* Alerts, diagnostics, recovery, rollback | ✅ |
-| 10 | **Standards** | STD | *What must it conform to?* Naming, API, logging, error, test standards | All |
-| 11 | **Service Governance Charter** | GOV | *What is it for?* Mission, scope, Lead AI, SLOs, review cadence | All |
+| 7 | **Deployment Scope Matrix** | DSM | *Where can this run?* Cloud-Only / Hybrid / Local-Only topology, mode-awareness, data locality, per-mode blockers | All |
+| 8 | **Policy** | POL | *What rules govern it?* Security, data, AI, access policies | All |
+| 9 | **Procedure** | PROC | *What are the repeatable steps?* Deploy, rotate, onboard, incident | ✅ / 🔧 Partial |
+| 10 | **Runbook** | RUN | *What do I do at 3am?* Alerts, diagnostics, recovery, rollback | ✅ |
+| 11 | **Standards** | STD | *What must it conform to?* Naming, API, logging, error, test standards | All |
+| 12 | **Service Governance Charter** | GOV | *What is it for?* Mission, scope, Lead AI, SLOs, review cadence | All |
+
+**Deployment Scope Matrix — grounding.** DSM answers a distinct question from ASD (which is
+about *load* scaling): it is about *where the service's process(es) physically run* — the
+platform recognizes exactly three deployment scopes, defined in code by
+`src/platform/infrastructure_mode.py` (`PlatformInfraMode`: `CLOUD_ONLY` / `HYBRID` /
+`LOCAL_ONLY`, selected via the `PLATFORM_INFRA_MODE` env var, legacy alias `SYSTEM_MODE`) and
+illustrated platform-wide in `docs/architecture/infrastructure-modes.md`. A DSM must state,
+per service: (a) whether the service's own code calls `PlatformInfraMode` / branches on the
+mode directly (verify by grep — as of this framework revision, none of the 43 named entities
+do; mode is an externally-applied deployment-topology choice, not in-process branching), (b)
+what actually runs and where under each of the three modes (which `docker-compose.production.yml`
+service block, on which host class, whether a persistent volume is attached), and (c) any
+hard per-mode blocker (e.g. a GPU/Ollama/local-hardware dependency that has no cloud
+equivalent, or a Cloudflare-Worker-only foundation with no Local-Only path). Planned-tier and
+charter-only (§2.1) DSMs are intent-level only — state target mode support, not implemented
+behaviour.
 
 **Cross-references, not copies.** Platform-wide policies (e.g. `POL-AI-001`), standards,
 and procedures already in `docs/policies/`, `docs/procedures/`, `docs/defstan/` are
@@ -66,9 +83,9 @@ three **gate tiers** below. This is the single source of truth for the mapping:
 
 | Canonical status label (from `CLAUDE.md`) | Gate tier | Required pack |
 |------------------------------------------------------|-----------|---------------|
-| `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 11-artifact pack, code-grounded |
+| `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 12-artifact pack, code-grounded |
 | `🔧 Partial`, `🔧 Migrating`, `🔧 Self-hosted` | **Partial** | Live pack, scoped to what exists; gaps flagged |
-| `🔧 Planned` | **Planned** | GOV + RACI + TFM + POL + STD only |
+| `🔧 Planned` | **Planned** | GOV + RACI + TFM + DSM + POL + STD only |
 
 > A `✅` label always maps to **Live**; a `🔧` label maps to **Partial** unless it is
 > exactly `🔧 Planned`, which maps to **Planned**. Automation keys off the emoji + the
@@ -135,7 +152,7 @@ failing the build on gaps — the same pattern already used for entity-name lint
 Coverage is tracked in `docs/services/INDEX.md`. The honest rollout order is:
 
 1. **✅ In-repo services first** (The Spark, The Digital Grid, Infinity, The Nexus,
-   The Observatory, The Workshop, The Town Hall) — full 11-artifact packs, code-grounded.
+   The Observatory, The Workshop, The Town Hall) — full 12-artifact packs, code-grounded.
 2. **🔧 Partial services** — DDD/TASD scoped to what exists; gaps flagged, not faked.
 3. **🔧 Planned services** — GOV + RACI + TFM + POL + STD only (per §2.1), until code lands.
 
@@ -149,3 +166,4 @@ code-grounded pack. New packs are cloned from the template and from that exempla
 | Date | Reviewer | Action |
 |------|----------|--------|
 | 2026-07-02 | Trancendos Platform Engineering | Initial framework — artifact catalogue, RACI, lifecycle, rollout |
+| 2026-07-11 | Trancendos Platform Engineering | Added **Deployment Scope Matrix (DSM)** as artifact #7, required at all gate tiers. Every application must document its Cloud-Only, Hybrid, and Local-Only deployment scope, code-grounded against `src/platform/infrastructure_mode.py` (`PlatformInfraMode`) and `docker-compose.production.yml`. Packs bumped from 11 to 12 artifacts; see `docs/services/INDEX.md` for per-entity rollout. |

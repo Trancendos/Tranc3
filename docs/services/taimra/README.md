@@ -111,7 +111,22 @@
 - **Degradation:** Observatory emission failures are wrapped in `except Exception: pass` and
   don't block twin operations.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** mounted in the `tranc3-backend` monolith (`api.py`); runs wherever that monolith's `docker-compose.production.yml` service block is deployed, on whatever port/host the monolith uses (compose service `tranc3-backend`)
+- **Persistence:** SQLite/volume shared with the rest of the monolith (`tranc3-backend` has a named volume in compose)
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tranc3-backend` compose block runs on a single cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front | backed by the monolith's attached volume — persists across redeploys as long as the volume is preserved | no entity-specific blocker beyond whatever applies to the monolith as a whole |
+| **Hybrid** | same monolith block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the monolith itself still runs wherever it's deployed | monolith volume, optionally mirrored to local TrueNAS via Syncthing | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one, per `should_run_citadel_docker()` in `infrastructure_mode.py` |
+| **Local-Only** | same monolith block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops (backup, power, network) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -119,14 +134,14 @@
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Personalization | simple incrementing affinity score | zero cost, no ML model |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the access-control half of the module's own "Governed by Trancendos
   Magna Carta policy" claim. The I-Mind content-filtering half remains unenforced (see DDD).
 - Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Activate a twin:** `POST /taimra/activate/{user_id}` (as the same user, or an admin) — sets status to `LEARNING`.
 - **Record an interaction:** `POST /taimra/record/{user_id}` with `{"message", "topics",
@@ -134,7 +149,7 @@
 - **Export or delete a twin:** `GET /taimra/export/{user_id}` / `DELETE /taimra/twin/{user_id}` —
   auth-gated; returns `403` unless the caller is that user or holds the `admin` role.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **A user's twin data is missing after a restart:** expected — no persistence in this module.
 - **`GET /taimra/twin/{user_id}` returns 404 for a user with recorded interactions elsewhere:**
@@ -145,7 +160,7 @@
 - **Sensitive topics appear in a user's twin despite the "never stores I-Mind flagged content"
   claim:** expected — this guarantee is not enforced in code (see DDD).
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Naming: canonical entity name "tAimra" per `CLAUDE.md`/`PLATFORM_ENTITIES.md` (note the
   lowercase-t "tAimra" for the entity vs. capital-T "tAImra" for its Lead AI — both correct per

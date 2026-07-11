@@ -151,7 +151,23 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
   SQLite file and depends on external wiki-backend services per its compose block.
 - **Degradation:** Observatory/Event-Bus emission failures don't block the CRUD response.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`library-service`, port 8067) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `library-service` compose service — state survives container restarts/redeploys in any mode
+- **Note:** this entity has **two** deployment surfaces — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a separate standalone worker (`library-service`, port 8067). The table below describes the standalone worker; the monolith-mounted router follows the monolith's own placement (see the monolith pattern noted across this platform's other entities) and shares its volume.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `library-service` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `library-service` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `library-service` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -160,7 +176,7 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 | Storage | in-memory `dict` (`src/library/*`), no persistence | zero infra cost, no durability |
 | Standalone worker | `workers/library-service/` — SQLite + multi-backend wiki adapter | self-hosted, port 8067 |
 
-## 8. Policy (POL)
+## 9. Policy (POL)
 
 - **Security gap, not fixed:** `src/library/*` routes (mounted in `api.py`, including create/
   update/delete mutations) have no route-level auth at all — any caller reaching `api.py` can
@@ -171,7 +187,7 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 - Zero-cost mandate: any future Outline/BookStack/etc. backend wiring must pass
   `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
-## 9. Procedure (PROC)
+## 10. Procedure (PROC)
 
 - **Create an article:** `POST /library/articles` with `{"title": "...", "body": "...", "tags":
   [...], "author": "..."}` — status is always set to `PUBLISHED` on create (no draft-via-API path).
@@ -180,7 +196,7 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 - **Update an article:** not exposed over HTTP in `src/library/*` — see DDD gap; would require
   calling `Library.update()` in-process or adding a route.
 
-## 10. Runbook (RUN)
+## 11. Runbook (RUN)
 
 - **Articles disappear after a restart:** expected — `src/library/*` has no persistence; only
   the 6 seed articles reappear.
@@ -193,7 +209,7 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 - **`/library/articles/{id}` returns 404:** article ID never existed or the process restarted
   since it was created (no persistence).
 
-## 11. Standards (STD)
+## 12. Standards (STD)
 
 - Naming: canonical entity name "The Library" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any Dockerfile that hardcodes a `--port` CLI flag MUST match the port set in
