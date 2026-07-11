@@ -23,7 +23,16 @@
 
 ## 2. Detailed Design Document (DDD) — `deploy/forgejo/`
 
-### Container stack (`docker-compose.yml`)
+### Container stack (`deploy/forgejo/docker-compose.yml`)
+
+> **Two separate compose files exist for this entity, with two different runner service names —
+> not a naming bug.** `deploy/forgejo/docker-compose.yml` (this table, the standalone
+> manual-deploy path per §11 PROC) names its runner service `act-runner`. The unified
+> `docker-compose.production.yml` (the DSM below) names the equivalent service `forgejo-runner`.
+> Both are genuinely correct for their own file — operators following this pack's Procedure
+> section should look for `act-runner`; operators inspecting the production stack as a whole
+> should look for `forgejo-runner`.
+
 | Service | Image | Notes |
 |---|---|---|
 | `forgejo` (`container_name: the-workshop`) | `codeberg.org/forgejo/forgejo:7` | SQLite DB (`FORGEJO__database__PATH=/data/forgejo/forgejo.db`); Actions enabled (`DEFAULT_ACTIONS_URL=https://code.forgejo.org`); published on `127.0.0.1:3456:3000`; healthcheck `GET /-/health` |
@@ -78,7 +87,7 @@
 | Setup | What runs, and where | Data locality | Hard blockers / caveats |
 |---|---|---|---|
 | **Cloud-Only** | both compose blocks run on a single cloud host; Traefik routes `trancendos.com/the-workshop` to it | persists via each service's attached volume as long as the disk is preserved | no entity-specific blocker beyond standard single-host durability |
-| **Hybrid** | `forgejo` server can run centrally (cloud or local) while `forgejo-runner` instances run in either location and pick up jobs from the same server — a genuinely useful split for this entity specifically | server data central; runner state wherever each runner instance lives | requires network reachability between runner and server regardless of which side is local vs cloud |
+| **Hybrid** | `forgejo` server can run centrally (cloud or local) while `forgejo-runner` instances run in either location and pick up jobs from the same server — a genuinely useful split for this entity specifically | server data central; runner state wherever each runner instance lives | requires network reachability between runner and server regardless of which side is local vs cloud; the runner's `FORGEJO_INSTANCE_URL` currently defaults to the Compose-internal `http://forgejo:3000/the-workshop`, which only resolves inside the same Docker network — a runner placed on a genuinely separate host (the whole point of this Hybrid split) needs that value changed to an externally-reachable Forgejo endpoint, plus appropriate TLS/network-policy and runner-registration configuration; this is not automated today |
 | **Local-Only** | both compose blocks run entirely on local/Citadel hardware | fully local, volume-backed | none beyond standard local-hardware ops |
 
 - **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
@@ -96,15 +105,15 @@
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
-| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
-| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment, and no local run command is documented in §11 PROC either |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
 | **Production** | Yes | full detail in the DSM above | — |
 
-- **Gap:** this entity has **no non-Production environment at all** — `forgejo / forgejo-runner` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+- **Gap:** this entity has **no non-Production environment at all** — `forgejo / forgejo-runner` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks, nor is a local run command documented in §11 PROC — Production is genuinely the first place it runs. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
 
 ## 10. Policy (POL)
 

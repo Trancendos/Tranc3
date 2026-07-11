@@ -140,7 +140,7 @@ This is one of the more substantively wired entities audited in this series:
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|

@@ -85,7 +85,7 @@
 > change to that platform-wide behaviour is a single grep-replace across `docs/services/*/`,
 > not a re-authoring exercise. Only the "Runtime placement," "Persistence," and the setup
 > table's per-mode cells should differ between services.
-
+>
 > The platform recognizes exactly three deployment scopes, defined in code by
 > `src/platform/infrastructure_mode.py` (`PlatformInfraMode.CLOUD_ONLY` / `.HYBRID` /
 > `.LOCAL_ONLY`, selected via `PLATFORM_INFRA_MODE`, legacy alias `SYSTEM_MODE`) and
@@ -128,18 +128,23 @@
 
 > A distinct question from DSM: DSM is about *physical location* (Cloud-Only/Hybrid/Local-Only);
 > this is about *SDLC promotion stage* (Dev/UAT/Production). The platform has exactly three
-> environment-tier compose files: `docker-compose.development.yml` (6 services — `api`, `redis`,
-> `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog`), `docker-compose.uat.yml` (16 services,
-> a superset adding `vault`, `users-service`, `monitoring`, `the-grid`, `products-service`,
-> `orders-service`, `payments-service`, `prometheus`, `grafana`, `seed-data`), and
-> `docker-compose.production.yml` (286 services). Check both files directly by name — do not
-> assume coverage.
+> environment-tier compose files: `docker-compose.development.yml` (a small fixed set including
+> `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog`), `docker-compose.uat.yml`
+> (a superset adding, among others, `vault`, `users-service`, `monitoring`, `the-grid`,
+> `products-service`, `orders-service`, `payments-service`, `prometheus`, `grafana`, `seed-data`),
+> and `docker-compose.production.yml` (the full platform). Do not hardcode exact service counts
+> here — they drift as the topology changes; check all three files directly by name instead, and
+> see `docs/services/INDEX.md` for current platform-wide totals if a count is genuinely needed.
+> Absence from Dev/UAT compose is a *compose-coverage* gap, not necessarily a *validation* gap —
+> if this pack's own Procedure (PROC) section documents a local run command, or a monolith router
+> for this entity is mounted via the `api` service (which the Dev/UAT compose files do include),
+> say so rather than implying zero pre-Production validation is possible.
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
-| **Dev** (`docker-compose.development.yml`) | `<Yes/No/Partial>` | `<monolith router via the `api` service? standalone worker by name?>` | `<caveats>` |
+| **Dev** (`docker-compose.development.yml`) | `<Yes/No/Partial>` | `<monolith router via the api service? standalone worker by name?>` | `<caveats>` |
 | **UAT** (`docker-compose.uat.yml`) | `<Yes/No/Partial>` | `<same>` | `<caveats>` |
-| **Production** (`docker-compose.production.yml`) | Yes | `<full detail — see DSM above>` | — |
+| **Production** (`docker-compose.production.yml`) | `<Yes/No/Partial>` | `<full detail — see DSM above>` | `<caveats>` |
 
 - **Gap, if any:** `<state plainly if Dev/UAT coverage is monolith-router-only while the standalone
   worker is Production-only, or if there is no non-Production coverage at all — this is the norm

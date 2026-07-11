@@ -1,7 +1,7 @@
 # Design Governance Framework — Trancendos Platform
 
-**Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC
-**Effective:** 2026-07-02 | **Review Cycle:** Quarterly | **Approver:** Platform Owner (The Citadel)
+**Version:** 1.1.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC
+**Effective:** 2026-07-11 | **Review Cycle:** Quarterly | **Approver:** Platform Owner (The Citadel)
 
 ---
 
@@ -57,19 +57,28 @@ comprises the following artifacts. The template for each lives in
 **Environment Support Matrix — grounding.** ESM answers a distinct question from DSM: DSM is
 about *physical location* (Cloud-Only/Hybrid/Local-Only); ESM is about *SDLC promotion stage*
 (Dev/UAT/Production) — an orthogonal axis. The platform has exactly three environment-tier
-compose files: `docker-compose.development.yml` (6 services: `api`, `redis`, `infinity-ws`,
-`infinity-auth`, `infinity-ai`, `mailhog`), `docker-compose.uat.yml` (16 services, a superset
-adding `vault`, `users-service`, `monitoring`, `the-grid`, `products-service`, `orders-service`,
-`payments-service`, `prometheus`, `grafana`, `seed-data`), and `docker-compose.production.yml`
-(286 services — the full platform). An ESM must state, per service: (a) whether its monolith
+compose files: `docker-compose.development.yml` (a small fixed set — `api`, `redis`,
+`infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog`), `docker-compose.uat.yml` (a superset
+adding, among others, `vault`, `users-service`, `monitoring`, `the-grid`, `products-service`,
+`orders-service`, `payments-service`, `prometheus`, `grafana`, `seed-data`), and
+`docker-compose.production.yml` (the full platform — do not hardcode an exact count here, since
+it drifts; see `docs/services/INDEX.md` for the current total). An ESM must state, per service: (a) whether its monolith
 router (if any) has Dev/UAT coverage — true for every entity mounted in `api.py`, since the `api`
 service is present in all three compose files running the same code; (b) whether its standalone
 worker (if any) has its own service block in the Dev and/or UAT compose files by name — true only
-for `infinity-ws` (The Nexus), `infinity-auth` (Infinity), and `infinity-ai` (Luminous) in both
-Dev and UAT, and additionally `the-grid` (The Digital Grid) and `monitoring` (The Observatory) in
-UAT only; every other standalone worker (the other ~90) is Production-only — it has no Dev or UAT
-environment to validate against before a production deploy. This is a real, checkable gap, not
-speculation: state it plainly rather than assuming parity across environments. Planned-tier and
+for `infinity-ws` (The Nexus) and `infinity-auth` (Infinity) in both Dev and UAT, and
+additionally `the-grid` (The Digital Grid) and `monitoring` (The Observatory) in UAT only; every
+other standalone worker (the other ~90) is Production-only — it has no Dev or UAT environment to
+validate against before a production deploy. **Note on `infinity-ai`:** the Dev/UAT compose files
+also include `infinity-ai` (port 8009), but that worker is the shared, cross-cutting AI Gateway
+(`src/ai_gateway/`, per `CLAUDE.md`'s "Core Python Packages" table) — the same category as Service
+Mesh, Event Bus, and Zero Trust IAM — not one of the 43 named entities' own logic. A legacy
+Cloudflare-Worker mapping table in `CLAUDE.md` labels the old `infinity-ai-api` worker
+"Luminous / AI API," but nothing in `workers/infinity-ai/` or `src/ai_gateway/` imports from or
+references Luminous's own code root (`src/bio_neural/`, `src/core/`) — treat that legacy label as
+informal, not an ownership claim, and do not count `infinity-ai`'s Dev/UAT presence toward
+Luminous's own ESM. This is a real, checkable gap, not speculation: state it plainly rather than
+assuming parity across environments. Planned-tier and
 charter-only (§2.1) ESMs are intent-level only.
 
 **Deployment Scope Matrix — grounding.** DSM answers a distinct question from ASD (which is
@@ -113,6 +122,16 @@ three **gate tiers** below. This is the single source of truth for the mapping:
 > A `✅` label always maps to **Live**; a `🔧` label maps to **Partial** unless it is
 > exactly `🔧 Planned`, which maps to **Planned**. Automation keys off the emoji + the
 > word `Planned`, so new nuance labels remain forward-compatible.
+
+> **Charter-only exception (documented deviation from Live, not a fourth gate tier).** A `✅`
+> label normally requires the full Live pack above, but 4 entities (The Lighthouse, The HIVE,
+> Royal Bank of Arcadia, Arcadian Exchange) are `✅ Deployed` Cloudflare Workers with **no source
+> code in this repo** to ground DDD/TASD/SIM/ASD/PROC/RUN against. For these, and only these, the
+> required pack is reduced to **GOV + RACI + TFM + DSM + ESM + POL + STD** — the same artifact set
+> as Planned-tier, despite the entity's status being Live — tracked as an explicit,
+> individually-named exception, not a general-purpose escape hatch. See
+> `docs/services/INDEX.md`'s "Known §2.1 gap" note for the up-to-date list and rationale. Other
+> references in this document to "charter-only (§2.1)" point back to this paragraph.
 
 ---
 
@@ -190,3 +209,4 @@ code-grounded pack. New packs are cloned from the template and from that exempla
 |------|----------|--------|
 | 2026-07-02 | Trancendos Platform Engineering | Initial framework — artifact catalogue, RACI, lifecycle, rollout |
 | 2026-07-11 | Trancendos Platform Engineering | Added **Deployment Scope Matrix (DSM)** as artifact #7, required at all gate tiers. Every application must document its Cloud-Only, Hybrid, and Local-Only deployment scope, code-grounded against `src/platform/infrastructure_mode.py` (`PlatformInfraMode`) and `docker-compose.production.yml`. Packs bumped from 11 to 12 artifacts; see `docs/services/INDEX.md` for per-entity rollout. |
+| 2026-07-11 | Trancendos Platform Engineering | Added **Environment Support Matrix (ESM)** as artifact #9 (between TFM and POL), required at all gate tiers. Every application must document its Dev/UAT/Production compose-coverage, grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml`. Packs bumped from 12 to 13 artifacts; charter-only packs from 6 to 7. See `docs/services/INDEX.md` for per-entity rollout. |

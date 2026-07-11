@@ -136,7 +136,7 @@
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
@@ -168,7 +168,7 @@
   the twin must have been created via `activate()` first — `record_interaction()` is a no-op for
   a twin that was never activated.
 - **A caller gets `403` on activate/export/delete:** expected — they are not the target
-  `user_id` and do not hold the `admin` role; see POL §9.
+  `user_id` and do not hold the `admin` role; see POL §10.
 - **Sensitive topics appear in a user's twin despite the "never stores I-Mind flagged content"
   claim:** expected — this guarantee is not enforced in code (see DDD).
 

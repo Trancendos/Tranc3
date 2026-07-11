@@ -19,9 +19,14 @@
 > added. Issue #188 can be considered closed for this entity.
 | **Gate tier** | Partial → GOV + RACI + TFM + DSM + POL + STD + DDD scoped to the suite that exists |
 
-> **Truthfulness:** claims cite `tests/test_chaos.py`. The Chaos Party's in-repo foundation is a
-> **fault-injection test suite**, not a running HTTP service — the pack documents what it actually
-> exercises. Status owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
+> **Truthfulness:** this entity has two genuinely separate surfaces, and claims below cite the
+> correct one for each section. `tests/test_chaos.py` is a **fault-injection test suite, not a
+> running HTTP service** — that specific characterization applies only to the test suite, not to
+> the entity as a whole. `workers/chaos-party/worker.py`, by contrast, **is** a real, deployable
+> standalone HTTP worker (SQLite-backed, port 8079, now the actual build target per the fix
+> above) — see the DDD below for the DDD/architecture claims specific to the test suite, and the
+> DSM for the deployed-worker claims. Status owned by the `CLAUDE.md` service table; identity by
+> `PLATFORM_ENTITIES.md`.
 
 ## 1. Service Governance Charter (GOV)
 

@@ -131,7 +131,7 @@
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
@@ -165,7 +165,7 @@
   check whether the profile was created via a route that calls `get_or_create()` — the profile
   route itself does not create one; see TASD code-quality note.
 - **A caller gets `403` on export/delete:** expected — they are not the target `user_id` and do
-  not hold the `admin` role; see POL §9.
+  not hold the `admin` role; see POL §10.
 
 ## 13. Standards (STD)
 

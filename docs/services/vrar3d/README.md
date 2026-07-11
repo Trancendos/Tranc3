@@ -114,7 +114,12 @@
 ## 7. Deployment Scope Matrix (DSM)
 
 - **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
-- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`vrar3d`, port 8060) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Runtime placement:** **two deployment surfaces**, corrected 2026-07-11 (this pack previously
+  said the standalone worker was the only surface): `src/vrar3d/routes.py` is unconditionally
+  mounted into the `tranc3-backend` monolith (`api.py`, `app.include_router(_vrar3d_router)`) *and*
+  there is a separate standalone worker with its own `docker-compose.production.yml` service block
+  (`vrar3d`, port 8060) and its own Traefik route. The table below describes the standalone
+  worker; the monolith-mounted router follows the monolith's own placement and shares its volume.
 - **Persistence:** named volume attached to the `vrar3d` compose service — state survives container restarts/redeploys in any mode
 
 | Setup | What runs, and where | Data locality | Hard blockers / caveats |
@@ -136,15 +141,15 @@
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
-| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
-| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
-| **Production** | Yes | full detail in the DSM above | — |
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `vrar3d` worker is **not** in this compose file | standalone worker has zero Dev coverage; monolith router is present and exercisable |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `vrar3d` worker is **not** in this compose file either | standalone worker has zero UAT coverage; monolith router is present and exercisable |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
 
-- **Gap:** this entity has **no non-Production environment at all** — `vrar3d` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+- **Gap:** the standalone `vrar3d` worker has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity. The monolith-mounted router, however, **is** present in Dev/UAT via the `api` service — corrected 2026-07-11 after review flagged the earlier version of this table for missing that surface entirely.
 
 ## 10. Policy (POL)
 

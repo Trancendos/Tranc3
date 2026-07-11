@@ -2,10 +2,11 @@
 
 ## Custom Hierarchy Specification v0.9.0
 
-> **Mandatory Rule**: These definitions are the canonical taxonomy for the
-> Tranc3 Infinity Ecosystem. All documentation, code, and communication
-> MUST adhere to this hierarchy. The terms AI, Agent, and Bot have
-> specific, distinct meanings that differ from colloquial usage.
+> **Mandatory Rule**: These definitions are the canonical taxonomy for the **AeonMind polyglot
+> agent framework** (`aeonmind/`) — see the scope note immediately below for what this does and
+> does not cover. All AeonMind documentation, code, and communication MUST adhere to this
+> hierarchy. The terms AI, Agent, and Bot have specific, distinct meanings that differ from
+> colloquial usage, and from the Trancendos platform's own Tier 1–5 vocabulary.
 
 > **Scope note (added 2026-07-11, reconciling a real cross-reference gap).** "Tranc3 Infinity
 > Ecosystem" here means the **AeonMind polyglot agent framework** (`aeonmind/` — Rust/Go/Python/
@@ -210,10 +211,10 @@ All Tier 4 Agents maintain a Fluidic State that tracks:
 | Parameter Shift Rule | Quantum gradient computation: ∂f/∂θ = [f(θ+π/2) - f(θ-π/2)] / 2 |
 | Sentinel Channel | Inter-entity communication bus for broadcast messaging |
 | Spectral Radius | Largest eigenvalue magnitude of reservoir weight matrix — controls stability |
-| Tier | Position in the Tranc3 entity hierarchy (0=Human to 5=Bot) |
+| Tier | Position in the **AeonMind agent-framework** hierarchy (0=Human to 5=Bot) — not the Trancendos platform's own 43-entity Tier 1–5 hierarchy in `PLATFORM_ENTITIES.md` |
 | Variational Circuit | Parameterized quantum circuit with trainable rotation gates |
 
 ---
 
-*Document Version: 0.9.0 | Phase 24 | Tranc3 Infinity Ecosystem*
+*Document Version: 0.9.0 | Phase 24 | AeonMind polyglot agent framework (not the Trancendos platform's 43 named entities — see scope note above)*
 *Custom Hierarchy: AI = ML/LLM Complex (T3) | Agent = Autonomous AI (T4) | Bot = Stateless Worker (T5)*

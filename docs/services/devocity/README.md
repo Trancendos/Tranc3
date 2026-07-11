@@ -80,7 +80,7 @@
 - **Decision: no key-validation middleware.** Despite `ApiKeyScope` implying gated access to The
   Spark/The Digital Grid, no dependency or middleware in this repo checks a request's key against
   `ApiKey.key_hash`. This is a substantial, real gap between the entity's stated purpose and its
-  actual enforcement — documented, not fixed (adding real key-gated auth to The Spark/Grid routes
+  actual enforcement — documented, not fixed (adding real key-gated auth to The Spark/The Digital Grid routes
   is an architectural change well beyond this docs pass).
 - **Fixed:** account-creation and key-issuance endpoints now require `Depends(get_current_user)`
   plus a self-or-admin ownership check via `_get_owned_account()`, mirroring `api.py`'s
@@ -146,7 +146,7 @@
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
@@ -160,7 +160,7 @@
 
 - Every `/devocity/accounts*` route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the account-creation and key-issuance auth gap. The key-*validation*
-  gap (issued keys not being checked against The Spark/Grid) remains open; see TASD.
+  gap (issued keys not being checked against The Spark/The Digital Grid) remains open; see TASD.
 - Zero-cost mandate: Redis usage stays within the existing platform budget; no new dependency.
 
 ## 11. Procedure (PROC)
@@ -199,6 +199,6 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/devocity/portal.py` (350 lines), `src/devocity/routes.py` (103 lines), `api.py` router registration (line 864), grep cross-check against `src/security/security_framework.py` | Confirmed Live-tier, full pack authored. Major finding: DevOcity implements real, well-practiced API key generation (hashed, one-time plaintext reveal) and genuine Redis persistence, but no code anywhere in the repo validates an issued key against any protected route — the `SPARK`/`GRID`/`ADMIN`/`FULL` scopes are purely descriptive with zero enforcement. Also flagged: unauthenticated account creation with unverified `user_id` (contradicts the module's own "wired to Infinity SSO" claim), unauthenticated key issuance for any known account ID, and four dead counters (`usage`, `request_count`, `delivery_count`, `failure_count`) that are declared but never incremented. None of these were code-fixed — each requires an architectural auth/enforcement decision out of scope for a docs pass. |
-| 2026-07-08 | Claude (session) | `src/devocity/routes.py` (168 lines, post-fix), `workers/devocity/worker.py` | Closed the account-creation/key-issuance no-auth gap: every `/devocity/accounts*` route now requires `Depends(get_current_user)` plus `_get_owned_account()`'s self-or-admin check. Verified via `tests/test_devocity_auth.py`. Also fixed a separate, more severe defect in the standalone `workers/devocity/worker.py`: `INTERNAL_SECRET` defaulted to the hardcoded literal `"dev-secret"` rather than failing open on an unset secret (the pattern used by every other `INTERNAL_SECRET`-gated worker in this codebase) — a guessable, undocumented backdoor credential shipped by default in production since `INTERNAL_SECRET` is unset in `docker-compose.production.yml`/`.env.example`. Changed the default to `""`, matching the established fail-open-if-unset convention. The key-*validation* gap (issued DevOcity keys never checked against The Spark/Grid) remains open — unrelated to this fix, requires a separate architectural decision. |
+| 2026-07-08 | Claude (session) | `src/devocity/routes.py` (168 lines, post-fix), `workers/devocity/worker.py` | Closed the account-creation/key-issuance no-auth gap: every `/devocity/accounts*` route now requires `Depends(get_current_user)` plus `_get_owned_account()`'s self-or-admin check. Verified via `tests/test_devocity_auth.py`. Also fixed a separate, more severe defect in the standalone `workers/devocity/worker.py`: `INTERNAL_SECRET` defaulted to the hardcoded literal `"dev-secret"` rather than failing open on an unset secret (the pattern used by every other `INTERNAL_SECRET`-gated worker in this codebase) — a guessable, undocumented backdoor credential shipped by default in production since `INTERNAL_SECRET` is unset in `docker-compose.production.yml`/`.env.example`. Changed the default to `""`, matching the established fail-open-if-unset convention. The key-*validation* gap (issued DevOcity keys never checked against The Spark/The Digital Grid) remains open — unrelated to this fix, requires a separate architectural decision. |
 | 2026-07-09 | Claude (session) | `src/devocity/routes.py` (post-fix), `src/auth/tokens.py` | cubic correctly flagged the same class of bug already found in Tranquility/tAimra: the initial fix's cross-user override checked `tier == "enterprise"`, but real JWTs carry `tier` as a numeric int and never that string. `_require_account_owner()`'s override now checks `role == "admin"` instead. Tests updated to assert real-shaped payloads. |
 | 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/devocity/Dockerfile`, `workers/devocity/main.py`, `workers/devocity/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/devocity/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy/The Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, hardcoded empty/placeholder responses) while a genuinely more complete SQLite-backed `worker.py` sat unused in the same directory. **Fixed this time** (unlike Academy's prior pass, this was caught and corrected in the same session rather than left for a follow-up): changed the Dockerfile to build/run `worker.py` and added a named volume (`devocity-data:/app/data`) to `docker-compose.production.yml`. DSM rewritten to reflect the fix. Note this is independent of the `src/devocity/portal.py` monolith-router finding above (API-key issuance) — two separate surfaces, two separate fixes. |

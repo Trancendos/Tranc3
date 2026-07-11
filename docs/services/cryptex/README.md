@@ -159,7 +159,7 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
@@ -192,7 +192,7 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
   request path is in `RBACMiddleware._SCAN_SKIP` or `ENVIRONMENT=test` is set — both bypass the
   `is_blocked()` check by design; otherwise this would be a real bug, not expected behavior.
 - **A non-admin caller gets `403` on `/cryptex/block/{ip}` or `/cryptex/bounty/*`:** expected —
-  see POL §9.
+  see POL §10.
 - **Signal history disappears after a restart:** expected — `_signals` is in-memory only.
 
 ## 13. Standards (STD)

@@ -51,20 +51,31 @@ not a committed integration.
 
 ## 4. Deployment Scope Matrix (DSM)
 
-- **Today: Cloud-Only by construction.** Royal Bank of Arcadia runs exclusively as the
-  Cloudflare Worker `arcadia-royal-bank` on Cloudflare's edge network. Cloudflare Workers
-  cannot run outside Cloudflare's infrastructure, so there is currently **no Hybrid or
-  Local-Only path** for this entity — the platform's `PlatformInfraMode`
-  (`CLOUD_ONLY`/`HYBRID`/`LOCAL_ONLY`, `src/platform/infrastructure_mode.py`) is not consulted,
-  because no self-hosted alternative exists to switch to.
-- **Planned:** if/when this entity is ported to a self-hosted Python worker, it would follow
-  the same `docker-compose.production.yml` Cloud-Only/Hybrid/Local-Only pattern as every other
-  self-hosted worker (note the `CF_WORKER_MIGRATION_ROADMAP.md` file `CLAUDE.md` points to for
-  this intent does not currently exist in this repo, a known doc gap). No target mode, port, or
-  persistence model has been chosen yet — a financial ledger service will likely require a
-  durable volume regardless of mode, unlike stateless entities.
-- This DSM will be rewritten with real per-mode detail once source lands, per the same §2.1
-  promotion process as the rest of this pack.
+- **Mode awareness:** N/A — no source exists in this repo for this entity to branch on
+  `PlatformInfraMode` or anything else; not one of the 43 named entities' own code branches on
+  the mode except The Citadel, and this entity's absence of source makes the question moot
+  rather than a plain "No."
+- **Runtime placement:** Cloudflare Worker `arcadia-royal-bank`, running on Cloudflare's edge
+  network — not a `docker-compose.production.yml` service block of any kind.
+- **Persistence:** Unknown — no source in this repo to inspect.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `arcadia-royal-bank` Cloudflare Worker, on Cloudflare's edge — the only mode this entity currently supports | unknown — no source to inspect | none beyond the general Cloudflare Worker constraints (no persistent local filesystem, cold-start limits) |
+| **Hybrid** | N/A — no self-hosted alternative exists to pair with the cloud edge | N/A | Cloudflare Workers cannot run outside Cloudflare's infrastructure; there is no Hybrid path today |
+| **Local-Only** | N/A — same reason | N/A | same — no Local-Only path exists until a self-hosted Python port lands |
+
+- **Zero-cost posture per mode:** Unknown — Cloudflare Workers' own free tier applies at the
+  edge; whether this worker calls any AI-Gateway-routed path cannot be determined without source.
+- **Switching modes:** N/A today — `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` are not consulted because
+  no self-hosted alternative exists to switch to. **Planned:** if/when this entity is ported to
+  a self-hosted Python worker, it would follow the same `docker-compose.production.yml`
+  Cloud-Only/Hybrid/Local-Only pattern as every other self-hosted worker (note the
+  `CF_WORKER_MIGRATION_ROADMAP.md` file `CLAUDE.md` points to for this intent does not currently
+  exist in this repo, a known doc gap). No target mode, port, or persistence model has been
+  chosen yet — a financial ledger service will likely require a durable volume regardless of
+  mode, unlike stateless entities. This DSM will be rewritten with real per-mode detail once
+  source lands, per the same §2.1 promotion process as the rest of this pack.
 
 ## 5. Environment Support Matrix (ESM)
 
@@ -93,3 +104,4 @@ not a committed integration.
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), repo search confirming no `royal_bank_of_arcadia` implementation exists | Confirmed ✅-labelled status but no in-repo source; pack scoped to GOV+RACI+TFM+POL+STD only per framework §2.1 pending source being added to this repo |
 | 2026-07-11 | Claude (session, cubic-dev-ai review triage) | `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1 (post-DSM update) | Pack scope corrected: now GOV+RACI+TFM+DSM+POL+STD (6 artifacts), not the 5-artifact set the 2026-07-04 entry above described — Deployment Scope Matrix (DSM) was added as artifact #4 in this pass. |
+| 2026-07-11 | Claude (session, ESM rollout) | `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1 (post-ESM update) | Pack scope corrected again: now GOV+RACI+TFM+DSM+ESM+POL+STD (7 artifacts) — Environment Support Matrix (ESM) added as artifact #5 in this same pass. |

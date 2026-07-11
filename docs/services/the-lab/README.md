@@ -159,15 +159,15 @@
 
 ## 9. Environment Support Matrix (ESM)
 
-> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
 
 | Environment | Covered? | What runs | Notes |
 |---|---|---|---|
-| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `the-lab / lab-service` worker is **not** in this compose file | standalone worker has zero Dev coverage |
-| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `the-lab / lab-service` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
-| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the two standalone workers, `the-lab` and `lab-service`, are **not** in this compose file | both standalone workers have zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — `the-lab` and `lab-service` are **not** in this compose file either | both standalone workers have zero UAT coverage |
+| **Production** | Yes | all three surfaces — full detail in the DSM above | — |
 
-- **Gap:** the standalone `the-lab / lab-service` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+- **Gap:** the two standalone workers, `the-lab` and `lab-service` (per the DSM above), have **no Dev or UAT environment at all** — the first place either runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
 
 ## 10. Policy (POL)
 
