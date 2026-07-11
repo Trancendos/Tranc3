@@ -566,14 +566,28 @@ class RelationsRegistry:
                     )
                 )
 
-        # AIs closest to being blocked from the most locations right now.
-        at_risk: List[tuple[str, int]] = []
-        for ai in _LEAD_AIS:
-            restricted_count = sum(
-                1 for rel in self.list_relationships(ai) if rel.tier in ("restricted", "blocked")
-            )
-            if restricted_count >= 3:
-                at_risk.append((ai, restricted_count))
+        # AIs closest to being blocked from the most others right now.
+        # Fetch every relationship row once and count restricted/blocked
+        # pairings per AI in Python, rather than calling list_relationships()
+        # for each of the ~39 Lead AIs (which would issue ~39*38 individual
+        # get_relationship queries per insights call).
+        with self._lock:
+            all_rel_rows = self._conn.execute(
+                "SELECT ai_a, ai_b, score, updated_at FROM ai_relationships"
+            ).fetchall()
+        now_ts = time.time()
+        restricted_counts: Dict[str, int] = {}
+        for row in all_rel_rows:
+            baseline = _baseline_for_pair(row["ai_a"], row["ai_b"])
+            elapsed_days = (now_ts - row["updated_at"]) / 86400.0
+            effective = _clamp_score(_decay_toward_baseline(row["score"], baseline, elapsed_days))
+            if permission_tier(effective) in ("restricted", "blocked"):
+                for ai in (row["ai_a"], row["ai_b"]):
+                    if ai in _LEAD_AIS:
+                        restricted_counts[ai] = restricted_counts.get(ai, 0) + 1
+        at_risk: List[tuple[str, int]] = [
+            (ai, count) for ai, count in restricted_counts.items() if count >= 3
+        ]
         for ai, count in sorted(at_risk, key=lambda kv: kv[1], reverse=True)[:2]:
             insights.append(
                 Insight(

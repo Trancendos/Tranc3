@@ -18,7 +18,7 @@ the underlying synchronous SQLite calls).
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -33,9 +33,6 @@ from src.relations.registry import (
 
 router = APIRouter(prefix="/relations", tags=["relations"])
 
-_VALID_EVENT_TYPES = ("location_tag", "ai_interaction", "action", "system")
-_VALID_SENTIMENTS = ("positive", "neutral", "negative")
-
 
 def _require_admin(current_user: dict) -> None:
     if current_user.get("role") != "admin":
@@ -46,10 +43,12 @@ def _require_admin(current_user: dict) -> None:
 
 class RecordEventRequest(BaseModel):
     actor_ai: str
-    event_type: str = Field(..., description="location_tag | ai_interaction | action | system")
+    # Literal types let Pydantic itself reject invalid values with a 422 —
+    # no manual checks needed in the handler.
+    event_type: Literal["location_tag", "ai_interaction", "action", "system"]
     location: Optional[str] = None
     target_ai: Optional[str] = None
-    sentiment: str = "neutral"
+    sentiment: Literal["positive", "neutral", "negative"] = "neutral"
     summary: str = ""
     details: Dict[str, Any] = Field(default_factory=dict)
 
@@ -102,16 +101,6 @@ def record_event(
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
     _require_admin(current_user)
-    if body.event_type not in _VALID_EVENT_TYPES:
-        raise HTTPException(
-            status_code=422,
-            detail=f"event_type must be one of {_VALID_EVENT_TYPES}",
-        )
-    if body.sentiment not in _VALID_SENTIMENTS:
-        raise HTTPException(
-            status_code=422,
-            detail=f"sentiment must be one of {_VALID_SENTIMENTS}",
-        )
     event = get_relations_registry().record_event(
         actor_ai=body.actor_ai,
         event_type=body.event_type,

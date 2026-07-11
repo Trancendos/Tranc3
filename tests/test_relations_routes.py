@@ -54,7 +54,12 @@ class TestReadRoutes:
         assert resp.status_code == 200
         body = resp.json()
         assert isinstance(body, list)
-        assert len(body) == 38  # every other Lead AI
+        # every *other* unique Lead AI — derive from PLATFORM_ENTITIES rather
+        # than hardcoding, so a roster change doesn't silently break this.
+        from src.entities.platform import PLATFORM_ENTITIES
+
+        expected = len({e.lead_ai for e in PLATFORM_ENTITIES.values()}) - 1
+        assert len(body) == expected
 
     def test_brochure_for_known_location(self, client):
         resp = client.get("/relations/locations/Royal Bank of Arcadia/brochure")

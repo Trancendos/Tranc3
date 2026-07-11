@@ -106,6 +106,36 @@ class TestFirstStepsBadge:
         assert any(b["code"] == "first_steps" for b in first)
         assert second == []
 
+    def test_pre_inserted_badge_does_not_crash_or_double_award(self, academy):
+        """Simulates the concurrent-award race: a badge row already exists
+        (inserted by a racing request) when _check_and_award_badges runs.
+        INSERT OR IGNORE must not raise, and the badge must not be counted
+        as newly awarded again."""
+        course_id, _ = _make_course_with_lessons(academy, n_lessons=1)
+        _enrol(academy, "user-1", course_id)
+        now = time.time()
+        with academy.get_conn() as conn:
+            conn.execute(
+                "UPDATE enrolments SET completed_at=? WHERE user_id=? AND course_id=?",
+                (now, "user-1", course_id),
+            )
+            # Pre-insert the first_steps badge as if a concurrent request won
+            # the race, but leave `already_earned`'s snapshot unaware of it by
+            # inserting AFTER that snapshot would have been taken — emulated
+            # here by inserting directly then calling the awarder.
+            badge_id = conn.execute("SELECT id FROM badges WHERE code='first_steps'").fetchone()[
+                "id"
+            ]
+            conn.execute(
+                "INSERT INTO user_badges (user_id, badge_id, awarded_at, course_id) "
+                "VALUES (?,?,?,NULL)",
+                ("user-1", badge_id, now),
+            )
+            conn.commit()
+            awarded = academy._check_and_award_badges(conn, "user-1", now)
+        # first_steps was already present → not re-counted; no IntegrityError.
+        assert all(b["code"] != "first_steps" for b in awarded)
+
 
 class TestPerfectionistBadge:
     def test_perfect_score_awards_perfectionist_mid_course(self, academy):

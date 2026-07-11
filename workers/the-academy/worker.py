@@ -214,11 +214,17 @@ def _check_and_award_badges(conn: sqlite3.Connection, user_id: str, now: float) 
         metric_value = metrics.get(badge["criteria_type"])
         if metric_value is None or metric_value < badge["criteria_value"]:
             continue
-        conn.execute(
-            "INSERT INTO user_badges (user_id, badge_id, awarded_at, course_id) VALUES (?,?,?,NULL)",
+        # INSERT OR IGNORE + rowcount so a concurrent /progress request that
+        # already awarded this badge (racing past the already_earned check
+        # above) doesn't raise an unhandled IntegrityError → 500. Only count
+        # the badge as "newly awarded" if this call actually inserted it.
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO user_badges (user_id, badge_id, awarded_at, course_id) "
+            "VALUES (?,?,?,NULL)",
             (user_id, badge["id"], now),
         )
-        newly_awarded.append(dict(badge))
+        if cur.rowcount:
+            newly_awarded.append(dict(badge))
     if newly_awarded:
         conn.commit()
     return newly_awarded
