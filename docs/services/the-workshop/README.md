@@ -86,7 +86,7 @@
 
 | Setup | What runs, and where | Data locality | Hard blockers / caveats |
 |---|---|---|---|
-| **Cloud-Only** | both compose blocks run on a single cloud host; Traefik routes `trancendos.com/the-workshop` to it | persists via each service's attached volume as long as the disk is preserved | no entity-specific blocker beyond standard single-host durability |
+| **Cloud-Only** | both compose blocks run on a single cloud host; Nginx/Caddy (not Traefik — this entity uses its own reverse proxy, per `nginx-the-workshop.conf`/`caddy-the-workshop.conf`) routes `trancendos.com/the-workshop` to it | persists via each service's attached volume as long as the disk is preserved | no entity-specific blocker beyond standard single-host durability |
 | **Hybrid** | `forgejo` server can run centrally (cloud or local) while `forgejo-runner` instances run in either location and pick up jobs from the same server — a genuinely useful split for this entity specifically | server data central; runner state wherever each runner instance lives | requires network reachability between runner and server regardless of which side is local vs cloud; the runner's `FORGEJO_INSTANCE_URL` currently defaults to the Compose-internal `http://forgejo:3000/the-workshop`, which only resolves inside the same Docker network — a runner placed on a genuinely separate host (the whole point of this Hybrid split) needs that value changed to an externally-reachable Forgejo endpoint, plus appropriate TLS/network-policy and runner-registration configuration; this is not automated today |
 | **Local-Only** | both compose blocks run entirely on local/Citadel hardware | fully local, volume-backed | none beyond standard local-hardware ops |
 

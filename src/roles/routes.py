@@ -65,8 +65,8 @@ async def get_role(location: str) -> Dict[str, Any]:
 async def role_history(location: str) -> List[Dict[str, Any]]:
     try:
         history = get_registry().get_history(location)
-    except UnknownLocationError:
-        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
+    except UnknownLocationError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
     return [
         {
             "location": h.location,
@@ -92,8 +92,8 @@ async def assign_role(
         role = get_registry().assign_ai(
             location, body.ai_name, changed_by=str(changed_by), reason=body.reason
         )
-    except UnknownLocationError:
-        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
+    except UnknownLocationError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
     return _serialize(role)
 
 
@@ -108,6 +108,6 @@ async def unassign_role(
     reason = body.reason if body else ""
     try:
         role = get_registry().remove_ai(location, changed_by=str(changed_by), reason=reason)
-    except UnknownLocationError:
-        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
+    except UnknownLocationError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
     return _serialize(role)
