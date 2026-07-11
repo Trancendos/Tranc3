@@ -75,6 +75,17 @@
 
 ## 7. Deployment Scope Matrix (DSM)
 
+> **Canonical wording, not free prose.** The "Mode awareness," "Zero-cost posture per mode,"
+> and "Switching modes" bullets below use fixed wording that is meant to be copied verbatim
+> (only the entity-specific clause, if any, varies) rather than paraphrased per service. This
+> is deliberate: the underlying facts (none of the 43 named entities branch on
+> `PlatformInfraMode` directly except The Citadel; the `zero_cost_cloud`/`zero_cost_full`
+> rotation-chain split; the `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` switch mechanism) are
+> platform-wide, not per-service — repeating the exact wording across packs means a future
+> change to that platform-wide behaviour is a single grep-replace across `docs/services/*/`,
+> not a re-authoring exercise. Only the "Runtime placement," "Persistence," and the setup
+> table's per-mode cells should differ between services.
+
 > The platform recognizes exactly three deployment scopes, defined in code by
 > `src/platform/infrastructure_mode.py` (`PlatformInfraMode.CLOUD_ONLY` / `.HYBRID` /
 > `.LOCAL_ONLY`, selected via `PLATFORM_INFRA_MODE`, legacy alias `SYSTEM_MODE`) and

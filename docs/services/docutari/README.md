@@ -217,7 +217,7 @@ both are reachable only directly by whatever external client knows their contain
 - **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
 - **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); no code change needed for either worker.
 
-## 8. Technology & Framework Matrix (TFM)
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Choice | Cost |
 |---|---|---|

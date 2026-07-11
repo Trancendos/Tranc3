@@ -156,7 +156,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
 - **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
 - **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
 
-## 8. Technology & Framework Matrix (TFM)
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Choice | Cost |
 |---|---|---|
