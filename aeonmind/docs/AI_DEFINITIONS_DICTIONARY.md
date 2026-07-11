@@ -7,6 +7,23 @@
 > MUST adhere to this hierarchy. The terms AI, Agent, and Bot have
 > specific, distinct meanings that differ from colloquial usage.
 
+> **Scope note (added 2026-07-11, reconciling a real cross-reference gap).** "Tranc3 Infinity
+> Ecosystem" here means the **AeonMind polyglot agent framework** (`aeonmind/` — Rust/Go/Python/
+> WASM), i.e. the generic Tier 0–5 (HUMAN→ORCHESTRATOR→PRIME→AI→AGENT→BOT) vocabulary for
+> *building* agents, plus the Sentinel Channel protocol and scoring/state models below. It is a
+> **separate document from, not a replacement for**, the Trancendos platform's own canonical
+> entity taxonomy — the 43 named platform entities (The Spark, The Digital Grid, Infinity, etc.),
+> their identities, and their own Tier 1–5 (Sovereign/Primes/Lead AI/Agents/Bots) hierarchy, which
+> live in `PLATFORM_ENTITIES.md` / `src/entities/platform.py` and are governed by `CLAUDE.md`'s
+> naming rules (`docs/architecture/infrastructure-modes.md` separately calls Tier 5 "Nanos" — a
+> third, minor naming variant not resolved here). The two hierarchies' tier *numbers* loosely
+> correspond in role (this doc's ORCHESTRATOR≈the platform's Sovereign, PRIME≈Primes, AI≈Lead AI,
+> AGENT≈Agents, BOT≈Bots/BotRegistry) but describe different things — do not cite this document as
+> authoritative for a specific platform entity's identity, status, or ownership; cite
+> `PLATFORM_ENTITIES.md` for that.
+> As of this note, only a thin Python bridge (`src/routers/aeonmind.py`) is live-mounted in
+> `api.py`; the Rust/Go/WASM agent runtime described below has no production deployment.
+
 ---
 
 ## TIER SYSTEM OVERVIEW

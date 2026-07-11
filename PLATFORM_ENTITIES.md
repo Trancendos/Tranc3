@@ -11,6 +11,13 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 
 **Pillars:** Architectural · Commercial/Financial · Creativity · Development (Code) · Knowledge · Security · DevOps · Wellbeing
 
+> **Not to be confused with:** `aeonmind/docs/AI_DEFINITIONS_DICTIONARY.md` defines a separate,
+> generic Tier 0–5 (HUMAN→ORCHESTRATOR→PRIME→AI→AGENT→BOT) vocabulary for the AeonMind polyglot
+> agent framework (`aeonmind/`) — a different subsystem, not one of the 43 entities below and not
+> an alternate description of them. The tier *numbers* loosely correspond in role (see that
+> document's own scope note), but this file is the sole source of truth for platform entity
+> identity, ownership, and status.
+
 ---
 
 ## Universal ID Taxonomy
