@@ -206,7 +206,19 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
 | Streaming relay (undeployed, unprovisioned) | Icecast (GPL) | zero (self-hosted, not yet deployed) |
 | Reverse proxy | Traefik | zero (already in stack) |
 
-## 9. Policy & Compliance (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `warp-radio` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy & Compliance (POL)
 
 - No PII is handled by the deployed stub.
 - If `worker.py` is ever promoted: playlist/track data is not inherently sensitive, but the
@@ -214,7 +226,7 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
   missing env var, per the platform's zero-trust IAM principle already applied elsewhere
   (`src/auth/zero_trust.py`).
 
-## 10. Procedures (PROC)
+## 11. Procedures (PROC)
 
 - **Local dev:** `cd workers/warp-radio && pip install -r requirements.txt && python main.py`
   (runs the deployed stub) or `python worker.py` (runs the alternate — its `_auth()` check is
@@ -225,7 +237,7 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
   `CMD` to build the chosen file, (4) re-run this doc-pack's DDD section against the newly
   deployed surface.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /warp-radio/health` (via Traefik, post-StripPrefix) or
   `GET /health` directly on port 8073.
@@ -236,7 +248,7 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
   Expected — `main.py` and `worker.py` share no storage. Not a bug; a consequence of the
   documented multi-implementation state above.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn/health-endpoint conventions as every other standalone
   worker in `workers/`.

@@ -151,7 +151,19 @@
 | Transport | HTTP + SSE | — | — | ✅ | — |
 | LLM trace (opt) | Langfuse integration | pinned | MIT | ✅ | optional |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `monitoring` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Yes | both surfaces: the monolith router via `api`, **and** the standalone `monitoring` worker has its own service block in `docker-compose.uat.yml` | genuinely the richer case among monolith+worker entities — this one has real UAT coverage for both surfaces |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** only Dev is missing for the standalone `monitoring` worker; UAT and Production both exercise it. The Observatory is one of only two dual-surface entities (the other being The Digital Grid) whose standalone worker has any pre-production coverage at all.
+
+## 10. Policy (POL)
 
 - **Applicable platform policies:** `POL-OPS-002`, `POL-PRI-001`; ISO 27001 audit controls — see `docs/policies/`, `docs/compliance/`.
 - **Service-specific rules:** audit events are append-only and tamper-evident (`/verify`);
@@ -159,14 +171,14 @@
 - **Data handling:** GDPR — audit data may be personal; retention + DSR per `PROC-DSR-001`.
 - **Access:** query/export authorized-only; actor recorded on every event.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Deploy:** `monitoring` worker (port 8007) + in-process instrumentation (`worker_setup.py`); CI via `.forgejo/workflows/`.
 - **Instrument a service:** wire `AuditMiddleware` + trace propagation via `worker_setup.py`.
 - **Investigate an incident:** `/search` + `/recent` by `trace_id`/actor; `/verify` for integrity.
 - **Retention/archival change:** via change gate (`docs/procedures/PROC-CHG-001-Change-Request.md`).
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /health` → 200; platform health via `HealthChecker`/`SystemHealth`.
 - **Key alerts → action:**
@@ -182,7 +194,7 @@
 - **Rollback:** redeploy previous image; audit schema is append-compatible.
 - **Recovery:** buffered events flush on store recovery; historical events restored from backup.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - **Tracing standard:** W3C TraceContext (`traceparent`); OpenTelemetry semantics.
 - **Metrics standard:** Prometheus exposition; worker-info metric per service.

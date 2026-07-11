@@ -179,7 +179,19 @@ in-repo client.
 | Persistence | SQLite (`QuarantineStore`) | zero (embedded) |
 | Sandboxing (Foundation-listed, not implemented) | Cuckoo sandbox | not integrated — this worker is static analysis only |
 
-## 9. Policy & Compliance (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `ice-box-service` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy & Compliance (POL)
 
 - The release-from-quarantine write is now gated behind an optional `INTERNAL_SECRET` check
   (fixed this pass) — enforcement is live once an operator sets the env var, open until then.
@@ -189,7 +201,7 @@ in-repo client.
   Foundation entry in `CLAUDE.md`'s recommended-foundations table is aspirational and not
   reflected in the actual (static-analysis-only) implementation.
 
-## 10. Procedures (PROC)
+## 11. Procedures (PROC)
 
 - **Local dev:** must run from the repo root (or with `PYTHONPATH` set to the repo root) so
   `src.security.*` imports resolve: `python -m uvicorn workers.ice-box-service.worker:app`
@@ -197,7 +209,7 @@ in-repo client.
 - **Building the image:** `docker compose build ice-box-service` — now works from repo root
   per the fixed compose context.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /ice-box/health` (via Traefik, post-StripPrefix) or `GET /health`
   directly on port 8046.
@@ -209,7 +221,7 @@ in-repo client.
   It does — this worker. See the truthfulness header and the corresponding correction now in
   `docs/services/the-warp-tunnel/README.md`.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn conventions as other standalone workers audited this
   session; Dockerfile now matches the repo-root-context pattern already established by

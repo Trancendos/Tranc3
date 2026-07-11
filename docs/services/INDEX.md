@@ -3,14 +3,14 @@
 Tracks per-service design/architecture/governance documentation across all Trancendos
 named entities. Governed by `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 Artifact legend: **GOV** Charter · **DDD** · **TASD** · **RACI** · **SIM** · **ASD** ·
-**TFM** · **DSM** · **POL** · **PROC** · **RUN** · **STD**.
+**TFM** · **DSM** · **ESM** · **POL** · **PROC** · **RUN** · **STD**.
 
 **Required-by-status rule (honesty gate).** The `Status` column below shows the canonical
 `CLAUDE.md`-service-table label verbatim; the framework normalizes each to a **gate tier**
 (see `DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1) that sets the required pack:
-- **Live** (any `✅` label) → full 12-artifact pack, code-grounded.
-- **Partial** (`🔧` labels except `🔧 Planned`) → GOV, RACI, TFM, DSM, POL, STD + DDD/TASD/SIM/ASD scoped to what exists.
-- **Planned** (`🔧 Planned`) → GOV, RACI, TFM, DSM, POL, STD **only** (intent-level; no fabricated DDD/RUN).
+- **Live** (any `✅` label) → full 13-artifact pack, code-grounded.
+- **Partial** (`🔧` labels except `🔧 Planned`) → GOV, RACI, TFM, DSM, ESM, POL, STD + DDD/TASD/SIM/ASD scoped to what exists.
+- **Planned** (`🔧 Planned`) → GOV, RACI, TFM, DSM, ESM, POL, STD **only** (intent-level; no fabricated DDD/RUN).
 
 **Deployment Scope Matrix (DSM) — added 2026-07-11.** Every application must document its
 Cloud-Only, Hybrid, and Local-Only deployment scope — required at all three gate tiers.
@@ -22,6 +22,22 @@ the rollout log below for the one genuine finding this pass surfaced: **The Cita
 only entity whose own code branches on `PlatformInfraMode` directly**
 (`should_run_citadel_docker()`) — every other entity's deployment scope is determined
 externally (which compose block runs, and where), not by in-process mode detection.
+
+**Environment Support Matrix (ESM) — added 2026-07-11.** A distinct question from DSM: DSM is
+*physical location* (Cloud-Only/Hybrid/Local-Only); ESM is *SDLC promotion stage*
+(Dev/UAT/Production). Grounded directly against the platform's three environment-tier compose
+files — `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services),
+`docker-compose.production.yml` (286 services) — checked by exact compose service name per
+entity, not assumed. **All 43/43 entities now carry an ESM section** (39 full packs got it as
+artifact #9, between TFM and POL; the 4 charter-only CF-Worker packs got it as artifact #5,
+between DSM and POL). Finding: most standalone workers have **zero Dev/UAT coverage** — the
+first environment they run in is Production — which is the norm for the ~90 standalone workers
+on this platform, not a documentation failure; only **The Observatory** (`monitoring`) and **The
+Digital Grid** (`the-grid`) have their standalone worker present in UAT. The 3 structurally
+special entities (**Arcadia** — no compose entry at any tier; **The Citadel** — is the infra
+stack itself, so ESM measures which of its own constituent components appear in each tier;
+**The Chaos Party** — two independent surfaces, a `pytest` suite and a real compose worker)
+each got bespoke ESM content rather than the standard template.
 
 Status column mirrors the `CLAUDE.md` service table (status source); Lead AI/identity
 mirrors `PLATFORM_ENTITIES.md` — update together.
@@ -72,7 +88,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **VRAR3D** | ✅ In repo | Entari | ✅ **Complete** | `docs/services/vrar3d/` |
 | **Resonate** | ✅ In repo | Magdalena | ✅ **Complete** | `docs/services/resonate/` |
 
-**Coverage:** **33 / 37 required full Live-tier packs** complete (full 11-artifact, code-grounded:
+**Coverage:** **33 / 37 required full Live-tier packs** complete (full 13-artifact, code-grounded:
 The Spark, The Digital Grid, Infinity, The Observatory, The Workshop, The Town Hall, The Citadel,
 **The Basement, The Studio, I-Mind, The Library, The Lab, The Artifactory, Cryptex, The Dutchy,
 DevOcity, Tranquility, tAimra, VRAR3D, Resonate, Think Tank, API Marketplace, The Academy, Sashas
@@ -95,7 +111,7 @@ Tunnel, Warp Radio, DocUtari, Fabulousa, The Ice Box, ChronosSphere/ArcStream) h
 received a real Live-tier rewrite · rollout order per framework §6.
 
 > **Known §2.1 gap (4 entities):** The Lighthouse, The HIVE, Royal Bank of Arcadia, and Arcadian
-> Exchange are `✅ Deployed` — **Live tier**, which requires the full 11-artifact code-grounded
+> Exchange are `✅ Deployed` — **Live tier**, which requires the full 13-artifact code-grounded
 > pack per §2.1 — but have no source code in this repo for their Cloudflare Workers to ground
 > DDD/TASD/SIM/ASD/PROC/RUN against. Their packs are charter-only (GOV+RACI+TFM+POL+STD) as an
 > **explicit, documented exception**, not a valid Planned-tier application — see each pack's
@@ -177,6 +193,7 @@ received a real Live-tier rewrite · rollout order per framework §6.
 | 2026-07-07 | Added The Ice Box pack, code-grounded against `workers/ice-box-service/worker.py` (225 lines, real static threat analysis + quarantine) and `src/security/ice_box/{analyser,quarantine,signatures}.py`. Found and fixed a build-breaking defect requiring more than a drive-by Dockerfile copy: `worker.py` imports repo-level `src.security.*` packages (including The Warp Tunnel's `WarpTunnel` class) and computes its `sys.path` insertion via `parents[2]`, so a Dockerfile alone wasn't enough — the compose build context had to be widened from `./workers/ice-box-service` to the repo root (`context: .`), matching the existing `infinity-portal`/`infinity-one`/`infinity-admin` pattern, with a Dockerfile preserving the source tree's relative depth so the `sys.path` logic still resolves; verified by executing the module directly before writing the doc-pack. Also fixed the Traefik StripPrefix defect (8th genuinely-fixed instance this session). **Corrected a factual error in The Warp Tunnel's pack** discovered while investigating this entity: `WarpTunnel`/`tunnel.py` is not orphaned — this worker is its real, live caller (the earlier grep behind that claim missed `workers/`); both packs updated. Flagged, not fixed: the same build-context defect class also affects `workers/swarm-coordinator-service/Dockerfile` (out of scope for this pass); no auth on any route including the quarantine-release write. Promoted from Mis-tiered to Complete (32/37 full Live-tier packs). 1 entity remains in the outstanding gap. |
 | 2026-07-07 | Added ChronosSphere/ArcStream pack — the 26th and final entity in this session's mis-tiered backlog — code-grounded against `workers/cron-service/worker.py` (698 lines, a genuine 8-backend ACO-pheromone-routed cron scheduler with an in-process asyncio fallback). Found and fixed a startup-crash-risk defect, a new class not seen elsewhere this session: `DB_PATH` resolves to `/data/cron.db`, but the Dockerfile only created/chowned `/app/data` (the wrong, unused path) before dropping to a non-root user — `mkdir /data` at the container filesystem root would raise `PermissionError` and crash the worker on every start. Fixed the Dockerfile's mkdir/chown target and added a previously-nonexistent `cron-data` volume for durability (same pattern as DocUtari's fix). No StripPrefix defect applies (no Traefik label — internal-only service). Also corrected a stale "Known gap" blockquote elsewhere in this file that still claimed all 26 entities needed rewrites and that every worker "has its own Dockerfile" (untrue at the time for `fabulousa-service`/`ice-box-service`, both fixed this session) — updated to reflect the current, accurate state. Promoted from Mis-tiered to Complete (33/37 full Live-tier packs). **0 entities remain in the outstanding gap** — this closes out the entire mis-tiered-entity backlog from the 2026-07-04/05 audit. |
 | 2026-07-11 | Added **Deployment Scope Matrix (DSM)** as a new required artifact (#7 in the numbered pack order; catalogue-table #7 in the framework) across **all 43/43 entities** in a single pass, following an explicit request to document Cloud-Only/Hybrid/Local-Only deployment scope for every application. Framework (`DESIGN-GOVERNANCE-FRAMEWORK.md`) and template (`SERVICE-DOC-PACK-TEMPLATE.md`) updated first; packs bumped from 11 to 12 artifacts. Grounded against `src/platform/infrastructure_mode.py` (`PlatformInfraMode.CLOUD_ONLY`/`.HYBRID`/`.LOCAL_ONLY`, env `PLATFORM_INFRA_MODE`/legacy `SYSTEM_MODE`) and `docker-compose.production.yml`. **Repo-wide grep confirmed a genuine, useful finding: of all 43 entities, only The Citadel's own code (`should_run_citadel_docker()`) branches on the mode directly** — every other entity's Cloud-Only/Hybrid/Local-Only behaviour is determined externally (which compose service block is deployed, and where; whether a named volume is attached), not by in-process mode detection; each DSM states this plainly rather than implying mode-awareness that doesn't exist. Per-entity DSMs vary by real, checked facts: monolith-mounted (`src/*/` in `api.py`, sharing `tranc3-backend`'s volume) vs standalone worker (`workers/*/`, own compose block/port, own volume-or-not — checked against compose for every entity, not assumed); genuine capability differences flagged, not just durability ones (Sasha's Photo Studio's ComfyUI/A1111 GPU dependency is unrealistic on free-tier Cloud-Only CPU hosts; Warp Radio's Icecast streaming is the most egress-bandwidth-constrained entity on Cloud-Only; Think Tank's real `torch` dependency is the heaviest CPU load). The 4 charter-only CF-Worker packs (The Lighthouse, The HIVE, Royal Bank of Arcadia, Arcadian Exchange) got an intent-level DSM stating they are **Cloud-Only by construction with no Local-Only path today** (Cloudflare Workers cannot run off Cloudflare's edge), renumbered to a 6-artifact charter-only pack. Also cross-referenced from `docs/architecture/infrastructure-modes.md` (the pre-existing platform-wide Mermaid diagrams for the same three modes) so the two documents point at each other rather than duplicating content, per the framework's "cross-references, not copies" rule. |
+| 2026-07-11 | Added **Environment Support Matrix (ESM)** as a new required artifact (#9 in the numbered pack order, between TFM and POL) across **all 43/43 entities**, following an explicit follow-up request to document Dev/UAT/Production coverage the same way DSM documents Cloud-Only/Hybrid/Local-Only. Framework and template updated first; packs bumped from 12 to 13 artifacts (charter-only packs: 6 to 7, ESM as #5 between DSM and POL). Grounded directly against the three environment-tier compose files by exact service name — `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), `docker-compose.production.yml` (286 services) — not assumed. **Finding: only two of the ~90 standalone workers on this platform have any pre-Production coverage at all** — The Observatory's `monitoring` and The Digital Grid's `the-grid` both appear in `docker-compose.uat.yml`; every other standalone worker's first environment is Production, which each ESM states plainly as the platform norm rather than a gap unique to that entity. Rolled out via two scripted passes (19 entities, then 17 more after fixing a heading-variant handling bug in the script) plus 4 charter-only packs done individually; **3 structurally special entities** — Arcadia (no compose entry at any tier, consistent with its DSM's "no `docker-compose.production.yml` block" finding), The Citadel (is the infra stack itself, so its ESM measures which of its own constituent components — Traefik/Vault/Prometheus/Alertmanager/OTel/Grafana/Loki+Promtail/IPFS — appear in each tier; only `vault`/`prometheus`/`grafana` carry through to UAT), and The Chaos Party (two independent surfaces — a `pytest` suite whose "environment" is whichever Forgejo runner executes it, and a real `chaos-party` compose worker that is Production-only) — each got bespoke content written individually rather than the standard template. **Caught and fixed during this pass:** the first scripted batch (19 entities) had a script bug that renumbered POL to #10 but left PROC/RUN/STD at their pre-ESM numbers (#10/#11/#12 instead of #11/#12/#13), producing a duplicate "## 10." heading in each of those 19 files; all 19 were re-verified and corrected before this rollout was considered complete. Final sweep confirmed all 43 files have exactly one ESM section and fully sequential heading numbers (1–13 full packs, 1–7 charter-only). |
 
 [^void-port]: `PLATFORM_ENTITIES.md` lists The Void's *primary worker* as `config-service` (8024) —
     that is a **different** worker owned by the same entity (`PID-VOI`), not the vault

@@ -129,14 +129,26 @@
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Cross-entity call | direct in-process call to `IMind.assess()` | zero cost |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `tranquility` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `tranquility` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `tranquility` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the compliance gap against the module's own "governed by Magna
   Carta + I-Mind protocols" claim. `GET /status` remains intentionally public.
 - Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Log a mood check-in:** `POST /tranquility/mood/{user_id}` (as the same user, or an admin) with `{"mood": 1-5, "notes": "...", "tags": [...]}`. A `LOW`/`VERY_LOW`
   mood triggers an I-Mind assessment automatically.
@@ -146,7 +158,7 @@
   /tranquility/data/{user_id}` — auth-gated; returns `403` unless the caller is that user or holds
   the `admin` role.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A user's mood history is missing after a restart:** expected — no persistence in this module.
 - **`GET /tranquility/profile/{user_id}` returns 404 for a user who has logged moods elsewhere:**
@@ -155,7 +167,7 @@
 - **A caller gets `403` on export/delete:** expected — they are not the target `user_id` and do
   not hold the `admin` role; see POL §9.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Tranquility" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any route exposing per-user personal data export or deletion MUST verify caller identity

@@ -151,7 +151,19 @@
 | Storage (undeployed only) | SQLite (`templates`/`projects`) | zero infra cost |
 | Auth (undeployed only) | `X-Internal-Secret` via `_auth()`, insecure `dev-secret` fallback | zero cost, currently would-be-unenforced if the fallback isn't fixed first |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `imaginarium` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - No route-level auth on the deployed `main.py` — low risk given `/orchestrate` is an honest
   no-op stub.
@@ -161,7 +173,7 @@
   Sashas Photo Studio, and TateKing.
 - Zero-cost mandate: fully honored on both files.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Check orchestration status (deployed):** `POST /orchestrate` — always returns "not yet
   ready", by honest design, not a bug.
@@ -169,7 +181,7 @@
 - **(Not currently reachable) Create a real multi-service project:** would be `POST /create` on
   `worker.py`, if promoted to deployed status.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/orchestrate` always returns `"orchestrated": false`:** expected — this is the deployed
   file's honest, intentional stub behavior, not a bug to chase.
@@ -182,7 +194,7 @@
   orchestration logic exists (`worker.py`) but isn't deployed — see truthfulness header for the
   full finding and the owner decision this requires before promotion.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Imaginarium" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Config modules invoked via bare `python <file>.py` correctly read `PORT` from the environment

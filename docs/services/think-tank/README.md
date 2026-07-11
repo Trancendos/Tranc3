@@ -149,7 +149,19 @@
 | Quantum simulation | Qiskit + Qiskit Aer | OSS, local, zero cost |
 | Planning | Beam search + chain-of-thought + (transitively) `torch`-based world model | OSS, local, zero cost |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - No route-level auth on any `/thinktank/*` route — combined with unbounded `qubits`/`shots` on
   the simulate endpoint, this is a real resource-exhaustion exposure worth prioritizing alongside
@@ -157,7 +169,7 @@
 - Zero-cost mandate: both Qiskit and the planning stack run locally with no paid API calls, per
   code inspection in this pass.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Run a quantum simulation:** `POST /thinktank/quantum/simulate` with `{"qubits": 3, "shots":
   1024}` — `circuit_type` is currently ignored.
@@ -165,7 +177,7 @@
   now functional post-fix; requires `torch` to be installed in the runtime environment (declared
   in `requirements.txt`).
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/thinktank/deepmind/plan` always returned an error before this pass:** this was the exact
   bug fixed here (`PlanningEngine` didn't exist) — confirm the fix (import of `StrategicPlanner`/
@@ -178,7 +190,7 @@
   declared `requirements.txt` dependency (`torch==2.12.1`) — ensure it's actually installed in
   the running environment; this is an install/environment issue, not a code defect.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Think Tank" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any route wrapping a call in `try/except` for health-check purposes MUST have code inside the

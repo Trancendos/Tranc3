@@ -139,7 +139,19 @@
 | Validation | Pydantic v2 | pinned | MIT | ✅ | clean |
 | Design target (OSS) | n8n (reference) | — | Fair-code (self-host free) | ✅ | — |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `the-grid` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Yes | both surfaces: the monolith router via `api`, **and** the standalone `the-grid` worker has its own service block in `docker-compose.uat.yml` | genuinely the richer case among monolith+worker entities — this one has real UAT coverage for both surfaces |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** only Dev is missing for the standalone `the-grid` worker; UAT and Production both exercise it. The Digital Grid is one of only two dual-surface entities (the other being The Observatory) whose standalone worker has any pre-production coverage at all.
+
+## 10. Policy (POL)
 
 - **Applicable platform policies:** `POL-AI-001`, `POL-OPS-002` — see `docs/policies/`.
 - **Service-specific rules:** `code` nodes execute logic — must run within platform
@@ -148,7 +160,7 @@
 - **Access:** workflow routes require a valid platform token (Infinity); tier limits per
   `src/monetisation/`.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Deploy:** as the `the-grid` worker (port 8010) and/or mounted routes; CI via
   `.forgejo/workflows/`.
@@ -158,7 +170,7 @@
   (`ml_training_workflow`, `self_healing_workflow`, `spark_ignition_workflow`).
 - **Config change:** through change gate (`docs/procedures/PROC-CHG-001-Change-Request.md`).
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /status` → grid status body.
 - **Key alerts → action:**
@@ -173,7 +185,7 @@
 - **Rollback:** redeploy previous image; workflow API is versioned/backward-compatible by policy.
 - **Recovery:** re-register workflows from source factories; in-flight executions are re-runnable.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - **API standard:** REST conventions (`src/workflow/routes.py`).
 - **Error standard:** canonical `ErrorCode` enum — `src/errors/error_catalog.py`.

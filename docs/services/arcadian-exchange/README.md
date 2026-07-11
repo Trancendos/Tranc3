@@ -9,7 +9,7 @@
 
 > **Truthfulness / gate-tier exception.** Per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1,
 > this entity's `✅ Deployed` `CLAUDE.md` status maps to the **Live** gate tier, which normally
-> **requires the full 12-artifact, code-grounded pack** — not the 6-artifact set below. This pack
+> **requires the full 13-artifact, code-grounded pack** — not the 7-artifact set below. This pack
 > is an **explicit, temporary exception** to that requirement: no source code for this Cloudflare
 > Worker exists in this repo, so DDD/TASD/SIM/ASD/PROC/RUN cannot be honestly grounded and are omitted
 > rather than fabricated. This is a **known compliance gap against §2.1**, not a valid application
@@ -65,7 +65,12 @@ not a committed integration.
 - This DSM will be rewritten with real per-mode detail once source lands, per the same §2.1
   promotion process as the rest of this pack.
 
-## 5. Policy (POL)
+## 5. Environment Support Matrix (ESM)
+
+- Not applicable in the Dev/UAT/Production compose sense — this entity has no source in this repo (per this pack's own Foundation note above); it runs exclusively as the Cloudflare Worker `arcadia-exchange` on Cloudflare's own environment tiers, which this repo does not control, configure, or document.
+- If/when a self-hosted Python port lands, it would be added to `docker-compose.production.yml` first; Dev/UAT coverage would then follow the same pattern as every other self-hosted worker (see `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2's ESM grounding) — not yet decided.
+
+## 6. Policy (POL)
 
 - Once implemented, Arcadian Exchange MUST comply with platform-wide policy (`docs/defstan/`,
   `POL-AI-001`) — no service-specific policy delta is recorded yet because no implementation
@@ -73,7 +78,7 @@ not a committed integration.
 - Zero-cost mandate applies: any future integration must pass `scripts/zero_cost_audit.py`
   before deployment, per The Citadel's deploy gate (`docs/services/the-citadel/`).
 
-## 6. Standards (STD)
+## 7. Standards (STD)
 
 - On implementation, Arcadian Exchange MUST get a full doc-pack upgrade (DDD, TASD, SIM, ASD, PROC, RUN)
   per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1's Partial/Live tier requirements —

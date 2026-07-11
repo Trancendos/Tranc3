@@ -108,17 +108,29 @@
 | Rate limiting | in-memory sliding window | in-process |
 | Identity | delegated to Infinity One | self-hosted |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `infinity-void` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - `MASTER_KEY_SEED` + `INTERNAL_SECRET` MUST be strong, unique, non-default (enforced by fail-fast).
   Secrets never logged; keys from env/vault only. Reuses platform policy (`POL-AI-001`, `docs/defstan/`).
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Rotate the master key:** re-encrypt stored secrets under a new `MASTER_KEY_SEED` (offline
   migration); never change the seed without re-encryption or existing secrets become undecryptable.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Startup `RuntimeError` (MASTER_KEY_SEED / INTERNAL_SECRET):** the value is unset or a known default —
   set a strong unique value (`python -c "import secrets; print(secrets.token_hex(32))"`).
@@ -126,7 +138,7 @@
 - **All secret routes return `401`:** Infinity verification failed (or `INFINITY_ONE_URL` unset) — confirm
   the token and that Infinity One `/auth/verify` is reachable with the worker's `X-Internal-Secret`.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - AES-256-GCM; PBKDF2-HMAC-SHA256 100k; random IV per secret. Auth delegated to Infinity.
 - Fail-fast on weak/absent secrets; CORS restricted to platform origins.

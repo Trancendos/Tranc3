@@ -155,7 +155,19 @@
 | MFA | TOTP (pyotp-style) | pinned | MIT | ✅ | clean |
 | Storage | SQLite | stdlib | Public domain | ✅ | — |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Yes | `infinity-auth` has its own service block in `docker-compose.development.yml` | one of only a handful of services with any Dev coverage at all |
+| **UAT** | Yes | `infinity-auth` has its own service block in `docker-compose.uat.yml` | — |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** none — this is one of the few entities with genuine Dev→UAT→Production parity, because `infinity-auth` is one of the handful of services present in all three compose files by name.
+
+## 10. Policy (POL)
 
 - **Applicable platform policies:** `POL-PRI-001` (privacy), `POL-OPS-002`,
   Zero Trust IAM (`src/auth/zero_trust.py`) — see `docs/policies/`.
@@ -164,7 +176,7 @@
 - **Data handling:** GDPR — email is PII; account deletion + DSR per `PROC-DSR-001`.
 - **Access:** role/tier managed via `PUT /auth/users/{user_id}/role`; tier→limits per `src/monetisation/`.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Deploy:** `infinity-auth` worker (port 8005), Dockerfile in `workers/infinity-auth/`; CI via `.forgejo/workflows/`.
 - **Key rotation:** rotate signing keys in config; publish new key in JWKS before retiring old (overlap window).
@@ -172,7 +184,7 @@
 - **Role change:** `PUT /auth/users/{user_id}/role` (admin/authorized only); audited to The Observatory.
 - **Config/secret change:** via change gate (`docs/procedures/PROC-CHG-001-Change-Request.md`); secrets from The Void.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /health` → 200.
 - **Key alerts → action:**
@@ -188,7 +200,7 @@
 - **Rollback:** redeploy previous image; keep JWKS backward-compatible so issued tokens stay valid.
 - **Recovery:** restore SQLite from backup; already-issued JWTs remain verifiable (stateless).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - **API standard:** OAuth2 (RFC 6749) authorization-code + token; OIDC discovery + JWKS.
 - **Crypto standard:** Argon2 password hashing; signed JWT; TOTP (RFC 6238) MFA.

@@ -145,13 +145,34 @@ Sequential steps, each a real script invocation (not aspirational):
 | Log aggregation | Loki + Promtail | OSS, self-hosted |
 | Orchestration | Docker Compose (not K8s) | avoids managed-cluster cost |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> A distinct question from DSM: DSM is about *physical location* (Cloud-Only/Hybrid/Local-Only); this is
+> about *SDLC promotion stage* (Dev/UAT/Production). Because this entity **is** the infrastructure stack
+> rather than a consumer of it, "coverage" here means which of its own constituent components (Traefik,
+> Vault, Prometheus, Alertmanager, OTel Collector, Grafana, Loki+Promtail, IPFS) appear in each
+> environment-tier compose file — checked directly by service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** (`docker-compose.development.yml`) | No | — | none of Traefik/Vault/Prometheus/Alertmanager/OTel/Grafana/Loki/Promtail/IPFS present; dev runs the bare `api`/`redis`/`infinity-ws`/`infinity-auth`/`infinity-ai`/`mailhog` set with no Citadel infra layer at all |
+| **UAT** (`docker-compose.uat.yml`) | Partial | `vault`, `prometheus`, `grafana` only (confirmed by name in the compose file) | Traefik, Alertmanager, OTel Collector, Loki+Promtail, and IPFS are **not** present in UAT — only 3 of the 8 constituent components carry through |
+| **Production** (`docker-compose.production.yml`) | Yes | the full stack — see DSM above | — |
+
+- **Gap, if any:** UAT is a deliberately reduced subset of the Citadel's own components (secrets +
+  metrics + dashboards, no reverse proxy / alerting / log aggregation / distributed storage). This
+  mirrors the platform-wide pattern (Dev/UAT are always subsets of Production for every entity) but is
+  worth stating explicitly here since this entity *is* the infra layer other entities are measured
+  against — its own ESM should not be read as "the Citadel doesn't run in Dev/UAT," rather that only a
+  reduced slice of its constituent services do, backing the handful of UAT workers that need them.
+
+## 10. Policy (POL)
 
 - Deploy MUST run `citadel_preflight.py` and `zero_cost_audit.py` before `up -d` — enforced by
   `deploy-production.sh`'s script order, not optional. No paid-provider dependency may pass
   `zero_cost_audit.py`. Reuses platform policy (`docs/defstan/`).
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Production deploy:** `cp .env.production.example .env.production` → fill secrets from The
   Void/Vault → `./deploy/citadel/deploy-production.sh` (from repo root, on the Citadel host).
@@ -159,7 +180,7 @@ Sequential steps, each a real script invocation (not aspirational):
   `vault operator unseal` per HashiCorp docs (script only warns; does not automate this — a
   deliberate manual step for a security-critical action).
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Preflight blocks deploy (`REQUIRED_KEYS` missing):** fill the reported key(s) in
   `.env.production` from Vault; re-run `citadel_preflight.py` directly to verify before retrying
@@ -172,7 +193,7 @@ Sequential steps, each a real script invocation (not aspirational):
   `traefik.enable=true` and the correct `loadbalancer.server.port` label — see
   `scripts/port_registry_validate.py` for the port-consistency check (issue #188).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - All new workers added to `docker-compose.production.yml` MUST use the `x-worker-common` anchor
   (shared logging, network, env_file) unless there's a documented reason not to.

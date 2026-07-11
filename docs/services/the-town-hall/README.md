@@ -99,23 +99,35 @@
 | Board / ITSM / Kanban | CranBania submodule | self-hosted |
 | Governance rules | Magna Carta (`src/compliance/`) | in-repo submodule |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `cranbania` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`) and Magna Carta runtime rules. Framework
   definitions are config-driven (`frameworks.yaml`), not hard-coded.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a policy check:** implement in `governance.py`, expose via `routes.py` if it needs an HTTP surface;
   register any new framework in `config/townhall/frameworks.yaml`.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/townhall/policies` empty:** check the governance store / `frameworks.yaml` loaded (`framework_registry`).
 - **Board unreachable at `/townhall` (8071):** that is CranBania (submodule) — check the submodule service,
   not `src/townhall/` (the in-repo router is separate and serves `/townhall/status|policies|check`).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Framework definitions are config-driven; compliance decisions flow through `src/compliance/middleware.py`.
 - In-repo router scope is deliberately minimal; board functionality is owned by CranBania.

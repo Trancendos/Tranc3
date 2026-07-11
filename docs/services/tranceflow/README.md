@@ -129,19 +129,31 @@
 | 3D/asset processing | Godot Engine, Blender, trimesh, meshio, open3d, pyvista | all free/OSS |
 | Auth | `X-Internal-Secret`, no insecure fallback | zero cost, genuinely enforced |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `tranceflow` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - Real internal-secret auth enforced, with a correct warn-not-fallback pattern for missing
   secrets — a positive finding relative to several other entities in this series.
 - Zero-cost mandate: fully honored per `config.py`'s tool choices.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create a project:** `POST /projects` with the required internal-secret header.
 - **Export an asset:** `POST /projects/{id}/export` — presumably triggers Godot/Blender per
   config; not traced end-to-end in this pass.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **The service was unreachable at port 8059 before this pass:** was a genuine Dockerfile/config
   port mismatch (container bound 8052; compose routed 8059; `config.py` also read the wrong env
@@ -151,7 +163,7 @@
   configured — set `INTERNAL_SECRET` in the deployment environment; this is correct, intentional
   behavior, not a bug.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "TranceFlow" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Config modules MUST read the exact environment variable name that

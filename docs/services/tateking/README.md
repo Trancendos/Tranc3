@@ -141,7 +141,19 @@
 | Storage | in-memory `_jobs` dict, no persistence | zero infra cost, no durability |
 | Auth | none in deployed `main.py`; `worker.py`'s unused alt has `X-Internal-Secret` with an insecure fallback | zero cost, currently unenforced |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `tateking` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - **Security gap, not fixed:** no route-level auth on any route, wildcard CORS
   (`allow_origins=["*"]`), and internet-facing routing via Traefik `websecure` — any caller can
@@ -149,14 +161,14 @@
 - Zero-cost mandate: fully honored — FFmpeg and Remotion are both self-hosted/OSS, matching
   `CLAUDE.md`'s Recommended Open Source Foundations table.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create a video:** `POST /video/create` — tries Remotion, falls back to FFmpeg automatically.
 - **Compose from prior jobs:** `POST /video/compose` with a list of prior job IDs — paths are
   resolved server-side, not caller-supplied.
 - **Check job status:** `GET /video/status/{job_id}` — in-memory only, lost on restart.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Every route 404s in production despite the container being healthy:** was the exact symptom
   of the pre-fix Traefik defect (``PathPrefix(`/tateking`)`` with no `StripPrefix` middleware,
@@ -168,7 +180,7 @@
   `REMOTION_SERVE_URL` isn't set, or if `remotion-render-service` is unreachable — check that
   service's own health, not this module's logic.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "TateKing" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Config modules invoked via bare `python <file>.py` (not a hardcoded `uvicorn --port` CLI flag)

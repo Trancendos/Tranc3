@@ -151,7 +151,19 @@
 | Tool RAG | FAISS (`faiss-cpu`) + sentence-transformers | pinned | MIT/Apache | ✅ | clean |
 | Validation | Pydantic v2 | pinned | MIT | ✅ | clean |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - **Applicable platform policies:** `POL-AI-001` (AI Ethics & Governance),
   `POL-OPS-002`, `POL-PRI-001` — see `docs/policies/`.
@@ -164,7 +176,7 @@
   read-only `/mcp/tools`, `/mcp/health`, `/mcp/grid/status` are currently open. Tier
   limits per `src/monetisation/`.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Deploy:** included in the FastAPI app (`api.py`) / worker image; CI via
   `.forgejo/workflows/` (no GitHub Actions).
@@ -173,7 +185,7 @@
 - **Config change:** through change gate (`docs/procedures/PROC-CHG-001-Change-Request.md`).
 - **Secret rotation:** N/A for The Spark core (holds no secrets); downstream tools use The Void.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /mcp/health` → 200 with status body.
 - **Key alerts → action:**
@@ -191,7 +203,7 @@
 - **Rollback:** redeploy previous image tag; MCP surface is backward-compatible by policy.
 - **Recovery:** stateless — restart restores service; RAG index rebuilds automatically.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - **API standard:** JSON-RPC 2.0 (`jsonrpc="2.0"`, standard error codes) — `src/mcp/server.py`.
 - **Error standard:** canonical `ErrorCode` enum — `src/errors/error_catalog.py`.

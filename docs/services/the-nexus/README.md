@@ -108,17 +108,29 @@
 | Message model | Pydantic `WSMessage` | in-process |
 | Tracing | OpenTelemetry (optional) | self-hosted collector |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Yes | `infinity-ws` has its own service block in `docker-compose.development.yml` | one of only a handful of services with any Dev coverage at all |
+| **UAT** | Yes | `infinity-ws` has its own service block in `docker-compose.uat.yml` | — |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** none — this is one of the few entities with genuine Dev→UAT→Production parity, because `infinity-ws` is one of the handful of services present in all three compose files by name.
+
+## 10. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`). `JWT_SECRET`/`INTERNAL_SECRET` come from the
   environment/vault; never hard-coded. No paid transport dependency.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a channel operation:** extend `ConnectionManager` (keep `_channels`/`_subscriptions`/`_msg_rate`
   in sync) and route it through the WS handler; do not add cross-instance assumptions without a broker.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Startup crashes (`RuntimeError`) about `JWT_SECRET`:** the env var is unset — the worker fails fast
   at import and will not start; set it (`python -c "import secrets; print(secrets.token_hex(32))"`).
@@ -129,7 +141,7 @@
 - **Broadcast reaches only some clients:** expected across replicas — state is per-process; use a single
   instance or add a shared fan-out.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - JWT HS256; secrets from env/vault. Per-connection message rate limiting enforced.
 - OTel and CORS are configuration-driven; OTel failure is non-fatal.

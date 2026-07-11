@@ -134,14 +134,26 @@
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Personalization | simple incrementing affinity score | zero cost, no ML model |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `taimra` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `taimra` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `taimra` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the access-control half of the module's own "Governed by Trancendos
   Magna Carta policy" claim. The I-Mind content-filtering half remains unenforced (see DDD).
 - Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Activate a twin:** `POST /taimra/activate/{user_id}` (as the same user, or an admin) — sets status to `LEARNING`.
 - **Record an interaction:** `POST /taimra/record/{user_id}` with `{"message", "topics",
@@ -149,7 +161,7 @@
 - **Export or delete a twin:** `GET /taimra/export/{user_id}` / `DELETE /taimra/twin/{user_id}` —
   auth-gated; returns `403` unless the caller is that user or holds the `admin` role.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A user's twin data is missing after a restart:** expected — no persistence in this module.
 - **`GET /taimra/twin/{user_id}` returns 404 for a user with recorded interactions elsewhere:**
@@ -160,7 +172,7 @@
 - **Sensitive topics appear in a user's twin despite the "never stores I-Mind flagged content"
   claim:** expected — this guarantee is not enforced in code (see DDD).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "tAimra" per `CLAUDE.md`/`PLATFORM_ENTITIES.md` (note the
   lowercase-t "tAimra" for the entity vs. capital-T "tAImra" for its Lead AI — both correct per

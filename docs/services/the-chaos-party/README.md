@@ -99,24 +99,43 @@ The suite deliberately introduces failures and asserts graceful degradation:
 | Fault injection | in-test exceptions/timeouts/cancellation | in-process |
 | Assertions on behaviour | `caplog` + state checks | in-process |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> A distinct question from DSM: DSM is about *physical location* (Cloud-Only/Hybrid/Local-Only); this is
+> about *SDLC promotion stage* (Dev/UAT/Production). Two genuinely separate surfaces, same as in the DSM
+> above: the `pytest` suite (executed by whatever CI runner picks up the job — an orthogonal concept to
+> the compose-tier environments this ESM measures) and the `chaos-party` compose service (checked
+> directly by name in each environment-tier compose file).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** (`docker-compose.development.yml`) | No | — | no `chaos-party` entry; the `pytest` suite still runs wherever Forgejo CI executes it, independent of this compose file |
+| **UAT** (`docker-compose.uat.yml`) | No | — | no `chaos-party` entry either; same CI-independence note applies |
+| **Production** (`docker-compose.production.yml`) | Yes | `chaos-party` service (port 8079, Traefik route, now running the real `worker.py`) — see DSM above | — |
+
+- **Gap, if any:** the `chaos-party` worker is Production-only in the compose sense, the norm for most
+  standalone workers, not a documentation failure to soften. The `pytest` suite's "environment" is a
+  separate, orthogonal concept — whichever Forgejo runner executes `tests/test_chaos.py` — and is not
+  gated by any of these three compose files at all.
+
+## 10. Policy (POL)
 
 - Chaos tests must exercise **real** platform primitives (no mocking the unit under test) and assert
   graceful degradation, not just failure. Reuses platform test standards.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a chaos scenario:** add a test to the relevant `Test*Chaos` class, inject a concrete fault
   (exception / timeout / cancellation), and assert the system degrades gracefully (state + log signal).
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A chaos test fails in CI:** a resilience guarantee regressed — inspect which class
   (circuit-breaker / workflow / event-bus / tool-timeout) and treat as a real defect, not flakiness.
 - **`test_concurrent_executions_isolated` failing:** historically a `NodeType.OUTPUT` workflow-executor
   issue — verify against the workflow executor, not the chaos harness.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Deterministic fault injection; assertions on both state and log output; no mocking the SUT.
 

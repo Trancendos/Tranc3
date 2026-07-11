@@ -138,13 +138,25 @@ This is one of the more substantively wired entities audited in this series:
 | Report storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Cross-entity aggregation | direct in-process function calls | zero cost, tightly coupled to the entities called |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `the-dutchy` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `the-dutchy` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `the-dutchy` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth on `/section7/*` routes — see SIM §5.
 - Zero-cost mandate: no external dependency in this module to audit against
   `scripts/zero_cost_audit.py`.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Generate a platform health report:** `POST /section7/reports/platform-health` — pulls live
   stats from 5 platform entities, auto-publishes to The Library, returns the report.
@@ -153,7 +165,7 @@ This is one of the more substantively wired entities audited in this series:
 - **List/inspect reports:** `GET /section7/reports` (optional `report_type` filter), `GET
   /section7/reports/{id}` for full detail.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A generated report is missing a data source:** expected if that entity was unreachable at
   generation time — check the omitted entity's own health, not this module (see TASD's
@@ -165,7 +177,7 @@ This is one of the more substantively wired entities audited in this series:
   section7.py` (this entity, The Dutchy) is unrelated to the `src/section7/` threat-intel package
   (a separate, unaudited-by-this-pack live background loop) — see truthfulness header.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Dutchy" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; "Section 7"
   is documented in `CLAUDE.md` as an internal placeholder mapping to this entity — but a

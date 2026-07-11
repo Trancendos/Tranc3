@@ -145,7 +145,19 @@
 | Generation backend | ComfyUI → AUTOMATIC1111 → offline placeholder | self-hosted-first, zero-cost fallback chain |
 | Storage | in-memory `_jobs` dict, no persistence | zero infra cost, no durability |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `sashas-photo-studio` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - **Security gap, not fixed:** no route-level auth on any `/photo/*` route in the deployed
   `main.py`, and this service is routed via Traefik's `websecure` entrypoint (internet-reachable,
@@ -154,14 +166,14 @@
 - Zero-cost mandate: fully honored — ComfyUI/A1111 are self-hosted, the final fallback is a
   zero-cost stub, matching `CLAUDE.md`'s Recommended Open Source Foundations table.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Generate an image:** `POST /photo/generate` with `{"prompt": "..."}` — tries ComfyUI, then
   A1111, then returns an honestly-labeled offline placeholder if neither backend is reachable.
 - **Check job status:** `GET /photo/status/{job_id}` — in-memory only, lost on restart.
 - **Attempt an upscale:** currently always 501s — not yet implemented, by design.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Every generation returns `"source": "offline", "placeholder": true`:** expected if neither
   ComfyUI nor AUTOMATIC1111 is reachable at their configured URLs — check `COMFYUI_URL`/
@@ -170,7 +182,7 @@
   (`worker.py`'s SQLite-backed alternative does, but isn't deployed).
 - **`/photo/upscale` always returns 501:** expected, not a bug — explicitly not yet implemented.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Sashas Photo Studio" per `CLAUDE.md`/`PLATFORM_ENTITIES.md` (no
   apostrophe — see `CLAUDE.md`'s naming rules).

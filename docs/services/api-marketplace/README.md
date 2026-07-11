@@ -133,13 +133,25 @@ code with zero callers.
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Call execution / credentials / webhooks / rate limiting | **not implemented** | N/A — deferred to a future Gravitee.io integration per the module's own stated plan |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - No route-level auth on any `/apimarket/*` route.
 - Zero-cost mandate: no external dependency currently in this module to audit; any future
   Gravitee.io integration must pass `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Register a connector:** `POST /apimarket/connectors` with `{"name", "slug", "base_url"}` —
   creates a catalogue entry only; does not make the connector callable through this module.
@@ -147,7 +159,7 @@ code with zero callers.
 - **Attempt to call a registered API:** not supported by this module — the caller must construct
   and send the HTTP request themselves using the catalogue's `base_url`/endpoint metadata.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`call_count`/`error_count` are always zero:** expected — `record_call()` exists but has no
   caller anywhere in the codebase; this is not a bug to chase, it's dead code.
@@ -157,7 +169,7 @@ code with zero callers.
 - **No OAuth token is stored for an `oauth2`-type connector:** expected — `AuthType` is metadata
   only; no credential storage exists in this module.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "API Marketplace" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - A module's own header/docstring mission bullets MUST be kept in sync with what the code actually

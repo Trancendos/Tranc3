@@ -126,20 +126,32 @@
 | Job storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Backend dispatch | **not implemented** | N/A — deferred to future ComfyUI/FFmpeg/Godot/Penpot integration |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `the-studio` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `the-studio` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `the-studio` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth currently implemented — see SIM §5.
 - Zero-cost mandate: any future backend integration (ComfyUI, FFmpeg, Godot, Penpot) must pass
   `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Submit a job:** `POST /studio/jobs` with `{"service": "sashas-photo-studio", "payload": {...}}`
   — returns a job record in `queued` status that will not currently progress further.
 - **List capabilities:** `GET /studio/capabilities` — static manifest, useful for discovering
   which sub-services exist and their intended feature set (not their live availability).
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Jobs stuck in `queued` forever:** expected — no dispatcher exists yet. This is not a bug to
   triage; it's the current (pre-backend-integration) state of the module.
@@ -149,7 +161,7 @@
   (`# nosec B110`) — check The Observatory's own logs/health, not this module, for emission
   failures.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Studio" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; note the
   `StudioServiceType.VIDEO` enum value is literally `"tatekings"` (plural) while the canonical

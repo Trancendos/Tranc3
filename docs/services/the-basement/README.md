@@ -137,7 +137,19 @@
 | Embeddings | `sentence-transformers` `all-MiniLM-L6-v2` (optional) | OSS, local |
 | Storage | in-memory `dict` (no persistence) | zero infra cost, but no durability |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `basement` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `basement` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `basement` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth is currently implemented (see SIM §5) — reuse platform policy
   (`POL-AI-001`, `docs/defstan/`) if/when auth is added; this pack does not assert a policy that
@@ -145,7 +157,7 @@
 - Security/critical Observatory events MUST remain retained (never evicted) per the hard-coded
   `retained` exemption in `ingest()`/`ingest_observatory_event()`.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Query the archive:** `GET /basement/search?q=<query>&top_k=<n>` — returns semantic matches if
   FAISS is active, else keyword-overlap matches.
@@ -154,7 +166,7 @@
 - **Add vector search:** install `faiss` and `sentence-transformers` in the runtime environment —
   no code change needed; `_try_init_faiss()` activates automatically on next process start.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/basement/stats` shows `vector_search: false`:** `faiss`/`sentence-transformers` aren't
   installed, or FAISS init raised — check logs for `"basement: FAISS init failed"` at WARNING
@@ -165,7 +177,7 @@
 - **404 on `/basement/records/{id}`:** record was evicted (non-retained, aged out) or the ID never
   existed — check `/basement/stats.total_records` and `by_source` breakdown.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical name "The Basement" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; code module is
   `src/basement/` (lowercase, matches convention used by other in-repo entities).

@@ -92,24 +92,43 @@
 | UI | Radix UI + Tailwind + lucide-react | OSS |
 | Serve | Nginx static (port 8080) | OSS |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> A distinct question from DSM: DSM is about *physical location* (Cloud-Only/Hybrid/Local-Only); this is
+> about *SDLC promotion stage* (Dev/UAT/Production). Checked directly: no `arcadia`/`web`/`frontend`/
+> `dashboard` service entry exists in any of `docker-compose.development.yml`, `docker-compose.uat.yml`,
+> or `docker-compose.production.yml`.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** (`docker-compose.development.yml`) | No | — | no compose entry for this front-end at any tier |
+| **UAT** (`docker-compose.uat.yml`) | No | — | same — not present |
+| **Production** (`docker-compose.production.yml`) | No | — | not present here either; per the DSM above, this entity is built/served outside the compose-tier model entirely (a static Vite build behind Nginx, or a local dev/preview server) |
+
+- **Gap, if any:** total — Arcadia has no compose-tier presence at all, in any of the three environment
+  files. This is consistent with its DSM's own finding (no `docker-compose.production.yml` block exists
+  for it either) — it is a front-end built and served as a static bundle, not a compose-managed backend
+  process, so the Dev/UAT/Production compose distinction this ESM otherwise measures doesn't apply to it
+  the same way. State this plainly rather than implying hidden coverage.
+
+## 10. Policy (POL)
 
 - No secrets in the client bundle; auth handled server-side. Security headers set in `nginx.conf`.
   Reuses platform policy (`POL-AI-001`, `docs/defstan/`).
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Local dev:** `pnpm dev` (Vite). **Build:** `pnpm build` (`tsc && vite build`) → static bundle served by
   the `web/Dockerfile` Nginx image. Add routes in `AppRouter.tsx` + `pages/`.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Blank page / 404 on deep links:** SPA fallback misconfigured — confirm `try_files ... /index.html` in
   `nginx.conf`.
 - **`/healthz` fails:** the Nginx container isn't serving — check the `web/Dockerfile` build/static assets.
 - **Stale assets after deploy:** `/assets/` is cached — ensure Vite content-hashed filenames (default).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - TypeScript strict build (`tsc` before `vite build`); accessible Radix primitives; security headers on the
   static host; no client-side secrets.

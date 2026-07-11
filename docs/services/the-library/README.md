@@ -176,7 +176,19 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 | Storage | in-memory `dict` (`src/library/*`), no persistence | zero infra cost, no durability |
 | Standalone worker | `workers/library-service/` — SQLite + multi-backend wiki adapter | self-hosted, port 8067 |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `library-service` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `library-service` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `library-service` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - **Security gap, not fixed:** `src/library/*` routes (mounted in `api.py`, including create/
   update/delete mutations) have no route-level auth at all — any caller reaching `api.py` can
@@ -187,7 +199,7 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 - Zero-cost mandate: any future Outline/BookStack/etc. backend wiring must pass
   `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create an article:** `POST /library/articles` with `{"title": "...", "body": "...", "tags":
   [...], "author": "..."}` — status is always set to `PUBLISHED` on create (no draft-via-API path).
@@ -196,7 +208,7 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 - **Update an article:** not exposed over HTTP in `src/library/*` — see DDD gap; would require
   calling `Library.update()` in-process or adding a route.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Articles disappear after a restart:** expected — `src/library/*` has no persistence; only
   the 6 seed articles reappear.
@@ -209,7 +221,7 @@ endpoint. Articles are updatable only via direct in-process calls, not over `/li
 - **`/library/articles/{id}` returns 404:** article ID never existed or the process restarted
   since it was created (no persistence).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Library" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any Dockerfile that hardcodes a `--port` CLI flag MUST match the port set in

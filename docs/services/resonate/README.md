@@ -128,7 +128,19 @@
 | Text wrapping | Python string templating + `random.choice` | OSS, in-process, zero cost |
 | Human notification (missing) | none | N/A — not implemented anywhere in this repo |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `resonate` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `resonate` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `resonate` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - **Security gap, not fixed:** no route-level auth on any `/resonate/*` route, including
   `POST /resonate/escalate/{user_id}`. This compounds the misleading-message finding below — an
@@ -139,7 +151,7 @@
   violates this and should be prioritized for correction ahead of most other findings in this
   doc-pack series, given the crisis-support context.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Wrap a response with empathetic framing:** `POST /resonate/wrap` with `{"response": "...",
   "sensitivity_level": "high", "crisis_resources": true}`.
@@ -147,7 +159,7 @@
   currently only logs and emits an Observatory event; does not notify anyone despite its response
   message.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A user was told "a support team member has been notified" but no one responded:** this is
   expected given the current implementation — no notification transport exists. This is the
@@ -157,7 +169,7 @@
   inference pipeline calls it — see SIM's unconfirmed-integration note (same class of gap as
   I-Mind).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Resonate" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any function whose return value is shown to an end user and claims a real-world action (e.g.

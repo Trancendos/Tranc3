@@ -144,14 +144,26 @@
 | Persistence | Redis (`src/core/redis_store`), 1-year TTL | existing platform dependency, zero new cost |
 | Key validation (missing) | none | N/A — not implemented anywhere |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `devocity` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `devocity` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `devocity` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Every `/devocity/accounts*` route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the account-creation and key-issuance auth gap. The key-*validation*
   gap (issued keys not being checked against The Spark/Grid) remains open; see TASD.
 - Zero-cost mandate: Redis usage stays within the existing platform budget; no new dependency.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create a developer account:** `POST /devocity/accounts` with `{"user_id": "...",
   "display_name": "..."}` as the same user (or an admin) — `user_id` must
@@ -163,7 +175,7 @@
 - **Register a webhook:** `POST /devocity/accounts/{id}/webhooks` — stores the endpoint and a
   signing secret; no delivery mechanism exists to actually call it.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Issued API keys don't grant any real access:** expected — see the major finding in the
   truthfulness header; this is not a bug to chase, it's an unimplemented enforcement layer.
@@ -174,7 +186,7 @@
 - **Account data missing after a restart:** check Redis connectivity — `_ensure_loaded()`
   degrades to empty in-memory state silently if Redis is unreachable.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "DevOcity" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any DevOcity-issued API key that is documented as granting a `scope` MUST have a corresponding

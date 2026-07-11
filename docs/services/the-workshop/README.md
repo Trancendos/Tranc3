@@ -94,17 +94,29 @@
 | Reverse proxy | Nginx / Caddy | OSS |
 | Deploy tooling | `flyctl`, `wrangler` (in runner image) | free tiers |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `forgejo / forgejo-runner` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - All CI/CD flows through The Workshop (no GitHub Actions for platform pipelines). Org secrets
   (`CF_API_TOKEN`, `FLY_API_TOKEN`) are set via `set-org-secrets.sh`, never committed.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Stand up The Workshop:** `bash deploy/forgejo/setup.sh` (or `bootstrap.sh` for full setup), add the
   Nginx block from `nginx-the-workshop.conf`, then `runner-setup.sh` to register the runner.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Forgejo unhealthy:** the compose healthcheck hits `http://localhost:3000/-/health`; check the
   `forgejo` container and the `forgejo-data` volume.
@@ -113,7 +125,7 @@
 - **Deploy step fails on missing `flyctl`/`wrangler`:** the custom `runner.Dockerfile` image wasn't built —
   either build it or accept the upstream `runner:3` image (no deploy tooling).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Forgejo bound to localhost + reverse-proxied on `/the-workshop`; secrets via org-secret script; runner
   image pins its deploy toolchain.

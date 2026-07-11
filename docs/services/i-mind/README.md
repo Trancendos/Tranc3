@@ -139,13 +139,25 @@
 | Classification | Python `re` regex patterns | OSS, in-process, zero cost |
 | Observability | Observatory `observe()` (best-effort) | in-process |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `imind` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `imind` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `imind` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth currently implemented — see SIM §5.
 - Crisis/self-harm detections MUST fire a SECURITY-severity Observatory event per mission intent —
   verified in code (`_emit`'s `EventSeverity.SECURITY if assessment.escalate`).
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Assess text:** `POST /imind/assess` with `{"text": "...", "actor": "<optional>"}` — returns
   level, categories, escalate flag, and response modifier string.
@@ -154,7 +166,7 @@
   classification, not `CRITICAL`. Add a new self-harm pattern anywhere in `_CRISIS_PATTERNS[1:]`, or
   a mental-health pattern to `_MENTAL_HEALTH_PATTERNS` — no other code change needed.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Assessments never escalate for self-harm text:** this was the exact bug fixed in this pass —
   two compounding defects: the string-vs-severity `level.value < SensitivityLevel.HIGH.value` guard,
@@ -165,7 +177,7 @@
 - **No Observatory event for a detection:** `_emit()` swallows exceptions silently — check The
   Observatory's own health, not this module.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "I-Mind" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Severity comparisons between `SensitivityLevel` members MUST use an explicit ordinal mapping or

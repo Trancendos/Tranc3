@@ -150,7 +150,19 @@
 | Storage | SQLite (WAL mode) | zero infra cost, durable |
 | Auth | `X-Internal-Secret` header check | zero cost, real enforcement (with the fallback caveat above) |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `the-academy` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - Auth is real and enforced on write routes — a positive finding relative to most entities in
   this series.
@@ -159,14 +171,14 @@
   routes post-deploy (e.g. confirming `/courses` returns real data, not a hard-coded "coming
   soon" stub) — no such test currently exists for this worker.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create and publish a course:** `POST /courses`, then `POST /courses/{id}/lessons` per lesson,
   then `PATCH /courses/{id}/publish`.
 - **Enrol and track progress:** `POST /enrolments`, then `POST /progress` per completed lesson —
   course completion is detected automatically once all lessons are marked complete.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/courses` always returns an empty list / `/enroll` always says "not yet open":** this was
   the exact symptom of the pre-fix defect (the placeholder `main.py` being deployed instead of
@@ -183,7 +195,7 @@
   corresponding `progress` row with `completed=1` for that user — completion is computed by
   comparing counts, not a stored flag.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Academy" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any worker directory containing more than one file with an `app = FastAPI(...)` object MUST have

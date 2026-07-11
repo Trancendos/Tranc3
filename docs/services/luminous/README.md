@@ -110,17 +110,29 @@ These are libraries consumed by the backend; not all are exposed via the `/lumin
 | Model providers | Ollama / OpenRouter `:free` / llama.cpp | free tiers only, rotate on failure |
 | Control loop | MAPE-K (`mape_k.py`) | in-process |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`); no paid model APIs; outputs pass
   `output_safety.py` before return where wired.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a bio-neural endpoint:** implement in `src/bio_neural/`, expose via `routes.py`, keep the
   heavy import inside the handler (import-guarded), return `503` on `ImportError`.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/luminous/status` degraded:** check `consciousness`/`neuromorphic` module fields; a `degraded`
   value indicates a failed import — verify `torch`/`numpy` in the image.
@@ -133,7 +145,7 @@ These are libraries consumed by the backend; not all are exposed via the `/lumin
   — usually an input-shape mismatch against the configured net. The handler calls `process(x)`; a
   `timesteps=` kwarg would be a `TypeError` (real signature `process(x, learn=False)`).
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Error detail sanitised (`safe_error_detail`); logs sanitised (`sanitize_for_log`).
 - Heavy deps import-guarded; endpoints fail soft with typed HTTP status codes.

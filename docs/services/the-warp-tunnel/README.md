@@ -170,7 +170,19 @@
 | Content interception (real, deployed — but via The Ice Box's worker, not this one) | Ice Box `ThreatAnalyser`/`QuarantineStore` integration (`tunnel.py`) | zero-cost, self-hosted |
 | Auth | none in deployed `main.py`; `worker.py`'s unused alt has `X-Internal-Secret` with an insecure fallback | zero cost, currently unenforced |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `warp-tunnel` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - No route-level auth on the deployed `main.py` — low risk given both routes are stubs.
 - **If `worker.py` is ever promoted to deployed status, its `dev-secret` fallback MUST be fixed
@@ -178,7 +190,7 @@
   and Imaginarium.
 - Zero-cost mandate: fully honored across all three implementations.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Check scan status (deployed):** `POST /scan` — always returns "not yet initialised", by
   honest design, not a bug.
@@ -188,7 +200,7 @@
   this entity's own port 8072). `WarpTunnel` has no caller *within `workers/warp-tunnel/`
   itself*, but is not dormant platform-wide.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/scan` always returns `"scanned": false`:** expected — this is the deployed file's honest,
   intentional stub behavior, not a bug to chase.
@@ -204,7 +216,7 @@
   `workers/warp-tunnel/` should also get a real implementation, or whether The Ice Box's
   coverage is considered sufficient for this platform capability.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Warp Tunnel" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Config modules invoked via bare `python <file>.py` correctly read `PORT` from the environment

@@ -159,7 +159,19 @@
 | Metadata storage | in-memory `dict` (`src/artifactory/*`), no persistence | zero infra cost, no durability |
 | Binary storage | Zot OCI registry (self-hosted) → Gitea packages → local filesystem | OSS, self-hosted, zero-cost fallback chain |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `artifactory-service` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `artifactory-service` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `artifactory-service` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - **Security gap, not fixed:** no route-level auth on any `src/artifactory/*` route, including the
   mutating ones — `POST /artifactory/artifacts`, `POST /artifactory/artifacts/{id}/versions`,
@@ -169,7 +181,7 @@
   treated as a build-breaking defect, not a cosmetic gap — see the broader-gap note in the
   truthfulness header; a follow-up pass should audit and fix the remaining 8.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Register an artifact:** `POST /artifactory/artifacts` with `{"name": "...", "type":
   "docker", "description": "..."}` — creates a metadata record only, does not upload any bytes.
@@ -181,7 +193,7 @@
 - **Query the real registry:** use `workers/artifactory-service/`'s `/repositories` and
   `/repositories/{repo}/tags` endpoints, which proxy to the actual Zot instance.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Artifact metadata disappears after a restart:** expected — `src/artifactory/*` has no
   persistence; only the 6 seed records reappear.
@@ -192,7 +204,7 @@
 - **`push_version()` accepted a bogus digest:** expected — `src/artifactory/*` never validates
   `digest`/`size_bytes` against real content; this module is metadata-only by design.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Artifactory" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Every service referenced in `docker-compose.production.yml` with a `build: { dockerfile:

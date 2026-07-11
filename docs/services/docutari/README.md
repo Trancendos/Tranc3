@@ -226,7 +226,19 @@ both are reachable only directly by whatever external client knows their contain
 | Document backends (optional) | Paperless-ngx, Stirling PDF, Gotenberg, Apache Tika | zero (self-hosted OSS, none provisioned in compose today) |
 | Object backends (optional) | MinIO, IPFS (kubo), Valkey, DuckDB, SeaweedFS, Garage | zero (self-hosted OSS/embedded, only `local`+`duckdb` guaranteed available) |
 
-## 9. Policy & Compliance (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `files-service / storage-service` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy & Compliance (POL)
 
 - Both services currently run **unauthenticated by default** in this compose file (see
   truthfulness header). Any document or object handled by either service should be treated as
@@ -235,7 +247,7 @@ both are reachable only directly by whatever external client knows their contain
 - Uploaded document content and object bytes are not scanned for malware/PII by either
   service — no integration with Cryptex or The Warp Tunnel/The Ice Box exists.
 
-## 10. Procedures (PROC)
+## 11. Procedures (PROC)
 
 - **Local dev:** `cd workers/files-service && pip install -r requirements-worker.txt && uvicorn
   worker:app --port 8014` (and equivalently for `storage-service` on 8020).
@@ -246,7 +258,7 @@ both are reachable only directly by whatever external client knows their contain
   the backend's own container to `docker-compose.production.yml` (none of the 9 optional
   backends across both services are provisioned there today).
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET http://files-service:8014/health` / `GET http://storage-service:8020/health`.
 - **Symptom: uploaded documents/objects disappear after a redeploy.** Before this pass, this
@@ -256,7 +268,7 @@ both are reachable only directly by whatever external client knows their contain
 - **Symptom: `/api/paperless/search` returns 503.** Expected — `PAPERLESS_API_TOKEN` is unset;
   not a bug.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn/SQLite-WAL conventions as other standalone workers audited
   this session.

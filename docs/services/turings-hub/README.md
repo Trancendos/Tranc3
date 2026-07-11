@@ -103,24 +103,36 @@
 | Code generation | template writers in `spawner.py` | in-process |
 | Research NN | `lnn.py`, `snn_qat.py` (PyTorch) | OSS |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `turings-hub-service` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `turings-hub-service` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `turings-hub-service` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`). Generated repos must not embed secrets —
   `_write_env_example` emits an `.env.example`, never real credentials.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a personality:** drop a profile JSON in `src/personality/profiles/`; it is picked up by
   `PersonalityMatrix._load_all()`. Materialise via `POST /turingshub/spawn`.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/turingshub/status` shows matrix unavailable:** `PersonalityMatrix` import failed — check the
   `api.py` startup warning and the `profiles/` directory.
 - **`spawn` fails:** verify the resolved output base (`_resolve_output_base`) is writable and inside
   the sandbox; check the returned file list.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Profiles are JSON with a stable schema (`PersonalityProfile._from_dict`).
 - Spawn output is sandboxed via `_resolve_output_base`; no writes outside the resolved base.

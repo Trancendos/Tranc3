@@ -165,7 +165,19 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
 | Scheduling backends (optional, none provisioned) | Cal.com, Kestra, n8n, Forgejo, NATS JetStream, Valkey | zero (self-hosted OSS) |
 | Fallback scheduler | in-process asyncio loop (this worker's own code, not python-crontab or APScheduler despite the label) | zero |
 
-## 9. Policy & Compliance (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `cron-service` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy & Compliance (POL)
 
 - All `/jobs*` routes are unauthenticated by default in this compose file (empty-string
   `INTERNAL_SECRET`) — any caller reaching the container can create, trigger, or delete
@@ -174,7 +186,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
   server) and should be treated as sensitive until auth is enabled.
 - Zero-cost mandate honoured — no paid scheduling API is called.
 
-## 10. Procedures (PROC)
+## 11. Procedures (PROC)
 
 - **Local dev:** `cd workers/cron-service && pip install -r requirements-worker.txt &&
   uvicorn worker:app --port 8021`.
@@ -184,7 +196,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
   add the backend's own container to `docker-compose.production.yml` — none of the 6
   network-based optional backends are provisioned there today.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET http://cron-service:8021/health` — includes per-backend pheromone
   status inline, useful for diagnosing why jobs keep landing on the in-process fallback.
@@ -198,7 +210,7 @@ No confirmed caller of this worker's HTTP surface was found elsewhere in the rep
   Expected while none of the 6 network backends are provisioned — every dispatch attempt fails
   its reachability check and falls through; not a bug.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn/SQLite-WAL conventions as other standalone workers audited
   this session.

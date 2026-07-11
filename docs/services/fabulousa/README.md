@@ -155,7 +155,19 @@ No confirmed caller of this service was found elsewhere in the repo.
 | Design platform (not yet provisioned) | Penpot (MPL 2.0, self-hosted) | zero |
 | Fallback | Figma REST API (free tier, read-only) | zero |
 
-## 9. Policy & Compliance (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `fabulousa-service` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy & Compliance (POL)
 
 - Both write endpoints are now gated behind an optional `INTERNAL_SECRET` check (fixed this
   pass) — enforcement is live once an operator sets the env var, open until then. No PII is
@@ -163,7 +175,7 @@ No confirmed caller of this service was found elsewhere in the repo.
 - Zero-cost mandate is honoured: no paid API is called (Figma's fallback is explicitly the free
   read-only tier).
 
-## 10. Procedures (PROC)
+## 11. Procedures (PROC)
 
 - **Local dev:** `cd workers/fabulousa-service && pip install -r requirements.txt && uvicorn
   worker:app --port 8048`.
@@ -171,7 +183,7 @@ No confirmed caller of this service was found elsewhere in the repo.
   set `PENPOT_URL`/`PENPOT_TOKEN` — no code change required, the client already targets an
   env-configurable URL.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET http://fabulousa-service:8048/health` directly (not reachable via
   Traefik at `/fabulousa/health` — see truthfulness header).
@@ -181,7 +193,7 @@ No confirmed caller of this service was found elsewhere in the repo.
 - **Symptom: `docker compose build fabulousa-service` fails with "Dockerfile not found."**
   Was expected before this pass — now fixed. If it recurs, check the Dockerfile wasn't removed.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn/single-file-worker conventions as other standalone workers
   audited this session; Dockerfile now matches the established non-root-user pattern (same

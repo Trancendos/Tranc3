@@ -157,14 +157,26 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 | Threat intel (unwired) | MISP (`misp_connector.py`) | self-hosted, not live-wired |
 | SIEM (unwired) | Wazuh (`wazuh_connector.py`) | self-hosted, not live-wired |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `cryptex` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `cryptex` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `cryptex` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - `POST /cryptex/block/{ip}`, `DELETE /cryptex/block/{ip}`, and every `/cryptex/bounty/*` route
   require admin auth — see DDD/SIM. `/cryptex/analyse*` remain intentionally unauthenticated.
 - Zero-cost mandate: `nuclei`/`pip-audit` scanning must stay within `scripts/zero_cost_audit.py`'s
   gate.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Analyse content for threats:** `POST /cryptex/analyse` with `{"context": {...}, "actor":
   "..."}` — returns matched signals; a `BLOCK` mitigation genuinely affects future traffic via
@@ -174,7 +186,7 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 - **Wire an orphaned module into the live path:** import it from `threat_detector.py` or add a
   new route in `routes.py` — no orphaned module currently has any caller in this repo.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Blocking an IP via `/cryptex/block/{ip}` doesn't stop its traffic:** check whether the
   request path is in `RBACMiddleware._SCAN_SKIP` or `ENVIRONMENT=test` is set — both bypass the
@@ -183,7 +195,7 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
   see POL §9.
 - **Signal history disappears after a restart:** expected — `_signals` is in-memory only.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Cryptex" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`. Note
   `cve_scanner.py` is imported by a test file named `test_section7.py` — "Section 7" is a

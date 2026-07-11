@@ -134,13 +134,25 @@
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Client rendering (referenced, not implemented here) | Three.js / A-Frame WebXR | OSS, browser-based |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml` (6 services), `docker-compose.uat.yml` (16 services), and `docker-compose.production.yml` (286 services) — checked by exact compose service name, not assumed.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no code path to validate before Production |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — first validation point is Production itself |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `vrar3d` only exists in `docker-compose.production.yml`. A change to this worker is validated for the first time in Production. This is the norm for most standalone workers on this platform (only The Nexus, Infinity, The Digital Grid, and The Observatory have any pre-production compose coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - No route-level auth on any `/vrar3d/*` route — anyone can start/end a wellbeing session for
   any `user_id`.
 - Zero-cost mandate: Three.js/A-Frame are free/OSS; no paid asset-hosting dependency introduced.
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **List available scenes:** `GET /vrar3d/scenes?type=meditation` (optional filter).
 - **Get a recommendation:** `GET /vrar3d/recommend?mood=2&sensitivity_level=critical` — caller
@@ -148,7 +160,7 @@
 - **Track a session:** `POST /vrar3d/sessions` to start, `POST /vrar3d/sessions/{id}/end` to end
   and record `mood_after`.
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **The crisis-calm scene never gets recommended in practice:** expected unless some other
   service explicitly calls `/vrar3d/recommend` with `sensitivity_level="critical"` sourced from a
@@ -158,7 +170,7 @@
 - **Session data disappears after a restart:** expected — no persistence; the scene catalogue
   itself re-seeds from the hard-coded list, so only session/mood history is lost.
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "VRAR3D" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`. Note the
   platform-level entity description ("standalone 3D/VR immersion") is broader than what the
