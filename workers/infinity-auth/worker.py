@@ -15,6 +15,24 @@ Uvicorn deployments that reference ``worker:app`` continue to work
 because this shim re-exports ``app`` from ``main``.
 """
 
+from database import AuthDatabase  # noqa: F401
 from main import app  # noqa: F401  re-exported for uvicorn worker:app
+from service import (  # noqa: F401
+    RateLimiter,
+    create_access_token,
+    create_refresh_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 
-__all__ = ["app"]
+__all__ = [
+    "app",
+    "AuthDatabase",
+    "RateLimiter",
+    "create_access_token",
+    "create_refresh_token",
+    "decode_access_token",
+    "hash_password",
+    "verify_password",
+]

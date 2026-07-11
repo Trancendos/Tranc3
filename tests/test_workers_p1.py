@@ -13,7 +13,9 @@ P1 Workers:
 from __future__ import annotations
 
 import importlib
+import os
 import sys
+import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -26,14 +28,56 @@ from fastapi.testclient import TestClient
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent
 
+# users-service instantiates its DB singleton at *module import time*
+# (`db = UsersDatabase()`, worker.py line ~200), defaulting USERS_DB_PATH to
+# the production-only `/data/users.db`. `/data` doesn't exist (and isn't
+# writable) outside a deployed container, so collecting this test file would
+# otherwise crash with PermissionError before any test runs. Point it at a
+# session-scoped temp dir instead — production is unaffected since compose
+# always sets USERS_DB_PATH's real value, this only fills the gap when the
+# env var is unset.
+_TEST_DATA_DIR = tempfile.mkdtemp(prefix="tranc3-test-p1-")
+os.environ.setdefault("USERS_DB_PATH", os.path.join(_TEST_DATA_DIR, "users.db"))
+
+
+_SHIM_MODULE_NAMES = ("main", "router", "config", "database", "service", "models")
+
 
 def _import_worker(module_dotted: str, file_path: Path):
-    """Import a worker module with hyphenated path using importlib."""
-    spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[module_dotted] = mod
-    spec.loader.exec_module(mod)
-    return mod
+    """Import a worker module with hyphenated path using importlib.
+
+    Adds the worker's own directory to sys.path for the duration of the
+    import so shim-style workers (e.g. infinity-ai's worker.py -> main.py)
+    can resolve their bare sibling imports, matching how the Dockerfile
+    COPYs them flat into the container's WORKDIR.
+
+    Many workers use identically-named internal modules (main.py, router.py,
+    config.py, database.py, service.py, models.py). A bare `from router
+    import x` caches under sys.modules["router"] — without eviction, the
+    *next* worker's `from router import y` would silently reuse the first
+    worker's cached module instead of re-resolving against its own
+    sys.path entry. Evict + restore around each import so every worker gets
+    a fresh resolution of its own same-named siblings.
+    """
+    worker_dir = str(file_path.parent)
+    inserted = worker_dir not in sys.path
+    if inserted:
+        sys.path.insert(0, worker_dir)
+    saved = {name: sys.modules.pop(name, None) for name in _SHIM_MODULE_NAMES}
+    try:
+        spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[module_dotted] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    finally:
+        if inserted:
+            sys.path.remove(worker_dir)
+        for name, old_mod in saved.items():
+            if old_mod is not None:
+                sys.modules[name] = old_mod
+            else:
+                sys.modules.pop(name, None)
 
 
 users_mod = _import_worker(

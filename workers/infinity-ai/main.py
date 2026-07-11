@@ -13,13 +13,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from router import router
-from service import adaptive_rotation
+from router import init_router, protected_router, public_router
+from service import AIGatewayRouter
 
-from config import WORKER_NAME, WORKER_PORT
-from database import db
+from config import DB_PATH, INTERNAL_SECRET, WORKER_NAME, WORKER_PORT
+from database import AIDatabase
 
 logger = logging.getLogger(WORKER_NAME)
+
+_INTERNAL_SECRET = INTERNAL_SECRET
+
+db = AIDatabase(db_path=DB_PATH)
+adaptive_rotation = AIGatewayRouter(db)
+init_router(db, adaptive_rotation)
 
 
 @asynccontextmanager
@@ -31,7 +37,6 @@ async def _lifespan(app: FastAPI):
     except Exception:
         pass
     logger.info("%s starting on port %d", WORKER_NAME, WORKER_PORT)
-    db._init_tables()
     logger.info(
         "%s ready — %d providers configured ✨", WORKER_NAME, len(adaptive_rotation.providers)
     )
@@ -70,7 +75,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(router)
+app.include_router(public_router)
+app.include_router(protected_router)
 
 if __name__ == "__main__":
     import uvicorn
