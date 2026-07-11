@@ -87,3 +87,4 @@ not a committed integration.
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `CLAUDE.md` service table (status, Lead AI, Foundation), `PLATFORM_ENTITIES.md` (identity), repo search confirming no `royal_bank_of_arcadia` implementation exists | Confirmed ✅-labelled status but no in-repo source; pack scoped to GOV+RACI+TFM+POL+STD only per framework §2.1 pending source being added to this repo |
+| 2026-07-11 | Claude (session, cubic-dev-ai review triage) | `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` §2.1 (post-DSM update) | Pack scope corrected: now GOV+RACI+TFM+DSM+POL+STD (6 artifacts), not the 5-artifact set the 2026-07-04 entry above described — Deployment Scope Matrix (DSM) was added as artifact #4 in this pass. |

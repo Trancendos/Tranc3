@@ -180,7 +180,7 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
   request path is in `RBACMiddleware._SCAN_SKIP` or `ENVIRONMENT=test` is set — both bypass the
   `is_blocked()` check by design; otherwise this would be a real bug, not expected behavior.
 - **A non-admin caller gets `403` on `/cryptex/block/{ip}` or `/cryptex/bounty/*`:** expected —
-  see POL §8.
+  see POL §9.
 - **Signal history disappears after a restart:** expected — `_signals` is in-memory only.
 
 ## 12. Standards (STD)

@@ -121,7 +121,7 @@ Sequential steps, each a real script invocation (not aspirational):
 
 - **Mode awareness:** Yes, indirectly — `src/platform/infrastructure_mode.py`'s `should_run_citadel_docker()` explicitly gates whether the Citadel Docker Compose stack runs at all: **true** for `LOCAL_ONLY`, **true** for `HYBRID` only when `CITADEL_LOCAL_STACK=true` is also set, **false** for `CLOUD_ONLY`. **The Citadel is the only one of the 43 named platform entities whose own code branches on the mode this way** — but it is not the only mode-aware code in the repo: `src/routers/adaptive.py` and `src/routers/ecosystem.py` also read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE`. None of those three are owned by one of the 43 named entities — they are shared platform/ops infrastructure, same category as this entity but not part of it — which is why every other entity's own DSM correctly says "No" for mode awareness.
 - **Runtime placement:** the entire `docker-compose.production.yml` stack — Traefik reverse proxy, Vault, Prometheus, Grafana, Loki+Promtail, IPFS, and every worker service block on this platform.
-- **Persistence:** each infrastructure component has its own named volume (`traefik`, `vault`, `prometheus`, `grafana`, etc. — confirmed present in compose).
+- **Persistence:** each infrastructure component has its own named volume (`traefik-config`/`traefik-certs`, `vault-data`, `prometheus-data`, `grafana-data`, etc. — confirmed present in compose).
 
 | Setup | What runs, and where | Data locality | Hard blockers / caveats |
 |---|---|---|---|
