@@ -44,6 +44,13 @@ Every service, location, and subsystem has a canonical code name. Use ONLY these
 
 Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `src/entities/platform.py`.
 
+**Location Functions & Job Descriptions.** Every Location has a functional Job Description title
+(e.g. Royal Bank of Arcadia → Chief Financial Officer) distinct from its canonical `lead_ai` name
+— see `docs/governance/LOCATION-FUNCTIONS.md`. Which AI currently holds that Job Description is
+mutable at runtime via the Role Assignment Registry (`src/roles/registry.py`, SQLite-backed,
+exposed at `/roles` — `src/roles/routes.py`, mounted in `api.py`), letting operators add, remove,
+or reassign AIs to a role without a code change; every change is recorded in an audit history.
+
 **Naming rules:**
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
