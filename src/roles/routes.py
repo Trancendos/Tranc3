@@ -33,7 +33,9 @@ class UnassignRequest(BaseModel):
 
 def _require_admin(current_user: dict) -> None:
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required to modify role assignments")
+        raise HTTPException(
+            status_code=403, detail="Admin role required to modify role assignments"
+        )
 
 
 def _serialize(assignment: RoleAssignment) -> Dict[str, Any]:
