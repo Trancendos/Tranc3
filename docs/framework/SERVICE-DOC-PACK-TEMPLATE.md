@@ -124,7 +124,28 @@
 | Storage | `<SQLite / IPFS / …>` | | | | |
 | Transport | `<HTTP+SSE / WS / JSON-RPC>` | | | | |
 
-## 9. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> A distinct question from DSM: DSM is about *physical location* (Cloud-Only/Hybrid/Local-Only);
+> this is about *SDLC promotion stage* (Dev/UAT/Production). The platform has exactly three
+> environment-tier compose files: `docker-compose.development.yml` (6 services — `api`, `redis`,
+> `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog`), `docker-compose.uat.yml` (16 services,
+> a superset adding `vault`, `users-service`, `monitoring`, `the-grid`, `products-service`,
+> `orders-service`, `payments-service`, `prometheus`, `grafana`, `seed-data`), and
+> `docker-compose.production.yml` (286 services). Check both files directly by name — do not
+> assume coverage.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** (`docker-compose.development.yml`) | `<Yes/No/Partial>` | `<monolith router via the `api` service? standalone worker by name?>` | `<caveats>` |
+| **UAT** (`docker-compose.uat.yml`) | `<Yes/No/Partial>` | `<same>` | `<caveats>` |
+| **Production** (`docker-compose.production.yml`) | Yes | `<full detail — see DSM above>` | — |
+
+- **Gap, if any:** `<state plainly if Dev/UAT coverage is monolith-router-only while the standalone
+  worker is Production-only, or if there is no non-Production coverage at all — this is the norm
+  for most standalone workers, not a documentation failure to soften>`
+
+## 10. Policy (POL)
 
 > Reference platform policies; record only service-specific deltas.
 
@@ -133,14 +154,14 @@
 - **Data handling:** `<retention, PII, GDPR basis>`
 - **Access policy:** `<who, tiers, MFA requirement>`
 
-## 10. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Deploy:** `<steps / command / CI workflow>`
 - **Configuration change:** `<steps + approval gate>`
 - **Secret rotation:** `<steps — cite The Void / Vault>`
 - **Onboarding a consumer:** `<steps>`
 
-## 11. Runbook (RUN)
+## 12. Runbook (RUN)
 
 > Only for ✅ live services.
 
@@ -155,7 +176,7 @@
 - **Rollback:** `<how to revert safely>`
 - **Recovery from data loss:** `<backup restore steps>`
 
-## 12. Standards (STD)
+## 13. Standards (STD)
 
 - **Applicable platform standards:** `<docs/defstan/… links>`
 - **API standard:** `<JSON-RPC 2.0 / REST conventions>`

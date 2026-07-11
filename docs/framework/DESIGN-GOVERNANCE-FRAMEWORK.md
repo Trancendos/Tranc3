@@ -23,7 +23,7 @@ It exists to prevent two failure modes:
 > not `PLATFORM_ENTITIES.md`, which carries identity/ownership only — is the source of
 > the ✅/🔧 status). The framework maps that label to one of three **gate tiers** (§2.1)
 > which drive artifact requirements. A `Planned`-tier service gets a
-> **GOV + RACI + TFM + DSM + POL + STD** pack only (intent-level); it does **not** get a
+> **GOV + RACI + TFM + DSM + ESM + POL + STD** pack only (intent-level); it does **not** get a
 > DDD/TASD/Runbook claiming implemented behaviour until code exists.
 >
 > **Source split:** identity/ownership (canonical name, Lead AI, PID) → `PLATFORM_ENTITIES.md`
@@ -47,11 +47,30 @@ comprises the following artifacts. The template for each lives in
 | 5 | **Architecture Scalability Document** | ASD | *How does it grow?* Load model, scaling levers, zero-cost limits | ✅ / 🔧 Partial |
 | 6 | **Technology Framework Matrix** | TFM | *What is it made of?* Languages, libs, licences, versions, CVE posture | All |
 | 7 | **Deployment Scope Matrix** | DSM | *Where can this run?* Cloud-Only / Hybrid / Local-Only topology, mode-awareness, data locality, per-mode blockers | All |
-| 8 | **Policy** | POL | *What rules govern it?* Security, data, AI, access policies | All |
-| 9 | **Procedure** | PROC | *What are the repeatable steps?* Deploy, rotate, onboard, incident | ✅ / 🔧 Partial |
-| 10 | **Runbook** | RUN | *What do I do at 3am?* Alerts, diagnostics, recovery, rollback | ✅ |
-| 11 | **Standards** | STD | *What must it conform to?* Naming, API, logging, error, test standards | All |
-| 12 | **Service Governance Charter** | GOV | *What is it for?* Mission, scope, Lead AI, SLOs, review cadence | All |
+| 8 | **Environment Support Matrix** | ESM | *Which SDLC environments actually run this?* Dev / UAT / Production coverage, grounded against the three `docker-compose.*.yml` files | All |
+| 9 | **Policy** | POL | *What rules govern it?* Security, data, AI, access policies | All |
+| 10 | **Procedure** | PROC | *What are the repeatable steps?* Deploy, rotate, onboard, incident | ✅ / 🔧 Partial |
+| 11 | **Runbook** | RUN | *What do I do at 3am?* Alerts, diagnostics, recovery, rollback | ✅ |
+| 12 | **Standards** | STD | *What must it conform to?* Naming, API, logging, error, test standards | All |
+| 13 | **Service Governance Charter** | GOV | *What is it for?* Mission, scope, Lead AI, SLOs, review cadence | All |
+
+**Environment Support Matrix — grounding.** ESM answers a distinct question from DSM: DSM is
+about *physical location* (Cloud-Only/Hybrid/Local-Only); ESM is about *SDLC promotion stage*
+(Dev/UAT/Production) — an orthogonal axis. The platform has exactly three environment-tier
+compose files: `docker-compose.development.yml` (6 services: `api`, `redis`, `infinity-ws`,
+`infinity-auth`, `infinity-ai`, `mailhog`), `docker-compose.uat.yml` (16 services, a superset
+adding `vault`, `users-service`, `monitoring`, `the-grid`, `products-service`, `orders-service`,
+`payments-service`, `prometheus`, `grafana`, `seed-data`), and `docker-compose.production.yml`
+(286 services — the full platform). An ESM must state, per service: (a) whether its monolith
+router (if any) has Dev/UAT coverage — true for every entity mounted in `api.py`, since the `api`
+service is present in all three compose files running the same code; (b) whether its standalone
+worker (if any) has its own service block in the Dev and/or UAT compose files by name — true only
+for `infinity-ws` (The Nexus), `infinity-auth` (Infinity), and `infinity-ai` (Luminous) in both
+Dev and UAT, and additionally `the-grid` (The Digital Grid) and `monitoring` (The Observatory) in
+UAT only; every other standalone worker (the other ~90) is Production-only — it has no Dev or UAT
+environment to validate against before a production deploy. This is a real, checkable gap, not
+speculation: state it plainly rather than assuming parity across environments. Planned-tier and
+charter-only (§2.1) ESMs are intent-level only.
 
 **Deployment Scope Matrix — grounding.** DSM answers a distinct question from ASD (which is
 about *load* scaling): it is about *where the service's process(es) physically run* — the
@@ -87,9 +106,9 @@ three **gate tiers** below. This is the single source of truth for the mapping:
 
 | Canonical status label (from `CLAUDE.md`) | Gate tier | Required pack |
 |------------------------------------------------------|-----------|---------------|
-| `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 12-artifact pack, code-grounded |
+| `✅ In repo`, `✅ Self-hosted`, `✅ Deployed`, `✅ Integrated` | **Live** | Full 13-artifact pack, code-grounded |
 | `🔧 Partial`, `🔧 Migrating`, `🔧 Self-hosted` | **Partial** | Live pack, scoped to what exists; gaps flagged |
-| `🔧 Planned` | **Planned** | GOV + RACI + TFM + DSM + POL + STD only |
+| `🔧 Planned` | **Planned** | GOV + RACI + TFM + DSM + ESM + POL + STD only |
 
 > A `✅` label always maps to **Live**; a `🔧` label maps to **Partial** unless it is
 > exactly `🔧 Planned`, which maps to **Planned**. Automation keys off the emoji + the
@@ -156,9 +175,9 @@ failing the build on gaps — the same pattern already used for entity-name lint
 Coverage is tracked in `docs/services/INDEX.md`. The honest rollout order is:
 
 1. **✅ In-repo services first** (The Spark, The Digital Grid, Infinity, The Nexus,
-   The Observatory, The Workshop, The Town Hall) — full 12-artifact packs, code-grounded.
+   The Observatory, The Workshop, The Town Hall) — full 13-artifact packs, code-grounded.
 2. **🔧 Partial services** — DDD/TASD scoped to what exists; gaps flagged, not faked.
-3. **🔧 Planned services** — GOV + RACI + TFM + DSM + POL + STD only (per §2.1), until code lands.
+3. **🔧 Planned services** — GOV + RACI + TFM + DSM + ESM + POL + STD only (per §2.1), until code lands.
 
 The Spark (`docs/services/the-spark/`) is the **reference implementation** of a complete,
 code-grounded pack. New packs are cloned from the template and from that exemplar.
