@@ -48,11 +48,17 @@ def _user_id(current_user: dict) -> str:
 
 
 def _serialize(sub: LocationSubscription) -> Dict[str, Any]:
+    # `grants_access` is the gate-truth: a row can be status='active' yet fail
+    # the gate because its terms_version is stale after a policy bump. Exposing
+    # it (and `terms_current`) here keeps /access/me and /subscribers listings
+    # from misleadingly presenting a stale subscriber as fully active.
     return {
         "user_id": sub.user_id,
         "location": sub.location,
         "status": sub.status,
         "terms_version": sub.terms_version,
+        "terms_current": sub.terms_version == CURRENT_TERMS_VERSION,
+        "grants_access": sub.is_active_on_current_terms(CURRENT_TERMS_VERSION),
         "subscribed_at": sub.subscribed_at,
         "revoked_at": sub.revoked_at,
     }

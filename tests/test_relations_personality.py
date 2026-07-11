@@ -85,7 +85,8 @@ class TestMalformedProfiles:
         assert quirks.found is False
 
     def test_non_string_code_name_is_skipped_not_crashed(self, monkeypatch, tmp_path):
-        # An unhashable (list) code_name must not crash `code_name in index`.
+        # A non-string code_name (e.g. a list) must not crash _build_index when
+        # it tries to use the value as a dict key (unhashable -> TypeError).
         (tmp_path / "listname.json").write_text(json.dumps({"code_name": ["not", "a", "string"]}))
         (tmp_path / "good.json").write_text(
             json.dumps({"code_name": "Good AI", "description": "ok"})
@@ -100,6 +101,19 @@ class TestMalformedProfiles:
         with caplog.at_level("WARNING"):
             get_quirks("Anyone")
         assert any("could not be read/parsed" in rec.message for rec in caplog.records)
+
+    def test_deeply_nested_json_recursionerror_falls_back_to_neutral(self, monkeypatch, tmp_path):
+        # Deeply nested JSON makes json.loads raise RecursionError, which is NOT
+        # a ValueError subclass; the loader must catch it and fall back rather
+        # than letting it crash _build_index and null out the whole index.
+        depth = 100_000
+        (tmp_path / "deep.json").write_text("[" * depth + "]" * depth)
+        (tmp_path / "good.json").write_text(
+            json.dumps({"code_name": "Good AI", "description": "ok"})
+        )
+        monkeypatch.setattr(personality_module, "_PROFILES_DIR", tmp_path)
+        # Must not raise, and the well-formed profile still resolves.
+        assert get_quirks("Good AI").found is True
 
 
 class TestDuplicateCodeName:

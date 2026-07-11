@@ -69,6 +69,34 @@ class TestBadgeSeeding:
             count = conn.execute("SELECT COUNT(*) FROM badges").fetchone()[0]
         assert count == 4
 
+    def test_reseed_upserts_updated_description_without_orphaning_awards(self, academy):
+        # Simulate an old DB row with stale text, plus an award referencing it,
+        # then re-seed: the description must update in place and the award's FK
+        # (badge id) must be preserved.
+        with academy.get_conn() as conn:
+            badge_id = conn.execute("SELECT id FROM badges WHERE code='first_steps'").fetchone()[
+                "id"
+            ]
+            conn.execute("UPDATE badges SET description='OLD STALE TEXT' WHERE code='first_steps'")
+            conn.execute(
+                "INSERT INTO user_badges (user_id, badge_id, awarded_at, course_id) "
+                "VALUES (?,?,?,NULL)",
+                ("user-1", badge_id, time.time()),
+            )
+            conn.commit()
+        academy._seed_badges(academy.get_conn())
+        with academy.get_conn() as conn:
+            row = conn.execute(
+                "SELECT id, description FROM badges WHERE code='first_steps'"
+            ).fetchone()
+            assert row["description"] == "Complete your first course."  # refreshed
+            assert row["id"] == badge_id  # id (and the FK'd award) preserved
+            award = conn.execute(
+                "SELECT COUNT(*) FROM user_badges WHERE user_id='user-1' AND badge_id=?",
+                (badge_id,),
+            ).fetchone()[0]
+            assert award == 1
+
 
 class TestFirstStepsBadge:
     def test_completing_first_course_awards_first_steps(self, academy):
@@ -106,11 +134,11 @@ class TestFirstStepsBadge:
         assert any(b["code"] == "first_steps" for b in first)
         assert second == []
 
-    def test_pre_inserted_badge_does_not_crash_or_double_award(self, academy):
-        """Simulates the concurrent-award race: a badge row already exists
-        (inserted by a racing request) when _check_and_award_badges runs.
-        INSERT OR IGNORE must not raise, and the badge must not be counted
-        as newly awarded again."""
+    def test_pre_committed_badge_is_not_re_awarded(self, academy):
+        """Concurrency ordering A — a racing request's award committed *before*
+        this call's `already_earned` snapshot. The badge is then in the snapshot,
+        so _check_and_award_badges skips it via the early `continue` (never
+        reaching the INSERT). It must not be re-counted or raise."""
         course_id, _ = _make_course_with_lessons(academy, n_lessons=1)
         _enrol(academy, "user-1", course_id)
         now = time.time()
@@ -119,10 +147,6 @@ class TestFirstStepsBadge:
                 "UPDATE enrolments SET completed_at=? WHERE user_id=? AND course_id=?",
                 (now, "user-1", course_id),
             )
-            # Pre-insert the first_steps badge as if a concurrent request won
-            # the race, but leave `already_earned`'s snapshot unaware of it by
-            # inserting AFTER that snapshot would have been taken — emulated
-            # here by inserting directly then calling the awarder.
             badge_id = conn.execute("SELECT id FROM badges WHERE code='first_steps'").fetchone()[
                 "id"
             ]
@@ -133,8 +157,35 @@ class TestFirstStepsBadge:
             )
             conn.commit()
             awarded = academy._check_and_award_badges(conn, "user-1", now)
-        # first_steps was already present → not re-counted; no IntegrityError.
         assert all(b["code"] != "first_steps" for b in awarded)
+
+    def test_insert_or_ignore_guard_yields_zero_rowcount_on_duplicate(self, academy):
+        """Concurrency ordering B — a racing request's award commits *after* this
+        call's `already_earned` snapshot but before its INSERT. The snapshot
+        can't see it, so execution reaches the `INSERT OR IGNORE ... if
+        cur.rowcount:` guard; the insert is ignored (rowcount 0) rather than
+        raising IntegrityError → 500. This exercises the exact statement the
+        awarder uses for that guard (unreachable via the public function in a
+        single thread, since a pre-committed row is always in the snapshot)."""
+        _make_course_with_lessons(academy, n_lessons=1)
+        now = time.time()
+        with academy.get_conn() as conn:
+            badge_id = conn.execute("SELECT id FROM badges WHERE code='first_steps'").fetchone()[
+                "id"
+            ]
+            first = conn.execute(
+                "INSERT OR IGNORE INTO user_badges (user_id, badge_id, awarded_at, course_id) "
+                "VALUES (?,?,?,NULL)",
+                ("user-1", badge_id, now),
+            )
+            assert first.rowcount == 1  # first award inserts
+            second = conn.execute(
+                "INSERT OR IGNORE INTO user_badges (user_id, badge_id, awarded_at, course_id) "
+                "VALUES (?,?,?,NULL)",
+                ("user-1", badge_id, now),
+            )
+            conn.commit()
+            assert second.rowcount == 0  # duplicate ignored, no IntegrityError
 
 
 class TestPerfectionistBadge:

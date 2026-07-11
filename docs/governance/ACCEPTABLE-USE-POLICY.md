@@ -34,13 +34,16 @@ This exists so that:
   until their next `subscribe` call cites the new `CURRENT_TERMS_VERSION` (a `subscribe` with the
   old version is rejected with `422`). The stale row is never deleted — access is gated off, not
   the record erased.
-- There's an auditable record of who agreed to what, and when — the current state lives in
-  `location_subscriptions` (never deleted, only marked `revoked`), and **every** subscribe/revoke
-  action additionally appends an immutable row to `subscription_history` (recording the action,
-  the `terms_version` consented to, the acting principal, and a timestamp), so re-consents and
-  revocations that overwrite current state still leave a permanent trail. This matches the
-  platform's audit-trail conventions (the Role Registry's `role_assignment_history`, the Relations
-  Registry's `activity_events`).
+- There's an auditable record of **which policy version** each user accepted, and when — the
+  current state lives in `location_subscriptions` (never deleted, only marked `revoked`), and
+  **every** subscribe/revoke action additionally appends an immutable row to `subscription_history`
+  (recording the action, the `terms_version` consented to, the acting principal, and a timestamp),
+  so re-consents and revocations that overwrite current state still leave a permanent trail. The
+  record stores the version identifier, not a copy of the policy text — this pins the exact text
+  only because **published versions are immutable** (see §6): a version number, once issued, always
+  refers to one frozen document, so `terms_version` unambiguously identifies what was shown. This
+  matches the platform's audit-trail conventions (the Role Registry's `role_assignment_history`,
+  the Relations Registry's `activity_events`).
 
 ## 2. What subscribing means
 
@@ -114,9 +117,16 @@ rollout happens.
 
 ## 6. Changing this policy
 
-To publish a new version:
+**Published versions are immutable.** Once a `Version` value has been issued and any user has
+consented to it, that version's text must never be edited in place — a stored `terms_version` like
+`1.0` is only meaningful as an audit record because it always refers to one frozen document. Any
+change to the policy's meaning is a **new** version with a new number; the prior version's exact
+text remains recoverable from this file's git history (and should be archived alongside it if the
+deployment doesn't retain full history). To publish a new version:
 
-1. Update this document's **Version** field and rewrite the affected sections.
+1. Update this document's **Version** field to the new number and write the new text as a new
+   version — do not overwrite the semantics of the old version in a way that would change what a
+   past consenter agreed to.
 2. Bump `CURRENT_TERMS_VERSION` in `src/access/registry.py` to match.
 3. The bump takes effect immediately at the gate: every stale subscriber (stored `terms_version` no
    longer equal to the current one) stops passing `require_location_subscription`, so the affected

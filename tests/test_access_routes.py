@@ -141,6 +141,27 @@ class TestReadOwnStatus:
         finally:
             client.app.dependency_overrides.pop(get_current_user, None)
 
+    def test_listing_exposes_stale_terms_status(self, client, monkeypatch):
+        client.app.dependency_overrides[get_current_user] = _override("u1")
+        try:
+            client.post(
+                "/access/The Lab/subscribe",
+                json={"accepted_terms": True, "terms_version": CURRENT_TERMS_VERSION},
+            )
+            fresh = client.get("/access/me").json()
+            assert fresh[0]["grants_access"] is True
+            assert fresh[0]["terms_current"] is True
+            # Bump the policy version: the row is now stale — still status
+            # 'active' but no longer granting access.
+            monkeypatch.setattr("src.access.registry.CURRENT_TERMS_VERSION", "2.0")
+            monkeypatch.setattr("src.access.routes.CURRENT_TERMS_VERSION", "2.0")
+            stale = client.get("/access/me").json()
+            assert stale[0]["status"] == "active"
+            assert stale[0]["terms_current"] is False
+            assert stale[0]["grants_access"] is False
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
     def test_get_my_subscription_unknown_location_404s(self, client):
         client.app.dependency_overrides[get_current_user] = _override("u1")
         try:

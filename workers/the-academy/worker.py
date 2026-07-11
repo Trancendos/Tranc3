@@ -171,6 +171,12 @@ _DEFAULT_BADGES = [
 
 
 def _seed_badges(conn: sqlite3.Connection) -> None:
+    # Upsert (not INSERT OR IGNORE) so that edits to a seed badge's text or
+    # criteria in _DEFAULT_BADGES propagate to databases created before the
+    # change on the next startup — otherwise a pre-existing row keeps returning
+    # stale description/reward_description text forever. `badges.code` is the
+    # UNIQUE key; the row id (and any user_badges FK to it) is preserved by the
+    # UPDATE, so re-seeding never orphans awarded badges.
     for (
         code,
         name,
@@ -181,9 +187,13 @@ def _seed_badges(conn: sqlite3.Connection) -> None:
         reward_desc,
     ) in _DEFAULT_BADGES:
         conn.execute(
-            "INSERT OR IGNORE INTO badges "
+            "INSERT INTO badges "
             "(code, name, description, criteria_type, criteria_value, reward_type, "
-            "reward_description) VALUES (?,?,?,?,?,?,?)",
+            "reward_description) VALUES (?,?,?,?,?,?,?) "
+            "ON CONFLICT(code) DO UPDATE SET "
+            "name = excluded.name, description = excluded.description, "
+            "criteria_type = excluded.criteria_type, criteria_value = excluded.criteria_value, "
+            "reward_type = excluded.reward_type, reward_description = excluded.reward_description",
             (code, name, description, criteria_type, criteria_value, reward_type, reward_desc),
         )
     conn.commit()

@@ -72,11 +72,15 @@ def _load_profile_dict(path: Path) -> Optional[Dict[str, Any]]:
 
     `ValueError` covers both `json.JSONDecodeError` and `UnicodeDecodeError`
     (raised by `read_text()` on invalid UTF-8) — both are `ValueError`
-    subclasses.
+    subclasses. `RecursionError` is caught explicitly because it is *not* a
+    `ValueError` subclass but deeply-nested JSON can still trigger it; letting
+    it escape would crash `_build_index`, leave `_index` as None, and break
+    every subsequent lookup — exactly the "never raise" failure this contract
+    forbids.
     """
     try:
         data = json.loads(path.read_text())
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, RecursionError) as exc:
         logger.warning("personality profile %s could not be read/parsed: %s", path, exc)
         return None
     if not isinstance(data, dict):
