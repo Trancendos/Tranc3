@@ -29,7 +29,6 @@ from service import LRUCache  # noqa: F401
 __all__ = [
     "app",
     "db",
-    "_INTERNAL_SECRET",
     "AIDatabase",
     "ChatMessage",
     "ChatCompletionRequest",

@@ -89,15 +89,21 @@ actually holds it right now."
 | Method | Route | Purpose | Auth |
 |---|---|---|---|
 | GET | `/roles/` | List all 43 current assignments | none |
-| GET | `/roles/{location:path}` | Get one Location's current assignment | none |
-| GET | `/roles/{location:path}/history` | Full reassignment history for one Location, newest first | none |
-| POST | `/roles/{location:path}/assign` | Assign or reassign an AI — body `{"ai_name": "...", "reason": "..."}` | **admin role required** |
-| DELETE | `/roles/{location:path}/assign` | Vacate the role (sets `assigned_ai` to `null`) — optional body `{"reason": "..."}` | **admin role required** |
+| GET | `/roles/{location}` | Get one Location's current assignment | none |
+| GET | `/roles/{location}/history` | Full reassignment history for one Location, newest first | none |
+| POST | `/roles/{location}/assign` | Assign or reassign an AI — body `{"ai_name": "...", "reason": "..."}` | **admin role required** |
+| DELETE | `/roles/{location}/assign` | Vacate the role (sets `assigned_ai` to `null`) — optional body `{"reason": "..."}` | **admin role required** |
 
 Read routes are open, matching most other registry-style modules on this platform (The Library,
 API Marketplace, etc.). Mutating routes require `role == "admin"` on the caller's JWT
 (`Depends(get_current_user)`, same dependency used by DevOcity and others) — reassigning who holds
 a platform-wide Job Description is a governance action, not a self-service, per-user operation.
+
+The route table above shows `{location}`, matching what FastAPI's generated OpenAPI spec (and
+therefore `/docs`, SDK generators, etc.) actually displays — FastAPI strips the `:path` converter
+suffix from the path-parameter name in its OpenAPI output. The underlying implementation still
+uses `:path` internally (see below) so it works correctly; only the public-facing route
+notation differs from the source code.
 
 All four single-location routes use FastAPI's `:path` converter (not the default segment
 converter) because **ChronosSphere / ArcStream** — one of the 43 canonical locations — contains a

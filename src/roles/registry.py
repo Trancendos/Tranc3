@@ -16,6 +16,7 @@ trail survive restarts. Every reassignment is recorded in
 from __future__ import annotations
 
 import sqlite3
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +60,13 @@ class RoleRegistry:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # `check_same_thread=False` plus FastAPI's threadpool (routes are
+        # plain `def`, not `async def`) means assign_ai/remove_ai's
+        # read-modify-write (SELECT current -> UPDATE -> INSERT history ->
+        # commit) can genuinely interleave across threads. This lock makes
+        # each call atomic so a concurrent reassignment can't record a
+        # `previous_ai` that's already stale by the time it commits.
+        self._lock = threading.Lock()
         self._init_schema()
         self._seed_defaults()
 
@@ -154,22 +162,23 @@ class RoleRegistry:
         """Assign (or reassign) an AI to a location's Job Description."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
-        current = self.get_role(location)
-        previous_ai = current.assigned_ai if current else None
-        now = time.time()
-        self._conn.execute(
-            "UPDATE role_assignments SET assigned_ai = ?, assigned_at = ?, assigned_by = ? "
-            "WHERE location = ?",
-            (ai_name, now, changed_by, location),
-        )
-        self._conn.execute(
-            "INSERT INTO role_assignment_history "
-            "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (location, previous_ai, ai_name, now, changed_by, reason),
-        )
-        self._conn.commit()
-        return self.get_role(location)  # type: ignore[return-value]
+        with self._lock:
+            current = self.get_role(location)
+            previous_ai = current.assigned_ai if current else None
+            now = time.time()
+            self._conn.execute(
+                "UPDATE role_assignments SET assigned_ai = ?, assigned_at = ?, assigned_by = ? "
+                "WHERE location = ?",
+                (ai_name, now, changed_by, location),
+            )
+            self._conn.execute(
+                "INSERT INTO role_assignment_history "
+                "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (location, previous_ai, ai_name, now, changed_by, reason),
+            )
+            self._conn.commit()
+            return self.get_role(location)  # type: ignore[return-value]
 
     def remove_ai(
         self,
@@ -180,22 +189,23 @@ class RoleRegistry:
         """Vacate a location's Job Description — leaves the role unassigned."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
-        current = self.get_role(location)
-        previous_ai = current.assigned_ai if current else None
-        now = time.time()
-        self._conn.execute(
-            "UPDATE role_assignments SET assigned_ai = NULL, assigned_at = ?, assigned_by = ? "
-            "WHERE location = ?",
-            (now, changed_by, location),
-        )
-        self._conn.execute(
-            "INSERT INTO role_assignment_history "
-            "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
-            "VALUES (?, ?, NULL, ?, ?, ?)",
-            (location, previous_ai, now, changed_by, reason or "unassigned"),
-        )
-        self._conn.commit()
-        return self.get_role(location)  # type: ignore[return-value]
+        with self._lock:
+            current = self.get_role(location)
+            previous_ai = current.assigned_ai if current else None
+            now = time.time()
+            self._conn.execute(
+                "UPDATE role_assignments SET assigned_ai = NULL, assigned_at = ?, "
+                "assigned_by = ? WHERE location = ?",
+                (now, changed_by, location),
+            )
+            self._conn.execute(
+                "INSERT INTO role_assignment_history "
+                "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
+                "VALUES (?, ?, NULL, ?, ?, ?)",
+                (location, previous_ai, now, changed_by, reason or "unassigned"),
+            )
+            self._conn.commit()
+            return self.get_role(location)  # type: ignore[return-value]
 
     def get_history(self, location: str) -> List[AssignmentHistoryEntry]:
         if location not in PLATFORM_ENTITIES:
@@ -223,6 +233,7 @@ class RoleRegistry:
 
 
 _registry: Optional[RoleRegistry] = None
+_registry_lock = threading.Lock()
 
 
 def get_registry() -> RoleRegistry:
@@ -230,5 +241,7 @@ def get_registry() -> RoleRegistry:
     this codebase (`get_devocity()`, `get_library()`, `get_marketplace()`)."""
     global _registry
     if _registry is None:
-        _registry = RoleRegistry()
+        with _registry_lock:
+            if _registry is None:
+                _registry = RoleRegistry()
     return _registry

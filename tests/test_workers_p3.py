@@ -17,9 +17,9 @@ P3 Workers covered:
 
 from __future__ import annotations
 
-import importlib
+import atexit
 import os
-import sys
+import shutil
 import tempfile
 import uuid
 from pathlib import Path
@@ -27,6 +27,8 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests._worker_import_utils import import_worker as _import_worker
 
 # ---------------------------------------------------------------------------
 # Import helpers
@@ -44,6 +46,7 @@ _TRANC3_ROOT = Path(__file__).resolve().parent.parent
 # always sets these env vars' real values, this only fills the gap when
 # they're unset.
 _TEST_DATA_DIR = tempfile.mkdtemp(prefix="tranc3-test-p3-")
+atexit.register(shutil.rmtree, _TEST_DATA_DIR, ignore_errors=True)
 os.environ.setdefault("ANALYTICS_DB_PATH", os.path.join(_TEST_DATA_DIR, "analytics.db"))
 os.environ.setdefault("ANALYTICS_DUCKDB_PATH", os.path.join(_TEST_DATA_DIR, "analytics.duckdb"))
 os.environ.setdefault("CACHE_DB_PATH", os.path.join(_TEST_DATA_DIR, "cache.db"))
@@ -55,46 +58,6 @@ os.environ.setdefault("DB_PATH", os.path.join(_TEST_DATA_DIR, "health_aggregator
 os.environ.setdefault("STORAGE_DB_PATH", os.path.join(_TEST_DATA_DIR, "storage.db"))
 os.environ.setdefault("STORAGE_DUCKDB_PATH", os.path.join(_TEST_DATA_DIR, "storage.duckdb"))
 os.environ.setdefault("STORAGE_LOCAL_ROOT", os.path.join(_TEST_DATA_DIR, "objects"))
-
-
-_SHIM_MODULE_NAMES = ("main", "router", "config", "database", "service", "models")
-
-
-def _import_worker(module_dotted: str, file_path: Path):
-    """Import a worker module from a hyphenated path via importlib.
-
-    Adds the worker's own directory to sys.path for the duration of the
-    import so shim-style workers (e.g. the-grid's worker.py -> main.py)
-    can resolve their bare sibling imports, matching how the Dockerfile
-    COPYs them flat into the container's WORKDIR.
-
-    Many workers use identically-named internal modules (main.py, router.py,
-    config.py, database.py, service.py, models.py). A bare `from router
-    import x` caches under sys.modules["router"] — without eviction, the
-    *next* worker's `from router import y` would silently reuse the first
-    worker's cached module instead of re-resolving against its own
-    sys.path entry. Evict + restore around each import so every worker gets
-    a fresh resolution of its own same-named siblings.
-    """
-    worker_dir = str(file_path.parent)
-    inserted = worker_dir not in sys.path
-    if inserted:
-        sys.path.insert(0, worker_dir)
-    saved = {name: sys.modules.pop(name, None) for name in _SHIM_MODULE_NAMES}
-    try:
-        spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[module_dotted] = mod
-        spec.loader.exec_module(mod)
-        return mod
-    finally:
-        if inserted:
-            sys.path.remove(worker_dir)
-        for name, old_mod in saved.items():
-            if old_mod is not None:
-                sys.modules[name] = old_mod
-            else:
-                sys.modules.pop(name, None)
 
 
 analytics_mod = _import_worker(
