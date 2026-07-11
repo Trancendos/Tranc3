@@ -227,6 +227,32 @@ class TestListRelationships:
 
 
 class TestActivityFeed:
+    def test_negative_limit_rejected(self, registry):
+        with pytest.raises(ValueError):
+            registry.get_feed(limit=-1)
+
+    def test_zero_limit_rejected(self, registry):
+        with pytest.raises(ValueError):
+            registry.get_feed(limit=0)
+
+    def test_non_serializable_details_raises_before_any_mutation(self, registry):
+        before = registry.get_relationship("Dorris Fontaine", "Larry Lowhammer")
+        with pytest.raises(TypeError):
+            registry.record_event(
+                actor_ai="Dorris Fontaine",
+                event_type="ai_interaction",
+                target_ai="Larry Lowhammer",
+                sentiment="positive",
+                summary="bad details",
+                details={"not_serializable": {1, 2, 3}},
+            )
+        # Neither the relationship nudge nor the activity row should have
+        # been applied — the failure must happen before either mutation.
+        after = registry.get_relationship("Dorris Fontaine", "Larry Lowhammer")
+        assert after.score == before.score
+        assert after.interactions_count == before.interactions_count
+        assert len(registry.get_feed()) == 0
+
     def test_feed_filters_by_ai(self, registry):
         registry.record_event(actor_ai="Dorris Fontaine", event_type="system", summary="a")
         registry.record_event(actor_ai="Larry Lowhammer", event_type="system", summary="b")

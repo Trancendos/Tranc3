@@ -67,21 +67,27 @@ with no specific counterpart AI — feeds the brochure's sentiment stats, not th
   score by a base delta (`±5`), scaled by both AIs' personality traits (§5) — more agreeable/
   empathetic AIs swing further positive; more assertive/neurotic AIs swing further negative.
   `sentiment="neutral"` interactions are recorded in the feed but don't move the score.
-- **Decay**: every stored score decays toward its baseline with a ~10-day half-life, computed
-  lazily at read time (no background job) — a score frozen by inactivity trends back toward neutral
-  rather than staying artificially blocked or trusted forever.
+- **Decay**: every stored score decays toward its *own pair's baseline* (§4 above — `+25` for a
+  same-Pillar pair, `0` otherwise) with a ~10-day half-life, computed lazily at read time (no
+  background job). A same-Pillar pair pushed to `-100` and then left idle trends back up toward
+  its `+25` baseline, not toward `0` — the decay target is per-pair, not a single global "neutral"
+  point.
 - **Redemption is structural**: scores are clamped to `[-100, 100]` but never locked. A relationship
   driven to `-100` ("blocked") can always recover — every future positive interaction, or simple
   time passing (decay), moves it back up. There is no code path that makes a block permanent.
-- **Permission tiers** (inclusive lower bound on each threshold):
+- **Permission tiers** (inclusive lower bound on each threshold) — these are **advisory
+  relationship-quality signals**, not an enforced access-control mechanism. Nothing outside
+  `src/relations/` currently reads or acts on a tier to actually grant or deny access to anything;
+  the wording below describes what a tier is *meant to represent* for a future consumer (or a
+  human operator reading the brochure), not a security guarantee this module enforces today:
 
-  | Score range | Tier | Meaning |
+  | Score range | Tier | Represents |
   |---|---|---|
-  | `≥ 60` | `trusted` | full access, unique trusted interactions |
-  | `[20, 60)` | `friendly` | normal, cooperative access |
-  | `[-20, 20)` | `neutral` | cautious/default access |
-  | `[-60, -20)` | `restricted` | limited access |
-  | `< -60` | `blocked` | blocked from that AI's Location — but redeemable |
+  | `≥ 60` | `trusted` | high trust, favorable for deeper/unique interactions |
+  | `[20, 60)` | `friendly` | normal, cooperative standing |
+  | `[-20, 20)` | `neutral` | cautious/default standing |
+  | `[-60, -20)` | `restricted` | strained standing |
+  | `< -60` | `blocked` | severely strained standing — but always redeemable |
 
 ## 5. Personality quirks (`src/relations/personality.py`)
 
@@ -95,6 +101,18 @@ flavor and sharper nudges, it's never required.
 - `positivity_multiplier` — driven by `agreeableness`/`empathy` (≈0.7×–1.3×).
 - `negativity_multiplier` — driven by `assertiveness`/`neuroticism` (≈0.7×–1.3×).
 - Brochure flavor text pulls the resident's `description` and `style.tone` when a profile is found.
+- Malformed profiles (invalid JSON, a JSON array instead of an object, `"style": null`, non-dict
+  `"traits"`) are treated the same as a missing profile — logged nowhere, silently neutral — since
+  the module's whole contract is "never raise, always fall back." Two profile files sharing the
+  same `code_name` **is** logged (a `logger.warning` naming both files) since that's a genuine data
+  problem worth surfacing, not an expected "profile missing" case.
+- The profiles directory is resolved as a path relative to this repo's own source tree
+  (`Path(__file__).resolve().parents[2] / "src" / "personality" / "profiles"`), not via
+  `importlib.resources` package-data lookup. This matches how every other in-repo module on this
+  platform resolves its own local paths (workers' `config.py` files, the Role Registry's
+  `data/role_registry.db`, etc.) and this platform's deployment model — a single checked-out repo
+  running via `docker-compose.production.yml`, not a `pip`-installed package — so it isn't
+  addressed here; would need revisiting only if that deployment model itself changed.
 
 ## 6. Automated trigger: Role Registry integration
 
@@ -119,13 +137,13 @@ two modules remain independently testable; `tests/test_roles.py` does not depend
 | GET | `/relations/locations/{location}/brochure` | The Location brochure | none |
 | GET | `/relations/{ai_a}/{ai_b}` | One pairwise relationship score | none |
 | GET | `/relations/{ai}` | One AI's full relationship list (all 38 others) | none |
-| POST | `/relations/events` | Record an activity event | **any authenticated caller** |
+| POST | `/relations/events` | Record an activity event | **admin role required** |
 
 Read routes are public, matching the Role Registry's convention. `POST /relations/events` requires
-authentication (any role, not admin-only) — it's meant to be called by the platform's own
-orchestration/agent layer or an operator tool, not the public, since it's the one route that
-mutates state; unlike Role assignment, recording an activity event isn't itself a governance action
-requiring `admin`.
+`role == "admin"` on the caller's JWT, same as the Role Registry's mutating routes — `actor_ai` is
+caller-supplied rather than derived from the JWT, so a non-admin gate would let any authenticated
+user inject events attributed to *any* AI (including fabricated `system` events) into a shared feed
+and relationship matrix.
 
 Like the Role Registry, the single-location brochure route uses FastAPI's `:path` converter
 internally so "ChronosSphere / ArcStream" (the one canonical Location with a literal `/`) resolves

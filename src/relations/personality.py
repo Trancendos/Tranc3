@@ -12,9 +12,12 @@ so every lookup falls back to a neutral default rather than raising.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 _PROFILES_DIR = Path(__file__).resolve().parents[2] / "src" / "personality" / "profiles"
 
@@ -58,18 +61,41 @@ _cache: Dict[str, PersonalityQuirks] = {}
 _index: Optional[Dict[str, Path]] = None
 
 
+def _load_profile_dict(path: Path) -> Optional[Dict[str, Any]]:
+    """Read+parse one profile file, returning None on any I/O, JSON, or
+    shape problem — this loader's whole contract is "never raise, always
+    fall back to neutral," so a malformed profile (unreadable file, invalid
+    JSON, a JSON array instead of an object, `"style": null`, etc.) is
+    handled the same way as a missing one."""
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
 def _build_index() -> Dict[str, Path]:
     index: Dict[str, Path] = {}
     if not _PROFILES_DIR.is_dir():
         return index
-    for path in _PROFILES_DIR.glob("*.json"):
-        try:
-            data = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError):
+    for path in sorted(_PROFILES_DIR.glob("*.json")):
+        data = _load_profile_dict(path)
+        if data is None:
             continue
         code_name = data.get("code_name")
-        if code_name:
-            index[code_name] = path
+        if not code_name:
+            continue
+        if code_name in index:
+            logger.warning(
+                "personality profile code_name collision: %r defined in both %s and %s — using %s",
+                code_name,
+                index[code_name],
+                path,
+                path,
+            )
+        index[code_name] = path
     return index
 
 
@@ -83,26 +109,26 @@ def get_quirks(code_name: str) -> PersonalityQuirks:
         _index = _build_index()
 
     path = _index.get(code_name)
-    if path is None:
-        result = PersonalityQuirks(code_name=code_name)
-        _cache[code_name] = result
-        return result
-
-    try:
-        data = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError):
+    data = _load_profile_dict(path) if path is not None else None
+    if data is None:
         result = PersonalityQuirks(code_name=code_name)
         _cache[code_name] = result
         return result
 
     traits = dict(_NEUTRAL_TRAITS)
-    traits.update(data.get("traits", {}))
+    raw_traits = data.get("traits")
+    if isinstance(raw_traits, dict):
+        traits.update(raw_traits)
+
+    style = data.get("style")
+    tone = style.get("tone", "neutral") if isinstance(style, dict) else "neutral"
+
     result = PersonalityQuirks(
         code_name=code_name,
-        description=data.get("description", ""),
-        tone=data.get("style", {}).get("tone", "neutral"),
+        description=data.get("description") or "",
+        tone=tone,
         traits=traits,
-        system_prompt_prefix=data.get("system_prompt_prefix", ""),
+        system_prompt_prefix=data.get("system_prompt_prefix") or "",
         found=True,
     )
     _cache[code_name] = result

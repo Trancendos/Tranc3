@@ -53,7 +53,7 @@ class UnknownLocationError(KeyError):
 
 
 def _emit_relations_event(
-    actor_ai: str, location: str, sentiment: str, summary: str, reason: str
+    actor_ai: str, location: str, sentiment: str, summary: str, reason: str, changed_at: float
 ) -> None:
     """Best-effort trigger into the AI-to-AI Relations activity feed.
 
@@ -64,6 +64,13 @@ def _emit_relations_event(
     testable module, and a reassignment must never fail because the
     Relations registry is unavailable, mid-migration, or simply not
     imported in a given test/runtime context.
+
+    This call happens after the role lock is released (see assign_ai/
+    remove_ai), so under concurrent reassignments the Relations feed's own
+    `ts` (stamped by `record_event` at call time) can land in a different
+    order than `role_assignment_history.changed_at`. `changed_at` is
+    threaded through into the event's `details` so the two systems share a
+    canonical ordering key even if their own timestamps disagree.
     """
     try:
         from src.relations.registry import get_relations_registry
@@ -74,7 +81,9 @@ def _emit_relations_event(
             location=location,
             sentiment=sentiment,
             summary=summary,
-            details={"reason": reason} if reason else {},
+            details={"reason": reason, "changed_at": changed_at}
+            if reason
+            else {"changed_at": changed_at},
         )
     except Exception:
         pass
@@ -220,6 +229,7 @@ class RoleRegistry:
             sentiment="positive",
             summary=f"{ai_name} was assigned as {result.job_description} of {location}",
             reason=reason,
+            changed_at=now,
         )
         return result
 
@@ -256,6 +266,7 @@ class RoleRegistry:
                 sentiment="neutral",
                 summary=f"{previous_ai} was vacated from {result.job_description} of {location}",
                 reason=reason,
+                changed_at=now,
             )
         return result
 

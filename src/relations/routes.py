@@ -4,9 +4,12 @@ Location Brochure.
 
 Read routes (feed, relationship lookups, brochure, insights) are
 unauthenticated, matching the Role Assignment Registry's convention.
-`POST /relations/events` requires an authenticated caller (any role) — it's
-meant to be called by the platform's own orchestration/agent layer (or an
-operator), not the public, since it's the one route that mutates state.
+`POST /relations/events` requires an authenticated **admin** — same
+convention as the Role Registry's mutating routes. This is a shared
+activity feed and relationship matrix, not a per-user-owned resource, and
+`actor_ai` is caller-supplied rather than derived from the JWT, so any
+authenticated non-admin caller would otherwise be able to inject events
+attributed to *any* AI (including fabricated `system` events).
 
 Handlers are plain `def`, not `async def` — see src/roles/routes.py for why
 (FastAPI threadpools sync handlers instead of blocking the event loop on
@@ -32,6 +35,13 @@ router = APIRouter(prefix="/relations", tags=["relations"])
 
 _VALID_EVENT_TYPES = ("location_tag", "ai_interaction", "action", "system")
 _VALID_SENTIMENTS = ("positive", "neutral", "negative")
+
+
+def _require_admin(current_user: dict) -> None:
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=403, detail="Admin role required to record relations activity events"
+        )
 
 
 class RecordEventRequest(BaseModel):
@@ -91,6 +101,7 @@ def record_event(
     body: RecordEventRequest,
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
+    _require_admin(current_user)
     if body.event_type not in _VALID_EVENT_TYPES:
         raise HTTPException(
             status_code=422,

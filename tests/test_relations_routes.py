@@ -82,8 +82,19 @@ class TestRecordEventRoute:
         )
         assert resp.status_code in (401, 403)
 
-    def test_any_authenticated_user_can_record(self, client):
+    def test_non_admin_forbidden(self, client):
         client.app.dependency_overrides[get_current_user] = _override("u1", role="user")
+        try:
+            resp = client.post(
+                "/relations/events",
+                json={"actor_ai": "Dorris Fontaine", "event_type": "system", "summary": "x"},
+            )
+            assert resp.status_code == 403
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+    def test_admin_can_record(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.post(
                 "/relations/events",
@@ -103,7 +114,7 @@ class TestRecordEventRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_invalid_event_type_rejected(self, client):
-        client.app.dependency_overrides[get_current_user] = _override("u1", role="user")
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.post(
                 "/relations/events",
@@ -114,7 +125,7 @@ class TestRecordEventRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_invalid_sentiment_rejected(self, client):
-        client.app.dependency_overrides[get_current_user] = _override("u1", role="user")
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.post(
                 "/relations/events",
@@ -130,7 +141,7 @@ class TestRecordEventRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_recorded_event_appears_in_feed(self, client):
-        client.app.dependency_overrides[get_current_user] = _override("u1", role="user")
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             client.post(
                 "/relations/events",

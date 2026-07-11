@@ -28,6 +28,7 @@ goal.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import sqlite3
 import threading
@@ -38,6 +39,8 @@ from typing import Any, Dict, List, Optional
 
 from src.entities.platform import PLATFORM_ENTITIES, get_job_description
 from src.relations.personality import get_quirks
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_DB_PATH = Path("data/relations_registry.db")
 
@@ -282,6 +285,12 @@ class RelationsRegistry:
             raise ValueError(f"invalid sentiment: {sentiment!r}")
         ts = time.time()
         details = details or {}
+        # Serialize before mutating anything — if `details` isn't
+        # JSON-serializable (a set, a datetime, ...), fail here rather than
+        # after the relationship nudge below has already been applied and
+        # committed, which would otherwise leave an orphaned score update
+        # with no matching activity_events row.
+        details_json = json.dumps(details)
         with self._lock:
             if event_type == "ai_interaction" and target_ai:
                 if sentiment != "neutral":
@@ -313,7 +322,7 @@ class RelationsRegistry:
                     target_ai,
                     sentiment,
                     summary,
-                    json.dumps(details),
+                    details_json,
                 ),
             )
             self._conn.commit()
@@ -355,6 +364,12 @@ class RelationsRegistry:
         since_ts: Optional[float] = None,
         limit: int = 50,
     ) -> List[ActivityEvent]:
+        # SQLite treats a negative LIMIT as "no limit" — this is a public
+        # method on a singleton also called internally by get_insights() and
+        # get_location_brochure(), so it must enforce its own positive bound
+        # rather than relying on callers (e.g. the HTTP route) to do it.
+        if limit <= 0:
+            raise ValueError(f"limit must be positive, got {limit!r}")
         clauses = []
         params: List[Any] = []
         if ai:
@@ -385,19 +400,32 @@ class RelationsRegistry:
         if entity is None:
             raise KeyError(location)
 
-        all_events = self.get_feed(location=location, limit=100_000)
+        # Aggregate via SQL (COUNT/GROUP BY) rather than loading every event
+        # for this Location into Python — activity_events is append-only, so
+        # a busy Location's history only grows, and a fixed row cap here
+        # would eventually under-report stats while still presenting them
+        # as complete.
         sentiment_counts = {"positive": 0, "neutral": 0, "negative": 0}
         visitor_counts: Dict[str, int] = {}
-        for evt in all_events:
-            sentiment_counts[evt.sentiment] = sentiment_counts.get(evt.sentiment, 0) + 1
-            visitor_counts[evt.actor_ai] = visitor_counts.get(evt.actor_ai, 0) + 1
+        with self._lock:
+            sentiment_rows = self._conn.execute(
+                "SELECT sentiment, COUNT(*) AS n FROM activity_events "
+                "WHERE location = ? GROUP BY sentiment",
+                (location,),
+            ).fetchall()
+            visitor_rows = self._conn.execute(
+                "SELECT actor_ai, COUNT(*) AS n FROM activity_events "
+                "WHERE location = ? GROUP BY actor_ai ORDER BY n DESC",
+                (location,),
+            ).fetchall()
+        for row in sentiment_rows:
+            sentiment_counts[row["sentiment"]] = row["n"]
+        for row in visitor_rows:
+            visitor_counts[row["actor_ai"]] = row["n"]
 
-        top_visitors = [
-            {"ai": name, "visits": count}
-            for name, count in sorted(visitor_counts.items(), key=lambda kv: kv[1], reverse=True)[
-                :5
-            ]
-        ]
+        top_visitors = [{"ai": row["actor_ai"], "visits": row["n"]} for row in visitor_rows[:5]]
+        total_events = sum(sentiment_counts.values())
+        recent_highlights = self.get_feed(location=location, limit=10)
 
         current_resident = None
         try:
@@ -405,7 +433,12 @@ class RelationsRegistry:
 
             role = get_role_registry().get_role(location)
             current_resident = role.assigned_ai if role else None
+        except ImportError:
+            current_resident = None
         except Exception:
+            logger.warning(
+                "get_location_brochure: role registry lookup failed for %r", location, exc_info=True
+            )
             current_resident = None
 
         job_description = get_job_description(location) or entity.primary_function
@@ -426,11 +459,11 @@ class RelationsRegistry:
             primary_function=entity.primary_function,
             job_description=job_description,
             current_resident=current_resident,
-            total_events=len(all_events),
+            total_events=total_events,
             unique_visitors=len(visitor_counts),
             sentiment_counts=sentiment_counts,
             top_visitors=top_visitors,
-            recent_highlights=all_events[:10],
+            recent_highlights=recent_highlights,
             flavor_text=flavor_text,
         )
 
@@ -440,24 +473,40 @@ class RelationsRegistry:
 
     def get_insights(self, window_days: float = 7.0, limit: int = 10) -> List[Insight]:
         since_ts = time.time() - window_days * 86400.0
-        recent = self.get_feed(since_ts=since_ts, limit=10_000)
         insights: List[Insight] = []
 
-        # Most active location by event count in the window.
-        location_counts: Dict[str, int] = {}
-        location_negative: Dict[str, int] = {}
+        # Location-level aggregates via SQL GROUP BY — no row cap, so these
+        # reflect the entire window regardless of how much activity it
+        # contains, rather than an arbitrary "most recent N events" subset.
+        with self._lock:
+            location_rows = self._conn.execute(
+                "SELECT location, COUNT(*) AS n FROM activity_events "
+                "WHERE ts >= ? AND location IS NOT NULL GROUP BY location",
+                (since_ts,),
+            ).fetchall()
+            negative_rows = self._conn.execute(
+                "SELECT location, COUNT(*) AS n FROM activity_events "
+                "WHERE ts >= ? AND location IS NOT NULL AND sentiment = 'negative' "
+                "GROUP BY location",
+                (since_ts,),
+            ).fetchall()
+            interaction_rows = self._conn.execute(
+                "SELECT actor_ai, target_ai, sentiment FROM activity_events "
+                "WHERE ts >= ? AND event_type = 'ai_interaction' AND target_ai IS NOT NULL",
+                (since_ts,),
+            ).fetchall()
+
+        location_counts: Dict[str, int] = {row["location"]: row["n"] for row in location_rows}
+        location_negative: Dict[str, int] = {row["location"]: row["n"] for row in negative_rows}
         pair_deltas: Dict[tuple[str, str], float] = {}
-        for evt in recent:
-            if evt.location:
-                location_counts[evt.location] = location_counts.get(evt.location, 0) + 1
-                if evt.sentiment == "negative":
-                    location_negative[evt.location] = location_negative.get(evt.location, 0) + 1
-            if evt.event_type == "ai_interaction" and evt.target_ai:
-                key = _pair_key(evt.actor_ai, evt.target_ai)
-                sign = (
-                    1 if evt.sentiment == "positive" else (-1 if evt.sentiment == "negative" else 0)
-                )
-                pair_deltas[key] = pair_deltas.get(key, 0.0) + sign
+        for row in interaction_rows:
+            key = _pair_key(row["actor_ai"], row["target_ai"])
+            sign = (
+                1
+                if row["sentiment"] == "positive"
+                else (-1 if row["sentiment"] == "negative" else 0)
+            )
+            pair_deltas[key] = pair_deltas.get(key, 0.0) + sign
 
         if location_counts:
             busiest = max(location_counts.items(), key=lambda kv: kv[1])
