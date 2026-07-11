@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from shared_core.sanitize import sanitize_for_log
 from src.entities.platform import PLATFORM_ENTITIES, get_job_description
 from src.relations.personality import get_quirks
 
@@ -436,8 +437,14 @@ class RelationsRegistry:
         except ImportError:
             current_resident = None
         except Exception:
+            # `location` is already an allowlisted PLATFORM_ENTITIES key by
+            # this point (the method raises KeyError above otherwise), but
+            # sanitize before logging anyway — defense-in-depth against log
+            # injection (CWE-117) and a barrier CodeQL recognizes.
             logger.warning(
-                "get_location_brochure: role registry lookup failed for %r", location, exc_info=True
+                "get_location_brochure: role registry lookup failed for %r",
+                sanitize_for_log(location),
+                exc_info=True,
             )
             current_resident = None
 
