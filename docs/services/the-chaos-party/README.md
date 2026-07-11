@@ -12,7 +12,7 @@
 > compose `PORT=8079` env; the Dockerfile `EXPOSE`s **8065**; while `docker-compose.production.yml`
 > (Traefik + `ports`) and `CLAUDE.md` use **8079**. So the app listens on 8063 while deployment routes
 > 8079 — a genuine defect (routing would not reach the app). Tracked in issue #188.
-| **Gate tier** | Partial → GOV + RACI + TFM + POL + STD + DDD scoped to the suite that exists |
+| **Gate tier** | Partial → GOV + RACI + TFM + DSM + POL + STD + DDD scoped to the suite that exists |
 
 > **Truthfulness:** claims cite `tests/test_chaos.py`. The Chaos Party's in-repo foundation is a
 > **fault-injection test suite**, not a running HTTP service — the pack documents what it actually
@@ -71,7 +71,7 @@ The suite deliberately introduces failures and asserts graceful degradation:
 
 ## 7. Deployment Scope Matrix (DSM)
 
-- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
 - **Runtime placement:** not a deployable service — `tests/test_chaos.py` is a test suite executed by CI (Forgejo runner, per `CLAUDE.md`'s "All CI/CD runs through Forgejo — NO GitHub Actions"), not a long-running `docker-compose.production.yml` service block.
 - **Persistence:** none — test runs are stateless; results go to `logs/test_results.jsonl` on the runner's own filesystem, not a dedicated volume for this entity.
 

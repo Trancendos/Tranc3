@@ -7,7 +7,7 @@
 | **Status** | 🔧 Partial (per `CLAUDE.md` service table) |
 | **Code** | `web/` (package `tranc3-web`) |
 | **Serve** | static SPA via Nginx on port **8080** (`web/nginx.conf`, `web/Dockerfile`) |
-| **Gate tier** | Partial → GOV + RACI + TFM + POL + STD + DDD scoped to the front-end that exists |
+| **Gate tier** | Partial → GOV + RACI + TFM + DSM + POL + STD + DDD scoped to the front-end that exists |
 
 > **Truthfulness:** claims cite `web/` (stack from `package.json`, structure from `web/src/`, serving from
 > `web/nginx.conf`). Screens beyond those present in `web/src/` (e.g. full forum/email UI implied by the
@@ -69,7 +69,7 @@
 
 ## 7. Deployment Scope Matrix (DSM)
 
-- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py` (repo-wide grep confirms none of the 43 named platform entities branch on `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly). Its deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
 - **Runtime placement:** front-end (`web/`), Partial tier — no `docker-compose.production.yml` service block exists for it (confirmed: no `arcadia`/`web`/`frontend`/`dashboard` compose entry). It is built and served as a static bundle or dev/preview server, not a long-running backend process.
 - **Persistence:** none — a front-end has no server-side state of its own; all data comes from API calls to other entities.
 
