@@ -451,6 +451,27 @@ def health() -> JSONResponse:
     )
 
 
+@_router.get("/cache/status")
+def cache_status() -> Dict[str, Any]:
+    now = time.time()
+    active = sum(1 for _, (_, exp) in _mem.items() if exp is None or exp > now)
+    return {
+        "active_backend": _select_backend(),
+        "keys_in_memory": active,
+        "backends": [
+            {
+                "name": b,
+                "enabled": _ENABLED[b],
+                "healthy": _GUARDS[b].can_allow(),
+                "pheromone": round(_GUARDS[b].pheromone, 4),
+                "calls_in_window": _GUARDS[b].calls_in_window,
+                "quota_remaining": _GUARDS[b].quota_remaining,
+            }
+            for b in _PRIORITY
+        ],
+    }
+
+
 @_router.get("/cache/{key}", response_model=GetResponse)
 async def get_key(key: str) -> GetResponse:
     now = time.time()
@@ -582,27 +603,6 @@ def flush() -> None:
             c.commit()
     except Exception:  # non-fatal on flush
         pass
-
-
-@_router.get("/cache/status")
-def cache_status() -> Dict[str, Any]:
-    now = time.time()
-    active = sum(1 for _, (_, exp) in _mem.items() if exp is None or exp > now)
-    return {
-        "active_backend": _select_backend(),
-        "keys_in_memory": active,
-        "backends": [
-            {
-                "name": b,
-                "enabled": _ENABLED[b],
-                "healthy": _GUARDS[b].can_allow(),
-                "pheromone": round(_GUARDS[b].pheromone, 4),
-                "calls_in_window": _GUARDS[b].calls_in_window,
-                "quota_remaining": _GUARDS[b].quota_remaining,
-            }
-            for b in _PRIORITY
-        ],
-    }
 
 
 app.include_router(_router)
