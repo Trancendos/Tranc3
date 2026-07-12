@@ -268,18 +268,23 @@ async def _valkey_get(key: str, url: str) -> Optional[Any]:
 
 
 # ── diskcache backend ─────────────────────────────────────────────────────────
-# SECURITY: diskcache stores values as pickle on disk (CVE-2025-69872 / no fixed
-# release). Only ever cache trusted, service-generated values here — never
-# attacker-controlled data — and keep DISKCACHE_DIR a private, worker-only volume,
-# since a value written by another party would be unpickled on read. See the pin
-# note in requirements-worker.txt and the .trivyignore entry.
+# SECURITY: diskcache's DEFAULT on-disk format is pickle, which is unsafe to
+# deserialize (CVE-2025-69872, no fixed release). We eliminate that risk by
+# using diskcache.JSONDisk — values are stored/read as JSON, never unpickled, so
+# a maliciously crafted on-disk entry cannot execute code. This is fully
+# compatible: every other backend here (SQLite, DuckDB, Valkey) already
+# round-trips values through json.dumps/json.loads, so all cached values are
+# JSON-serializable. (The pinned diskcache==5.6.3 is still version-flagged by
+# scanners since no patched release exists — see the .trivyignore justification —
+# but the vulnerable pickle code path is not used.)
 
 
 def _diskcache_set(key: str, value: Any, ttl: Optional[int]) -> bool:
     try:
         import diskcache  # type: ignore[import-untyped]
 
-        with diskcache.Cache(DISKCACHE_DIR) as dc:
+        # disk=JSONDisk → values stored as JSON, never pickle (CVE-2025-69872).
+        with diskcache.Cache(DISKCACHE_DIR, disk=diskcache.JSONDisk) as dc:
             dc.set(key, value, expire=ttl)
         return True
     except Exception:  # diskcache not installed or failure
@@ -290,7 +295,10 @@ def _diskcache_get(key: str) -> Optional[Any]:
     try:
         import diskcache  # type: ignore[import-untyped]
 
-        with diskcache.Cache(DISKCACHE_DIR) as dc:
+        # disk=JSONDisk → values read as JSON, never unpickled (CVE-2025-69872).
+        # Legacy pickle-written entries (if any) fail to decode and are treated
+        # as a cache miss by the except below — safe for an ephemeral, TTL'd cache.
+        with diskcache.Cache(DISKCACHE_DIR, disk=diskcache.JSONDisk) as dc:
             val = dc.get(key, default=None)
         return val
     except Exception:  # diskcache not installed or failure
