@@ -39,10 +39,17 @@ class FakeUserManager:
         return True
 
 
-def _checkout_event(user_id="u-123", tier="pro"):
+def _checkout_event(user_id="u-123", tier="pro", event_id="evt_1", payment_status="paid"):
     return {
+        "id": event_id,
         "type": "checkout.session.completed",
-        "data": {"object": {"id": "cs_1", "metadata": {"user_id": user_id, "tier": tier}}},
+        "data": {
+            "object": {
+                "id": "cs_1",
+                "payment_status": payment_status,
+                "metadata": {"user_id": user_id, "tier": tier},
+            }
+        },
     }
 
 
@@ -52,18 +59,23 @@ def _checkout_event(user_id="u-123", tier="pro"):
 
 
 def test_checkout_completed_yields_grant_plan():
-    plan = plan_from_event(_checkout_event(tier="business"))
-    assert plan == {
-        "action": "grant",
-        "user_id": "u-123",
-        "tier": "business",
-        "event": "checkout.session.completed",
-    }
+    plan = plan_from_event(_checkout_event(tier="business", event_id="evt_9"))
+    assert plan["action"] == "grant"
+    assert plan["user_id"] == "u-123"
+    assert plan["tier"] == "business"
+    assert plan["event"] == "checkout.session.completed"
+    assert plan["event_id"] == "evt_9"
+    assert plan["is_payment"] is True
 
 
 def test_checkout_free_or_unknown_tier_is_ignored():
     assert plan_from_event(_checkout_event(tier="free")) is None
     assert plan_from_event(_checkout_event(tier="bogus")) is None
+
+
+def test_checkout_unpaid_is_not_granted():
+    # An async payment method can complete the session while still unpaid.
+    assert plan_from_event(_checkout_event(payment_status="unpaid")) is None
 
 
 def test_checkout_without_user_id_is_ignored():
@@ -83,12 +95,14 @@ def test_subscription_deleted_yields_downgrade():
 
 
 def test_subscription_updated_inactive_status_downgrades():
-    evt = {
-        "type": "customer.subscription.updated",
-        "data": {"object": {"status": "canceled", "metadata": {"user_id": "u-9"}}},
-    }
-    plan = plan_from_event(evt)
-    assert plan["action"] == "downgrade" and plan["tier"] == "free"
+    # Every non-paying status (incl. the payment-never-succeeded ones) downgrades.
+    for status in ("canceled", "unpaid", "incomplete", "incomplete_expired"):
+        evt = {
+            "type": "customer.subscription.updated",
+            "data": {"object": {"status": status, "metadata": {"user_id": "u-9"}}},
+        }
+        plan = plan_from_event(evt)
+        assert plan["action"] == "downgrade" and plan["tier"] == "free", status
 
 
 def test_subscription_updated_active_maps_price_to_tier(monkeypatch):
@@ -106,6 +120,8 @@ def test_subscription_updated_active_maps_price_to_tier(monkeypatch):
     }
     plan = plan_from_event(evt)
     assert plan["action"] == "grant" and plan["tier"] == "pro"
+    # A subscription state change is not a payment — must not book revenue.
+    assert plan["is_payment"] is False
 
 
 def test_unrelated_event_is_ignored():
@@ -127,15 +143,62 @@ def test_tier_for_price_id(monkeypatch):
 def test_apply_provision_persists_by_id_and_books_revenue():
     fum = FakeUserManager()
     before = billing.revenue_tracker.summary().get("total_gbp", 0.0)
-    result = provision_from_event(fum, _checkout_event(user_id="u-77", tier="pro"))
+    result = provision_from_event(
+        fum, _checkout_event(user_id="u-77", tier="pro", event_id="evt_persist")
+    )
     assert result["handled"] is True
     assert result["action"] == "grant"
     assert result["tier"] == "pro"
     assert result["user_persisted"] is True
+    assert result["revenue_booked"] is True
     assert fum.by_id["u-77"] == "pro"
     # recurring revenue booked for the pro price
     after = billing.revenue_tracker.summary().get("total_gbp", 0.0)
-    assert after >= before + TIERS["pro"]["price_gbp"]
+    assert after == before + TIERS["pro"]["price_gbp"]
+
+
+def test_revenue_booked_once_per_event_id():
+    """Stripe delivers at least once; re-processing the same event must not
+    double-book revenue (charliecreates/Sourcery idempotency requirement)."""
+    fum = FakeUserManager()
+    evt = _checkout_event(user_id="u-dup", tier="business", event_id="evt_dupe_1")
+    before = billing.revenue_tracker.summary().get("total_gbp", 0.0)
+
+    first = provision_from_event(fum, evt)
+    second = provision_from_event(fum, evt)  # duplicate delivery / retry
+    third = provision_from_event(fum, evt)  # e.g. via the other webhook route
+
+    assert first["revenue_booked"] is True
+    assert second["revenue_booked"] is False
+    assert third["revenue_booked"] is False
+    after = billing.revenue_tracker.summary().get("total_gbp", 0.0)
+    # booked exactly once despite three deliveries
+    assert after == before + TIERS["business"]["price_gbp"]
+
+
+def test_subscription_updated_grant_books_no_revenue(monkeypatch):
+    """An active subscription.updated provisions the tier but is not a payment,
+    so it must never book revenue (renewals arrive as invoice.payment_succeeded)."""
+    monkeypatch.setitem(TIERS["pro"], "stripe_price_id", "price_PRO_x")
+    fum = FakeUserManager()
+    evt = {
+        "id": "evt_sub_upd",
+        "type": "customer.subscription.updated",
+        "data": {
+            "object": {
+                "status": "active",
+                "metadata": {"user_id": "u-sub"},
+                "items": {"data": [{"price": {"id": "price_PRO_x"}}]},
+            }
+        },
+    }
+    before = billing.revenue_tracker.summary().get("total_gbp", 0.0)
+    result = provision_from_event(fum, evt)
+    assert result["action"] == "grant" and result["tier"] == "pro"
+    assert result["revenue_booked"] is False
+    assert fum.by_id["u-sub"] == "pro"  # tier still provisioned
+    after = billing.revenue_tracker.summary().get("total_gbp", 0.0)
+    assert after == before  # no revenue
 
 
 def test_apply_provision_falls_back_to_username_when_id_unknown():

@@ -207,7 +207,18 @@ class DBUserManager:
         webhook-driven provisioning must be able to resolve by id. Returns True
         only if a matching user was found and updated.
         """
-        session = self._get_session()
+        # Skip the DB lookup entirely for non-UUID identifiers: apply_provision
+        # deliberately calls this with a *username* as a fallback, and querying
+        # User.id == "<username>" raises a DataError (invalid UUID) that would spam
+        # the logs on every such fallback. A bad UUID here just means "try the
+        # username path", not an error.
+        is_uuid = True
+        try:
+            uuid.UUID(str(user_id))
+        except (ValueError, AttributeError, TypeError):
+            is_uuid = False
+
+        session = self._get_session() if is_uuid else None
         if session:
             try:
                 from src.database.schema import User
@@ -218,6 +229,7 @@ class DBUserManager:
                     session.commit()
                     return True
             except Exception as e:
+                session.rollback()
                 logger.error("DB update_tier_by_id failed: %s", sanitize_for_log(e))
             finally:
                 session.close()

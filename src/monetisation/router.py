@@ -142,8 +142,10 @@ async def stripe_webhook(
     from src.monetisation.billing import provision_from_event, stripe_manager
 
     body = await request.body()
+    # Pass the RAW bytes: Stripe's signature verification is over the exact bytes,
+    # and a decode/re-encode round-trip can change them and fail verification.
     result = stripe_manager.handle_webhook(
-        payload=body.decode(),
+        payload=body,
         sig_header=stripe_signature or "",
     )
     # handle_webhook returns None on an invalid signature or when Stripe isn't
