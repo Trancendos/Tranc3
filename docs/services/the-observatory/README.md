@@ -123,7 +123,24 @@
 - **Degradation:** if the store is unavailable, events buffer and flush on recovery; metric
   and span shims no-op so host services are unaffected.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`monitoring`, port 8007) — does not run inside the `tranc3-backend` monolith. **No Traefik label is present on this compose service** — it is currently internal-only, reached by container DNS name + port, not via public routing.
+- **Persistence:** named volume attached to the `monitoring` compose service — state survives container restarts/redeploys in any mode
+- **Note:** this entity has **two** deployment surfaces — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a separate standalone worker (`monitoring`, port 8007). The table below describes the standalone worker; the monolith-mounted router follows the monolith's own placement (see the monolith pattern noted across this platform's other entities) and shares its volume.
+- **Note:** `CLAUDE.md`'s worker map also lists separate `audit-service` (8025) and `observatory` (8065) workers under this same entity — this DSM describes `monitoring` (the pack's own recorded worker); the other two are not verified against this pack and may carry different persistence characteristics.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `monitoring` compose block runs on a single cloud host, reached internally (no Traefik route) | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `monitoring` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `monitoring` compose block, run entirely on local/Citadel hardware, still reached internally (no Traefik route) | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Technology | Version | Licence | Zero-cost? | CVE posture |
 |-------|-----------|---------|---------|:----------:|-------------|
@@ -134,7 +151,19 @@
 | Transport | HTTP + SSE | — | — | ✅ | — |
 | LLM trace (opt) | Langfuse integration | pinned | MIT | ✅ | optional |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `monitoring` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Yes | both surfaces: the monolith router via `api`, **and** the standalone `monitoring` worker has its own service block in `docker-compose.uat.yml` | genuinely the richer case among monolith+worker entities — this one has real UAT coverage for both surfaces |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** only Dev is missing for the standalone `monitoring` worker; UAT and Production both exercise it. The Observatory is one of only two dual-surface entities (the other being The Digital Grid) whose standalone worker has any pre-production coverage at all.
+
+## 10. Policy (POL)
 
 - **Applicable platform policies:** `POL-OPS-002`, `POL-PRI-001`; ISO 27001 audit controls — see `docs/policies/`, `docs/compliance/`.
 - **Service-specific rules:** audit events are append-only and tamper-evident (`/verify`);
@@ -142,14 +171,14 @@
 - **Data handling:** GDPR — audit data may be personal; retention + DSR per `PROC-DSR-001`.
 - **Access:** query/export authorized-only; actor recorded on every event.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Deploy:** `monitoring` worker (port 8007) + in-process instrumentation (`worker_setup.py`); CI via `.forgejo/workflows/`.
 - **Instrument a service:** wire `AuditMiddleware` + trace propagation via `worker_setup.py`.
 - **Investigate an incident:** `/search` + `/recent` by `trace_id`/actor; `/verify` for integrity.
 - **Retention/archival change:** via change gate (`docs/procedures/PROC-CHG-001-Change-Request.md`).
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /health` → 200; platform health via `HealthChecker`/`SystemHealth`.
 - **Key alerts → action:**
@@ -165,7 +194,7 @@
 - **Rollback:** redeploy previous image; audit schema is append-compatible.
 - **Recovery:** buffered events flush on store recovery; historical events restored from backup.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - **Tracing standard:** W3C TraceContext (`traceparent`); OpenTelemetry semantics.
 - **Metrics standard:** Prometheus exposition; worker-info metric per service.

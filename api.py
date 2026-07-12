@@ -877,6 +877,27 @@ from src.apimarket.routes import (
 
 app.include_router(_apimarket_router)
 
+# ── Role Assignment Registry (Location -> Job Description -> assigned AI) ────
+from src.roles.routes import (
+    router as _roles_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_roles_router)
+
+# ── AI-to-AI Relationship Matrix + Activity Feed + Location Brochure ─────────
+from src.relations.routes import (
+    router as _relations_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_relations_router)
+
+# ── Location Access & Subscription Registry (opt-in per-Location gating) ─────
+from src.access.routes import (
+    router as _access_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_access_router)
+
 # ── Search & RAG API (hybrid BM25+vector, Meilisearch+Qdrant+Weaviate+Chroma) ─
 from src.routers.search_api import (
     router as _search_router,  # noqa: F401  # intentional top-level import

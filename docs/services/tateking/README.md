@@ -116,7 +116,23 @@
 - **Degradation:** Remotion failures fall through to FFmpeg automatically — a genuine, working
   degradation path, not merely documented intent.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`tateking`, port 8061) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `tateking` compose service — state survives container restarts/redeploys in any mode
+- **Note:** FFmpeg/Remotion video rendering is CPU/memory-intensive; free-tier Cloud-Only hosts may throttle or time out on larger render jobs sooner than Local-Only hardware would.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tateking` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `tateking` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `tateking` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -125,7 +141,19 @@
 | Storage | in-memory `_jobs` dict, no persistence | zero infra cost, no durability |
 | Auth | none in deployed `main.py`; `worker.py`'s unused alt has `X-Internal-Secret` with an insecure fallback | zero cost, currently unenforced |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment, and no local run command is documented in §11 PROC either |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `tateking` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks, nor is a local run command documented in §11 PROC — Production is genuinely the first place it runs. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - **Security gap, not fixed:** no route-level auth on any route, wildcard CORS
   (`allow_origins=["*"]`), and internet-facing routing via Traefik `websecure` — any caller can
@@ -133,14 +161,14 @@
 - Zero-cost mandate: fully honored — FFmpeg and Remotion are both self-hosted/OSS, matching
   `CLAUDE.md`'s Recommended Open Source Foundations table.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create a video:** `POST /video/create` — tries Remotion, falls back to FFmpeg automatically.
 - **Compose from prior jobs:** `POST /video/compose` with a list of prior job IDs — paths are
   resolved server-side, not caller-supplied.
 - **Check job status:** `GET /video/status/{job_id}` — in-memory only, lost on restart.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Every route 404s in production despite the container being healthy:** was the exact symptom
   of the pre-fix Traefik defect (``PathPrefix(`/tateking`)`` with no `StripPrefix` middleware,
@@ -152,7 +180,7 @@
   `REMOTION_SERVE_URL` isn't set, or if `remotion-render-service` is unreachable — check that
   service's own health, not this module's logic.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "TateKing" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Config modules invoked via bare `python <file>.py` (not a hardcoded `uvicorn --port` CLI flag)

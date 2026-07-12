@@ -181,7 +181,23 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
   complete for basic playlist/track CRUD but has not been reviewed for concurrency safety
   beyond SQLite's own WAL mode guarantees.
 
-## 7. Technology & Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`warp-radio`, port 8073) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** **no named volume** on the `warp-radio` compose service — any on-disk state is lost on container replace/redeploy in every mode alike
+- **Note:** see the Cloud-Only caveat on egress bandwidth — this is a genuine per-mode cost difference, not just durability.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `warp-radio` compose block runs on a single cloud host; Traefik/edge in front | ephemeral — no volume means state does not survive a redeploy | Icecast-style audio streaming needs sustained outbound bandwidth — free-tier cloud egress quotas make Cloud-Only the most quota-constrained mode for this specific entity, unlike most others on this platform |
+| **Hybrid** | same `warp-radio` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `warp-radio` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local (still no volume — same durability gap as Cloud-Only) | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Choice | Cost |
 |---|---|---|
@@ -190,7 +206,19 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
 | Streaming relay (undeployed, unprovisioned) | Icecast (GPL) | zero (self-hosted, not yet deployed) |
 | Reverse proxy | Traefik | zero (already in stack) |
 
-## 8. Policy & Compliance (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment (see §11 PROC for a local run command) |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `warp-radio` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks before Production, though a local run command may be documented in §11 PROC. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy & Compliance (POL)
 
 - No PII is handled by the deployed stub.
 - If `worker.py` is ever promoted: playlist/track data is not inherently sensitive, but the
@@ -198,7 +226,7 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
   missing env var, per the platform's zero-trust IAM principle already applied elsewhere
   (`src/auth/zero_trust.py`).
 
-## 9. Procedures (PROC)
+## 11. Procedures (PROC)
 
 - **Local dev:** `cd workers/warp-radio && pip install -r requirements.txt && python main.py`
   (runs the deployed stub) or `python worker.py` (runs the alternate — its `_auth()` check is
@@ -209,7 +237,7 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
   `CMD` to build the chosen file, (4) re-run this doc-pack's DDD section against the newly
   deployed surface.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /warp-radio/health` (via Traefik, post-StripPrefix) or
   `GET /health` directly on port 8073.
@@ -220,7 +248,7 @@ client references to `/warp-radio` outside this worker and compose/monitoring co
   Expected — `main.py` and `worker.py` share no storage. Not a bug; a consequence of the
   documented multi-implementation state above.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn/health-endpoint conventions as every other standalone
   worker in `workers/`.

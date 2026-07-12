@@ -121,7 +121,23 @@
   well-designed pattern for this entity, in contrast to several other entities' unenforced-flag
   findings in this series.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`sashas-photo-studio`, port 8062) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** **no named volume** on the `sashas-photo-studio` compose service — any on-disk state is lost on container replace/redeploy in every mode alike
+- **Note:** see the Cloud-Only caveat — this is a genuine capability difference between modes, not just a durability one.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `sashas-photo-studio` compose block runs on a single cloud host; Traefik/edge in front | ephemeral — no volume means state does not survive a redeploy | ComfyUI/AUTOMATIC1111 image-generation backends are GPU-bound; free-tier cloud CPU hosts cannot realistically run them, so Cloud-Only likely degrades to this worker's third fallback tier — an honestly-labelled offline placeholder |
+| **Hybrid** | same `sashas-photo-studio` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `sashas-photo-studio` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local (still no volume — same durability gap as Cloud-Only) | the only mode where the ComfyUI/AUTOMATIC1111 tiers are realistically usable, if local GPU hardware is present |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -129,7 +145,19 @@
 | Generation backend | ComfyUI → AUTOMATIC1111 → offline placeholder | self-hosted-first, zero-cost fallback chain |
 | Storage | in-memory `_jobs` dict, no persistence | zero infra cost, no durability |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment, and no local run command is documented in §11 PROC either |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `sashas-photo-studio` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks, nor is a local run command documented in §11 PROC — Production is genuinely the first place it runs. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - **Security gap, not fixed:** no route-level auth on any `/photo/*` route in the deployed
   `main.py`, and this service is routed via Traefik's `websecure` entrypoint (internet-reachable,
@@ -138,14 +166,14 @@
 - Zero-cost mandate: fully honored — ComfyUI/A1111 are self-hosted, the final fallback is a
   zero-cost stub, matching `CLAUDE.md`'s Recommended Open Source Foundations table.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Generate an image:** `POST /photo/generate` with `{"prompt": "..."}` — tries ComfyUI, then
   A1111, then returns an honestly-labeled offline placeholder if neither backend is reachable.
 - **Check job status:** `GET /photo/status/{job_id}` — in-memory only, lost on restart.
 - **Attempt an upscale:** currently always 501s — not yet implemented, by design.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Every generation returns `"source": "offline", "placeholder": true`:** expected if neither
   ComfyUI nor AUTOMATIC1111 is reachable at their configured URLs — check `COMFYUI_URL`/
@@ -154,7 +182,7 @@
   (`worker.py`'s SQLite-backed alternative does, but isn't deployed).
 - **`/photo/upscale` always returns 501:** expected, not a bug — explicitly not yet implemented.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Sashas Photo Studio" per `CLAUDE.md`/`PLATFORM_ENTITIES.md` (no
   apostrophe — see `CLAUDE.md`'s naming rules).

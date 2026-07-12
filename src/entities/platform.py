@@ -1496,6 +1496,66 @@ def _assign_ids() -> None:
 _assign_ids()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Job Descriptions — the functional executive-style title associated with
+# each Location's Tier-3 Lead AI role. Distinct from `lead_ai` (the AI/persona
+# *name* currently holding the role) — this is the role *title* itself, which
+# persists even when the assigned AI changes. See `src/roles/registry.py` for
+# the mutable, persisted assignment of an AI to a given Job Description.
+# ─────────────────────────────────────────────────────────────────────────────
+
+JOB_DESCRIPTIONS: Dict[str, str] = {
+    "The Nexus": "Chief Communications Officer",
+    "The HIVE": "Head of Data Transport & Swarm Operations",
+    "Arcadia": "Chief Community & Front-End Officer",
+    "Luminous": "Chief Technology Officer",
+    "The Town Hall": "Chief Governance Officer",
+    "The Studio": "Chief Creative Officer",
+    "Sashas Photo Studio": "Head of Photo & Image Generation",
+    "TranceFlow": "Head of 3D & Game Development",
+    "TateKing": "Head of Video Production",
+    "Fabulousa": "Chief Design Officer",
+    "Imaginarium": "Chief Creative Orchestration Officer",
+    "The Digital Grid": "Head of Workflow Engineering",
+    "The Lab": "Chief Engineering Officer",
+    "The Workshop": "Head of Source Control & CI/CD",
+    "The Chaos Party": "Head of Quality Assurance & Testing",
+    "The Artifactory": "Head of Artifact Management",
+    "API Marketplace": "Head of API Integrations",
+    "Royal Bank of Arcadia": "Chief Financial Officer",
+    "Arcadian Exchange": "Chief Procurement Officer",
+    "The Observatory": "Chief Audit & Monitoring Officer",
+    "The Library": "Chief Knowledge Officer",
+    "The Academy": "Head of Learning & Development",
+    "DocUtari": "Head of Document Management",
+    "The Basement": "Head of Archives",
+    "The Spark": "Head of AI Tooling",
+    "Infinity": "Chief Identity & Access Officer",
+    "The Void": "Chief Secrets & Vault Officer",
+    "The Lighthouse": "Head of Cryptographic Token Services",
+    "The Warp Tunnel": "Head of Threat Scanning & Quarantine",
+    "Cryptex": "Chief Information Security Officer",
+    "The Ice Box": "Head of Sandbox Threat Isolation",
+    "Warp Radio": "Head of Audio & Streaming",
+    "The Dutchy": "Chief Intelligence Officer",
+    "The Citadel": "Chief Operations Officer",
+    "Think Tank": "Head of Research & Development",
+    "Turing's Hub": "Head of AI Entity Creation",
+    "ChronosSphere / ArcStream": "Head of Scheduling & Task Management",
+    "DevOcity": "Head of DevOps",
+    "Tranquility": "Chief Wellbeing Officer",
+    "I-Mind": "Head of Emotional Intelligence",
+    "tAimra": "Head of Digital Twin Services",
+    "VRAR3D": "Head of Immersive Technology",
+    "Resonate": "Head of Empathy Engineering",
+}
+
+
+def get_job_description(location: str) -> Optional[str]:
+    """Return the functional Job Description title for a Location, or None."""
+    return JOB_DESCRIPTIONS.get(location)
+
+
 def get_entity_by_pid(pid: str) -> Optional[LocationEntity]:
     """Look up a LocationEntity by its PID-XXX identifier."""
     for entity in PLATFORM_ENTITIES.values():

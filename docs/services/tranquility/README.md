@@ -106,7 +106,22 @@
 - **Degradation:** Observatory emission and I-Mind assessment calls are both wrapped in
   `except Exception: pass` — failures don't block mood logging.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** **two independent surfaces**, not one — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a **separate standalone worker** (`tranquility`, port 8077) with its own `docker-compose.production.yml` service block and its own Traefik route. **The standalone worker's Dockerfile previously only `COPY`'d a placeholder `main.py`** (the same deployed-stub-vs-undeployed-real defect found for The Academy/The Basement/The Studio) — **fixed**: it now builds and runs the real, more complete SQLite-backed `worker.py`, with a named volume (`tranquility-data:/app/data`) added so its data survives redeploys.
+- **Persistence:** split between the two surfaces — the monolith router's own state is an in-memory `_profiles` dict (per this pack's own TFM/ASD); the standalone `tranquility` worker (now that it actually runs `worker.py`) uses real SQLite, now backed by a named volume — genuinely durable across redeploys in every mode.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | both surfaces run on a single cloud host (the monolith's `tranc3-backend` block and the standalone `tranquility` block, now running the real `worker.py`); Traefik/edge in front for the standalone worker | monolith router ephemeral by design; standalone worker's SQLite now persists via its attached volume as long as the disk is preserved | none beyond standard single-host durability |
+| **Hybrid** | same two surfaces; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, the monolith's other data can sync to local TrueNAS, and the standalone `tranquility` worker's SQLite volume can be synced the same way now that it exists | monolith ephemeral; worker's SQLite local-syncable | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same two surfaces, run entirely on local/Citadel hardware | monolith side still stateless by design; standalone worker fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -114,14 +129,26 @@
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Cross-entity call | direct in-process call to `IMind.assess()` | zero cost |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `tranquility` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `tranquility` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `tranquility` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the compliance gap against the module's own "governed by Magna
   Carta + I-Mind protocols" claim. `GET /status` remains intentionally public.
 - Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Log a mood check-in:** `POST /tranquility/mood/{user_id}` (as the same user, or an admin) with `{"mood": 1-5, "notes": "...", "tags": [...]}`. A `LOW`/`VERY_LOW`
   mood triggers an I-Mind assessment automatically.
@@ -131,16 +158,16 @@
   /tranquility/data/{user_id}` — auth-gated; returns `403` unless the caller is that user or holds
   the `admin` role.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A user's mood history is missing after a restart:** expected — no persistence in this module.
 - **`GET /tranquility/profile/{user_id}` returns 404 for a user who has logged moods elsewhere:**
   check whether the profile was created via a route that calls `get_or_create()` — the profile
   route itself does not create one; see TASD code-quality note.
 - **A caller gets `403` on export/delete:** expected — they are not the target `user_id` and do
-  not hold the `admin` role; see POL §8.
+  not hold the `admin` role; see POL §10.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Tranquility" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any route exposing per-user personal data export or deletion MUST verify caller identity
@@ -154,3 +181,4 @@
 | 2026-07-05 | Claude (session) | `src/tranquility/wellbeing.py` (179 lines), `src/tranquility/routes.py` (71 lines), `api.py` router registration (line 826) | Confirmed Live-tier, full pack authored. Verified a genuine, working cross-entity integration: `log_mood()` really calls `IMind.assess()` on low-mood entries. Major finding, documented not fixed: no auth on any route, most consequentially the full-history export and delete-all-data endpoints, which any caller can invoke for any `user_id` — a materially sensitive gap given the module's own "governed by Magna Carta + I-Mind protocols" claim. Also documented: two of the module's four stated capabilities (Resonate routing, tAimra burnout signals) are unimplemented comments only. |
 | 2026-07-08 | Claude (session) | `src/tranquility/routes.py` (102 lines, post-fix) | Closed the no-auth gap: every `user_id`-scoped route now requires `Depends(get_current_user)` plus `_require_self_or_admin()`, mirroring `api.py`'s `gdpr_erase()`. Verified via `tests/test_tranquility_taimra_auth.py` (own-data access, cross-user 403, admin override, unauthenticated 401/403). |
 | 2026-07-09 | Claude (session) | `src/tranquility/routes.py` (post-fix, renamed helper), `src/auth/tokens.py` | cubic correctly flagged that the initial fix's cross-user override checked `tier == "enterprise"`, but real JWTs (`src/auth/tokens.py`) carry `tier` as a numeric int and never that string — the override was dead for every real token. Renamed `_require_self_or_enterprise()` to `_require_self_or_admin()` and switched the check to `role == "admin"`, a claim real tokens do carry, matching the admin-check convention already used elsewhere (`api.py`'s `ai_provider_reset`, Cryptex's `_require_admin`). Tests updated to assert real-shaped payloads. |
+| 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/tranquility/Dockerfile`, `workers/tranquility/main.py`, `workers/tranquility/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/tranquility/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy/The Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, hardcoded empty/placeholder responses) while a genuinely more complete SQLite-backed `worker.py` sat unused in the same directory. **Fixed this time** (unlike Academy's prior pass, this was caught and corrected in the same session rather than left for a follow-up): changed the Dockerfile to build/run `worker.py` and added a named volume (`tranquility-data:/app/data`) to `docker-compose.production.yml`. DSM rewritten to reflect the fix. Note this is independent of the `src/tranquility/wellbeing.py` monolith-router finding above (wellbeing journal) — two separate surfaces, two separate fixes. |

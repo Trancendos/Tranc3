@@ -17,8 +17,10 @@ P3 Workers covered:
 
 from __future__ import annotations
 
-import importlib
-import sys
+import atexit
+import os
+import shutil
+import tempfile
 import uuid
 from pathlib import Path
 from unittest.mock import patch
@@ -26,34 +28,36 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests._worker_import_utils import import_worker as _import_worker
+
 # ---------------------------------------------------------------------------
 # Import helpers
 # ---------------------------------------------------------------------------
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent
 
-
-def _import_worker(module_dotted: str, file_path: Path):
-    """Import a worker module from a hyphenated path via importlib.
-
-    Adds the worker's own directory to sys.path for the duration of the
-    import so shim-style workers (e.g. the-grid's worker.py -> main.py)
-    can resolve their bare sibling imports, matching how the Dockerfile
-    COPYs them flat into the container's WORKDIR.
-    """
-    worker_dir = str(file_path.parent)
-    inserted = worker_dir not in sys.path
-    if inserted:
-        sys.path.insert(0, worker_dir)
-    try:
-        spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[module_dotted] = mod
-        spec.loader.exec_module(mod)
-        return mod
-    finally:
-        if inserted:
-            sys.path.remove(worker_dir)
+# Several P3 workers instantiate their DB/storage paths at *module import
+# time* (analytics-service, cache-service, cron-service, health-aggregator,
+# audit-service, storage-service all call `.mkdir()` against a `/data`-rooted
+# default). `/data` doesn't exist (and isn't writable) outside a deployed
+# container, so collecting this file would otherwise crash with
+# PermissionError before any test runs. Point every one of them at a shared
+# session-scoped temp dir instead — production is unaffected since compose
+# always sets these env vars' real values, this only fills the gap when
+# they're unset.
+_TEST_DATA_DIR = tempfile.mkdtemp(prefix="tranc3-test-p3-")
+atexit.register(shutil.rmtree, _TEST_DATA_DIR, ignore_errors=True)
+os.environ.setdefault("ANALYTICS_DB_PATH", os.path.join(_TEST_DATA_DIR, "analytics.db"))
+os.environ.setdefault("ANALYTICS_DUCKDB_PATH", os.path.join(_TEST_DATA_DIR, "analytics.duckdb"))
+os.environ.setdefault("CACHE_DB_PATH", os.path.join(_TEST_DATA_DIR, "cache.db"))
+os.environ.setdefault("CACHE_DUCKDB_PATH", os.path.join(_TEST_DATA_DIR, "cache.duckdb"))
+os.environ.setdefault("CACHE_DISKCACHE_DIR", os.path.join(_TEST_DATA_DIR, "diskcache"))
+os.environ.setdefault("CRON_DB_PATH", os.path.join(_TEST_DATA_DIR, "cron.db"))
+os.environ.setdefault("DATA_DIR", _TEST_DATA_DIR)
+os.environ.setdefault("DB_PATH", os.path.join(_TEST_DATA_DIR, "health_aggregator.db"))
+os.environ.setdefault("STORAGE_DB_PATH", os.path.join(_TEST_DATA_DIR, "storage.db"))
+os.environ.setdefault("STORAGE_DUCKDB_PATH", os.path.join(_TEST_DATA_DIR, "storage.duckdb"))
+os.environ.setdefault("STORAGE_LOCAL_ROOT", os.path.join(_TEST_DATA_DIR, "objects"))
 
 
 analytics_mod = _import_worker(

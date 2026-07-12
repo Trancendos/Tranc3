@@ -111,7 +111,22 @@
 - **Degradation:** Observatory emission failures are wrapped in `except Exception: pass` and
   don't block twin operations.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** **two independent surfaces**, not one — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a **separate standalone worker** (`taimra`, port 8074) with its own `docker-compose.production.yml` service block and its own Traefik route. **The standalone worker's Dockerfile previously only `COPY`'d a placeholder `main.py`** (the same deployed-stub-vs-undeployed-real defect found for The Academy/The Basement/The Studio) — **fixed**: it now builds and runs the real, more complete SQLite-backed `worker.py`, with a named volume (`taimra-data:/app/data`) added so its data survives redeploys.
+- **Persistence:** split between the two surfaces — the monolith router's own state is an in-memory `_twins` dict (per this pack's own TFM/ASD); the standalone `taimra` worker (now that it actually runs `worker.py`) uses real SQLite, now backed by a named volume — genuinely durable across redeploys in every mode.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | both surfaces run on a single cloud host (the monolith's `tranc3-backend` block and the standalone `taimra` block, now running the real `worker.py`); Traefik/edge in front for the standalone worker | monolith router ephemeral by design; standalone worker's SQLite now persists via its attached volume as long as the disk is preserved | none beyond standard single-host durability |
+| **Hybrid** | same two surfaces; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, the monolith's other data can sync to local TrueNAS, and the standalone `taimra` worker's SQLite volume can be synced the same way now that it exists | monolith ephemeral; worker's SQLite local-syncable | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same two surfaces, run entirely on local/Citadel hardware | monolith side still stateless by design; standalone worker fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -119,14 +134,26 @@
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Personalization | simple incrementing affinity score | zero cost, no ML model |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `taimra` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `taimra` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `taimra` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Every `user_id`-scoped route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the access-control half of the module's own "Governed by Trancendos
   Magna Carta policy" claim. The I-Mind content-filtering half remains unenforced (see DDD).
 - Zero-cost mandate: no external dependency to audit against `scripts/zero_cost_audit.py`.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Activate a twin:** `POST /taimra/activate/{user_id}` (as the same user, or an admin) — sets status to `LEARNING`.
 - **Record an interaction:** `POST /taimra/record/{user_id}` with `{"message", "topics",
@@ -134,18 +161,18 @@
 - **Export or delete a twin:** `GET /taimra/export/{user_id}` / `DELETE /taimra/twin/{user_id}` —
   auth-gated; returns `403` unless the caller is that user or holds the `admin` role.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A user's twin data is missing after a restart:** expected — no persistence in this module.
 - **`GET /taimra/twin/{user_id}` returns 404 for a user with recorded interactions elsewhere:**
   the twin must have been created via `activate()` first — `record_interaction()` is a no-op for
   a twin that was never activated.
 - **A caller gets `403` on activate/export/delete:** expected — they are not the target
-  `user_id` and do not hold the `admin` role; see POL §8.
+  `user_id` and do not hold the `admin` role; see POL §10.
 - **Sensitive topics appear in a user's twin despite the "never stores I-Mind flagged content"
   claim:** expected — this guarantee is not enforced in code (see DDD).
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "tAimra" per `CLAUDE.md`/`PLATFORM_ENTITIES.md` (note the
   lowercase-t "tAimra" for the entity vs. capital-T "tAImra" for its Lead AI — both correct per
@@ -161,3 +188,4 @@
 | 2026-07-05 | Claude (session) | `src/taimra/digital_twin.py` (165 lines), `src/taimra/routes.py` (74 lines), `api.py` router registration (line 819) | Confirmed Live-tier, full pack authored. Verified the twin lifecycle state machine (OFFLINE→LEARNING→ACTIVE) and offline-by-default no-op behavior are real and correctly implemented. Major finding, documented not fixed: no auth on any route (including export/delete of another user's twin), and the module's own stated privacy guarantee ("never infers or stores sensitive I-Mind flagged content") has zero enforcement in code — no I-Mind import or call exists anywhere in this module. Also noted a dead `TwinStatus.PAUSED` enum member never assigned anywhere. |
 | 2026-07-08 | Claude (session) | `src/taimra/routes.py` (109 lines, post-fix) | Closed the no-auth gap: every `user_id`-scoped route now requires `Depends(get_current_user)` plus `_require_self_or_admin()`, mirroring `api.py`'s `gdpr_erase()`. Verified via `tests/test_tranquility_taimra_auth.py`. The I-Mind content-filtering gap remains open — unchanged, unrelated to this fix. |
 | 2026-07-09 | Claude (session) | `src/taimra/routes.py` (post-fix, renamed helper), `src/auth/tokens.py` | cubic correctly flagged that the initial fix's cross-user override checked `tier == "enterprise"`, but real JWTs (`src/auth/tokens.py`) carry `tier` as a numeric int and never that string — the override was dead for every real token. Renamed `_require_self_or_enterprise()` to `_require_self_or_admin()` and switched the check to `role == "admin"`, a claim real tokens do carry. Tests updated to assert real-shaped payloads. |
+| 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/taimra/Dockerfile`, `workers/taimra/main.py`, `workers/taimra/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/taimra/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy/The Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, hardcoded empty/placeholder responses) while a genuinely more complete SQLite-backed `worker.py` sat unused in the same directory. **Fixed this time** (unlike Academy's prior pass, this was caught and corrected in the same session rather than left for a follow-up): changed the Dockerfile to build/run `worker.py` and added a named volume (`taimra-data:/app/data`) to `docker-compose.production.yml`. DSM rewritten to reflect the fix. Note this is independent of the `src/taimra/digital_twin.py` monolith-router finding above (digital-twin lifecycle) — two separate surfaces, two separate fixes. |

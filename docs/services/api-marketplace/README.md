@@ -110,7 +110,22 @@ code with zero callers.
   integrated) is self-hosted OSS per `CLAUDE.md`'s foundations table.
 - **Degradation:** Observatory emission failure doesn't block registration.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** mounted in the `tranc3-backend` monolith (`api.py`); runs wherever that monolith's `docker-compose.production.yml` service block is deployed, on whatever port/host the monolith uses (compose service `tranc3-backend`)
+- **Persistence:** None — this entity's own state is an in-memory `dict` (`_marketplace`'s connector/endpoint registry per this pack's own TFM/ASD), with no persistence of its own. While the `tranc3-backend` monolith has a named volume, that volume backs *other* entities' state, not this one; this service's own state (if any) is lost on restart/redeploy in every mode alike.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tranc3-backend` compose block runs on a single cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front | ephemeral — this service holds no state of its own; the monolith's volume does not apply to it | no entity-specific blocker beyond whatever applies to the monolith as a whole |
+| **Hybrid** | same monolith block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the monolith itself still runs wherever it's deployed | ephemeral, same as Cloud-Only — this service's own state does not benefit from the Hybrid data-locality split | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one, per `should_run_citadel_docker()` in `infrastructure_mode.py` |
+| **Local-Only** | same monolith block, run entirely on local/Citadel hardware behind local Traefik | still ephemeral — local hardware does not change this service's own statelessness | none beyond standard local-hardware ops (backup, power, network) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -118,13 +133,25 @@ code with zero callers.
 | Storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Call execution / credentials / webhooks / rate limiting | **not implemented** | N/A — deferred to a future Gravitee.io integration per the module's own stated plan |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - No route-level auth on any `/apimarket/*` route.
 - Zero-cost mandate: no external dependency currently in this module to audit; any future
   Gravitee.io integration must pass `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Register a connector:** `POST /apimarket/connectors` with `{"name", "slug", "base_url"}` —
   creates a catalogue entry only; does not make the connector callable through this module.
@@ -132,7 +159,7 @@ code with zero callers.
 - **Attempt to call a registered API:** not supported by this module — the caller must construct
   and send the HTTP request themselves using the catalogue's `base_url`/endpoint metadata.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`call_count`/`error_count` are always zero:** expected — `record_call()` exists but has no
   caller anywhere in the codebase; this is not a bug to chase, it's dead code.
@@ -142,7 +169,7 @@ code with zero callers.
 - **No OAuth token is stored for an `oauth2`-type connector:** expected — `AuthType` is metadata
   only; no credential storage exists in this module.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "API Marketplace" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - A module's own header/docstring mission bullets MUST be kept in sync with what the code actually

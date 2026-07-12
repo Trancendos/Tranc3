@@ -130,7 +130,23 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
   self-hosted per `CLAUDE.md`'s Recommended Open Source Foundations table.
 - **Degradation:** none needed for the wired paths beyond standard Observatory best-effort emission.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`cryptex`, port 8053) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `cryptex` compose service — state survives container restarts/redeploys in any mode
+- **Note:** this entity has **two** deployment surfaces — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a separate standalone worker (`cryptex`, port 8053). The table below describes the standalone worker; the monolith-mounted router follows the monolith's own placement (see the monolith pattern noted across this platform's other entities) and shares its volume.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `cryptex` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `cryptex` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `cryptex` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -141,14 +157,26 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 | Threat intel (unwired) | MISP (`misp_connector.py`) | self-hosted, not live-wired |
 | SIEM (unwired) | Wazuh (`wazuh_connector.py`) | self-hosted, not live-wired |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `cryptex` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `cryptex` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `cryptex` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - `POST /cryptex/block/{ip}`, `DELETE /cryptex/block/{ip}`, and every `/cryptex/bounty/*` route
   require admin auth — see DDD/SIM. `/cryptex/analyse*` remain intentionally unauthenticated.
 - Zero-cost mandate: `nuclei`/`pip-audit` scanning must stay within `scripts/zero_cost_audit.py`'s
   gate.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Analyse content for threats:** `POST /cryptex/analyse` with `{"context": {...}, "actor":
   "..."}` — returns matched signals; a `BLOCK` mitigation genuinely affects future traffic via
@@ -158,16 +186,16 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 - **Wire an orphaned module into the live path:** import it from `threat_detector.py` or add a
   new route in `routes.py` — no orphaned module currently has any caller in this repo.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Blocking an IP via `/cryptex/block/{ip}` doesn't stop its traffic:** check whether the
   request path is in `RBACMiddleware._SCAN_SKIP` or `ENVIRONMENT=test` is set — both bypass the
   `is_blocked()` check by design; otherwise this would be a real bug, not expected behavior.
 - **A non-admin caller gets `403` on `/cryptex/block/{ip}` or `/cryptex/bounty/*`:** expected —
-  see POL §8.
+  see POL §10.
 - **Signal history disappears after a restart:** expected — `_signals` is in-memory only.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Cryptex" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`. Note
   `cve_scanner.py` is imported by a test file named `test_section7.py` — "Section 7" is a

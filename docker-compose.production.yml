@@ -3158,6 +3158,8 @@ services:
       - "8074"
     ports:
       - "8074:8074"
+    volumes:
+      - taimra-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8074/health')"]
@@ -3182,6 +3184,8 @@ services:
       - "8075"
     ports:
       - "8075:8075"
+    volumes:
+      - imind-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8075/health')"]
@@ -3204,6 +3208,8 @@ services:
       - "8076"
     ports:
       - "8076:8076"
+    volumes:
+      - resonate-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8076/health')"]
@@ -3226,6 +3232,8 @@ services:
       - "8077"
     ports:
       - "8077:8077"
+    volumes:
+      - tranquility-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8077/health')"]
@@ -3250,6 +3258,8 @@ services:
       - "8069"
     ports:
       - "8069:8069"
+    volumes:
+      - the-studio-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8069/health')"]
@@ -3366,6 +3376,8 @@ services:
       - "8057"
     ports:
       - "8057:8057"
+    volumes:
+      - the-dutchy-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8057/health')"]
@@ -3388,6 +3400,8 @@ services:
       - "8110"
     ports:
       - "8110:8110"
+    volumes:
+      - devocity-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8110/health')"]
@@ -3410,6 +3424,8 @@ services:
       - "8079"
     ports:
       - "8079:8079"
+    volumes:
+      - chaos-party-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8079/health')"]
@@ -3432,6 +3448,8 @@ services:
       - "8068"
     ports:
       - "8068:8068"
+    volumes:
+      - basement-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8068/health')"]
@@ -3952,6 +3970,24 @@ volumes:
   storage-data:
     driver: local
   cron-data:
+    driver: local
+  basement-data:
+    driver: local
+  the-studio-data:
+    driver: local
+  imind-data:
+    driver: local
+  taimra-data:
+    driver: local
+  resonate-data:
+    driver: local
+  tranquility-data:
+    driver: local
+  chaos-party-data:
+    driver: local
+  devocity-data:
+    driver: local
+  the-dutchy-data:
     driver: local
   identity-data:
     driver: local

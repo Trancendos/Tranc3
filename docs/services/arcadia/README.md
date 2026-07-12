@@ -7,7 +7,7 @@
 | **Status** | 🔧 Partial (per `CLAUDE.md` service table) |
 | **Code** | `web/` (package `tranc3-web`) |
 | **Serve** | static SPA via Nginx on port **8080** (`web/nginx.conf`, `web/Dockerfile`) |
-| **Gate tier** | Partial → GOV + RACI + TFM + POL + STD + DDD scoped to the front-end that exists |
+| **Gate tier** | Partial → GOV + RACI + TFM + DSM + POL + STD + DDD scoped to the front-end that exists |
 
 > **Truthfulness:** claims cite `web/` (stack from `package.json`, structure from `web/src/`, serving from
 > `web/nginx.conf`). Screens beyond those present in `web/src/` (e.g. full forum/email UI implied by the
@@ -67,7 +67,22 @@
 - **Zero-cost limits & hard stops:** static hosting via Nginx; no paid front-end platform.
 - **Growth path:** code-split routes as `pages/` grows; the bundle is already Vite-optimised.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** front-end (`web/`), Partial tier — no `docker-compose.production.yml` service block exists for it (confirmed: no `arcadia`/`web`/`frontend`/`dashboard` compose entry). It is built and served as a static bundle or dev/preview server, not a long-running backend process.
+- **Persistence:** none — a front-end has no server-side state of its own; all data comes from API calls to other entities.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | static build (Vite) served from Cloudflare R2/Pages or an equivalent free-tier static host — matches `docs/architecture/infrastructure-modes.md`'s Cloud-Only "R2_ASSETS" node | n/a — static assets only | no build pipeline/CI target for this is confirmed in this pack; treat as PLANNED until a concrete static-hosting deploy step is code-grounded |
+| **Hybrid** | static build served from cloud storage, with a local dev/preview server available for the team | n/a — static assets only | same PLANNED caveat as Cloud-Only |
+| **Local-Only** | local Vite dev/preview server (`GD` node in `docs/architecture/infrastructure-modes.md`'s Local-Only diagram) | n/a — static assets only | fine for development; not a production serving strategy on its own |
+
+- **Zero-cost posture per mode:** static hosting is free-tier-compatible in all three modes; no AI-Gateway rotation applies to a front-end.
+- **Switching modes:** no runtime mode-switch applies — this is a build/deploy-target choice, not a running process that reads `PLATFORM_INFRA_MODE`.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -77,24 +92,43 @@
 | UI | Radix UI + Tailwind + lucide-react | OSS |
 | Serve | Nginx static (port 8080) | OSS |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> A distinct question from DSM: DSM is about *physical location* (Cloud-Only/Hybrid/Local-Only); this is
+> about *SDLC promotion stage* (Dev/UAT/Production). Checked directly: no `arcadia`/`web`/`frontend`/
+> `dashboard` service entry exists in any of `docker-compose.development.yml`, `docker-compose.uat.yml`,
+> or `docker-compose.production.yml`.
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** (`docker-compose.development.yml`) | No | — | no compose entry for this front-end at any tier |
+| **UAT** (`docker-compose.uat.yml`) | No | — | same — not present |
+| **Production** (`docker-compose.production.yml`) | No | — | not present here either; per the DSM above, this entity is built/served outside the compose-tier model entirely (a static Vite build behind Nginx, or a local dev/preview server) |
+
+- **Gap, if any:** total — Arcadia has no compose-tier presence at all, in any of the three environment
+  files. This is consistent with its DSM's own finding (no `docker-compose.production.yml` block exists
+  for it either) — it is a front-end built and served as a static bundle, not a compose-managed backend
+  process, so the Dev/UAT/Production compose distinction this ESM otherwise measures doesn't apply to it
+  the same way. State this plainly rather than implying hidden coverage.
+
+## 10. Policy (POL)
 
 - No secrets in the client bundle; auth handled server-side. Security headers set in `nginx.conf`.
   Reuses platform policy (`POL-AI-001`, `docs/defstan/`).
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Local dev:** `pnpm dev` (Vite). **Build:** `pnpm build` (`tsc && vite build`) → static bundle served by
   the `web/Dockerfile` Nginx image. Add routes in `AppRouter.tsx` + `pages/`.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Blank page / 404 on deep links:** SPA fallback misconfigured — confirm `try_files ... /index.html` in
   `nginx.conf`.
 - **`/healthz` fails:** the Nginx container isn't serving — check the `web/Dockerfile` build/static assets.
 - **Stale assets after deploy:** `/assets/` is cached — ensure Vite content-hashed filenames (default).
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - TypeScript strict build (`tsc` before `vite build`); accessible Radix primitives; security headers on the
   static host; no client-side secrets.

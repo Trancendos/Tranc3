@@ -528,6 +528,15 @@ class AIGatewayRouter:
             (ProviderName.offline, self.offline),
         ]
 
+    def reset_daily_counts_if_needed(self) -> None:
+        """Placeholder for per-provider daily request-count reset.
+
+        No per-provider counters are tracked yet (the providers dashboard in
+        router.py currently reports static placeholder utilisation); this
+        exists so the background reset loop in main.py has something to call
+        once that tracking is implemented.
+        """
+
     def _make_cache_key(
         self,
         model: str,

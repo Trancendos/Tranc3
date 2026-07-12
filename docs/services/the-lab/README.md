@@ -133,7 +133,22 @@
   its `config.py`.
 - **Degradation:** Observatory emission failures don't block the CRUD response.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** three surfaces — a router mounted in the `tranc3-backend` monolith (`src/lab/`) plus **two** separate standalone workers: `the-lab` (port 8055, sandboxed execution, **has** a Traefik label) and `lab-service` (port 8066, code generation, **no** Traefik label — internal-only, reached by container DNS name + port) — confirmed as two independently-deployed compose services, not one.
+- **Persistence:** monolith side (`src/lab/*`) is an in-memory `dict` store (`_sessions`) with **no persistence of its own** (per this pack's own TFM) — the `tranc3-backend` volume backs *other* entities' state, not this one; `lab-service` has a named volume; `the-lab` (execution sandbox) has **no** volume.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | all three surfaces run their own compose block on a single cloud host; `the-lab` gets a Traefik route, `lab-service` and the monolith do not (internal-only) | monolith ephemeral (in-memory); `lab-service` volume-backed; `the-lab` execution sandbox ephemeral by design (arguably correct for a sandbox) | no entity-specific blocker beyond the sandbox's inherent statelessness and the monolith router's statelessness |
+| **Hybrid** | same three surfaces; per the Hybrid diagram, monolith/`lab-service` data can sync to local TrueNAS | as above, local-syncable where a volume exists | requires `CITADEL_LOCAL_STACK=true` for a local stack alongside the cloud one |
+| **Local-Only** | same three surfaces, entirely on local/Citadel hardware | monolith still ephemeral; `lab-service` fully local, volume-backed; `the-lab` sandbox still stateless | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); no code change needed for any of the three surfaces.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -142,14 +157,26 @@
 | Code execution (`workers/the-lab/`) | sandboxed `subprocess` (python3/node/bash allowlist) | self-hosted, port 8055 |
 | Code generation (`workers/lab-service/`) | Ollama → Tabby → HuggingFace → OpenRouter fallback | self-hosted-first, free-tier fallback, port 8066 |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the two standalone workers, `the-lab` and `lab-service`, are **not** in this compose file | both standalone workers have zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — `the-lab` and `lab-service` are **not** in this compose file either | both standalone workers have zero UAT coverage |
+| **Production** | Yes | all three surfaces — full detail in the DSM above | — |
+
+- **Gap:** the two standalone workers, `the-lab` and `lab-service` (per the DSM above), have **no Dev or UAT environment at all** — the first place either runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth on `src/lab/*` routes — see SIM §5. Both standalone workers enforce
   `X-Internal-Secret` auth on their functional routes, but not on `/health`/`/metrics` — see SIM §5.
 - Zero-cost mandate: `workers/lab-service/`'s free-tier fallback chain (HuggingFace/OpenRouter)
   must stay within `scripts/zero_cost_audit.py`'s gate per The Citadel's deploy policy.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create a session:** `POST /lab/sessions` with `{"language": "python", "task_type":
   "generate"}` — returns a session record; no AI response is generated by this call.
@@ -158,7 +185,7 @@
 - **Run real code:** use `workers/the-lab/`'s execution endpoints directly (internal-secret
   authed) — not reachable via `src/lab/*`.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/lab/sessions/{id}/messages` never returns an AI-generated reply:** expected — `src/lab/*`
   has no generation call at all (see DDD). Do not treat this as a broken inference pipeline; it
@@ -168,7 +195,7 @@
   present in the deployed image if this recurs.
 - **Sessions/messages disappear after a restart:** expected — `src/lab/*` has no persistence.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Lab" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; be precise in
   code reviews about which of the three implementations (`src/lab/*`, `workers/the-lab/`,

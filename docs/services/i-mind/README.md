@@ -116,7 +116,22 @@
 - **Zero-cost limits:** no external dependency; regex-only.
 - **Degradation:** Observatory emission failure doesn't block the assessment response.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** **two independent surfaces**, not one — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a **separate standalone worker** (`imind`, port 8075) with its own `docker-compose.production.yml` service block and its own Traefik route. **The standalone worker's Dockerfile previously only `COPY`'d a placeholder `main.py`** (the same deployed-stub-vs-undeployed-real defect found for The Academy/The Basement/The Studio) — **fixed**: it now builds and runs the real, more complete SQLite-backed `worker.py`, with a named volume (`imind-data:/app/data`) added so its data survives redeploys.
+- **Persistence:** split between the two surfaces — the monolith router's own state is an in-memory regex-classification pass (per this pack's own DDD) with no storage of any kind on the monolith side; the standalone `imind` worker (now that it actually runs `worker.py`) uses real SQLite, now backed by a named volume — genuinely durable across redeploys in every mode.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | both surfaces run on a single cloud host (the monolith's `tranc3-backend` block and the standalone `imind` block, now running the real `worker.py`); Traefik/edge in front for the standalone worker | monolith router ephemeral by design; standalone worker's SQLite now persists via its attached volume as long as the disk is preserved | none beyond standard single-host durability |
+| **Hybrid** | same two surfaces; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, the monolith's other data can sync to local TrueNAS, and the standalone `imind` worker's SQLite volume exists, but live file-level syncing (TrueNAS/Syncthing) is not safe for an actively-written SQLite database — a consistent copy requires quiescing the worker first (stop, snapshot/copy, restart) or an application-level replication approach, not naive background file sync | monolith ephemeral; worker's SQLite requires quiesced backup/restore, not live file sync | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same two surfaces, run entirely on local/Citadel hardware | monolith side still stateless by design; standalone worker fully local, volume-backed | none beyond standard local-hardware ops; not mode-specific, but note the standing gaps regardless of mode: no auth on any `/imind/*` route, and the chat/generate/stream/websocket inference paths never call `IMind.assess()` (see SIM §5) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -124,13 +139,25 @@
 | Classification | Python `re` regex patterns | OSS, in-process, zero cost |
 | Observability | Observatory `observe()` (best-effort) | in-process |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `imind` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `imind` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `imind` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth currently implemented — see SIM §5.
 - Crisis/self-harm detections MUST fire a SECURITY-severity Observatory event per mission intent —
   verified in code (`_emit`'s `EventSeverity.SECURITY if assessment.escalate`).
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Assess text:** `POST /imind/assess` with `{"text": "...", "actor": "<optional>"}` — returns
   level, categories, escalate flag, and response modifier string.
@@ -139,7 +166,7 @@
   classification, not `CRITICAL`. Add a new self-harm pattern anywhere in `_CRISIS_PATTERNS[1:]`, or
   a mental-health pattern to `_MENTAL_HEALTH_PATTERNS` — no other code change needed.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Assessments never escalate for self-harm text:** this was the exact bug fixed in this pass —
   two compounding defects: the string-vs-severity `level.value < SensitivityLevel.HIGH.value` guard,
@@ -150,7 +177,7 @@
 - **No Observatory event for a detection:** `_emit()` swallows exceptions silently — check The
   Observatory's own health, not this module.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "I-Mind" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Severity comparisons between `SensitivityLevel` members MUST use an explicit ordinal mapping or
@@ -163,3 +190,4 @@
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/imind/protocol.py` (169 lines), `src/imind/routes.py` (28 lines), `api.py` router registration (line 814) | Confirmed Live-tier, full pack authored. Found and fixed a real bug: the self-harm level-upgrade check used string comparison (`level.value < SensitivityLevel.HIGH.value`) instead of severity ordering, so self-harm detections never actually escalated past `NONE`. Also flagged (not fixed, unverified): no confirmed caller of `IMind.assess()` from the inference pipeline was found — routable but integration into the actual chat flow is unconfirmed. |
 | 2026-07-09 | Claude (session) | `src/tranquility/wellbeing.py`, `api.py` (`chat()` line 1436, `chat_stream()` line 1684, `ws_chat()` line 2009), `src/core/tranc3_inference.py`, `src/ai_gateway/`, `src/platform/entity_rotation.py`, `src/platform/zero_cost_service_map.py`, `src/entities/platform.py` | Resolved the "unconfirmed" status from the prior entry with a direct investigation. **Confirmed:** `Tranquility.log_mood()` genuinely calls `IMind.assess()` on `LOW`/`VERY_LOW` moods (already independently verified in Tranquility's own doc-pack). **Also confirmed (not merely unverified):** none of the platform's actual chat entry points (`chat()`, `chat_stream()`, `ws_chat()`) or the inference/gateway layers call `IMind.assess()` or import `src.imind` — grep-verified with zero matches. The three other files referencing "imind" (`entity_rotation.py`, `zero_cost_service_map.py`, `entities/platform.py`) are registry/rotation metadata only, not real callers. No code changed this pass — this was a documentation-accuracy investigation per the go-live punch list, resolving the module's "unverified" wiring status to a definite finding: I-Mind does not screen messages before inference, contrary to its stated mission. |
+| 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/imind/Dockerfile`, `workers/imind/main.py`, `workers/imind/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/imind/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy/The Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, hardcoded empty/placeholder responses) while a genuinely more complete SQLite-backed `worker.py` sat unused in the same directory. **Fixed this time** (unlike Academy's prior pass, this was caught and corrected in the same session rather than left for a follow-up): changed the Dockerfile to build/run `worker.py` and added a named volume (`imind-data:/app/data`) to `docker-compose.production.yml`. DSM rewritten to reflect the fix. Note this is independent of the `src/imind/protocol.py` monolith-router finding above (self-harm severity-escalation logic) — two separate surfaces, two separate fixes. |

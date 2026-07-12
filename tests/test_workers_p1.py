@@ -12,8 +12,10 @@ P1 Workers:
 
 from __future__ import annotations
 
-import importlib
-import sys
+import atexit
+import os
+import shutil
+import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -22,18 +24,23 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests._worker_import_utils import import_worker as _import_worker
+
 # ─── Import helpers for hyphenated package names ───────────────────────────────
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent
 
-
-def _import_worker(module_dotted: str, file_path: Path):
-    """Import a worker module with hyphenated path using importlib."""
-    spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[module_dotted] = mod
-    spec.loader.exec_module(mod)
-    return mod
+# users-service instantiates its DB singleton at *module import time*
+# (`db = UsersDatabase()`, worker.py line ~200), defaulting USERS_DB_PATH to
+# the production-only `/data/users.db`. `/data` doesn't exist (and isn't
+# writable) outside a deployed container, so collecting this test file would
+# otherwise crash with PermissionError before any test runs. Point it at a
+# session-scoped temp dir instead — production is unaffected since compose
+# always sets USERS_DB_PATH's real value, this only fills the gap when the
+# env var is unset.
+_TEST_DATA_DIR = tempfile.mkdtemp(prefix="tranc3-test-p1-")
+atexit.register(shutil.rmtree, _TEST_DATA_DIR, ignore_errors=True)
+os.environ.setdefault("USERS_DB_PATH", os.path.join(_TEST_DATA_DIR, "users.db"))
 
 
 users_mod = _import_worker(
