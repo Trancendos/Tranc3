@@ -71,8 +71,14 @@ export CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>   # the account_id in 
 npm ci && npx wrangler deploy
 ```
 
-## Not covered here
+## Not covered here (yet)
 
-`cloudflare/pages/` (`trancendos-frontend`) is a Cloudflare **Pages** project with a
-different lifecycle (`wrangler pages deploy <build-dir>`) and no `package.json`; it is
-intentionally excluded from this Workers matrix.
+- The legacy `*-rotation` workers (`notifications-`, `queue-`, `search-`, `storage-rotation`)
+  are omitted from the manifest until each carries a **committed, reviewed `package-lock.json`**.
+  (Generating one via `wrangler ^4` pulls `wrangler`'s optional `@img/sharp-*` platform binaries
+  into the lock, which the license scanner flags as LGPL — build-tool-only and never shipped in
+  the deployed worker, but call it out before adding these locks.) To onboard one: commit its lock,
+  then add its manifest line.
+- `cloudflare/pages/` (`trancendos-frontend`) is a Cloudflare **Pages** project with a different
+  lifecycle (`wrangler pages deploy <build-dir>`) and no `package.json`; intentionally excluded
+  from this Workers matrix.

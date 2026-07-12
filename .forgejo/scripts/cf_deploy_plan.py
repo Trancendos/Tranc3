@@ -52,35 +52,29 @@ def _load_workers() -> list[dict]:
 
 
 def _git_changed_files(before: str, after: str) -> list[str] | None:
-    """Return the list of changed paths for a push, or None if undeterminable."""
+    """Return the changed paths for the push's `before..after` range, or None if
+    it can't be determined (missing/zero base, or the diff command fails).
+
+    We deliberately do NOT fall back to a `HEAD~1..HEAD` single-commit diff: on a
+    multi-commit push that would silently miss the earlier commits' worker
+    changes and under-deploy. Returning None instead makes the planner fail loud
+    (exit 1) so an operator dispatches explicitly. The workflow checks out with
+    fetch-depth: 0, so the real `before` commit is always available in CI.
+    """
     zero = {"", "0000000000000000000000000000000000000000"}
-    candidates = []
-    if before not in zero and after not in zero:
-        candidates.append((f"{before}", f"{after}"))
-    # Fallbacks for squash-merges / when the event range isn't usable.
-    candidates.append(("HEAD~1", "HEAD"))
-    for base, head in candidates:
-        try:
-            out = subprocess.run(
-                ["git", "diff", "--name-only", f"{base}", f"{head}"],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            if base == "HEAD~1" and len(candidates) > 1:
-                # We had a real push range but it wasn't diffable (e.g. the parent
-                # wasn't fetched) and fell back to the single-commit diff — flag it,
-                # since earlier commits of a multi-commit push may then be missed.
-                print(
-                    "::warning::Could not diff the push range; fell back to HEAD~1. "
-                    "Changes in earlier commits of a multi-commit push may be ignored "
-                    "— ensure the workflow uses fetch-depth: 0."
-                )
-            return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
-        except subprocess.CalledProcessError:
-            continue
-    return None
+    if before in zero or after in zero:
+        return None
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--name-only", before, after],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        return None
+    return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
 
 
 def _emit(matrix: dict, any_selected: bool, count: int) -> None:

@@ -8,15 +8,14 @@
     "wrangler.toml `name`, dir = its folder under cloudflare/). No workflow edit needed.",
     "health_url is polled after deploy as a SOFT signal (warning only, never fails",
     "the job — `wrangler deploy` exit code is the authoritative success gate). Leave",
-    "it \"\" to skip the health poll for that worker."
+    "it \"\" to skip the health poll for that worker.",
+    "A worker MUST carry a committed package-lock.json to be listed here (CI installs",
+    "with lockfile-only `npm ci` — see DEPLOY.md). The legacy *-rotation workers and",
+    "the Pages project are intentionally omitted until they carry a reviewed lock."
   ],
   "workers": [
     { "name": "trancendos-api-gateway", "dir": "trancendos-api-gateway", "health_url": "https://api.trancendos.com/health" },
     { "name": "tranc3-ai",              "dir": "tranc3-ai",              "health_url": "https://tranc3-ai.luminous-aimastermind.workers.dev/health" },
-    { "name": "infinity-void",          "dir": "infinity-void",          "health_url": "https://infinity-void.luminous-aimastermind.workers.dev/health" },
-    { "name": "tranc3-notifications",   "dir": "notifications-rotation", "health_url": "" },
-    { "name": "tranc3-queue",           "dir": "queue-rotation",         "health_url": "" },
-    { "name": "tranc3-search",          "dir": "search-rotation",        "health_url": "" },
-    { "name": "tranc3-storage",         "dir": "storage-rotation",       "health_url": "" }
+    { "name": "infinity-void",          "dir": "infinity-void",          "health_url": "https://infinity-void.luminous-aimastermind.workers.dev/health" }
   ]
 }
