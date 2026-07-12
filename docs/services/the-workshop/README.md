@@ -127,6 +127,17 @@
 
 ## 12. Runbook (RUN)
 
+- **Workshop unreachable / Cloudflare 522 (whole service down):** run
+  `bash deploy/forgejo/recover.sh` on the server — it diagnoses and self-heals each layer
+  (Docker → containers → Forgejo health → reverse proxy) and reports what still needs a human.
+  Full triage table + prevention in `deploy/forgejo/RUNBOOK.md`. A **522 with a healthy
+  local Forgejo** (standalone: `curl http://127.0.0.1:3456/-/health`; production has no
+  `3456` binding, so check inside the container:
+  `docker exec trancendos-forgejo wget -qO- http://localhost:3000/-/health`) means the
+  fault is the reverse proxy / host firewall / Cloudflare side, not Forgejo.
+- **Survives host reboots:** the containers are `restart: unless-stopped`, but that does not
+  cover a full host reboot — install `deploy/forgejo/the-workshop.service` (systemd) so the
+  stack comes back on boot (`systemctl enable --now the-workshop`).
 - **Forgejo unhealthy:** the compose healthcheck hits `http://localhost:3000/-/health`; check the
   `forgejo` container and the `forgejo-data` volume.
 - **Runner not picking up jobs:** verify `FORGEJO_INSTANCE_URL` + runner registration (`runner-setup.sh`);
