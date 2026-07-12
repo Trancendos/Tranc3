@@ -303,16 +303,12 @@ def _no_pickle_json_disk():
 
             def fetch(self, mode, filename, value, read):
                 if mode == MODE_PICKLE:
-                    raise ValueError(
-                        "refusing pickle-mode cache entry (CVE-2025-69872)"
-                    )
+                    raise ValueError("refusing pickle-mode cache entry (CVE-2025-69872)")
                 return super().fetch(mode, filename, value, read)
 
             def get(self, key, raw):
                 if not raw:
-                    raise ValueError(
-                        "refusing pickled (non-raw) cache key (CVE-2025-69872)"
-                    )
+                    raise ValueError("refusing pickled (non-raw) cache key (CVE-2025-69872)")
                 return super().get(key, raw)
 
         _no_pickle_disk_cls = _NoPickleJSONDisk
