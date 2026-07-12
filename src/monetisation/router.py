@@ -118,21 +118,57 @@ async def billing_portal(user_id: str, return_url: str = "https://trancendos.com
     return result
 
 
+def _current_user_manager():
+    """Fetch the live DBUserManager the app swaps in at startup, without a
+    module-load-time import of api.py (which imports this router)."""
+    try:
+        import api
+
+        return getattr(api, "db_user_manager", None)
+    except Exception:  # api not importable (e.g. router used in isolation)
+        return None
+
+
 @router.post("/webhook/stripe")
 async def stripe_webhook(
     request: Request, stripe_signature: str = Header(None, alias="Stripe-Signature")
 ):
-    """Handle Stripe webhook events."""
-    from src.monetisation.billing import stripe_manager
+    """Handle Stripe webhook events and provision the customer's tier.
+
+    NB: this platform exposes a second webhook route at `/billing/webhook`
+    (defined in api.py) with identical provisioning — configure only ONE of them
+    in the Stripe dashboard to avoid double-processing an event.
+    """
+    from src.monetisation.billing import provision_from_event, stripe_manager
 
     body = await request.body()
+    # Pass the RAW bytes: Stripe's signature verification is over the exact bytes,
+    # and a decode/re-encode round-trip can change them and fail verification.
     result = stripe_manager.handle_webhook(
-        payload=body.decode(),
+        payload=body,
         sig_header=stripe_signature or "",
     )
-    if result.get("error"):
-        raise HTTPException(status_code=400, detail=result["error"])
-    return result
+    # handle_webhook returns None on an invalid signature or when Stripe isn't
+    # configured (it never returns an "error" key), so guard on falsiness.
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid or unconfigured Stripe webhook")
+
+    # Reshape the flattened {id, type, data:object} into an event and provision.
+    # Keep the event id so revenue booking dedupes against Stripe retries.
+    event = {
+        "id": result.get("id"),
+        "type": result.get("type", ""),
+        "data": {"object": result.get("data") or {}},
+    }
+    provisioned = provision_from_event(_current_user_manager(), event)
+    # If we recognised an actionable event but couldn't persist the tier, fail
+    # loud (5xx) so Stripe retries rather than treating a paid-but-not-upgraded
+    # customer as successfully delivered.
+    if provisioned.get("handled") and not provisioned.get("user_persisted"):
+        raise HTTPException(
+            status_code=503, detail={"error": "tier_not_persisted", "provisioned": provisioned}
+        )
+    return {"received": True, "type": result.get("type"), "provisioned": provisioned}
 
 
 @router.get("/revenue/summary")
