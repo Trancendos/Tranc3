@@ -7,8 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from src.auth.facade import get_current_user
 
 logger = logging.getLogger("src.monetisation.router")
 
@@ -67,20 +69,27 @@ async def billing_status():
     from src.monetisation.billing import TIERS
 
     provider_status = _billing().provider_status()
+    # Use the real TIERS keys — entries have no "name" (KeyError -> 500 before),
+    # and the price/rate keys are `price_gbp` / `req_per_hour` (the old
+    # `price_monthly` / `requests_per_hour` lookups silently returned None).
     tiers_info = {
         tier_key: {
-            "name": cfg["name"],
-            "price_monthly": cfg.get("price_monthly"),
+            "name": tier_key.title(),
             "price_gbp": cfg.get("price_gbp"),
-            "requests_per_hour": cfg.get("requests_per_hour"),
+            "requests_per_hour": cfg.get("req_per_hour"),
             "stripe_price_configured": cfg.get("stripe_price_id") is not None,
         }
         for tier_key, cfg in TIERS.items()
     }
+    # zero_cost_mode == "no payment provider is live". Only the real provider
+    # flags (`stripe`, `lemon_squeezy`) count — the `*_price_configured` keys
+    # describe catalogue setup, not an enabled provider, so `any(...)` over the
+    # whole dict wrongly reported a live provider when only a price ID was set.
+    provider_live = provider_status.get("stripe") or provider_status.get("lemon_squeezy")
     return {
         "providers": provider_status,
         "tiers": tiers_info,
-        "zero_cost_mode": not any(provider_status.values()),
+        "zero_cost_mode": not provider_live,
     }
 
 
@@ -103,19 +112,48 @@ async def create_checkout(req: CheckoutRequest):
 
 
 @router.post("/portal")
-async def billing_portal(user_id: str, return_url: str = "https://trancendos.com/account"):
-    """Open Stripe billing portal for a customer."""
+async def billing_portal(
+    return_url: str = "https://trancendos.com/account",
+    user: dict = Depends(get_current_user),
+):
+    """Open the Stripe billing portal for the *authenticated* customer.
+
+    Security (cubic P0 / gemini HIGH, BOLA): this endpoint previously took a
+    client-supplied `user_id` and passed it straight to Stripe as the customer id,
+    so any unauthenticated caller could mint a management-session URL for an
+    arbitrary Stripe customer. It is now bound to the caller's own identity via
+    `get_current_user`, and the Stripe customer id is resolved **server-side** from
+    the durable link the webhook persisted (`users.stripe_customer_id`) — never
+    from the request.
+    """
     from src.monetisation.billing import stripe_manager
 
-    if not stripe_manager.enabled:
+    if not stripe_manager.is_enabled:
         raise HTTPException(status_code=503, detail="Stripe not configured")
-    result = stripe_manager.create_portal_session(
-        customer_id=user_id,
-        return_url=return_url,
-    )
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-    return result
+
+    # Resolve the caller's own Stripe customer id from our store. The token `sub`
+    # is the internal user id; fall back to `username` for older tokens.
+    manager = _current_user_manager()
+    customer_id = None
+    if manager is not None and hasattr(manager, "get_stripe_customer_id"):
+        identifier = user.get("sub") or user.get("username")
+        customer_id = manager.get_stripe_customer_id(identifier)
+
+    if not customer_id:
+        # Authenticated, but this user has no Stripe customer on file yet (never
+        # subscribed, or the linking webhook hasn't arrived). 409 — not an auth
+        # failure, and we will NOT accept a caller-supplied id to paper over it.
+        raise HTTPException(
+            status_code=409,
+            detail="No Stripe customer on file for this account. Subscribe first.",
+        )
+
+    url = stripe_manager.create_portal_session(customer_id=customer_id, return_url=return_url)
+    if not url:
+        raise HTTPException(
+            status_code=502, detail="Could not create Stripe billing portal session"
+        )
+    return {"portal_url": url}
 
 
 def _current_user_manager():
