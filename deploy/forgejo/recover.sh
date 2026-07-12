@@ -90,8 +90,15 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 # ── Topology detection (the safety core) ─────────────────────────────────────
-cont_exists()  { docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$1"; }
-cont_running() { docker ps    --format '{{.Names}}' 2>/dev/null | grep -qx "$1"; }
+# NB: these all pipe `docker … | grep` WITHOUT `-q`. `grep -q` exits on the first
+# match and closes the pipe, which can SIGPIPE the `docker` producer; under
+# `set -o pipefail` that surfaces as a non-zero pipeline status *even on a match*,
+# so an existing container/volume could be misreported as absent — and for the
+# volume guard that would wrongly green-light the bootstrap path over live data.
+# Dropping `-q` makes grep drain the whole stream (`>/dev/null` keeps it quiet)
+# while still returning 0/1 on match/no-match.
+cont_exists()  { docker ps -a --format '{{.Names}}' 2>/dev/null | grep -Fx -- "$1" >/dev/null; }
+cont_running() { docker ps    --format '{{.Names}}' 2>/dev/null | grep -Fx -- "$1" >/dev/null; }
 # Match the Forgejo data volume whether it's the literal name (`forgejo-data`,
 # e.g. an external/named volume) OR a Compose project-prefixed variant
 # (`citadel_forgejo-data`, `tranc3_forgejo-data`, …). A production stack whose
@@ -99,7 +106,7 @@ cont_running() { docker ps    --format '{{.Names}}' 2>/dev/null | grep -qx "$1";
 # for a fresh host — that misclassification is exactly what would bootstrap an
 # empty standalone Forgejo over live production data.
 forgejo_vol_exists() {
-  docker volume ls --format '{{.Name}}' 2>/dev/null | grep -qE '(^|_)forgejo-data$'
+  docker volume ls --format '{{.Name}}' 2>/dev/null | grep -E '(^|_)forgejo-data$' >/dev/null
 }
 
 PROD_FORGEJO="trancendos-forgejo"
