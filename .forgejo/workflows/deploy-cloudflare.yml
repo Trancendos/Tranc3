@@ -75,6 +75,12 @@ jobs:
 
       - name: Build deploy plan
         id: plan
+        # Only plan when credentials are present. The planner fails loud (exit 1)
+        # on an undeterminable change-set; running it in a credential-less run
+        # would red-fail the job instead of skipping cleanly. With no creds there
+        # is nothing to deploy, so skipping the plan leaves matrix/any empty and
+        # the deploy job is gated off by `creds == 'true'` anyway.
+        if: ${{ steps.creds.outputs.present == 'true' }}
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           DISPATCH_WORKER: ${{ github.event.inputs.worker }}

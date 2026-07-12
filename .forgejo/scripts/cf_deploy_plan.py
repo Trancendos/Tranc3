@@ -21,9 +21,12 @@ Outputs (written to $GITHUB_OUTPUT, GitHub/Forgejo-Actions compatible):
              deploy job be skipped cleanly with no empty-matrix error).
   * count  : number of workers selected (for the human-readable summary).
 
-Fails closed: if the changed-file set can't be determined for a push (shallow
-clone, missing parent), it deploys nothing and prints a warning telling the
-operator to re-run via manual dispatch — never a surprise deploy-everything.
+Fails loud: if the changed-file set can't be determined for a push (missing/zero
+base, or the diff command fails), it exits 1 (a red build) so the omission is
+visible and an operator can dispatch explicitly — never a silent partial deploy
+or a surprise deploy-everything. The workflow only runs this planner when
+Cloudflare credentials are present, so a credential-less run skips cleanly rather
+than red-failing here (there is nothing to deploy without credentials anyway).
 """
 
 from __future__ import annotations
