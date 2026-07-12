@@ -67,12 +67,14 @@ async def billing_status():
     from src.monetisation.billing import TIERS
 
     provider_status = _billing().provider_status()
+    # Use the real TIERS keys — entries have no "name" (KeyError -> 500 before),
+    # and the price/rate keys are `price_gbp` / `req_per_hour` (the old
+    # `price_monthly` / `requests_per_hour` lookups silently returned None).
     tiers_info = {
         tier_key: {
-            "name": cfg["name"],
-            "price_monthly": cfg.get("price_monthly"),
+            "name": tier_key.title(),
             "price_gbp": cfg.get("price_gbp"),
-            "requests_per_hour": cfg.get("requests_per_hour"),
+            "requests_per_hour": cfg.get("req_per_hour"),
             "stripe_price_configured": cfg.get("stripe_price_id") is not None,
         }
         for tier_key, cfg in TIERS.items()
@@ -107,15 +109,19 @@ async def billing_portal(user_id: str, return_url: str = "https://trancendos.com
     """Open Stripe billing portal for a customer."""
     from src.monetisation.billing import stripe_manager
 
-    if not stripe_manager.enabled:
+    # StripeManager exposes `is_enabled` (not `enabled`); the old attribute name
+    # raised AttributeError -> 500 instead of this clean 503.
+    if not stripe_manager.is_enabled:
         raise HTTPException(status_code=503, detail="Stripe not configured")
-    result = stripe_manager.create_portal_session(
-        customer_id=user_id,
-        return_url=return_url,
-    )
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-    return result
+    # create_portal_session returns the portal URL (str) or None on failure —
+    # not a dict, so the previous `"error" in result` check was wrong (it would
+    # TypeError on None and substring-scan a URL).
+    url = stripe_manager.create_portal_session(customer_id=user_id, return_url=return_url)
+    if not url:
+        raise HTTPException(
+            status_code=502, detail="Could not create Stripe billing portal session"
+        )
+    return {"portal_url": url}
 
 
 def _current_user_manager():
