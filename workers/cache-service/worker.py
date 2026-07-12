@@ -268,6 +268,11 @@ async def _valkey_get(key: str, url: str) -> Optional[Any]:
 
 
 # ── diskcache backend ─────────────────────────────────────────────────────────
+# SECURITY: diskcache stores values as pickle on disk (CVE-2025-69872 / no fixed
+# release). Only ever cache trusted, service-generated values here — never
+# attacker-controlled data — and keep DISKCACHE_DIR a private, worker-only volume,
+# since a value written by another party would be unpickled on read. See the pin
+# note in requirements-worker.txt and the .trivyignore entry.
 
 
 def _diskcache_set(key: str, value: Any, ttl: Optional[int]) -> bool:
