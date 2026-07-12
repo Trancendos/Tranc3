@@ -4,7 +4,7 @@ When `https://trancendos.com/the-workshop` is unreachable. Cloudflare **HTTP 522
 means "connection timed out to origin" — i.e. Cloudflare reached the trancendos.com
 edge but the **origin server never answered**. The fault is somewhere on this path:
 
-```
+```text
 Cloudflare  →  DNS/edge  →  host:443  →  reverse proxy  →  Forgejo  →  act-runner
 ```
 

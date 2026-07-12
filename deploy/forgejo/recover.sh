@@ -92,7 +92,15 @@ fi
 # ── Topology detection (the safety core) ─────────────────────────────────────
 cont_exists()  { docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$1"; }
 cont_running() { docker ps    --format '{{.Names}}' 2>/dev/null | grep -qx "$1"; }
-vol_exists()   { docker volume ls --format '{{.Name}}' 2>/dev/null | grep -qx "$1"; }
+# Match the Forgejo data volume whether it's the literal name (`forgejo-data`,
+# e.g. an external/named volume) OR a Compose project-prefixed variant
+# (`citadel_forgejo-data`, `tranc3_forgejo-data`, …). A production stack whose
+# containers were removed but whose data volume survives must NOT be mistaken
+# for a fresh host — that misclassification is exactly what would bootstrap an
+# empty standalone Forgejo over live production data.
+forgejo_vol_exists() {
+  docker volume ls --format '{{.Name}}' 2>/dev/null | grep -qE '(^|_)forgejo-data$'
+}
 
 PROD_FORGEJO="trancendos-forgejo"
 STANDALONE_FORGEJO="the-workshop"
@@ -122,7 +130,7 @@ elif (( standalone )); then
 else
   # Neither known Forgejo container exists. Do NOT guess-and-start — that is how
   # a second server ends up on the shared volume (the whole point of this guard).
-  if vol_exists "forgejo-data"; then
+  if forgejo_vol_exists; then
     warn "A 'forgejo-data' volume exists but neither $PROD_FORGEJO nor $STANDALONE_FORGEJO is present."
     NEEDS_HUMAN+=("Forgejo data exists but no known container — NOT auto-starting to avoid a conflicting second server. Bring up the CORRECT stack by hand: production → docker compose -f docker-compose.production.yml up -d traefik forgejo forgejo-runner ; standalone → docker compose -f deploy/forgejo/docker-compose.yml up -d")
   else
@@ -237,8 +245,17 @@ fi
 # the proxy over HTTPS with the real Host header and -k, requiring a literal 200.
 # (A plain http:// check can false-positive on an http->https 301, which `-f`
 # treats as success.)
+# -k is intentional here: this is a local origin routing probe, not a security
+# boundary. We hit 127.0.0.1 with a Host header, so the origin cert (issued for
+# trancendos.com — often a Cloudflare Origin CA cert that is NOT in the system
+# trust store) won't validate against the IP; a validating `--resolve` check
+# would false-negative on exactly that setup. We only care whether the proxy
+# routes /the-workshop to Forgejo and returns 200. Read the status separately
+# and default it, so a connection failure reports "000" — not the "000000"
+# artifact of curl's own 000 output concatenated with an `|| echo 000` fallback.
 proxy_code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 8 \
-  -H 'Host: trancendos.com' 'https://127.0.0.1/the-workshop/-/health' 2>/dev/null || echo 000)"
+  -H 'Host: trancendos.com' 'https://127.0.0.1/the-workshop/-/health' 2>/dev/null)"
+proxy_code="${proxy_code:-000}"
 if [[ "$proxy_code" == "200" ]]; then
   ok "Reverse proxy routes /the-workshop/ to Forgejo (HTTP 200 through the proxy)."
 else
