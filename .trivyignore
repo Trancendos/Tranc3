@@ -19,10 +19,12 @@ KSV118
 # Affects: diskcache <= 5.6.3 (workers/cache-service). 5.6.3 is the LATEST release
 # and the advisory has NO fixed version, so there is no version to upgrade to.
 # Status: NOT EXPLOITABLE in our usage. workers/cache-service/worker.py opens the
-# cache with `disk=diskcache.JSONDisk`, so values are serialized/read as JSON and
-# never unpickled — the vulnerable pickle code path is not exercised. The finding
-# remains only because scanners match the package version (usage-blind), not the
-# serializer in use. Re-evaluate (and drop this ignore) if a patched diskcache
-# release ships. Full context at the pin in
+# cache with a hardened _NoPickleJSONDisk (JSONDisk subclass) that serializes/reads
+# values as JSON AND hard-rejects the base Disk's pickle read paths (mode=MODE_PICKLE
+# values and non-raw keys) — so a tampered or legacy pickle row raises (cache miss)
+# instead of reaching pickle.load(). Verified with an adversarial MODE_PICKLE
+# injection test. The finding remains only because scanners match the package
+# version (usage-blind), not the serializer in use. Re-evaluate (and drop this
+# ignore) if a patched diskcache release ships. Full context at the pin in
 # workers/cache-service/requirements-worker.txt.
 CVE-2025-69872

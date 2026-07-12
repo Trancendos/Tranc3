@@ -8,8 +8,11 @@ duckdb==1.3.0
 # diskcache: CVE-2025-69872 / GHSA-w8v5-vhqr-4h9v (MODERATE) — unsafe pickle
 # deserialization in diskcache's DEFAULT on-disk format. 5.6.3 is the LATEST
 # release and the advisory has no fixed version, so there is no version to bump
-# to. MITIGATED IN CODE: worker.py opens the cache with disk=diskcache.JSONDisk,
-# so values are stored/read as JSON and never unpickled — the vulnerable code
-# path is not exercised. Scanners still version-match 5.6.3 (usage-blind), so it
-# stays tracked in .trivyignore with that justification.
+# to. MITIGATED IN CODE: worker.py opens the cache with a hardened
+# _NoPickleJSONDisk (a JSONDisk subclass) that (a) writes/reads values as JSON
+# and (b) hard-rejects the pickle read paths (mode=MODE_PICKLE values and
+# non-raw keys) that the base Disk would otherwise pickle.load() — so a tampered
+# or legacy pickle row raises (cache miss) instead of executing code. Verified
+# with an adversarial MODE_PICKLE injection test. Scanners still version-match
+# 5.6.3 (usage-blind), so it stays tracked in .trivyignore.
 diskcache==5.6.3
