@@ -153,9 +153,21 @@ async def stripe_webhook(
     if not result:
         raise HTTPException(status_code=400, detail="Invalid or unconfigured Stripe webhook")
 
-    # Reshape the flattened {type, data:object} into an event and provision.
-    event = {"type": result.get("type", ""), "data": {"object": result.get("data") or {}}}
+    # Reshape the flattened {id, type, data:object} into an event and provision.
+    # Keep the event id so revenue booking dedupes against Stripe retries.
+    event = {
+        "id": result.get("id"),
+        "type": result.get("type", ""),
+        "data": {"object": result.get("data") or {}},
+    }
     provisioned = provision_from_event(_current_user_manager(), event)
+    # If we recognised an actionable event but couldn't persist the tier, fail
+    # loud (5xx) so Stripe retries rather than treating a paid-but-not-upgraded
+    # customer as successfully delivered.
+    if provisioned.get("handled") and not provisioned.get("user_persisted"):
+        raise HTTPException(
+            status_code=503, detail={"error": "tier_not_persisted", "provisioned": provisioned}
+        )
     return {"received": True, "type": result.get("type"), "provisioned": provisioned}
 
 

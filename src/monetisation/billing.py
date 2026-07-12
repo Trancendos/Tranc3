@@ -206,17 +206,6 @@ class TierEnforcer:
             else -1,
         }
 
-    def set_tier(self, user_id: str, tier: str) -> bool:
-        """Update the cached tier for an already-tracked user so live rate limits
-        reflect a subscription change immediately. Best-effort: returns False if
-        the user has no in-memory usage record yet (their tier will be picked up
-        from the persistent store on their next authenticated request)."""
-        record = self._usage.get(user_id)
-        if record is None:
-            return False
-        record.tier = tier
-        return True
-
     def can_use_feature(self, tier: str, feature: str) -> bool:
         return bool(TIERS.get(tier, TIERS["free"]).get(feature, False))
 
@@ -303,7 +292,13 @@ class StripeManager:
             return None
         try:
             event = self._stripe.Webhook.construct_event(payload, sig_header, self._webhook_secret)
-            return {"type": event["type"], "data": event["data"]["object"]}
+            # Include the event id so downstream provisioning can dedupe against
+            # Stripe's at-least-once delivery (dropping it defeats record_once).
+            return {
+                "id": event.get("id"),
+                "type": event["type"],
+                "data": event["data"]["object"],
+            }
         except Exception as exc:
             logger.error("Stripe webhook error: %s", sanitize_for_log(exc))
             return None
@@ -845,9 +840,17 @@ def _subscription_price_id(sub_obj: Dict[str, Any]) -> Optional[str]:
 
 
 # Subscription statuses that mean the customer does NOT have a paid entitlement.
-# `incomplete` / `incomplete_expired` mean the initial payment never succeeded, so
-# they must NOT grant a paid tier (the subscription still carries items/price IDs).
-_INACTIVE_SUB_STATUSES = {"canceled", "unpaid", "incomplete", "incomplete_expired"}
+# `incomplete` / `incomplete_expired` mean the initial payment never succeeded;
+# `paused` means billing is suspended (e.g. a trial paused for lack of a payment
+# method). None of these may grant a paid tier even though the subscription still
+# carries items/price IDs.
+_INACTIVE_SUB_STATUSES = {
+    "canceled",
+    "unpaid",
+    "incomplete",
+    "incomplete_expired",
+    "paused",
+}
 
 
 def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -915,6 +918,28 @@ def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             return _downgrade()
         return None
 
+    if etype == "invoice.paid":
+        # Recurring renewal payment — the documented Stripe renewal event. Identity
+        # lives on the subscription (copied to the invoice as subscription_details.
+        # metadata); tier from the line item price, falling back to that metadata.
+        inv_md = (obj.get("subscription_details") or {}).get("metadata") or md
+        inv_user = inv_md.get("user_id")
+        lines = (obj.get("lines") or {}).get("data") or []
+        price_id = (lines[0].get("price") or {}).get("id") if lines else None
+        tier = tier_for_price_id(price_id)
+        if tier is None and inv_md.get("tier") in TIERS:
+            tier = inv_md["tier"]
+        if inv_user and tier and tier != "free":
+            return {
+                "action": "grant",
+                "user_id": inv_user,
+                "tier": tier,
+                "event": etype,
+                "event_id": event_id,
+                "is_payment": True,
+            }
+        return None
+
     return None
 
 
@@ -950,8 +975,10 @@ def apply_provision(user_manager: Any, plan: Optional[Dict[str, Any]]) -> Dict[s
             sanitize_for_log(plan.get("event")),
         )
 
-    # Reflect immediately in the live rate-limit cache if the user is tracked.
-    enforcer.set_tier(user_id, tier)
+    # Note: we deliberately do NOT poke the TierEnforcer usage cache here — rate
+    # limiting resolves the tier from the value the caller passes to
+    # check_and_increment (sourced from the authenticated user, i.e. the store we
+    # just updated), so the persisted tier already governs the user's next request.
 
     # Book revenue ONLY for a genuine payment event, and only once per Stripe
     # event id — Stripe delivers at least once and both webhook routes share this

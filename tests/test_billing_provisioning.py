@@ -13,7 +13,6 @@ from src.monetisation import billing
 from src.monetisation.billing import (
     TIERS,
     apply_provision,
-    enforcer,
     plan_from_event,
     provision_from_event,
     tier_for_price_id,
@@ -124,8 +123,44 @@ def test_subscription_updated_active_maps_price_to_tier(monkeypatch):
     assert plan["is_payment"] is False
 
 
-def test_unrelated_event_is_ignored():
+def test_subscription_paused_downgrades():
+    # A paused subscription (e.g. trial paused for no payment method) must not
+    # retain a paid tier.
+    evt = {
+        "type": "customer.subscription.updated",
+        "data": {"object": {"status": "paused", "metadata": {"user_id": "u-p"}}},
+    }
+    plan = plan_from_event(evt)
+    assert plan["action"] == "downgrade" and plan["tier"] == "free"
+
+
+def test_invoice_paid_books_renewal_revenue(monkeypatch):
+    # The documented recurring-renewal event; identity from subscription_details.
+    monkeypatch.setitem(TIERS["pro"], "stripe_price_id", "price_PRO_renew")
+    evt = {
+        "id": "evt_inv_1",
+        "type": "invoice.paid",
+        "data": {
+            "object": {
+                "subscription_details": {"metadata": {"user_id": "u-renew", "tier": "pro"}},
+                "lines": {"data": [{"price": {"id": "price_PRO_renew"}}]},
+            }
+        },
+    }
+    plan = plan_from_event(evt)
+    assert plan["action"] == "grant"
+    assert plan["user_id"] == "u-renew"
+    assert plan["tier"] == "pro"
+    assert plan["is_payment"] is True
+    assert plan["event_id"] == "evt_inv_1"
+
+
+def test_invoice_paid_without_identity_is_ignored():
     assert plan_from_event({"type": "invoice.paid", "data": {"object": {}}}) is None
+
+
+def test_truly_unrelated_event_is_ignored():
+    assert plan_from_event({"type": "charge.refunded", "data": {"object": {}}}) is None
 
 
 def test_tier_for_price_id(monkeypatch):
@@ -165,12 +200,15 @@ def test_revenue_booked_once_per_event_id():
     before = billing.revenue_tracker.summary().get("total_gbp", 0.0)
 
     first = provision_from_event(fum, evt)
+    assert fum.by_id["u-dup"] == "business"  # tier set on first delivery
     second = provision_from_event(fum, evt)  # duplicate delivery / retry
     third = provision_from_event(fum, evt)  # e.g. via the other webhook route
 
     assert first["revenue_booked"] is True
     assert second["revenue_booked"] is False
     assert third["revenue_booked"] is False
+    # tier state converges (idempotent) — unchanged after the duplicate deliveries
+    assert fum.by_id["u-dup"] == "business"
     after = billing.revenue_tracker.summary().get("total_gbp", 0.0)
     # booked exactly once despite three deliveries
     assert after == before + TIERS["business"]["price_gbp"]
@@ -229,16 +267,6 @@ def test_apply_provision_survives_none_manager():
     result = apply_provision(None, {"action": "grant", "user_id": "u", "tier": "pro", "event": "x"})
     assert result["handled"] is True
     assert result["user_persisted"] is False
-
-
-def test_enforcer_cache_reflects_new_tier_for_tracked_user():
-    # A user already being rate-limited should see the new tier immediately.
-    enforcer.check_and_increment("u-live", tier="free")
-    apply_provision(
-        FakeUserManager(),
-        {"action": "grant", "user_id": "u-live", "tier": "business", "event": "x"},
-    )
-    assert enforcer.get_usage("u-live")["tier"] == "business"
 
 
 # ---------------------------------------------------------------------------

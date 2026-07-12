@@ -2011,6 +2011,14 @@ async def stripe_webhook(request: Request):
     from src.monetisation.billing import provision_from_event
 
     provisioned = provision_from_event(db_user_manager, event)
+    # Fail loud (5xx) if we recognised an actionable event but couldn't persist the
+    # tier, so Stripe retries instead of treating a paid-but-not-upgraded customer
+    # as delivered.
+    if provisioned.get("handled") and not provisioned.get("user_persisted"):
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "tier_not_persisted", "provisioned": provisioned},
+        )
     return {"received": True, "provisioned": provisioned}
 
 
