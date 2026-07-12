@@ -563,10 +563,19 @@ class PassiveRevenueEngine:
         logger.info("Revenue: %s +£%.2f (total: £%.2f)", stream, amount_gbp, self._revenue[stream])
 
     def marketplace_fee(self, transaction_amount_gbp: float) -> float:
-        """Calculate 2.5% Arcadian Exchange marketplace fee."""
+        """Calculate AND record the 2.5% Arcadian Exchange marketplace fee."""
         fee = round(transaction_amount_gbp * 0.025, 2)
         self.record("marketplace_fees", fee, {"transaction_amount": transaction_amount_gbp})
         return fee
+
+    @property
+    def streams(self) -> Dict[str, float]:
+        """Cumulative revenue per stream (GBP). Returns a **defensive copy** — a
+        plain, JSON-serialisable dict — so callers can read (and even mutate) it
+        without touching the engine's ledger, and so nobody depends on the private
+        `_revenue` attribute (whose absence previously crashed the /billing/revenue
+        endpoints). To change recorded revenue, use record()/record_once()."""
+        return dict(self._revenue)
 
     def summary(self) -> Dict:
         total = sum(self._revenue.values())

@@ -186,15 +186,16 @@ async def revenue_summary():
 async def record_marketplace_fee(req: MarketplaceFeeRequest):
     """Record a marketplace transaction and return the 2.5% platform fee."""
     tracker = _revenue()
-    fee = tracker.marketplace_fee(req.transaction_amount)
-    tracker.streams["marketplace_fees"]["monthly_estimate"] = (
-        tracker.streams["marketplace_fees"].get("monthly_estimate", 0.0) + fee
-    )
+    # marketplace_fee() already books the fee into the marketplace_fees stream.
+    # (The previous tracker.streams[...]["monthly_estimate"] write both crashed —
+    # PassiveRevenueEngine has no such nested shape — and double-counted.)
+    fee = tracker.marketplace_fee(req.transaction_amount)  # already rounded to 2dp
     return {
         "transaction_amount": req.transaction_amount,
-        "platform_fee": round(fee, 4),
+        "platform_fee": fee,
         "fee_rate": "2.5%",
         "description": req.description,
+        "marketplace_fees_total": round(tracker.streams["marketplace_fees"], 2),
     }
 
 
