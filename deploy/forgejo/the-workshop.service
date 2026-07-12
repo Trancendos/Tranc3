@@ -1,8 +1,21 @@
 # deploy/forgejo/the-workshop.service
-# systemd unit that supervises The Workshop (Forgejo + act-runner) and brings it
-# back automatically after a host reboot — the most common silent cause of a
-# Cloudflare 522 on a stack whose containers are otherwise `restart: unless-stopped`
-# (that policy does NOT cover a full host reboot unless something starts compose).
+# systemd unit that brings The Workshop (Forgejo + act-runner) back automatically
+# after a host reboot — the most common silent cause of a Cloudflare 522 on a
+# stack whose containers are otherwise `restart: unless-stopped` (that policy does
+# NOT cover a full host reboot unless something starts compose).
+#
+# Why it calls recover.sh instead of a bare `docker compose up`:
+#   This platform documents TWO Forgejo deployments that share the named
+#   `forgejo-data` volume — production (docker-compose.production.yml, container
+#   `trancendos-forgejo` behind Traefik) and standalone (deploy/forgejo/
+#   docker-compose.yml, container `the-workshop` behind nginx/Caddy). A hardcoded
+#   `docker compose -f deploy/forgejo/docker-compose.yml up -d` would (a) start the
+#   WRONG stack on a production host — a second Forgejo on the shared volume, which
+#   risks DB corruption — and (b) recreate the act-runner from the upstream image,
+#   losing the custom flyctl/wrangler tooling because the unit's clean environment
+#   never sets RUNNER_IMAGE. recover.sh detects the deployed topology, operates
+#   only on that stack, refuses to double-start, and pins RUNNER_IMAGE to the
+#   already-deployed runner image before `up`. It exits 0 when Forgejo is healthy.
 #
 # Install (run once on the trancendos.com server, as root):
 #   # 1. Edit WorkingDirectory below to your repo checkout path if not /opt/tranc3
@@ -13,10 +26,10 @@
 # Check / operate:
 #   systemctl status the-workshop
 #   journalctl -u the-workshop -f
-#   sudo systemctl restart the-workshop   # = docker compose up -d (idempotent)
+#   sudo systemctl restart the-workshop   # = re-run recover.sh (idempotent)
 
 [Unit]
-Description=The Workshop — Trancendos Forgejo CI/CD (docker compose)
+Description=The Workshop — Trancendos Forgejo CI/CD (topology-aware boot)
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
@@ -26,10 +39,15 @@ Type=oneshot
 RemainAfterExit=yes
 # Repo checkout on the server — change if yours differs.
 WorkingDirectory=/opt/tranc3
-ExecStart=/usr/bin/docker compose -f deploy/forgejo/docker-compose.yml up -d
+# Topology-detecting bring-up: auto-selects production vs standalone, preserves
+# the custom runner image, and refuses to start a conflicting second Forgejo.
+ExecStart=/usr/bin/env bash deploy/forgejo/recover.sh
+# On stop, tear down whichever stack this checkout's standalone compose defines.
+# (Production hosts run the full Citadel stack under its own supervision; there a
+# `systemctl stop the-workshop` is a no-op against the standalone file and will
+# not touch trancendos-forgejo.)
 ExecStop=/usr/bin/docker compose -f deploy/forgejo/docker-compose.yml down
-# Re-assert desired state periodically is handled by the containers' own
-# restart policy; this unit guarantees they exist after a boot.
+# recover.sh waits up to ~60s for Forgejo health; give the unit headroom.
 TimeoutStartSec=300
 
 [Install]
