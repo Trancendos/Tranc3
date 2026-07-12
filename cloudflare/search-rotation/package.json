@@ -1,13 +1,13 @@
 {
   "name": "tranc3-search",
   "version": "1.0.0",
-  "description": "Adaptive zero-cost search rotation — Typesense + Meilisearch + Algolia + KV fallback",
+  "description": "Adaptive zero-cost search rotation \u2014 Typesense + Meilisearch + Algolia + KV fallback",
   "main": "src/index.js",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev"
   },
   "devDependencies": {
-    "wrangler": "^3"
+    "wrangler": "^4.102.0"
   }
 }

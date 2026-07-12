@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "Data-driven Cloudflare deploy manifest. Single source of truth for which",
+    "workers the deploy pipeline knows about. Consumed by",
+    ".forgejo/scripts/cf_deploy_plan.py, which the .forgejo/workflows/deploy-cloudflare.yml",
+    "workflow runs to compute a per-worker deploy matrix from the files that",
+    "actually changed. To onboard a new worker: add an entry here (name = the",
+    "wrangler.toml `name`, dir = its folder under cloudflare/). No workflow edit needed.",
+    "health_url is polled after deploy as a SOFT signal (warning only, never fails",
+    "the job — `wrangler deploy` exit code is the authoritative success gate). Leave",
+    "it \"\" to skip the health poll for that worker.",
+    "A worker MUST carry a committed package-lock.json to be listed here (CI installs",
+    "with lockfile-only `npm ci` — see DEPLOY.md). The legacy *-rotation workers and",
+    "the Pages project are intentionally omitted until they carry a reviewed lock."
+  ],
+  "workers": [
+    { "name": "trancendos-api-gateway", "dir": "trancendos-api-gateway", "health_url": "https://api.trancendos.com/health" },
+    { "name": "tranc3-ai",              "dir": "tranc3-ai",              "health_url": "https://tranc3-ai.luminous-aimastermind.workers.dev/health" },
+    { "name": "infinity-void",          "dir": "infinity-void",          "health_url": "https://infinity-void.luminous-aimastermind.workers.dev/health" }
+  ]
+}

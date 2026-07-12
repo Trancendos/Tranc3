@@ -1,45 +1,102 @@
 name: Deploy Cloudflare Workers
 
+# Smart, data-driven Cloudflare deploy pipeline (Forgejo Actions — The Workshop).
+#
+# What changed vs. the old version:
+#   * No hardcoded per-worker jobs. Workers are declared once in
+#     cloudflare/deploy-manifest.json; add one there and it deploys — no edit here.
+#   * Change-aware: a push only deploys workers whose own files changed
+#     (see .forgejo/scripts/cf_deploy_plan.py), not all of them every time.
+#   * Fails soft on missing credentials: if CF_API_TOKEN isn't configured (e.g.
+#     The Workshop runner is being bootstrapped), the deploy is SKIPPED with a
+#     clear notice instead of red-X'ing the pipeline.
+#   * Manual dispatch can target one worker or all, with an optional force flag.
+#   * Post-deploy health poll (soft — advisory only; `wrangler deploy` is the gate).
+
 on:
   push:
     branches: [main]
     paths:
       - 'cloudflare/**'
       - '.forgejo/workflows/deploy-cloudflare.yml'
+      - '.forgejo/scripts/cf_deploy_plan.py'
   workflow_dispatch:
+    inputs:
+      worker:
+        description: 'Worker to deploy: a name from cloudflare/deploy-manifest.json, or "all"'
+        required: false
+        default: 'all'
+      force:
+        description: 'Deploy even if no matching files changed'
+        required: false
+        default: 'false'
+
+# Serialize deploys to main so two pushes can't race the same worker; let an
+# in-flight deploy finish rather than cancelling it mid-`wrangler deploy`.
+concurrency:
+  group: cf-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  deploy-api-gateway:
-    name: Deploy API Gateway Worker
+  preflight:
+    name: Preflight (plan + credential check)
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      any: ${{ steps.plan.outputs.any }}
+      count: ${{ steps.plan.outputs.count }}
+      creds: ${{ steps.creds.outputs.present }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          fetch-depth: 0  # full history so the push `before..after` diff is reliable
+                          # even for multi-commit pushes / squash merges
 
-      - name: Install Wrangler
-        run: npm install -g wrangler
-
-      - name: Set TRANC3_BACKEND_URL secret
-        working-directory: cloudflare/trancendos-api-gateway
+      - name: Check Cloudflare credentials
+        id: creds
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
-          echo "https://trancendos-backend.fly.dev" | wrangler secret put TRANC3_BACKEND_URL --name trancendos-api-gateway
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          # Both are required by `wrangler deploy`; gate on both so a
+          # half-configured runner skips cleanly instead of failing mid-deploy.
+          if [ -n "${CF_API_TOKEN}" ] && [ -n "${CF_ACCOUNT_ID}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials present (API token + account id)."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            [ -z "${CF_API_TOKEN}" ] && echo "::warning::CF_API_TOKEN is not configured for this runner."
+            [ -z "${CF_ACCOUNT_ID}" ] && echo "::warning::CF_ACCOUNT_ID is not configured for this runner."
+            echo "::warning::Deploy will be skipped until BOTH CF_API_TOKEN and CF_ACCOUNT_ID are set as org/repo secrets in The Workshop."
+          fi
 
-      - name: Deploy API Gateway
-        working-directory: cloudflare/trancendos-api-gateway
-        run: wrangler deploy
+      - name: Build deploy plan
+        id: plan
+        # Only plan when credentials are present. The planner fails loud (exit 1)
+        # on an undeterminable change-set; running it in a credential-less run
+        # would red-fail the job instead of skipping cleanly. With no creds there
+        # is nothing to deploy, so skipping the plan leaves matrix/any empty and
+        # the deploy job is gated off by `creds == 'true'` anyway.
+        if: ${{ steps.creds.outputs.present == 'true' }}
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_WORKER: ${{ github.event.inputs.worker }}
+          FORCE: ${{ github.event.inputs.force }}
+          GIT_BEFORE: ${{ github.event.before }}
+          GIT_AFTER: ${{ github.sha }}
+        run: python3 .forgejo/scripts/cf_deploy_plan.py
 
-  deploy-tranc3-ai:
-    name: Deploy tranc3-ai Worker
+  deploy:
+    name: Deploy ${{ matrix.name }}
+    needs: preflight
+    if: ${{ needs.preflight.outputs.any == 'true' && needs.preflight.outputs.creds == 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # one worker failing shouldn't block the others
+      matrix: ${{ fromJSON(needs.preflight.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -47,13 +104,61 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        working-directory: cloudflare/tranc3-ai
+      - name: Install worker dependencies
+        working-directory: cloudflare/${{ matrix.dir }}
+        # Lockfile-only install for a deterministic, reviewed dependency tree.
+        # Every manifest worker MUST commit a package-lock.json (see DEPLOY.md);
+        # there is deliberately no `npm install` fallback, so a missing or
+        # out-of-sync lock fails loudly instead of silently resolving an
+        # unpinned (possibly different) wrangler at deploy time.
         run: npm ci
 
-      - name: Deploy tranc3-ai
-        working-directory: cloudflare/tranc3-ai
-        run: npx wrangler deploy
+      - name: Deploy ${{ matrix.name }}
+        working-directory: cloudflare/${{ matrix.dir }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        # --no-install: deploy only with the wrangler that `npm ci` just installed
+        # from the lockfile. No unpinned `npx wrangler` retry — a failed production
+        # deploy must never be re-attempted under a different, unreviewed CLI version.
+        run: npx --no-install wrangler deploy
+
+      - name: Health poll (advisory)
+        if: ${{ matrix.health_url != '' }}
+        # Pass matrix values through the environment rather than interpolating
+        # them into the shell script, so a value with shell metacharacters can't
+        # break parsing or inject commands.
+        env:
+          HEALTH_URL: ${{ matrix.health_url }}
+          WORKER_NAME: ${{ matrix.name }}
+        run: |
+          echo "Polling ${HEALTH_URL} ..."
+          for i in 1 2 3 4 5; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "OK — ${WORKER_NAME} healthy (200) on attempt $i."
+              exit 0
+            fi
+            echo "attempt $i: HTTP ${code} — retrying..."
+            sleep $((i * 3))
+          done
+          echo "::warning::${WORKER_NAME} health poll did not return 200 (last: ${code}). Deploy itself succeeded; verify the endpoint/route manually."
+
+  report:
+    name: Deploy summary
+    needs: [preflight, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize
+        run: |
+          echo "Planned workers: ${{ needs.preflight.outputs.count }}"
+          echo "Credentials present: ${{ needs.preflight.outputs.creds }}"
+          echo "Deploy job result: ${{ needs.deploy.result }}"
+          if [ "${{ needs.preflight.outputs.creds }}" != "true" ]; then
+            echo "::notice::Skipped — no Cloudflare credentials on this runner."
+          elif [ "${{ needs.preflight.outputs.any }}" != "true" ]; then
+            echo "::notice::Nothing to deploy — no matching worker changes."
+          else
+            echo "::notice::Deploy dispatched for ${{ needs.preflight.outputs.count }} worker(s); result=${{ needs.deploy.result }}."
+          fi
