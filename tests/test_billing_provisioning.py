@@ -25,6 +25,7 @@ class FakeUserManager:
     def __init__(self):
         self.by_id: dict[str, str] = {}
         self.by_name: dict[str, str] = {}
+        self.customer_by_id: dict[str, str] = {}
 
     def update_tier_by_id(self, user_id: str, tier: str) -> bool:
         # emulate "unknown user" for a sentinel id so the username fallback is exercised
@@ -37,14 +38,23 @@ class FakeUserManager:
         self.by_name[username] = tier
         return True
 
+    def set_stripe_customer_id(self, user_id: str, customer_id: str) -> bool:
+        if not customer_id:
+            return False
+        self.customer_by_id[user_id] = customer_id
+        return True
 
-def _checkout_event(user_id="u-123", tier="pro", event_id="evt_1", payment_status="paid"):
+
+def _checkout_event(
+    user_id="u-123", tier="pro", event_id="evt_1", payment_status="paid", customer="cus_ABC"
+):
     return {
         "id": event_id,
         "type": "checkout.session.completed",
         "data": {
             "object": {
                 "id": "cs_1",
+                "customer": customer,
                 "payment_status": payment_status,
                 "metadata": {"user_id": user_id, "tier": tier},
             }
@@ -170,6 +180,20 @@ def test_tier_for_price_id(monkeypatch):
     assert tier_for_price_id(None) is None
 
 
+def test_checkout_plan_captures_stripe_customer_id():
+    plan = plan_from_event(_checkout_event(customer="cus_XYZ"))
+    assert plan["stripe_customer_id"] == "cus_XYZ"
+
+
+def test_plan_ignores_non_string_customer():
+    # Un-expanded events send the customer id as a string; an object would be a
+    # bug to persist. Guard against storing a dict.
+    evt = _checkout_event()
+    evt["data"]["object"]["customer"] = {"id": "cus_obj"}
+    plan = plan_from_event(evt)
+    assert plan["stripe_customer_id"] is None
+
+
 # ---------------------------------------------------------------------------
 # apply_provision / provision_from_event (side effects, injected manager)
 # ---------------------------------------------------------------------------
@@ -190,6 +214,34 @@ def test_apply_provision_persists_by_id_and_books_revenue():
     # recurring revenue booked for the pro price
     after = billing.revenue_tracker.summary().get("total_gbp", 0.0)
     assert after == before + TIERS["pro"]["price_gbp"]
+
+
+def test_apply_provision_persists_stripe_customer_id():
+    fum = FakeUserManager()
+    result = provision_from_event(
+        fum, _checkout_event(user_id="u-cust", tier="pro", customer="cus_LINK")
+    )
+    assert result["customer_persisted"] is True
+    assert fum.customer_by_id["u-cust"] == "cus_LINK"
+
+
+def test_apply_provision_without_customer_id_does_not_persist_link():
+    fum = FakeUserManager()
+    result = provision_from_event(
+        fum, _checkout_event(user_id="u-nocust", tier="pro", customer=None)
+    )
+    assert result["customer_persisted"] is False
+    assert "u-nocust" not in fum.customer_by_id
+
+
+def test_end_to_end_checkout_links_customer_via_real_fallback_manager():
+    mgr = DBUserManager(None)
+    created = mgr.create_user("carol", "Str0ng-Pass!23")
+    uid = created["user_id"]
+
+    provision_from_event(mgr, _checkout_event(user_id=uid, tier="pro", customer="cus_CAROL"))
+    # The portal's server-side resolution path now returns the linked customer.
+    assert mgr.get_stripe_customer_id(uid) == "cus_CAROL"
 
 
 def test_revenue_booked_once_per_event_id():

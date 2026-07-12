@@ -119,25 +119,41 @@ async def billing_portal(
     """Open the Stripe billing portal for the *authenticated* customer.
 
     Security (cubic P0 / gemini HIGH, BOLA): this endpoint previously took a
-    client-supplied `user_id` and passed it straight to Stripe as the customer
-    id, so any unauthenticated caller could mint a management-session URL for an
+    client-supplied `user_id` and passed it straight to Stripe as the customer id,
+    so any unauthenticated caller could mint a management-session URL for an
     arbitrary Stripe customer. It is now bound to the caller's own identity via
-    `get_current_user`; it never accepts a customer id from the request.
-
-    The server-side link from our internal user id to a Stripe `cus_...` id does
-    not exist yet (the User table has no `stripe_customer_id` column, and the
-    webhook does not persist one). Until that linkage lands we return 501 rather
-    than guessing — passing our internal UUID to Stripe as a customer id is both
-    wrong (it is not a `cus_...` id) and the very hole we are closing. See the
-    tracking issue for the migration + webhook-storage work.
+    `get_current_user`, and the Stripe customer id is resolved **server-side** from
+    the durable link the webhook persisted (`users.stripe_customer_id`) — never
+    from the request.
     """
-    raise HTTPException(
-        status_code=501,
-        detail=(
-            "Billing portal not yet available: Stripe customer linkage is pending "
-            "(requires stripe_customer_id persistence)."
-        ),
-    )
+    from src.monetisation.billing import stripe_manager
+
+    if not stripe_manager.is_enabled:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+
+    # Resolve the caller's own Stripe customer id from our store. The token `sub`
+    # is the internal user id; fall back to `username` for older tokens.
+    manager = _current_user_manager()
+    customer_id = None
+    if manager is not None and hasattr(manager, "get_stripe_customer_id"):
+        identifier = user.get("sub") or user.get("username")
+        customer_id = manager.get_stripe_customer_id(identifier)
+
+    if not customer_id:
+        # Authenticated, but this user has no Stripe customer on file yet (never
+        # subscribed, or the linking webhook hasn't arrived). 409 — not an auth
+        # failure, and we will NOT accept a caller-supplied id to paper over it.
+        raise HTTPException(
+            status_code=409,
+            detail="No Stripe customer on file for this account. Subscribe first.",
+        )
+
+    url = stripe_manager.create_portal_session(customer_id=customer_id, return_url=return_url)
+    if not url:
+        raise HTTPException(
+            status_code=502, detail="Could not create Stripe billing portal session"
+        )
+    return {"portal_url": url}
 
 
 def _current_user_manager():

@@ -5,8 +5,11 @@ Portal: regression + security cover. The handler once called
 as a dict, both of which 500'd; a crash-fix then un-masked a BOLA — it accepted
 a client-supplied `user_id` and passed it straight to Stripe as the customer id,
 so any unauthenticated caller could mint a portal URL for an arbitrary customer.
-The endpoint is now bound to the authenticated user and returns 501 until the
-Stripe-customer-id linkage lands. These tests pin that closed behaviour.
+The endpoint is now bound to the authenticated user and resolves that user's
+Stripe customer id **server-side** from the persisted link. These tests pin the
+closed behaviour: no client id in the signature, 503 when Stripe is off, 409 when
+the caller has no customer on file, 502 on session-creation failure, and a URL on
+success.
 
 Status: previously KeyError: 'name' -> 500; `zero_cost_mode` also counted the
 `*_price_configured` catalogue flags as if they were live providers.
@@ -21,17 +24,35 @@ import pytest
 from fastapi import HTTPException
 
 from src.monetisation import billing
+from src.monetisation import router as billing_router_mod
 from src.monetisation.billing import TIERS
 from src.monetisation.router import billing_portal, billing_status
 
 
-def test_portal_is_gated_501_pending_customer_linkage():
-    # Bound to the authenticated caller; no client `user_id` is accepted. Until
-    # stripe_customer_id persistence exists it must refuse (501), never mint a
-    # session for an arbitrary/guessed customer id.
-    with pytest.raises(HTTPException) as exc:
-        asyncio.run(billing_portal(user={"sub": "user-123", "username": "alice"}))
-    assert exc.value.status_code == 501
+class _FakeStripe:
+    def __init__(self, is_enabled: bool, portal_url):
+        self.is_enabled = is_enabled
+        self._portal_url = portal_url
+        self.seen_customer_id = None
+
+    def create_portal_session(self, customer_id: str, return_url: str):
+        self.seen_customer_id = customer_id
+        return self._portal_url
+
+
+class _FakeManager:
+    def __init__(self, mapping: dict):
+        self._mapping = mapping
+
+    def get_stripe_customer_id(self, identifier):
+        return self._mapping.get(identifier)
+
+
+def _patch_portal(monkeypatch, *, stripe, customer_map):
+    monkeypatch.setattr(billing, "stripe_manager", stripe)
+    monkeypatch.setattr(
+        billing_router_mod, "_current_user_manager", lambda: _FakeManager(customer_map)
+    )
 
 
 def test_portal_does_not_accept_client_customer_id():
@@ -43,6 +64,53 @@ def test_portal_does_not_accept_client_customer_id():
     assert "user_id" not in params
     assert "customer_id" not in params
     assert params <= {"return_url", "user"}
+
+
+def test_portal_503_when_stripe_disabled(monkeypatch):
+    _patch_portal(monkeypatch, stripe=_FakeStripe(False, None), customer_map={})
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(billing_portal(user={"sub": "u-1", "username": "alice"}))
+    assert exc.value.status_code == 503
+
+
+def test_portal_409_when_no_customer_on_file(monkeypatch):
+    # Authenticated but never subscribed → 409, and Stripe is never asked to mint
+    # a session for a guessed id.
+    stripe = _FakeStripe(True, "https://billing.stripe.com/x")
+    _patch_portal(monkeypatch, stripe=stripe, customer_map={})
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(billing_portal(user={"sub": "u-1", "username": "alice"}))
+    assert exc.value.status_code == 409
+    assert stripe.seen_customer_id is None
+
+
+def test_portal_502_when_session_creation_fails(monkeypatch):
+    stripe = _FakeStripe(True, None)  # enabled, but Stripe returns None
+    _patch_portal(monkeypatch, stripe=stripe, customer_map={"u-1": "cus_1"})
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(billing_portal(user={"sub": "u-1", "username": "alice"}))
+    assert exc.value.status_code == 502
+
+
+def test_portal_returns_url_and_uses_server_resolved_customer(monkeypatch):
+    url = "https://billing.stripe.com/session/xyz"
+    stripe = _FakeStripe(True, url)
+    _patch_portal(monkeypatch, stripe=stripe, customer_map={"u-1": "cus_SERVER"})
+    result = asyncio.run(billing_portal(user={"sub": "u-1", "username": "alice"}))
+    assert result == {"portal_url": url}
+    # The customer id came from our store, keyed by the token subject — never the
+    # request.
+    assert stripe.seen_customer_id == "cus_SERVER"
+
+
+def test_portal_falls_back_to_username_for_legacy_tokens(monkeypatch):
+    url = "https://billing.stripe.com/session/legacy"
+    stripe = _FakeStripe(True, url)
+    # No `sub` match; resolve by username instead.
+    _patch_portal(monkeypatch, stripe=stripe, customer_map={"alice": "cus_LEGACY"})
+    result = asyncio.run(billing_portal(user={"username": "alice"}))
+    assert result == {"portal_url": url}
+    assert stripe.seen_customer_id == "cus_LEGACY"
 
 
 # --- GET /billing/status (previously KeyError: 'name' -> 500) -----------------

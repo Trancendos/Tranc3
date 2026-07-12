@@ -877,6 +877,10 @@ def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     obj = (event.get("data") or {}).get("object") or {}
     md = obj.get("metadata") or {}
     user_id = md.get("user_id")
+    # The Stripe customer id (cus_...) rides on every actionable object
+    # (checkout session, subscription, invoice). Capture it so provisioning can
+    # persist the durable user->customer link the billing portal resolves from.
+    customer_id = obj.get("customer") if isinstance(obj.get("customer"), str) else None
 
     def _grant(tier: str, *, is_payment: bool) -> Dict[str, Any]:
         return {
@@ -886,6 +890,7 @@ def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "event": etype,
             "event_id": event_id,
             "is_payment": is_payment,
+            "stripe_customer_id": customer_id,
         }
 
     def _downgrade() -> Dict[str, Any]:
@@ -896,6 +901,7 @@ def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "event": etype,
             "event_id": event_id,
             "is_payment": False,
+            "stripe_customer_id": customer_id,
         }
 
     if etype == "checkout.session.completed":
@@ -946,6 +952,7 @@ def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 "event": etype,
                 "event_id": event_id,
                 "is_payment": True,
+                "stripe_customer_id": customer_id,
             }
         return None
 
@@ -984,6 +991,19 @@ def apply_provision(user_manager: Any, plan: Optional[Dict[str, Any]]) -> Dict[s
             sanitize_for_log(plan.get("event")),
         )
 
+    # Persist the durable user -> Stripe customer link (best-effort, never fatal to
+    # the webhook). This is what lets POST /billing/portal resolve the caller's
+    # customer id server-side instead of trusting a client-supplied value.
+    customer_persisted = False
+    stripe_customer_id = plan.get("stripe_customer_id")
+    if stripe_customer_id and hasattr(user_manager, "set_stripe_customer_id"):
+        try:
+            customer_persisted = bool(
+                user_manager.set_stripe_customer_id(user_id, stripe_customer_id)
+            )
+        except Exception as exc:  # never let this raise into the webhook
+            logger.error("provision: stripe_customer_id persist failed: %s", sanitize_for_log(exc))
+
     # Note: we deliberately do NOT poke the TierEnforcer usage cache here — rate
     # limiting resolves the tier from the value the caller passes to
     # check_and_increment (sourced from the authenticated user, i.e. the store we
@@ -1009,6 +1029,7 @@ def apply_provision(user_manager: Any, plan: Optional[Dict[str, Any]]) -> Dict[s
         "tier": tier,
         "user_persisted": persisted,
         "revenue_booked": revenue_booked,
+        "customer_persisted": customer_persisted,
     }
 
 
