@@ -58,13 +58,18 @@ jobs:
         id: creds
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
-          if [ -n "${CF_API_TOKEN}" ]; then
+          # Both are required by `wrangler deploy`; gate on both so a
+          # half-configured runner skips cleanly instead of failing mid-deploy.
+          if [ -n "${CF_API_TOKEN}" ] && [ -n "${CF_ACCOUNT_ID}" ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare API token present."
+            echo "Cloudflare credentials present (API token + account id)."
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CF_API_TOKEN is not configured for this runner — deploy will be skipped. Set the CF_API_TOKEN and CF_ACCOUNT_ID org/repo secrets in The Workshop to enable it."
+            [ -z "${CF_API_TOKEN}" ] && echo "::warning::CF_API_TOKEN is not configured for this runner."
+            [ -z "${CF_ACCOUNT_ID}" ] && echo "::warning::CF_ACCOUNT_ID is not configured for this runner."
+            echo "::warning::Deploy will be skipped until BOTH CF_API_TOKEN and CF_ACCOUNT_ID are set as org/repo secrets in The Workshop."
           fi
 
       - name: Build deploy plan
@@ -94,7 +99,9 @@ jobs:
 
       - name: Install worker dependencies
         working-directory: cloudflare/${{ matrix.dir }}
-        run: npm ci 2>/dev/null || npm install
+        # Exit-code fallback (keeps npm's stderr visible for diagnosis): use the
+        # lockfile when present, otherwise resolve fresh.
+        run: npm ci || npm install
 
       - name: Deploy ${{ matrix.name }}
         working-directory: cloudflare/${{ matrix.dir }}

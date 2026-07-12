@@ -34,7 +34,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+# Prefer the CI-provided checkout root (GITHUB_WORKSPACE) so the planner isn't
+# coupled to this script's location; fall back to walking up from __file__ for
+# local runs / when the env var is unset.
+_WORKSPACE = os.environ.get("GITHUB_WORKSPACE")
+REPO_ROOT = Path(_WORKSPACE) if _WORKSPACE else Path(__file__).resolve().parents[2]
 MANIFEST = REPO_ROOT / "cloudflare" / "deploy-manifest.json"
 WORKFLOW_REL = ".forgejo/workflows/deploy-cloudflare.yml"
 MANIFEST_REL = "cloudflare/deploy-manifest.json"
