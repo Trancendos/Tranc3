@@ -52,7 +52,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # need the parent commit so push diffs work
+          fetch-depth: 0  # full history so the push `before..after` diff is reliable
+                          # even for multi-commit pushes / squash merges
 
       - name: Check Cloudflare credentials
         id: creds
@@ -99,32 +100,43 @@ jobs:
 
       - name: Install worker dependencies
         working-directory: cloudflare/${{ matrix.dir }}
-        # Exit-code fallback (keeps npm's stderr visible for diagnosis): use the
-        # lockfile when present, otherwise resolve fresh.
-        run: npm ci || npm install
+        # Lockfile-only install for a deterministic, reviewed dependency tree.
+        # Every manifest worker MUST commit a package-lock.json (see DEPLOY.md);
+        # there is deliberately no `npm install` fallback, so a missing or
+        # out-of-sync lock fails loudly instead of silently resolving an
+        # unpinned (possibly different) wrangler at deploy time.
+        run: npm ci
 
       - name: Deploy ${{ matrix.name }}
         working-directory: cloudflare/${{ matrix.dir }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        run: npx --no-install wrangler deploy || npx wrangler deploy
+        # --no-install: deploy only with the wrangler that `npm ci` just installed
+        # from the lockfile. No unpinned `npx wrangler` retry — a failed production
+        # deploy must never be re-attempted under a different, unreviewed CLI version.
+        run: npx --no-install wrangler deploy
 
       - name: Health poll (advisory)
         if: ${{ matrix.health_url != '' }}
+        # Pass matrix values through the environment rather than interpolating
+        # them into the shell script, so a value with shell metacharacters can't
+        # break parsing or inject commands.
+        env:
+          HEALTH_URL: ${{ matrix.health_url }}
+          WORKER_NAME: ${{ matrix.name }}
         run: |
-          url='${{ matrix.health_url }}'
-          echo "Polling ${url} ..."
+          echo "Polling ${HEALTH_URL} ..."
           for i in 1 2 3 4 5; do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$url" || echo 000)
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL" || echo 000)
             if [ "$code" = "200" ]; then
-              echo "OK — ${{ matrix.name }} healthy (200) on attempt $i."
+              echo "OK — ${WORKER_NAME} healthy (200) on attempt $i."
               exit 0
             fi
             echo "attempt $i: HTTP ${code} — retrying..."
             sleep $((i * 3))
           done
-          echo "::warning::${{ matrix.name }} health poll did not return 200 (last: ${code}). Deploy itself succeeded; verify the endpoint/route manually."
+          echo "::warning::${WORKER_NAME} health poll did not return 200 (last: ${code}). Deploy itself succeeded; verify the endpoint/route manually."
 
   report:
     name: Deploy summary

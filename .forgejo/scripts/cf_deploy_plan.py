@@ -45,7 +45,7 @@ MANIFEST_REL = "cloudflare/deploy-manifest.json"
 
 
 def _load_workers() -> list[dict]:
-    data = json.loads(MANIFEST.read_text())
+    data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     workers = data.get("workers", [])
     # Only well-formed entries with a name + dir are deployable.
     return [w for w in workers if w.get("name") and w.get("dir")]
@@ -68,6 +68,15 @@ def _git_changed_files(before: str, after: str) -> list[str] | None:
                 text=True,
                 check=True,
             )
+            if base == "HEAD~1" and len(candidates) > 1:
+                # We had a real push range but it wasn't diffable (e.g. the parent
+                # wasn't fetched) and fell back to the single-commit diff — flag it,
+                # since earlier commits of a multi-commit push may then be missed.
+                print(
+                    "::warning::Could not diff the push range; fell back to HEAD~1. "
+                    "Changes in earlier commits of a multi-commit push may be ignored "
+                    "— ensure the workflow uses fetch-depth: 0."
+                )
             return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
         except subprocess.CalledProcessError:
             continue
@@ -120,13 +129,18 @@ def main() -> int:
             os.environ.get("GIT_BEFORE", ""), os.environ.get("GIT_AFTER", "")
         )
         if changed is None:
+            # Fail loud rather than silently skipping: a push that can't be
+            # diffed would otherwise leave production out of sync with main with
+            # nobody alerted. With fetch-depth: 0 this should never happen, so
+            # reaching here is a genuine anomaly worth a red build.
             print(
-                "::warning::Could not determine changed files (shallow clone or "
-                "missing parent commit). Deploying nothing — re-run via manual "
-                "dispatch (workflow_dispatch) with the target worker if needed."
+                "::error::Could not determine changed files (shallow clone or "
+                "missing parent commit). Failing to prevent a silent deploy "
+                "omission — re-run via manual dispatch (workflow_dispatch), or "
+                "ensure the workflow checks out with fetch-depth: 0."
             )
             _emit({"include": []}, False, 0)
-            return 0
+            return 1
         infra_changed = any(p in (WORKFLOW_REL, MANIFEST_REL) for p in changed)
         if infra_changed:
             print(

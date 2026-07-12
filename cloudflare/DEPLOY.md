@@ -34,13 +34,16 @@ The workflow reads two secrets; without them it **skips** cleanly (a warning, no
 failure), so a runner that isn't yet configured doesn't red-X every push:
 
 - `CF_API_TOKEN` — Cloudflare API token with Workers edit scope.
-- `CF_ACCOUNT_ID` — `e0214028cb64d31232f5662548a55e4e`.
+- `CF_ACCOUNT_ID` — `<your-cloudflare-account-id>` (the `account_id` in each worker's `wrangler.toml`).
 
 Set them as org or repo secrets in Forgejo (Settings → Actions → Secrets).
 
 ## Onboarding a new worker
 
-1. Add its folder under `cloudflare/<dir>/` with a `wrangler.toml` and `package.json`.
+1. Add its folder under `cloudflare/<dir>/` with a `wrangler.toml`, a `package.json`
+   pinning `wrangler` (`^4.102.0` fleet-wide), **and a committed `package-lock.json`**
+   (`npm install --package-lock-only`). The deploy uses lockfile-only `npm ci` for
+   reproducibility — a worker without a lock will fail the deploy by design.
 2. Add one line to `cloudflare/deploy-manifest.json`:
    ```json
    { "name": "<wrangler-name>", "dir": "<folder>", "health_url": "https://<name>.luminous-aimastermind.workers.dev/health" }
@@ -64,7 +67,7 @@ Cloudflare token:
 ```bash
 cd cloudflare/<dir>
 export CLOUDFLARE_API_TOKEN=...        # Workers-edit-scoped token
-export CLOUDFLARE_ACCOUNT_ID=e0214028cb64d31232f5662548a55e4e
+export CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>   # the account_id in wrangler.toml
 npm ci && npx wrangler deploy
 ```
 
