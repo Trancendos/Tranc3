@@ -452,7 +452,7 @@ def health() -> JSONResponse:
 
 
 @_router.get("/cache/status")
-def cache_status() -> Dict[str, Any]:
+async def cache_status() -> Dict[str, Any]:
     now = time.time()
     active = sum(1 for _, (_, exp) in _mem.items() if exp is None or exp > now)
     return {
