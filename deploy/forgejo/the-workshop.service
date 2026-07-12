@@ -1,0 +1,36 @@
+# deploy/forgejo/the-workshop.service
+# systemd unit that supervises The Workshop (Forgejo + act-runner) and brings it
+# back automatically after a host reboot — the most common silent cause of a
+# Cloudflare 522 on a stack whose containers are otherwise `restart: unless-stopped`
+# (that policy does NOT cover a full host reboot unless something starts compose).
+#
+# Install (run once on the trancendos.com server, as root):
+#   # 1. Edit WorkingDirectory below to your repo checkout path if not /opt/tranc3
+#   sudo cp deploy/forgejo/the-workshop.service /etc/systemd/system/the-workshop.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now the-workshop.service
+#
+# Check / operate:
+#   systemctl status the-workshop
+#   journalctl -u the-workshop -f
+#   sudo systemctl restart the-workshop   # = docker compose up -d (idempotent)
+
+[Unit]
+Description=The Workshop — Trancendos Forgejo CI/CD (docker compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Repo checkout on the server — change if yours differs.
+WorkingDirectory=/opt/tranc3
+ExecStart=/usr/bin/docker compose -f deploy/forgejo/docker-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f deploy/forgejo/docker-compose.yml down
+# Re-assert desired state periodically is handled by the containers' own
+# restart policy; this unit guarantees they exist after a boot.
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
