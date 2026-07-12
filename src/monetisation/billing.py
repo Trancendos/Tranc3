@@ -206,6 +206,17 @@ class TierEnforcer:
             else -1,
         }
 
+    def set_tier(self, user_id: str, tier: str) -> bool:
+        """Update the cached tier for an already-tracked user so live rate limits
+        reflect a subscription change immediately. Best-effort: returns False if
+        the user has no in-memory usage record yet (their tier will be picked up
+        from the persistent store on their next authenticated request)."""
+        record = self._usage.get(user_id)
+        if record is None:
+            return False
+        record.tier = tier
+        return True
+
     def can_use_feature(self, tier: str, feature: str) -> bool:
         return bool(TIERS.get(tier, TIERS["free"]).get(feature, False))
 
@@ -275,6 +286,10 @@ class StripeManager:
                 success_url=success_url,
                 cancel_url=cancel_url,
                 metadata={"user_id": user_id, "tier": tier},
+                # Copy the identity onto the Subscription too, so later
+                # customer.subscription.* events (renewals, cancellations) can be
+                # mapped back to the user for tier provisioning/downgrade.
+                subscription_data={"metadata": {"user_id": user_id, "tier": tier}},
                 tax_id_collection={"enabled": True},
                 automatic_tax={"enabled": True},
             )
@@ -770,3 +785,125 @@ stripe_manager = StripeManager()
 billing_router = BillingRouter()
 revenue_tracker = PassiveRevenueEngine()
 tax_monitor = TaxMonitor()
+
+
+# ---------------------------------------------------------------------------
+# Webhook-driven subscription provisioning
+# ---------------------------------------------------------------------------
+# Validating a Stripe webhook signature is necessary but NOT sufficient: a paid
+# checkout only actually grants the customer their plan once the platform records
+# the new tier. The functions below turn a verified Stripe event into a concrete
+# provisioning action (grant/downgrade) and apply it to the persistent user store
+# (+ the live rate-limit cache and revenue ledger). Kept free of any api.py import
+# so it stays unit-testable: the caller injects the user manager.
+
+
+def tier_for_price_id(price_id: Optional[str]) -> Optional[str]:
+    """Reverse-map a configured Stripe price ID back to its tier key, or None."""
+    if not price_id:
+        return None
+    for tier, cfg in TIERS.items():
+        if cfg.get("stripe_price_id") and cfg["stripe_price_id"] == price_id:
+            return tier
+    return None
+
+
+def _subscription_price_id(sub_obj: Dict[str, Any]) -> Optional[str]:
+    """Pull the (first) active price ID out of a Stripe Subscription object."""
+    try:
+        items = (sub_obj.get("items") or {}).get("data") or []
+        if items:
+            return (items[0].get("price") or {}).get("id")
+    except Exception:  # malformed/partial event payload
+        return None
+    return None
+
+
+# Subscription statuses that mean the customer no longer has a paid entitlement.
+_INACTIVE_SUB_STATUSES = {"canceled", "unpaid", "incomplete_expired"}
+
+
+def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Turn a verified Stripe event dict into a provisioning plan, or None if the
+    event isn't one we act on / lacks the identity needed to act safely.
+
+    Plan shape: {"action": "grant"|"downgrade", "user_id": str, "tier": str,
+                 "event": <event type>}. Pure — no side effects, no I/O.
+    """
+    etype = event.get("type", "")
+    obj = (event.get("data") or {}).get("object") or {}
+    md = obj.get("metadata") or {}
+    user_id = md.get("user_id")
+
+    if etype == "checkout.session.completed":
+        tier = md.get("tier")
+        if user_id and tier in TIERS and tier != "free":
+            return {"action": "grant", "user_id": user_id, "tier": tier, "event": etype}
+        return None
+
+    if etype == "customer.subscription.updated":
+        if not user_id:
+            return None
+        if obj.get("status") in _INACTIVE_SUB_STATUSES:
+            return {"action": "downgrade", "user_id": user_id, "tier": "free", "event": etype}
+        # Prefer the tier implied by the current price; fall back to metadata.
+        tier = tier_for_price_id(_subscription_price_id(obj))
+        if tier is None and md.get("tier") in TIERS:
+            tier = md["tier"]
+        if tier and tier != "free":
+            return {"action": "grant", "user_id": user_id, "tier": tier, "event": etype}
+        return None
+
+    if etype == "customer.subscription.deleted":
+        if user_id:
+            return {"action": "downgrade", "user_id": user_id, "tier": "free", "event": etype}
+        return None
+
+    return None
+
+
+def apply_provision(user_manager: Any, plan: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Apply a provisioning plan: persist the user's new tier (by id, then by
+    username as a fallback), reflect it in the live rate-limit cache, and record
+    recurring revenue on an upgrade. Idempotent — re-applying the same plan just
+    re-sets the same tier. `user_manager` is injected so this stays testable.
+    """
+    if not plan:
+        return {"handled": False}
+
+    user_id = plan["user_id"]
+    tier = plan["tier"]
+    persisted = False
+    try:
+        if hasattr(user_manager, "update_tier_by_id"):
+            persisted = bool(user_manager.update_tier_by_id(user_id, tier))
+        if not persisted and hasattr(user_manager, "update_tier"):
+            # metadata may have carried a username rather than an id
+            persisted = bool(user_manager.update_tier(user_id, tier))
+    except Exception as exc:  # never let provisioning raise into the webhook
+        logger.error("provision: tier persist failed: %s", sanitize_for_log(exc))
+
+    # Reflect immediately in the live rate-limit cache if the user is tracked.
+    enforcer.set_tier(user_id, tier)
+
+    # Book recurring revenue on an upgrade (never on a downgrade).
+    if plan["action"] == "grant":
+        price = TIERS.get(tier, {}).get("price_gbp") or 0
+        if price:
+            revenue_tracker.record(
+                "saas_subscriptions",
+                float(price),
+                {"user_id": user_id, "tier": tier, "event": plan.get("event")},
+            )
+
+    return {
+        "handled": True,
+        "action": plan["action"],
+        "tier": tier,
+        "user_persisted": persisted,
+    }
+
+
+def provision_from_event(user_manager: Any, event: Dict[str, Any]) -> Dict[str, Any]:
+    """Convenience: parse a verified Stripe event and apply the resulting plan."""
+    return apply_provision(user_manager, plan_from_event(event))

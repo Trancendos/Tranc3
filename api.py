@@ -2004,7 +2004,14 @@ async def stripe_webhook(request: Request):
         sanitize_for_log(etype),
         sanitize_for_log(obj.get("id")),
     )  # codeql[py/cleartext-logging]
-    return {"received": True}
+
+    # Provision the customer's tier off the verified event (grant on paid
+    # checkout / active subscription, downgrade on cancellation). Without this a
+    # paid checkout never actually upgrades the user.
+    from src.monetisation.billing import provision_from_event
+
+    provisioned = provision_from_event(db_user_manager, event)
+    return {"received": True, "provisioned": provisioned}
 
 
 # ── Compliance ────────────────────────────────────────────────────────────────

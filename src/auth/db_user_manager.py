@@ -200,6 +200,36 @@ class DBUserManager:
             return True
         return False
 
+    def update_tier_by_id(self, user_id: str, new_tier: str) -> bool:
+        """Update a user's tier keyed by their stable id (UUID).
+
+        Billing/checkout metadata carries the user *id*, not the username, so
+        webhook-driven provisioning must be able to resolve by id. Returns True
+        only if a matching user was found and updated.
+        """
+        session = self._get_session()
+        if session:
+            try:
+                from src.database.schema import User
+
+                user = session.query(User).filter(User.id == user_id).first()
+                if user:
+                    user.tier = new_tier  # type: ignore[assignment]
+                    session.commit()
+                    return True
+            except Exception as e:
+                logger.error("DB update_tier_by_id failed: %s", sanitize_for_log(e))
+            finally:
+                session.close()
+
+        # Fallback store is keyed by username; match on the stored id.
+        for rec in self._fallback.values():
+            if str(rec.get("id")) == str(user_id):
+                rec["tier"] = new_tier
+                rec["roles"] = _tier_to_roles(new_tier)
+                return True
+        return False
+
     @staticmethod
     def _validate_password(password: str):
         """Enforce password strength — SCAMPER-S action."""
