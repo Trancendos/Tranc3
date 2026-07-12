@@ -570,9 +570,11 @@ class PassiveRevenueEngine:
 
     @property
     def streams(self) -> Dict[str, float]:
-        """Read-only view of cumulative revenue per stream (GBP). Public accessor
-        so callers don't reach into the private _revenue dict (and don't crash on a
-        missing attribute, as the /billing/revenue endpoints previously did)."""
+        """Cumulative revenue per stream (GBP). Returns a **defensive copy** — a
+        plain, JSON-serialisable dict — so callers can read (and even mutate) it
+        without touching the engine's ledger, and so nobody depends on the private
+        `_revenue` attribute (whose absence previously crashed the /billing/revenue
+        endpoints). To change recorded revenue, use record()/record_once()."""
         return dict(self._revenue)
 
     def summary(self) -> Dict:

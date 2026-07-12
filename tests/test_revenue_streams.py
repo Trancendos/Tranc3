@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from src.monetisation import billing
 from src.monetisation.billing import PassiveRevenueEngine
 from src.monetisation.router import (
@@ -19,12 +21,21 @@ from src.monetisation.router import (
 )
 
 
-def test_streams_property_is_readonly_float_view():
+@pytest.fixture(autouse=True)
+def reset_revenue_tracker():
+    """Reset the global revenue tracker before each test so the endpoint tests
+    (which mutate billing.revenue_tracker) stay isolated and order-independent."""
+    billing.revenue_tracker = PassiveRevenueEngine()
+    yield
+
+
+def test_streams_property_is_defensive_copy_of_floats():
     e = PassiveRevenueEngine()
     assert isinstance(e.streams, dict)
     assert all(isinstance(v, float) for v in e.streams.values())
-    # returns a copy — mutating it must not corrupt the engine's ledger
-    e.streams["marketplace_fees"] = 999.0
+    # It's a copy — mutating what we get back must not corrupt the engine's ledger.
+    streams_copy = e.streams
+    streams_copy["marketplace_fees"] = 999.0
     assert e.streams["marketplace_fees"] == 0.0
 
 
