@@ -7,8 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from src.auth.facade import get_current_user
 
 logger = logging.getLogger("src.monetisation.router")
 
@@ -79,10 +81,15 @@ async def billing_status():
         }
         for tier_key, cfg in TIERS.items()
     }
+    # zero_cost_mode == "no payment provider is live". Only the real provider
+    # flags (`stripe`, `lemon_squeezy`) count — the `*_price_configured` keys
+    # describe catalogue setup, not an enabled provider, so `any(...)` over the
+    # whole dict wrongly reported a live provider when only a price ID was set.
+    provider_live = provider_status.get("stripe") or provider_status.get("lemon_squeezy")
     return {
         "providers": provider_status,
         "tiers": tiers_info,
-        "zero_cost_mode": not any(provider_status.values()),
+        "zero_cost_mode": not provider_live,
     }
 
 
@@ -105,23 +112,32 @@ async def create_checkout(req: CheckoutRequest):
 
 
 @router.post("/portal")
-async def billing_portal(user_id: str, return_url: str = "https://trancendos.com/account"):
-    """Open Stripe billing portal for a customer."""
-    from src.monetisation.billing import stripe_manager
+async def billing_portal(
+    return_url: str = "https://trancendos.com/account",
+    user: dict = Depends(get_current_user),
+):
+    """Open the Stripe billing portal for the *authenticated* customer.
 
-    # StripeManager exposes `is_enabled` (not `enabled`); the old attribute name
-    # raised AttributeError -> 500 instead of this clean 503.
-    if not stripe_manager.is_enabled:
-        raise HTTPException(status_code=503, detail="Stripe not configured")
-    # create_portal_session returns the portal URL (str) or None on failure —
-    # not a dict, so the previous `"error" in result` check was wrong (it would
-    # TypeError on None and substring-scan a URL).
-    url = stripe_manager.create_portal_session(customer_id=user_id, return_url=return_url)
-    if not url:
-        raise HTTPException(
-            status_code=502, detail="Could not create Stripe billing portal session"
-        )
-    return {"portal_url": url}
+    Security (cubic P0 / gemini HIGH, BOLA): this endpoint previously took a
+    client-supplied `user_id` and passed it straight to Stripe as the customer
+    id, so any unauthenticated caller could mint a management-session URL for an
+    arbitrary Stripe customer. It is now bound to the caller's own identity via
+    `get_current_user`; it never accepts a customer id from the request.
+
+    The server-side link from our internal user id to a Stripe `cus_...` id does
+    not exist yet (the User table has no `stripe_customer_id` column, and the
+    webhook does not persist one). Until that linkage lands we return 501 rather
+    than guessing — passing our internal UUID to Stripe as a customer id is both
+    wrong (it is not a `cus_...` id) and the very hole we are closing. See the
+    tracking issue for the migration + webhook-storage work.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail=(
+            "Billing portal not yet available: Stripe customer linkage is pending "
+            "(requires stripe_customer_id persistence)."
+        ),
+    )
 
 
 def _current_user_manager():
