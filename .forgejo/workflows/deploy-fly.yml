@@ -47,6 +47,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Check Fly credentials
         env:
@@ -101,7 +103,7 @@ jobs:
             TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
             OLLAMA_URL="http://localhost:11434" \
             EMBED_MODEL="all-MiniLM-L6-v2" \
-            CORS_ORIGINS="https://trancendos.com,https://api.trancendos.com" \
+            CORS_ORIGINS="https://trancendos.com,https://www.trancendos.com,https://api.trancendos.com,https://tranc3-backend.fly.dev" \
             --app tranc3-backend
 
       - name: Deploy backend
@@ -128,6 +130,8 @@ jobs:
         working-directory: tranc3-bots
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install flyctl
         run: |

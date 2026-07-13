@@ -54,6 +54,7 @@ jobs:
         with:
           fetch-depth: 0  # full history so the push `before..after` diff is reliable
                           # even for multi-commit pushes / squash merges
+          persist-credentials: false
 
       - name: Check Cloudflare credentials
         id: creds
@@ -104,6 +105,8 @@ jobs:
       matrix: ${{ fromJSON(needs.preflight.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
