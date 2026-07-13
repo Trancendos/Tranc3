@@ -23,7 +23,7 @@ primary_region = "lhr"
   TRANC3_WORKERS     = "1"
   TRANC3_CONCURRENCY = "2"
   FRONTEND_URL       = "https://trancendos.com"
-  CORS_ORIGINS       = "https://trancendos.com,https://www.trancendos.com,https://trancendos-backend.fly.dev"
+  CORS_ORIGINS       = "https://trancendos.com,https://www.trancendos.com,https://tranc3-backend.fly.dev"
 
 [http_service]
   internal_port      = 8000

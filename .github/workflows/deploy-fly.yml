@@ -1,0 +1,136 @@
+name: Deploy to Fly.io
+
+# Cloud-only phase interim measure: this mirrors
+# .forgejo/workflows/deploy-fly.yml so deploys keep working while The
+# Workshop (self-hosted Forgejo) is down. See cloudflare/DEPLOY.md for the
+# dual-path rationale. Keep this file and the Forgejo copy in sync.
+#
+# Runs on GitHub-hosted runners (no self-hosted runner dependency), and
+# targets the backend app's real name — `tranc3-backend`, matching the root
+# fly.toml — rather than the `trancendos-backend` name used by mistake in
+# the original Forgejo workflow.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.py"
+      - "Dockerfile"
+      - "docker-entrypoint.sh"
+      - "fly.toml"
+      - "requirements.txt"
+      - "web/**"
+      - "tranc3-bots/**"
+      - ".github/workflows/deploy-fly.yml"
+  workflow_dispatch:
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Backend: tranc3-backend on Fly.io
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy tranc3-backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flyctl
+        run: |
+          if ! command -v flyctl &>/dev/null; then
+            curl -L https://fly.io/install.sh | sh
+            echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Inject all production secrets into Fly.io
+        run: |
+          flyctl secrets set \
+            SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            REDIS_URL="${{ secrets.REDIS_URL }}" \
+            SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            UPSTASH_REDIS_REST_URL="${{ secrets.UPSTASH_REDIS_REST_URL }}" \
+            UPSTASH_REDIS_REST_TOKEN="${{ secrets.UPSTASH_REDIS_REST_TOKEN }}" \
+            CITADEL_WEBHOOK_SECRET="${{ secrets.CITADEL_WEBHOOK_SECRET }}" \
+            CF_ACCOUNT_ID="${{ secrets.CF_ACCOUNT_ID }}" \
+            ENVIRONMENT="production" \
+            TRANC3_BACKEND_URL="https://tranc3-backend.fly.dev" \
+            TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
+            OLLAMA_URL="http://localhost:11434" \
+            EMBED_MODEL="all-MiniLM-L6-v2" \
+            CORS_ORIGINS="https://trancendos.com,https://api.trancendos.com" \
+            --app tranc3-backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy backend
+        run: flyctl deploy --remote-only --app tranc3-backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health check
+        run: |
+          sleep 15
+          STATUS=$(curl -sf https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
+          echo "Health check status: $STATUS"
+          [ "$STATUS" = "200" ] || { echo "Health check failed"; exit 1; }
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Bots: trancendos-bots on Fly.io
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-bots:
+    name: Deploy trancendos-bots
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    defaults:
+      run:
+        working-directory: tranc3-bots
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flyctl
+        run: |
+          if ! command -v flyctl &>/dev/null; then
+            curl -L https://fly.io/install.sh | sh
+            echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Inject bots secrets
+        run: |
+          flyctl secrets set \
+            REDIS_URL="${{ secrets.REDIS_URL }}" \
+            TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" \
+            SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            ENVIRONMENT="production" \
+            --app trancendos-bots
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy bots
+        run: flyctl deploy --remote-only --app trancendos-bots
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Wire bots URL into backend
+        run: |
+          flyctl secrets set \
+            TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
+            --app tranc3-backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Notify The Citadel
+        run: |
+          BACKEND_URL="https://tranc3-backend.fly.dev"
+          curl -sf -X POST "$BACKEND_URL/citadel/webhooks/forgejo" \
+            -H "Content-Type: application/json" \
+            -H "X-Forgejo-Event: workflow_run" \
+            -d "{\"ref\":\"refs/heads/main\",\"repository\":{\"name\":\"Tranc3\"},\"after\":\"$(git rev-parse HEAD)\",\"sender\":{\"login\":\"github-actions\"}}" \
+            || echo "Citadel notification skipped (backend may be warming)"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

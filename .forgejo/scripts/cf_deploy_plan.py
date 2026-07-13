@@ -43,7 +43,14 @@ from pathlib import Path
 _WORKSPACE = os.environ.get("GITHUB_WORKSPACE")
 REPO_ROOT = Path(_WORKSPACE) if _WORKSPACE else Path(__file__).resolve().parents[2]
 MANIFEST = REPO_ROOT / "cloudflare" / "deploy-manifest.json"
-WORKFLOW_REL = ".forgejo/workflows/deploy-cloudflare.yml"
+# Two CI systems currently trigger this planner (Forgejo Actions and, during
+# the cloud-only phase, GitHub Actions — see cloudflare/DEPLOY.md). A push
+# touching either workflow file is an infra change regardless of which
+# system's copy of this script is running.
+WORKFLOW_RELS = (
+    ".forgejo/workflows/deploy-cloudflare.yml",
+    ".github/workflows/deploy-cloudflare.yml",
+)
 MANIFEST_REL = "cloudflare/deploy-manifest.json"
 
 
@@ -138,7 +145,7 @@ def main() -> int:
             )
             _emit({"include": []}, False, 0)
             return 1
-        infra_changed = any(p in (WORKFLOW_REL, MANIFEST_REL) for p in changed)
+        infra_changed = any(p in WORKFLOW_RELS or p == MANIFEST_REL for p in changed)
         if infra_changed:
             print(
                 "::notice::Deploy workflow or manifest changed — treating as an "
