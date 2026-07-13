@@ -803,26 +803,71 @@ class TestQueueService:
 
 
 class TestCacheService:
-    """Tests for cache-service: TTL-backed in-memory + SQLite cache."""
+    """Tests for cache-service: multi-backend ACO cache (in-memory + SQLite + others)."""
 
     @pytest.fixture
     def client(self, tmp_path):
-        # cache-service uses _store dict (module-level) + DB
-        db_path = str(tmp_path / "cache.db")
-        saved_store = dict(cache_mod._store)
+        # cache-service keys its live state off the module-level `_mem` dict
+        # (renamed from the old `_store` design) + a SQLite-backed `DB_PATH`.
+        # Force backend selection to sqlite only: duckdb/diskcache/valkey/
+        # dragonfly write to session-wide shared paths (not scoped per test),
+        # and delete_key()/flush() only clear `_mem` + the sqlite table — so a
+        # write that lands in another backend would survive a delete/flush and
+        # make the "gone after delete" assertions flaky depending on which
+        # backend previously accumulated pheromone across the test session.
+        # "memory" must be disabled too: set_key()'s memory branch delegates to
+        # _valkey_set(), i.e. it is a network write, not the `_mem` dict.
+        db_path = Path(tmp_path / "cache.db")
+        saved_mem = dict(cache_mod._mem)
+        saved_enabled = dict(cache_mod._ENABLED)
+        # Guard state (pheromone + call window) drives _select_backend() and the
+        # /cache/status diagnostics; snapshot and reset it so backend selection
+        # is identical for every test regardless of what ran before.
+        saved_guards = {
+            name: (g.pheromone, list(g._calls)) for name, g in cache_mod._GUARDS.items()
+        }
+        cache_mod._ENABLED.update(
+            {
+                "memory": False,
+                "valkey": False,
+                "duckdb": False,
+                "diskcache": False,
+                "dragonfly": False,
+            }
+        )
+        for g in cache_mod._GUARDS.values():
+            g.pheromone = 1.0
+            g._calls.clear()
         with patch.object(cache_mod, "DB_PATH", db_path):
-            cache_mod._store.clear()
-            cache_mod.init_db()
-            secret = getattr(cache_mod, "_INTERNAL_SECRET", "")
+            cache_mod._mem.clear()
+            cache_mod._init_sqlite()
+            secret = getattr(cache_mod, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
             yield TestClient(cache_mod.app, headers=headers)
-        cache_mod._store.clear()
-        cache_mod._store.update(saved_store)
+        cache_mod._mem.clear()
+        cache_mod._mem.update(saved_mem)
+        cache_mod._ENABLED.update(saved_enabled)
+        for name, (pheromone, calls) in saved_guards.items():
+            cache_mod._GUARDS[name].pheromone = pheromone
+            cache_mod._GUARDS[name]._calls.clear()
+            cache_mod._GUARDS[name]._calls.extend(calls)
 
     def test_health(self, client):
         r = client.get("/health")
         assert r.status_code == 200
-        assert r.json()["status"] == "healthy"
+        assert r.json()["status"] == "ok"
+
+    def test_cache_status_not_shadowed_by_key_route(self, client):
+        # Regression: GET /cache/{key} used to be registered before
+        # GET /cache/status, so Starlette's ordered route matching swallowed
+        # every request to /cache/status as a lookup for the literal key
+        # "status" (-> 404 instead of real backend diagnostics).
+        r = client.get("/cache/status")
+        assert r.status_code == 200
+        data = r.json()
+        assert "active_backend" in data
+        assert isinstance(data["backends"], list)
+        assert "keys_in_memory" in data
 
     def test_set_and_get(self, client):
         client.put("/cache/mykey", json={"value": "hello-world"})
@@ -830,12 +875,10 @@ class TestCacheService:
         assert r.status_code == 200
         data = r.json()
         assert data["value"] == "hello-world"
-        # Cache get returns {key, value, ttl_remaining}
-        assert "key" in data
+        assert data["key"] == "mykey"
 
     def test_get_missing_key(self, client):
         r = client.get("/cache/nonexistent-key-xyz")
-        # Returns 404 for missing keys
         assert r.status_code == 404
 
     def test_set_with_ttl(self, client):
@@ -843,13 +886,18 @@ class TestCacheService:
         assert r.status_code == 200
         data = r.json()
         assert data["key"] == "ttl-key"
+        assert data["ttl"] == 3600
 
     def test_delete(self, client):
         client.put("/cache/del-key", json={"value": "to-delete"})
         r = client.delete("/cache/del-key")
-        assert r.status_code == 200
+        assert r.status_code == 204
         gone = client.get("/cache/del-key")
         assert gone.status_code == 404
+
+    def test_delete_missing_key_is_404(self, client):
+        r = client.delete("/cache/never-existed")
+        assert r.status_code == 404
 
     def test_key_exists(self, client):
         client.put("/cache/exists-key", json={"value": "yes"})
@@ -877,26 +925,22 @@ class TestCacheService:
         r = client.post("/cache/mget", json=["mg1", "mg2", "missing"])
         assert r.status_code == 200
         data = r.json()
-        assert "mg1" in data
         assert data["mg1"] == "alpha"
+        assert "missing" not in data
 
     def test_list_keys(self, client):
         client.put("/cache/list-key-1", json={"value": "a"})
         r = client.get("/cache")
         assert r.status_code == 200
         data = r.json()
-        assert "keys" in data
+        assert "list-key-1" in data["keys"]
 
     def test_flush_all(self, client):
         client.put("/cache/flush-key", json={"value": "flush-me"})
         r = client.delete("/cache")
-        assert r.status_code == 200
-
-    def test_stats(self, client):
-        r = client.get("/stats")
-        assert r.status_code == 200
-        data = r.json()
-        assert "total_keys" in data
+        assert r.status_code == 204
+        gone = client.get("/cache/flush-key")
+        assert gone.status_code == 404
 
 
 # ===========================================================================
