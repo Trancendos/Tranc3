@@ -1,15 +1,18 @@
 name: Deploy Cloudflare Workers
 
-# Smart, data-driven Cloudflare deploy pipeline (Forgejo Actions — The Workshop).
+# Smart, data-driven Cloudflare deploy pipeline (GitHub Actions).
 #
-# What changed vs. the old version:
+# Cloud-only phase interim measure: this mirrors
+# .forgejo/workflows/deploy-cloudflare.yml so deploys keep working while The
+# Workshop (self-hosted Forgejo) is down. See cloudflare/DEPLOY.md for the
+# dual-path rationale. Keep this file and the Forgejo copy in sync.
+#
 #   * No hardcoded per-worker jobs. Workers are declared once in
 #     cloudflare/deploy-manifest.json; add one there and it deploys — no edit here.
 #   * Change-aware: a push only deploys workers whose own files changed
 #     (see .forgejo/scripts/cf_deploy_plan.py), not all of them every time.
-#   * Fails soft on missing credentials: if CF_API_TOKEN isn't configured (e.g.
-#     The Workshop runner is being bootstrapped), the deploy is SKIPPED with a
-#     clear notice instead of red-X'ing the pipeline.
+#   * Fails soft on missing credentials: if CF_API_TOKEN isn't configured, the
+#     deploy is SKIPPED with a clear notice instead of red-X'ing the pipeline.
 #   * Manual dispatch can target one worker or all, with an optional force flag.
 #   * Post-deploy health poll (soft — advisory only; `wrangler deploy` is the gate).
 
@@ -18,7 +21,7 @@ on:
     branches: [main]
     paths:
       - 'cloudflare/**'
-      - '.forgejo/workflows/deploy-cloudflare.yml'
+      - '.github/workflows/deploy-cloudflare.yml'
       - '.forgejo/scripts/cf_deploy_plan.py'
   workflow_dispatch:
     inputs:
@@ -71,7 +74,7 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
             [ -z "${CF_API_TOKEN}" ] && echo "::warning::CF_API_TOKEN is not configured for this runner."
             [ -z "${CF_ACCOUNT_ID}" ] && echo "::warning::CF_ACCOUNT_ID is not configured for this runner."
-            echo "::warning::Deploy will be skipped until BOTH CF_API_TOKEN and CF_ACCOUNT_ID are set as org/repo secrets in The Workshop."
+            echo "::warning::Deploy will be skipped until BOTH CF_API_TOKEN and CF_ACCOUNT_ID are set as GitHub repo secrets."
           fi
 
       - name: Build deploy plan

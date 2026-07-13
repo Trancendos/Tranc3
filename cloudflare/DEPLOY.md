@@ -1,8 +1,23 @@
 # Cloudflare Workers — Deploy
 
-Cloudflare deploys run through **The Workshop** (Forgejo CI), not GitHub Actions,
-per the platform's CI/CD sovereignty principle (see `CLAUDE.md`). The pipeline is
-data-driven and change-aware.
+Cloudflare deploys are **data-driven and change-aware**, and currently run through
+**two** CI systems in parallel:
+
+- **The Workshop** (self-hosted Forgejo) — `.forgejo/workflows/deploy-cloudflare.yml`.
+  This is the platform's documented CI/CD sovereignty path (see `CLAUDE.md`) and
+  remains the long-term system of record.
+- **GitHub Actions** — `.github/workflows/deploy-cloudflare.yml`. Added as a
+  **deliberate, interim, cloud-only-phase measure**: the platform is currently
+  running cloud-only (Cloudflare Workers + Fly.io), and The Workshop runner itself
+  depends on the self-hosted host that this phase explicitly defers standing back
+  up. Without a second trigger path, a cloud-only deploy would have no way to fire.
+  This diverges from the "NO GitHub Actions" principle by explicit operator
+  decision; retire the GitHub Actions copy once The Workshop is back and hybrid/local
+  is reactivated, rather than maintaining both indefinitely.
+
+Both workflows share the same planner script and manifest below, so a worker only
+needs to be onboarded once — it deploys from whichever CI system currently has
+working credentials and connectivity.
 
 > **Note on direction:** these Cloudflare Workers are **legacy** and are being
 > migrated to the self-hosted stack (Traefik + Python workers — see
@@ -15,8 +30,9 @@ data-driven and change-aware.
 | File | Role |
 |---|---|
 | `cloudflare/deploy-manifest.json` | Single source of truth — every deployable worker (`name` = its `wrangler.toml` name, `dir` = its folder, optional `health_url`). |
-| `.forgejo/scripts/cf_deploy_plan.py` | Computes *which* workers to deploy from the changed files (push) or the dispatch inputs, and emits the CI matrix. |
-| `.forgejo/workflows/deploy-cloudflare.yml` | The workflow: preflight (credential guard + plan) → matrix deploy → advisory health poll → summary. |
+| `.forgejo/scripts/cf_deploy_plan.py` | Computes *which* workers to deploy from the changed files (push) or the dispatch inputs, and emits the CI matrix. Shared by both workflow copies below. |
+| `.forgejo/workflows/deploy-cloudflare.yml` | The Workshop (Forgejo) workflow: preflight (credential guard + plan) → matrix deploy → advisory health poll → summary. |
+| `.github/workflows/deploy-cloudflare.yml` | GitHub Actions workflow — same logic, cloud-only-phase interim trigger path. Keep in sync with the Forgejo copy. |
 
 ## How it triggers
 
@@ -28,15 +44,18 @@ data-driven and change-aware.
   - `worker`: a name from the manifest, or `all` (default).
   - `force`: `true` to deploy even when no matching files changed.
 
-## Credentials (one-time, in The Workshop)
+## Credentials
 
-The workflow reads two secrets; without them it **skips** cleanly (a warning, not a
+Each workflow reads two secrets; without them it **skips** cleanly (a warning, not a
 failure), so a runner that isn't yet configured doesn't red-X every push:
 
 - `CF_API_TOKEN` — Cloudflare API token with Workers edit scope.
 - `CF_ACCOUNT_ID` — `<your-cloudflare-account-id>` (the `account_id` in each worker's `wrangler.toml`).
 
-Set them as org or repo secrets in Forgejo (Settings → Actions → Secrets).
+Set them as org or repo secrets in **Forgejo** (Settings → Actions → Secrets) for
+The Workshop's copy, and separately as **GitHub repo secrets** (Settings → Secrets
+and variables → Actions) for the GitHub Actions copy — the two CI systems do not
+share a secret store.
 
 ## Onboarding a new worker
 
