@@ -95,7 +95,12 @@ jobs:
   deploy:
     name: Deploy ${{ matrix.name }}
     needs: preflight
-    if: ${{ needs.preflight.outputs.any == 'true' && needs.preflight.outputs.creds == 'true' }}
+    # Also gate on github.ref: push is already main-only via the trigger's
+    # `branches` filter, but workflow_dispatch lets an operator pick any
+    # branch/tag to run against, and actions/checkout defaults to that ref.
+    # Without this, a manual dispatch from a feature branch would deploy
+    # that branch's worker code to production.
+    if: ${{ needs.preflight.outputs.any == 'true' && needs.preflight.outputs.creds == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false  # one worker failing shouldn't block the others

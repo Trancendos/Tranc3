@@ -38,6 +38,12 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   deploy-backend:
     name: Deploy tranc3-backend
+    # push is already main-only via the trigger's `branches` filter, but
+    # workflow_dispatch lets an operator pick any branch/tag to run against,
+    # and actions/checkout defaults to that ref. Without this, a manual
+    # dispatch from a feature branch would deploy that branch's code to
+    # production.
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
