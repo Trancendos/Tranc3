@@ -9,6 +9,14 @@ name: Deploy to Fly.io
 # targets the backend app's real name — `tranc3-backend`, matching the root
 # fly.toml — rather than the `trancendos-backend` name used by mistake in
 # the original Forgejo workflow.
+#
+# Secrets are passed to flyctl via step-level `env:` and referenced as
+# `"$VAR"` in bash, not interpolated directly into `run:` via `${{ secrets.* }}`.
+# GitHub expands `${{ }}` into the script text before bash ever parses it, so a
+# secret value containing a quote or `$(...)` embedded that way could break out
+# of its argument or be re-evaluated as shell syntax; `env:` + `"$VAR"` avoids
+# that because bash substitutes the value as a single token, not as text to
+# re-parse.
 
 on:
   push:
@@ -24,6 +32,16 @@ on:
       - ".github/workflows/deploy-fly.yml"
   workflow_dispatch:
 
+# Serialize deploys to main so two pushes can't race the same Fly app — an
+# older run finishing after a newer one could leave production on stale code
+# or clobber TRANC3_BOTS_URL mid-deploy.
+concurrency:
+  group: fly-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
   # Backend: tranc3-backend on Fly.io
@@ -34,29 +52,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check Fly credentials
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          # Fail with a clear message rather than letting flyctl run with an
+          # empty token further down the job.
+          if [ -z "${FLY_API_TOKEN}" ]; then
+            echo "::error::FLY_API_TOKEN is not configured as a GitHub repo secret. Set it under Settings > Secrets and variables > Actions before this workflow can deploy."
+            exit 1
+          fi
+
       - name: Install flyctl
+        # No FLY_API_TOKEN in this step's env — the installer only downloads
+        # and unpacks the flyctl binary, it never needs the token, so it
+        # shouldn't be handed one.
         run: |
           if ! command -v flyctl &>/dev/null; then
             curl -L https://fly.io/install.sh | sh
             echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
           fi
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Inject all production secrets into Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          IN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          IN_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          IN_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          IN_REDIS_URL: ${{ secrets.REDIS_URL }}
+          IN_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          IN_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          IN_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          IN_UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          IN_UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          IN_CITADEL_WEBHOOK_SECRET: ${{ secrets.CITADEL_WEBHOOK_SECRET }}
+          IN_CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
           flyctl secrets set \
-            SECRET_KEY="${{ secrets.SECRET_KEY }}" \
-            JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-            REDIS_URL="${{ secrets.REDIS_URL }}" \
-            SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
-            SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
-            SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            UPSTASH_REDIS_REST_URL="${{ secrets.UPSTASH_REDIS_REST_URL }}" \
-            UPSTASH_REDIS_REST_TOKEN="${{ secrets.UPSTASH_REDIS_REST_TOKEN }}" \
-            CITADEL_WEBHOOK_SECRET="${{ secrets.CITADEL_WEBHOOK_SECRET }}" \
-            CF_ACCOUNT_ID="${{ secrets.CF_ACCOUNT_ID }}" \
+            SECRET_KEY="$IN_SECRET_KEY" \
+            JWT_SECRET="$IN_JWT_SECRET" \
+            DATABASE_URL="$IN_DATABASE_URL" \
+            REDIS_URL="$IN_REDIS_URL" \
+            SUPABASE_URL="$IN_SUPABASE_URL" \
+            SUPABASE_ANON_KEY="$IN_SUPABASE_ANON_KEY" \
+            SUPABASE_SERVICE_ROLE_KEY="$IN_SUPABASE_SERVICE_ROLE_KEY" \
+            UPSTASH_REDIS_REST_URL="$IN_UPSTASH_REDIS_REST_URL" \
+            UPSTASH_REDIS_REST_TOKEN="$IN_UPSTASH_REDIS_REST_TOKEN" \
+            CITADEL_WEBHOOK_SECRET="$IN_CITADEL_WEBHOOK_SECRET" \
+            CF_ACCOUNT_ID="$IN_CF_ACCOUNT_ID" \
             ENVIRONMENT="production" \
             TRANC3_BACKEND_URL="https://tranc3-backend.fly.dev" \
             TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
@@ -64,8 +107,6 @@ jobs:
             EMBED_MODEL="all-MiniLM-L6-v2" \
             CORS_ORIGINS="https://trancendos.com,https://api.trancendos.com" \
             --app tranc3-backend
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy backend
         run: flyctl deploy --remote-only --app tranc3-backend
@@ -100,16 +141,19 @@ jobs:
           fi
 
       - name: Inject bots secrets
-        run: |
-          flyctl secrets set \
-            REDIS_URL="${{ secrets.REDIS_URL }}" \
-            TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" \
-            SECRET_KEY="${{ secrets.SECRET_KEY }}" \
-            JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            ENVIRONMENT="production" \
-            --app trancendos-bots
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          IN_REDIS_URL: ${{ secrets.REDIS_URL }}
+          IN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          IN_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          flyctl secrets set \
+            REDIS_URL="$IN_REDIS_URL" \
+            TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" \
+            SECRET_KEY="$IN_SECRET_KEY" \
+            JWT_SECRET="$IN_JWT_SECRET" \
+            ENVIRONMENT="production" \
+            --app trancendos-bots
 
       - name: Deploy bots
         run: flyctl deploy --remote-only --app trancendos-bots
@@ -132,5 +176,3 @@ jobs:
             -H "X-Forgejo-Event: workflow_run" \
             -d "{\"ref\":\"refs/heads/main\",\"repository\":{\"name\":\"Tranc3\"},\"after\":\"$(git rev-parse HEAD)\",\"sender\":{\"login\":\"github-actions\"}}" \
             || echo "Citadel notification skipped (backend may be warming)"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
