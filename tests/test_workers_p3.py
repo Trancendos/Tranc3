@@ -815,12 +815,29 @@ class TestCacheService:
         # write that lands in another backend would survive a delete/flush and
         # make the "gone after delete" assertions flaky depending on which
         # backend previously accumulated pheromone across the test session.
+        # "memory" must be disabled too: set_key()'s memory branch delegates to
+        # _valkey_set(), i.e. it is a network write, not the `_mem` dict.
         db_path = Path(tmp_path / "cache.db")
         saved_mem = dict(cache_mod._mem)
         saved_enabled = dict(cache_mod._ENABLED)
+        # Guard state (pheromone + call window) drives _select_backend() and the
+        # /cache/status diagnostics; snapshot and reset it so backend selection
+        # is identical for every test regardless of what ran before.
+        saved_guards = {
+            name: (g.pheromone, list(g._calls)) for name, g in cache_mod._GUARDS.items()
+        }
         cache_mod._ENABLED.update(
-            {"valkey": False, "duckdb": False, "diskcache": False, "dragonfly": False}
+            {
+                "memory": False,
+                "valkey": False,
+                "duckdb": False,
+                "diskcache": False,
+                "dragonfly": False,
+            }
         )
+        for g in cache_mod._GUARDS.values():
+            g.pheromone = 1.0
+            g._calls.clear()
         with patch.object(cache_mod, "DB_PATH", db_path):
             cache_mod._mem.clear()
             cache_mod._init_sqlite()
@@ -830,6 +847,10 @@ class TestCacheService:
         cache_mod._mem.clear()
         cache_mod._mem.update(saved_mem)
         cache_mod._ENABLED.update(saved_enabled)
+        for name, (pheromone, calls) in saved_guards.items():
+            cache_mod._GUARDS[name].pheromone = pheromone
+            cache_mod._GUARDS[name]._calls.clear()
+            cache_mod._GUARDS[name]._calls.extend(calls)
 
     def test_health(self, client):
         r = client.get("/health")
