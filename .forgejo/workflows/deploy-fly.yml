@@ -85,6 +85,10 @@ jobs:
           IN_UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           IN_CITADEL_WEBHOOK_SECRET: ${{ secrets.CITADEL_WEBHOOK_SECRET }}
           IN_CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          IN_STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          IN_STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          IN_STRIPE_PRO_PRICE_ID: ${{ secrets.STRIPE_PRO_PRICE_ID }}
+          IN_STRIPE_BUSINESS_PRICE_ID: ${{ secrets.STRIPE_BUSINESS_PRICE_ID }}
         run: |
           flyctl secrets set \
             SECRET_KEY="$IN_SECRET_KEY" \
@@ -98,6 +102,10 @@ jobs:
             UPSTASH_REDIS_REST_TOKEN="$IN_UPSTASH_REDIS_REST_TOKEN" \
             CITADEL_WEBHOOK_SECRET="$IN_CITADEL_WEBHOOK_SECRET" \
             CF_ACCOUNT_ID="$IN_CF_ACCOUNT_ID" \
+            STRIPE_SECRET_KEY="$IN_STRIPE_SECRET_KEY" \
+            STRIPE_WEBHOOK_SECRET="$IN_STRIPE_WEBHOOK_SECRET" \
+            STRIPE_PRO_PRICE_ID="$IN_STRIPE_PRO_PRICE_ID" \
+            STRIPE_BUSINESS_PRICE_ID="$IN_STRIPE_BUSINESS_PRICE_ID" \
             ENVIRONMENT="production" \
             TRANC3_BACKEND_URL="https://tranc3-backend.fly.dev" \
             TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
