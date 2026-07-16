@@ -40,6 +40,17 @@ production Docker host is modelled as server `SRV-CITADEL-01`, matching **The Ci
 this repo's pre-commit hooks and `.forgejo/workflows/security-scan.yml`: bandit, pip-audit,
 safety, semgrep, gitleaks, and Trivy for container images.
 
+## Companion documents
+
+Three docs alongside the CSVs turn the CMDB from a static inventory into something
+operationally usable:
+
+| Doc | Covers |
+|---|---|
+| `runbooks.md` | Health-check, restart, scaling, rollback, and DR procedures for the six anchor services — written for this platform's actual Docker Compose + Traefik + Forgejo stack, not Kubernetes/AWS. Defers to `deploy/forgejo/RUNBOOK.md` for The Workshop, which already has a dedicated, more detailed runbook. |
+| `api-spec-template.md` | Reusable OpenAPI 3.1 skeleton plus a worked example (`API-SPARK-001`) kept in sync with `05_apis.csv`, and the API versioning strategy. |
+| `compliance-and-pipeline.md` | ITIL/SOC2/GDPR/HIPAA/ISO 27001 control mapping onto this workbook's columns, and the deployment pipeline as it actually runs through `.forgejo/workflows/` and `docker compose`, including rollback and approval procedure. |
+
 ## Files
 
 | # | File | Purpose |
@@ -89,7 +100,7 @@ originating spec's conventions (Code/Text/Integer/Boolean/List with `;`-separate
 ## Validation rules that apply across files
 
 - Every `Owner` column must be a valid Tier 3 Lead AI name from `PLATFORM_ENTITIES.md`.
-- `RPO` (Recovery Point Objective, max acceptable data loss) and `RTO` (Recovery Time Objective, max acceptable downtime) are independent targets set per service criticality — neither is required to be greater than the other. Both should tighten as `CriticalityCode` increases (CRT-001 services should carry the lowest RPO/RTO minutes).
+- `RPO` (Recovery Point Objective, max acceptable data loss) and `RTO` (Recovery Time Objective, max acceptable downtime) are independent targets set per service criticality — neither is required to be greater than the other. Both should tighten with higher service criticality — note `CriticalityCode` is inverted (CRT-001 is the *highest* criticality), so CRT-001 services should carry the **lowest** RPO/RTO minutes.
 - `SLA` must be **>= 99.0%** for any row with `CriticalityCode = CRT-001` (Critical).
 - Cross-references (`DependsOnServices`, `ServiceID`, `ApplicationID`, etc.) must resolve to a row in the referenced file.
 - `HostingModel` should be `HST-003` (Self Hosted) unless a service has an explicit, documented reason to run elsewhere (e.g. Fly.io during the Cloudflare Workers → self-hosted migration).
