@@ -68,9 +68,9 @@ data. Setting `ComplianceFrameworks` to include `HIPAA` and having `EncryptionAt
 safeguard, but it does not by itself establish the required administrative safeguards
 (risk analysis, workforce training, sanction policy) or physical safeguards (facility
 access controls) — those need their own documentation outside this CMDB workbook before
-a HIPAA claim can be made for real. Note `DB-OBS-001` currently has no real persistence
-(see `10_databases.csv`, `runbooks.md` § The Observatory), so any `HIPAA` framework tag
-on that row is aspirational until persistence exists.
+a HIPAA claim can be made for real. Note `DB-OBS-001` and `STO-OBS-001` currently have no
+real persistence (see `10_databases.csv`, `11_storage.csv`, `runbooks.md` § The Observatory),
+so any `HIPAA` framework tag on either row is aspirational until persistence exists.
 
 ### ISO 27001
 
@@ -111,10 +111,14 @@ STAGE 2: BUILD
 STAGE 3: DEPLOY
   - .forgejo/workflows/deploy-fly.yml -> flyctl deploy --remote-only for
     tranc3-backend, tranc3-bots (Fly.io, legacy)
-  - .forgejo/workflows/deploy-self-hosted.yml -> also uses flyctl deploy for
-    trancendos-backend/trancendos-bots, NOT a pure docker compose deploy despite
-    the workflow's name; other self-hosted workers are brought up via
-    docker compose -f docker-compose.production.yml up -d --build <service>
+  - .forgejo/workflows/deploy-self-hosted.yml -> triggers on workers/** changes but
+    only runs flyctl deploy for trancendos-backend/trancendos-bots, despite the
+    workflow's name — it does NOT run `docker compose ... up` for any workers/*
+    service. Getting a workers/* change onto SRV-CITADEL-01 is currently a separate,
+    unautomated step: someone runs
+    `docker compose -f docker-compose.production.yml up -d --build <service>`
+    manually on the host (or via a future Ansible/host-level job) — CI does not do
+    this today.
      v [success]
 STAGE 4: VERIFY
   - the pipeline checks a fixed backend health endpoint, not each service's own

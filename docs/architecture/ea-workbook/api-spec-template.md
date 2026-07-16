@@ -131,8 +131,9 @@ paths:
       summary: Invoke a registered MCP tool
       description: |
         JSON-RPC 2.0 endpoint for tool discovery and invocation, per src/mcp/. Valid
-        `method` values are "tools/list" and "tools/call" only — the actual tool name
-        goes under `params`, not `method`. RAG-MCP semantic matching (src/mcp/tool_rag.py)
+        `method` values are "initialize", "tools/list", "tools/call", "resources/list",
+        and "ping" (see _METHOD_DISPATCH) — for tools/call, the actual tool name goes
+        under `params`, not `method`. RAG-MCP semantic matching (src/mcp/tool_rag.py)
         is a separate, optional discovery path (backed by an optional Qdrant client) used
         to help select a tool; it is not part of the tools/call request/response contract
         itself.
@@ -165,7 +166,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/RpcResponse'
         '401':
-          description: Unauthorized — bearer JWT missing/invalid (rejected before the JSON-RPC layer is reached)
+          description: |
+            Unauthorized — covers both a missing and an invalid/expired bearer token.
+            src/auth/facade.py uses HTTPBearer(auto_error=False) and raises 401 itself
+            in both cases (get_current_user_dep), so there is no separate 403 path here
+            despite that being FastAPI's HTTPBearer default behavior in other apps.
           content:
             application/json:
               schema:
@@ -192,10 +197,11 @@ components:
           enum: ["2.0"]
         method:
           type: string
-          enum: ["tools/list", "tools/call"]
+          enum: ["initialize", "tools/list", "tools/call", "resources/list", "ping"]
           description: |
-            JSON-RPC method name — only "tools/list" and "tools/call" are valid.
-            The registered tool name itself is passed inside `params`, not here.
+            JSON-RPC method name — must be one of the methods registered in
+            src/mcp/server.py's _METHOD_DISPATCH table. The registered tool name
+            itself is passed inside `params` for tools/call, not in `method`.
         params:
           type: object
         id:
@@ -217,9 +223,24 @@ components:
         result:
           type: object
         error:
-          $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/schemas/MCPError'
         id:
           type: string
+
+    MCPError:
+      type: object
+      description: |
+        JSON-RPC error object nested inside RpcResponse.error on failure — distinct
+        from the top-level ErrorResponse used for 401/429 transport-level failures.
+        Matches src/mcp/server.py's error envelope (code/message, e.g. ERR_TOOL_NOT_FOUND).
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        data:
+          type: object
 ```
 
 ## Versioning strategy

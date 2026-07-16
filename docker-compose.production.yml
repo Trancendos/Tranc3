@@ -61,6 +61,7 @@ services:
     container_name: tranc3-traefik
     <<: *common
     command:
+      - "--ping=true"
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"

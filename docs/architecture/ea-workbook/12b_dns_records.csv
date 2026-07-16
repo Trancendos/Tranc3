@@ -1,3 +1,3 @@
 RecordID,DNSID,RecordName,RecordType,RecordValue,TTL,Priority,RoutingPolicy,StatusCode,Notes
-DNSR-001,DNS-001,@,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-004,Root A record - requires the Citadel host's public/NAT IP - 10.0.1.10 is private address space and cannot be the public value
-DNSR-002,DNS-002,@,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-004,api.trancendos.com to Traefik ingress - RecordName is @ since this row is already inside the api.trancendos.com zone
+DNSR-001,DNS-001,@,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-001,Root A record - requires the Citadel host's public/NAT IP - 10.0.1.10 is private address space and cannot be the public value
+DNSR-002,DNS-001,api,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-001,api.trancendos.com to Traefik ingress - a record in the trancendos.com zone (DNS-001) - not a separate delegated zone

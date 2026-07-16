@@ -76,9 +76,12 @@ This service is the one anchor with `AutoScalingEnabled=TRUE` (`02_service_inven
 max 3 instances). `docker compose --scale` cannot be used as-is today — the
 `workflow-engine-service` entry in `docker-compose.production.yml` sets a fixed
 `container_name`, and Compose refuses to start more than one container from a service
-that has one. Scaling to multiple instances requires removing that fixed name (and
-adjusting anything that depends on the literal container name, e.g. health checks or
-Traefik labels) before `--scale` will work.
+that has one. Scaling to multiple instances requires removing that fixed name — and the
+fixed `"8034:8034"` host port publish, which would also fail with more than one replica
+(only one container can bind a given host port). Traffic to replicas would need to go
+through Traefik service discovery instead of the published host port, and anything that
+depends on the literal container name (health checks, Traefik labels) needs adjusting
+too, before `--scale` will work.
 
 ### Rollback
 Same pattern as The Spark — redeploy the previous commit/tag via `docker compose up -d --build`
@@ -118,8 +121,12 @@ rather than an operational incident.
 4. Log the action — Observatory picks it up automatically via audit middleware.
 
 ### Success criteria
-`/auth/token` issues a valid JWT via the authorization_code grant; no repeated auth
-failures in `docker compose logs infinity-auth`.
+`/auth/token` issues an access token via the authorization_code grant. Note the
+authorization_code path (`workers/infinity-auth/router.py` `token_endpoint`) currently
+returns an opaque `secrets.token_urlsafe(32)` string, not a signed JWT — only the
+refresh path builds a JWT via `jose.jwt.encode`. Verify success against the actual
+token contract (a 200 response with a non-empty `access_token`), not by attempting to
+decode it as a JWT. No repeated auth failures in `docker compose logs infinity-auth`.
 
 ---
 
@@ -170,7 +177,7 @@ this entry exists only to complete the six-anchor-service set for cross-referenc
 ## RUNBOOK: The Observatory (Audit & Monitoring)
 **Owner:** Norman Hawkins · **SLA:** 99.9% · **CriticalityCode:** CRT-001
 **Service/App IDs:** `SRV-OBS-001` / `APP-OBS-001`
-**Hard dependencies:** `SRV-INF-001`, `DB-OBS-001` (SQLite — see caveat below)
+**Hard dependency:** `SRV-INF-001` · `DB-OBS-001` is not currently used at runtime — see caveat below
 
 ### Audit ingestion failure
 ```bash
