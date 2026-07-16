@@ -64,7 +64,7 @@ def main() -> int:
     rows = load_rows()
     headers = {"X-Internal-Secret": args.internal_secret} if args.internal_secret else {}
 
-    registered, skipped = 0, 0
+    registered, skipped, failed = 0, 0, 0
     for row in rows:
         service_id = row.get("ServiceID", "?")
         notes = row.get("Notes", "")
@@ -97,9 +97,10 @@ def main() -> int:
             registered += 1
         except httpx.HTTPError as e:
             print(f"FAIL {name} -> {url}: {e}")
+            failed += 1
 
-    print(f"\n{registered} registered, {skipped} skipped (no port in Notes).")
-    return 0 if skipped == 0 else 1
+    print(f"\n{registered} registered, {skipped} skipped (no port in Notes), {failed} failed.")
+    return 0 if skipped == 0 and failed == 0 else 1
 
 
 if __name__ == "__main__":

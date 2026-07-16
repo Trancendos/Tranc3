@@ -29,9 +29,15 @@ def validate() -> int:
         return 1
 
     for path in csv_files:
-        with open(path, newline="", encoding="utf-8") as fh:
-            rows = list(csv.reader(fh))
-        if not rows:
+        try:
+            with open(path, newline="", encoding="utf-8") as fh:
+                rows = list(csv.reader(fh, strict=True))
+        except csv.Error as exc:
+            failures.append(f"{os.path.basename(path)}: CSV parse error — {exc}")
+            continue
+
+        if not rows or not rows[0]:
+            failures.append(f"{os.path.basename(path)}: missing or empty header row")
             continue
         header_len = len(rows[0])
         for i, row in enumerate(rows[1:], start=2):

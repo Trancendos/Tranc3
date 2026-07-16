@@ -1,3 +1,5 @@
 RecordID,DNSID,RecordName,RecordType,RecordValue,TTL,Priority,RoutingPolicy,StatusCode,Notes
-DNSR-001,DNS-001,@,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-001,Root A record - requires the Citadel host's public/NAT IP - 10.0.1.10 is private address space and cannot be the public value
-DNSR-002,DNS-001,api,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-001,api.trancendos.com to Traefik ingress - a record in the trancendos.com zone (DNS-001) - not a separate delegated zone
+DNSR-001,DNS-001,@,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-001,Matches cloudflare_record.apex in deploy/terraform/oci-citadel-dns.tf - resolves to oci_core_public_ip.citadel.ip_address at apply time - proxied=false (grey cloud - required for Traefik HTTP-01 ACME)
+DNSR-002,DNS-001,www,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-001,Matches cloudflare_record.www in deploy/terraform/oci-citadel-dns.tf - proxied=false
+DNSR-003,DNS-001,api,DNST-001,<public-or-NAT-IP-of-citadel-host>,300,,ROUTE-001,STS-001,Matches cloudflare_record.api in deploy/terraform/oci-citadel-dns.tf - a record in this zone (DNS-001) not a separate delegated api.trancendos.com zone - proxied=false
+DNSR-004,DNS-001,the-workshop,DNST-003,trancendos.com,300,,ROUTE-001,STS-001,Matches cloudflare_record.the_workshop in deploy/terraform/oci-citadel-dns.tf - CNAME provisioned alongside Traefik path routing (belt-and-suspenders per the Terraform file's own comment) rather than a substitute for it - proxied=false

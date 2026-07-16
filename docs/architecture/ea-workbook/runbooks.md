@@ -121,12 +121,17 @@ rather than an operational incident.
 4. Log the action — Observatory picks it up automatically via audit middleware.
 
 ### Success criteria
-`/auth/token` issues an access token via the authorization_code grant. Note the
-authorization_code path (`workers/infinity-auth/router.py` `token_endpoint`) currently
-returns an opaque `secrets.token_urlsafe(32)` string, not a signed JWT — only the
-refresh path builds a JWT via `jose.jwt.encode`. Verify success against the actual
-token contract (a 200 response with a non-empty `access_token`), not by attempting to
-decode it as a JWT. No repeated auth failures in `docker compose logs infinity-auth`.
+`/auth/token` returns 200 with a non-empty `access_token` for the authorization_code
+grant. That token is currently unusable for anything beyond that response: the grant
+issues an opaque `secrets.token_urlsafe(32)` string (`workers/infinity-auth/router.py`
+`token_endpoint`), but every protected route in this service — including `/auth/verify`
+and `/auth/me` — authenticates via `get_current_user` → `decode_access_token`, which
+requires a signed JWT and will reject the opaque string with 401. Only the refresh path
+(`_refresh_via_token`) actually issues a JWT via `jose.jwt.encode`. Do not treat an
+`/auth/verify` round-trip as a success check for the authorization_code grant — it will
+fail even when the grant itself is working as coded. This is a real gap in the token
+contract, not a runbook error; flag it if seen, don't chase it as an operational
+incident. No repeated auth failures in `docker compose logs infinity-auth`.
 
 ---
 
