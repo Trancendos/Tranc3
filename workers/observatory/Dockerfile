@@ -8,4 +8,4 @@ USER appuser
 EXPOSE 8040
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"OBSERVATORY_PORT\", \"8040\")}/health', timeout=4).read()"
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${OBSERVATORY_PORT:-8040}"]
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${OBSERVATORY_PORT:-8040}"]

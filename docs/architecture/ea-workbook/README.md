@@ -47,7 +47,7 @@ operationally usable:
 
 | Doc | Covers |
 |---|---|
-| `runbooks.md` | Health-check, restart, scaling, rollback, and DR procedures for the six anchor services — written for this platform's actual Docker Compose + Traefik + Forgejo stack, not Kubernetes/AWS. Defers to `deploy/forgejo/RUNBOOK.md` for The Workshop, which already has a dedicated, more detailed runbook. |
+| `runbooks.md` | Health-check, restart, scaling, rollback, and selected recovery procedures for the anchor services — written for this platform's actual Docker Compose + Traefik + Forgejo stack, not Kubernetes/AWS. Defers to `deploy/forgejo/RUNBOOK.md` for The Workshop, which already has a dedicated, more detailed runbook. |
 | `api-spec-template.md` | Reusable OpenAPI 3.1 skeleton plus a worked example (`API-SPARK-001`) kept in sync with `05_apis.csv`, and the API versioning strategy. |
 | `compliance-and-pipeline.md` | ITIL/SOC2/GDPR/HIPAA/ISO 27001 control mapping onto this workbook's columns, and the deployment pipeline as it actually runs through `.forgejo/workflows/` and `docker compose`, including rollback and approval procedure. |
 

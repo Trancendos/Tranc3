@@ -1,3 +1,3 @@
 DNSID,ZoneName,ZoneType,Owner,NameServers,RegistrationProvider,StatusCode,DNSSEC,RecordCount,ComplianceFrameworks,Notes
-DNS-001,trancendos.com,ZTYPE-001,Nexus-Prime,ns1.trancendos.com;ns2.trancendos.com,Cloudflare Registrar,STS-004,TRUE,8,ITIL;SOC2,Primary domain - services are subdirectories not subdomains per deployment topology
-DNS-002,api.trancendos.com,ZTYPE-001,Nexus-Prime,ns1.trancendos.com;ns2.trancendos.com,Cloudflare Registrar,STS-004,TRUE,3,ITIL;SOC2,Routes through Traefik to self-hosted workers - replacing CF trancendos-api-gateway
+DNS-001,trancendos.com,ZTYPE-001,Nexus-Prime,ns1.trancendos.com;ns2.trancendos.com,Cloudflare Registrar,STS-004,TRUE,1,ITIL;SOC2,Primary domain - services are subdirectories not subdomains per deployment topology - no the-workshop subdomain since path routing cannot be modelled as a CNAME
+DNS-002,api.trancendos.com,ZTYPE-001,Nexus-Prime,ns1.trancendos.com;ns2.trancendos.com,Cloudflare Registrar,STS-004,TRUE,1,ITIL;SOC2,Routes through Traefik to self-hosted workers - replacing CF trancendos-api-gateway - ACME uses Traefik-managed HTTP-01 so no DNS-01 challenge record is needed

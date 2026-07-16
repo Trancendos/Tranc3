@@ -68,8 +68,9 @@ components:
     OAuth2:
       type: oauth2
       flows:
-        clientCredentials:
-          tokenUrl: http://localhost:8005/oauth2/token   # Infinity — workers/infinity-auth/
+        authorizationCode:
+          authorizationUrl: http://localhost:8005/auth/authorize
+          tokenUrl: http://localhost:8005/auth/token   # Infinity — workers/infinity-auth/, authorization_code + PKCE only
           scopes:
             read:all: Read all resources
             write:all: Write all resources
@@ -77,11 +78,15 @@ components:
   schemas:
     HealthResponse:
       type: object
-      required: [status, timestamp]
+      description: |
+        Generic template shape. The Spark's real /mcp/health (src/mcp/server.py) returns
+        status as a literal "ok" string plus a numeric `ts` (time.time()) rather than an
+        enum + ISO timestamp — adjust required/properties per service to match its actual
+        payload rather than assuming this generic shape.
+      required: [status]
       properties:
         status:
           type: string
-          enum: [healthy, degraded, unhealthy]
         timestamp:
           type: string
           format: date-time
@@ -125,16 +130,22 @@ paths:
     post:
       summary: Invoke a registered MCP tool
       description: |
-        JSON-RPC 2.0 endpoint for tool discovery and invocation, per src/mcp/.
-        Tool selection uses RAG-MCP semantic matching (src/mcp/tool_rag.py) when
-        more than one registered tool could satisfy the request.
+        JSON-RPC 2.0 endpoint for tool discovery and invocation, per src/mcp/. Valid
+        `method` values are "tools/list" and "tools/call" only — the actual tool name
+        goes under `params`, not `method`. RAG-MCP semantic matching (src/mcp/tool_rag.py)
+        is a separate, optional discovery path (backed by an optional Qdrant client) used
+        to help select a tool; it is not part of the tools/call request/response contract
+        itself.
 
         **Rate Limit:** 1000 requests/hour
-        **Timeout:** 5 seconds
+        **Timeout:** 60 seconds (asyncio.wait_for around the tool handler)
       operationId: invokeMcpTool
       tags: [Resources]
       security:
-        - OAuth2: [tools:invoke]
+        - OAuth2: []
+      # Real auth is Depends(get_current_user) — bearer JWT via Infinity. No OAuth2
+      # scope is declared or enforced by the actual route; the empty list above
+      # reflects that rather than inventing a "tools:invoke" scope that doesn't exist.
       requestBody:
         required: true
         content:
@@ -143,19 +154,18 @@ paths:
               $ref: '#/components/schemas/RpcRequest'
       responses:
         '200':
-          description: Tool invocation result
+          description: |
+            JSON-RPC response envelope. The real implementation returns HTTP 200 for
+            BOTH success and error outcomes — a failed call (invalid request, unknown
+            tool, handler exception, timeout) comes back as this same 200 response
+            with a populated `error` field inside RpcResponse, not as a 4xx/5xx status.
+            There is no separate top-level ErrorResponse for JSON-RPC-level failures.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RpcResponse'
-        '400':
-          description: Invalid JSON-RPC request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Unauthorized
+          description: Unauthorized — bearer JWT missing/invalid (rejected before the JSON-RPC layer is reached)
           content:
             application/json:
               schema:
@@ -175,18 +185,27 @@ components:
   schemas:
     RpcRequest:
       type: object
-      required: [jsonrpc, method, id]
+      required: [jsonrpc, method]
       properties:
         jsonrpc:
           type: string
           enum: ["2.0"]
         method:
           type: string
-          description: Registered tool name, or "tools/list" for discovery
+          enum: ["tools/list", "tools/call"]
+          description: |
+            JSON-RPC method name — only "tools/list" and "tools/call" are valid.
+            The registered tool name itself is passed inside `params`, not here.
         params:
           type: object
         id:
-          type: string
+          description: |
+            Per JSON-RPC 2.0, optional and may be a string, number, or null — not
+            required. A request with no `id` is treated as a notification.
+          oneOf:
+            - type: string
+            - type: number
+            - type: "null"
 
     RpcResponse:
       type: object

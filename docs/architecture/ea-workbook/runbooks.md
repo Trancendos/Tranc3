@@ -73,10 +73,12 @@ docker compose -f docker-compose.production.yml restart workflow-engine-service
 
 ### Scaling (queue backlog)
 This service is the one anchor with `AutoScalingEnabled=TRUE` (`02_service_inventory.csv`,
-max 3 instances). If Docker Compose scaling is in use:
-```bash
-docker compose -f docker-compose.production.yml up -d --scale workflow-engine-service=3
-```
+max 3 instances). `docker compose --scale` cannot be used as-is today — the
+`workflow-engine-service` entry in `docker-compose.production.yml` sets a fixed
+`container_name`, and Compose refuses to start more than one container from a service
+that has one. Scaling to multiple instances requires removing that fixed name (and
+adjusting anything that depends on the literal container name, e.g. health checks or
+Traefik labels) before `--scale` will work.
 
 ### Rollback
 Same pattern as The Spark — redeploy the previous commit/tag via `docker compose up -d --build`
@@ -97,12 +99,17 @@ Queue depth returns to baseline, `/health` green for 3 consecutive checks.
 # 1. Confirm vault reachable first — this is almost always the real cause
 curl -s http://localhost:8038/health
 
-# 2. Check signing keys are exposed
-curl -s http://localhost:8005/.well-known/jwks.json
+# 2. Check the auth service itself
+curl -s http://localhost:8005/health
 
 # 3. Restart if 1 and 2 are healthy but tokens still fail
 docker compose -f docker-compose.production.yml restart infinity-auth
 ```
+Infinity only implements the `authorization_code` grant (with PKCE) at `POST /auth/token` —
+there is no `/oauth2/token` route and no `client_credentials` support. Its `refresh_token`
+grant is currently broken in the application code (the token endpoint queries a
+`refresh_tokens` table that is never created), so treat refresh failures as a known issue
+rather than an operational incident.
 
 ### Threat response (Cryptex/Renik alert)
 1. Confirm alert in the security channel your team uses for Cryptex notifications.
@@ -111,8 +118,8 @@ docker compose -f docker-compose.production.yml restart infinity-auth
 4. Log the action — Observatory picks it up automatically via audit middleware.
 
 ### Success criteria
-`/oauth2/token` issues a valid JWT for a test client; JWKS endpoint responds; no repeated
-auth failures in `docker compose logs infinity-auth`.
+`/auth/token` issues a valid JWT via the authorization_code grant; no repeated auth
+failures in `docker compose logs infinity-auth`.
 
 ---
 
@@ -163,19 +170,22 @@ this entry exists only to complete the six-anchor-service set for cross-referenc
 ## RUNBOOK: The Observatory (Audit & Monitoring)
 **Owner:** Norman Hawkins · **SLA:** 99.9% · **CriticalityCode:** CRT-001
 **Service/App IDs:** `SRV-OBS-001` / `APP-OBS-001`
-**Hard dependencies:** `SRV-INF-001`, `DB-OBS-001` (Postgres audit log store)
+**Hard dependencies:** `SRV-INF-001`, `DB-OBS-001` (SQLite — see caveat below)
 
 ### Audit ingestion failure
 ```bash
 docker inspect -f '{{.State.Health.Status}}' tranc3-observatory
 
-# Check the audit DB is reachable and not full
-docker exec tranc3-postgres pg_isready -U audit_user -d audit_logs_db 2>/dev/null \
-  || docker exec <postgres-container> pg_isready
-
 # Restart the observatory worker
 docker compose -f docker-compose.production.yml restart observatory
 ```
+**Known gap:** `OBSERVATORY_DB_PATH` is configured but the worker never actually opens or
+writes to it today — audit/metric events live only in an in-process `deque` (see
+`workers/observatory/service.py`) and are lost on every restart. There is currently no
+durable database to check the health of; "ingestion failure" here really means the
+in-memory buffer isn't being populated, which a process restart usually clears. Treat any
+retention/compliance claim about this data surviving a restart as aspirational until
+persistence is implemented.
 Also check Loki/Promtail (`tranc3-loki`, `tranc3-promtail` containers) if the symptom is
 missing *log* data specifically rather than missing *audit* data — they are separate
 pipelines feeding the same dashboards.
