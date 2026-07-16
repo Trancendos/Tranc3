@@ -79,7 +79,7 @@ pull_request_rules:
   # ── Auto-close stale WIP PRs ─────────────────────────────────────────
   - name: Warn on stale draft PRs
     conditions:
-      - draft=true
+      - draft
       - "updated-at<7 days ago"
     actions:
       comment:

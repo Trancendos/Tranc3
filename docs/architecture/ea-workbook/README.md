@@ -89,7 +89,7 @@ originating spec's conventions (Code/Text/Integer/Boolean/List with `;`-separate
 ## Validation rules that apply across files
 
 - Every `Owner` column must be a valid Tier 3 Lead AI name from `PLATFORM_ENTITIES.md`.
-- `RPO` (Recovery Point Objective) must be **>=** `RTO` (Recovery Time Objective) wherever both appear.
+- `RPO` (Recovery Point Objective, max acceptable data loss) and `RTO` (Recovery Time Objective, max acceptable downtime) are independent targets set per service criticality — neither is required to be greater than the other. Both should tighten as `CriticalityCode` increases (CRT-001 services should carry the lowest RPO/RTO minutes).
 - `SLA` must be **>= 99.0%** for any row with `CriticalityCode = CRT-001` (Critical).
 - Cross-references (`DependsOnServices`, `ServiceID`, `ApplicationID`, etc.) must resolve to a row in the referenced file.
 - `HostingModel` should be `HST-003` (Self Hosted) unless a service has an explicit, documented reason to run elsewhere (e.g. Fly.io during the Cloudflare Workers → self-hosted migration).
