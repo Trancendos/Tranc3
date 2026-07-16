@@ -1,0 +1,3 @@
+DNSID,ZoneName,ZoneType,Owner,NameServers,RegistrationProvider,StatusCode,DNSSEC,RecordCount,ComplianceFrameworks,Notes
+DNS-001,trancendos.com,ZTYPE-001,The Nexus,ns1.trancendos.com;ns2.trancendos.com,Cloudflare Registrar,STS-004,TRUE,8,ITIL;SOC2,Primary domain - services are subdirectories not subdomains per deployment topology
+DNS-002,api.trancendos.com,ZTYPE-001,The Nexus,ns1.trancendos.com;ns2.trancendos.com,Cloudflare Registrar,STS-004,TRUE,3,ITIL;SOC2,Routes through Traefik to self-hosted workers - replacing CF trancendos-api-gateway

@@ -1,0 +1,5 @@
+RecordID,DNSID,RecordName,RecordType,RecordValue,TTL,Priority,RoutingPolicy,StatusCode,Notes
+DNSR-001,DNS-001,@,DNST-001,10.0.1.10,300,,ROUTE-001,STS-004,Root A record to The Citadel host
+DNSR-002,DNS-001,the-workshop,DNST-003,trancendos.com,300,,ROUTE-001,STS-004,CNAME - Forgejo served at trancendos.com/the-workshop via Traefik path routing
+DNSR-003,DNS-002,api,DNST-001,10.0.1.10,300,,ROUTE-001,STS-004,api.trancendos.com to Traefik ingress
+DNSR-004,DNS-002,_acme-challenge,DNST-006,validation-token-placeholder,60,,ROUTE-001,STS-004,ACME validation for Traefik-managed TLS certs
