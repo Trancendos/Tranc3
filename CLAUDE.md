@@ -162,6 +162,9 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 - `CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python
 - `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
 - `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
+- `docs/architecture/ea-workbook/` — EA/CMDB workbook (17 CSVs + runbooks/API-spec/compliance
+  docs) covering 6 real anchor services in depth (The Spark, The Digital Grid, Infinity,
+  The Void, The Workshop, The Observatory) — not a full inventory of all 90+ services
 
 **Architecture principles:**
 1. **SQLite over Cloudflare D1** — Each worker owns its own database file; no shared state

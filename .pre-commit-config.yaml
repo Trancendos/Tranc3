@@ -84,6 +84,16 @@ repos:
       - id: typos
         args: [--config, .typos.toml]
 
+  # ── EA/CMDB workbook integrity ────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: validate-ea-workbook
+        name: Validate EA workbook CSV integrity
+        entry: python scripts/validate_ea_workbook.py
+        language: system
+        files: ^docs/architecture/ea-workbook/.*\.csv$
+        pass_filenames: false
+
   # ── Proactive Security Scanner (AST-based CodeQL pattern prevention) ────
   # Blocks the exact patterns that caused ~297 CodeQL alerts from ever
   # landing in the codebase again. Maps to CWE-022, CWE-117, CWE-209,

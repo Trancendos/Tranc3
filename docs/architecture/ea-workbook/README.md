@@ -6,6 +6,20 @@ deployments, down through environments, hosting, servers, databases, storage, DN
 load balancers, firewalls, dependencies, vulnerability findings, and configuration
 drift.
 
+**Scope note:** every row is seeded from 6 real anchor services (see below), out of the
+90+ services listed in `CLAUDE.md`'s worker map. This is intentionally a depth-first
+anchor set, not a full inventory — treat any row for a service not in the anchor table
+as illustrative/unverified until it's added and checked against real code the same way
+the anchor rows were. CI validates only structural CSV integrity
+(`scripts/validate_ea_workbook.py`, wired into `.forgejo/workflows/ci.yml` and
+`.pre-commit-config.yaml`) — it does not verify that a row's claims still match the code.
+
+`scripts/register_ea_workbook_services.py` reads `02_service_inventory.csv`'s
+`HealthCheckPath`/`HealthCheckInterval` columns and registers each anchor service with
+`health-aggregator`'s dynamic registry (`POST /services`), so this data actually drives
+live monitoring instead of only being read by humans. Run it after deploying the anchor
+services, or wire it into a post-deploy step once one exists.
+
 ## Why this exists
 
 `PLATFORM_ENTITIES.md` and `docs/architecture/master-schema.md` answer *who owns what*
