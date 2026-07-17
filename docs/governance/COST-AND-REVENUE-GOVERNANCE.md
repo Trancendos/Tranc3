@@ -43,15 +43,31 @@ during this review:
 | `config/zero_cost/providers.yaml` + `src/zero_cost/registry.py` | Canonical per-capability approved-provider rotation chains; `assert_zero_cost()` rejects any provider not on the approved list | Already correctly excludes `together-ai`/`fireworks-ai` from the approved `ai_inference` chain (flagged `risk: credits_expire`) — this registry was right; the gap was that `workers/infinity-ai` never calls it |
 | `ZeroCostEnforcer.assert_zero_cost()` daily assertion | Checks specific paid-provider env vars (`OPENAI_API_KEY`, etc.) and logs violations | `TOGETHER_API_KEY`/`DEEPSEEK_API_KEY` were missing from the checked list — added |
 
-**Known remaining gap, not yet closed:** `workers/infinity-ai/service.py`'s `AIGatewayRouter` builds
-its own provider list independently of `src/zero_cost/registry.py` — Together and DeepSeek are
-currently excluded from the live rotation only because no API key is configured anywhere in
-`docker-compose.production.yml`, not because the code checks `is_approved()`. That is an accident of
-current configuration, not an enforced hard stop — the next person who sets `TOGETHER_API_KEY` as a
-secret gets no warning from that worker itself (the platform-level checks above would still catch
-it). Wiring `AIGatewayRouter.__init__` to filter its provider list through
-`src/zero_cost/registry.is_approved()` is the natural next fix and is tracked as an open item, not
-claimed as done here.
+**Closed this session:** `workers/infinity-ai/service.py`'s `AIGatewayRouter` now filters its
+candidate provider list through `is_approved()` at construction time (a vendored
+`zero_cost_registry.py` + `config/zero_cost/providers.yaml`, since this worker's Docker build
+context is isolated from the repo root) — `together` is now excluded by code, not by the accident of
+no `TOGETHER_API_KEY` being configured. `workers/infinity-ai/router.py`'s `/health` route was also
+fixed: it previously hardcoded a static 8-provider list that included `together` regardless of what
+was actually in rotation — it now reports `_gateway.providers` for real.
+
+**Real bug found and fixed in the registry itself, while wiring the above:** `is_approved()` and
+`approved_ids()` in `src/zero_cost/registry.py` checked `provider_id in reg.get("approved_self_hosted", [])`
+— but `approved_self_hosted` in `providers.yaml` is a list of `{id, category, cost, ...}` dicts, not
+bare strings, so that membership check silently never matched anything (and `approved_ids()`
+actually raised `TypeError: unhashable type: 'dict'` if ever called — it evidently never had been).
+This meant `is_approved("groq")`, `is_approved("litellm")`, `is_approved("gemini")`,
+`is_approved("github-models")`, and `is_approved("deepseek")` all incorrectly returned `False` before
+this fix, even though every one of them is a genuinely approved zero-cost provider per that same
+file. Fixed to extract `.id` from each dict; added regression tests
+(`tests/test_zero_cost_registry.py`) covering both the dict-extraction fix and the crash fix.
+
+**Known remaining gap, not fully closed:** the registry itself has an internal ID-naming
+inconsistency — `capabilities.ai_inference` lists `openrouter_free` (underscore) while
+`conditional_cloud` separately lists `openrouter-free` (hyphen), and `workers/infinity-ai` uses bare
+`openrouter`. The wiring above maps `openrouter` → `openrouter_free` at the call site rather than
+editing `providers.yaml`'s data, since normalizing the registry's own provider-ID taxonomy across
+every consumer is a larger, deliberate change this pass didn't make unilaterally.
 
 ## 3. Escalation chain for any potential cost
 
@@ -120,8 +136,9 @@ verify-before-document convention (`docs/architecture/ea-workbook/README.md`).
 
 ## 6. Open items
 
-- Wire `workers/infinity-ai/service.py`'s `AIGatewayRouter` to `src/zero_cost/registry.is_approved()`
-  so Together/DeepSeek exclusion is enforced, not accidental (§2).
+- The registry's own `openrouter_free` / `openrouter-free` / `openrouter` ID-naming inconsistency
+  (§2) is worked around at the `workers/infinity-ai` call site, not fixed at the source — a
+  deliberate, larger `providers.yaml` cleanup this pass didn't make unilaterally.
 - `src/cloud/cost_optimizer.py` (`MultiCloudCostOptimizer`) was found during this review: dead code,
   never imported anywhere, defaulting `AWS_ENABLED`/`AZURE_ENABLED`/`GCP_ENABLED` to `"true"` and
   estimating ~£2,600/month of paid multi-cloud spend — directly contradicting this platform's

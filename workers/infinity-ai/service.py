@@ -53,6 +53,7 @@ from config import (
 )
 from database import AIDatabase
 from sanitize import sanitize_for_log
+from zero_cost_registry import is_approved
 
 logger = logging.getLogger(WORKER_NAME)
 
@@ -496,12 +497,24 @@ class OfflineClient:
 # AI Gateway Router (AdaptiveRotation)
 # ---------------------------------------------------------------------------
 
+# ProviderName values that don't match the zero-cost registry's own provider
+# IDs 1:1 (e.g. registry lists "openrouter_free", not bare "openrouter").
+_REGISTRY_ID_OVERRIDES: Dict[ProviderName, str] = {
+    ProviderName.openrouter: "openrouter_free",
+}
+
 
 class AIGatewayRouter:
     """Routes AI requests through provider priority chain with caching and budget tracking.
 
     Provider rotation order (LimitMonitor x8 AdaptiveRotation):
       ollama → groq → cerebras → openrouter → huggingface → together → deepseek → offline
+
+    Every candidate provider is checked against zero_cost_registry.is_approved()
+    before being added to the live rotation — see config/zero_cost/providers.yaml
+    for the canonical approved-provider list. This closes the gap where together/
+    deepseek could silently rotate into use just because an API key happened to be
+    configured, with no enforcement tying the rotation to the zero-cost registry.
     """
 
     def __init__(self, db: AIDatabase):
@@ -517,7 +530,7 @@ class AIGatewayRouter:
         self.deepseek = DeepSeekClient()
         self.offline = OfflineClient()
         # Provider priority: local first → fast cloud free tiers → offline fallback
-        self.providers = [
+        candidates = [
             (ProviderName.ollama, self.ollama),
             (ProviderName.groq, self.groq),
             (ProviderName.cerebras, self.cerebras),
@@ -527,6 +540,18 @@ class AIGatewayRouter:
             (ProviderName.deepseek, self.deepseek),
             (ProviderName.offline, self.offline),
         ]
+        self.providers = []
+        for name, client in candidates:
+            registry_id = _REGISTRY_ID_OVERRIDES.get(name, name.value)
+            if is_approved(registry_id):
+                self.providers.append((name, client))
+            else:
+                logger.warning(
+                    "AIGatewayRouter: excluding provider %r — not approved in "
+                    "config/zero_cost/providers.yaml (registry id %r)",
+                    name.value,
+                    registry_id,
+                )
 
     def reset_daily_counts_if_needed(self) -> None:
         """Placeholder for per-provider daily request-count reset.

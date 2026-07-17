@@ -1,4 +1,13 @@
-"""Zero-cost provider registry — approved IDs, rotation chains, hard stops."""
+"""Zero-cost provider registry — approved IDs, rotation chains, hard stops.
+
+Vendored copy of src/zero_cost/registry.py. This worker's Docker build context is
+./workers/infinity-ai only (see docker-compose.production.yml), so the repo-root
+src/zero_cost package is never visible to the build — the only change from the
+original is _REGISTRY_PATH, which now points at the providers.yaml vendored
+alongside this file (workers/infinity-ai/config/zero_cost/providers.yaml) instead
+of resolving three parents up. Keep in sync with src/zero_cost/registry.py and
+config/zero_cost/providers.yaml if either changes.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +16,7 @@ from typing import Any
 
 import yaml
 
-_REGISTRY_PATH = Path(__file__).resolve().parents[2] / "config" / "zero_cost" / "providers.yaml"
+_REGISTRY_PATH = Path(__file__).resolve().parent / "config" / "zero_cost" / "providers.yaml"
 
 # Legacy rotator / env names → canonical chain names in providers.yaml
 _CHAIN_ALIASES: dict[str, str] = {

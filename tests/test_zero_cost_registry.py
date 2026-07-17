@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from src.zero_cost.registry import (
+    approved_ids,
     assert_zero_cost,
     get_chain,
     is_approved,
@@ -32,6 +33,25 @@ def test_assert_zero_cost_rejects_paid() -> None:
 def test_assert_zero_cost_rejects_unlisted_provider() -> None:
     with pytest.raises(ValueError, match="not in the zero-cost registry"):
         assert_zero_cost("openai_paid")
+
+
+def test_approved_self_hosted_dict_entries_resolve_by_id() -> None:
+    """approved_self_hosted holds {id, category, cost, ...} dicts, not bare strings —
+    is_approved() must extract .id rather than checking raw membership."""
+    for provider_id in ("groq", "litellm", "gemini", "github-models", "deepseek"):
+        assert is_approved(provider_id), f"{provider_id} should be approved via approved_self_hosted"
+
+
+def test_approved_ids_does_not_crash_on_dict_entries() -> None:
+    """approved_self_hosted's dicts are unhashable — approved_ids() must not set() them directly."""
+    ids = approved_ids()
+    assert "ollama" in ids
+    assert "groq" in ids
+
+
+def test_unapproved_providers_still_rejected() -> None:
+    assert not is_approved("together")
+    assert not is_approved("openai")
 
 
 def test_zero_cost_full_chain_has_six_to_eight_providers() -> None:

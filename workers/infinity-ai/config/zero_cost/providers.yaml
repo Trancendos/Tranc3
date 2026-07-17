@@ -1,0 +1,333 @@
+# Zero-cost provider registry — 6–8 providers per capability with rotation chains.
+# Paid providers are listed for documentation only; runtime must reject them unless explicitly enabled.
+version: "2026-06"
+model: zero_cost_first
+policy:
+  max_paid_providers: 0
+  require_self_hosted_first: true
+  rotation_min_providers: 6
+  rotation_max_providers: 8
+  quota_hard_stop: true
+  daily_request_limit_per_provider: 5000
+  cooldown_seconds_on_exhaust: 3600
+
+capabilities:
+  embeddings:
+    description: "Embedding vectors — local sentence-transformers first"
+    providers:
+      - id: local_embeddings
+        cost: zero
+        self_hosted: true
+        priority: 1
+      - id: ollama
+        cost: zero
+        self_hosted: true
+        priority: 2
+      - id: huggingface
+        cost: zero
+        self_hosted: false
+        priority: 3
+      - id: openrouter_free
+        cost: zero
+        self_hosted: false
+        priority: 4
+      - id: cohere_free
+        cost: zero
+        self_hosted: false
+        priority: 5
+      - id: voyage_free
+        cost: zero
+        self_hosted: false
+        priority: 6
+      - id: offline_embeddings
+        cost: zero
+        self_hosted: true
+        priority: 99
+    rotation_chains:
+      - name: embeddings_default
+        providers: [local_embeddings, ollama, huggingface, openrouter_free, cohere_free, voyage_free, offline_embeddings]
+
+  speech_to_text:
+    description: "STT — Whisper local, then free API tiers"
+    providers:
+      - id: whisper_local
+        cost: zero
+        self_hosted: true
+        priority: 1
+      - id: faster_whisper
+        cost: zero
+        self_hosted: true
+        priority: 2
+      - id: groq_whisper
+        cost: zero
+        self_hosted: false
+        priority: 3
+      - id: assemblyai_free
+        cost: zero
+        self_hosted: false
+        priority: 4
+      - id: deepgram_free
+        cost: zero
+        self_hosted: false
+        priority: 5
+      - id: openai_whisper_free
+        cost: zero
+        self_hosted: false
+        priority: 6
+      - id: offline_stt
+        cost: zero
+        self_hosted: true
+        priority: 99
+    rotation_chains:
+      - name: stt_default
+        providers: [whisper_local, faster_whisper, groq_whisper, assemblyai_free, deepgram_free, openai_whisper_free, offline_stt]
+
+  image_generation:
+    description: "Image gen — local SD/ComfyUI stubs, then free tiers"
+    providers:
+      - id: comfyui_local
+        cost: zero
+        self_hosted: true
+        priority: 1
+      - id: stable_diffusion_local
+        cost: zero
+        self_hosted: true
+        priority: 2
+      - id: huggingface_inference
+        cost: zero
+        self_hosted: false
+        priority: 3
+      - id: replicate_free
+        cost: zero
+        self_hosted: false
+        priority: 4
+      - id: pollinations
+        cost: zero
+        self_hosted: false
+        priority: 5
+      - id: leonardo_free
+        cost: zero
+        self_hosted: false
+        priority: 6
+      - id: offline_image
+        cost: zero
+        self_hosted: true
+        priority: 99
+    rotation_chains:
+      - name: image_default
+        providers: [comfyui_local, stable_diffusion_local, huggingface_inference, replicate_free, pollinations, leonardo_free, offline_image]
+
+  ai_inference:
+    description: "LLM inference — local Ollama first, then 8 free cloud tiers"
+    providers:
+      - id: ollama
+        cost: zero
+        self_hosted: true
+        priority: 1
+      - id: huggingface
+        cost: zero
+        self_hosted: false
+        priority: 2
+      - id: openrouter_free
+        cost: zero
+        self_hosted: false
+        priority: 3
+      - id: groq_free
+        cost: zero
+        self_hosted: false
+        priority: 4
+      - id: cerebras_free
+        cost: zero
+        self_hosted: false
+        priority: 5
+      - id: sambanova_free
+        cost: zero
+        self_hosted: false
+        priority: 6
+      - id: mistral_free
+        cost: zero
+        self_hosted: false
+        priority: 7
+      - id: github_models_free
+        cost: zero
+        self_hosted: false
+        priority: 8
+      - id: offline
+        cost: zero
+        self_hosted: true
+        priority: 99
+    rotation_chains:
+      - name: zero_cost_cloud
+        providers: [huggingface, openrouter_free, groq_free, cerebras_free, sambanova_free, mistral_free, github_models_free, offline]
+      - name: zero_cost_local
+        providers: [ollama, offline]
+      - name: zero_cost_full
+        providers: [ollama, huggingface, openrouter_free, groq_free, cerebras_free, sambanova_free, mistral_free, github_models_free, offline]
+
+# Legacy flat list (backward compatible with is_approved())
+approved_self_hosted:
+  - id: litellm
+    category: ai_inference
+    cost: "MIT — self-hosted aggregator proxy, zero-cost"
+  - id: ollama
+    category: ai_inference
+    cost: "MIT — local only"
+  - id: groq
+    category: ai_inference
+    cost: "free tier when GROQ_API_KEY set — 14.4k req/day cap"
+  - id: gemini
+    category: ai_inference
+    cost: "free tier when GOOGLE_GEMINI_API_KEY set"
+  - id: github-models
+    category: ai_inference
+    cost: "free with any GitHub PAT — no credit card. 50 req/day GPT-4o, 150/day gpt-4o-mini"
+    notes: "GITHUB_TOKEN env var — any personal access token, no special scopes"
+  - id: cerebras
+    category: ai_inference
+    cost: "free tier when CEREBRAS_API_KEY set"
+  - id: sambanova
+    category: ai_inference
+    cost: "free tier when SAMBANOVA_API_KEY set"
+  - id: mistral
+    category: ai_inference
+    cost: "free tier — 500K tokens/month. MISTRAL_API_KEY"
+  - id: cohere
+    category: ai_inference
+    cost: "free tier — 100K tokens/month (token-based, not request-based). COHERE_API_KEY"
+  - id: deepseek
+    category: ai_inference
+    cost: "free tier (soft limits). DEEPSEEK_API_KEY"
+  - id: forgejo
+    category: cicd
+    cost: "Forgejo OSS — The Workshop"
+  - id: woodpecker-ci
+    category: cicd
+    cost: "Apache 2.0 — self-hosted on Oracle VM alongside Forgejo"
+  - id: traefik
+    category: ingress
+    cost: "OSS"
+  - id: prometheus
+    category: observability
+    cost: "OSS"
+  - id: grafana
+    category: observability
+    cost: "OSS"
+  - id: loki
+    category: observability
+    cost: "OSS"
+  - id: vault-ce
+    category: secrets
+    cost: "BSL — self-hosted Vault on Citadel"
+  - id: trivy
+    category: security
+    cost: "Apache 2.0"
+  - id: grype
+    category: security
+    cost: "Apache 2.0"
+  - id: osv-scanner
+    category: security
+    cost: "Apache 2.0"
+  - id: semgrep
+    category: security
+    cost: "OSS CLI in CI"
+  - id: gitleaks
+    category: security
+    cost: "MIT"
+  - id: blender
+    category: creative_3d
+    cost: "GPL — TateKing/TranceFlow pipeline"
+  - id: penpot
+    category: design
+    cost: "MPL — Fabulousa"
+  - id: ipfs
+    category: storage
+    cost: "self-hosted node"
+  - id: qdrant
+    category: vector_db
+    cost: "Apache 2.0 self-hosted"
+  - id: chromadb
+    category: vector_db
+    cost: "Apache 2.0 — local SQLite in dev, Postgres in prod"
+  - id: llama-cpp-python
+    category: ai_inference
+    cost: "MIT — GGUF quantized local inference (CPU/GPU)"
+  - id: sqlite
+    category: database
+    cost: "public domain"
+  - id: ansible-core
+    category: automation
+    cost: "GPL — Citadel health probes"
+
+conditional_cloud:
+  - id: aws-always-free
+    category: cloud
+    limits: "Lambda 1M/mo, DynamoDB 25GB, SNS/SQS 1M — card required"
+    risk: credits_expire
+  - id: gcp-always-free
+    category: cloud
+    limits: "e2-micro US, Cloud Run 2M req — billing account required"
+    risk: credits_expire
+  - id: oracle-always-free
+    category: cloud
+    limits: "4 OCPU ARM + 200GB — card, capacity often scarce"
+    risk: idle_reclaim
+  - id: cloudflare-free
+    category: edge
+    limits: "100K workers req/day — legacy path being retired"
+    risk: quota_caps
+  - id: openrouter-free
+    category: ai_inference
+    limits: "~50 req/day :free models"
+    risk: daily_cap
+  - id: huggingface-inference
+    category: ai_inference
+    limits: "~$0.10/mo inference credits on free account"
+    risk: monthly_cap
+  - id: supabase-free
+    category: database
+    limits: "500MB — pauses after 7d idle"
+    risk: idle_pause
+  - id: github-public
+    category: forge
+    limits: "unlimited Actions on public repos; 2,000 min/month private repos"
+    risk: private_repo_limits
+  - id: gitlab-free
+    category: forge
+    limits: "400 compute minutes/month shared runners; unlimited with self-hosted"
+    risk: monthly_cap
+  - id: together-ai
+    category: ai_inference
+    limits: "$1 credit on signup — refreshes periodically, NOT guaranteed"
+    risk: credits_expire
+  - id: fireworks-ai
+    category: ai_inference
+    limits: "$1/month credit — refreshes monthly, NOT guaranteed"
+    risk: credits_expire
+
+blocked_paid:
+  - openai
+  - anthropic
+  - azure-openai
+  - gpt4
+  - claude-api-paid
+
+avoid_paid_default:
+  - id: replicate
+    reason: "Requires credit card even for free tier. NOT zero-cost."
+  - id: stability-ai
+    reason: "Free API tier ended 2024. No longer available."
+  - id: fly-io-new-accounts
+    reason: "No permanent free tier since 2024"
+  - id: adobe-creative-cloud-pro
+    reason: "Desktop apps paid; only Express/Firefly crumbs free"
+  - id: creative-fabrica-premium-3d
+    reason: "Trial then subscription"
+  - id: snyk-private-heavy
+    reason: "200 tests/mo on private repos"
+
+language_ecosystems:
+  python: { registry: pypi, cost: free, tool: pip-audit }
+  node: { registry: npm, cost: free_public, tool: npm-audit }
+  rust: { registry: crates.io, cost: free, tool: cargo-audit }
+  jvm: { registry: maven-central, cost: free_public, tool: owasp-dependency-check }
+  go: { registry: proxy.golang.org, cost: free, tool: govulncheck }
