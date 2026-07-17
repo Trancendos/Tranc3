@@ -65,10 +65,16 @@ services:
     # two that need real Docker access, which run on act-runner-deploy
     # instead.
     #
-    # Use custom image (flyctl + wrangler + python + security tools)
-    # Build first: docker build -f deploy/forgejo/runner.Dockerfile -t trancendos/act-runner:latest .
-    # If custom image not yet built, swap to: image: code.forgejo.org/forgejo/runner:3
-    image: ${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}
+    # Custom image (flyctl + wrangler + python + security tools) is the
+    # default — bootstrap.sh builds it and sets RUNNER_IMAGE before this
+    # runs. A manual `docker compose up` without that env var still needs
+    # the image to exist locally first: docker build -f
+    # deploy/forgejo/runner.Dockerfile -t trancendos/act-runner:latest .
+    # (defaulting to the bare upstream image here would silently register a
+    # runner missing python3.11/node20/docker — every real label on this
+    # runner needs one of those). Only override RUNNER_IMAGE to the upstream
+    # image deliberately, knowing jobs needing that toolchain will fail.
+    image: ${RUNNER_IMAGE:-trancendos/act-runner:latest}
     container_name: the-workshop-runner
     restart: unless-stopped
     depends_on:
@@ -120,7 +126,12 @@ services:
     # opting in with `runs-on: deploy-host`, restricted to
     # push/schedule/workflow_dispatch triggers, should ever land here — see
     # act-runner-deploy.yml's header comment for the full reasoning.
-    image: ${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}
+    # Defaults to the custom image, not upstream: unlike act-runner above,
+    # deploy-host's whole reason to exist is running `docker build`/`docker
+    # run` steps, which need the custom image's docker CLI — the upstream
+    # image would register a runner that accepts deploy-host jobs and then
+    # fails every one of them on a missing `docker` binary.
+    image: ${RUNNER_IMAGE:-trancendos/act-runner:latest}
     container_name: the-workshop-runner-deploy
     restart: unless-stopped
     depends_on:

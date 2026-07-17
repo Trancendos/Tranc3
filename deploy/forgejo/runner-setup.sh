@@ -21,12 +21,20 @@ die() { echo "[runner-setup] ERROR: $*" >&2; exit 1; }
 CF_API_TOKEN="${CF_API_TOKEN:-}"
 FLY_API_TOKEN="${FLY_API_TOKEN:-}"
 
-# ── Start/restart the runner ──────────────────────────────────────────────────
+# ── Start/restart both runners ────────────────────────────────────────────────
+# act-runner (default, no host Docker access) and act-runner-deploy (the
+# privileged deploy-host runner — see act-runner-deploy.yml). Both need the
+# same registration token; Forgejo gives each connecting runner its own
+# identity from it.
 log "Starting act runner…"
 RUNNER_REGISTRATION_TOKEN="$RUNNER_REGISTRATION_TOKEN" \
   docker compose -f "$COMPOSE_FILE" up -d act-runner
 
-log "Waiting for runner to register…"
+log "Starting act-runner-deploy…"
+RUNNER_REGISTRATION_TOKEN="$RUNNER_REGISTRATION_TOKEN" \
+  docker compose -f "$COMPOSE_FILE" up -d act-runner-deploy
+
+log "Waiting for runners to register…"
 sleep 8
 
 # ── Store deploy secrets in Forgejo ──────────────────────────────────────────

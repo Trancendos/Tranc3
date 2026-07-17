@@ -12,10 +12,23 @@
 # other workflow on act-runner.yml's socket-less `:docker://` labels, closes
 # that hole while the jobs that actually need the socket still get it.
 #
-# Only ever reference this runner from workflows/jobs restricted to
-# push/schedule/workflow_dispatch triggers — never pull_request. Adding
-# `deploy-host` to a pull_request-triggered job re-opens the same hole this
-# split exists to close.
+# Only ever reference this runner from workflows/jobs guarded by
+# `if: github.ref == 'refs/heads/main'` (see deploy-self-hosted.yml's
+# build-workers and security-scan.yml's owasp-zap-dast for the pattern) —
+# an event-type check alone (e.g. `github.event_name != 'pull_request'`) is
+# NOT enough, since a push to any other writable branch, or a
+# workflow_dispatch on a non-main ref, would still reach this runner.
+#
+# IMPORTANT — this label alone enforces nothing. Nothing in Forgejo stops a
+# new or edited workflow file from adding `runs-on: deploy-host` to a job
+# with no ref guard at all; the guard above is a convention every
+# deploy-host-eligible job must carry, not something this runner can check
+# on its own. The actual backstop is repo-level branch protection on `main`
+# (require review before merge, disallow direct pushes) — without that, any
+# contributor who can push a branch or open a PR can still land a
+# `runs-on: deploy-host` job with a passing main-ref guard by simply
+# merging it. Verify branch protection is enabled before treating this
+# split as a closed hole, not just this file's guard convention.
 #
 # Mounted at /data/act-runner-deploy.yml by docker-compose.yml's
 # act-runner-deploy service, selected via that service's
@@ -37,9 +50,12 @@ runner:
     - "deploy-host:host"
 
   fetch_interval: 2s
-  # Deploy jobs are infrequent and shouldn't overlap with each other on a
-  # single Docker daemon — kept low deliberately, unlike act-runner.yml.
-  capacity: 2
+  # 1, not act-runner.yml's 4: deploy jobs share the one host Docker daemon
+  # (docker build/tag/rm against the same image namespace), so two running
+  # at once could step on each other's images/containers. Capacity 1
+  # serializes them — the actual enforcement for "shouldn't overlap",
+  # not just a comment.
+  capacity: 1
   timeout: 3h
 
 cache:

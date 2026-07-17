@@ -17,13 +17,17 @@
 # NO Cloudflare API tokens needed. NO wrangler needed.
 # All workers run as self-owned processes.
 #
-# Runs on `deploy-host`, the one Workshop runner with host Docker socket
-# access (deploy/forgejo/act-runner-deploy.yml), not the default
-# `self-hosted` runner — these jobs `docker build` real images. Safe here
-# because this workflow has no pull_request trigger (push/workflow_dispatch
-# only), so it never runs attacker-controlled workflow content. Do not add
-# a pull_request trigger to this file without also moving it off
-# `deploy-host` — see that file's header comment for why.
+# Only build-workers runs on `deploy-host`, the one Workshop runner with
+# host Docker socket access (deploy/forgejo/act-runner-deploy.yml) — it's
+# the only job here that `docker build`s real images. The other two jobs
+# don't touch Docker and stay on the default `self-hosted` runner. Safe to
+# route anything here to deploy-host at all because this workflow has no
+# pull_request trigger (push/workflow_dispatch only) and every deploy-host
+# job also carries `if: github.ref == 'refs/heads/main'`, so it never runs
+# workflow content from an unreviewed ref. Do not add a pull_request
+# trigger, and do not drop that main-ref guard from build-workers, without
+# also reconsidering whether it belongs on deploy-host — see that file's
+# header comment for why.
 
 name: Deploy Self-Hosted Workers
 
@@ -43,6 +47,11 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   build-workers:
     name: Build Worker Images
+    # workflow_dispatch lets an operator run this on any ref, and without
+    # this guard that would let a feature branch's checkout run `docker
+    # build` on deploy-host (the socket-bearing runner) directly — the same
+    # main-ref restriction the two dependent jobs below already have.
+    if: github.ref == 'refs/heads/main'
     runs-on: deploy-host
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +93,9 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   deploy-fly:
     name: Deploy to Fly.io
-    runs-on: deploy-host
+    # No docker commands in this job — flyctl only. Stays on the default
+    # socket-less runner; only build-workers above needs deploy-host.
+    runs-on: self-hosted
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     steps:
@@ -144,7 +155,11 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   verify-and-register-self-hosted:
     name: Verify + register self-hosted workers
-    runs-on: deploy-host
+    # No docker commands here either — HTTP verification + health-aggregator
+    # registration calls only. act-runner.yml's container.network is
+    # tranc3-net too, so this keeps the production-fleet reachability these
+    # steps need without deploy-host's socket access.
+    runs-on: self-hosted
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     continue-on-error: true

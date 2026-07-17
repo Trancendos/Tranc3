@@ -125,6 +125,9 @@ elif (( prod )); then
   COMPOSE_FILE="${REPO_ROOT}/docker-compose.production.yml"
   FORGEJO="$PROD_FORGEJO"
   RUNNER="trancendos-forgejo-runner"
+  # No second/privileged runner in this compose file yet — the deploy-host
+  # split (deploy/forgejo/act-runner-deploy.yml) is standalone-only so far.
+  RUNNER_DEPLOY=""
   UP_SERVICES=(traefik forgejo forgejo-runner)
   PROXY_KIND="traefik"; PROXY_CONTAINER="tranc3-traefik"
 elif (( standalone )); then
@@ -132,7 +135,8 @@ elif (( standalone )); then
   COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
   FORGEJO="$STANDALONE_FORGEJO"
   RUNNER="the-workshop-runner"
-  UP_SERVICES=()   # small file — bring the whole thing up
+  RUNNER_DEPLOY="the-workshop-runner-deploy"
+  UP_SERVICES=()   # small file — bring the whole thing up (both runners too)
   PROXY_KIND="webserver"; PROXY_CONTAINER=""
 else
   # Neither known Forgejo container exists. Do NOT guess-and-start — that is how
@@ -151,8 +155,14 @@ ok "Detected topology: ${TOPO} (forgejo=${FORGEJO}, proxy=${PROXY_KIND})."
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
 # ── Layer 1: bring the detected stack up (never a different one) ──────────────
-if cont_running "$FORGEJO" && cont_running "$RUNNER"; then
-  ok "Containers already running (${FORGEJO}, ${RUNNER})."
+# RUNNER_DEPLOY is checked too (when this topology has one) so a down
+# deploy-host runner isn't masked by the default runner + Forgejo both
+# looking healthy — see docker-compose.yml's act-runner-deploy for why a
+# missing privileged runner otherwise fails silently (deploy jobs just
+# queue forever with no obvious error here).
+runner_deploy_ok() { [[ -z "$RUNNER_DEPLOY" ]] || cont_running "$RUNNER_DEPLOY"; }
+if cont_running "$FORGEJO" && cont_running "$RUNNER" && runner_deploy_ok; then
+  ok "Containers already running (${FORGEJO}, ${RUNNER}$([[ -n "$RUNNER_DEPLOY" ]] && echo ", ${RUNNER_DEPLOY}"))."
 elif [[ $CHECK_ONLY -eq 1 ]]; then
   NEEDS_HUMAN+=("Containers down — start with: docker compose -f $COMPOSE_FILE up -d ${UP_SERVICES[*]}")
 else

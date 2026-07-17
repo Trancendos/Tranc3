@@ -25,14 +25,20 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     python3.11 python3.11-venv python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Docker CLI ─────────────────────────────────────────────────────────────────
+# ── Docker CLI (client binary only, no dockerd) ───────────────────────────────
 # `:host` runner labels execute job steps in this container's own process
 # namespace, so a step's `docker build`/`docker push` needs a `docker` binary
 # here even though the daemon it talks to (via the mounted socket) is the
-# host's — installing docker.io pulls in the client without a second dockerd.
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    docker.io \
-    && rm -rf /var/lib/apt/lists/*
+# host's. The `docker.io` apt package would also drag in a full second
+# dockerd/containerd (~150MB, unused daemon tooling and attack surface on
+# an already-privileged image) — Docker's own static CLI tarball ships just
+# the client binaries, so extract only `docker` from it, same pattern as
+# the gitleaks static binary below.
+ARG DOCKER_CLI_VERSION=27.3.1
+RUN curl -sSfL \
+    "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_CLI_VERSION}.tgz" \
+    | tar -xz -C /usr/local/bin --strip-components=1 docker/docker \
+    && docker --version
 
 # ── Node.js 20 (via NodeSource) ───────────────────────────────────────────────
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
