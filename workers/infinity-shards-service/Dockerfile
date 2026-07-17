@@ -7,6 +7,12 @@ WORKDIR /app
 COPY --chown=worker:worker workers/infinity-shards-service/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 COPY --chown=worker:worker workers/infinity-shards-service/worker.py .
+# worker.py imports src.database.encrypted_sqlite, which itself imports
+# src.errors.error_catalog - both vendored from the repo-root build context
+# (context: . per docker-compose.production.yml), not duplicated locally.
+COPY --chown=worker:worker src/__init__.py src/__init__.py
+COPY --chown=worker:worker src/database/ src/database/
+COPY --chown=worker:worker src/errors/ src/errors/
 
 RUN mkdir -p data && chown -R worker:worker data
 
