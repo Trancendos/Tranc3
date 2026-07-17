@@ -517,9 +517,22 @@ async def register_service(
     x_internal_secret: Optional[str] = Header(None),
 ) -> Dict[str, Any]:
     _require_internal_strict(x_internal_secret)
-    scheme = urlparse(body.url).scheme
-    if scheme not in ("http", "https"):
+    parsed = urlparse(body.url)
+    if parsed.scheme not in ("http", "https"):
         raise HTTPException(status_code=400, detail="url must be http:// or https://")
+    hostname = (parsed.hostname or "").lower()
+    # Baseline SSRF hardening on top of the internal-secret gate above:
+    # reject loopback and link-local targets (the latter covers the
+    # 169.254.169.254 cloud-metadata endpoint). This checks the literal
+    # hostname, not the DNS-resolved IP — a caller could still register a
+    # name that resolves to a blocked address later (DNS rebinding). Full
+    # protection against that needs resolving and pinning the IP at both
+    # registration and poll time; not done here since this endpoint is
+    # already gated by _require_internal_strict, not internet-reachable.
+    if hostname in ("localhost", "127.0.0.1", "::1") or hostname.startswith("169.254."):
+        raise HTTPException(
+            status_code=400, detail="url must not target a loopback or link-local host"
+        )
     _dynamic_services[body.name] = {
         "name": body.name,
         "url": body.url,
