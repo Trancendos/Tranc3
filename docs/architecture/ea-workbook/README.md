@@ -17,8 +17,17 @@ the anchor rows were. CI validates only structural CSV integrity
 `scripts/register_ea_workbook_services.py` reads `02_service_inventory.csv`'s
 `HealthCheckPath`/`HealthCheckInterval` columns and registers each anchor service with
 `health-aggregator`'s dynamic registry (`POST /services`), so this data actually drives
-live monitoring instead of only being read by humans. Run it after deploying the anchor
-services, or wire it into a post-deploy step once one exists.
+live monitoring instead of only being read by humans. It now runs automatically from
+`.forgejo/workflows/deploy-self-hosted.yml`'s `verify-and-register-self-hosted` job
+(alongside `scripts/post_deploy_verify.py`), both as best-effort/`--soft` steps.
+
+`Trancendos_Master_Service_Matrix.xlsx` (this directory) is a companion workbook mirroring
+the same 8 components (the 6 CSV anchors plus Traefik and health-aggregator) in a
+service/route/endpoint/dependency/security/deployment matrix format, plus a broad
+structural scan of all 94 real `workers/*` directories and a real, non-fictional
+Improvement Roadmap of gaps found while building it. Regenerate it with
+`python scripts/build_master_service_matrix.py` after updating the facts baked into that
+script — it is not hand-edited directly.
 
 ## Why this exists
 

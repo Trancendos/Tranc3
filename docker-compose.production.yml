@@ -3796,6 +3796,18 @@ services:
       - "traefik.http.routers.forgejo.entrypoints=websecure"
       - "traefik.http.routers.forgejo.tls.certresolver=letsencrypt"
       - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+      # the-workshop.trancendos.com (CNAME, deploy/terraform/oci-citadel-dns.tf) has no
+      # working route without this: Forgejo's ROOT_URL is the path-based URL above, so it
+      # must not be served directly at the bare subdomain (that would conflict with the
+      # links/redirects Forgejo itself generates). Redirect to the canonical path URL instead.
+      - "traefik.http.routers.forgejo-subdomain.rule=Host(`the-workshop.trancendos.com`)"
+      - "traefik.http.routers.forgejo-subdomain.entrypoints=websecure"
+      - "traefik.http.routers.forgejo-subdomain.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.forgejo-subdomain.service=forgejo"
+      - "traefik.http.routers.forgejo-subdomain.middlewares=forgejo-subdomain-redirect"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.regex=^https://the-workshop\\.trancendos\\.com/(.*)"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.replacement=https://trancendos.com/the-workshop/$${1}"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.permanent=true"
 
   # ── Forgejo Actions Runner — executes .forgejo/workflows/ ────────────
   forgejo-runner:

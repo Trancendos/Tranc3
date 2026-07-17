@@ -123,3 +123,51 @@ jobs:
             || echo "Citadel notification skipped (backend may be warming)"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  # ──────────────────────────────────────────────────────────────
+  # Verify + register: closes the loop between the EA workbook CMDB
+  # and live monitoring on the self-hosted Docker Compose fleet.
+  # Runs on the self-hosted runner, which shares a network with the
+  # docker-compose.production.yml stack — assumes the workers this
+  # step probes are already running on that host (this workflow does
+  # not itself docker-compose-deploy workers/* — see the Improvement
+  # Roadmap in docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx).
+  # --soft / continue-on-error so a not-yet-built worker never blocks CI.
+  # ──────────────────────────────────────────────────────────────
+  verify-and-register-self-hosted:
+    name: Verify + register self-hosted workers
+    runs-on: self-hosted
+    needs: build-workers
+    if: github.ref == 'refs/heads/main'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install script dependencies
+        run: pip install --quiet httpx==0.28.1
+
+      - name: Create logs dir
+        run: mkdir -p logs
+
+      - name: Post-deploy health verification (soft — warnings only)
+        run: python3 scripts/post_deploy_verify.py --base http://localhost --soft --report logs/deploy_verify.json
+        continue-on-error: true
+
+      - name: Register EA workbook anchor services with health-aggregator
+        run: python3 scripts/register_ea_workbook_services.py --health-aggregator-url http://localhost:8029 --host localhost
+        env:
+          INTERNAL_SECRET: ${{ secrets.HEALTH_AGGREGATOR_INTERNAL_SECRET }}
+        continue-on-error: true
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-verify-${{ github.run_number }}
+          path: logs/deploy_verify.json
+          retention-days: 30
