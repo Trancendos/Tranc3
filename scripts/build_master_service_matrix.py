@@ -9,6 +9,7 @@ the actual Tranc3 codebase during this session's review of PR #221 — no
 placeholder/example data adopted from the template.
 """
 
+import csv
 import datetime
 import os
 import re
@@ -92,6 +93,65 @@ def scan_workers():
             ]
         )
     return rows
+
+
+_STATUS_LABELS = {
+    "STS-001": "Planned",
+    "STS-002": "Building",
+    "STS-003": "Deploying",
+    "STS-004": "Active",
+    "STS-005": "Live",
+    "STS-006": "Failed",
+    "STS-007": "Retired",
+}
+
+
+def load_ea_workbook_services():
+    """Real rows from docs/architecture/ea-workbook/{02_service_inventory,
+    18_cost_and_revenue_review}.csv — the verify-before-document EA/CMDB
+    workbook this repeatedly refers back to elsewhere in this script. Every
+    field here is a literal copy from those CSVs, not re-derived or
+    re-verified by this script; keeping the two in sync is a matter of
+    re-running this generator after the CSVs change, same as everything else
+    in this file."""
+    ea_dir = os.path.join(REPO_ROOT, "docs", "architecture", "ea-workbook")
+
+    with open(os.path.join(ea_dir, "02_service_inventory.csv"), newline="", encoding="utf-8") as f:
+        services = {row["ServiceID"]: row for row in csv.DictReader(f)}
+
+    zero_cost = {}
+    with open(os.path.join(ea_dir, "18_cost_and_revenue_review.csv"), newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            zero_cost[row["ServiceID"]] = row["ZeroCostStatus"]
+
+    rows = []
+    for sid in sorted(services):
+        svc = services[sid]
+        rows.append(
+            [
+                sid,
+                svc["ServiceName"],
+                svc["Owner"],
+                _STATUS_LABELS.get(svc["StatusCode"], svc["StatusCode"]),
+                svc["CriticalityCode"],
+                zero_cost.get(sid, "Not yet reviewed"),
+                svc["Notes"],
+            ]
+        )
+    return rows
+
+
+def workers_missing_from_ea_workbook(worker_names):
+    """Cross-check every real workers/* directory name against the EA
+    workbook's raw text — catches a worker added to the repo without ever
+    being documented. Substring match against the whole CSV, not a strict
+    per-field join, because the workbook's Notes columns are where a
+    worker's own directory name usually appears (e.g. 'workers/foo port
+    8080'), not always in ServiceName."""
+    ea_dir = os.path.join(REPO_ROOT, "docs", "architecture", "ea-workbook")
+    with open(os.path.join(ea_dir, "02_service_inventory.csv"), encoding="utf-8") as f:
+        blob = f.read()
+    return [name for name in worker_names if name not in blob]
 
 
 wb = Workbook()
@@ -1261,6 +1321,47 @@ road_rows = [
 write_rows(road, road_header, road_rows, widths=[16, 46, 60, 60, 30, 10, 14])
 
 # ---------------------------------------------------------------------------
+# EA Workbook Services — every service from the verify-before-document CSV
+# workbook (docs/architecture/ea-workbook/), not just the 8 deep-verified
+# anchors above. This is what actually answers "is everything captured?" —
+# the anchor sheets above stay hand-curated at full depth; this sheet is a
+# faithful mirror of the broader CSV workbook, which is the one place new
+# services get added going forward.
+# ---------------------------------------------------------------------------
+eaw = wb.create_sheet("EA Workbook Services")
+eaw["A1"] = "EA Workbook Services — mirrored from docs/architecture/ea-workbook/*.csv"
+eaw["A1"].font = Font(bold=True, size=12)
+eaw["A2"] = (
+    "Every row here is a literal copy of a docs/architecture/ea-workbook/02_service_inventory.csv "
+    "row (ZeroCostStatus from 18_cost_and_revenue_review.csv) — the CSVs are the source of truth; "
+    "this sheet exists so a service's owner, status, and known issues are visible without leaving "
+    "this workbook. Re-run scripts/build_master_service_matrix.py after the CSVs change."
+)
+eaw["A2"].alignment = WRAP
+eaw.merge_cells("A2:G2")
+eaw.row_dimensions[2].height = 45
+
+eaw_header_row = 4
+eaw_header = ["ServiceID", "ServiceName", "Owner", "Status", "Criticality", "ZeroCostStatus", "Notes"]
+ea_rows = load_ea_workbook_services()
+write_rows(eaw, eaw_header, ea_rows, widths=[18, 28, 26, 12, 12, 16, 90], start_row=eaw_header_row)
+
+eaw_summary_row = eaw_header_row + len(ea_rows) + 3
+eaw.cell(row=eaw_summary_row, column=1, value="Summary").font = Font(bold=True)
+eaw_last = eaw_header_row + len(ea_rows)
+eaw_summary_stats = [
+    ("Total services in EA workbook", f"=COUNTA(A{eaw_header_row + 1}:A{eaw_last})"),
+    ("Owner = Unmapped", f'=COUNTIF(C{eaw_header_row + 1}:C{eaw_last},"Unmapped")'),
+    ("Status = Active", f'=COUNTIF(D{eaw_header_row + 1}:D{eaw_last},"Active")'),
+    ("Status = Building (not live)", f'=COUNTIF(D{eaw_header_row + 1}:D{eaw_last},"Building")'),
+    ("ZeroCostStatus = Not yet reviewed", f'=COUNTIF(F{eaw_header_row + 1}:F{eaw_last},"Not yet reviewed")'),
+    ("ZeroCostStatus = Flagged", f'=COUNTIF(F{eaw_header_row + 1}:F{eaw_last},"Flagged")'),
+]
+for i, (label, formula) in enumerate(eaw_summary_stats, start=eaw_summary_row + 1):
+    eaw.cell(row=i, column=1, value=label)
+    eaw.cell(row=i, column=2, value=formula)
+
+# ---------------------------------------------------------------------------
 # All Workers (Broad Scan) — every workers/* directory, structurally scanned
 # ---------------------------------------------------------------------------
 scan = wb.create_sheet("All Workers (Broad Scan)")
@@ -1322,6 +1423,14 @@ for i, (label, formula) in enumerate(summary_stats, start=scan_summary_row + 1):
     scan.cell(row=i, column=1, value=label)
     scan.cell(row=i, column=2, value=formula)
 
+missing_workers = workers_missing_from_ea_workbook([row[0] for row in worker_rows])
+missing_row = scan_summary_row + len(summary_stats) + 2
+scan.cell(row=missing_row, column=1, value="workers/* directories NOT referenced anywhere in the EA workbook").font = Font(bold=True)
+scan.cell(row=missing_row, column=2, value=len(missing_workers))
+scan.cell(row=missing_row + 1, column=1, value=", ".join(missing_workers) if missing_workers else "(none — full coverage)")
+scan.cell(row=missing_row + 1, column=1).alignment = WRAP
+scan.merge_cells(start_row=missing_row + 1, start_column=1, end_row=missing_row + 1, end_column=6)
+
 # ---------------------------------------------------------------------------
 # Governance Checks — real, formula-driven, self-auditing
 # ---------------------------------------------------------------------------
@@ -1363,6 +1472,16 @@ checks = [
         '=COUNTIFS(Endpoints!I2:I100,"Public",Endpoints!G2:G100,"No")',
         0,
     ),
+    (
+        "workers/* directories missing from the EA workbook (see All Workers (Broad Scan) sheet)",
+        f"='All Workers (Broad Scan)'!B{missing_row}",
+        0,
+    ),
+    (
+        "EA workbook services with Owner = Unmapped (real gap, not yet 0 — tracked here on purpose)",
+        f'=COUNTIF(\'EA Workbook Services\'!C{eaw_header_row + 1}:C{eaw_last},"Unmapped")',
+        0,
+    ),
 ]
 for i, (check, formula, target) in enumerate(checks, start=gov_header_row + 1):
     gov.cell(row=i, column=1, value=check).alignment = WRAP
@@ -1383,6 +1502,7 @@ order = [
     "Change Log",
     "Deprecations",
     "Executive Dashboard",
+    "EA Workbook Services",
     "All Workers (Broad Scan)",
     "Improvement Roadmap",
     "Governance Checks",

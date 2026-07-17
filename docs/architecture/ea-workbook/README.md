@@ -22,12 +22,19 @@ live monitoring instead of only being read by humans. It now runs automatically 
 (alongside `scripts/post_deploy_verify.py`), both as best-effort/`--soft` steps.
 
 `Trancendos_Master_Service_Matrix.xlsx` (this directory) is a companion workbook mirroring
-the same 8 components (the 6 CSV anchors plus Traefik and health-aggregator) in a
-service/route/endpoint/dependency/security/deployment matrix format, plus a broad
-structural scan of all 94 real `workers/*` directories and a real, non-fictional
-Improvement Roadmap of gaps found while building it. Regenerate it with
+the same 8 anchor components (the 6 CSV anchors plus Traefik and health-aggregator) in a
+service/route/endpoint/dependency/security/deployment matrix format, at hand-verified full
+depth. Two further sheets give it broader coverage at lower depth: **EA Workbook Services**
+mirrors every row of `02_service_inventory.csv` (ServiceID/Owner/Status/Criticality/
+ZeroCostStatus/Notes, cross-joined with `18_cost_and_revenue_review.csv`) — the CSVs remain
+the source of truth, this sheet just makes them visible without leaving the workbook — and
+**All Workers (Broad Scan)** does a structural scan of all 94 real `workers/*` directories
+(worker.py/Dockerfile presence, compose registration, routed port, `/health` reference) and
+cross-checks that every one of them is referenced somewhere in the EA workbook, failing
+`Governance Checks` if a worker is ever added without being documented. Plus a real,
+non-fictional Improvement Roadmap of gaps found while building it. Regenerate it with
 `python scripts/build_master_service_matrix.py` after updating the facts baked into that
-script — it is not hand-edited directly.
+script or the CSVs it now reads from — it is not hand-edited directly.
 
 `scripts/check_master_matrix_freshness.py` closes the loop so that regeneration step
 isn't just a manual convention: it re-runs the generator against current repo state and
