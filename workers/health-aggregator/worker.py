@@ -55,7 +55,9 @@ logger = logging.getLogger(WORKER_NAME)
 SERVICE_REGISTRY: List[Dict[str, Any]] = [
     # Core backend
     {"name": "tranc3-backend", "port": 8000},
-    {"name": "nanoservices", "port": 8001},
+    # nanoservices (8001) is not its own docker-compose.production.yml
+    # service — CLAUDE.md documents it as an internal proxy mounted on
+    # tranc3-backend — so it has no separate Docker DNS name to poll.
     # P0 — critical
     {"name": "infinity-ws", "port": 8004},
     {"name": "infinity-auth", "port": 8005},
@@ -96,16 +98,18 @@ SERVICE_REGISTRY: List[Dict[str, Any]] = [
     {"name": "langchain-integration-service", "port": 8036},
     {"name": "deepagents-orchestrator-service", "port": 8037},
     {"name": "vault-service", "port": 8038},
-    # Infinity portal / admin cluster
-    {"name": "infinity-portal-service", "port": 8042},
-    {"name": "infinity-one-service", "port": 8043},
-    {"name": "infinity-admin-service", "port": 8044},
-    {"name": "infinity-shards-service", "port": 8045},
+    # Infinity portal / admin cluster — names match the real compose service
+    # keys (infinity-portal, not infinity-portal-service — CLAUDE.md's
+    # worker-map column and the actual compose keys disagree here).
+    {"name": "infinity-portal", "port": 8042},
+    {"name": "infinity-one", "port": 8043},
+    {"name": "infinity-admin", "port": 8044},
+    {"name": "infinity-shards", "port": 8045},
     # Bridge + Town Hall
-    {"name": "infinity-bridge-service", "port": 8070},
+    {"name": "infinity-bridge", "port": 8070},
     {"name": "cranbania", "port": 8071},
-    # Bots
-    {"name": "tranc3-bots", "port": 8080},
+    # tranc3-bots (8080) is a separate Fly.io deployment per CLAUDE.md, not a
+    # docker-compose.production.yml service — no Docker DNS name to poll.
 ]
 
 # Materialise the health URL for each entry. Uses the compose service name
@@ -297,22 +301,46 @@ def _dynamic_poll_targets() -> List[Dict[str, Any]]:
     for svc in _dynamic_services.values():
         url = svc["url"]
         try:
-            port = urlparse(url).port or 0
+            parsed = urlparse(url)
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
         except ValueError:
             port = 0
-        targets.append({"name": svc["name"], "port": port, "health_url": url})
+        targets.append(
+            {
+                "name": svc["name"],
+                "port": port,
+                "health_url": url,
+                "interval_seconds": svc.get("interval_seconds", POLL_INTERVAL),
+            }
+        )
     return targets
+
+
+# Last-polled wall-clock time per dynamic target, so a registration's
+# interval_seconds is actually honored instead of every dynamic target
+# riding the fixed POLL_INTERVAL tick regardless of what was registered.
+_dynamic_last_polled: Dict[str, float] = {}
 
 
 async def _poll_all() -> None:
     """Poll all registered (static + dynamically registered) services once and update _latest."""
     global _poll_count
-    targets = _all_targets()
+    dynamic_names = {svc["name"] for svc in _dynamic_poll_targets()}
+    now = time.time()
+    targets = [
+        svc
+        for svc in _all_targets()
+        if svc["name"] not in dynamic_names
+        or now - _dynamic_last_polled.get(svc["name"], 0)
+        >= svc.get("interval_seconds", POLL_INTERVAL)
+    ]
     results = await asyncio.gather(*[_check_one(svc) for svc in targets], return_exceptions=True)
     for svc, res in zip(targets, results, strict=False):
         if isinstance(res, Exception):
             res = {"name": svc["name"], "port": svc["port"], "status": "down", "error": str(res)}
         _latest[svc["name"]] = res
+        if svc["name"] in dynamic_names:
+            _dynamic_last_polled[svc["name"]] = now
         try:
             _persist_check(res)
         except Exception:  # noqa: BLE001 — persist errors must not abort polling
@@ -457,12 +485,33 @@ def _require_internal(x_internal_secret: Optional[str]) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
+def _require_internal_strict(x_internal_secret: Optional[str]) -> None:
+    """Like _require_internal, but fails closed when INTERNAL_SECRET is unset.
+
+    POST/DELETE /services cause health-aggregator to poll an operator-chosen
+    URL from its own network every interval — an unauthenticated instance of
+    this would be an open SSRF primitive against tranc3-net. The read-only
+    _require_internal fail-open behavior is left as-is elsewhere; this only
+    tightens the two mutating endpoints.
+    """
+    if not INTERNAL_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="INTERNAL_SECRET must be configured to register/remove dynamic services",
+        )
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @app.post("/services", status_code=201, summary="Dynamically register a service to monitor")
 async def register_service(
     body: ServiceRegisterIn,
     x_internal_secret: Optional[str] = Header(None),
 ) -> Dict[str, Any]:
-    _require_internal(x_internal_secret)
+    _require_internal_strict(x_internal_secret)
+    scheme = urlparse(body.url).scheme
+    if scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="url must be http:// or https://")
     _dynamic_services[body.name] = {
         "name": body.name,
         "url": body.url,
@@ -481,7 +530,7 @@ async def list_services(x_internal_secret: Optional[str] = Header(None)) -> Dict
 async def delete_service(
     name: str, x_internal_secret: Optional[str] = Header(None)
 ) -> Dict[str, Any]:
-    _require_internal(x_internal_secret)
+    _require_internal_strict(x_internal_secret)
     _dynamic_services.pop(name, None)
     return {"deleted": name}
 

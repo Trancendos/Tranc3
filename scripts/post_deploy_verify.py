@@ -35,16 +35,17 @@ LOGS.mkdir(exist_ok=True)
 ALL_ENTITIES: list[dict] = [
     # ── Core / always-on ────────────────────────────────────────────────────
     {"name": "tranc3-backend", "port": 8000, "tier": "core", "path": "/health"},
-    {"name": "nanoservices", "port": 8001, "tier": "core", "path": "/health"},
+    # nanoservices (8001) is mounted on tranc3-backend, not its own compose
+    # service — no separate name to probe, entry removed.
     # ── P0 ──────────────────────────────────────────────────────────────────
     {"name": "infinity-ws", "port": 8004, "tier": "P0", "path": "/health"},
     {"name": "infinity-auth", "port": 8005, "tier": "P0", "path": "/health"},
-    # ── P1 ──────────────────────────────────────────────────────────────────
-    {"name": "infinity-portal-service", "port": 8042, "tier": "P1", "path": "/health"},
-    {"name": "infinity-one-service", "port": 8043, "tier": "P1", "path": "/health"},
-    {"name": "infinity-admin-service", "port": 8044, "tier": "P1", "path": "/health"},
-    {"name": "infinity-shards-service", "port": 8045, "tier": "P1", "path": "/health"},
-    {"name": "infinity-bridge-service", "port": 8070, "tier": "P1", "path": "/health"},
+    # ── P1 ── names match real compose service keys (no -service suffix) ────
+    {"name": "infinity-portal", "port": 8042, "tier": "P1", "path": "/health"},
+    {"name": "infinity-one", "port": 8043, "tier": "P1", "path": "/health"},
+    {"name": "infinity-admin", "port": 8044, "tier": "P1", "path": "/health"},
+    {"name": "infinity-shards", "port": 8045, "tier": "P1", "path": "/health"},
+    {"name": "infinity-bridge", "port": 8070, "tier": "P1", "path": "/health"},
     {"name": "cranbania", "port": 8071, "tier": "P1", "path": "/health"},
     {"name": "users-service", "port": 8006, "tier": "P1", "path": "/health"},
     {"name": "monitoring", "port": 8007, "tier": "P1", "path": "/health"},
@@ -78,10 +79,10 @@ ALL_ENTITIES: list[dict] = [
     {"name": "model-router-service", "port": 8033, "tier": "P3", "path": "/health"},
     {"name": "workflow-engine-service", "port": 8034, "tier": "P3", "path": "/health"},
     {"name": "skills-benchmark-service", "port": 8035, "tier": "P3", "path": "/health"},
-    {"name": "langchain-integration", "port": 8036, "tier": "P3", "path": "/health"},
-    {"name": "deepagents-orchestrator", "port": 8037, "tier": "P3", "path": "/health"},
+    {"name": "langchain-integration-service", "port": 8036, "tier": "P3", "path": "/health"},
+    {"name": "deepagents-orchestrator-service", "port": 8037, "tier": "P3", "path": "/health"},
     {"name": "vault-service", "port": 8038, "tier": "P3", "path": "/health"},
-    {"name": "optional-services-health", "port": 8039, "tier": "P3", "path": "/health"},
+    {"name": "mlflow-service", "port": 8039, "tier": "P3", "path": "/health"},
     # ── Planned entities (18) — ports match CLAUDE.md's canonical worker map ──
     {"name": "the-academy", "port": 8056, "tier": "planned", "path": "/health"},
     {"name": "basement", "port": 8068, "tier": "planned", "path": "/health"},

@@ -1335,10 +1335,17 @@ for c, h in enumerate(gov_header, start=1):
 style_header(gov, gov_header_row, 4)
 checks = [
     ("Every component has a named owner", '=COUNTIF(Services!G2:G100,"")', 0),
-    ("Every component has a Security row", "=COUNTA(Security!A2:A100)-COUNTA(Services!A2:A100)", 0),
+    (
+        # Per-name match, not an aggregate row-count diff: a count-only
+        # comparison would read PASS even if Security's rows didn't
+        # correspond to the same components as Services' rows.
+        "Every component has a Security row",
+        '=SUMPRODUCT((Services!B2:B100<>"")*ISNA(MATCH(Services!B2:B100,Security!A2:A100,0)))',
+        0,
+    ),
     (
         "Every component has a Deployment row",
-        "=COUNTA(Deployment!A2:A100)-COUNTA(Services!A2:A100)",
+        '=SUMPRODUCT((Services!B2:B100<>"")*ISNA(MATCH(Services!B2:B100,Deployment!A2:A100,0)))',
         0,
     ),
     (

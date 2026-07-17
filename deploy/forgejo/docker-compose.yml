@@ -75,6 +75,13 @@ services:
       - FORGEJO_RUNNER_REGISTRATION_TOKEN=${RUNNER_REGISTRATION_TOKEN:-}
       - FORGEJO_RUNNER_NAME=trancendos-runner-1
       - FORGEJO_RUNNER_LABELS=self-hosted,linux,x64
+      # Without this, the mounted act-runner.yml below was never actually
+      # read by the runner's entrypoint — its container.network setting
+      # (below) is what makes CI job containers join tranc3-net, since
+      # FORGEJO_RUNNER_LABELS has no :host suffixes and jobs therefore run
+      # in ephemeral sibling containers (via the docker.sock mount), not
+      # inside this long-running act-runner container itself.
+      - FORGEJO_RUNNER_CONFIG=/data/act-runner.yml
       # Pass deploy tokens to runner environment
       - FLY_API_TOKEN=${FLY_API_TOKEN:-}
       - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN:-}
@@ -86,12 +93,11 @@ services:
       # Runner config
       - ./act-runner.yml:/data/act-runner.yml:ro
     networks:
-      # `default` keeps `forgejo:3000` resolvable (same compose project);
-      # `tranc3-net` (external, defined in docker-compose.production.yml)
-      # lets jobs like deploy-self-hosted.yml's verify/register steps reach
-      # workers by service name (e.g. http://workflow-engine-service:8034)
-      # instead of the host-published ports, which this container has no
-      # route to since it isn't started with network_mode: host.
+      # `default` keeps `forgejo:3000` resolvable (same compose project).
+      # `tranc3-net` here covers the long-running act-runner daemon itself —
+      # the actual per-job CI containers it spawns via docker.sock get
+      # tranc3-net through act-runner.yml's container.network setting
+      # instead (this attachment alone would not cover them).
       - default
       - tranc3-net
 

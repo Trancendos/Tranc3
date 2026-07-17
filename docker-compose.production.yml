@@ -4168,6 +4168,13 @@ networks:
     # compose files — e.g. deploy/forgejo/docker-compose.yml's act-runner —
     # can join it deterministically as an `external: true` network to reach
     # workers by service name instead of guessing at host-published ports.
+    #
+    # UPGRADE NOTE for a host with this stack already running under the old
+    # auto-generated network name: `docker compose -f
+    # docker-compose.production.yml down` first (removes the old
+    # project-scoped network) before deploying this change and bringing the
+    # stack back up — otherwise Compose may try to create a second bridge on
+    # the same 172.28.0.0/16 subnet and fail before any container starts.
     name: tranc3-net
     driver: bridge
     ipam:

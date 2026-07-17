@@ -171,7 +171,7 @@ deploy-staging:
 	docker compose -f docker-compose.production.yml up -d --build --remove-orphans
 	@echo "==> Waiting 20s for services to initialise..."
 	@sleep 20
-	@python3 scripts/post_deploy_verify.py --tier P0 --retries 3
+	@python3 scripts/post_deploy_verify.py --tier P0 --base http://127.0.0.1 --retries 3
 	@echo "==> Staging stack ready."
 
 # prod: full production deploy with pre-deploy gate, deploy, post-deploy verify
@@ -183,7 +183,7 @@ deploy-prod:
 	@echo "==> [3/4] Starting production stack..."
 	@docker compose -f docker-compose.production.yml up -d --remove-orphans
 	@echo "==> [4/4] Post-deploy verification..."
-	@python3 scripts/post_deploy_verify.py --retries 5 --report logs/deploy_verify.json
+	@python3 scripts/post_deploy_verify.py --base http://127.0.0.1 --retries 5 --report logs/deploy_verify.json
 	@echo "==> Production deploy complete."
 
 # verify: run post-deploy health check against running stack

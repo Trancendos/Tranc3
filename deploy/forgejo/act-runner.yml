@@ -1,8 +1,10 @@
 # deploy/forgejo/act-runner.yml
 # Configuration for the Forgejo act-runner (The Workshop CI/CD executor).
 #
-# Mount this into the runner container at /data/.runner
-# Or set FORGEJO_RUNNER_CONFIG env var to point to this file.
+# Mounted at /data/act-runner.yml by docker-compose.yml; only actually read
+# because that same file sets FORGEJO_RUNNER_CONFIG=/data/act-runner.yml —
+# without that env var the runner's entrypoint ignores this file entirely
+# and falls back to its own generated default config.
 #
 # Reference: https://forgejo.org/docs/latest/admin/runner-installation/
 
@@ -34,9 +36,16 @@ cache:
   external_server: ""
 
 container:
-  # Network for containers spun up by runner (not used for host-mode jobs)
-  network: ""
-  # Use host network for jobs that need localhost access (Forgejo, Redis etc.)
+  # Network for the ephemeral job containers this runner spawns via its
+  # docker.sock mount. Must be tranc3-net (external network defined in
+  # docker-compose.production.yml, created ahead of time — see
+  # bootstrap.sh's "Ensuring tranc3-net exists" step) so jobs like
+  # deploy-self-hosted.yml's verify/register steps can reach the production
+  # fleet by service name (e.g. http://workflow-engine-service:8034).
+  # Attaching only the long-running act-runner *service* to tranc3-net (in
+  # docker-compose.yml) does not cover this — each job runs in its own
+  # separate sibling container, not inside act-runner's own namespace.
+  network: tranc3-net
   privileged: false
   valid_volumes: []
   docker_host: ""
