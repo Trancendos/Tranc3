@@ -17,6 +17,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import APIRouter, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -38,8 +39,15 @@ _err_count = 0
 
 
 # ---------------------------------------------------------------------------
-# Crypto helpers (stdlib only — no external deps required for basic AES-GCM)
+# Crypto helpers
 # ---------------------------------------------------------------------------
+# `cryptography` is a hard dependency (requirements.txt), not optional here —
+# a prior version of this module silently fell back to XOR "encryption" if
+# the import failed, which would have made this vault's at-rest protection
+# trivially breakable in any environment missing the package, with no error
+# raised to reveal it. AESGCM is imported unconditionally at module load so a
+# missing dependency fails loudly (ImportError on startup) instead of quietly
+# downgrading every secret this worker stores.
 
 
 def _derive_key(master: str, salt: bytes) -> bytes:
@@ -49,35 +57,17 @@ def _derive_key(master: str, salt: bytes) -> bytes:
 
 def _encrypt(plaintext: str, master: str) -> tuple[bytes, bytes, bytes]:
     """Return (ciphertext, iv, salt). Uses os.urandom for IV+salt."""
-    try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
-        salt = os.urandom(16)
-        iv = os.urandom(12)
-        key = _derive_key(master, salt)
-        ct = AESGCM(key).encrypt(iv, plaintext.encode(), None)
-        return ct, iv, salt
-    except ImportError:
-        # Fallback: XOR-based (insecure, dev-only indicator)
-        salt = os.urandom(16)
-        iv = os.urandom(12)
-        key = _derive_key(master, salt)
-        data = plaintext.encode()
-        ct = bytes(b ^ key[i % 32] for i, b in enumerate(data)) + b"\xde\xad"  # sentinel
-        return ct, iv, salt
+    salt = os.urandom(16)
+    iv = os.urandom(12)
+    key = _derive_key(master, salt)
+    ct = AESGCM(key).encrypt(iv, plaintext.encode(), None)
+    return ct, iv, salt
 
 
 def _decrypt(ct: bytes, iv: bytes, salt: bytes, master: str) -> str:
     """Decrypt and return plaintext."""
-    try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
-        key = _derive_key(master, salt)
-        return AESGCM(key).decrypt(iv, ct, None).decode()
-    except ImportError:
-        key = _derive_key(master, salt)
-        raw = ct[:-2]  # strip sentinel
-        return bytes(b ^ key[i % 32] for i, b in enumerate(raw)).decode()
+    key = _derive_key(master, salt)
+    return AESGCM(key).decrypt(iv, ct, None).decode()
 
 
 # ---------------------------------------------------------------------------

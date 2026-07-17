@@ -50,8 +50,18 @@ on:
 # jobs just `needs: build-workers` and do nothing Docker-related — queuing
 # an entire run behind another doesn't lose anything, each queued run still
 # deploys its own triggering ref's code once its turn comes.
+#
+# Grouped by ref (not a fixed literal) so a workflow_dispatch on some other
+# branch — a no-op here since every job below is main-ref-guarded — doesn't
+# occupy the same queue slot as real main deployments and delay them.
+#
+# Queuing same-group runs is NOT the same as ordering them: Forgejo doesn't
+# guarantee an older-commit run finishes before a newer one that queued
+# after it, so this alone doesn't stop a stale run from deploying last and
+# rolling main back — deploy-fly's own "Guard against a stale/out-of-order
+# deploy" step is what actually prevents that outcome.
 concurrency:
-  group: deploy-self-hosted-main
+  group: deploy-self-hosted-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -122,7 +132,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # `concurrency: cancel-in-progress: false` (workflow-scoped, above)
+      # queues overlapping runs on the same ref instead of cancelling them —
+      # it does NOT guarantee they execute in commit order. If two pushes to
+      # main land close together, the run for the OLDER commit can still be
+      # the one that finishes last and `flyctl deploy`s after the newer run
+      # already deployed, silently rolling production back to stale code.
+      # Guard against that here: skip the actual deploy steps if origin/main
+      # has moved past this run's commit by the time its turn comes.
+      # Push-triggered only — a manual workflow_dispatch on an older ref is
+      # deliberate operator intent (e.g. a rollback) and should not be
+      # second-guessed by this check.
+      - name: Guard against a stale/out-of-order deploy
+        id: staleness
+        run: |
+          git fetch origin main --quiet
+          latest="$(git rev-parse origin/main)"
+          current="${{ github.sha }}"
+          if [ "${{ github.event_name }}" = "push" ] && [ "$latest" != "$current" ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::This run's commit ($current) is behind origin/main's current HEAD ($latest) — a newer push landed while this run was queued. Skipping the Fly.io deploy steps so production isn't rolled back; the run for $latest will deploy the current code."
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install flyctl
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           if ! command -v flyctl &>/dev/null; then
             curl -L https://fly.io/install.sh | sh
@@ -132,6 +167,7 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy backend (trancendos-backend)
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           flyctl deploy --remote-only --app trancendos-backend
         env:
@@ -139,6 +175,7 @@ jobs:
         continue-on-error: true
 
       - name: Deploy bots (trancendos-bots)
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           cd tranc3-bots
           flyctl deploy --remote-only --app trancendos-bots

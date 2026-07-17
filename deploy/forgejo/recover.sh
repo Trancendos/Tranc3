@@ -190,10 +190,13 @@ runner_deploy_ok() { [[ -z "$RUNNER_DEPLOY" ]] || runner_registered "$RUNNER_DEP
 if cont_running "$FORGEJO" && runner_registered "$RUNNER" && runner_deploy_ok; then
   ok "Containers already running (${FORGEJO}, ${RUNNER}$([[ -n "$RUNNER_DEPLOY" ]] && echo ", ${RUNNER_DEPLOY}"))."
 elif [[ $CHECK_ONLY -eq 1 ]]; then
-  if cont_running "$FORGEJO" && cont_running "$RUNNER"; then
+  if cont_running "$FORGEJO" && cont_running "$RUNNER" && { [[ -z "$RUNNER_DEPLOY" ]] || cont_running "$RUNNER_DEPLOY"; }; then
     # Everything that `docker compose up` would affect is already running —
     # what's actually wrong is registration, which restarting containers
     # doesn't fix. Don't tell the operator to start an already-running stack.
+    # (Deliberately checks liveness, not runner_registered, here: if the
+    # deploy runner were actually stopped, that's a real "start it" case and
+    # falls through to the `else` below instead of this message.)
     NEEDS_HUMAN+=("Containers are running but a runner looks unregistered (see Layer 4 below) — restarting won't help; check the runner logs and Forgejo's admin/runners page.")
   else
     NEEDS_HUMAN+=("Containers down — start with: docker compose -f $COMPOSE_FILE up -d ${UP_SERVICES[*]}")

@@ -210,7 +210,7 @@ requirements:
         description: "Separate, independently-implemented AES-GCM secret encryption (does not use src/database/encrypted_sqlite.py)"
       - type: code
         path: workers/the-void/worker.py
-        description: "Separate, independently-implemented AES-GCM secret encryption (does not use src/database/encrypted_sqlite.py)"
+        description: "Separate, independently-implemented AES-GCM secret encryption (does not use src/database/encrypted_sqlite.py) — previously had a silent XOR fallback when the cryptography import failed (insecure, no error raised); removed in favor of a hard top-level import so a missing dependency now fails loudly instead of downgrading encryption unnoticed"
       - type: code
         path: workers/vault-service/worker.py
         description: "AES-GCM SQLite fallback backend when OpenBao is unavailable — separate implementation, does not use src/database/encrypted_sqlite.py"
