@@ -52,7 +52,7 @@ from config import (
     WORKER_NAME,
 )
 from database import AIDatabase
-from Dimensional.sanitize import sanitize_for_log
+from sanitize import sanitize_for_log
 
 logger = logging.getLogger(WORKER_NAME)
 
