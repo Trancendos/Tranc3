@@ -25,7 +25,7 @@ DEFAULT_SERVICES = [
     ("orders-service", 8012),
     ("payments-service", 8013),
     ("infinity-admin", 8044),
-    ("swarm-coordinator", 8053),
+    ("swarm-coordinator-service", 8109),
 ]
 
 

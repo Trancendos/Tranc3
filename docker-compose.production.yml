@@ -61,6 +61,7 @@ services:
     container_name: tranc3-traefik
     <<: *common
     command:
+      - "--ping=true"
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -3795,6 +3796,18 @@ services:
       - "traefik.http.routers.forgejo.entrypoints=websecure"
       - "traefik.http.routers.forgejo.tls.certresolver=letsencrypt"
       - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+      # the-workshop.trancendos.com (CNAME, deploy/terraform/oci-citadel-dns.tf) has no
+      # working route without this: Forgejo's ROOT_URL is the path-based URL above, so it
+      # must not be served directly at the bare subdomain (that would conflict with the
+      # links/redirects Forgejo itself generates). Redirect to the canonical path URL instead.
+      - "traefik.http.routers.forgejo-subdomain.rule=Host(`the-workshop.trancendos.com`)"
+      - "traefik.http.routers.forgejo-subdomain.entrypoints=websecure"
+      - "traefik.http.routers.forgejo-subdomain.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.forgejo-subdomain.service=forgejo"
+      - "traefik.http.routers.forgejo-subdomain.middlewares=forgejo-subdomain-redirect"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.regex=^https://the-workshop\\.trancendos\\.com/(.*)"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.replacement=https://trancendos.com/the-workshop/$${1}"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.permanent=true"
 
   # ── Forgejo Actions Runner — executes .forgejo/workflows/ ────────────
   forgejo-runner:
@@ -4151,6 +4164,18 @@ volumes:
 # ═══════════════════════════════════════════════════════════════════════════
 networks:
   tranc3-net:
+    # Explicit name (rather than the default `<project>_tranc3-net`) so other
+    # compose files — e.g. deploy/forgejo/docker-compose.yml's act-runner —
+    # can join it deterministically as an `external: true` network to reach
+    # workers by service name instead of guessing at host-published ports.
+    #
+    # UPGRADE NOTE for a host with this stack already running under the old
+    # auto-generated network name: `docker compose -f
+    # docker-compose.production.yml down` first (removes the old
+    # project-scoped network) before deploying this change and bringing the
+    # stack back up — otherwise Compose may try to create a second bridge on
+    # the same 172.28.0.0/16 subnet and fail before any container starts.
+    name: tranc3-net
     driver: bridge
     ipam:
       config:

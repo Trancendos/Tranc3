@@ -25,7 +25,7 @@ CORE_SERVICES=(
   users-service products-service orders-service payments-service
   api-gateway
   monitoring notifications infinity-ai
-  infinity-admin swarm-coordinator
+  infinity-admin swarm-coordinator-service
   prometheus grafana
 )
 

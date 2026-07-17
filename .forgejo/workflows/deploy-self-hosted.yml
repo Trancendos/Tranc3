@@ -16,6 +16,18 @@
 #
 # NO Cloudflare API tokens needed. NO wrangler needed.
 # All workers run as self-owned processes.
+#
+# Only build-workers runs on `deploy-host`, the one Workshop runner with
+# host Docker socket access (deploy/forgejo/act-runner-deploy.yml) — it's
+# the only job here that `docker build`s real images. The other two jobs
+# don't touch Docker and stay on the default `self-hosted` runner. Safe to
+# route anything here to deploy-host at all because this workflow has no
+# pull_request trigger (push/workflow_dispatch only) and every deploy-host
+# job also carries `if: github.ref == 'refs/heads/main'`, so it never runs
+# workflow content from an unreviewed ref. Do not add a pull_request
+# trigger, and do not drop that main-ref guard from build-workers, without
+# also reconsidering whether it belongs on deploy-host — see that file's
+# header comment for why.
 
 name: Deploy Self-Hosted Workers
 
@@ -29,13 +41,49 @@ on:
       - ".forgejo/workflows/deploy-self-hosted.yml"
   workflow_dispatch:
 
+# Forgejo Actions does not support `jobs.<job_id>.concurrency` (a job-level
+# block there is rejected/ignored, not enforced) — only workflow-scoped
+# concurrency works, so this has to serialize the whole workflow, not just
+# build-workers. That's still correct here: build-workers is the only job
+# that `docker build`s real `:latest`-tagged images (see its own comment for
+# why overlapping runs would race on those tags), and the two downstream
+# jobs just `needs: build-workers` and do nothing Docker-related — queuing
+# an entire run behind another doesn't lose anything, each queued run still
+# deploys its own triggering ref's code once its turn comes.
+#
+# Grouped by ref (not a fixed literal) so a workflow_dispatch on some other
+# branch — a no-op here since every job below is main-ref-guarded — doesn't
+# occupy the same queue slot as real main deployments and delay them.
+#
+# Queuing same-group runs is NOT the same as ordering them: Forgejo doesn't
+# guarantee an older-commit run finishes before a newer one that queued
+# after it, so this alone doesn't stop a stale run from deploying last and
+# rolling main back — deploy-fly's own "Guard against a stale/out-of-order
+# deploy" step is what actually prevents that outcome.
+concurrency:
+  group: deploy-self-hosted-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ──────────────────────────────────────────────────────────────
   # Build: Package all workers into Docker images
   # ──────────────────────────────────────────────────────────────
   build-workers:
     name: Build Worker Images
-    runs-on: self-hosted
+    # workflow_dispatch lets an operator run this on any ref, and without
+    # this guard that would let a feature branch's checkout run `docker
+    # build` on deploy-host (the socket-bearing runner) directly — the same
+    # main-ref restriction the two dependent jobs below already have.
+    if: github.ref == 'refs/heads/main'
+    # Every image built here is tagged `:latest` (mutable), and act-runner-deploy.yml
+    # runs deploy-host at capacity 2 so this job can execute alongside owasp-zap-dast.
+    # Two build-workers runs in flight at once would `docker build`/push the same
+    # `:latest` tags concurrently — last-writer-wins with no ordering guarantee, so
+    # a slower run finishing after a faster/newer one can silently leave an older
+    # image live. Serialized via the workflow-level `concurrency:` block above
+    # (Forgejo Actions doesn't honor a job-level one here) so overlapping commits
+    # to main queue instead of racing.
+    runs-on: deploy-host
     steps:
       - uses: actions/checkout@v4
 
@@ -76,13 +124,51 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   deploy-fly:
     name: Deploy to Fly.io
+    # No docker commands in this job — flyctl only. Stays on the default
+    # socket-less runner; only build-workers above needs deploy-host.
     runs-on: self-hosted
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
+      # `concurrency: cancel-in-progress: false` (workflow-scoped, above)
+      # queues overlapping runs on the same ref instead of cancelling them —
+      # it does NOT guarantee they execute in commit order. If two pushes to
+      # main land close together, the run for the OLDER commit can still be
+      # the one that finishes last and `flyctl deploy`s after the newer run
+      # already deployed, silently rolling production back to stale code.
+      # Guard against that here: skip the actual deploy steps if origin/main
+      # has moved past this run's commit by the time its turn comes.
+      # Push-triggered only — a manual workflow_dispatch on an older ref is
+      # deliberate operator intent (e.g. a rollback) and should not be
+      # second-guessed by this check.
+      - name: Guard against a stale/out-of-order deploy
+        id: staleness
+        run: |
+          git fetch origin main --quiet
+          latest="$(git rev-parse origin/main)"
+          current="${{ github.sha }}"
+          stale=false
+          if [ "${{ github.event_name }}" = "push" ] && [ "$latest" != "$current" ]; then
+            # Only defer to a newer run if one will actually exist: this
+            # workflow's own `on.push.paths` filter means a later main commit
+            # that touches none of workers/**, cloudflare/**, tranc3-bots/**,
+            # or this workflow file never triggers its own deploy-self-hosted
+            # run — e.g. a docs-only commit. Treating THIS run as stale in
+            # that case would skip the only deployment that was ever going to
+            # ship the current changes. Only mark stale if some commit between
+            # here and origin/main's HEAD actually touches a triggering path.
+            changed="$(git diff --name-only "$current" "$latest")"
+            if echo "$changed" | grep -qE '^(workers/|cloudflare/|tranc3-bots/|\.forgejo/workflows/deploy-self-hosted\.yml)'; then
+              stale=true
+              echo "::warning::This run's commit ($current) is behind origin/main's current HEAD ($latest), and a later commit touches deployable paths — a newer run will handle this deploy. Skipping the Fly.io deploy steps so production isn't rolled back."
+            fi
+          fi
+          echo "stale=$stale" >> "$GITHUB_OUTPUT"
+
       - name: Install flyctl
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           if ! command -v flyctl &>/dev/null; then
             curl -L https://fly.io/install.sh | sh
@@ -92,6 +178,7 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy backend (trancendos-backend)
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           flyctl deploy --remote-only --app trancendos-backend
         env:
@@ -99,6 +186,7 @@ jobs:
         continue-on-error: true
 
       - name: Deploy bots (trancendos-bots)
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           cd tranc3-bots
           flyctl deploy --remote-only --app trancendos-bots
@@ -107,6 +195,7 @@ jobs:
         continue-on-error: true
 
       - name: Health check
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           sleep 15
           STATUS=$(curl -sf https://trancendos-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
@@ -114,6 +203,7 @@ jobs:
           [ "$STATUS" = "200" ] || echo "Warning: Backend health check returned $STATUS"
 
       - name: Notify The Citadel
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           BACKEND_URL="https://trancendos-backend.fly.dev"
           curl -sf -X POST "$BACKEND_URL/citadel/webhooks/forgejo" \
@@ -123,3 +213,60 @@ jobs:
             || echo "Citadel notification skipped (backend may be warming)"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  # ──────────────────────────────────────────────────────────────
+  # Verify + register: closes the loop between the EA workbook CMDB
+  # and live monitoring on the self-hosted Docker Compose fleet.
+  # Runs on the self-hosted runner, which shares a network with the
+  # docker-compose.production.yml stack — assumes the workers this
+  # step probes are already running on that host (this workflow does
+  # not itself docker-compose-deploy workers/* — see the Improvement
+  # Roadmap in docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx).
+  # --soft / continue-on-error so a not-yet-built worker never blocks CI.
+  # ──────────────────────────────────────────────────────────────
+  verify-and-register-self-hosted:
+    name: Verify + register self-hosted workers
+    # No docker commands here either — HTTP verification + health-aggregator
+    # registration calls only. act-runner.yml's container.network is
+    # tranc3-net too, so this keeps the production-fleet reachability these
+    # steps need without deploy-host's socket access.
+    runs-on: self-hosted
+    needs: build-workers
+    if: github.ref == 'refs/heads/main'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install script dependencies
+        run: pip install --quiet httpx==0.28.1
+
+      - name: Create logs dir
+        run: mkdir -p logs
+
+      - name: Post-deploy health verification (soft — warnings only)
+        # No --base: probes each entity at its own compose service name
+        # (Docker DNS on tranc3-net) — this runner is attached to that
+        # network via deploy/forgejo/docker-compose.yml's act-runner service.
+        run: python3 scripts/post_deploy_verify.py --soft --report logs/deploy_verify.json
+        continue-on-error: true
+
+      - name: Register EA workbook anchor services with health-aggregator
+        # No --host: resolves each anchor's compose service name so
+        # health-aggregator's own polling can actually reach it.
+        run: python3 scripts/register_ea_workbook_services.py
+        env:
+          INTERNAL_SECRET: ${{ secrets.HEALTH_AGGREGATOR_INTERNAL_SECRET }}
+        continue-on-error: true
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-verify-${{ github.run_number }}
+          path: logs/deploy_verify.json
+          retention-days: 30

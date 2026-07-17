@@ -130,6 +130,39 @@ Location's Job Description title — both are treated as platform-definition cha
 re-seed the new row on next startup), not operator-level reassignments. Only the *AI holding* a
 Job Description is mutable at runtime, per the "Model" table in §1 above.
 
+## 6. Key metrics & escalation paths (seed data, 14 of 43 Locations)
+
+Per-role operating targets and escalation triggers for the Job Description holder to track day
+to day, seeded for the Locations where this level of detail was available. Not yet populated for
+the remaining Locations — add a row here when a Job Description gets this level of definition,
+following the same shape. `assigned_ai` matches §2's seed state; escalation paths refer to "the
+location's Tier 2 Prime sponsor" generically rather than naming one, since Tier 2 Prime sponsorship
+is assigned separately (see `master-schema.md` §SCHEMA-CORE-001) and is out of scope for this file.
+
+| Location | Assigned AI (seed) | Key Metrics | Escalation Path |
+|---|---|---|---|
+| **Infinity** | The Guardian (Anchor: Orb of Orisis) | Authentication success rate 99.99%; MTTD anomaly < 5 min; access review completion 100%; security incidents 0; token generation latency < 100ms | SEV-1 security incident → immediate escalation; compliance violation → Tier 2 Prime sponsor; policy change → Tier 2 Prime sponsor approval |
+| **The Lab** | The Dr. & Slime | Compilation success rate 99.95%; average compilation time < 2 min; queue depth < 100 jobs; developer satisfaction > 90%; code coverage > 80%; incident MTTR < 30 min | Compilation failure > 5 min → immediate investigation; performance degradation > 20% → optimization sprint; quality metric drop → root cause analysis; SEV-1 → immediate escalation to Tier 2 Prime sponsor |
+| **The Workshop** | Larry Lowhammer | Repository availability 99.99%; response time < 500ms; backup success 100%; RTO < 15 min; RPO < 5 min; artifact storage utilization < 80% | Repository unavailable > 5 min → immediate investigation (see `deploy/forgejo/RUNBOOK.md`); backup failure → immediate remediation; data loss incident → SEV-1 escalation; compliance violation → Tier 2 Prime sponsor |
+| **The Observatory** | Norman Hawkins | Audit log availability 99.99%; audit log latency < 1s; compliance score 100%; critical audit findings 0; monitoring coverage 100%; alert accuracy > 95% | Audit log failure → immediate escalation; compliance violation → Tier 2 Prime sponsor; data loss → SEV-1 incident; privacy breach → immediate escalation |
+| **The Void** | Prometheus | Vault availability 99.99%; secret rotation success 100%; encryption key rotation 100%; backup success 100%; security incidents 0; compliance violations 0 | Vault unavailable → immediate escalation (highest blast radius — see `docs/architecture/ea-workbook/runbooks.md`); encryption key loss → SEV-1; security breach → immediate escalation; compliance violation → Tier 2 Prime sponsor |
+| **Cryptex** | Renik | MTTD < 5 min; MTTR < 30 min; vulnerability detection rate > 95%; false positive rate < 5%; critical security incidents 0; compliance violations 0 | Threat detected → immediate investigation; security incident → SEV-1 escalation; malware detected → immediate containment; compliance violation → Tier 2 Prime sponsor |
+| **The HIVE** | The Queen | Data transport availability 99.99%; throughput > 1GB/s; packet loss < 0.1%; latency < 50ms; data integrity 100%; RTO < 15 min | Data transport unavailable → immediate investigation; data loss → SEV-1 incident; data integrity issue → immediate investigation; performance degradation > 20% → investigation |
+| **Luminous** | Cornelius MacIntyre | Orchestration availability 99.99%; workflow execution success > 99%; workflow latency < 1s; service coordination success > 99%; automation execution success > 99%; reliability > 99.9% | Orchestration unavailable → immediate investigation; workflow failure rate > 1% → investigation; performance degradation > 20% → optimization; compliance violation → Tier 2 Prime sponsor |
+| **The Lighthouse** | Rocking Ricki | Token generation success 99.99%; token validation latency < 50ms; token revocation success 100%; security incidents 0; compliance violations 0; token usage accuracy 100% | Token generation failure → immediate investigation; token security breach → SEV-1 incident; compliance violation → Tier 2 Prime sponsor; performance degradation > 20% → investigation |
+| **The Academy** | Shimshi | Training completion rate > 95%; knowledge base coverage 100%; documentation accuracy 100%; learning satisfaction > 90%; certification pass rate > 85%; onboarding success rate > 95% | Knowledge base unavailable → immediate investigation; training failure → investigation; documentation gap → update request; compliance violation → Tier 2 Prime sponsor |
+| **Arcadia** | Lilli SC | Frontend availability 99.95%; page load time < 2s; user satisfaction > 90%; accessibility score > 95%; performance score > 90%; error rate < 0.1% | Frontend unavailable > 5 min → immediate investigation; performance degradation > 20% → investigation; user satisfaction drop → investigation; accessibility violation → remediation |
+| **Tranquility** | Savania | Service availability 99.95%; user satisfaction > 90%; data privacy 100%; support response time < 1 hour | Service unavailable → immediate investigation; data privacy breach → SEV-1 incident; user safety concern → immediate escalation |
+| **The Studio** | Voxx | Tool availability 99.95%; rendering performance < 1s; user satisfaction > 90%; collaboration success > 95%; asset management accuracy 100%; performance score > 90% | Tool unavailable > 5 min → immediate investigation; performance degradation > 20% → investigation; user satisfaction drop → investigation; data loss → SEV-1 incident |
+| **The Library** | Zimik | Knowledge base availability 99.95%; search success rate > 95%; content accuracy 100%; user satisfaction > 90%; content currency 100%; usage growth > 20% quarterly | Knowledge base unavailable → immediate investigation; search failure → investigation; content accuracy issue → update request; compliance violation → Tier 2 Prime sponsor |
+
+Two roles from the source material were deliberately **not** included here because their metrics
+targeted a Job Description that doesn't match this file's canonical assignment: a "Solarscene —
+infrastructure operations" set (Solarscene's actual assigned Location per §2 is API Marketplace /
+Head of API Integrations, not infrastructure) and a "Dorris Fontaine — API marketplace" set
+(Dorris's actual assigned Location is Royal Bank of Arcadia / Chief Financial Officer). Attaching
+either set to its mismatched Location would have been misleading rather than useful.
+
 ---
 
 ## Verification Log
@@ -137,3 +170,4 @@ Job Description is mutable at runtime, per the "Model" table in §1 above.
 | Date | Verifier | Result |
 |---|---|---|
 | 2026-07-11 | Claude (session) | Confirmed `JOB_DESCRIPTIONS` covers exactly the same 43 keys as `PLATFORM_ENTITIES`; manually exercised `RoleRegistry` (seed, get, assign, reassign, remove, re-assign-after-removal, history ordering, reconnect-idempotency) against a temp SQLite file — all behaviors verified correct. `pytest` unavailable in this sandbox; `tests/test_roles.py` added for CI to run. |
+| 2026-07-16 | Claude (session) | Added §6 (Key metrics & escalation paths) from externally-supplied role material; cross-checked every entry against this file's §2 seed assignments before including it, and excluded two entries (Solarscene, Dorris Fontaine) whose source metrics targeted a different Job Description than their canonical assignment here. Did not adopt the source material's Tier 1/2/3 org-chart, which conflicted with `master-schema.md`'s `PID-PRIME-XXX` tier assignments. |

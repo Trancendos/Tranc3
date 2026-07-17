@@ -35,16 +35,20 @@ LOGS.mkdir(exist_ok=True)
 ALL_ENTITIES: list[dict] = [
     # ── Core / always-on ────────────────────────────────────────────────────
     {"name": "tranc3-backend", "port": 8000, "tier": "core", "path": "/health"},
-    {"name": "nanoservices", "port": 8001, "tier": "core", "path": "/health"},
+    # Port 8001 is the real tranc3-ai compose service (The Spark), not
+    # "nanoservices" — that name was simply wrong, not a stand-in for a
+    # non-existent service; nanoservices genuinely has no separate compose
+    # entry (mounted on tranc3-backend per CLAUDE.md) and isn't probed here.
+    {"name": "tranc3-ai", "port": 8001, "tier": "P0", "path": "/health"},
     # ── P0 ──────────────────────────────────────────────────────────────────
     {"name": "infinity-ws", "port": 8004, "tier": "P0", "path": "/health"},
     {"name": "infinity-auth", "port": 8005, "tier": "P0", "path": "/health"},
-    # ── P1 ──────────────────────────────────────────────────────────────────
-    {"name": "infinity-portal-service", "port": 8042, "tier": "P1", "path": "/health"},
-    {"name": "infinity-one-service", "port": 8043, "tier": "P1", "path": "/health"},
-    {"name": "infinity-admin-service", "port": 8044, "tier": "P1", "path": "/health"},
-    {"name": "infinity-shards-service", "port": 8045, "tier": "P1", "path": "/health"},
-    {"name": "infinity-bridge-service", "port": 8070, "tier": "P1", "path": "/health"},
+    # ── P1 ── names match real compose service keys (no -service suffix) ────
+    {"name": "infinity-portal", "port": 8042, "tier": "P1", "path": "/health"},
+    {"name": "infinity-one", "port": 8043, "tier": "P1", "path": "/health"},
+    {"name": "infinity-admin", "port": 8044, "tier": "P1", "path": "/health"},
+    {"name": "infinity-shards", "port": 8045, "tier": "P1", "path": "/health"},
+    {"name": "infinity-bridge", "port": 8070, "tier": "P1", "path": "/health"},
     {"name": "cranbania", "port": 8071, "tier": "P1", "path": "/health"},
     {"name": "users-service", "port": 8006, "tier": "P1", "path": "/health"},
     {"name": "monitoring", "port": 8007, "tier": "P1", "path": "/health"},
@@ -57,20 +61,20 @@ ALL_ENTITIES: list[dict] = [
     {"name": "payments-service", "port": 8013, "tier": "P2", "path": "/health"},
     {"name": "files-service", "port": 8014, "tier": "P2", "path": "/health"},
     {"name": "identity-service", "port": 8015, "tier": "P2", "path": "/health"},
-    # ── P3 ──────────────────────────────────────────────────────────────────
+    # ── P3 ─── ports match docker-compose.production.yml, not alphabetical order
     {"name": "analytics-service", "port": 8016, "tier": "P3", "path": "/health"},
-    {"name": "audit-service", "port": 8017, "tier": "P3", "path": "/health"},
-    {"name": "cache-service", "port": 8018, "tier": "P3", "path": "/health"},
-    {"name": "cdn-service", "port": 8019, "tier": "P3", "path": "/health"},
-    {"name": "config-service", "port": 8020, "tier": "P3", "path": "/health"},
+    {"name": "search-service", "port": 8017, "tier": "P3", "path": "/health"},
+    {"name": "email-service", "port": 8018, "tier": "P3", "path": "/health"},
+    {"name": "sms-service", "port": 8019, "tier": "P3", "path": "/health"},
+    {"name": "storage-service", "port": 8020, "tier": "P3", "path": "/health"},
     {"name": "cron-service", "port": 8021, "tier": "P3", "path": "/health"},
-    {"name": "email-service", "port": 8022, "tier": "P3", "path": "/health"},
-    {"name": "geo-service", "port": 8023, "tier": "P3", "path": "/health"},
-    {"name": "search-service", "port": 8024, "tier": "P3", "path": "/health"},
-    {"name": "sms-service", "port": 8025, "tier": "P3", "path": "/health"},
-    {"name": "storage-service", "port": 8026, "tier": "P3", "path": "/health"},
-    {"name": "queue-service", "port": 8027, "tier": "P3", "path": "/health"},
-    {"name": "rate-limit-service", "port": 8028, "tier": "P3", "path": "/health"},
+    {"name": "queue-service", "port": 8022, "tier": "P3", "path": "/health"},
+    {"name": "cache-service", "port": 8023, "tier": "P3", "path": "/health"},
+    {"name": "config-service", "port": 8024, "tier": "P3", "path": "/health"},
+    {"name": "audit-service", "port": 8025, "tier": "P3", "path": "/health"},
+    {"name": "rate-limit-service", "port": 8026, "tier": "P3", "path": "/health"},
+    {"name": "geo-service", "port": 8027, "tier": "P3", "path": "/health"},
+    {"name": "cdn-service", "port": 8028, "tier": "P3", "path": "/health"},
     {"name": "health-aggregator", "port": 8029, "tier": "P3", "path": "/health"},
     {"name": "gbrain-bridge", "port": 8030, "tier": "P3", "path": "/health"},
     {"name": "topology-service", "port": 8031, "tier": "P3", "path": "/health"},
@@ -78,10 +82,10 @@ ALL_ENTITIES: list[dict] = [
     {"name": "model-router-service", "port": 8033, "tier": "P3", "path": "/health"},
     {"name": "workflow-engine-service", "port": 8034, "tier": "P3", "path": "/health"},
     {"name": "skills-benchmark-service", "port": 8035, "tier": "P3", "path": "/health"},
-    {"name": "langchain-integration", "port": 8036, "tier": "P3", "path": "/health"},
-    {"name": "deepagents-orchestrator", "port": 8037, "tier": "P3", "path": "/health"},
+    {"name": "langchain-integration-service", "port": 8036, "tier": "P3", "path": "/health"},
+    {"name": "deepagents-orchestrator-service", "port": 8037, "tier": "P3", "path": "/health"},
     {"name": "vault-service", "port": 8038, "tier": "P3", "path": "/health"},
-    {"name": "optional-services-health", "port": 8039, "tier": "P3", "path": "/health"},
+    {"name": "mlflow-service", "port": 8039, "tier": "P3", "path": "/health"},
     # ── Planned entities (18) — ports match CLAUDE.md's canonical worker map ──
     {"name": "the-academy", "port": 8056, "tier": "planned", "path": "/health"},
     {"name": "basement", "port": 8068, "tier": "planned", "path": "/health"},
@@ -127,7 +131,7 @@ class EntityResult:
 @dataclass
 class VerifyReport:
     timestamp: float = field(default_factory=time.time)
-    base_url: str = "http://127.0.0.1"
+    base_url: str = "per-service-dns"
     results: list[EntityResult] = field(default_factory=list)
     overall: str = "unknown"
     critical_pass_rate: float = 0.0
@@ -140,9 +144,18 @@ class VerifyReport:
 # ---------------------------------------------------------------------------
 
 
-def _probe(base: str, entity: dict, timeout: float = 5.0) -> tuple[str, int, int]:
-    """Return (status, http_code, latency_ms)."""
-    url = f"{base}:{entity['port']}{entity['path']}"
+def _probe(base: str | None, entity: dict, timeout: float = 5.0) -> tuple[str, int, int]:
+    """Return (status, http_code, latency_ms).
+
+    `base=None` (the default) probes each entity at its own compose service
+    name — `entity["name"]` matches the service key in
+    docker-compose.production.yml, resolvable via Docker DNS on tranc3-net —
+    rather than a single shared host. A single shared `base` only makes sense
+    when every entity's port is published to the same reachable host (e.g.
+    manual testing against 127.0.0.1 with all worker ports published).
+    """
+    host = base if base is not None else f"http://{entity['name']}"
+    url = f"{host}:{entity['port']}{entity['path']}"
     t0 = time.monotonic()
     try:
         req = urllib.request.Request(url, method="GET")
@@ -162,7 +175,7 @@ def _probe(base: str, entity: dict, timeout: float = 5.0) -> tuple[str, int, int
 
 
 def probe_with_retry(
-    base: str,
+    base: str | None,
     entity: dict,
     max_attempts: int = 3,
     backoff_base: float = 2.0,
@@ -199,7 +212,8 @@ def probe_with_retry(
 # ---------------------------------------------------------------------------
 
 
-def _report_to_observatory(base: str, report: VerifyReport) -> None:
+def _report_to_observatory(base: str | None, report: VerifyReport) -> None:
+    host = base if base is not None else "http://monitoring"
     try:
         payload = json.dumps(
             {
@@ -213,7 +227,7 @@ def _report_to_observatory(base: str, report: VerifyReport) -> None:
             }
         ).encode()
         req = urllib.request.Request(
-            f"{base}:8007/events",
+            f"{host}:8007/events",
             data=payload,
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -296,8 +310,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Post-deploy health verifier")
     parser.add_argument(
         "--base",
-        default=os.environ.get("TRANC3_BASE_URL", "http://127.0.0.1"),
-        help="Base URL of the host (default: http://127.0.0.1)",
+        default=os.environ.get("TRANC3_BASE_URL"),
+        help=(
+            "Shared base URL to probe every entity at (e.g. http://127.0.0.1 for a "
+            "host with every worker port published). Default: probe each entity at "
+            "its own compose service name (Docker DNS on tranc3-net)."
+        ),
     )
     parser.add_argument(
         "--tier",
@@ -318,7 +336,8 @@ def main() -> int:
         ALL_ENTITIES if args.tier == "all" else [e for e in ALL_ENTITIES if e["tier"] == args.tier]
     )
 
-    print(f"\nProbing {len(entities)} entities against {args.base} …")
+    target_desc = args.base if args.base is not None else "each entity's own compose service name"
+    print(f"\nProbing {len(entities)} entities against {target_desc} …")
     t_start = time.monotonic()
 
     results: list[EntityResult] = []
@@ -340,7 +359,7 @@ def main() -> int:
     overall = "healthy" if cr_rate >= HARD_STOP_THRESHOLD else "degraded"
 
     report = VerifyReport(
-        base_url=args.base,
+        base_url=target_desc,
         results=results,
         overall=overall,
         critical_pass_rate=cr_rate,

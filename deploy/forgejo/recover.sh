@@ -99,6 +99,32 @@ fi
 # while still returning 0/1 on match/no-match.
 cont_exists()  { docker ps -a --format '{{.Names}}' 2>/dev/null | grep -Fx -- "$1" >/dev/null; }
 cont_running() { docker ps    --format '{{.Names}}' 2>/dev/null | grep -Fx -- "$1" >/dev/null; }
+# `docker ps` only proves the act_runner *process* is alive, not that Forgejo
+# accepted its registration — a runner stuck retrying a bad/expired
+# RUNNER_REGISTRATION_TOKEN stays "running" forever while every CI job queues
+# with nothing able to pick it up. This script has no Forgejo admin token to
+# query the authoritative /admin/runners state, so this is a heuristic, not
+# proof: scan recent logs for act_runner's own fatal/auth-failure output.
+# Treat a runner as unregistered if the process is up but its last 30 log
+# lines show a known failure pattern; otherwise fall through to "running" as
+# before (matches prior behavior when the pattern doesn't match, so this only
+# adds detection, it doesn't remove any existing green path).
+runner_registered() {
+  local container="$1" logs
+  cont_running "$container" || return 1
+  # Capture logs into a variable first, then grep the string — piping
+  # `docker logs | grep -q` lets grep exit (and the pipeline's status become
+  # grep's, under `set -o pipefail`) before `docker logs` finishes draining,
+  # so a real failure line arriving after grep's early exit is never seen and
+  # a genuinely unregistered runner gets reported healthy.
+  logs="$(docker logs --tail 30 "$container" 2>&1)" || return 1
+  # "connection refused" deliberately excluded: it's what a runner logs
+  # while reconnecting after a blip, not proof it's still unregistered — a
+  # transient one in the last 30 lines shouldn't fail a runner that has
+  # since reconnected fine. The other patterns are terminal/definitive.
+  ! grep -Eiq \
+    'level=fatal|unauthorized|invalid token|failed to register|registration.*(fail|expired)' <<< "$logs"
+}
 # Match the Forgejo data volume whether it's the literal name (`forgejo-data`,
 # e.g. an external/named volume) OR a Compose project-prefixed variant
 # (`citadel_forgejo-data`, `tranc3_forgejo-data`, …). A production stack whose
@@ -125,6 +151,9 @@ elif (( prod )); then
   COMPOSE_FILE="${REPO_ROOT}/docker-compose.production.yml"
   FORGEJO="$PROD_FORGEJO"
   RUNNER="trancendos-forgejo-runner"
+  # No second/privileged runner in this compose file yet — the deploy-host
+  # split (deploy/forgejo/act-runner-deploy.yml) is standalone-only so far.
+  RUNNER_DEPLOY=""
   UP_SERVICES=(traefik forgejo forgejo-runner)
   PROXY_KIND="traefik"; PROXY_CONTAINER="tranc3-traefik"
 elif (( standalone )); then
@@ -132,7 +161,8 @@ elif (( standalone )); then
   COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
   FORGEJO="$STANDALONE_FORGEJO"
   RUNNER="the-workshop-runner"
-  UP_SERVICES=()   # small file — bring the whole thing up
+  RUNNER_DEPLOY="the-workshop-runner-deploy"
+  UP_SERVICES=()   # small file — bring the whole thing up (both runners too)
   PROXY_KIND="webserver"; PROXY_CONTAINER=""
 else
   # Neither known Forgejo container exists. Do NOT guess-and-start — that is how
@@ -151,10 +181,26 @@ ok "Detected topology: ${TOPO} (forgejo=${FORGEJO}, proxy=${PROXY_KIND})."
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
 # ── Layer 1: bring the detected stack up (never a different one) ──────────────
-if cont_running "$FORGEJO" && cont_running "$RUNNER"; then
-  ok "Containers already running (${FORGEJO}, ${RUNNER})."
+# RUNNER_DEPLOY is checked too (when this topology has one) so a down
+# deploy-host runner isn't masked by the default runner + Forgejo both
+# looking healthy — see docker-compose.yml's act-runner-deploy for why a
+# missing privileged runner otherwise fails silently (deploy jobs just
+# queue forever with no obvious error here).
+runner_deploy_ok() { [[ -z "$RUNNER_DEPLOY" ]] || runner_registered "$RUNNER_DEPLOY"; }
+if cont_running "$FORGEJO" && runner_registered "$RUNNER" && runner_deploy_ok; then
+  ok "Containers already running (${FORGEJO}, ${RUNNER}$([[ -n "$RUNNER_DEPLOY" ]] && echo ", ${RUNNER_DEPLOY}"))."
 elif [[ $CHECK_ONLY -eq 1 ]]; then
-  NEEDS_HUMAN+=("Containers down — start with: docker compose -f $COMPOSE_FILE up -d ${UP_SERVICES[*]}")
+  if cont_running "$FORGEJO" && cont_running "$RUNNER" && { [[ -z "$RUNNER_DEPLOY" ]] || cont_running "$RUNNER_DEPLOY"; }; then
+    # Everything that `docker compose up` would affect is already running —
+    # what's actually wrong is registration, which restarting containers
+    # doesn't fix. Don't tell the operator to start an already-running stack.
+    # (Deliberately checks liveness, not runner_registered, here: if the
+    # deploy runner were actually stopped, that's a real "start it" case and
+    # falls through to the `else` below instead of this message.)
+    NEEDS_HUMAN+=("Containers are running but a runner looks unregistered (see Layer 4 below) — restarting won't help; check the runner logs and Forgejo's admin/runners page.")
+  else
+    NEEDS_HUMAN+=("Containers down — start with: docker compose -f $COMPOSE_FILE up -d ${UP_SERVICES[*]}")
+  fi
 else
   # Preserve the runner's currently-deployed image so `up` can't silently revert
   # the custom flyctl/wrangler runner to the upstream fallback in ${RUNNER_IMAGE:-…}.
@@ -270,10 +316,31 @@ else
   NEEDS_HUMAN+=("Proxy not routing the subpath — confirm the /the-workshop route/location is present and reload the proxy (${PROXY_KIND}).")
 fi
 
+# ── Layer 4: runner(s) — a healthy Forgejo with a dead/unregistered runner still can't run CI ─
+if runner_registered "$RUNNER"; then
+  ok "Runner (${RUNNER}) is running and shows no registration failures in recent logs."
+else
+  if cont_running "$RUNNER"; then
+    warn "Runner (${RUNNER}) is running but its recent logs show a registration/auth failure — CI jobs will queue with nothing to pick them up."
+    NEEDS_HUMAN+=("Runner running but not registered — check: docker compose -f $COMPOSE_FILE logs ${RUNNER} ; verify at https://trancendos.com/the-workshop/-/admin/runners")
+  else
+    warn "Runner (${RUNNER}) is not running — CI jobs cannot execute."
+    NEEDS_HUMAN+=("Runner down — check: docker compose -f $COMPOSE_FILE logs ${RUNNER}")
+  fi
+fi
+if ! runner_deploy_ok; then
+  if [[ -n "$RUNNER_DEPLOY" ]] && cont_running "$RUNNER_DEPLOY"; then
+    warn "Deploy runner (${RUNNER_DEPLOY}) is running but its recent logs show a registration/auth failure — deploy-host jobs (worker builds, DAST) will queue forever."
+  else
+    warn "Deploy runner (${RUNNER_DEPLOY}) is not running — deploy-host jobs (worker builds, DAST) will queue forever."
+  fi
+  NEEDS_HUMAN+=("Deploy runner down or unregistered — check: docker compose -f $COMPOSE_FILE logs ${RUNNER_DEPLOY} ; verify at https://trancendos.com/the-workshop/-/admin/runners")
+fi
+
 # ── Final verdict ────────────────────────────────────────────────────────────
-if forgejo_healthy; then
+if forgejo_healthy && runner_registered "$RUNNER" && runner_deploy_ok; then
   echo ""
-  ok "Forgejo is healthy locally (${TOPO})."
+  ok "Forgejo and all expected runners are healthy locally (${TOPO})."
   if [[ "$proxy_code" != "200" ]]; then
     echo "    → Forgejo is fine but the proxy path isn't returning 200 — fix layer 3 above."
   else
@@ -284,7 +351,7 @@ if forgejo_healthy; then
   report_and_exit 0
 else
   echo ""
-  err "Forgejo is NOT healthy after recovery — resolve the items above."
+  err "Forgejo and/or a runner are NOT healthy after recovery — resolve the items above."
   echo "    Common causes: disk full (df -h; docker system df), a locked/corrupt SQLite db,"
   echo "    or the host was rebooted without the boot unit (see deploy/forgejo/the-workshop.service)."
   report_and_exit 1

@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + httpx — no paid external dependencies.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import os
 import sqlite3
@@ -19,12 +20,13 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Config
@@ -54,7 +56,11 @@ logger = logging.getLogger(WORKER_NAME)
 SERVICE_REGISTRY: List[Dict[str, Any]] = [
     # Core backend
     {"name": "tranc3-backend", "port": 8000},
-    {"name": "nanoservices", "port": 8001},
+    # Port 8001 is the real tranc3-ai compose service (The Spark), not
+    # "nanoservices" — that name was simply wrong. nanoservices genuinely
+    # has no separate compose entry (mounted on tranc3-backend per
+    # CLAUDE.md) and isn't polled here.
+    {"name": "tranc3-ai", "port": 8001},
     # P0 — critical
     {"name": "infinity-ws", "port": 8004},
     {"name": "infinity-auth", "port": 8005},
@@ -69,20 +75,20 @@ SERVICE_REGISTRY: List[Dict[str, Any]] = [
     {"name": "payments-service", "port": 8013},
     {"name": "files-service", "port": 8014},
     {"name": "identity-service", "port": 8015},
-    # P2
+    # P2 / P3 — ports match docker-compose.production.yml, not alphabetical order
     {"name": "analytics-service", "port": 8016},
-    {"name": "audit-service", "port": 8017},
-    {"name": "cache-service", "port": 8018},
-    {"name": "cdn-service", "port": 8019},
-    {"name": "config-service", "port": 8020},
+    {"name": "search-service", "port": 8017},
+    {"name": "email-service", "port": 8018},
+    {"name": "sms-service", "port": 8019},
+    {"name": "storage-service", "port": 8020},
     {"name": "cron-service", "port": 8021},
-    {"name": "email-service", "port": 8022},
-    {"name": "geo-service", "port": 8023},
-    {"name": "search-service", "port": 8024},
-    {"name": "sms-service", "port": 8025},
-    {"name": "storage-service", "port": 8026},
-    {"name": "queue-service", "port": 8027},
-    {"name": "rate-limit-service", "port": 8028},
+    {"name": "queue-service", "port": 8022},
+    {"name": "cache-service", "port": 8023},
+    {"name": "config-service", "port": 8024},
+    {"name": "audit-service", "port": 8025},
+    {"name": "rate-limit-service", "port": 8026},
+    {"name": "geo-service", "port": 8027},
+    {"name": "cdn-service", "port": 8028},
     # self — skip polling ourselves to avoid infinite recursion
     # {"name": "health-aggregator",         "port": 8029},
     # P3
@@ -95,21 +101,27 @@ SERVICE_REGISTRY: List[Dict[str, Any]] = [
     {"name": "langchain-integration-service", "port": 8036},
     {"name": "deepagents-orchestrator-service", "port": 8037},
     {"name": "vault-service", "port": 8038},
-    # Infinity portal / admin cluster
-    {"name": "infinity-portal-service", "port": 8042},
-    {"name": "infinity-one-service", "port": 8043},
-    {"name": "infinity-admin-service", "port": 8044},
-    {"name": "infinity-shards-service", "port": 8045},
+    # Infinity portal / admin cluster — names match the real compose service
+    # keys (infinity-portal, not infinity-portal-service — CLAUDE.md's
+    # worker-map column and the actual compose keys disagree here).
+    {"name": "infinity-portal", "port": 8042},
+    {"name": "infinity-one", "port": 8043},
+    {"name": "infinity-admin", "port": 8044},
+    {"name": "infinity-shards", "port": 8045},
     # Bridge + Town Hall
-    {"name": "infinity-bridge-service", "port": 8070},
+    {"name": "infinity-bridge", "port": 8070},
     {"name": "cranbania", "port": 8071},
-    # Bots
-    {"name": "tranc3-bots", "port": 8080},
+    # tranc3-bots (8080) is a separate Fly.io deployment per CLAUDE.md, not a
+    # docker-compose.production.yml service — no Docker DNS name to poll.
 ]
 
-# Materialise the health URL for each entry
+# Materialise the health URL for each entry. Uses the compose service name
+# (Docker DNS on tranc3-net), not "localhost" — health-aggregator runs in its
+# own container on a bridge network, so "localhost" only ever reached itself
+# and every other entry silently probed as down. `_svc["name"]` must match
+# the service's key in docker-compose.production.yml for this to resolve.
 for _svc in SERVICE_REGISTRY:
-    _svc["health_url"] = f"http://localhost:{_svc['port']}/health"
+    _svc["health_url"] = f"http://{_svc['name']}:{_svc['port']}/health"
 
 _REGISTRY_BY_NAME: Dict[str, Dict[str, Any]] = {s["name"]: s for s in SERVICE_REGISTRY}
 
@@ -264,16 +276,80 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
+def _all_targets() -> List[Dict[str, Any]]:
+    """Static SERVICE_REGISTRY plus normalised dynamic registrations.
+
+    Shared by /status, /predict, /metrics, and _poll_all so a service
+    registered via POST /services shows up everywhere a static entry would,
+    not just in the internal poll loop. A dynamic registration takes
+    precedence over a static entry of the same name — duplicate targets
+    would double-poll a service and break /metrics (Prometheus rejects a
+    payload with duplicate service/port labelsets).
+    """
+    dynamic = _dynamic_poll_targets()
+    dynamic_names = {svc["name"] for svc in dynamic}
+    static = [svc for svc in SERVICE_REGISTRY if svc["name"] not in dynamic_names]
+    return static + dynamic
+
+
+def _dynamic_poll_targets() -> List[Dict[str, Any]]:
+    """Normalise POST /services registrations into _check_one's expected shape.
+
+    Dynamic registrations (register_ea_workbook_services.py) carry a full
+    "url" rather than a "port" — _check_one/_persist_check need "health_url"
+    and "port", so derive both here instead of duplicating that shape at
+    every call site.
+    """
+    targets = []
+    for svc in _dynamic_services.values():
+        url = svc["url"]
+        try:
+            parsed = urlparse(url)
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        except ValueError:
+            port = 0
+        targets.append(
+            {
+                "name": svc["name"],
+                "port": port,
+                "health_url": url,
+                "interval_seconds": svc.get("interval_seconds", POLL_INTERVAL),
+            }
+        )
+    return targets
+
+
+# Last-polled monotonic time per target (static and dynamic), so a
+# registration's interval_seconds is actually honored instead of every
+# target riding the fixed POLL_INTERVAL tick regardless of what was
+# registered. monotonic(), not time() — a backwards wall-clock adjustment
+# (NTP correction, manual change) must never make polling appear "not due
+# yet" for an extended stretch.
+_last_polled: Dict[str, float] = {}
+
+# _poll_loop's actual tick granularity. A target's interval_seconds is only
+# ever honored to within this resolution — e.g. registering an interval
+# shorter than TICK_INTERVAL still only polls at most every TICK_INTERVAL.
+TICK_INTERVAL = 5
+
+
 async def _poll_all() -> None:
-    """Poll all registered services once and update _latest."""
+    """Poll every registered target whose interval_seconds has elapsed and update _latest."""
     global _poll_count
-    results = await asyncio.gather(
-        *[_check_one(svc) for svc in SERVICE_REGISTRY], return_exceptions=True
-    )
-    for svc, res in zip(SERVICE_REGISTRY, results, strict=False):
+    now = time.monotonic()
+    targets = [
+        svc
+        for svc in _all_targets()
+        if now - _last_polled.get(svc["name"], 0) >= svc.get("interval_seconds", POLL_INTERVAL)
+    ]
+    if not targets:
+        return
+    results = await asyncio.gather(*[_check_one(svc) for svc in targets], return_exceptions=True)
+    for svc, res in zip(targets, results, strict=False):
         if isinstance(res, Exception):
             res = {"name": svc["name"], "port": svc["port"], "status": "down", "error": str(res)}
         _latest[svc["name"]] = res
+        _last_polled[svc["name"]] = now
         try:
             _persist_check(res)
         except Exception:  # noqa: BLE001 — persist errors must not abort polling
@@ -282,10 +358,10 @@ async def _poll_all() -> None:
 
 
 async def _poll_loop() -> None:
-    """Background task — poll on startup, then every POLL_INTERVAL seconds."""
+    """Background task — poll due targets every TICK_INTERVAL seconds."""
     await _poll_all()
     while True:
-        await asyncio.sleep(POLL_INTERVAL)
+        await asyncio.sleep(TICK_INTERVAL)
         await _poll_all()
 
 
@@ -315,7 +391,11 @@ class PlatformStatus(BaseModel):
 class ServiceRegisterIn(BaseModel):
     name: str
     url: str
-    interval_seconds: int = 30
+    # Floor at TICK_INTERVAL: a lower value can't actually be honored (the
+    # poll loop only checks due-ness every TICK_INTERVAL seconds) and a
+    # non-positive value would make the target due on every single tick —
+    # accidental or intentional high-frequency polling of an internal URL.
+    interval_seconds: int = Field(default=30, ge=TICK_INTERVAL)
 
 
 class HistoryPoint(BaseModel):
@@ -403,7 +483,7 @@ async def health():
         "port": PORT,
         "uptime_seconds": round(uptime_s, 1),
         "poll_count": _poll_count,
-        "monitored_services": len(SERVICE_REGISTRY),
+        "monitored_services": len(_all_targets()),
         "polled_so_far": len(_latest),
         "entity": {
             "location": "The Observatory",
@@ -418,12 +498,55 @@ def _require_internal(x_internal_secret: Optional[str]) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
+def _require_internal_strict(x_internal_secret: Optional[str]) -> None:
+    """Like _require_internal, but fails closed when INTERNAL_SECRET is unset.
+
+    POST/DELETE /services cause health-aggregator to poll an operator-chosen
+    URL from its own network every interval — an unauthenticated instance of
+    this would be an open SSRF primitive against tranc3-net. The read-only
+    _require_internal fail-open behavior is left as-is elsewhere; this only
+    tightens the two mutating endpoints.
+    """
+    if not INTERNAL_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="INTERNAL_SECRET must be configured to register/remove dynamic services",
+        )
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @app.post("/services", status_code=201, summary="Dynamically register a service to monitor")
 async def register_service(
     body: ServiceRegisterIn,
     x_internal_secret: Optional[str] = Header(None),
 ) -> Dict[str, Any]:
-    _require_internal(x_internal_secret)
+    _require_internal_strict(x_internal_secret)
+    parsed = urlparse(body.url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="url must be http:// or https://")
+    hostname = (parsed.hostname or "").lower()
+    # Baseline SSRF hardening on top of the internal-secret gate above:
+    # reject loopback and link-local targets (the latter covers the
+    # 169.254.169.254 cloud-metadata endpoint). ipaddress classifies any
+    # literal loopback/link-local address, not just the common spellings
+    # (127.0.0.2 and fe80::1 are blocked exactly like 127.0.0.1 and ::1).
+    # This still only checks the literal hostname, not a DNS-resolved IP —
+    # a caller could register a name that resolves to a blocked address
+    # later (DNS rebinding). Full protection against that needs resolving
+    # and pinning the IP at both registration and poll time; not done here
+    # since this endpoint is already gated by _require_internal_strict,
+    # not internet-reachable.
+    is_blocked = hostname == "localhost"
+    try:
+        addr = ipaddress.ip_address(hostname)
+        is_blocked = is_blocked or addr.is_loopback or addr.is_link_local
+    except ValueError:
+        pass  # not a literal IP (e.g. a compose service name) — fine
+    if is_blocked:
+        raise HTTPException(
+            status_code=400, detail="url must not target a loopback or link-local host"
+        )
     _dynamic_services[body.name] = {
         "name": body.name,
         "url": body.url,
@@ -442,7 +565,7 @@ async def list_services(x_internal_secret: Optional[str] = Header(None)) -> Dict
 async def delete_service(
     name: str, x_internal_secret: Optional[str] = Header(None)
 ) -> Dict[str, Any]:
-    _require_internal(x_internal_secret)
+    _require_internal_strict(x_internal_secret)
     _dynamic_services.pop(name, None)
     return {"deleted": name}
 
@@ -473,7 +596,8 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> Dict[str, A
     _require_internal(x_internal_secret)
     services = []
     healthy = degraded = unreachable = 0
-    for svc in SERVICE_REGISTRY:
+    targets = _all_targets()
+    for svc in targets:
         name = svc["name"]
         if name in _latest:
             d = _latest[name]
@@ -504,7 +628,7 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> Dict[str, A
         "healthy_count": healthy,
         "degraded_count": degraded,
         "unreachable_count": unreachable,
-        "total_count": len(SERVICE_REGISTRY),
+        "total_count": len(targets),
         "services": services,
     }
 
@@ -633,7 +757,7 @@ async def predict() -> Dict[str, Any]:
     stable = []
 
     with _conn() as c:
-        for svc in SERVICE_REGISTRY:
+        for svc in _all_targets():
             name = svc["name"]
             rows = c.execute(
                 """
@@ -683,7 +807,8 @@ async def metrics() -> str:
         "# HELP service_health_status Health status of each Trancendos service (1=healthy, 0.5=degraded, 0=unreachable)",
         "# TYPE service_health_status gauge",
     ]
-    for svc in SERVICE_REGISTRY:
+    metrics_targets = _all_targets()
+    for svc in metrics_targets:
         name = svc["name"]
         data = _latest.get(name, {})
         st = data.get("status", "unknown")
@@ -695,7 +820,7 @@ async def metrics() -> str:
         "# HELP service_latency_ms Last observed health-check latency in milliseconds",
         "# TYPE service_latency_ms gauge",
     ]
-    for svc in SERVICE_REGISTRY:
+    for svc in metrics_targets:
         name = svc["name"]
         data = _latest.get(name, {})
         latency = data.get("latency_ms")
@@ -704,7 +829,7 @@ async def metrics() -> str:
 
     lines += [
         "",
-        "# HELP health_aggregator_poll_total Total number of full poll cycles completed",
+        "# HELP health_aggregator_poll_total Total number of poll ticks that probed at least one target",
         "# TYPE health_aggregator_poll_total counter",
         f"health_aggregator_poll_total {_poll_count}",
     ]

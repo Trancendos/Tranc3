@@ -132,8 +132,14 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
 fi
 
 # ── Step 7: Post-rollback verification ────────────────────────────────────────
+# This script runs `docker compose` directly on the host, not inside a
+# container on tranc3-net — post_deploy_verify.py's default per-service
+# Docker-DNS probing wouldn't resolve from here, so pass the host's
+# published ports explicitly (docker-compose.production.yml publishes every
+# worker port to the host — see the "Port source of truth" note in
+# CLAUDE.md).
 log "Running post-rollback verification (tier=$VERIFY_TIER)..."
-VERIFY_CMD="python3 scripts/post_deploy_verify.py --tier $VERIFY_TIER --retries 3"
+VERIFY_CMD="python3 scripts/post_deploy_verify.py --base http://127.0.0.1 --tier $VERIFY_TIER --retries 3"
 
 if [[ "$DRY_RUN" -eq 0 ]]; then
     if $VERIFY_CMD 2>&1 | tee -a "$ROLLBACK_LOG"; then
