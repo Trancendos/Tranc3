@@ -1,0 +1,63 @@
+# .github/workflows/publish-matrix-site.yml
+# Publish a browsable copy of Trancendos_Master_Service_Matrix.xlsx to
+# GitHub Pages.
+#
+# Why GitHub Actions (not Forgejo): GitHub Pages is a GitHub-native feature —
+# same deliberate, narrow exception to the Forgejo-first CI convention as
+# publish-wiki.yml.
+#
+# Zero-cost: GitHub Pages + Actions are both free for public repos. Runs only
+# when the workbook or this workflow changes on main, plus manual dispatch.
+
+name: Publish Matrix Site
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx"
+      - "scripts/render_matrix_html.py"
+      - ".github/workflows/publish-matrix-site.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Render matrix to static HTML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install openpyxl
+        run: pip install --quiet openpyxl==3.1.5
+
+      - name: Render site
+        run: python3 scripts/render_matrix_html.py --out site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

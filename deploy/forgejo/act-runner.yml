@@ -2,9 +2,10 @@
 # Configuration for the Forgejo act-runner (The Workshop CI/CD executor).
 #
 # Mounted at /data/act-runner.yml by docker-compose.yml; only actually read
-# because that same file sets FORGEJO_RUNNER_CONFIG=/data/act-runner.yml —
-# without that env var the runner's entrypoint ignores this file entirely
-# and falls back to its own generated default config.
+# because that same file overrides the container's command to
+# `daemon --config /data/act-runner.yml` — without that override the
+# runner's entrypoint ignores this file entirely and falls back to its own
+# generated default config.
 #
 # Reference: https://forgejo.org/docs/latest/admin/runner-installation/
 
@@ -12,13 +13,18 @@ log:
   level: info
 
 runner:
-  # Runner labels exposed to Forgejo — jobs use `runs-on: self-hosted` or these
+  # Runner labels exposed to Forgejo — jobs use `runs-on: self-hosted` or
+  # these. Deliberately no `:host` suffix (that mode runs jobs in-process
+  # inside this runner container, where `container.network` below has no
+  # effect — there's no per-job container for it to configure). Plain
+  # labels mean jobs run in standard container mode instead, each in its
+  # own ephemeral container that `container.network` does apply to.
   labels:
-    - "self-hosted:host"
-    - "linux:host"
-    - "x64:host"
-    - "python3.11:host"
-    - "node20:host"
+    - "self-hosted"
+    - "linux"
+    - "x64"
+    - "python3.11"
+    - "node20"
 
   # Fetch interval for new jobs
   fetch_interval: 2s

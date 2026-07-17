@@ -1340,12 +1340,12 @@ checks = [
         # comparison would read PASS even if Security's rows didn't
         # correspond to the same components as Services' rows.
         "Every component has a Security row",
-        '=SUMPRODUCT((Services!B2:B100<>"")*ISNA(MATCH(Services!B2:B100,Security!A2:A100,0)))',
+        '=SUMPRODUCT((Services!C2:C100<>"")*ISNA(MATCH(Services!C2:C100,Security!A2:A100,0)))',
         0,
     ),
     (
         "Every component has a Deployment row",
-        '=SUMPRODUCT((Services!B2:B100<>"")*ISNA(MATCH(Services!B2:B100,Deployment!A2:A100,0)))',
+        '=SUMPRODUCT((Services!C2:C100<>"")*ISNA(MATCH(Services!C2:C100,Deployment!A2:A100,0)))',
         0,
     ),
     (

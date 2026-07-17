@@ -35,8 +35,11 @@ LOGS.mkdir(exist_ok=True)
 ALL_ENTITIES: list[dict] = [
     # ── Core / always-on ────────────────────────────────────────────────────
     {"name": "tranc3-backend", "port": 8000, "tier": "core", "path": "/health"},
-    # nanoservices (8001) is mounted on tranc3-backend, not its own compose
-    # service — no separate name to probe, entry removed.
+    # Port 8001 is the real tranc3-ai compose service (The Spark), not
+    # "nanoservices" — that name was simply wrong, not a stand-in for a
+    # non-existent service; nanoservices genuinely has no separate compose
+    # entry (mounted on tranc3-backend per CLAUDE.md) and isn't probed here.
+    {"name": "tranc3-ai", "port": 8001, "tier": "P0", "path": "/health"},
     # ── P0 ──────────────────────────────────────────────────────────────────
     {"name": "infinity-ws", "port": 8004, "tier": "P0", "path": "/health"},
     {"name": "infinity-auth", "port": 8005, "tier": "P0", "path": "/health"},

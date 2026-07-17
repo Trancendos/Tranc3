@@ -182,16 +182,12 @@ fi
 ok "Runner registration token obtained"
 
 # ── Step 9: Start act-runner ──────────────────────────────────────────────────
-# act-runner joins tranc3-net as an `external: true` network (see
-# docker-compose.yml) so CI jobs can reach the docker-compose.production.yml
-# fleet by service name. That network is normally created by bringing up the
-# production stack first; create it here too so a Workshop-only bootstrap
-# (production stack not yet deployed) doesn't fail with "network not found".
-log "Ensuring tranc3-net exists…"
-docker network inspect tranc3-net >/dev/null 2>&1 \
-  || docker network create --driver bridge --subnet 172.28.0.0/16 tranc3-net
-ok "tranc3-net ready"
-
+# act-runner joins tranc3-net (docker-compose.yml declares it by the same
+# explicit `name: tranc3-net` as docker-compose.production.yml, not
+# `external: true`) so CI jobs can reach the production fleet by service
+# name. `docker compose up` below creates that network itself on a
+# Workshop-only bootstrap (production stack not yet deployed) — no manual
+# pre-creation needed, and none is attempted here.
 log "Starting act-runner…"
 export RUNNER_REGISTRATION_TOKEN
 docker compose -f "$COMPOSE_FILE" up -d act-runner

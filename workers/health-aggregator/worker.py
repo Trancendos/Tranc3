@@ -55,9 +55,11 @@ logger = logging.getLogger(WORKER_NAME)
 SERVICE_REGISTRY: List[Dict[str, Any]] = [
     # Core backend
     {"name": "tranc3-backend", "port": 8000},
-    # nanoservices (8001) is not its own docker-compose.production.yml
-    # service — CLAUDE.md documents it as an internal proxy mounted on
-    # tranc3-backend — so it has no separate Docker DNS name to poll.
+    # Port 8001 is the real tranc3-ai compose service (The Spark), not
+    # "nanoservices" — that name was simply wrong. nanoservices genuinely
+    # has no separate compose entry (mounted on tranc3-backend per
+    # CLAUDE.md) and isn't polled here.
+    {"name": "tranc3-ai", "port": 8001},
     # P0 — critical
     {"name": "infinity-ws", "port": 8004},
     {"name": "infinity-auth", "port": 8005},
@@ -316,31 +318,37 @@ def _dynamic_poll_targets() -> List[Dict[str, Any]]:
     return targets
 
 
-# Last-polled wall-clock time per dynamic target, so a registration's
-# interval_seconds is actually honored instead of every dynamic target
-# riding the fixed POLL_INTERVAL tick regardless of what was registered.
-_dynamic_last_polled: Dict[str, float] = {}
+# Last-polled monotonic time per target (static and dynamic), so a
+# registration's interval_seconds is actually honored instead of every
+# target riding the fixed POLL_INTERVAL tick regardless of what was
+# registered. monotonic(), not time() — a backwards wall-clock adjustment
+# (NTP correction, manual change) must never make polling appear "not due
+# yet" for an extended stretch.
+_last_polled: Dict[str, float] = {}
+
+# _poll_loop's actual tick granularity. A target's interval_seconds is only
+# ever honored to within this resolution — e.g. registering an interval
+# shorter than TICK_INTERVAL still only polls at most every TICK_INTERVAL.
+TICK_INTERVAL = 5
 
 
 async def _poll_all() -> None:
-    """Poll all registered (static + dynamically registered) services once and update _latest."""
+    """Poll every registered target whose interval_seconds has elapsed and update _latest."""
     global _poll_count
-    dynamic_names = {svc["name"] for svc in _dynamic_poll_targets()}
-    now = time.time()
+    now = time.monotonic()
     targets = [
         svc
         for svc in _all_targets()
-        if svc["name"] not in dynamic_names
-        or now - _dynamic_last_polled.get(svc["name"], 0)
-        >= svc.get("interval_seconds", POLL_INTERVAL)
+        if now - _last_polled.get(svc["name"], 0) >= svc.get("interval_seconds", POLL_INTERVAL)
     ]
+    if not targets:
+        return
     results = await asyncio.gather(*[_check_one(svc) for svc in targets], return_exceptions=True)
     for svc, res in zip(targets, results, strict=False):
         if isinstance(res, Exception):
             res = {"name": svc["name"], "port": svc["port"], "status": "down", "error": str(res)}
         _latest[svc["name"]] = res
-        if svc["name"] in dynamic_names:
-            _dynamic_last_polled[svc["name"]] = now
+        _last_polled[svc["name"]] = now
         try:
             _persist_check(res)
         except Exception:  # noqa: BLE001 — persist errors must not abort polling
@@ -349,10 +357,10 @@ async def _poll_all() -> None:
 
 
 async def _poll_loop() -> None:
-    """Background task — poll on startup, then every POLL_INTERVAL seconds."""
+    """Background task — poll due targets every TICK_INTERVAL seconds."""
     await _poll_all()
     while True:
-        await asyncio.sleep(POLL_INTERVAL)
+        await asyncio.sleep(TICK_INTERVAL)
         await _poll_all()
 
 
@@ -794,7 +802,7 @@ async def metrics() -> str:
 
     lines += [
         "",
-        "# HELP health_aggregator_poll_total Total number of full poll cycles completed",
+        "# HELP health_aggregator_poll_total Total number of poll ticks that probed at least one target",
         "# TYPE health_aggregator_poll_total counter",
         f"health_aggregator_poll_total {_poll_count}",
     ]

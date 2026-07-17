@@ -69,19 +69,20 @@ services:
     depends_on:
       forgejo:
         condition: service_healthy
+    # The base image's entrypoint handles registration (using the
+    # FORGEJO_RUNNER_* env vars below) then execs its CMD — overriding CMD
+    # here to explicitly pass --config still runs through that same
+    # entrypoint, it doesn't bypass registration. This is what actually
+    # makes the runner read act-runner.yml; an env var alone does not
+    # select it, and without it the runner falls back to its own generated
+    # default config, silently ignoring container.network below.
+    command: ["daemon", "--config", "/data/act-runner.yml"]
     environment:
       # Internal URL — runner talks directly to Forgejo container, not through nginx
       - FORGEJO_INSTANCE_URL=http://forgejo:3000/the-workshop
       - FORGEJO_RUNNER_REGISTRATION_TOKEN=${RUNNER_REGISTRATION_TOKEN:-}
       - FORGEJO_RUNNER_NAME=trancendos-runner-1
       - FORGEJO_RUNNER_LABELS=self-hosted,linux,x64
-      # Without this, the mounted act-runner.yml below was never actually
-      # read by the runner's entrypoint — its container.network setting
-      # (below) is what makes CI job containers join tranc3-net, since
-      # FORGEJO_RUNNER_LABELS has no :host suffixes and jobs therefore run
-      # in ephemeral sibling containers (via the docker.sock mount), not
-      # inside this long-running act-runner container itself.
-      - FORGEJO_RUNNER_CONFIG=/data/act-runner.yml
       # Pass deploy tokens to runner environment
       - FLY_API_TOKEN=${FLY_API_TOKEN:-}
       - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN:-}
@@ -103,8 +104,18 @@ services:
 
 networks:
   default: {}
+  # Same explicit name as docker-compose.production.yml's declaration, not
+  # `external: true` — two Compose projects each declaring a network by the
+  # same literal `name:` share it correctly (whichever comes up first
+  # creates it; the other attaches). `external: true` requires the network
+  # to already exist with Compose's own management labels, which a bare
+  # `docker network create` (the previous bootstrap.sh approach) does not
+  # produce — that combination fails a subsequent `docker compose up` from
+  # the *other* project. This way neither compose file needs the other to
+  # have run first.
   tranc3-net:
-    external: true
+    name: tranc3-net
+    driver: bridge
 
 volumes:
   forgejo-data:
