@@ -2,8 +2,8 @@
 
 **Standard:** DEF STAN 00-700 (adapted for civilian public platform)  
 **Area Code:** IA  
-**Status Summary:** 9 COMPLIANT, 1 PARTIAL  
-**Score:** ~85%
+**Status Summary:** 8 COMPLIANT, 2 PARTIAL  
+**Score:** ~81.8%
 
 ## Purpose
 

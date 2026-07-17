@@ -222,6 +222,23 @@ requirements:
     reviewer: "Trancendos"
     notes: "WAV-003 resolved. All 52 SQLite workers use encrypted_sqlite.connect(). High-sensitivity workers apply field-level AES-GCM on PII and credential columns."
 
+  - id: REQ-IA-011
+    standard: "DEF STAN 00-700"
+    title: "Email/Domain Authentication (Anti-Spoofing)"
+    description: "DNS-based sender authentication (SPF, DKIM, DMARC) must be in place for any domain able to send mail on the platform's behalf, so receivers can distinguish legitimate mail from spoofed/phishing mail impersonating the domain."
+    status: PARTIAL
+    evidence:
+      - type: config
+        path: deploy/terraform/oci-citadel-dns.tf
+        description: "cloudflare_record.spf (v=spf1 -all), cloudflare_record.dmarc (p=none, monitor-only)"
+      - type: config
+        path: docs/architecture/ea-workbook/12b_dns_records.csv
+        description: "DNSR-005 (SPF), DNSR-006 (DMARC)"
+    verification_method: inspection
+    last_reviewed: "2026-07-17"
+    reviewer: "Trancendos"
+    notes: "SPF hard-fails every sender (correct — no relay configured yet, workers/email-service/worker.py's SMTP_HOST is unset by default). DMARC is monitor-only (p=none). No DKIM record — needs a real sending service's selector/key pair first. Update all three together once SMTP_HOST is pointed at a real relay."
+
   # ─────────────────────────────────────────────────────────────────────────────
   # SAFETY — SOFTWARE (DEF STAN 00-055 inspired)
   # ─────────────────────────────────────────────────────────────────────────────
