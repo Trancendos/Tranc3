@@ -29,6 +29,14 @@ Improvement Roadmap of gaps found while building it. Regenerate it with
 `python scripts/build_master_service_matrix.py` after updating the facts baked into that
 script — it is not hand-edited directly.
 
+`scripts/check_master_matrix_freshness.py` closes the loop so that regeneration step
+isn't just a manual convention: it re-runs the generator against current repo state and
+diffs every sheet's cell values (ignoring openpyxl's save-time file metadata) against
+the committed workbook, failing CI if they've drifted apart. It runs as part of
+`.forgejo/workflows/ci.yml`'s `smoke` job on every push/PR, so a PR that changes
+`docker-compose.production.yml`, `workers/*`, or the generator script without
+re-running the generator gets caught instead of silently shipping a stale workbook.
+
 ## Why this exists
 
 `PLATFORM_ENTITIES.md` and `docs/architecture/master-schema.md` answer *who owns what*
