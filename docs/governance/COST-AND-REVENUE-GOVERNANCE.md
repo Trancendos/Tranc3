@@ -128,5 +128,25 @@ verify-before-document convention (`docs/architecture/ea-workbook/README.md`).
   zero-cost architecture. It predates the self-hosted pivot (referenced only in `wiki-content/
   Historical-*` docs). Recommend removal; not deleted in this pass pending confirmation it isn't
   wanted for some future multi-cloud evaluation path.
-- The full ~90-service Arcadian Exchange review (§5) has not been run — this document establishes
-  the process; running it against every service is separate, ongoing work.
+- `workers/vrar3d`'s optional `SKETCHFAB_API_KEY` integration is not listed in
+  `config/zero_cost/providers.yaml` or `ZeroCostEnforcer.BLOCKED_SERVICES` — same class of gap as
+  the infinity-ai item above, found later in the same audit pass (`18_cost_and_revenue_review.csv`
+  REV-VRAR3D-001). Inert by default (feature only activates if the key is configured), but needs the
+  same Dorris review before it's ever turned on.
+- The Void has three separate worker implementations discovered across this audit
+  (`docs/architecture/ea-workbook/02_service_inventory.csv` SRV-VOID-001/SRV-INFVOID-001):
+  `workers/vault-service/` (deprecated, still deployed, broken port), `workers/the-void/`
+  (code-only, never deployed), and `workers/infinity-void/` (fully working, self-contained,
+  correctly deployed at port 8002 — appears to be the actual functioning self-hosted replacement).
+  Consolidating onto one is a naming/architecture decision for Prometheus/Cornelius, not something
+  this cost/revenue review resolves on its own.
+- The full ~90-service Arcadian Exchange review (§5): as of this update, the EA/CMDB workbook
+  (`docs/architecture/ea-workbook/18_cost_and_revenue_review.csv`) has verify-before-document
+  reviews for 78 real services, including the previously-deferred billing-path services
+  (orders-service, payments-service, files-service, identity-service, artifactory-service). Notably,
+  payments-service (the standalone worker) was found to have no Stripe integration at all — the real
+  Stripe billing path is `src/monetisation/billing.py`, a separate subsystem mounted on
+  tranc3-backend, not the worker this row's process originally assumed. A handful of infrastructure
+  sidecars in `docker-compose.production.yml` (Traefik, Prometheus, Grafana, MISP, Wazuh, and
+  similar third-party self-hosted stacks) remain outside this workbook's scope and would need their
+  own review pass if this process is extended to them.
