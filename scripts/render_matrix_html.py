@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import re
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -76,11 +77,26 @@ PAGE_TEMPLATE = """<!doctype html>
 """
 
 
-# Header fill colour set by build_master_service_matrix.py's style_header()
-# (HEADER_FILL = "1F2937"). Sheets don't all put their header row at row 1
-# (some have a title row, or a summary block, before it), so detecting the
-# header by its actual styling is more robust than assuming a fixed row.
-_HEADER_FILL_RGB = "001F2937"
+_BUILD_SCRIPT = ROOT / "scripts" / "build_master_service_matrix.py"
+
+
+def _load_header_fill_rgb() -> str:
+    """Read HEADER_FILL's hex colour straight from build_master_service_matrix.py's
+    source, rather than hardcoding a copy of it here. That script executes its
+    workbook-building code at module level (no __main__ guard), so it can't be
+    imported without re-running the whole build — parsing the source text is the
+    cheap way to stay in sync if HEADER_FILL's value ever changes there."""
+    src = _BUILD_SCRIPT.read_text(encoding="utf-8")
+    m = re.search(r'HEADER_FILL = PatternFill\(start_color="([0-9A-Fa-f]{6})"', src)
+    if not m:
+        raise RuntimeError(f"Could not find HEADER_FILL definition in {_BUILD_SCRIPT}")
+    return "00" + m.group(1).upper()
+
+
+# Sheets don't all put their header row at row 1 (some have a title row, or a
+# summary block, before it), so detecting the header by its actual styling is
+# more robust than assuming a fixed row.
+_HEADER_FILL_RGB = _load_header_fill_rgb()
 
 
 def _is_header_row(row) -> bool:

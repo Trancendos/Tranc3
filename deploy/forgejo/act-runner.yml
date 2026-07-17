@@ -16,18 +16,32 @@ runner:
   # Runner labels exposed to Forgejo — jobs use `runs-on: self-hosted` or
   # these. Every label needs an executor suffix (Forgejo requires either
   # `:host` or `:docker://<image>`) — a bare label is not valid and leaves
-  # `runs-on: self-hosted` jobs unable to run at all. `:host` runs jobs
-  # in-process inside this runner container, where `container.network`
-  # below has no effect (no per-job container exists for it to configure).
-  # `:docker://trancendos/act-runner:latest` runs each job in its own
-  # ephemeral container built from runner.Dockerfile (flyctl, wrangler,
-  # Python, Node preinstalled) — container.network does apply to those.
+  # `runs-on: self-hosted` jobs unable to run at all.
+  #
+  # `:host` (used here), not `:docker://<image>`: several real workflows in
+  # .forgejo/workflows/ (deploy-self-hosted.yml, frontend-build.yml) run
+  # `docker build`/`docker run` as job steps. `:host` executes jobs
+  # in-process inside this runner container, which already has
+  # /var/run/docker.sock bind-mounted (see docker-compose.yml's act-runner
+  # service) — so those steps can reach the host's Docker daemon directly.
+  # `:docker://<image>` would instead spawn each job in its own ephemeral
+  # sibling container with no socket of its own (container.docker_host and
+  # container.valid_volumes below are both left empty/unset), so any
+  # Docker-based step would fail to reach a daemon at all. It would also
+  # make job availability depend on trancendos/act-runner:latest existing —
+  # bootstrap.sh falls back to the upstream runner image without rebuilding
+  # or relabeling anything if that custom image fails to build, silently
+  # leaving these labels pointing at an image that was never produced.
+  # `:host` avoids both problems: it needs no per-job image at all, and the
+  # runner container's own network attachments (`default` + `tranc3-net` in
+  # docker-compose.yml) already cover in-process jobs, so `container.network`
+  # below is inert here — it only takes effect for `:docker://` labels.
   labels:
-    - "self-hosted:docker://trancendos/act-runner:latest"
-    - "linux:docker://trancendos/act-runner:latest"
-    - "x64:docker://trancendos/act-runner:latest"
-    - "python3.11:docker://trancendos/act-runner:latest"
-    - "node20:docker://trancendos/act-runner:latest"
+    - "self-hosted:host"
+    - "linux:host"
+    - "x64:host"
+    - "python3.11:host"
+    - "node20:host"
 
   # Fetch interval for new jobs
   fetch_interval: 2s
@@ -45,15 +59,16 @@ cache:
   external_server: ""
 
 container:
-  # Network for the ephemeral job containers this runner spawns via its
-  # docker.sock mount. Must be tranc3-net (external network defined in
-  # docker-compose.production.yml, created ahead of time — see
-  # bootstrap.sh's "Ensuring tranc3-net exists" step) so jobs like
-  # deploy-self-hosted.yml's verify/register steps can reach the production
-  # fleet by service name (e.g. http://workflow-engine-service:8034).
-  # Attaching only the long-running act-runner *service* to tranc3-net (in
-  # docker-compose.yml) does not cover this — each job runs in its own
-  # separate sibling container, not inside act-runner's own namespace.
+  # Only takes effect for `:docker://<image>` labels, which spawn each job in
+  # its own ephemeral sibling container. All labels above use `:host` (see
+  # the comment on runner.labels), so jobs run in-process inside the
+  # act-runner container itself, which docker-compose.yml already attaches
+  # to both `default` and `tranc3-net` — that attachment is what actually
+  # gives host-mode jobs their tranc3-net reachability (e.g.
+  # deploy-self-hosted.yml's verify/register steps reaching
+  # http://workflow-engine-service:8034), not this setting. Left set to
+  # tranc3-net anyway so it's correct by default if a label is ever switched
+  # to `:docker://` in the future.
   network: tranc3-net
   privileged: false
   valid_volumes: []
