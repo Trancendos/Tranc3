@@ -50,7 +50,7 @@ from sse_starlette.sse import EventSourceResponse
 # ---------------------------------------------------------------------------
 
 SERVICE_NAME = "vault-service"
-PORT = 8086
+PORT = int(os.environ.get("PORT", "8038"))
 
 # ---------------------------------------------------------------------------
 
@@ -800,4 +800,4 @@ app.include_router(_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8030)  # nosec B104 — containerised service
+    uvicorn.run(app, host="0.0.0.0", port=PORT)  # nosec B104 — containerised service
