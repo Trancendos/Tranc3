@@ -55,6 +55,13 @@ or reassign AIs to a role without a code change; every change is recorded in an 
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
 - "tAimra" = location name; "tAImra" = its Lead AI name (different capitalisation — both correct)
+- "The Nexus" — self-referential by design, not a documentation error: the location and its Lead
+  AI share the same common name because The Nexus is unique among the 43 entities in being both a
+  location and an entity in its own right (it doesn't have a separate humanoid-styled AI persona
+  the way most other locations do). `PLATFORM_ENTITIES.md`'s AID-NXS-01 gives it a formal/full
+  designation, **Nexus-Prime**, for entity-ID contexts — use "The Nexus" in this table and casual
+  references, "Nexus-Prime" where a distinct AID is required (matching how "The Guardian" below
+  gets a full title only in entity contexts).
 - "The Guardian (Anchor: Orb of Orisis)" — full title required in entity contexts
 - `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
 - "Section 7" — internal placeholder name, NOT in the canonical entity hierarchy; closest entity is **The Dutchy** (Intelligence & Market Analysis, Lead AI: Predictive lore)
@@ -420,7 +427,15 @@ EMBED_MODEL              # all-MiniLM-L6-v2 (sentence-transformers)
 
 ## CI/CD
 
-**All CI/CD runs through Forgejo (The Workshop) — NO GitHub Actions.**
+**Forgejo (The Workshop) is the primary CI/CD system for deployment and heavier pipelines.**
+`.github/workflows/` is not dead code, though — it currently has 12 real, active files, several of
+which gate this repo's PRs directly (`ci.yml`'s Ruff/lint checks, `codeql.yml`, `test.yml`,
+`trivy.yml`, `codecov.yml`, `python.yml`, `rust.yml`, `go.yml`). Two more are deliberate, narrow
+exceptions for GitHub-native features with no Forgejo equivalent — `publish-wiki.yml` (GitHub
+Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
+`docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
+deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run
+(PR status checks, CodeQL, Pages/Wiki) rather than being phased out.
 
 Workflow files in `.forgejo/workflows/`:
 - `deploy-fly.yml` — tranc3-backend + tranc3-bots to Fly.io

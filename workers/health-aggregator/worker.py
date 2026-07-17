@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + httpx — no paid external dependencies.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import os
 import sqlite3
@@ -25,7 +26,7 @@ import httpx
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Config
@@ -390,7 +391,11 @@ class PlatformStatus(BaseModel):
 class ServiceRegisterIn(BaseModel):
     name: str
     url: str
-    interval_seconds: int = 30
+    # Floor at TICK_INTERVAL: a lower value can't actually be honored (the
+    # poll loop only checks due-ness every TICK_INTERVAL seconds) and a
+    # non-positive value would make the target due on every single tick —
+    # accidental or intentional high-frequency polling of an internal URL.
+    interval_seconds: int = Field(default=30, ge=TICK_INTERVAL)
 
 
 class HistoryPoint(BaseModel):
@@ -523,13 +528,22 @@ async def register_service(
     hostname = (parsed.hostname or "").lower()
     # Baseline SSRF hardening on top of the internal-secret gate above:
     # reject loopback and link-local targets (the latter covers the
-    # 169.254.169.254 cloud-metadata endpoint). This checks the literal
-    # hostname, not the DNS-resolved IP — a caller could still register a
-    # name that resolves to a blocked address later (DNS rebinding). Full
-    # protection against that needs resolving and pinning the IP at both
-    # registration and poll time; not done here since this endpoint is
-    # already gated by _require_internal_strict, not internet-reachable.
-    if hostname in ("localhost", "127.0.0.1", "::1") or hostname.startswith("169.254."):
+    # 169.254.169.254 cloud-metadata endpoint). ipaddress classifies any
+    # literal loopback/link-local address, not just the common spellings
+    # (127.0.0.2 and fe80::1 are blocked exactly like 127.0.0.1 and ::1).
+    # This still only checks the literal hostname, not a DNS-resolved IP —
+    # a caller could register a name that resolves to a blocked address
+    # later (DNS rebinding). Full protection against that needs resolving
+    # and pinning the IP at both registration and poll time; not done here
+    # since this endpoint is already gated by _require_internal_strict,
+    # not internet-reachable.
+    is_blocked = hostname == "localhost"
+    try:
+        addr = ipaddress.ip_address(hostname)
+        is_blocked = is_blocked or addr.is_loopback or addr.is_link_local
+    except ValueError:
+        pass  # not a literal IP (e.g. a compose service name) — fine
+    if is_blocked:
         raise HTTPException(
             status_code=400, detail="url must not target a loopback or link-local host"
         )

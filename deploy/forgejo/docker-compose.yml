@@ -112,10 +112,18 @@ networks:
   # `docker network create` (the previous bootstrap.sh approach) does not
   # produce — that combination fails a subsequent `docker compose up` from
   # the *other* project. This way neither compose file needs the other to
-  # have run first.
+  # have run first. The ipam block must match docker-compose.production.yml's
+  # tranc3-net declaration exactly — whichever project's `up` runs first is
+  # the one that actually creates the network, and Compose won't resize an
+  # already-existing network to match a second declaration, so a mismatch
+  # here would silently leave production's subnet unapplied if Forgejo
+  # happens to start first.
   tranc3-net:
     name: tranc3-net
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
   forgejo-data:

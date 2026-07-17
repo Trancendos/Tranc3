@@ -76,11 +76,30 @@ PAGE_TEMPLATE = """<!doctype html>
 """
 
 
+# Header fill colour set by build_master_service_matrix.py's style_header()
+# (HEADER_FILL = "1F2937"). Sheets don't all put their header row at row 1
+# (some have a title row, or a summary block, before it), so detecting the
+# header by its actual styling is more robust than assuming a fixed row.
+_HEADER_FILL_RGB = "001F2937"
+
+
+def _is_header_row(row) -> bool:
+    cells = [c for c in row if c.value is not None]
+    if not cells:
+        return False
+    return all(
+        c.fill and c.fill.start_color and c.fill.start_color.rgb == _HEADER_FILL_RGB for c in cells
+    )
+
+
 def _sheet_html(ws) -> str:
     rows_html = []
     for row in ws.iter_rows():
+        tag = "th" if _is_header_row(row) else "td"
+        attrs = ' scope="col"' if tag == "th" else ""
         cells = "".join(
-            f"<td>{html.escape(str(c.value)) if c.value is not None else ''}</td>" for c in row
+            f"<{tag}{attrs}>{html.escape(str(c.value)) if c.value is not None else ''}</{tag}>"
+            for c in row
         )
         rows_html.append(f"<tr>{cells}</tr>")
     return f"<table>{''.join(rows_html)}</table>"

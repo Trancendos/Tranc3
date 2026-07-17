@@ -14,17 +14,20 @@ log:
 
 runner:
   # Runner labels exposed to Forgejo — jobs use `runs-on: self-hosted` or
-  # these. Deliberately no `:host` suffix (that mode runs jobs in-process
-  # inside this runner container, where `container.network` below has no
-  # effect — there's no per-job container for it to configure). Plain
-  # labels mean jobs run in standard container mode instead, each in its
-  # own ephemeral container that `container.network` does apply to.
+  # these. Every label needs an executor suffix (Forgejo requires either
+  # `:host` or `:docker://<image>`) — a bare label is not valid and leaves
+  # `runs-on: self-hosted` jobs unable to run at all. `:host` runs jobs
+  # in-process inside this runner container, where `container.network`
+  # below has no effect (no per-job container exists for it to configure).
+  # `:docker://trancendos/act-runner:latest` runs each job in its own
+  # ephemeral container built from runner.Dockerfile (flyctl, wrangler,
+  # Python, Node preinstalled) — container.network does apply to those.
   labels:
-    - "self-hosted"
-    - "linux"
-    - "x64"
-    - "python3.11"
-    - "node20"
+    - "self-hosted:docker://trancendos/act-runner:latest"
+    - "linux:docker://trancendos/act-runner:latest"
+    - "x64:docker://trancendos/act-runner:latest"
+    - "python3.11:docker://trancendos/act-runner:latest"
+    - "node20:docker://trancendos/act-runner:latest"
 
   # Fetch interval for new jobs
   fetch_interval: 2s

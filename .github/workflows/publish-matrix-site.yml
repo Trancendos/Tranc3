@@ -4,7 +4,8 @@
 #
 # Why GitHub Actions (not Forgejo): GitHub Pages is a GitHub-native feature —
 # same deliberate, narrow exception to the Forgejo-first CI convention as
-# publish-wiki.yml.
+# publish-wiki.yml. See CLAUDE.md's CI/CD section for the full list of real,
+# active .github/workflows/ files and why this one's in scope.
 #
 # Zero-cost: GitHub Pages + Actions are both free for public repos. Runs only
 # when the workbook or this workflow changes on main, plus manual dispatch.
