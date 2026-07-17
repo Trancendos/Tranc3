@@ -17,6 +17,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import APIRouter, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,7 +68,21 @@ def _encrypt(plaintext: str, master: str) -> tuple[bytes, bytes, bytes]:
 def _decrypt(ct: bytes, iv: bytes, salt: bytes, master: str) -> str:
     """Decrypt and return plaintext."""
     key = _derive_key(master, salt)
-    return AESGCM(key).decrypt(iv, ct, None).decode()
+    try:
+        return AESGCM(key).decrypt(iv, ct, None).decode()
+    except InvalidTag:
+        # Records written by the old cryptography-unavailable fallback are
+        # XOR'd with a b"\xde\xad" sentinel, not AES-GCM — feeding them to
+        # AESGCM.decrypt() always raised InvalidTag here, silently making any
+        # secret stored before this fix permanently unretrievable. Detect
+        # that legacy format by the sentinel and decode it the same way the
+        # old fallback did, so pre-existing records stay readable. New writes
+        # are always AES-GCM (see _encrypt above) — this is a read-only
+        # compatibility path, not a re-introduction of XOR for new secrets.
+        if ct[-2:] != b"\xde\xad":
+            raise
+        raw = ct[:-2]
+        return bytes(b ^ key[i % 32] for i, b in enumerate(raw)).decode()
 
 
 # ---------------------------------------------------------------------------

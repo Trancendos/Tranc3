@@ -149,12 +149,23 @@ jobs:
           git fetch origin main --quiet
           latest="$(git rev-parse origin/main)"
           current="${{ github.sha }}"
+          stale=false
           if [ "${{ github.event_name }}" = "push" ] && [ "$latest" != "$current" ]; then
-            echo "stale=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::This run's commit ($current) is behind origin/main's current HEAD ($latest) — a newer push landed while this run was queued. Skipping the Fly.io deploy steps so production isn't rolled back; the run for $latest will deploy the current code."
-          else
-            echo "stale=false" >> "$GITHUB_OUTPUT"
+            # Only defer to a newer run if one will actually exist: this
+            # workflow's own `on.push.paths` filter means a later main commit
+            # that touches none of workers/**, cloudflare/**, tranc3-bots/**,
+            # or this workflow file never triggers its own deploy-self-hosted
+            # run — e.g. a docs-only commit. Treating THIS run as stale in
+            # that case would skip the only deployment that was ever going to
+            # ship the current changes. Only mark stale if some commit between
+            # here and origin/main's HEAD actually touches a triggering path.
+            changed="$(git diff --name-only "$current" "$latest")"
+            if echo "$changed" | grep -qE '^(workers/|cloudflare/|tranc3-bots/|\.forgejo/workflows/deploy-self-hosted\.yml)'; then
+              stale=true
+              echo "::warning::This run's commit ($current) is behind origin/main's current HEAD ($latest), and a later commit touches deployable paths — a newer run will handle this deploy. Skipping the Fly.io deploy steps so production isn't rolled back."
+            fi
           fi
+          echo "stale=$stale" >> "$GITHUB_OUTPUT"
 
       - name: Install flyctl
         if: steps.staleness.outputs.stale != 'true'
@@ -184,6 +195,7 @@ jobs:
         continue-on-error: true
 
       - name: Health check
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           sleep 15
           STATUS=$(curl -sf https://trancendos-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
@@ -191,6 +203,7 @@ jobs:
           [ "$STATUS" = "200" ] || echo "Warning: Backend health check returned $STATUS"
 
       - name: Notify The Citadel
+        if: steps.staleness.outputs.stale != 'true'
         run: |
           BACKEND_URL="https://trancendos-backend.fly.dev"
           curl -sf -X POST "$BACKEND_URL/citadel/webhooks/forgejo" \
