@@ -51,7 +51,7 @@ CORE_SERVICES = [
     "notifications",
     "infinity-ai",
     "infinity-admin",
-    "swarm-coordinator",
+    "swarm-coordinator-service",
     "prometheus",
     "grafana",
 ]

@@ -20,7 +20,7 @@ WORKERS = [
     ("notifications", "http://localhost:8008/health"),
     ("infinity-ai", "http://localhost:8009/health"),
     ("infinity-admin", "http://localhost:8044/health"),
-    ("swarm-coordinator", "http://localhost:8053/health"),
+    ("swarm-coordinator-service", "http://localhost:8109/health"),
 ]
 
 

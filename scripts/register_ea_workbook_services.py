@@ -93,8 +93,14 @@ def main() -> int:
     for row in rows:
         service_id = row.get("ServiceID", "?")
         notes = row.get("Notes", "")
-        health_path = row.get("HealthCheckPath", "/health")
-        interval = row.get("HealthCheckInterval", "30")
+        # csv.DictReader yields "" for an empty cell, not None, so a plain
+        # .get(..., default) doesn't fall back — an empty HealthCheckInterval
+        # would otherwise crash int() below, and a path missing its leading
+        # slash would silently build a malformed URL.
+        health_path = row.get("HealthCheckPath", "").strip() or "/health"
+        if not health_path.startswith("/"):
+            health_path = f"/{health_path}"
+        interval = row.get("HealthCheckInterval", "").strip() or "30"
 
         m = PORT_RE.search(notes)
         if not m:

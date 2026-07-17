@@ -274,9 +274,15 @@ def _all_targets() -> List[Dict[str, Any]]:
 
     Shared by /status, /predict, /metrics, and _poll_all so a service
     registered via POST /services shows up everywhere a static entry would,
-    not just in the internal poll loop.
+    not just in the internal poll loop. A dynamic registration takes
+    precedence over a static entry of the same name — duplicate targets
+    would double-poll a service and break /metrics (Prometheus rejects a
+    payload with duplicate service/port labelsets).
     """
-    return SERVICE_REGISTRY + _dynamic_poll_targets()
+    dynamic = _dynamic_poll_targets()
+    dynamic_names = {svc["name"] for svc in dynamic}
+    static = [svc for svc in SERVICE_REGISTRY if svc["name"] not in dynamic_names]
+    return static + dynamic
 
 
 def _dynamic_poll_targets() -> List[Dict[str, Any]]:
