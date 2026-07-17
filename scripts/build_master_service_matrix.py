@@ -9,7 +9,6 @@ the actual Tranc3 codebase during this session's review of PR #221 — no
 placeholder/example data adopted from the template.
 """
 import datetime
-import json
 import os
 import re
 
