@@ -147,3 +147,18 @@ All public-facing services, internal APIs, and infrastructure components. The pl
 **Compliance Status:** PARTIAL  
 **Gap:** SQLite workers (38 services) lack at-rest encryption. See Waiver WAV-003.  
 **Verification:** Inspection
+
+---
+
+### REQ-IA-011 — Email/Domain Authentication (Anti-Spoofing)
+
+**Description:** DNS-based sender authentication (SPF, DKIM, DMARC) in place for any domain able to send mail on the platform's behalf, so receivers can distinguish legitimate mail from spoofed/phishing mail impersonating the domain.
+
+**Implementation Evidence:**
+- `deploy/terraform/oci-citadel-dns.tf` — `cloudflare_record.spf`, `cloudflare_record.dmarc`
+- `docs/architecture/ea-workbook/12b_dns_records.csv` — DNSR-005 (SPF), DNSR-006 (DMARC)
+- `workers/email-service/worker.py` — the only component capable of sending mail from `trancendos.com`; `SMTP_HOST` is an unconfigured, bring-your-own relay (empty by default → log-only mode)
+
+**Compliance Status:** PARTIAL  
+**Gap:** SPF is `v=spf1 -all` (authorizes no sender — correct given no relay is configured, but means legitimate mail can't be sent yet either) and DMARC is `p=none` (monitor-only). No DKIM record exists, since DKIM requires a selector/key pair from an actual sending service. All three need updating together once `SMTP_HOST` is pointed at a real relay: add that relay's SPF `include:`/`ip4:`, publish its DKIM selector, then tighten DMARC to `p=quarantine` then `p=reject` once aggregate reports (routed to `dmarc-reports@trancendos.com`) confirm alignment. The `dmarc-reports@` mailbox itself does not exist yet either — create it (or repoint `rua`/`ruf`) before relying on reports.  
+**Verification:** Inspection (DNS query for `trancendos.com` TXT and `_dmarc.trancendos.com` TXT)

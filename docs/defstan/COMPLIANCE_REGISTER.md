@@ -37,6 +37,7 @@
 | REQ-IA-008 | CORS Policy Enforcement | COMPLIANT | `api.py` CORSMiddleware |
 | REQ-IA-009 | Dependency Vulnerability Management | COMPLIANT | `.forgejo/workflows/dependency-audit.yml` |
 | REQ-IA-010 | Data at Rest Encryption | PARTIAL | Vault encrypted; SQLite workers not encrypted at rest |
+| REQ-IA-011 | Email/Domain Authentication (Anti-Spoofing) | PARTIAL | SPF (-all) + DMARC (p=none) published; no DKIM/real relay yet |
 
 ---
 
