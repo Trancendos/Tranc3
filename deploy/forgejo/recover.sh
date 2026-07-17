@@ -110,10 +110,20 @@ cont_running() { docker ps    --format '{{.Names}}' 2>/dev/null | grep -Fx -- "$
 # before (matches prior behavior when the pattern doesn't match, so this only
 # adds detection, it doesn't remove any existing green path).
 runner_registered() {
-  local container="$1"
+  local container="$1" logs
   cont_running "$container" || return 1
-  ! docker logs --tail 30 "$container" 2>&1 | grep -Eiq \
-    'level=fatal|unauthorized|invalid token|connection refused|failed to register|registration.*(fail|expired)'
+  # Capture logs into a variable first, then grep the string — piping
+  # `docker logs | grep -q` lets grep exit (and the pipeline's status become
+  # grep's, under `set -o pipefail`) before `docker logs` finishes draining,
+  # so a real failure line arriving after grep's early exit is never seen and
+  # a genuinely unregistered runner gets reported healthy.
+  logs="$(docker logs --tail 30 "$container" 2>&1)" || return 1
+  # "connection refused" deliberately excluded: it's what a runner logs
+  # while reconnecting after a blip, not proof it's still unregistered — a
+  # transient one in the last 30 lines shouldn't fail a runner that has
+  # since reconnected fine. The other patterns are terminal/definitive.
+  ! grep -Eiq \
+    'level=fatal|unauthorized|invalid token|failed to register|registration.*(fail|expired)' <<< "$logs"
 }
 # Match the Forgejo data volume whether it's the literal name (`forgejo-data`,
 # e.g. an external/named volume) OR a Compose project-prefixed variant
@@ -177,10 +187,17 @@ compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 # missing privileged runner otherwise fails silently (deploy jobs just
 # queue forever with no obvious error here).
 runner_deploy_ok() { [[ -z "$RUNNER_DEPLOY" ]] || runner_registered "$RUNNER_DEPLOY"; }
-if cont_running "$FORGEJO" && cont_running "$RUNNER" && runner_deploy_ok; then
+if cont_running "$FORGEJO" && runner_registered "$RUNNER" && runner_deploy_ok; then
   ok "Containers already running (${FORGEJO}, ${RUNNER}$([[ -n "$RUNNER_DEPLOY" ]] && echo ", ${RUNNER_DEPLOY}"))."
 elif [[ $CHECK_ONLY -eq 1 ]]; then
-  NEEDS_HUMAN+=("Containers down — start with: docker compose -f $COMPOSE_FILE up -d ${UP_SERVICES[*]}")
+  if cont_running "$FORGEJO" && cont_running "$RUNNER"; then
+    # Everything that `docker compose up` would affect is already running —
+    # what's actually wrong is registration, which restarting containers
+    # doesn't fix. Don't tell the operator to start an already-running stack.
+    NEEDS_HUMAN+=("Containers are running but a runner looks unregistered (see Layer 4 below) — restarting won't help; check the runner logs and Forgejo's admin/runners page.")
+  else
+    NEEDS_HUMAN+=("Containers down — start with: docker compose -f $COMPOSE_FILE up -d ${UP_SERVICES[*]}")
+  fi
 else
   # Preserve the runner's currently-deployed image so `up` can't silently revert
   # the custom flyctl/wrangler runner to the upstream fallback in ${RUNNER_IMAGE:-…}.

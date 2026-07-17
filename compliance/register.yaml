@@ -201,20 +201,29 @@ requirements:
     evidence:
       - type: code
         path: src/database/encrypted_sqlite.py
-        description: "AES-GCM field-level encryption module with HKDF-SHA256 key derivation per database — exists and is tested, but only 1 of 82 worker.py files (workers/infinity-shards-service/worker.py) actually imports/uses it"
+        description: "AES-GCM field-level encryption helpers (encrypt_field/decrypt_field/EncryptedKVStore) with per-database key derivation — exists and is tested, but no worker.py currently calls those functions; workers/infinity-shards-service/worker.py imports only connect() (WAL mode + foreign keys, no encryption) from this module"
       - type: code
         path: tests/test_encrypted_sqlite.py
         description: "25 unit tests covering encrypt/decrypt, tamper detection, persistence, raw bytes visibility — tests the module in isolation, not its adoption across workers"
       - type: code
+        path: workers/infinity-void/worker.py
+        description: "Separate, independently-implemented AES-GCM secret encryption (does not use src/database/encrypted_sqlite.py)"
+      - type: code
+        path: workers/the-void/worker.py
+        description: "Separate, independently-implemented AES-GCM secret encryption (does not use src/database/encrypted_sqlite.py)"
+      - type: code
+        path: workers/vault-service/worker.py
+        description: "AES-GCM SQLite fallback backend when OpenBao is unavailable — separate implementation, does not use src/database/encrypted_sqlite.py"
+      - type: code
         path: cloudflare/infinity-void/
-        description: "AES-GCM encrypted vault for platform secrets"
+        description: "AES-GCM encrypted vault for platform secrets (legacy Cloudflare Worker)"
       - type: code
         path: fly.toml
         description: "Fly.io 1GB encrypted volume at /app/models"
-    verification_method: automated_test
+    verification_method: inspection
     last_reviewed: "2026-07-17"
     reviewer: "Trancendos"
-    notes: "Downgraded from COMPLIANT: prior notes claimed 'all 52 SQLite workers use encrypted_sqlite.connect()' and cited workers/users-service/worker.py + workers/infinity-auth/worker.py as encrypting PII/tokens at rest — grepped both files for 'encrypt'/'encrypted_sqlite' and found zero matches; only 1 of 82 worker.py files in the repo actually imports encrypted_sqlite. The module and its test suite are real, but adoption across workers is not. Gap: most SQLite-backed workers persist data unencrypted at rest; only The Void (Cloudflare) and the Fly.io volume are confirmed encrypted."
+    notes: "Downgraded from COMPLIANT: prior notes claimed 'all 52 SQLite workers use encrypted_sqlite.connect()' and cited workers/users-service/worker.py + workers/infinity-auth/worker.py as encrypting PII/tokens at rest — grepped both files for 'encrypt'/'encrypted_sqlite' and found zero matches (the infinity-auth hit on 'cryptography.hazmat' was RSA JWT key handling, not AES-GCM). Corrected via manual inspection, not an automated test — no adoption-coverage test exists, so verification_method reflects how PARTIAL was actually established. Real self-hosted AES-GCM coverage exists but is fragmented: infinity-void, the-void, and vault-service each independently implement their own AES-GCM encryption, none via src/database/encrypted_sqlite.py. Gap: the shared field-encryption helper module is unused by any worker; most SQLite-backed workers outside the Void/Vault family persist data unencrypted at rest."
 
   - id: REQ-IA-011
     standard: "DEF STAN 00-700"

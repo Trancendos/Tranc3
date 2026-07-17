@@ -41,6 +41,19 @@ on:
       - ".forgejo/workflows/deploy-self-hosted.yml"
   workflow_dispatch:
 
+# Forgejo Actions does not support `jobs.<job_id>.concurrency` (a job-level
+# block there is rejected/ignored, not enforced) — only workflow-scoped
+# concurrency works, so this has to serialize the whole workflow, not just
+# build-workers. That's still correct here: build-workers is the only job
+# that `docker build`s real `:latest`-tagged images (see its own comment for
+# why overlapping runs would race on those tags), and the two downstream
+# jobs just `needs: build-workers` and do nothing Docker-related — queuing
+# an entire run behind another doesn't lose anything, each queued run still
+# deploys its own triggering ref's code once its turn comes.
+concurrency:
+  group: deploy-self-hosted-main
+  cancel-in-progress: false
+
 jobs:
   # ──────────────────────────────────────────────────────────────
   # Build: Package all workers into Docker images
@@ -57,12 +70,9 @@ jobs:
     # Two build-workers runs in flight at once would `docker build`/push the same
     # `:latest` tags concurrently — last-writer-wins with no ordering guarantee, so
     # a slower run finishing after a faster/newer one can silently leave an older
-    # image live. Serialize on push (not a docker-level lock) so overlapping
-    # commits to main queue instead of racing; queued runs still get the newest
-    # code since each checks out its own triggering ref.
-    concurrency:
-      group: build-workers-main
-      cancel-in-progress: false
+    # image live. Serialized via the workflow-level `concurrency:` block above
+    # (Forgejo Actions doesn't honor a job-level one here) so overlapping commits
+    # to main queue instead of racing.
     runs-on: deploy-host
     steps:
       - uses: actions/checkout@v4
