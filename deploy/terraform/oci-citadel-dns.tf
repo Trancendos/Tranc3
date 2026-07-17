@@ -153,7 +153,7 @@ resource "cloudflare_record" "dmarc" {
   content  = "v=DMARC1; p=none"
   proxied  = false
   ttl      = 300
-  comment  = "DMARC — monitor-only (p=none); add rua= once dmarc-reports@ mailbox exists — managed by Terraform"
+  comment  = "DMARC — no enforcement or reporting (p=none); add rua= once dmarc-reports@ mailbox exists — managed by Terraform"
 }
 
 # ── DNS output summary ────────────────────────────────────────

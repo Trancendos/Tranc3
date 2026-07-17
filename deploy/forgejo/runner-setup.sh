@@ -41,8 +41,8 @@ check_runner_up() {
   if [[ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]]; then
     log "  ${service} is running"
   else
-    warn "${service} did not stay running — check: docker compose -f $COMPOSE_FILE logs ${service}"
     docker compose -f "$COMPOSE_FILE" logs --tail 20 "$service" 2>&1 || true
+    die "${service} did not stay running — check the logs above"
   fi
 }
 

@@ -52,6 +52,17 @@ jobs:
     # build` on deploy-host (the socket-bearing runner) directly — the same
     # main-ref restriction the two dependent jobs below already have.
     if: github.ref == 'refs/heads/main'
+    # Every image built here is tagged `:latest` (mutable), and act-runner-deploy.yml
+    # runs deploy-host at capacity 2 so this job can execute alongside owasp-zap-dast.
+    # Two build-workers runs in flight at once would `docker build`/push the same
+    # `:latest` tags concurrently — last-writer-wins with no ordering guarantee, so
+    # a slower run finishing after a faster/newer one can silently leave an older
+    # image live. Serialize on push (not a docker-level lock) so overlapping
+    # commits to main queue instead of racing; queued runs still get the newest
+    # code since each checks out its own triggering ref.
+    concurrency:
+      group: build-workers-main
+      cancel-in-progress: false
     runs-on: deploy-host
     steps:
       - uses: actions/checkout@v4

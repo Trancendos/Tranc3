@@ -197,20 +197,14 @@ requirements:
     standard: "DEF STAN 00-700"
     title: "Data at Rest Encryption"
     description: "Sensitive data stored in databases and file systems must be encrypted at rest using AES-256 or equivalent. Encryption keys must be managed separately from encrypted data."
-    status: COMPLIANT
+    status: PARTIAL
     evidence:
       - type: code
         path: src/database/encrypted_sqlite.py
-        description: "AES-GCM field-level encryption for all SQLite workers; HKDF-SHA256 key derivation per database"
+        description: "AES-GCM field-level encryption module with HKDF-SHA256 key derivation per database — exists and is tested, but only 1 of 82 worker.py files (workers/infinity-shards-service/worker.py) actually imports/uses it"
       - type: code
         path: tests/test_encrypted_sqlite.py
-        description: "25 unit tests covering encrypt/decrypt, tamper detection, persistence, raw bytes visibility"
-      - type: code
-        path: workers/users-service/worker.py
-        description: "PII columns (bio, avatar_url, preferences, display_name) encrypted on write"
-      - type: code
-        path: workers/infinity-auth/worker.py
-        description: "Refresh tokens encrypted at rest; HMAC hash column for indexed lookup"
+        description: "25 unit tests covering encrypt/decrypt, tamper detection, persistence, raw bytes visibility — tests the module in isolation, not its adoption across workers"
       - type: code
         path: cloudflare/infinity-void/
         description: "AES-GCM encrypted vault for platform secrets"
@@ -218,9 +212,9 @@ requirements:
         path: fly.toml
         description: "Fly.io 1GB encrypted volume at /app/models"
     verification_method: automated_test
-    last_reviewed: "2026-06-06"
+    last_reviewed: "2026-07-17"
     reviewer: "Trancendos"
-    notes: "WAV-003 resolved. All 52 SQLite workers use encrypted_sqlite.connect(). High-sensitivity workers apply field-level AES-GCM on PII and credential columns."
+    notes: "Downgraded from COMPLIANT: prior notes claimed 'all 52 SQLite workers use encrypted_sqlite.connect()' and cited workers/users-service/worker.py + workers/infinity-auth/worker.py as encrypting PII/tokens at rest — grepped both files for 'encrypt'/'encrypted_sqlite' and found zero matches; only 1 of 82 worker.py files in the repo actually imports encrypted_sqlite. The module and its test suite are real, but adoption across workers is not. Gap: most SQLite-backed workers persist data unencrypted at rest; only The Void (Cloudflare) and the Fly.io volume are confirmed encrypted."
 
   - id: REQ-IA-011
     standard: "DEF STAN 00-700"
