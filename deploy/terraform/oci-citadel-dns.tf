@@ -107,12 +107,29 @@ resource "cloudflare_record" "the_workshop" {
 #   - SPF hard-fails every sender (`-all`, no `include:`/`ip4:` — there's
 #     nothing legitimate to allow yet).
 #   - DMARC starts at p=none (monitor only, per the standard DMARC rollout
-#     playbook) with aggregate/forensic reports routed to dmarc-reports@,
-#     so you see who's sending mail *as* this domain — spoofing attempts
-#     included — before you tighten to quarantine/reject.
+#     playbook), so you can see who's sending mail *as* this domain —
+#     spoofing attempts included — before tightening to quarantine/reject.
+#
+# TWO THINGS MUST HAPPEN TOGETHER, NOT JUST ONE, BEFORE THIS DOMAIN CAN
+# ACTUALLY SEND MAIL: setting SMTP_HOST on email-service alone is NOT
+# enough — the SPF record below must also gain an `include:`/`ip4:` for
+# that relay (still `-all` at the end) or every message it sends will
+# fail SPF at the receiving end. There is no automated guard preventing
+# someone from setting SMTP_HOST without updating this file; that's a
+# deployment-process gap, not a Terraform one — flag it in your PR/deploy
+# checklist when SMTP_HOST is finally configured.
+#
 # No DKIM record here: DKIM is a per-sending-service selector + public key,
 # and there's no relay configured yet to generate one — add it (and
 # tighten SPF's `include:`) when SMTP_HOST is actually set to something.
+#
+# No rua/ruf on the DMARC record: they'd point at dmarc-reports@ mailbox
+# that doesn't exist yet (nothing provisions it — no MX record, no mailbox
+# behind email-service). An aggregate-report URI with no working recipient
+# either silently loses every report or bounces at the reporting sender,
+# neither of which is useful. Add rua=mailto:dmarc-reports@${var.domain}
+# once that mailbox is actually provisioned and receiving mail.
+#
 # DEF STAN 00-700 (Information Assurance, docs/defstan/) scopes IA "full"
 # to all public-facing services — matching that here via 12_dns.csv /
 # 12b_dns_records.csv's ComplianceFrameworks column.
@@ -125,7 +142,7 @@ resource "cloudflare_record" "spf" {
   content  = "v=spf1 -all"
   proxied  = false
   ttl      = 300
-  comment  = "SPF — no senders authorized yet (email-service SMTP_HOST unset) — managed by Terraform"
+  comment  = "SPF — no senders authorized yet; update alongside SMTP_HOST — managed by Terraform"
 }
 
 resource "cloudflare_record" "dmarc" {
@@ -133,10 +150,10 @@ resource "cloudflare_record" "dmarc" {
   zone_id  = var.cloudflare_zone_id
   name     = "_dmarc"
   type     = "TXT"
-  content  = "v=DMARC1; p=none; rua=mailto:dmarc-reports@${var.domain}; ruf=mailto:dmarc-reports@${var.domain}; fo=1"
+  content  = "v=DMARC1; p=none"
   proxied  = false
   ttl      = 300
-  comment  = "DMARC — monitor-only (p=none) until SPF/DKIM are backed by a real mail relay — managed by Terraform"
+  comment  = "DMARC — monitor-only (p=none); add rua= once dmarc-reports@ mailbox exists — managed by Terraform"
 }
 
 # ── DNS output summary ────────────────────────────────────────
@@ -149,7 +166,7 @@ output "dns_records" {
     api          = "api.${var.domain} A → ${local.citadel_ip}"
     the_workshop = "the-workshop.${var.domain} CNAME → ${var.domain}"
     spf          = "${var.domain} TXT → v=spf1 -all"
-    dmarc        = "_dmarc.${var.domain} TXT → v=DMARC1; p=none; ..."
+    dmarc        = "_dmarc.${var.domain} TXT → v=DMARC1; p=none"
     note         = "All records are proxied=false (grey cloud / direct DNS)"
   }
 }

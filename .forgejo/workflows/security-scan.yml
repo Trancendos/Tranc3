@@ -587,14 +587,17 @@ jobs:
         run: |
           # No bind mount: this job runs on deploy-host, where job steps
           # execute in-process inside the act-runner-deploy container
-          # (`:host` executor) but `docker run` still talks to the *host's*
-          # daemon via the mounted socket — so a `-v "$(pwd)/...:..."` mount
-          # would resolve $(pwd) against the host's filesystem, not this
-          # container's, silently mounting the wrong (usually nonexistent)
-          # directory and leaving ZAP with no input and no reachable output.
-          # `docker cp` moves files across that same runner-container/host
-          # boundary explicitly instead, so it doesn't depend on the two
-          # filesystems sharing any paths.
+          # (`:host` executor), but the daemon a `docker` command talks to
+          # via the mounted socket is still the *host's* — so a
+          # `-v "$(pwd)/...:..."` mount would resolve $(pwd) against the
+          # host's filesystem, not this container's, silently mounting the
+          # wrong (usually nonexistent) directory and leaving ZAP with no
+          # input and no reachable output. Instead: `docker create` the
+          # container without starting it, `docker cp` the input in,
+          # `docker start -a` to run it, `docker cp` the reports back out,
+          # then `docker rm -f` — cp moves files across that same
+          # runner-container/host boundary explicitly, so it doesn't depend
+          # on the two filesystems sharing any paths.
           cid=$(docker create ghcr.io/zaproxy/zaproxy:stable \
             zap-api-scan.py \
               -t /zap/wrk/openapi.json \
@@ -603,7 +606,11 @@ jobs:
               -J zap-report.json \
               -x zap-report.xml \
               -I)
-          docker cp logs/openapi.json "$cid:/zap/wrk/openapi.json"
+          docker cp logs/openapi.json "$cid:/zap/wrk/openapi.json" || {
+            docker rm -f "$cid" >/dev/null 2>&1 || true
+            echo "Failed to copy openapi.json into ZAP container — aborting scan" >&2
+            exit 1
+          }
           docker start -a "$cid" || true
           docker cp "$cid:/zap/wrk/zap-report.html" logs/zap-report.html || true
           docker cp "$cid:/zap/wrk/zap-report.json" logs/zap-report.json || true
