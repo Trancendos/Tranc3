@@ -43,10 +43,7 @@ jobs:
         run: python scripts/validate_ea_workbook.py
 
       - name: Check master service matrix freshness
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system openpyxl --quiet
-          python scripts/check_master_matrix_freshness.py
+        run: python scripts/check_master_matrix_freshness.py
 
       - name: Create logs dir
         run: mkdir -p logs

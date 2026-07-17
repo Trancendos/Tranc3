@@ -85,6 +85,20 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # Runner config
       - ./act-runner.yml:/data/act-runner.yml:ro
+    networks:
+      # `default` keeps `forgejo:3000` resolvable (same compose project);
+      # `tranc3-net` (external, defined in docker-compose.production.yml)
+      # lets jobs like deploy-self-hosted.yml's verify/register steps reach
+      # workers by service name (e.g. http://workflow-engine-service:8034)
+      # instead of the host-published ports, which this container has no
+      # route to since it isn't started with network_mode: host.
+      - default
+      - tranc3-net
+
+networks:
+  default: {}
+  tranc3-net:
+    external: true
 
 volumes:
   forgejo-data:

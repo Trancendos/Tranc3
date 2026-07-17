@@ -8,8 +8,7 @@ instead of sitting next to the code as documentation only.
 
 Usage:
     python scripts/register_ea_workbook_services.py \
-        --health-aggregator-url http://localhost:8029 \
-        --host localhost
+        --health-aggregator-url http://health-aggregator:8029
 
 Each row's port is extracted from its free-text Notes column (e.g. "port 8034"),
 since 02_service_inventory.csv doesn't have a dedicated Port column. Rows whose
@@ -37,6 +36,21 @@ WORKBOOK_CSV = os.path.join(
 
 PORT_RE = re.compile(r"\bport\s+(\d{4,5})\b", re.IGNORECASE)
 
+# ServiceID -> docker-compose.production.yml service key, for building a
+# health_url reachable via Docker DNS on tranc3-net (the network
+# health-aggregator itself runs on). --host overrides this per-run for the
+# rare case you're probing from outside that network via published ports.
+# SRV-WORKSHOP-001 has no entry: Forgejo runs in a separate compose project
+# (deploy/forgejo/docker-compose.yml) that is not part of tranc3-net, so it
+# has no compose-DNS-resolvable name from health-aggregator's perspective.
+SERVICE_ID_TO_COMPOSE_NAME: dict[str, str] = {
+    "SRV-SPARK-001": "tranc3-backend",  # Spark is mounted inside tranc3-backend
+    "SRV-GRID-001": "workflow-engine-service",
+    "SRV-INF-001": "infinity-auth",
+    "SRV-VOID-001": "vault-service",
+    "SRV-OBS-001": "observatory",
+}
+
 
 def load_rows() -> list[dict[str, str]]:
     with open(WORKBOOK_CSV, newline="", encoding="utf-8") as fh:
@@ -47,12 +61,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--health-aggregator-url",
-        default=os.environ.get("HEALTH_AGGREGATOR_URL", "http://localhost:8029"),
+        default=os.environ.get("HEALTH_AGGREGATOR_URL", "http://health-aggregator:8029"),
     )
     parser.add_argument(
         "--host",
-        default="localhost",
-        help="Host the anchor services are reachable at (default: localhost)",
+        default=None,
+        help=(
+            "Override host for every registered service's health_url (e.g. localhost "
+            "when every worker port is published to the same host). Default: resolve "
+            "each anchor's compose service name from SERVICE_ID_TO_COMPOSE_NAME "
+            "(Docker DNS on tranc3-net) — matches how health-aggregator itself is "
+            "deployed, so registered checks are actually reachable from it."
+        ),
     )
     parser.add_argument(
         "--internal-secret",
@@ -65,6 +85,11 @@ def main() -> int:
     headers = {"X-Internal-Secret": args.internal_secret} if args.internal_secret else {}
 
     registered, skipped, failed = 0, 0, 0
+    # Known-limitation skips (e.g. SRV-WORKSHOP-001 not being on tranc3-net)
+    # are an expected, permanent condition, not a data-quality problem —
+    # tracked separately so they don't flip the exit code to failure on
+    # every normal run.
+    known_limitation_skipped = 0
     for row in rows:
         service_id = row.get("ServiceID", "?")
         notes = row.get("Notes", "")
@@ -77,8 +102,20 @@ def main() -> int:
             skipped += 1
             continue
         port = m.group(1)
-        url = f"http://{args.host}:{port}{health_path}"
         name = row.get("ServiceName", service_id)
+
+        if args.host is not None:
+            host = args.host
+        else:
+            host = SERVICE_ID_TO_COMPOSE_NAME.get(service_id)
+            if host is None:
+                print(
+                    f"SKIP {service_id}: no compose service name known (not on tranc3-net, "
+                    f"or SERVICE_ID_TO_COMPOSE_NAME needs an entry) — pass --host to force one"
+                )
+                known_limitation_skipped += 1
+                continue
+        url = f"http://{host}:{port}{health_path}"
 
         if args.dry_run:
             print(f"[dry-run] would register {name} -> {url} (every {interval}s)")
@@ -99,7 +136,10 @@ def main() -> int:
             print(f"FAIL {name} -> {url}: {e}")
             failed += 1
 
-    print(f"\n{registered} registered, {skipped} skipped (no port in Notes), {failed} failed.")
+    print(
+        f"\n{registered} registered, {skipped} skipped, "
+        f"{known_limitation_skipped} skipped (known limitation), {failed} failed."
+    )
     return 0 if skipped == 0 and failed == 0 else 1
 
 

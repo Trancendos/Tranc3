@@ -155,11 +155,16 @@ jobs:
         run: mkdir -p logs
 
       - name: Post-deploy health verification (soft — warnings only)
-        run: python3 scripts/post_deploy_verify.py --base http://localhost --soft --report logs/deploy_verify.json
+        # No --base: probes each entity at its own compose service name
+        # (Docker DNS on tranc3-net) — this runner is attached to that
+        # network via deploy/forgejo/docker-compose.yml's act-runner service.
+        run: python3 scripts/post_deploy_verify.py --soft --report logs/deploy_verify.json
         continue-on-error: true
 
       - name: Register EA workbook anchor services with health-aggregator
-        run: python3 scripts/register_ea_workbook_services.py --health-aggregator-url http://localhost:8029 --host localhost
+        # No --host: resolves each anchor's compose service name so
+        # health-aggregator's own polling can actually reach it.
+        run: python3 scripts/register_ea_workbook_services.py
         env:
           INTERNAL_SECRET: ${{ secrets.HEALTH_AGGREGATOR_INTERNAL_SECRET }}
         continue-on-error: true

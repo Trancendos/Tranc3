@@ -4164,6 +4164,11 @@ volumes:
 # ═══════════════════════════════════════════════════════════════════════════
 networks:
   tranc3-net:
+    # Explicit name (rather than the default `<project>_tranc3-net`) so other
+    # compose files — e.g. deploy/forgejo/docker-compose.yml's act-runner —
+    # can join it deterministically as an `external: true` network to reach
+    # workers by service name instead of guessing at host-published ports.
+    name: tranc3-net
     driver: bridge
     ipam:
       config:

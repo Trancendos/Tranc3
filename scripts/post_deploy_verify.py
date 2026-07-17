@@ -127,7 +127,7 @@ class EntityResult:
 @dataclass
 class VerifyReport:
     timestamp: float = field(default_factory=time.time)
-    base_url: str = "http://127.0.0.1"
+    base_url: str = "per-service-dns"
     results: list[EntityResult] = field(default_factory=list)
     overall: str = "unknown"
     critical_pass_rate: float = 0.0
@@ -140,9 +140,18 @@ class VerifyReport:
 # ---------------------------------------------------------------------------
 
 
-def _probe(base: str, entity: dict, timeout: float = 5.0) -> tuple[str, int, int]:
-    """Return (status, http_code, latency_ms)."""
-    url = f"{base}:{entity['port']}{entity['path']}"
+def _probe(base: str | None, entity: dict, timeout: float = 5.0) -> tuple[str, int, int]:
+    """Return (status, http_code, latency_ms).
+
+    `base=None` (the default) probes each entity at its own compose service
+    name — `entity["name"]` matches the service key in
+    docker-compose.production.yml, resolvable via Docker DNS on tranc3-net —
+    rather than a single shared host. A single shared `base` only makes sense
+    when every entity's port is published to the same reachable host (e.g.
+    manual testing against 127.0.0.1 with all worker ports published).
+    """
+    host = base if base is not None else f"http://{entity['name']}"
+    url = f"{host}:{entity['port']}{entity['path']}"
     t0 = time.monotonic()
     try:
         req = urllib.request.Request(url, method="GET")
@@ -162,7 +171,7 @@ def _probe(base: str, entity: dict, timeout: float = 5.0) -> tuple[str, int, int
 
 
 def probe_with_retry(
-    base: str,
+    base: str | None,
     entity: dict,
     max_attempts: int = 3,
     backoff_base: float = 2.0,
@@ -199,7 +208,8 @@ def probe_with_retry(
 # ---------------------------------------------------------------------------
 
 
-def _report_to_observatory(base: str, report: VerifyReport) -> None:
+def _report_to_observatory(base: str | None, report: VerifyReport) -> None:
+    host = base if base is not None else "http://monitoring"
     try:
         payload = json.dumps(
             {
@@ -213,7 +223,7 @@ def _report_to_observatory(base: str, report: VerifyReport) -> None:
             }
         ).encode()
         req = urllib.request.Request(
-            f"{base}:8007/events",
+            f"{host}:8007/events",
             data=payload,
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -296,8 +306,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Post-deploy health verifier")
     parser.add_argument(
         "--base",
-        default=os.environ.get("TRANC3_BASE_URL", "http://127.0.0.1"),
-        help="Base URL of the host (default: http://127.0.0.1)",
+        default=os.environ.get("TRANC3_BASE_URL"),
+        help=(
+            "Shared base URL to probe every entity at (e.g. http://127.0.0.1 for a "
+            "host with every worker port published). Default: probe each entity at "
+            "its own compose service name (Docker DNS on tranc3-net)."
+        ),
     )
     parser.add_argument(
         "--tier",
@@ -318,7 +332,8 @@ def main() -> int:
         ALL_ENTITIES if args.tier == "all" else [e for e in ALL_ENTITIES if e["tier"] == args.tier]
     )
 
-    print(f"\nProbing {len(entities)} entities against {args.base} …")
+    target_desc = args.base if args.base is not None else "each entity's own compose service name"
+    print(f"\nProbing {len(entities)} entities against {target_desc} …")
     t_start = time.monotonic()
 
     results: list[EntityResult] = []
@@ -340,7 +355,7 @@ def main() -> int:
     overall = "healthy" if cr_rate >= HARD_STOP_THRESHOLD else "degraded"
 
     report = VerifyReport(
-        base_url=args.base,
+        base_url=target_desc,
         results=results,
         overall=overall,
         critical_pass_rate=cr_rate,

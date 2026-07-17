@@ -33,9 +33,10 @@ script — it is not hand-edited directly.
 isn't just a manual convention: it re-runs the generator against current repo state and
 diffs every sheet's cell values (ignoring openpyxl's save-time file metadata) against
 the committed workbook, failing CI if they've drifted apart. It runs as part of
-`.forgejo/workflows/ci.yml`'s `smoke` job on every push/PR, so a PR that changes
-`docker-compose.production.yml`, `workers/*`, or the generator script without
-re-running the generator gets caught instead of silently shipping a stale workbook.
+`.forgejo/workflows/ci.yml`'s `smoke` job on every push and on pull requests targeting
+`main`, so a PR that changes `docker-compose.production.yml`, `workers/*`, or the
+generator script without re-running the generator gets caught when one of its scanned
+inputs changes, instead of silently shipping a stale workbook.
 
 ## Why this exists
 

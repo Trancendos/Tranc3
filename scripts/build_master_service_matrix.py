@@ -13,6 +13,7 @@ import datetime
 import os
 import re
 
+import yaml
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
@@ -28,18 +29,41 @@ def scan_workers():
     port there, and whether a /health reference exists in the source."""
     workers_dir = os.path.join(REPO_ROOT, "workers")
     with open(os.path.join(REPO_ROOT, "docker-compose.production.yml")) as f:
-        compose = f.read()
+        compose_services = yaml.safe_load(f).get("services") or {}
 
     def compose_port(service_key):
-        m = re.search(
-            rf'^  {re.escape(service_key)}:\s*\n(?:.*\n){{0,25}}?.*?ports:\s*\n\s*-\s*"(\d+):\d+"',
-            compose,
-            re.M,
-        )
-        return m.group(1) if m else None
+        # Real YAML parse, not a line-based regex — handles both block-list
+        # (`ports:\n  - "8000:8000"`) and inline-array (`ports: ["8000:8000"]`)
+        # forms, which normalise to the same Python list. Precedence matches
+        # scripts/port_registry_validate.py's documented convention (PORT env
+        # → Traefik loadbalancer label → published ports), so internal-only
+        # services that route via Traefik without publishing a host port
+        # (e.g. remotion-render-service) still resolve.
+        svc = compose_services.get(service_key)
+        if not svc:
+            return None
+
+        env = svc.get("environment")
+        if isinstance(env, dict) and env.get("PORT") is not None:
+            return str(env["PORT"])
+        if isinstance(env, list):
+            for e in env:
+                if str(e).startswith("PORT="):
+                    return str(e).split("=", 1)[1]
+
+        for label in svc.get("labels") or []:
+            m = re.match(r".*loadbalancer\.server\.port=(\d+)", str(label))
+            if m:
+                return m.group(1)
+
+        for p in svc.get("ports") or []:
+            m = re.match(r"^(?:[\d.]+:)?(\d+):\d+$", str(p).strip('"'))
+            if m:
+                return m.group(1)
+        return None
 
     def compose_has_service(service_key):
-        return re.search(rf"^  {re.escape(service_key)}:\s*$", compose, re.M) is not None
+        return service_key in compose_services
 
     rows = []
     for name in sorted(os.listdir(workers_dir)):
@@ -357,7 +381,7 @@ svc_rows = [
         "No",
         "Internal",
         "deploy/forgejo/ — Forgejo container :3000 (Traefik), SSH :2222",
-        "Real Traefik rule Host(trancendos.com)&&PathPrefix(/the-workshop); the-workshop.trancendos.com CNAME (real DNS record) has no matching host rule so it does not currently reach Forgejo",
+        "Real Traefik rule Host(trancendos.com)&&PathPrefix(/the-workshop); the-workshop.trancendos.com CNAME (real DNS record) 301-redirects to the canonical path via the forgejo-subdomain router",
     ],
     [
         "SRV-006",
@@ -502,7 +526,19 @@ rte_rows = [
         "Internal",
         "Allow",
         "Host(`trancendos.com`) && PathPrefix(`/the-workshop`), tls.certresolver=letsencrypt",
-        "Only matches Host=trancendos.com — a request with Host=the-workshop.trancendos.com does NOT match this rule",
+        "Host=the-workshop.trancendos.com is handled by a separate router (forgejo-subdomain) that 301-redirects to this path — see RTE-006b",
+    ],
+    [
+        "RTE-006b",
+        "Traefik",
+        "The Workshop",
+        "HTTP (internal)",
+        "HTTPS (301 redirect)",
+        3000,
+        "Internal",
+        "Allow",
+        "Host(`the-workshop.trancendos.com`), middlewares=forgejo-subdomain-redirect, tls.certresolver=letsencrypt",
+        "forgejo-subdomain router — 301s to https://trancendos.com/the-workshop/ since Forgejo's ROOT_URL is path-based and would conflict with its own generated links if served directly at this subdomain",
     ],
     [
         "RTE-007",
@@ -605,8 +641,8 @@ ep_rows = [
         "Public (DNS only)",
         "n/a",
         "n/a",
-        "Public DNS, non-functional at HTTP layer",
-        "Real DNS record provisioned by Terraform, but no Traefik host rule matches this Host header today — request does not currently reach Forgejo",
+        "Public DNS, 301-redirects to canonical path",
+        "Real DNS record provisioned by Terraform; the forgejo-subdomain Traefik router matches this Host header and 301-redirects to https://trancendos.com/the-workshop/",
     ],
     [
         "EP-005",
@@ -1005,6 +1041,30 @@ chg_rows = [
         "Fixed ACME challenge type + the-workshop CNAME routing claim",
         "Corrected HTTP-01 to the real tlsChallenge/TLS-ALPN-01; discovered the-workshop CNAME has no matching Traefik host rule",
     ],
+    [
+        "CHG-007",
+        "2026-07-17",
+        "pending",
+        "Fixed cubic-dev-ai review batch: the register/verify loop never actually worked",
+        (
+            "health-aggregator's SERVICE_REGISTRY built health_url from 'localhost', which "
+            "inside its own bridge-networked container only ever reached itself — every "
+            "static check silently probed as down since deployment. Dynamically-registered "
+            "services (POST /services) were never included in the poll loop, /status, "
+            "/predict, or /metrics at all. register_ea_workbook_services.py wrote loopback "
+            "URLs unusable from health-aggregator's container, and deploy-self-hosted.yml's "
+            "verify/register steps ran from act-runner, which isn't on tranc3-net and can't "
+            "reach compose-published ports via 'localhost' either. Fixed: health-aggregator "
+            "now resolves every target (static + dynamic) via Docker service DNS; "
+            "register/verify scripts default to compose service names instead of localhost; "
+            "act-runner joins tranc3-net (now an explicitly-named external network) so those "
+            "CI steps can actually reach the fleet. Also fixed: build_master_service_matrix.py "
+            "used a line-regex for compose ports that missed every inline-array `ports: [...]` "
+            "service (silently blanked ~15 P3 workers' ports); openpyxl was an undeclared "
+            "dependency; Workshop route/endpoint rows still described the pre-redirect-fix "
+            "state; Governance Checks' Current Result column was never populated."
+        ),
+    ],
 ]
 write_rows(chg, chg_header, chg_rows, widths=[10, 20, 10, 55, 75])
 
@@ -1300,6 +1360,7 @@ checks = [
 for i, (check, formula, target) in enumerate(checks, start=gov_header_row + 1):
     gov.cell(row=i, column=1, value=check).alignment = WRAP
     gov.cell(row=i, column=2, value=formula)
+    gov.cell(row=i, column=3, value=f'=IF(B{i}=D{i},"PASS","FAIL")')
     gov.cell(row=i, column=4, value=target)
 autosize(gov, [55, 60, 16, 14])
 

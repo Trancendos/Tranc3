@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Query
@@ -107,9 +108,13 @@ SERVICE_REGISTRY: List[Dict[str, Any]] = [
     {"name": "tranc3-bots", "port": 8080},
 ]
 
-# Materialise the health URL for each entry
+# Materialise the health URL for each entry. Uses the compose service name
+# (Docker DNS on tranc3-net), not "localhost" — health-aggregator runs in its
+# own container on a bridge network, so "localhost" only ever reached itself
+# and every other entry silently probed as down. `_svc["name"]` must match
+# the service's key in docker-compose.production.yml for this to resolve.
 for _svc in SERVICE_REGISTRY:
-    _svc["health_url"] = f"http://localhost:{_svc['port']}/health"
+    _svc["health_url"] = f"http://{_svc['name']}:{_svc['port']}/health"
 
 _REGISTRY_BY_NAME: Dict[str, Dict[str, Any]] = {s["name"]: s for s in SERVICE_REGISTRY}
 
@@ -264,13 +269,41 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
+def _all_targets() -> List[Dict[str, Any]]:
+    """Static SERVICE_REGISTRY plus normalised dynamic registrations.
+
+    Shared by /status, /predict, /metrics, and _poll_all so a service
+    registered via POST /services shows up everywhere a static entry would,
+    not just in the internal poll loop.
+    """
+    return SERVICE_REGISTRY + _dynamic_poll_targets()
+
+
+def _dynamic_poll_targets() -> List[Dict[str, Any]]:
+    """Normalise POST /services registrations into _check_one's expected shape.
+
+    Dynamic registrations (register_ea_workbook_services.py) carry a full
+    "url" rather than a "port" — _check_one/_persist_check need "health_url"
+    and "port", so derive both here instead of duplicating that shape at
+    every call site.
+    """
+    targets = []
+    for svc in _dynamic_services.values():
+        url = svc["url"]
+        try:
+            port = urlparse(url).port or 0
+        except ValueError:
+            port = 0
+        targets.append({"name": svc["name"], "port": port, "health_url": url})
+    return targets
+
+
 async def _poll_all() -> None:
-    """Poll all registered services once and update _latest."""
+    """Poll all registered (static + dynamically registered) services once and update _latest."""
     global _poll_count
-    results = await asyncio.gather(
-        *[_check_one(svc) for svc in SERVICE_REGISTRY], return_exceptions=True
-    )
-    for svc, res in zip(SERVICE_REGISTRY, results, strict=False):
+    targets = _all_targets()
+    results = await asyncio.gather(*[_check_one(svc) for svc in targets], return_exceptions=True)
+    for svc, res in zip(targets, results, strict=False):
         if isinstance(res, Exception):
             res = {"name": svc["name"], "port": svc["port"], "status": "down", "error": str(res)}
         _latest[svc["name"]] = res
@@ -403,7 +436,7 @@ async def health():
         "port": PORT,
         "uptime_seconds": round(uptime_s, 1),
         "poll_count": _poll_count,
-        "monitored_services": len(SERVICE_REGISTRY),
+        "monitored_services": len(_all_targets()),
         "polled_so_far": len(_latest),
         "entity": {
             "location": "The Observatory",
@@ -473,7 +506,8 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> Dict[str, A
     _require_internal(x_internal_secret)
     services = []
     healthy = degraded = unreachable = 0
-    for svc in SERVICE_REGISTRY:
+    targets = _all_targets()
+    for svc in targets:
         name = svc["name"]
         if name in _latest:
             d = _latest[name]
@@ -504,7 +538,7 @@ async def status(x_internal_secret: Optional[str] = Header(None)) -> Dict[str, A
         "healthy_count": healthy,
         "degraded_count": degraded,
         "unreachable_count": unreachable,
-        "total_count": len(SERVICE_REGISTRY),
+        "total_count": len(targets),
         "services": services,
     }
 
@@ -633,7 +667,7 @@ async def predict() -> Dict[str, Any]:
     stable = []
 
     with _conn() as c:
-        for svc in SERVICE_REGISTRY:
+        for svc in _all_targets():
             name = svc["name"]
             rows = c.execute(
                 """
@@ -683,7 +717,8 @@ async def metrics() -> str:
         "# HELP service_health_status Health status of each Trancendos service (1=healthy, 0.5=degraded, 0=unreachable)",
         "# TYPE service_health_status gauge",
     ]
-    for svc in SERVICE_REGISTRY:
+    metrics_targets = _all_targets()
+    for svc in metrics_targets:
         name = svc["name"]
         data = _latest.get(name, {})
         st = data.get("status", "unknown")
@@ -695,7 +730,7 @@ async def metrics() -> str:
         "# HELP service_latency_ms Last observed health-check latency in milliseconds",
         "# TYPE service_latency_ms gauge",
     ]
-    for svc in SERVICE_REGISTRY:
+    for svc in metrics_targets:
         name = svc["name"]
         data = _latest.get(name, {})
         latency = data.get("latency_ms")
