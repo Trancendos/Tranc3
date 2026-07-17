@@ -50,12 +50,16 @@ runner:
     - "deploy-host:host"
 
   fetch_interval: 2s
-  # 1, not act-runner.yml's 4: deploy jobs share the one host Docker daemon
-  # (docker build/tag/rm against the same image namespace), so two running
-  # at once could step on each other's images/containers. Capacity 1
-  # serializes them — the actual enforcement for "shouldn't overlap",
-  # not just a comment.
-  capacity: 1
+  # 2, not act-runner.yml's 4, and not 1: only two job *types* ever land on
+  # deploy-host (deploy-self-hosted.yml's build-workers, on push to main;
+  # security-scan.yml's owasp-zap-dast, on push/schedule) and they use
+  # distinct image tags/containers, so real collision risk between them is
+  # low — but capacity 1 turned out to be its own bug: it serializes ALL
+  # deploy-host jobs against each other, so a build-workers run can queue
+  # behind owasp-zap-dast for up to timeout's full 3h with nothing else
+  # available to run it. 2 lets both proceed without that bottleneck while
+  # still bounding total concurrent load on the one host Docker daemon.
+  capacity: 2
   timeout: 3h
 
 cache:

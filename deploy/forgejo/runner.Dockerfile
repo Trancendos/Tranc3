@@ -40,6 +40,21 @@ RUN curl -sSfL \
     | tar -xz -C /usr/local/bin --strip-components=1 docker/docker \
     && docker --version
 
+# Docker 23+ CLI has no legacy builder fallback — `docker build` always
+# delegates to the Buildx plugin, which the static CLI tarball above does
+# NOT include. Without this, every `docker build` step would fail with
+# "'build' is not a docker command" despite `docker --version` above
+# succeeding. Installed to the system-wide plugin dir (not
+# ~/.docker/cli-plugins) so it's found regardless of which user runs it —
+# this stage runs as root, but the final image switches to USER runner.
+ARG DOCKER_BUILDX_VERSION=0.19.2
+RUN mkdir -p /usr/local/lib/docker/cli-plugins \
+    && curl -sSfL \
+    "https://github.com/docker/buildx/releases/download/v${DOCKER_BUILDX_VERSION}/buildx-v${DOCKER_BUILDX_VERSION}.linux-amd64" \
+    -o /usr/local/lib/docker/cli-plugins/docker-buildx \
+    && chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx \
+    && docker buildx version
+
 # ── Node.js 20 (via NodeSource) ───────────────────────────────────────────────
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
@@ -77,7 +92,8 @@ RUN flyctl version \
     && gitleaks version \
     && bandit --version \
     && ruff --version \
-    && docker --version
+    && docker --version \
+    && docker buildx version
 
 USER runner
 

@@ -90,6 +90,7 @@ if docker build \
     -t trancendos/act-runner:latest \
     "${REPO_ROOT}" > "${RUNNER_BUILD_LOG}" 2>&1; then
   tail -5 "${RUNNER_BUILD_LOG}"
+  rm -f "${RUNNER_BUILD_LOG}"
 else
   tail -40 "${RUNNER_BUILD_LOG}"
   die "Custom runner image build failed — full log at ${RUNNER_BUILD_LOG} (last 40 lines above). Fix the Dockerfile and re-run; both Workshop runners depend on this image's toolchain (see deploy/forgejo/act-runner.yml and act-runner-deploy.yml), so neither will work without it."
@@ -209,8 +210,8 @@ check_runner_up() {
   if [[ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]]; then
     ok "${service} started"
   else
-    warn "${service} did not stay running — check: docker compose -f $COMPOSE_FILE logs ${service}"
     docker compose -f "$COMPOSE_FILE" logs --tail 20 "$service" 2>&1 || true
+    die "${service} did not stay running (logs above) — check: docker compose -f $COMPOSE_FILE logs ${service}"
   fi
 }
 

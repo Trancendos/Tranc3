@@ -280,10 +280,22 @@ else
   NEEDS_HUMAN+=("Proxy not routing the subpath — confirm the /the-workshop route/location is present and reload the proxy (${PROXY_KIND}).")
 fi
 
+# ── Layer 4: runner(s) — a healthy Forgejo with a dead runner still can't run CI ─
+if cont_running "$RUNNER"; then
+  ok "Runner (${RUNNER}) is running."
+else
+  warn "Runner (${RUNNER}) is not running — CI jobs cannot execute."
+  NEEDS_HUMAN+=("Runner down — check: docker compose -f $COMPOSE_FILE logs ${RUNNER}")
+fi
+if ! runner_deploy_ok; then
+  warn "Deploy runner (${RUNNER_DEPLOY}) is not running — deploy-host jobs (worker builds, DAST) will queue forever."
+  NEEDS_HUMAN+=("Deploy runner down — check: docker compose -f $COMPOSE_FILE logs ${RUNNER_DEPLOY}")
+fi
+
 # ── Final verdict ────────────────────────────────────────────────────────────
-if forgejo_healthy; then
+if forgejo_healthy && cont_running "$RUNNER" && runner_deploy_ok; then
   echo ""
-  ok "Forgejo is healthy locally (${TOPO})."
+  ok "Forgejo and all expected runners are healthy locally (${TOPO})."
   if [[ "$proxy_code" != "200" ]]; then
     echo "    → Forgejo is fine but the proxy path isn't returning 200 — fix layer 3 above."
   else
@@ -294,7 +306,7 @@ if forgejo_healthy; then
   report_and_exit 0
 else
   echo ""
-  err "Forgejo is NOT healthy after recovery — resolve the items above."
+  err "Forgejo and/or a runner are NOT healthy after recovery — resolve the items above."
   echo "    Common causes: disk full (df -h; docker system df), a locked/corrupt SQLite db,"
   echo "    or the host was rebooted without the boot unit (see deploy/forgejo/the-workshop.service)."
   report_and_exit 1
