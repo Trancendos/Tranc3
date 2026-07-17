@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT") or "8092")
+WORKER_PORT = int(os.getenv("PORT") or "8111")
 WORKER_NAME = "triposr-worker"
 
 OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", "/app/outputs"))

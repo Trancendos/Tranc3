@@ -1054,7 +1054,7 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
       <<: *healthcheck-default
 
-  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8051) ──
+  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8111) ──
   triposr-worker:
     <<: *worker-common
     build:
