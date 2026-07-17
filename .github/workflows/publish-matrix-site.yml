@@ -18,6 +18,12 @@ on:
     paths:
       - "docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx"
       - "scripts/render_matrix_html.py"
+      # render_matrix_html.py reads HEADER_FILL out of this file's source at
+      # run time (see its _load_header_fill_rgb docstring) — a HEADER_FILL-only
+      # edit here wouldn't touch the .xlsx or render_matrix_html.py paths
+      # above, so without listing it explicitly the site would silently stay
+      # stale.
+      - "scripts/build_master_service_matrix.py"
       - ".github/workflows/publish-matrix-site.yml"
   workflow_dispatch: {}
 

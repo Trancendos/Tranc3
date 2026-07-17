@@ -74,17 +74,22 @@ fi
 ok "Pre-flight checks passed"
 
 # ── Step 1: Build custom runner image ────────────────────────────────────────
+# act-runner.yml's labels all use the `:host` executor, which runs job steps
+# in-process inside whichever image this container ends up as — so the
+# workflows this fleet actually runs (docker build/push, flyctl, wrangler,
+# python3.11, node20 — see runner.Dockerfile's tool list) are only available
+# if the custom image built here is what's running. The bare upstream image
+# (code.forgejo.org/forgejo/runner:3) has none of that toolchain, so falling
+# back to it used to leave the runner registered and looking healthy while
+# every real CI job silently failed on a missing binary. Fail loudly instead.
 log "Building custom runner image (trancendos/act-runner:latest)…"
-if docker build \
+docker build \
     -f "${SCRIPT_DIR}/runner.Dockerfile" \
     -t trancendos/act-runner:latest \
-    "${REPO_ROOT}" 2>&1 | tail -5; then
-  ok "Runner image built"
-  export RUNNER_IMAGE="trancendos/act-runner:latest"
-else
-  warn "Custom runner build failed — falling back to upstream image"
-  export RUNNER_IMAGE="code.forgejo.org/forgejo/runner:3"
-fi
+    "${REPO_ROOT}" 2>&1 | tail -5 \
+  || die "Custom runner image build failed — see output above. Fix the Dockerfile and re-run; The Workshop's CI depends on this image's toolchain (see deploy/forgejo/act-runner.yml labels), so it will not start without it."
+ok "Runner image built"
+export RUNNER_IMAGE="trancendos/act-runner:latest"
 
 # ── Step 2: Start Forgejo ─────────────────────────────────────────────────────
 log "Starting Forgejo…"
@@ -181,18 +186,28 @@ fi
 [[ -n "$RUNNER_REGISTRATION_TOKEN" ]] || die "Could not get runner registration token"
 ok "Runner registration token obtained"
 
-# ── Step 9: Start act-runner ──────────────────────────────────────────────────
-# act-runner joins tranc3-net (docker-compose.yml declares it by the same
-# explicit `name: tranc3-net` as docker-compose.production.yml, not
-# `external: true`) so CI jobs can reach the production fleet by service
-# name. `docker compose up` below creates that network itself on a
-# Workshop-only bootstrap (production stack not yet deployed) — no manual
-# pre-creation needed, and none is attempted here.
+# ── Step 9: Start both act-runners ────────────────────────────────────────────
+# act-runner (PR-safe, no host Docker access) and act-runner-deploy
+# (privileged, `deploy-host` label only, push/schedule/workflow_dispatch
+# jobs only — see act-runner-deploy.yml for why this split exists). Both
+# join tranc3-net (docker-compose.yml declares it by the same explicit
+# `name: tranc3-net` as docker-compose.production.yml, not `external: true`)
+# so CI jobs can reach the production fleet by service name. `docker compose
+# up` below creates that network itself on a Workshop-only bootstrap
+# (production stack not yet deployed) — no manual pre-creation needed, and
+# none is attempted here. Both runners register with the same org-level
+# registration token — Forgejo issues each connecting runner its own
+# identity from it, so one token covers any number of runner instances.
 log "Starting act-runner…"
 export RUNNER_REGISTRATION_TOKEN
 docker compose -f "$COMPOSE_FILE" up -d act-runner
 sleep 10
 ok "act-runner started"
+
+log "Starting act-runner-deploy…"
+docker compose -f "$COMPOSE_FILE" up -d act-runner-deploy
+sleep 10
+ok "act-runner-deploy started"
 
 # ── Step 10: Push all org secrets ─────────────────────────────────────────────
 log "Pushing org secrets to Forgejo…"

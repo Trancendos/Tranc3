@@ -11,6 +11,8 @@
 #   - Python 3.11
 #   - pip security tools: pip-audit, bandit, safety, semgrep
 #   - gitleaks v8
+#   - docker CLI (client only — talks to the /var/run/docker.sock bind-mounted
+#     into this container by docker-compose.yml; no dockerd of its own)
 #   - git, curl, jq, make
 
 FROM code.forgejo.org/forgejo/runner:3
@@ -21,6 +23,15 @@ USER root
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     curl wget git jq make ca-certificates gnupg \
     python3.11 python3.11-venv python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Docker CLI ─────────────────────────────────────────────────────────────────
+# `:host` runner labels execute job steps in this container's own process
+# namespace, so a step's `docker build`/`docker push` needs a `docker` binary
+# here even though the daemon it talks to (via the mounted socket) is the
+# host's — installing docker.io pulls in the client without a second dockerd.
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    docker.io \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Node.js 20 (via NodeSource) ───────────────────────────────────────────────
@@ -59,7 +70,8 @@ RUN flyctl version \
     && node --version \
     && gitleaks version \
     && bandit --version \
-    && ruff --version
+    && ruff --version \
+    && docker --version
 
 USER runner
 

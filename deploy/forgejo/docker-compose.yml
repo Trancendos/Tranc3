@@ -60,6 +60,11 @@ services:
       start_period: 30s
 
   act-runner:
+    # The default, PR-safe runner — no host Docker socket reaches job
+    # containers (see act-runner.yml). Handles every workflow except the
+    # two that need real Docker access, which run on act-runner-deploy
+    # instead.
+    #
     # Use custom image (flyctl + wrangler + python + security tools)
     # Build first: docker build -f deploy/forgejo/runner.Dockerfile -t trancendos/act-runner:latest .
     # If custom image not yet built, swap to: image: code.forgejo.org/forgejo/runner:3
@@ -89,7 +94,12 @@ services:
       - CLOUDFLARE_ACCOUNT_ID=e0214028cb64d31232f5662548a55e4e
     volumes:
       - act-runner-data:/data
-      # Docker socket for container-in-container builds
+      # Socket is for this daemon container to spawn ephemeral job
+      # containers via the Docker API (act-runner.yml's `:docker://` labels
+      # require it for that) — NOT to hand Docker access to job steps
+      # themselves. act-runner.yml's container.valid_volumes/docker_host
+      # are deliberately empty so the socket stops here and isn't also
+      # mounted into those job containers.
       - /var/run/docker.sock:/var/run/docker.sock
       # Runner config
       - ./act-runner.yml:/data/act-runner.yml:ro
@@ -99,6 +109,40 @@ services:
       # the actual per-job CI containers it spawns via docker.sock get
       # tranc3-net through act-runner.yml's container.network setting
       # instead (this attachment alone would not cover them).
+      - default
+      - tranc3-net
+
+  act-runner-deploy:
+    # Second, privileged runner — the only one whose job steps can reach the
+    # host Docker daemon directly (`:host` execution mode in
+    # act-runner-deploy.yml, not just a socket mount on the daemon itself
+    # like the act-runner service above). Only workflows/jobs explicitly
+    # opting in with `runs-on: deploy-host`, restricted to
+    # push/schedule/workflow_dispatch triggers, should ever land here — see
+    # act-runner-deploy.yml's header comment for the full reasoning.
+    image: ${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}
+    container_name: the-workshop-runner-deploy
+    restart: unless-stopped
+    depends_on:
+      forgejo:
+        condition: service_healthy
+    command: ["daemon", "--config", "/data/act-runner-deploy.yml"]
+    environment:
+      - FORGEJO_INSTANCE_URL=http://forgejo:3000/the-workshop
+      - FORGEJO_RUNNER_REGISTRATION_TOKEN=${RUNNER_REGISTRATION_TOKEN:-}
+      - FORGEJO_RUNNER_NAME=trancendos-runner-deploy
+      - FORGEJO_RUNNER_LABELS=deploy-host
+      - FLY_API_TOKEN=${FLY_API_TOKEN:-}
+      - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN:-}
+      - CLOUDFLARE_ACCOUNT_ID=e0214028cb64d31232f5662548a55e4e
+    volumes:
+      - act-runner-deploy-data:/data
+      # Job steps on this runner run in-process (`:host`), so this socket
+      # IS directly reachable from them — that's the point of this separate
+      # runner. Only route push/schedule/workflow_dispatch-only jobs here.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./act-runner-deploy.yml:/data/act-runner-deploy.yml:ro
+    networks:
       - default
       - tranc3-net
 
@@ -130,3 +174,5 @@ volumes:
     name: forgejo-data
   act-runner-data:
     name: act-runner-data
+  act-runner-deploy-data:
+    name: act-runner-deploy-data

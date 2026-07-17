@@ -87,7 +87,9 @@ def _load_header_fill_rgb() -> str:
     imported without re-running the whole build — parsing the source text is the
     cheap way to stay in sync if HEADER_FILL's value ever changes there."""
     src = _BUILD_SCRIPT.read_text(encoding="utf-8")
-    m = re.search(r'HEADER_FILL = PatternFill\(start_color="([0-9A-Fa-f]{6})"', src)
+    m = re.search(
+        r"HEADER_FILL\s*=\s*PatternFill\(\s*start_color\s*=\s*['\"]([0-9A-Fa-f]{6})['\"]", src
+    )
     if not m:
         raise RuntimeError(f"Could not find HEADER_FILL definition in {_BUILD_SCRIPT}")
     return "00" + m.group(1).upper()

@@ -16,6 +16,14 @@
 #
 # NO Cloudflare API tokens needed. NO wrangler needed.
 # All workers run as self-owned processes.
+#
+# Runs on `deploy-host`, the one Workshop runner with host Docker socket
+# access (deploy/forgejo/act-runner-deploy.yml), not the default
+# `self-hosted` runner — these jobs `docker build` real images. Safe here
+# because this workflow has no pull_request trigger (push/workflow_dispatch
+# only), so it never runs attacker-controlled workflow content. Do not add
+# a pull_request trigger to this file without also moving it off
+# `deploy-host` — see that file's header comment for why.
 
 name: Deploy Self-Hosted Workers
 
@@ -35,7 +43,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   build-workers:
     name: Build Worker Images
-    runs-on: self-hosted
+    runs-on: deploy-host
     steps:
       - uses: actions/checkout@v4
 
@@ -76,7 +84,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   deploy-fly:
     name: Deploy to Fly.io
-    runs-on: self-hosted
+    runs-on: deploy-host
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     steps:
@@ -136,7 +144,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   verify-and-register-self-hosted:
     name: Verify + register self-hosted workers
-    runs-on: self-hosted
+    runs-on: deploy-host
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     continue-on-error: true

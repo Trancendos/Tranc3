@@ -545,7 +545,17 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   owasp-zap-dast:
     name: OWASP ZAP — DAST API Scan
-    runs-on: self-hosted
+    # This is the one job in this workflow that runs `docker run`, so it's
+    # on `deploy-host` (the only Workshop runner with host Docker socket
+    # access — deploy/forgejo/act-runner-deploy.yml) instead of the default
+    # `self-hosted` runner used by every other job below. This workflow as a
+    # whole triggers on pull_request, but deploy-host must never run
+    # PR-triggered work (a PR's own workflow content executes as-is on this
+    # Forgejo mirror, so that would hand host Docker access to attacker-
+    # controlled code) — so this job additionally skips pull_request events
+    # here, leaving it to run only on push/schedule/workflow_dispatch.
+    if: github.event_name != 'pull_request'
+    runs-on: deploy-host
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4

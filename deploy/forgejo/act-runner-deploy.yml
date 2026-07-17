@@ -1,0 +1,60 @@
+# deploy/forgejo/act-runner-deploy.yml
+# Configuration for The Workshop's second, privileged act-runner — the only
+# one with access to the host's /var/run/docker.sock.
+#
+# This exists because a small number of jobs (deploy-self-hosted.yml;
+# security-scan.yml's owasp-zap-dast) genuinely need to run `docker build`/
+# `docker run` against the host's own Docker daemon, but this is a Forgejo
+# mirror where pull_request-triggered jobs run whatever workflow content is
+# in the PR itself — so giving host Docker access to every self-hosted job
+# (see act-runner.yml) would let any PR take over the host. Splitting those
+# two jobs onto this separate `deploy-host:host` runner, and keeping every
+# other workflow on act-runner.yml's socket-less `:docker://` labels, closes
+# that hole while the jobs that actually need the socket still get it.
+#
+# Only ever reference this runner from workflows/jobs restricted to
+# push/schedule/workflow_dispatch triggers — never pull_request. Adding
+# `deploy-host` to a pull_request-triggered job re-opens the same hole this
+# split exists to close.
+#
+# Mounted at /data/act-runner-deploy.yml by docker-compose.yml's
+# act-runner-deploy service, selected via that service's
+# `daemon --config /data/act-runner-deploy.yml` command override.
+#
+# Reference: https://forgejo.org/docs/latest/admin/runner-installation/
+
+log:
+  level: info
+
+runner:
+  # `:host` runs jobs in-process inside this runner container, which
+  # docker-compose.yml bind-mounts /var/run/docker.sock into — so `docker`
+  # commands in job steps reach the host daemon directly. Deliberately a
+  # single label distinct from act-runner.yml's self-hosted/linux/x64/etc,
+  # so only workflows that explicitly opt in with `runs-on: deploy-host`
+  # land here; nothing matches this runner by accident.
+  labels:
+    - "deploy-host:host"
+
+  fetch_interval: 2s
+  # Deploy jobs are infrequent and shouldn't overlap with each other on a
+  # single Docker daemon — kept low deliberately, unlike act-runner.yml.
+  capacity: 2
+  timeout: 3h
+
+cache:
+  enabled: true
+  host: ""
+  port: 0
+  external_server: ""
+
+container:
+  # Inert under `:host` (no per-job container exists for this to configure)
+  # — see act-runner.yml's container block for the label that actually uses
+  # it. This runner's own network access comes from docker-compose.yml
+  # attaching the act-runner-deploy service itself to tranc3-net.
+  network: tranc3-net
+  privileged: false
+  valid_volumes: []
+  docker_host: ""
+  force_pull: false
