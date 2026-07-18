@@ -162,11 +162,11 @@ Workers subdomain: `luminous-aimastermind.workers.dev`
 
 ### Zero-Cost Self-Hosted Architecture (Fortiere)
 
-The Tranc3 platform has been transformed from a Cloudflare Workers + paid-services architecture to a fully self-hosted, zero-cost Python/FastAPI architecture. All 26+ Cloudflare Workers are being migrated to self-hosted Python workers backed by SQLite, in-memory state, and local filesystem. No paid APIs, no third-party cost-incurring dependencies.
+The Tranc3 platform is moving from a Cloudflare Workers + paid-services architecture toward a self-hosted, zero-cost Python/FastAPI architecture — but this is gated on funding, not unconditional. Every Location (Application/Service) supports three deployment modes: **Cloud Only** (current default for all Locations — the founder's local server needs repair/replacement money that isn't available yet), **Hybrid** (part cloud/part local), and **Local/Self-Hosted** (fully on owned hardware, blocked purely on server funding). The ~26 already-live Cloudflare Workers stay in place under Cloud Only; migrating them to self-hosted Python workers (SQLite, in-memory state, local filesystem) is the Hybrid/Local path, not a committed timeline. Each Location also carries Dev/UAT/Prod per mode, with Dev/UAT provisioned on demand only once Think Tank has scoped actual R&D work — they are not standing environments. Standing policy: avoid GitHub Actions and Cloudflare Workers wherever possible (both carry rate limits that bite under prolonged/heavy use) — this is the actual reason for the zero-cost, self-hosted-by-default posture, not a rejection of the CF Workers currently in place.
 
 **Key documents:**
-- `CROSS_REPO_SYNERGY.md` — Maps all 29 infinity-adminOS TypeScript packages to Python equivalents
-- `CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python
+- `wiki-content/Architecture-CROSS_REPO_SYNERGY.md` — Maps all 29 infinity-adminOS TypeScript packages to Python equivalents (moved from repo root during the wiki-content migration — see `docs/WIKI_INDEX.md`)
+- `wiki-content/Architecture-CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python, describing the Hybrid/Local path once funded (moved from repo root — see `docs/WIKI_INDEX.md`)
 - `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
 - `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
 - `docs/architecture/ea-workbook/` — EA/CMDB workbook (17 CSVs + runbooks/API-spec/compliance
