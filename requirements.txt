@@ -21,7 +21,7 @@ torch==2.12.1
 sentencepiece==0.2.1
 
 # === Datasets ===
-datasets==3.0.0
+datasets==5.0.0
 
 # === Numerical Computing ===
 numpy==2.1.3
