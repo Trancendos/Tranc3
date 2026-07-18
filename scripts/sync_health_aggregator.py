@@ -45,12 +45,30 @@ def _marker_path(cmdb_db_path: str) -> str:
 
 
 def _generation_is_stale(cmdb_db_path: str) -> bool:
+    """A pure elapsed-time check alone can't tell "abandoned" apart from
+    "legitimately still running, just past the timeout" — a rebuild that's
+    unusually slow (much larger CSVs someday, a loaded disk) but still
+    actively writing would otherwise get preempted by a sync reading a
+    half-rebuilt CMDB. Cross-checked against the db file's own mtime: if
+    load_all() has written to db_path more recently than the REBUILDING
+    sentinel itself, that's direct evidence the rebuild is still live
+    right now, regardless of how long it's been running — only silence on
+    *both* signals (no sentinel activity AND no db activity, for the full
+    timeout) counts as abandoned.
+    """
     generation_path = cmdb_db_path + ".generation"
     try:
-        age = time.time() - os.path.getmtime(generation_path)
+        generation_mtime = os.path.getmtime(generation_path)
     except OSError:
         return False
-    return age > _REBUILDING_STALE_SECONDS
+
+    try:
+        db_mtime = os.path.getmtime(cmdb_db_path)
+    except OSError:
+        db_mtime = generation_mtime  # db missing/unreadable — fall back to time-only
+
+    most_recent_activity = max(generation_mtime, db_mtime)
+    return (time.time() - most_recent_activity) > _REBUILDING_STALE_SECONDS
 
 
 def _read_generation(cmdb_db_path: str) -> str | None:
