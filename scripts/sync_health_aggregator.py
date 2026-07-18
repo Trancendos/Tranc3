@@ -53,7 +53,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--health-db",
-        default=os.environ.get("HEALTH_AGGREGATOR_DB_PATH", "/data/health_aggregator.db"),
+        # DB_PATH matches workers/health-aggregator/worker.py's own env var
+        # name — if the worker is deployed with a non-default DB_PATH, this
+        # must follow it or it silently syncs from (or 404s against) the
+        # wrong file. HEALTH_AGGREGATOR_DB_PATH is kept as a higher-priority
+        # override for pointing this script somewhere different from the
+        # worker itself (e.g. a read replica).
+        default=os.environ.get(
+            "HEALTH_AGGREGATOR_DB_PATH",
+            os.environ.get("DB_PATH", "/data/health_aggregator.db"),
+        ),
     )
     parser.add_argument(
         "--cmdb-db",

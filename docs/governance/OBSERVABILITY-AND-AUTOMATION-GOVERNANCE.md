@@ -49,11 +49,12 @@ Confidential-classified services have no auth mechanism," found by hand while wr
 a regression test that the join still finds the known `infinity-shards-service` gap.
 
 A sixth table, **`HealthObservation`**, is also defined — `service_id`, `observed_at`,
-`health_score`, `status`, `error_count`, `response_time_ms`, `source`. It is **empty**. Nothing
-writes to it yet. It exists because "capture live traffic/health data so trend detection has
-something to detect trends in" needs a destination before it needs an algorithm, and this is that
-destination, modelled on `ProactiveHealthMonitor`'s own `HealthSample` shape so wiring it in later
-is a straight mapping, not a redesign.
+`health_score`, `status`, `error_count`, `response_time_ms`, `source`. It exists because "capture
+live traffic/health data so trend detection has something to detect trends in" needs a destination
+before it needs an algorithm, and this is that destination, modelled on `ProactiveHealthMonitor`'s
+own `HealthSample` shape so wiring it in later is a straight mapping, not a redesign. A writer for
+it now exists (§2b) — but it is **empty in every real deployment today**, because that writer has
+only been run against synthetic test data, not a live `health-aggregator` instance (§3).
 
 ## 2b. Built this pass: the health-aggregator → `HealthObservation` sync
 
