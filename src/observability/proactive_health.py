@@ -337,15 +337,21 @@ class ProactiveHealthMonitor:
     # minutes) — that accumulation, not this method, is the remaining gap.
 
     @staticmethod
-    def _replay_alert_id(service_id: str, observed_at: Any, severity: str, kind: str) -> str:
+    def _replay_alert_id(observation_id: Any, service_id: str, severity: str, kind: str) -> str:
         """Deterministic id for a replayed alert, so re-running
         sample_from_cmdb against the same history doesn't re-persist,
         re-log, or re-accumulate-in-memory the same historical event under a
         fresh random uuid each time (unlike check_all()'s live alerts, which
-        are genuinely new events and do want a fresh id per raise)."""
+        are genuinely new events and do want a fresh id per raise).
+
+        Keyed on the HealthObservation row's own primary key, not
+        (service_id, observed_at, severity, kind) — two distinct rows for
+        the same service can share an identical observed_at (e.g. two
+        sources polling in the same instant) and would otherwise collide,
+        silently dropping one of two genuinely distinct alerts."""
         import hashlib
 
-        seed = f"{service_id}|{observed_at}|{severity}|{kind}"
+        seed = f"{observation_id}|{service_id}|{severity}|{kind}"
         return "replay-" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
 
     def sample_from_cmdb(self, cmdb_db_path: str) -> list[ProactiveAlert]:
@@ -356,8 +362,9 @@ class ProactiveHealthMonitor:
         from that service's EWMA baseline (1.0), it does not resume from a
         prior call's state, so calling it twice in a row does not double-
         count trends within a single history. Each replayed alert gets a
-        deterministic id keyed on (service_id, observed_at, severity, kind)
-        and is skipped if already present in self._alerts, so repeated calls
+        deterministic id keyed on the source HealthObservation row's own id
+        (plus service_id/severity/kind) and is skipped if already present in
+        self._alerts, so repeated calls
         against unchanged history don't grow self._alerts unboundedly,
         re-insert duplicate rows into the alerts db (INSERT OR IGNORE relies
         on this), or re-log the same historical event on every call.
@@ -379,9 +386,14 @@ class ProactiveHealthMonitor:
         existing_ids = {a.alert_id for a in self._alerts}
 
         def raise_if_new(
-            service_id: str, severity: str, message: str, context: dict, observed_at: Any, kind: str
+            observation_id: Any,
+            service_id: str,
+            severity: str,
+            message: str,
+            context: dict,
+            kind: str,
         ) -> None:
-            alert_id = self._replay_alert_id(service_id, observed_at, severity, kind)
+            alert_id = self._replay_alert_id(observation_id, service_id, severity, kind)
             if alert_id in existing_ids:
                 return
             existing_ids.add(alert_id)
@@ -393,7 +405,7 @@ class ProactiveHealthMonitor:
         conn.row_factory = sqlite3.Row
         try:
             rows = conn.execute(
-                "SELECT service_id, health_score, error_count, observed_at "
+                "SELECT id, service_id, health_score, error_count, observed_at "
                 "FROM health_observations "
                 "WHERE health_score IS NOT NULL AND service_id IS NOT NULL "
                 "ORDER BY service_id, observed_at ASC"
@@ -426,29 +438,29 @@ class ProactiveHealthMonitor:
                 context = {"ewma": ewma, "raw": obs["health_score"], "observed_at": observed_at}
                 if ewma < self._CRITICAL_THRESHOLD:
                     raise_if_new(
+                        obs["id"],
                         service_id,
                         "critical",
                         f"Health critical: EWMA={ewma:.2f}",
                         context,
-                        observed_at,
                         "critical",
                     )
                 elif ewma < self._WARNING_THRESHOLD:
                     raise_if_new(
+                        obs["id"],
                         service_id,
                         "warning",
                         f"Health degraded: EWMA={ewma:.2f}",
                         context,
-                        observed_at,
                         "degraded",
                     )
                 elif trending_down:
                     raise_if_new(
+                        obs["id"],
                         service_id,
                         "warning",
                         f"Declining health trend ({self._TREND_WINDOW} samples)",
                         {"samples": self._scores[service_id][-self._TREND_WINDOW :]},
-                        observed_at,
                         "trend",
                     )
         return alerts

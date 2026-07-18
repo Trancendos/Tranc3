@@ -133,6 +133,37 @@ def test_repeated_calls_against_unchanged_history_do_not_duplicate_alerts(tmp_pa
     assert len(monitor._alerts) == total_after_first  # no growth on replay
 
 
+def test_distinct_rows_sharing_a_timestamp_both_raise(tmp_path):
+    """Regression test: two distinct HealthObservation rows for the same
+    service that happen to share an identical observed_at (e.g. two sources
+    polling in the same instant) must not collide into a single suppressed
+    alert — the replay id must key on the row's own id, not just
+    (service_id, observed_at, severity, kind)."""
+    cmdb_path = tmp_path / "cmdb.db"
+    same_ts = "2026-07-01T00:00:00"
+    _make_cmdb_db(
+        cmdb_path,
+        [(sid, 0.02, same_ts) for sid in ("SRV-SPARK-001", "SRV-VOID-001")],
+    )
+    # Drive both down to critical with more low samples at the same timestamp.
+    conn = sqlite3.connect(cmdb_path)
+    for sid in ("SRV-SPARK-001", "SRV-VOID-001"):
+        for _ in range(6):
+            conn.execute(
+                "INSERT INTO health_observations "
+                "(service_id, observed_at, health_score, status, error_count, source) "
+                "VALUES (?, ?, 0.02, 'healthy', 0, 'test')",
+                (sid, same_ts),
+            )
+    conn.commit()
+    conn.close()
+
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    ids_seen = {a.entity_id for a in alerts if a.severity == "critical"}
+    assert ids_seen == {"SRV-SPARK-001", "SRV-VOID-001"}
+
+
 def test_missing_health_observations_table_returns_no_alerts_not_a_crash(tmp_path):
     """A CMDB db that predates HealthObservation (or points at the wrong
     file) must report and return no alerts, not raise sqlite3.OperationalError."""
