@@ -32,6 +32,8 @@ class ModelConfig:
     d_head: int = field(init=False)
 
     def __post_init__(self) -> None:
+        if self.d_model <= 0:
+            raise ValueError(f"d_model must be greater than 0 (got {self.d_model})")
         if self.n_heads <= 0:
             raise ValueError(f"n_heads must be greater than 0 (got {self.n_heads})")
         if self.d_model % self.n_heads != 0:
@@ -39,6 +41,13 @@ class ModelConfig:
                 f"d_model ({self.d_model}) must be divisible by n_heads ({self.n_heads})"
             )
         self.d_head = self.d_model // self.n_heads
+        if self.d_head % 2 != 0:
+            # RotaryEmbedding's inv_freq is built from torch.arange(0, dim, 2),
+            # which silently produces a shorter cache than dim for odd dim —
+            # the mismatch doesn't surface until the first forward pass, as a
+            # confusing tensor-shape RuntimeError unrelated on its face to
+            # this config value.
+            raise ValueError(f"d_model / n_heads ({self.d_head}) must be even — RoPE requires it")
 
 
 @dataclass

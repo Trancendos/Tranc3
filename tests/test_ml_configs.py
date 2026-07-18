@@ -38,6 +38,19 @@ class TestModelConfig:
         with pytest.raises(ValueError):
             ModelConfig(n_heads=0)
 
+    def test_non_positive_d_model_rejected(self):
+        with pytest.raises(ValueError):
+            ModelConfig(d_model=0, n_heads=1)
+        with pytest.raises(ValueError):
+            ModelConfig(d_model=-8, n_heads=4)
+
+    def test_odd_d_head_rejected_before_model_construction(self):
+        # d_model=15, n_heads=3 -> d_head=5 (odd), which used to build a
+        # ModelConfig successfully and only fail on the first forward pass
+        # with a confusing RoPE tensor-shape RuntimeError.
+        with pytest.raises(ValueError):
+            ModelConfig(d_model=15, n_heads=3)
+
     def test_builds_and_runs_a_real_model(self):
         cfg = ModelConfig(
             vocab_size=500, d_model=64, n_layers=2, n_heads=4, d_ff=256, max_seq_len=32
@@ -94,3 +107,47 @@ class TestUserSettingModel:
         assert store.list_keys("alice")["GROQ_API_KEY"] == "set"
         assert store.delete("alice", "GROQ_API_KEY") is True
         assert store.get("alice", "GROQ_API_KEY") is None
+
+    def test_orm_model_matches_migration_003_column_shape(self):
+        """UserSetting must match migrations/versions/003_user_settings.py exactly:
+        Base.metadata.create_all() does not alter an already-migrated table, so if
+        the ORM model drifts from the deployed schema (e.g. a UUID PK vs. the
+        migration's INTEGER autoincrement PK), inserts against a real migrated
+        database would fail even though tests against a fresh create_all() db
+        would pass."""
+        table = Base.metadata.tables["user_settings"]
+        assert table.c.id.autoincrement in (True, "auto")
+        assert not isinstance(table.c.id.type, type(table.c.encrypted_value.type))
+        assert table.c.username.type.length == 64
+        assert table.c.key.type.length == 128
+
+    def test_settings_store_works_against_migrated_schema(self, tmp_path, monkeypatch):
+        """Build the table via the real Alembic migration (not create_all) and
+        confirm UserSettingsStore still works against exactly that shape."""
+        import importlib.util
+
+        from alembic.migration import MigrationContext
+        from alembic.operations import Operations
+        from sqlalchemy import create_engine
+
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-at-least-32-characters-long")
+
+        db_path = tmp_path / "migrated_settings.db"
+        engine = create_engine(f"sqlite:///{db_path}")
+        migrations_dir = __import__("pathlib").Path(__file__).resolve().parent.parent / "migrations"
+        spec = importlib.util.spec_from_file_location(
+            "m003_user_settings", migrations_dir / "versions" / "003_user_settings.py"
+        )
+        m003 = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m003)
+
+        with engine.connect() as conn:
+            ctx = MigrationContext.configure(conn)
+            m003.op = Operations(ctx)
+            m003.upgrade()
+
+        from src.settings_store import UserSettingsStore
+
+        store = UserSettingsStore(f"sqlite:///{db_path}")
+        store.set("bob", "GITHUB_TOKEN", "ghp_test456")
+        assert store.get("bob", "GITHUB_TOKEN") == "ghp_test456"
