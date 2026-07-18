@@ -16,29 +16,50 @@ Covers the unified gateway (port 8040) that aggregates all P4 worker data:
   - Access audit, threat level, and policy endpoints (Phase 22)
 """
 
+import importlib.util
 import os
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from tests._worker_import_utils import import_worker as _import_worker
-
-_GATEWAY_WORKER_PATH = (
-    Path(__file__).resolve().parent.parent / "workers" / "gateway-service" / "worker.py"
-)
+_GATEWAY_WORKER_DIR = Path(__file__).resolve().parent.parent / "workers" / "gateway-service"
+_GATEWAY_WORKER_PATH = _GATEWAY_WORKER_DIR / "worker.py"
 
 _gateway_worker_cache = None
 
 
 def _load_gateway_worker():
+    """Import gateway-service's worker.py, keeping its directory on sys.path
+    and its sibling modules (service.py, config.py, ...) live in sys.modules
+    for the rest of the process.
+
+    Unlike tests/_worker_import_utils.import_worker, this does NOT evict/restore
+    those names afterward — router.py performs several *lazy*, request-time
+    `from service import ...` imports (see workers/gateway-service/router.py),
+    which would raise ModuleNotFoundError once the shared helper's cleanup
+    already ran, since sys.path/sys.modules would no longer resolve them. This
+    file only ever imports gateway-service, so there's no cross-worker
+    same-named-sibling collision risk to guard against here.
+    """
     global _gateway_worker_cache
-    if _gateway_worker_cache is None:
-        _gateway_worker_cache = _import_worker(
-            "workers.gateway-service.worker", _GATEWAY_WORKER_PATH
-        )
-    return _gateway_worker_cache
+    if _gateway_worker_cache is not None:
+        return _gateway_worker_cache
+
+    worker_dir = str(_GATEWAY_WORKER_DIR)
+    if worker_dir not in sys.path:
+        sys.path.insert(0, worker_dir)
+
+    spec = importlib.util.spec_from_file_location(
+        "workers.gateway-service.worker", _GATEWAY_WORKER_PATH
+    )
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["workers.gateway-service.worker"] = mod
+    spec.loader.exec_module(mod)
+    _gateway_worker_cache = mod
+    return mod
 
 
 # ---------------------------------------------------------------------------

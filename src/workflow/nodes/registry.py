@@ -26,7 +26,6 @@ def _init_registry() -> None:
     global _REGISTRY_INITIALIZED
     if _REGISTRY_INITIALIZED:
         return
-    _REGISTRY_INITIALIZED = True
 
     from .ai import LLMNode, MLPredictNode  # noqa: PLC0415
     from .code import CodeExecNode  # noqa: PLC0415
@@ -53,6 +52,11 @@ def _init_registry() -> None:
             NodeType.ML_PREDICT: MLPredictNode,
         }
     )
+    # Only after successful population — if an import above raises, the flag
+    # must stay False so the next create_node() call retries (and surfaces
+    # the real error) instead of silently treating a partial/empty registry
+    # as "already initialized" forever.
+    _REGISTRY_INITIALIZED = True
 
 
 _PHASE4_NODE_REGISTRY: Dict[str, Any] = {}
