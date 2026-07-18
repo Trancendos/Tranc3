@@ -36,6 +36,14 @@ non-fictional Improvement Roadmap of gaps found while building it. Regenerate it
 `python scripts/build_master_service_matrix.py` after updating the facts baked into that
 script or the CSVs it now reads from — it is not hand-edited directly.
 
+**`src/cmdb/`** turns these same 19 CSVs into a real relational domain model — a SQLite database
+(`data/cmdb.db`, gitignored, rebuild with `python scripts/build_cmdb.py`) with actual foreign keys
+between `Service`, `Application`, `Deployment`, `CostReview`, and `AccessControlReview`, plus an
+empty `HealthObservation` table ready for live health-check data to land in once something is wired
+to write to it (see `docs/governance/OBSERVABILITY-AND-AUTOMATION-GOVERNANCE.md`). Same "CSVs are
+the source of truth, this is a derived build artifact" convention as the xlsx matrix above —
+covered by `tests/test_cmdb.py`.
+
 `scripts/check_master_matrix_freshness.py` closes the loop so that regeneration step
 isn't just a manual convention: it re-runs the generator against current repo state and
 diffs every sheet's cell values (ignoring openpyxl's save-time file metadata) against
