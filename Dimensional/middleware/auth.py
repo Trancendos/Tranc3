@@ -164,9 +164,18 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 payload = verify_token(bearer_token)
                 username = payload.get("username") or payload.get("sub") if payload else None
                 if username:
+                    # create_access_token() (src/auth/tokens.py) stores tier as an
+                    # int (default 0), but every RBAC/tier consumer in this codebase
+                    # (src/auth/rbac.py's _TIER_PERMISSIONS, src/monetisation/billing.py's
+                    # TIERS) is keyed by tier NAME strings ("free"/"pro"/"business"/
+                    # "enterprise") — there is no established int->name mapping anywhere
+                    # to recover "pro"/"business" from a bare int, so fail closed to
+                    # "free" rather than crash .lower() on an int or guess a mapping.
+                    raw_tier = payload.get("tier", "free") if payload else "free"
                     user = {
                         "sub": username,
-                        "tier": payload.get("tier", "free"),
+                        "role": payload.get("role", "user") if payload else "user",
+                        "tier": raw_tier if isinstance(raw_tier, str) else "free",
                         "auth_method": "jwt",
                         "is_active": True,
                     }

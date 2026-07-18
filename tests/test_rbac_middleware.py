@@ -39,7 +39,9 @@ def app_with_state_route(monkeypatch):
 
 
 class TestRBACMiddlewarePopulatesUser:
-    def test_valid_bearer_token_populates_request_state_user(self, app_with_state_route):
+    def test_valid_bearer_token_does_not_raise_and_user_stays_none_without_db_wiring(
+        self, app_with_state_route
+    ):
         token = create_token(user_id="u1", username="alice")
         resp = app_with_state_route.get("/protected", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
