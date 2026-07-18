@@ -4,7 +4,7 @@ version: "3.8"
 
 services:
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:6c86cad803970ea782683a8e80e7403444c5bf3cf70de63b4d3c8e87500db92f
     container_name: docutari
     restart: unless-stopped
     ports:
@@ -48,7 +48,7 @@ services:
       - "traefik.http.services.paperless.loadbalancer.server.port=8000"
 
   paperless-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: paperless-db
     restart: unless-stopped
     environment:
@@ -66,7 +66,7 @@ services:
       - tranc3-network
 
   paperless-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: paperless-redis
     restart: unless-stopped
     networks:

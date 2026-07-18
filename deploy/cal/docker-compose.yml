@@ -4,7 +4,7 @@ version: "3.8"
 
 services:
   calcom:
-    image: calcom/cal.com:latest
+    image: calcom/cal.com:latest@sha256:ace3bb1219fb7306585ab9f4d94d41af7ee064c343db0498173436bbe857bd49
     container_name: chronossphere
     restart: unless-stopped
     ports:
@@ -32,7 +32,7 @@ services:
       - "traefik.http.services.calcom.loadbalancer.server.port=3000"
 
   calcom-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: calcom-db
     restart: unless-stopped
     environment:

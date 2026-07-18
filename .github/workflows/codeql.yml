@@ -44,7 +44,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e
@@ -99,7 +99,7 @@ jobs:
 
       - name: Dismiss suppressed alerts
         if: github.ref == 'refs/heads/main'
-        uses: advanced-security/dismiss-alerts@v2
+        uses: advanced-security/dismiss-alerts@a18f986bdb40edba0dd7a74382c15d4a3d50a1c8 # v2
         with:
           sarif-id: ${{ steps.upload_sarif.outputs.sarif-id }}
           sarif-file: sarif-results/${{ matrix.sarif-name }}.sarif
