@@ -247,6 +247,30 @@ class SystemMetric(Base):
 
 
 # ============================================================
+# USER SETTINGS (encrypted, per-user API keys / secrets)
+# ============================================================
+class UserSetting(Base):
+    """Matches migrations/versions/003_user_settings.py exactly — an integer
+    autoincrement PK, not a _GUID(), since this table may already be
+    provisioned by that migration in a deployed database and
+    Base.metadata.create_all does not alter already-existing tables."""
+
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(64), nullable=False)
+    key = Column(String(128), nullable=False)
+    encrypted_value = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_user_settings_username", "username"),
+        Index("ix_user_settings_username_key", "username", "key", unique=True),
+    )
+
+
+# ============================================================
 # DATABASE MANAGER
 # ============================================================
 class DatabaseManager:
