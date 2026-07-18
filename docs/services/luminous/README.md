@@ -84,7 +84,23 @@ These are libraries consumed by the backend; not all are exposed via the `/lumin
   No paid inference dependency.
 - **Degradation:** torch/provider absence → `503`; the backend keeps running (import-guarded).
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** mounted in the `tranc3-backend` monolith (`api.py`); runs wherever that monolith's `docker-compose.production.yml` service block is deployed, on whatever port/host the monolith uses (compose service `tranc3-backend`)
+- **Persistence:** None — this entity performs in-process computation only (IIT Φ calculation, neuromorphic LIF+STDP net, MAPE-K control loop, per this pack's own TFM — no "Storage" row exists because there is no storage of Luminous's own). While the `tranc3-backend` monolith has a named volume, that volume backs *other* entities' state, not this one; this service's own state is lost on restart/redeploy in every mode alike. (The optional `ollama` backend's own model-weight volume, noted below, is a separate downstream dependency's persistence, not Luminous's own.)
+- **Note:** an optional local LLM backend (`ollama`, its own compose service with a dedicated volume for model weights) gives Luminous materially better inference cost/latency on Local-Only or Hybrid — Cloud-Only free-tier CPU hosts cannot realistically serve local model weights, so Cloud-Only falls back to the AI Gateway's free-tier cloud providers (OpenRouter/HuggingFace) instead of Ollama.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tranc3-backend` compose block runs on a single cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front | ephemeral — this service holds no state of its own; the monolith's volume does not apply to it | no entity-specific blocker beyond whatever applies to the monolith as a whole |
+| **Hybrid** | same monolith block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the monolith itself still runs wherever it's deployed | ephemeral, same as Cloud-Only — this service's own state does not benefit from the Hybrid data-locality split | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one, per `should_run_citadel_docker()` in `infrastructure_mode.py` |
+| **Local-Only** | same monolith block, run entirely on local/Citadel hardware behind local Traefik | still ephemeral — local hardware does not change this service's own statelessness | none beyond standard local-hardware ops (backup, power, network); not mode-specific, but note the standing gap regardless of mode: no route-level authentication (see SIM above) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -94,17 +110,29 @@ These are libraries consumed by the backend; not all are exposed via the `/lumin
 | Model providers | Ollama / OpenRouter `:free` / llama.cpp | free tiers only, rotate on failure |
 | Control loop | MAPE-K (`mape_k.py`) | in-process |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`); no paid model APIs; outputs pass
   `output_safety.py` before return where wired.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a bio-neural endpoint:** implement in `src/bio_neural/`, expose via `routes.py`, keep the
   heavy import inside the handler (import-guarded), return `503` on `ImportError`.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/luminous/status` degraded:** check `consciousness`/`neuromorphic` module fields; a `degraded`
   value indicates a failed import — verify `torch`/`numpy` in the image.
@@ -117,7 +145,7 @@ These are libraries consumed by the backend; not all are exposed via the `/lumin
   — usually an input-shape mismatch against the configured net. The handler calls `process(x)`; a
   `timesteps=` kwarg would be a `TypeError` (real signature `process(x, learn=False)`).
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Error detail sanitised (`safe_error_detail`); logs sanitised (`sanitize_for_log`).
 - Heavy deps import-guarded; endpoints fail soft with typed HTTP status codes.

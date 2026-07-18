@@ -3,9 +3,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     adduser --disabled-password --gecos "" appuser
-COPY main.py .
+COPY worker.py .
+RUN mkdir -p /app/data && chown appuser:appuser /app/data
 USER appuser
-EXPOSE 8061
+EXPOSE 8075
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"
-CMD ["python", "main.py"]
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8075/health')"
+CMD ["python", "worker.py"]

@@ -125,7 +125,23 @@
 - **Degradation:** if tool RAG is unavailable, fall back to exact/name-based tool lookup;
   if a downstream tool is down, return a JSON-RPC error for that call only.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** mounted in the `tranc3-backend` monolith (`api.py`); runs wherever that monolith's `docker-compose.production.yml` service block is deployed, on whatever port/host the monolith uses (compose service `tranc3-backend`)
+- **Persistence:** None — this entity's own state is an ephemeral, in-process FAISS tool-RAG index that is rebuilt on start (per this pack's own ASD) — no persistence of its own. While the `tranc3-backend` monolith has a named volume, that volume backs *other* entities' state, not this one; this service's own state (if any) is lost on restart/redeploy in every mode alike.
+- **Note:** stateless by design — its FAISS tool-RAG index is ephemeral and rebuilt on start (per this pack's own ASD), so the volume above matters to the monolith generally, not to The Spark specifically.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tranc3-backend` compose block runs on a single cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front | ephemeral — this service holds no state of its own; the monolith's volume does not apply to it | no entity-specific blocker beyond whatever applies to the monolith as a whole |
+| **Hybrid** | same monolith block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the monolith itself still runs wherever it's deployed | ephemeral, same as Cloud-Only — this service's own state does not benefit from the Hybrid data-locality split | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one, per `should_run_citadel_docker()` in `infrastructure_mode.py` |
+| **Local-Only** | same monolith block, run entirely on local/Citadel hardware behind local Traefik | still ephemeral — local hardware does not change this service's own statelessness | none beyond standard local-hardware ops (backup, power, network) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Technology | Version | Licence | Zero-cost? | CVE posture |
 |-------|-----------|---------|---------|:----------:|-------------|
@@ -135,7 +151,19 @@
 | Tool RAG | FAISS (`faiss-cpu`) + sentence-transformers | pinned | MIT/Apache | ✅ | clean |
 | Validation | Pydantic v2 | pinned | MIT | ✅ | clean |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - **Applicable platform policies:** `POL-AI-001` (AI Ethics & Governance),
   `POL-OPS-002`, `POL-PRI-001` — see `docs/policies/`.
@@ -148,7 +176,7 @@
   read-only `/mcp/tools`, `/mcp/health`, `/mcp/grid/status` are currently open. Tier
   limits per `src/monetisation/`.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Deploy:** included in the FastAPI app (`api.py`) / worker image; CI via
   `.forgejo/workflows/` (no GitHub Actions).
@@ -157,7 +185,7 @@
 - **Config change:** through change gate (`docs/procedures/PROC-CHG-001-Change-Request.md`).
 - **Secret rotation:** N/A for The Spark core (holds no secrets); downstream tools use The Void.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET /mcp/health` → 200 with status body.
 - **Key alerts → action:**
@@ -175,7 +203,7 @@
 - **Rollback:** redeploy previous image tag; MCP surface is backward-compatible by policy.
 - **Recovery:** stateless — restart restores service; RAG index rebuilds automatically.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - **API standard:** JSON-RPC 2.0 (`jsonrpc="2.0"`, standard error codes) — `src/mcp/server.py`.
 - **Error standard:** canonical `ErrorCode` enum — `src/errors/error_catalog.py`.

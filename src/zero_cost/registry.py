@@ -96,10 +96,23 @@ def get_chain(chain_name: str) -> list[str]:
     raise ValueError(f"Unknown rotation chain: {chain_name!r}. Available: {sorted(chains_map)}")
 
 
+def _approved_self_hosted_ids(reg: dict[str, Any]) -> set[str]:
+    """approved_self_hosted entries are {id, category, cost, ...} dicts, not bare strings."""
+    ids: set[str] = set()
+    for entry in reg.get("approved_self_hosted", []):
+        if isinstance(entry, dict):
+            pid = entry.get("id")
+            if pid:
+                ids.add(str(pid))
+        elif isinstance(entry, str):
+            ids.add(entry)
+    return ids
+
+
 def is_approved(provider_id: str) -> bool:
     """True if provider is on an approved list or a zero-cost capability entry."""
     reg = load_registry()
-    if provider_id in reg.get("approved_self_hosted", []):
+    if provider_id in _approved_self_hosted_ids(reg):
         return True
     if provider_id in reg.get("approved_free_tier", []):
         return True
@@ -113,9 +126,7 @@ def is_approved(provider_id: str) -> bool:
 
 def approved_ids() -> frozenset[str]:
     reg = load_registry()
-    ids: set[str] = set(reg.get("approved_self_hosted", [])) | set(
-        reg.get("approved_free_tier", [])
-    )
+    ids: set[str] = _approved_self_hosted_ids(reg) | set(reg.get("approved_free_tier", []))
     for prov in _iter_capability_providers(reg):
         pid = prov.get("id")
         if pid and is_approved(str(pid)):

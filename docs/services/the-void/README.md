@@ -81,7 +81,23 @@
 - **Zero-cost limits & hard stops:** no CF D1/KV/R2; in-memory rate limiter caps abuse. No paid dependency.
 - **Degradation:** `/health` reports `degraded` if the SQLite schema/queries fail.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`infinity-void`, port 8002) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** named volume attached to the `infinity-void` compose service — state survives container restarts/redeploys in any mode
+- **Note:** this is a secrets vault — losing its volume is a materially worse event than for most other entities (all encrypted secrets, not just cache/derived state), so backup of this specific volume matters more than the platform-wide default in every mode.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `infinity-void` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `infinity-void` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `infinity-void` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -92,17 +108,29 @@
 | Rate limiting | in-memory sliding window | in-process |
 | Identity | delegated to Infinity One | self-hosted |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment, and no local run command is documented in §11 PROC either |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `infinity-void` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks, nor is a local run command documented in §11 PROC — Production is genuinely the first place it runs. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - `MASTER_KEY_SEED` + `INTERNAL_SECRET` MUST be strong, unique, non-default (enforced by fail-fast).
   Secrets never logged; keys from env/vault only. Reuses platform policy (`POL-AI-001`, `docs/defstan/`).
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Rotate the master key:** re-encrypt stored secrets under a new `MASTER_KEY_SEED` (offline
   migration); never change the seed without re-encryption or existing secrets become undecryptable.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Startup `RuntimeError` (MASTER_KEY_SEED / INTERNAL_SECRET):** the value is unset or a known default —
   set a strong unique value (`python -c "import secrets; print(secrets.token_hex(32))"`).
@@ -110,7 +138,7 @@
 - **All secret routes return `401`:** Infinity verification failed (or `INFINITY_ONE_URL` unset) — confirm
   the token and that Infinity One `/auth/verify` is reachable with the worker's `X-Internal-Secret`.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - AES-256-GCM; PBKDF2-HMAC-SHA256 100k; random IV per secret. Auth delegated to Infinity.
 - Fail-fast on weak/absent secrets; CORS restricted to platform origins.

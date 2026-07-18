@@ -275,6 +275,10 @@ class StripeManager:
                 success_url=success_url,
                 cancel_url=cancel_url,
                 metadata={"user_id": user_id, "tier": tier},
+                # Copy the identity onto the Subscription too, so later
+                # customer.subscription.* events (renewals, cancellations) can be
+                # mapped back to the user for tier provisioning/downgrade.
+                subscription_data={"metadata": {"user_id": user_id, "tier": tier}},
                 tax_id_collection={"enabled": True},
                 automatic_tax={"enabled": True},
             )
@@ -288,7 +292,13 @@ class StripeManager:
             return None
         try:
             event = self._stripe.Webhook.construct_event(payload, sig_header, self._webhook_secret)
-            return {"type": event["type"], "data": event["data"]["object"]}
+            # Include the event id so downstream provisioning can dedupe against
+            # Stripe's at-least-once delivery (dropping it defeats record_once).
+            return {
+                "id": event.get("id"),
+                "type": event["type"],
+                "data": event["data"]["object"],
+            }
         except Exception as exc:
             logger.error("Stripe webhook error: %s", sanitize_for_log(exc))
             return None
@@ -508,9 +518,34 @@ class PassiveRevenueEngine:
         "consulting": {"description": "Platform consulting and integration", "currency": "GBP"},
     }
 
+    # Cap on remembered event ids for idempotent booking (bounded memory).
+    _MAX_BOOKED_IDS = 10_000
+
     def __init__(self):
         self._revenue: Dict[str, float] = dict.fromkeys(self.STREAMS, 0.0)
         self._transactions: List[Dict] = []
+        # Insertion-ordered set of Stripe event ids already booked, for dedupe.
+        self._booked_event_ids: Dict[str, None] = {}
+
+    def record_once(
+        self,
+        event_id: Optional[str],
+        stream: str,
+        amount_gbp: float,
+        metadata: Optional[Dict] = None,
+    ) -> bool:
+        """Book revenue at most once per Stripe event id. Returns True if it was
+        booked, False if this event id was already seen (a duplicate/retry). With
+        no event id we cannot dedupe, so we fall back to booking unconditionally."""
+        if event_id:
+            if event_id in self._booked_event_ids:
+                return False
+            self._booked_event_ids[event_id] = None
+            if len(self._booked_event_ids) > self._MAX_BOOKED_IDS:
+                # Evict the oldest remembered id (dict preserves insertion order).
+                self._booked_event_ids.pop(next(iter(self._booked_event_ids)))
+        self.record(stream, amount_gbp, metadata)
+        return True
 
     def record(self, stream: str, amount_gbp: float, metadata: Optional[Dict] = None):
         if stream not in self._revenue:
@@ -528,10 +563,19 @@ class PassiveRevenueEngine:
         logger.info("Revenue: %s +£%.2f (total: £%.2f)", stream, amount_gbp, self._revenue[stream])
 
     def marketplace_fee(self, transaction_amount_gbp: float) -> float:
-        """Calculate 2.5% Arcadian Exchange marketplace fee."""
+        """Calculate AND record the 2.5% Arcadian Exchange marketplace fee."""
         fee = round(transaction_amount_gbp * 0.025, 2)
         self.record("marketplace_fees", fee, {"transaction_amount": transaction_amount_gbp})
         return fee
+
+    @property
+    def streams(self) -> Dict[str, float]:
+        """Cumulative revenue per stream (GBP). Returns a **defensive copy** — a
+        plain, JSON-serialisable dict — so callers can read (and even mutate) it
+        without touching the engine's ledger, and so nobody depends on the private
+        `_revenue` attribute (whose absence previously crashed the /billing/revenue
+        endpoints). To change recorded revenue, use record()/record_once()."""
+        return dict(self._revenue)
 
     def summary(self) -> Dict:
         total = sum(self._revenue.values())
@@ -770,3 +814,225 @@ stripe_manager = StripeManager()
 billing_router = BillingRouter()
 revenue_tracker = PassiveRevenueEngine()
 tax_monitor = TaxMonitor()
+
+
+# ---------------------------------------------------------------------------
+# Webhook-driven subscription provisioning
+# ---------------------------------------------------------------------------
+# Validating a Stripe webhook signature is necessary but NOT sufficient: a paid
+# checkout only actually grants the customer their plan once the platform records
+# the new tier. The functions below turn a verified Stripe event into a concrete
+# provisioning action (grant/downgrade) and apply it to the persistent user store
+# (+ the live rate-limit cache and revenue ledger). Kept free of any api.py import
+# so it stays unit-testable: the caller injects the user manager.
+
+
+def tier_for_price_id(price_id: Optional[str]) -> Optional[str]:
+    """Reverse-map a configured Stripe price ID back to its tier key, or None."""
+    if not price_id:
+        return None
+    for tier, cfg in TIERS.items():
+        if cfg.get("stripe_price_id") and cfg["stripe_price_id"] == price_id:
+            return tier
+    return None
+
+
+def _subscription_price_id(sub_obj: Dict[str, Any]) -> Optional[str]:
+    """Pull the (first) active price ID out of a Stripe Subscription object."""
+    try:
+        items = (sub_obj.get("items") or {}).get("data") or []
+        if items:
+            return (items[0].get("price") or {}).get("id")
+    except Exception:  # malformed/partial event payload
+        return None
+    return None
+
+
+# Subscription statuses that mean the customer does NOT have a paid entitlement.
+# `incomplete` / `incomplete_expired` mean the initial payment never succeeded;
+# `paused` means billing is suspended (e.g. a trial paused for lack of a payment
+# method). None of these may grant a paid tier even though the subscription still
+# carries items/price IDs.
+_INACTIVE_SUB_STATUSES = {
+    "canceled",
+    "unpaid",
+    "incomplete",
+    "incomplete_expired",
+    "paused",
+}
+
+
+def plan_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Turn a verified Stripe event dict into a provisioning plan, or None if the
+    event isn't one we act on / lacks the identity needed to act safely.
+
+    Plan shape: {"action": "grant"|"downgrade", "user_id": str, "tier": str,
+                 "event": <type>, "event_id": <id>, "is_payment": bool}. Pure — no
+    side effects, no I/O. `is_payment` marks the events that represent an actual
+    successful charge (so only those book revenue), and `event_id` lets the caller
+    dedupe against Stripe's at-least-once delivery.
+    """
+    etype = event.get("type", "")
+    event_id = event.get("id")
+    obj = (event.get("data") or {}).get("object") or {}
+    md = obj.get("metadata") or {}
+    user_id = md.get("user_id")
+    # The Stripe customer id (cus_...) rides on every actionable object
+    # (checkout session, subscription, invoice). Capture it so provisioning can
+    # persist the durable user->customer link the billing portal resolves from.
+    customer_id = obj.get("customer") if isinstance(obj.get("customer"), str) else None
+
+    def _grant(tier: str, *, is_payment: bool) -> Dict[str, Any]:
+        return {
+            "action": "grant",
+            "user_id": user_id,
+            "tier": tier,
+            "event": etype,
+            "event_id": event_id,
+            "is_payment": is_payment,
+            "stripe_customer_id": customer_id,
+        }
+
+    def _downgrade() -> Dict[str, Any]:
+        return {
+            "action": "downgrade",
+            "user_id": user_id,
+            "tier": "free",
+            "event": etype,
+            "event_id": event_id,
+            "is_payment": False,
+            "stripe_customer_id": customer_id,
+        }
+
+    if etype == "checkout.session.completed":
+        tier = md.get("tier")
+        # Only a paid session grants (async payment methods can complete a session
+        # while still "unpaid"); "no_payment_required" is a 100%-off coupon → grant.
+        paid = obj.get("payment_status", "paid") != "unpaid"
+        if user_id and tier in TIERS and tier != "free" and paid:
+            return _grant(tier, is_payment=True)
+        return None
+
+    if etype == "customer.subscription.updated":
+        if not user_id:
+            return None
+        if obj.get("status") in _INACTIVE_SUB_STATUSES:
+            return _downgrade()
+        # Prefer the tier implied by the current price; fall back to metadata.
+        tier = tier_for_price_id(_subscription_price_id(obj))
+        if tier is None and md.get("tier") in TIERS:
+            tier = md["tier"]
+        if tier and tier != "free":
+            # A subscription state change is NOT a payment — provision the tier but
+            # never book revenue here (renewals arrive as invoice.payment_succeeded).
+            return _grant(tier, is_payment=False)
+        return None
+
+    if etype == "customer.subscription.deleted":
+        if user_id:
+            return _downgrade()
+        return None
+
+    if etype == "invoice.paid":
+        # Recurring renewal payment — the documented Stripe renewal event. Identity
+        # lives on the subscription (copied to the invoice as subscription_details.
+        # metadata); tier from the line item price, falling back to that metadata.
+        inv_md = (obj.get("subscription_details") or {}).get("metadata") or md
+        inv_user = inv_md.get("user_id")
+        lines = (obj.get("lines") or {}).get("data") or []
+        price_id = (lines[0].get("price") or {}).get("id") if lines else None
+        tier = tier_for_price_id(price_id)
+        if tier is None and inv_md.get("tier") in TIERS:
+            tier = inv_md["tier"]
+        if inv_user and tier and tier != "free":
+            return {
+                "action": "grant",
+                "user_id": inv_user,
+                "tier": tier,
+                "event": etype,
+                "event_id": event_id,
+                "is_payment": True,
+                "stripe_customer_id": customer_id,
+            }
+        return None
+
+    return None
+
+
+def apply_provision(user_manager: Any, plan: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Apply a provisioning plan: persist the user's new tier (by id, then by
+    username as a fallback), reflect it in the live rate-limit cache, and record
+    recurring revenue on an upgrade. Idempotent — re-applying the same plan just
+    re-sets the same tier. `user_manager` is injected so this stays testable.
+    """
+    if not plan:
+        return {"handled": False}
+
+    user_id = plan["user_id"]
+    tier = plan["tier"]
+    persisted = False
+    try:
+        if hasattr(user_manager, "update_tier_by_id"):
+            persisted = bool(user_manager.update_tier_by_id(user_id, tier))
+        if not persisted and hasattr(user_manager, "update_tier"):
+            # metadata may have carried a username rather than an id
+            persisted = bool(user_manager.update_tier(user_id, tier))
+    except Exception as exc:  # never let provisioning raise into the webhook
+        logger.error("provision: tier persist failed: %s", sanitize_for_log(exc))
+
+    if not persisted:
+        # The webhook still 200s (so Stripe doesn't retry a validly-parsed event),
+        # but this needs an operator's eye — the customer paid but we couldn't
+        # record their tier against any known user.
+        logger.warning(
+            "provision: tier NOT persisted user=%s tier=%s event=%s",
+            sanitize_for_log(user_id),
+            sanitize_for_log(tier),
+            sanitize_for_log(plan.get("event")),
+        )
+
+    # Persist the durable user -> Stripe customer link (best-effort, never fatal to
+    # the webhook). This is what lets POST /billing/portal resolve the caller's
+    # customer id server-side instead of trusting a client-supplied value.
+    customer_persisted = False
+    stripe_customer_id = plan.get("stripe_customer_id")
+    if stripe_customer_id and hasattr(user_manager, "set_stripe_customer_id"):
+        try:
+            customer_persisted = bool(
+                user_manager.set_stripe_customer_id(user_id, stripe_customer_id)
+            )
+        except Exception as exc:  # never let this raise into the webhook
+            logger.error("provision: stripe_customer_id persist failed: %s", sanitize_for_log(exc))
+
+    # Note: we deliberately do NOT poke the TierEnforcer usage cache here — rate
+    # limiting resolves the tier from the value the caller passes to
+    # check_and_increment (sourced from the authenticated user, i.e. the store we
+    # just updated), so the persisted tier already governs the user's next request.
+
+    # Book revenue ONLY for a genuine payment event, and only once per Stripe
+    # event id — Stripe delivers at least once and both webhook routes share this
+    # singleton, so dedupe here prevents double-counting on retries/duplicates.
+    revenue_booked = False
+    if plan.get("is_payment") and plan["action"] == "grant":
+        price = TIERS.get(tier, {}).get("price_gbp") or 0
+        if price:
+            revenue_booked = revenue_tracker.record_once(
+                plan.get("event_id"),
+                "saas_subscriptions",
+                float(price),
+                {"user_id": user_id, "tier": tier, "event": plan.get("event")},
+            )
+
+    return {
+        "handled": True,
+        "action": plan["action"],
+        "tier": tier,
+        "user_persisted": persisted,
+        "revenue_booked": revenue_booked,
+        "customer_persisted": customer_persisted,
+    }
+
+
+def provision_from_event(user_manager: Any, event: Dict[str, Any]) -> Dict[str, Any]:
+    """Convenience: parse a verified Stripe event and apply the resulting plan."""
+    return apply_provision(user_manager, plan_from_event(event))

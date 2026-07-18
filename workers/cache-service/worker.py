@@ -268,13 +268,58 @@ async def _valkey_get(key: str, url: str) -> Optional[Any]:
 
 
 # ── diskcache backend ─────────────────────────────────────────────────────────
+# SECURITY: diskcache's DEFAULT on-disk format is pickle, which is unsafe to
+# deserialize (CVE-2025-69872, no fixed release). JSONDisk alone is NOT enough:
+# it only changes what *we write* — its fetch()/get() still delegate to the base
+# Disk, which pickle.load()s any row whose `mode` column says MODE_PICKLE (and
+# any key row flagged non-raw). A writer to the cache directory could therefore
+# plant a MODE_PICKLE row (or a legacy pickle entry could linger) and get code
+# execution on read. _NoPickleJSONDisk below closes that: it hard-REJECTS the
+# pickle modes on the read path, so hostile/legacy rows raise (→ cache miss via
+# our except handlers) instead of being unpickled. Values round-trip as JSON,
+# which is fully compatible — every other backend here (SQLite, DuckDB, Valkey)
+# already uses json.dumps/json.loads. (diskcache==5.6.3 stays version-flagged by
+# scanners since no patched release exists — see the .trivyignore justification —
+# but the pickle deserialization path is unreachable in this worker.)
+
+_no_pickle_disk_cls = None
+
+
+def _no_pickle_json_disk():
+    """Lazily build (and cache) the pickle-rejecting JSONDisk subclass."""
+    global _no_pickle_disk_cls
+    if _no_pickle_disk_cls is None:
+        import diskcache  # type: ignore[import-untyped]
+        from diskcache.core import MODE_PICKLE  # type: ignore[import-untyped]
+
+        class _NoPickleJSONDisk(diskcache.JSONDisk):  # type: ignore[misc]
+            """JSONDisk that refuses to unpickle anything (CVE-2025-69872).
+
+            Base Disk.fetch() pickle.load()s rows with mode=MODE_PICKLE and
+            Disk.get() unpickles keys stored non-raw. JSONDisk never *writes*
+            such rows, but inherits both read paths — reject them outright so
+            a tampered or legacy row raises instead of executing code.
+            """
+
+            def fetch(self, mode, filename, value, read):
+                if mode == MODE_PICKLE:
+                    raise ValueError("refusing pickle-mode cache entry (CVE-2025-69872)")
+                return super().fetch(mode, filename, value, read)
+
+            def get(self, key, raw):
+                if not raw:
+                    raise ValueError("refusing pickled (non-raw) cache key (CVE-2025-69872)")
+                return super().get(key, raw)
+
+        _no_pickle_disk_cls = _NoPickleJSONDisk
+    return _no_pickle_disk_cls
 
 
 def _diskcache_set(key: str, value: Any, ttl: Optional[int]) -> bool:
     try:
         import diskcache  # type: ignore[import-untyped]
 
-        with diskcache.Cache(DISKCACHE_DIR) as dc:
+        with diskcache.Cache(DISKCACHE_DIR, disk=_no_pickle_json_disk()) as dc:
             dc.set(key, value, expire=ttl)
         return True
     except Exception:  # diskcache not installed or failure
@@ -285,7 +330,9 @@ def _diskcache_get(key: str) -> Optional[Any]:
     try:
         import diskcache  # type: ignore[import-untyped]
 
-        with diskcache.Cache(DISKCACHE_DIR) as dc:
+        # Values are read as JSON only; a hostile/legacy MODE_PICKLE row raises
+        # in _NoPickleJSONDisk.fetch and lands in the except → cache miss.
+        with diskcache.Cache(DISKCACHE_DIR, disk=_no_pickle_json_disk()) as dc:
             val = dc.get(key, default=None)
         return val
     except Exception:  # diskcache not installed or failure
@@ -402,6 +449,27 @@ def health() -> JSONResponse:
             "active_backend": _select_backend(),
         }
     )
+
+
+@_router.get("/cache/status")
+async def cache_status() -> Dict[str, Any]:
+    now = time.time()
+    active = sum(1 for _, (_, exp) in _mem.items() if exp is None or exp > now)
+    return {
+        "active_backend": _select_backend(),
+        "keys_in_memory": active,
+        "backends": [
+            {
+                "name": b,
+                "enabled": _ENABLED[b],
+                "healthy": _GUARDS[b].can_allow(),
+                "pheromone": round(_GUARDS[b].pheromone, 4),
+                "calls_in_window": _GUARDS[b].calls_in_window,
+                "quota_remaining": _GUARDS[b].quota_remaining,
+            }
+            for b in _PRIORITY
+        ],
+    }
 
 
 @_router.get("/cache/{key}", response_model=GetResponse)
@@ -535,27 +603,6 @@ def flush() -> None:
             c.commit()
     except Exception:  # non-fatal on flush
         pass
-
-
-@_router.get("/cache/status")
-def cache_status() -> Dict[str, Any]:
-    now = time.time()
-    active = sum(1 for _, (_, exp) in _mem.items() if exp is None or exp > now)
-    return {
-        "active_backend": _select_backend(),
-        "keys_in_memory": active,
-        "backends": [
-            {
-                "name": b,
-                "enabled": _ENABLED[b],
-                "healthy": _GUARDS[b].can_allow(),
-                "pheromone": round(_GUARDS[b].pheromone, 4),
-                "calls_in_window": _GUARDS[b].calls_in_window,
-                "quota_remaining": _GUARDS[b].quota_remaining,
-            }
-            for b in _PRIORITY
-        ],
-    }
 
 
 app.include_router(_router)

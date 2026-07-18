@@ -59,16 +59,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "ollama_available": ollama_ok,
-        "providers": [
-            "ollama",
-            "groq",
-            "cerebras",
-            "openrouter",
-            "huggingface",
-            "together",
-            "deepseek",
-            "offline",
-        ],
+        "providers": [name.value for name, _ in _gateway.providers],
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
     }
 

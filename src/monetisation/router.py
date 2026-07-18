@@ -7,8 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from src.auth.facade import get_current_user
 
 logger = logging.getLogger("src.monetisation.router")
 
@@ -67,20 +69,27 @@ async def billing_status():
     from src.monetisation.billing import TIERS
 
     provider_status = _billing().provider_status()
+    # Use the real TIERS keys — entries have no "name" (KeyError -> 500 before),
+    # and the price/rate keys are `price_gbp` / `req_per_hour` (the old
+    # `price_monthly` / `requests_per_hour` lookups silently returned None).
     tiers_info = {
         tier_key: {
-            "name": cfg["name"],
-            "price_monthly": cfg.get("price_monthly"),
+            "name": tier_key.title(),
             "price_gbp": cfg.get("price_gbp"),
-            "requests_per_hour": cfg.get("requests_per_hour"),
+            "requests_per_hour": cfg.get("req_per_hour"),
             "stripe_price_configured": cfg.get("stripe_price_id") is not None,
         }
         for tier_key, cfg in TIERS.items()
     }
+    # zero_cost_mode == "no payment provider is live". Only the real provider
+    # flags (`stripe`, `lemon_squeezy`) count — the `*_price_configured` keys
+    # describe catalogue setup, not an enabled provider, so `any(...)` over the
+    # whole dict wrongly reported a live provider when only a price ID was set.
+    provider_live = provider_status.get("stripe") or provider_status.get("lemon_squeezy")
     return {
         "providers": provider_status,
         "tiers": tiers_info,
-        "zero_cost_mode": not any(provider_status.values()),
+        "zero_cost_mode": not provider_live,
     }
 
 
@@ -103,36 +112,101 @@ async def create_checkout(req: CheckoutRequest):
 
 
 @router.post("/portal")
-async def billing_portal(user_id: str, return_url: str = "https://trancendos.com/account"):
-    """Open Stripe billing portal for a customer."""
+async def billing_portal(
+    return_url: str = "https://trancendos.com/account",
+    user: dict = Depends(get_current_user),
+):
+    """Open the Stripe billing portal for the *authenticated* customer.
+
+    Security (cubic P0 / gemini HIGH, BOLA): this endpoint previously took a
+    client-supplied `user_id` and passed it straight to Stripe as the customer id,
+    so any unauthenticated caller could mint a management-session URL for an
+    arbitrary Stripe customer. It is now bound to the caller's own identity via
+    `get_current_user`, and the Stripe customer id is resolved **server-side** from
+    the durable link the webhook persisted (`users.stripe_customer_id`) — never
+    from the request.
+    """
     from src.monetisation.billing import stripe_manager
 
-    if not stripe_manager.enabled:
+    if not stripe_manager.is_enabled:
         raise HTTPException(status_code=503, detail="Stripe not configured")
-    result = stripe_manager.create_portal_session(
-        customer_id=user_id,
-        return_url=return_url,
-    )
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-    return result
+
+    # Resolve the caller's own Stripe customer id from our store. The token `sub`
+    # is the internal user id; fall back to `username` for older tokens.
+    manager = _current_user_manager()
+    customer_id = None
+    if manager is not None and hasattr(manager, "get_stripe_customer_id"):
+        identifier = user.get("sub") or user.get("username")
+        customer_id = manager.get_stripe_customer_id(identifier)
+
+    if not customer_id:
+        # Authenticated, but this user has no Stripe customer on file yet (never
+        # subscribed, or the linking webhook hasn't arrived). 409 — not an auth
+        # failure, and we will NOT accept a caller-supplied id to paper over it.
+        raise HTTPException(
+            status_code=409,
+            detail="No Stripe customer on file for this account. Subscribe first.",
+        )
+
+    url = stripe_manager.create_portal_session(customer_id=customer_id, return_url=return_url)
+    if not url:
+        raise HTTPException(
+            status_code=502, detail="Could not create Stripe billing portal session"
+        )
+    return {"portal_url": url}
+
+
+def _current_user_manager():
+    """Fetch the live DBUserManager the app swaps in at startup, without a
+    module-load-time import of api.py (which imports this router)."""
+    try:
+        import api
+
+        return getattr(api, "db_user_manager", None)
+    except Exception:  # api not importable (e.g. router used in isolation)
+        return None
 
 
 @router.post("/webhook/stripe")
 async def stripe_webhook(
     request: Request, stripe_signature: str = Header(None, alias="Stripe-Signature")
 ):
-    """Handle Stripe webhook events."""
-    from src.monetisation.billing import stripe_manager
+    """Handle Stripe webhook events and provision the customer's tier.
+
+    NB: this platform exposes a second webhook route at `/billing/webhook`
+    (defined in api.py) with identical provisioning — configure only ONE of them
+    in the Stripe dashboard to avoid double-processing an event.
+    """
+    from src.monetisation.billing import provision_from_event, stripe_manager
 
     body = await request.body()
+    # Pass the RAW bytes: Stripe's signature verification is over the exact bytes,
+    # and a decode/re-encode round-trip can change them and fail verification.
     result = stripe_manager.handle_webhook(
-        payload=body.decode(),
+        payload=body,
         sig_header=stripe_signature or "",
     )
-    if result.get("error"):
-        raise HTTPException(status_code=400, detail=result["error"])
-    return result
+    # handle_webhook returns None on an invalid signature or when Stripe isn't
+    # configured (it never returns an "error" key), so guard on falsiness.
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid or unconfigured Stripe webhook")
+
+    # Reshape the flattened {id, type, data:object} into an event and provision.
+    # Keep the event id so revenue booking dedupes against Stripe retries.
+    event = {
+        "id": result.get("id"),
+        "type": result.get("type", ""),
+        "data": {"object": result.get("data") or {}},
+    }
+    provisioned = provision_from_event(_current_user_manager(), event)
+    # If we recognised an actionable event but couldn't persist the tier, fail
+    # loud (5xx) so Stripe retries rather than treating a paid-but-not-upgraded
+    # customer as successfully delivered.
+    if provisioned.get("handled") and not provisioned.get("user_persisted"):
+        raise HTTPException(
+            status_code=503, detail={"error": "tier_not_persisted", "provisioned": provisioned}
+        )
+    return {"received": True, "type": result.get("type"), "provisioned": provisioned}
 
 
 @router.get("/revenue/summary")
@@ -150,15 +224,16 @@ async def revenue_summary():
 async def record_marketplace_fee(req: MarketplaceFeeRequest):
     """Record a marketplace transaction and return the 2.5% platform fee."""
     tracker = _revenue()
-    fee = tracker.marketplace_fee(req.transaction_amount)
-    tracker.streams["marketplace_fees"]["monthly_estimate"] = (
-        tracker.streams["marketplace_fees"].get("monthly_estimate", 0.0) + fee
-    )
+    # marketplace_fee() already books the fee into the marketplace_fees stream.
+    # (The previous tracker.streams[...]["monthly_estimate"] write both crashed —
+    # PassiveRevenueEngine has no such nested shape — and double-counted.)
+    fee = tracker.marketplace_fee(req.transaction_amount)  # already rounded to 2dp
     return {
         "transaction_amount": req.transaction_amount,
-        "platform_fee": round(fee, 4),
+        "platform_fee": fee,
         "fee_rate": "2.5%",
         "description": req.description,
+        "marketplace_fees_total": round(tracker.streams["marketplace_fees"], 2),
     }
 
 

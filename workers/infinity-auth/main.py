@@ -8,19 +8,26 @@ Uvicorn/Docker should point at   main:app   (or worker:app via shim).
 from __future__ import annotations
 
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from router import init_router_deps, router
+from router import init_router, router
+from service import RateLimiter
 
-from config import PORT, _cors_origins, logger
+from config import PORT, _cors_origins
+from database import AuthDatabase
 from shared_core.infinity.worker_integration import InfinityWorkerKit
 
+logger = logging.getLogger("tranc3.workers.infinity-auth")
+
+db = AuthDatabase()
+rate_limiter = RateLimiter()
 worker_kit = InfinityWorkerKit(
     "infinity-auth", defense_threshold=3, defense_window_seconds=60, defense_block_seconds=900
 )
-init_router_deps(worker_kit=worker_kit)
+init_router(db, rate_limiter, worker_kit)
 
 
 @asynccontextmanager

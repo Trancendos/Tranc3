@@ -103,7 +103,22 @@
   deferred to whichever backend (ComfyUI/FFmpeg/Godot/Penpot) is eventually wired in.
 - **Degradation:** none needed yet — there is no live backend to degrade from.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** **two independent surfaces exist in the repo, but only one is deployed.** A router is mounted in the `tranc3-backend` monolith (`api.py`); separately, `workers/the-studio/` has its own `docker-compose.production.yml` service block and Traefik route — **but its Dockerfile only `COPY`s `main.py`**, an honest placeholder stub (`"status": "initialising"`, empty lists, always-404 lookups, zero storage of any kind). The more complete SQLite-backed `workers/the-studio/worker.py` sits in the same directory but is **never copied into the image** — the same class of deployed-stub-vs-undeployed-real defect previously found and fixed for The Academy (see that pack's Verification Log). Not fixed here (a deployment decision, not a docs-pass fix), but the DSM below describes what is **actually running**, not the more capable code sitting unused beside it.
+- **Persistence:** None on either deployed surface. The monolith side's own state is an in-memory `_jobs: Dict[str, StudioJob]` (per this pack's own TFM/ASD), with no persistence of its own; the **deployed** standalone worker (`the-studio`'s `main.py`) has no storage at all — not even in-memory — every route either returns a hardcoded empty response or a 404. (The undeployed `worker.py` does have real SQLite, but since it never runs, its persistence characteristics are not this DSM's concern.)
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | both surfaces run on a single cloud host (the monolith's `tranc3-backend` block and the standalone `the-studio` block, running its stub `main.py`); Traefik/edge in front for the standalone worker | ephemeral for both, but for different reasons — the monolith router holds no state by design, and the deployed `the-studio` stub has no storage to lose in the first place | the standalone worker's public routes return placeholder data regardless of mode — that is a deployment gap, not a mode-specific one |
+| **Hybrid** | same two surfaces; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, the monolith's other data can sync to local TrueNAS, which has no bearing on the deployed stub's lack of storage | as above — neither surface has real state to place | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same two surfaces, run entirely on local/Citadel hardware | monolith side still stateless by design; the deployed `the-studio` stub still has no storage, local hardware or not | promoting `workers/the-studio/worker.py` (the real SQLite implementation) to be what's actually built and deployed would fix this in any mode — it is not currently mode-specific |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -111,20 +126,32 @@
 | Job storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Backend dispatch | **not implemented** | N/A — deferred to future ComfyUI/FFmpeg/Godot/Penpot integration |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `the-studio` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `the-studio` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `the-studio` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth currently implemented — see SIM §5.
 - Zero-cost mandate: any future backend integration (ComfyUI, FFmpeg, Godot, Penpot) must pass
   `scripts/zero_cost_audit.py` per The Citadel's deploy gate.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Submit a job:** `POST /studio/jobs` with `{"service": "sashas-photo-studio", "payload": {...}}`
   — returns a job record in `queued` status that will not currently progress further.
 - **List capabilities:** `GET /studio/capabilities` — static manifest, useful for discovering
   which sub-services exist and their intended feature set (not their live availability).
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Jobs stuck in `queued` forever:** expected — no dispatcher exists yet. This is not a bug to
   triage; it's the current (pre-backend-integration) state of the module.
@@ -134,7 +161,7 @@
   (`# nosec B110`) — check The Observatory's own logs/health, not this module, for emission
   failures.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Studio" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; note the
   `StudioServiceType.VIDEO` enum value is literally `"tatekings"` (plural) while the canonical
@@ -149,3 +176,4 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `src/studio/hub.py` (185 lines), `src/studio/routes.py` (56 lines), `api.py` router registration (line 838) | Confirmed Live-tier per `CLAUDE.md` status, full pack authored. Code-grounded finding: the orchestration shell is real and live-wired, but all sub-service backends are self-labelled "planned"/"scaffold" in the capability manifest, and no job ever transitions out of `queued` — documented explicitly rather than glossed over. `tatekings` enum-value/naming inconsistency also flagged. |
+| 2026-07-11 | Claude (session, cubic-dev-ai review triage, DSM pass) | `workers/the-studio/Dockerfile`, `workers/the-studio/main.py`, `workers/the-studio/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/the-studio/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy: the Dockerfile only `COPY`s `main.py` (an honest placeholder — `"status": "initialising"`, empty `/projects`, always-404 `/projects/{id}`, zero storage) while a genuinely more complete SQLite-backed `worker.py` sits in the same directory, never copied into the image. Not fixed here — a deployment decision, not a docs-pass fix — but the DSM now describes the actually-running `main.py`, not `worker.py`. |

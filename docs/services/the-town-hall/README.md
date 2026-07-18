@@ -74,7 +74,29 @@
 - **Zero-cost limits & hard stops:** in-repo modules are pure Python; no paid governance SaaS.
 - **Caveat:** the board's scaling characteristics live in the CranBania repo and are out of scope here.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** **two deployment surfaces**, corrected 2026-07-11 (this pack previously
+  described only the standalone worker): the `/townhall/*` compliance router (`src/townhall/`) is
+  mounted into the `tranc3-backend` monolith (`api.py`, `app.include_router(_townhall_router)`)
+  *and* there is a separate standalone worker, the CranBania submodule, with its own
+  `docker-compose.production.yml` service block (`cranbania`, port 8071) and its own Traefik
+  route. The table below describes the standalone worker; the monolith-mounted router follows
+  the monolith's own placement and shares its volume.
+- **Persistence:** named volume attached to the `cranbania` compose service — state survives container restarts/redeploys in any mode
+- **Note:** `cranbania` is a git submodule (`https://github.com/Trancendos/CranBania`) — deploying it in any mode requires the submodule to be checked out, not just the parent repo.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `cranbania` compose block runs on a single cloud host; Traefik/edge in front | persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `cranbania` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `cranbania` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -83,23 +105,35 @@
 | Board / ITSM / Kanban | CranBania submodule | self-hosted |
 | Governance rules | Magna Carta (`src/compliance/`) | in-repo submodule |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the `/townhall/*` monolith router — the standalone `cranbania` worker is **not** in this compose file | standalone worker has zero Dev coverage; the in-repo router (`/townhall/status`, `/townhall/policies`, `/townhall/check`) is present and exercisable |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `cranbania` worker is **not** in this compose file either | standalone worker has zero UAT coverage; the in-repo router is present and exercisable |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `cranbania` worker (CranBania submodule) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity. The in-repo `/townhall/*` router, however, **is** present in Dev/UAT via the `api` service — corrected 2026-07-11 after review flagged the earlier version of this table for missing that surface entirely.
+
+## 10. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`) and Magna Carta runtime rules. Framework
   definitions are config-driven (`frameworks.yaml`), not hard-coded.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a policy check:** implement in `governance.py`, expose via `routes.py` if it needs an HTTP surface;
   register any new framework in `config/townhall/frameworks.yaml`.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/townhall/policies` empty:** check the governance store / `frameworks.yaml` loaded (`framework_registry`).
 - **Board unreachable at `/townhall` (8071):** that is CranBania (submodule) — check the submodule service,
   not `src/townhall/` (the in-repo router is separate and serves `/townhall/status|policies|check`).
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Framework definitions are config-driven; compliance decisions flow through `src/compliance/middleware.py`.
 - In-repo router scope is deliberately minimal; board functionality is owned by CranBania.

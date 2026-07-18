@@ -145,7 +145,23 @@
 - **Degradation:** N/A for the deployed stub; the other two implementations' failure-handling
   depth was not traced in this pass.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`warp-tunnel`, port 8072) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** **no named volume** on the `warp-tunnel` compose service — any on-disk state is lost on container replace/redeploy in every mode alike
+- **Note:** a separate, real content-scanner implementation (`src/security/warp_tunnel/tunnel.py`, `WarpTunnel` class) is not independently deployed — it is imported and called by `workers/ice-box-service/` (see The Ice Box's own DSM), so its deployment scope tracks that worker's, not this one's.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `warp-tunnel` compose block runs on a single cloud host; Traefik/edge in front | ephemeral — no volume means state does not survive a redeploy | if this worker writes any local file it needs to keep, that data is at risk on every mode until a volume is added |
+| **Hybrid** | same `warp-tunnel` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `warp-tunnel` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local (still no volume — same durability gap as Cloud-Only) | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -154,7 +170,19 @@
 | Content interception (real, deployed — but via The Ice Box's worker, not this one) | Ice Box `ThreatAnalyser`/`QuarantineStore` integration (`tunnel.py`) | zero-cost, self-hosted |
 | Auth | none in deployed `main.py`; `worker.py`'s unused alt has `X-Internal-Secret` with an insecure fallback | zero cost, currently unenforced |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment, and no local run command is documented in §11 PROC either |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `warp-tunnel` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks, nor is a local run command documented in §11 PROC — Production is genuinely the first place it runs. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - No route-level auth on the deployed `main.py` — low risk given both routes are stubs.
 - **If `worker.py` is ever promoted to deployed status, its `dev-secret` fallback MUST be fixed
@@ -162,7 +190,7 @@
   and Imaginarium.
 - Zero-cost mandate: fully honored across all three implementations.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Check scan status (deployed):** `POST /scan` — always returns "not yet initialised", by
   honest design, not a bug.
@@ -172,7 +200,7 @@
   this entity's own port 8072). `WarpTunnel` has no caller *within `workers/warp-tunnel/`
   itself*, but is not dormant platform-wide.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/scan` always returns `"scanned": false`:** expected — this is the deployed file's honest,
   intentional stub behavior, not a bug to chase.
@@ -188,7 +216,7 @@
   `workers/warp-tunnel/` should also get a real implementation, or whether The Ice Box's
   coverage is considered sufficient for this platform capability.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Warp Tunnel" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Config modules invoked via bare `python <file>.py` correctly read `PORT` from the environment

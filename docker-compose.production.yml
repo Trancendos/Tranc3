@@ -61,6 +61,7 @@ services:
     container_name: tranc3-traefik
     <<: *common
     command:
+      - "--ping=true"
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -1053,7 +1054,7 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
       <<: *healthcheck-default
 
-  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8051) ──
+  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8111) ──
   triposr-worker:
     <<: *worker-common
     build:
@@ -3158,6 +3159,8 @@ services:
       - "8074"
     ports:
       - "8074:8074"
+    volumes:
+      - taimra-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8074/health')"]
@@ -3182,6 +3185,8 @@ services:
       - "8075"
     ports:
       - "8075:8075"
+    volumes:
+      - imind-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8075/health')"]
@@ -3204,6 +3209,8 @@ services:
       - "8076"
     ports:
       - "8076:8076"
+    volumes:
+      - resonate-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8076/health')"]
@@ -3226,6 +3233,8 @@ services:
       - "8077"
     ports:
       - "8077:8077"
+    volumes:
+      - tranquility-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8077/health')"]
@@ -3250,6 +3259,8 @@ services:
       - "8069"
     ports:
       - "8069:8069"
+    volumes:
+      - the-studio-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8069/health')"]
@@ -3366,6 +3377,8 @@ services:
       - "8057"
     ports:
       - "8057:8057"
+    volumes:
+      - the-dutchy-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8057/health')"]
@@ -3388,6 +3401,8 @@ services:
       - "8110"
     ports:
       - "8110:8110"
+    volumes:
+      - devocity-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8110/health')"]
@@ -3410,6 +3425,8 @@ services:
       - "8079"
     ports:
       - "8079:8079"
+    volumes:
+      - chaos-party-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8079/health')"]
@@ -3432,6 +3449,8 @@ services:
       - "8068"
     ports:
       - "8068:8068"
+    volumes:
+      - basement-data:/app/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8068/health')"]
@@ -3552,10 +3571,14 @@ services:
       - "traefik.http.services.artifactory-service.loadbalancer.server.port=8047"
 
   # ── Sentinel Station — platform guardian (Port 8041) ──────────────────────────────────────────────
+  # context is repo root, not ./workers/sentinel-station-service: the Dockerfile's own COPY paths
+  # (workers/sentinel-station-service/...) were always written assuming repo-root context - with the
+  # isolated context this used to have, the build failed at the first COPY step (nested path never
+  # existed) and worker.py's Dimensional.infinity.* imports were also unresolvable either way.
   sentinel-station-service:
     build:
-      context: ./workers/sentinel-station-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/sentinel-station-service/Dockerfile
     container_name: tranc3-sentinel-station-service
     <<: *worker-common
     environment:
@@ -3777,6 +3800,18 @@ services:
       - "traefik.http.routers.forgejo.entrypoints=websecure"
       - "traefik.http.routers.forgejo.tls.certresolver=letsencrypt"
       - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+      # the-workshop.trancendos.com (CNAME, deploy/terraform/oci-citadel-dns.tf) has no
+      # working route without this: Forgejo's ROOT_URL is the path-based URL above, so it
+      # must not be served directly at the bare subdomain (that would conflict with the
+      # links/redirects Forgejo itself generates). Redirect to the canonical path URL instead.
+      - "traefik.http.routers.forgejo-subdomain.rule=Host(`the-workshop.trancendos.com`)"
+      - "traefik.http.routers.forgejo-subdomain.entrypoints=websecure"
+      - "traefik.http.routers.forgejo-subdomain.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.forgejo-subdomain.service=forgejo"
+      - "traefik.http.routers.forgejo-subdomain.middlewares=forgejo-subdomain-redirect"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.regex=^https://the-workshop\\.trancendos\\.com/(.*)"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.replacement=https://trancendos.com/the-workshop/$${1}"
+      - "traefik.http.middlewares.forgejo-subdomain-redirect.redirectregex.permanent=true"
 
   # ── Forgejo Actions Runner — executes .forgejo/workflows/ ────────────
   forgejo-runner:
@@ -3953,6 +3988,24 @@ volumes:
     driver: local
   cron-data:
     driver: local
+  basement-data:
+    driver: local
+  the-studio-data:
+    driver: local
+  imind-data:
+    driver: local
+  taimra-data:
+    driver: local
+  resonate-data:
+    driver: local
+  tranquility-data:
+    driver: local
+  chaos-party-data:
+    driver: local
+  devocity-data:
+    driver: local
+  the-dutchy-data:
+    driver: local
   identity-data:
     driver: local
   nats-data:
@@ -4115,6 +4168,18 @@ volumes:
 # ═══════════════════════════════════════════════════════════════════════════
 networks:
   tranc3-net:
+    # Explicit name (rather than the default `<project>_tranc3-net`) so other
+    # compose files — e.g. deploy/forgejo/docker-compose.yml's act-runner —
+    # can join it deterministically as an `external: true` network to reach
+    # workers by service name instead of guessing at host-published ports.
+    #
+    # UPGRADE NOTE for a host with this stack already running under the old
+    # auto-generated network name: `docker compose -f
+    # docker-compose.production.yml down` first (removes the old
+    # project-scoped network) before deploying this change and bringing the
+    # stack back up — otherwise Compose may try to create a second bridge on
+    # the same 172.28.0.0/16 subnet and fail before any container starts.
+    name: tranc3-net
     driver: bridge
     ipam:
       config:

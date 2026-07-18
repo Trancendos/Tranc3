@@ -28,11 +28,11 @@ RUN mkdir -p /app/outputs /app/models && chown -R worker:worker /app
 # Security: drop to non-root user
 USER worker
 
-EXPOSE 8051
+EXPOSE 8111
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8111/health')" || exit 1
 
 ENV OUTPUTS_DIR=/app/outputs
 ENV MODELS_DIR=/app/models
 
-CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8051"]
+CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8111"]

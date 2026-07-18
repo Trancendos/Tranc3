@@ -113,7 +113,22 @@
 - **Degradation:** embedding/FAISS failures during ingest are swallowed (logged, not raised) — a
   record is still stored even if it can't be vector-indexed.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** **two independent surfaces exist in the repo, and (as of the fix below) both run real code.** A router is mounted in the `tranc3-backend` monolith (`api.py`); separately, `workers/basement/` has its own `docker-compose.production.yml` service block (compose-routed port **8068**) and Traefik route. **Fixed 2026-07-11:** the standalone worker's Dockerfile previously only `COPY`'d `main.py`, an honest placeholder stub (`"status": "initialising"`, empty lists, always-404 lookups, zero storage) — the same class of deployed-stub-vs-undeployed-real defect found and fixed for The Academy. The Dockerfile now `COPY`s and runs the genuinely more complete SQLite+FTS5-backed `workers/basement/worker.py` instead, with its `EXPOSE`/`HEALTHCHECK`/`CMD` aligned to port 8068. See the Verification Log for the specific commit-level change.
+- **Persistence:** the monolith side's own state is an in-memory `Dict[str, ArchiveRecord]` (per this pack's own DDD), with no persistence of its own. The standalone worker (`workers/basement/worker.py`, now deployed) uses SQLite + FTS5 and is backed by a named volume (`basement-data:/app/data`) added to `docker-compose.production.yml` in the same fix — state survives container restarts/redeploys.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | both surfaces run on a single cloud host (the monolith's `tranc3-backend` block and the standalone `basement` block, now running the real `worker.py`); Traefik/edge in front for the standalone worker | monolith side ephemeral by design; standalone worker persists via its attached volume as long as the volume/disk is preserved on that host | none beyond standard single-host durability for the standalone worker (no built-in cross-host replication) |
+| **Hybrid** | same two surfaces; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the standalone worker itself still runs wherever it's deployed | monolith side still ephemeral; standalone worker's volume optionally local-synced | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same two surfaces, run entirely on local/Citadel hardware | monolith side still stateless by design; standalone worker fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -122,7 +137,19 @@
 | Embeddings | `sentence-transformers` `all-MiniLM-L6-v2` (optional) | OSS, local |
 | Storage | in-memory `dict` (no persistence) | zero infra cost, but no durability |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `basement` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `basement` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `basement` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth is currently implemented (see SIM §5) — reuse platform policy
   (`POL-AI-001`, `docs/defstan/`) if/when auth is added; this pack does not assert a policy that
@@ -130,7 +157,7 @@
 - Security/critical Observatory events MUST remain retained (never evicted) per the hard-coded
   `retained` exemption in `ingest()`/`ingest_observatory_event()`.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Query the archive:** `GET /basement/search?q=<query>&top_k=<n>` — returns semantic matches if
   FAISS is active, else keyword-overlap matches.
@@ -139,7 +166,7 @@
 - **Add vector search:** install `faiss` and `sentence-transformers` in the runtime environment —
   no code change needed; `_try_init_faiss()` activates automatically on next process start.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/basement/stats` shows `vector_search: false`:** `faiss`/`sentence-transformers` aren't
   installed, or FAISS init raised — check logs for `"basement: FAISS init failed"` at WARNING
@@ -150,7 +177,7 @@
 - **404 on `/basement/records/{id}`:** record was evicted (non-retained, aged out) or the ID never
   existed — check `/basement/stats.total_records` and `by_source` breakdown.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical name "The Basement" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; code module is
   `src/basement/` (lowercase, matches convention used by other in-repo entities).
@@ -162,3 +189,5 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-04 | Claude (session) | `src/basement/archive.py` (251 lines), `src/basement/routes.py` (47 lines), `api.py` router registration (line 790) | Confirmed Live-tier, full pack authored — DDD/TASD/SIM/ASD grounded in actual code; no auth on routes is a genuine finding (SIM §5), not fabricated. Supersedes the prior charter-only placeholder pack (see PR #199–#201 history in `docs/services/INDEX.md`). |
+| 2026-07-11 | Claude (session, cubic-dev-ai review triage, DSM pass) | `workers/basement/Dockerfile`, `workers/basement/main.py`, `workers/basement/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/basement/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy: the Dockerfile only `COPY`s `main.py` (an honest placeholder — `"status": "initialising"`, empty `/archives`, always-404 `/archive/{id}`, zero storage) while the genuinely more complete SQLite+FTS5 `worker.py` (already referenced in this pack's own header/scope note) is never copied into the image. Not fixed at the time of this entry — a deployment decision, not a docs-pass fix — but the DSM then described the actually-running `main.py`, not `worker.py`. Also reconciled a three-way port discrepancy: `main.py`/Dockerfile default to 8041, `worker.py`'s own docstring says 8088 (moot while undeployed), and compose's `PORT=8068` is what's actually routed. |
+| 2026-07-11 | Claude (session, later same day) | `workers/basement/Dockerfile`, `docker-compose.production.yml` | **Fixed the defect from the prior entry:** Dockerfile now `COPY`s and runs `worker.py` instead of `main.py`, with `EXPOSE`/`HEALTHCHECK`/`CMD` aligned to port 8068 and a `mkdir -p /app/data` + chown step added. Added a `basement-data` named volume mounted at `/app/data` in `docker-compose.production.yml`. DSM, Persistence, and setup-table sections above rewritten to describe the now-deployed `worker.py` (SQLite+FTS5, volume-backed) rather than the retired `main.py` stub. |

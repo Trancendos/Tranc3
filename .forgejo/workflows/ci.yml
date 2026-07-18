@@ -39,6 +39,12 @@ jobs:
           uv pip install --system ruff --quiet
           ruff check src/ api.py --select E,F,W --ignore E501 || true
 
+      - name: Validate EA workbook CSVs
+        run: python scripts/validate_ea_workbook.py
+
+      - name: Check master service matrix freshness
+        run: python scripts/check_master_matrix_freshness.py
+
       - name: Create logs dir
         run: mkdir -p logs
 

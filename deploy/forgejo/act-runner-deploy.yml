@@ -1,0 +1,80 @@
+# deploy/forgejo/act-runner-deploy.yml
+# Configuration for The Workshop's second, privileged act-runner — the only
+# one with access to the host's /var/run/docker.sock.
+#
+# This exists because a small number of jobs (deploy-self-hosted.yml;
+# security-scan.yml's owasp-zap-dast) genuinely need to run `docker build`/
+# `docker run` against the host's own Docker daemon, but this is a Forgejo
+# mirror where pull_request-triggered jobs run whatever workflow content is
+# in the PR itself — so giving host Docker access to every self-hosted job
+# (see act-runner.yml) would let any PR take over the host. Splitting those
+# two jobs onto this separate `deploy-host:host` runner, and keeping every
+# other workflow on act-runner.yml's socket-less `:docker://` labels, closes
+# that hole while the jobs that actually need the socket still get it.
+#
+# Only ever reference this runner from workflows/jobs guarded by
+# `if: github.ref == 'refs/heads/main'` (see deploy-self-hosted.yml's
+# build-workers and security-scan.yml's owasp-zap-dast for the pattern) —
+# an event-type check alone (e.g. `github.event_name != 'pull_request'`) is
+# NOT enough, since a push to any other writable branch, or a
+# workflow_dispatch on a non-main ref, would still reach this runner.
+#
+# IMPORTANT — this label alone enforces nothing. Nothing in Forgejo stops a
+# new or edited workflow file from adding `runs-on: deploy-host` to a job
+# with no ref guard at all; the guard above is a convention every
+# deploy-host-eligible job must carry, not something this runner can check
+# on its own. The actual backstop is repo-level branch protection on `main`
+# (require review before merge, disallow direct pushes) — without that, any
+# contributor who can push a branch or open a PR can still land a
+# `runs-on: deploy-host` job with a passing main-ref guard by simply
+# merging it. Verify branch protection is enabled before treating this
+# split as a closed hole, not just this file's guard convention.
+#
+# Mounted at /data/act-runner-deploy.yml by docker-compose.yml's
+# act-runner-deploy service, selected via that service's
+# `daemon --config /data/act-runner-deploy.yml` command override.
+#
+# Reference: https://forgejo.org/docs/latest/admin/runner-installation/
+
+log:
+  level: info
+
+runner:
+  # `:host` runs jobs in-process inside this runner container, which
+  # docker-compose.yml bind-mounts /var/run/docker.sock into — so `docker`
+  # commands in job steps reach the host daemon directly. Deliberately a
+  # single label distinct from act-runner.yml's self-hosted/linux/x64/etc,
+  # so only workflows that explicitly opt in with `runs-on: deploy-host`
+  # land here; nothing matches this runner by accident.
+  labels:
+    - "deploy-host:host"
+
+  fetch_interval: 2s
+  # 2, not act-runner.yml's 4, and not 1: only two job *types* ever land on
+  # deploy-host (deploy-self-hosted.yml's build-workers, on push to main;
+  # security-scan.yml's owasp-zap-dast, on push/schedule) and they use
+  # distinct image tags/containers, so real collision risk between them is
+  # low — but capacity 1 turned out to be its own bug: it serializes ALL
+  # deploy-host jobs against each other, so a build-workers run can queue
+  # behind owasp-zap-dast for up to timeout's full 3h with nothing else
+  # available to run it. 2 lets both proceed without that bottleneck while
+  # still bounding total concurrent load on the one host Docker daemon.
+  capacity: 2
+  timeout: 3h
+
+cache:
+  enabled: true
+  host: ""
+  port: 0
+  external_server: ""
+
+container:
+  # Inert under `:host` (no per-job container exists for this to configure)
+  # — see act-runner.yml's container block for the label that actually uses
+  # it. This runner's own network access comes from docker-compose.yml
+  # attaching the act-runner-deploy service itself to tranc3-net.
+  network: tranc3-net
+  privileged: false
+  valid_volumes: []
+  docker_host: ""
+  force_pull: false

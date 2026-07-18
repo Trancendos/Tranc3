@@ -125,7 +125,23 @@
   (post-fix) returns a structured error via `safe_error_detail()` on any exception, including a
   missing `torch` install.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** mounted in the `tranc3-backend` monolith (`api.py`); runs wherever that monolith's `docker-compose.production.yml` service block is deployed, on whatever port/host the monolith uses (compose service `tranc3-backend`)
+- **Persistence:** None — this entity is stateless per-request (per this pack's own ASD) — zero SQLite or other storage usage anywhere in `src/quantum/` or `src/deepmind/`. While the `tranc3-backend` monolith has a named volume, that volume backs *other* entities' state, not this one; this service's own state (if any) is lost on restart/redeploy in every mode alike.
+- **Note:** this entity has a real `torch` dependency (per this pack's own TFM) — CPU-only inference here is heavier than most entities on this platform. On Cloud-Only free-tier CPU hosts this is a genuine latency/quota risk under the zero-cost mandate; Local-Only hardware with more cores (or a GPU, if available) degrades this risk.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `tranc3-backend` compose block runs on a single cloud host (e.g. Fly.io / Oracle Free Tier); Traefik/edge in front | ephemeral — this service holds no state of its own; the monolith's volume does not apply to it | no entity-specific blocker beyond whatever applies to the monolith as a whole |
+| **Hybrid** | same monolith block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, persistent data can sync to local TrueNAS while the monolith itself still runs wherever it's deployed | ephemeral, same as Cloud-Only — this service's own state does not benefit from the Hybrid data-locality split | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one, per `should_run_citadel_docker()` in `infrastructure_mode.py` |
+| **Local-Only** | same monolith block, run entirely on local/Citadel hardware behind local Traefik | still ephemeral — local hardware does not change this service's own statelessness | none beyond standard local-hardware ops (backup, power, network); not mode-specific, but note the standing gap regardless of mode: quantum-simulation routes are unauthenticated (the `depth` parameter is already clamped to `[1, 10]`, so this is an auth gap, not an unbounded-cost one — see ASD/POL) |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for the monolith as a whole
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -133,7 +149,19 @@
 | Quantum simulation | Qiskit + Qiskit Aer | OSS, local, zero cost |
 | Planning | Beam search + chain-of-thought + (transitively) `torch`-based world model | OSS, local, zero cost |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the same `tranc3-backend` monolith, so this entity's router is present — but nothing exercises it specifically (no seed data, no entity-specific smoke test) | code is present, not validated in isolation |
+| **UAT** | Partial | same monolith router via the `api` service in `docker-compose.uat.yml` | same caveat as Dev — present, not entity-specifically validated |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has no standalone worker at all, so there is nothing *beyond* the monolith to have Dev/UAT coverage for — the gap is the same one every monolith-mounted route shares (present in all three environments' `api` service, but no entity-specific test/seed data distinguishes it from any other route in the same monolith).
+
+## 10. Policy (POL)
 
 - No route-level auth on any `/thinktank/*` route — combined with unbounded `qubits`/`shots` on
   the simulate endpoint, this is a real resource-exhaustion exposure worth prioritizing alongside
@@ -141,7 +169,7 @@
 - Zero-cost mandate: both Qiskit and the planning stack run locally with no paid API calls, per
   code inspection in this pass.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Run a quantum simulation:** `POST /thinktank/quantum/simulate` with `{"qubits": 3, "shots":
   1024}` — `circuit_type` is currently ignored.
@@ -149,7 +177,7 @@
   now functional post-fix; requires `torch` to be installed in the runtime environment (declared
   in `requirements.txt`).
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/thinktank/deepmind/plan` always returned an error before this pass:** this was the exact
   bug fixed here (`PlanningEngine` didn't exist) — confirm the fix (import of `StrategicPlanner`/
@@ -162,7 +190,7 @@
   declared `requirements.txt` dependency (`torch==2.12.1`) — ensure it's actually installed in
   the running environment; this is an install/environment issue, not a code defect.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Think Tank" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any route wrapping a call in `try/except` for health-check purposes MUST have code inside the

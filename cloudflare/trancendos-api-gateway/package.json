@@ -7,10 +7,10 @@
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "4.100.0"
+    "wrangler": "^4.102.0"
   },
   "overrides": {
-    "wrangler": "^4.93.1",
+    "wrangler": "^4.102.0",
     "esbuild": ">=0.25.0",
     "ws": ">=8.21.0"
   }

@@ -13,9 +13,9 @@ RUN mkdir -p /data/assets && chown vrar3d:vrar3d /data /data/assets
 
 USER vrar3d
 
-EXPOSE 8063
+EXPOSE 8060
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8063/health', timeout=4).read()"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8060/health', timeout=4).read()"
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8063"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8060"]

@@ -30,6 +30,6 @@ all:
           - { name: gbrain-bridge, port: 8030 }
           - { name: vault-service, port: 8038 }
           - { name: infinity-admin, port: 8044 }
-          - { name: swarm-coordinator, port: 8053 }
+          - { name: swarm-coordinator-service, port: 8109 }
           - { name: hive-service, port: 8060 }
           - { name: infinity-bridge, port: 8070 }

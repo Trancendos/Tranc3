@@ -9,9 +9,12 @@
 
 set -euo pipefail
 
-COMPOSE_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker-compose.yml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
 
 log() { echo "[runner-setup] $*"; }
+warn() { echo "[runner-setup] WARN: $*" >&2; }
 die() { echo "[runner-setup] ERROR: $*" >&2; exit 1; }
 
 : "${RUNNER_REGISTRATION_TOKEN:?Set RUNNER_REGISTRATION_TOKEN first}"
@@ -21,13 +24,46 @@ die() { echo "[runner-setup] ERROR: $*" >&2; exit 1; }
 CF_API_TOKEN="${CF_API_TOKEN:-}"
 FLY_API_TOKEN="${FLY_API_TOKEN:-}"
 
-# ── Start/restart the runner ──────────────────────────────────────────────────
+# ── Build the custom runner image if missing ──────────────────────────────────
+# docker-compose.yml defaults RUNNER_IMAGE to trancendos/act-runner:latest for
+# both runners (neither the bare upstream image nor a missing image work —
+# every label depends on this image's toolchain, see act-runner.yml). Unlike
+# bootstrap.sh, this script is the "re-run later" / manual re-registration
+# path, so it can't assume the image already exists from a prior bootstrap.
+if ! docker image inspect trancendos/act-runner:latest >/dev/null 2>&1; then
+  log "trancendos/act-runner:latest not found locally — building it…"
+  docker build -f "${SCRIPT_DIR}/runner.Dockerfile" -t trancendos/act-runner:latest "${REPO_ROOT}" \
+    || die "Runner image build failed. Fix deploy/forgejo/runner.Dockerfile and re-run."
+fi
+
+check_runner_up() {
+  local service="$1" container="$2"
+  if [[ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]]; then
+    log "  ${service} is running"
+  else
+    docker compose -f "$COMPOSE_FILE" logs --tail 20 "$service" 2>&1 || true
+    die "${service} did not stay running — check the logs above"
+  fi
+}
+
+# ── Start/restart both runners ────────────────────────────────────────────────
+# act-runner (default, no host Docker access) and act-runner-deploy (the
+# privileged deploy-host runner — see act-runner-deploy.yml). Both need the
+# same registration token; Forgejo gives each connecting runner its own
+# identity from it.
 log "Starting act runner…"
 RUNNER_REGISTRATION_TOKEN="$RUNNER_REGISTRATION_TOKEN" \
   docker compose -f "$COMPOSE_FILE" up -d act-runner
 
-log "Waiting for runner to register…"
+log "Starting act-runner-deploy…"
+RUNNER_REGISTRATION_TOKEN="$RUNNER_REGISTRATION_TOKEN" \
+  docker compose -f "$COMPOSE_FILE" up -d act-runner-deploy
+
+log "Waiting for runners to register…"
 sleep 8
+
+check_runner_up act-runner the-workshop-runner
+check_runner_up act-runner-deploy the-workshop-runner-deploy
 
 # ── Store deploy secrets in Forgejo ──────────────────────────────────────────
 # Uses Forgejo API to create org-level secrets (available to all repos).

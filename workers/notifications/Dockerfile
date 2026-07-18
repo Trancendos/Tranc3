@@ -5,7 +5,7 @@ RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 WORKDIR /app
 COPY --chown=worker:worker requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker worker.py .
+COPY --chown=worker:worker sanitize.py error_handlers.py url_validation.py worker.py .
 RUN mkdir -p /app/data \
     && chown -R worker:worker /app/data
 # Security: drop to non-root user

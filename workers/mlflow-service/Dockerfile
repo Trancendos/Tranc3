@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 WORKDIR /app
 COPY --chown=worker:worker requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker worker.py .
+COPY --chown=worker:worker path_validation.py worker.py .
 RUN mkdir -p /data/mlflow-service \
     && chown -R worker:worker /data/mlflow-service
 # Security: drop to non-root user

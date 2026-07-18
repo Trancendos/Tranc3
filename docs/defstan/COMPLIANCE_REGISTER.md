@@ -11,7 +11,7 @@
 
 | Area | Standard | Total | Compliant | Partial | Planned | Score |
 |------|----------|-------|-----------|---------|---------|-------|
-| IA | DEF STAN 00-700 | 10 | 8 | 1 | 0 | 85.0% |
+| IA | DEF STAN 00-700 | 11 | 8 | 2 | 0 | 81.8% |
 | SA | DEF STAN 00-055 | 6 | 3 | 2 | 1 | 66.7% |
 | QA | DEF STAN 05-086 | 7 | 6 | 1 | 0 | 92.9% |
 | CM | DEF STAN 00-044 | 6 | 5 | 1 | 0 | 91.7% |
@@ -19,7 +19,7 @@
 | SD | DEF STAN 00-056 | 7 | 5 | 2 | 0 | 85.7% |
 | TD | DEF STAN 05-057 | 7 | 6 | 1 | 0 | 92.9% |
 
-**Overall Score: ~83.6%** (CI gate: PASS — threshold 70%)
+**Overall Score: ~83.3%** (CI gate: PASS — threshold 70%)
 
 ---
 
@@ -37,6 +37,7 @@
 | REQ-IA-008 | CORS Policy Enforcement | COMPLIANT | `api.py` CORSMiddleware |
 | REQ-IA-009 | Dependency Vulnerability Management | COMPLIANT | `.forgejo/workflows/dependency-audit.yml` |
 | REQ-IA-010 | Data at Rest Encryption | PARTIAL | Vault encrypted; SQLite workers not encrypted at rest |
+| REQ-IA-011 | Email/Domain Authentication (Anti-Spoofing) | PARTIAL | SPF (-all) + DMARC (p=none) published; no DKIM/real relay yet |
 
 ---
 

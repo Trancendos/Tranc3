@@ -114,7 +114,23 @@ This is one of the more substantively wired entities audited in this series:
   modules.
 - **Degradation:** each cross-entity fetch degrades independently on failure (see TASD).
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`the-dutchy`, port 8057) and its own Traefik route — does not run inside the `tranc3-backend` monolith. **This worker's Dockerfile previously only `COPY`'d a placeholder `main.py`** (the same deployed-stub-vs-undeployed-real defect found for The Academy/The Basement/The Studio) — **fixed**: it now builds and runs the real, more complete SQLite-backed `worker.py`, with a named volume (`the-dutchy-data:/app/data`) added so its data survives redeploys.
+- **Persistence:** named volume now attached to the `the-dutchy` compose service (added alongside the worker.py fix above) — state survives container restarts/redeploys in any mode
+- **Note:** this entity has **two** deployment surfaces — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a separate standalone worker (`the-dutchy`, port 8057). The table below describes the standalone worker; the monolith-mounted router follows the monolith's own placement (see the monolith pattern noted across this platform's other entities) and shares its volume.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `the-dutchy` compose block runs on a single cloud host, now running the real `worker.py`; Traefik/edge in front | persists via its attached volume as long as the disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `the-dutchy` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `the-dutchy` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -122,13 +138,25 @@ This is one of the more substantively wired entities audited in this series:
 | Report storage | in-memory `dict`, no persistence | zero infra cost, no durability |
 | Cross-entity aggregation | direct in-process function calls | zero cost, tightly coupled to the entities called |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `the-dutchy` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `the-dutchy` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `the-dutchy` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - No route-level auth on `/section7/*` routes — see SIM §5.
 - Zero-cost mandate: no external dependency in this module to audit against
   `scripts/zero_cost_audit.py`.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Generate a platform health report:** `POST /section7/reports/platform-health` — pulls live
   stats from 5 platform entities, auto-publishes to The Library, returns the report.
@@ -137,7 +165,7 @@ This is one of the more substantively wired entities audited in this series:
 - **List/inspect reports:** `GET /section7/reports` (optional `report_type` filter), `GET
   /section7/reports/{id}` for full detail.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A generated report is missing a data source:** expected if that entity was unreachable at
   generation time — check the omitted entity's own health, not this module (see TASD's
@@ -149,7 +177,7 @@ This is one of the more substantively wired entities audited in this series:
   section7.py` (this entity, The Dutchy) is unrelated to the `src/section7/` threat-intel package
   (a separate, unaudited-by-this-pack live background loop) — see truthfulness header.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "The Dutchy" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`; "Section 7"
   is documented in `CLAUDE.md` as an internal placeholder mapping to this entity — but a
@@ -165,3 +193,4 @@ This is one of the more substantively wired entities audited in this series:
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/research/section7.py` (285 lines), `src/research/routes.py` (53 lines), `src/research/bci_interface.py` (132 lines), `api.py` router registration (line 804) and startup wiring (line ~521), `src/section7/` package (6 files) | Confirmed Live-tier, full pack authored for the `src/research/*` path (the standalone `workers/the-dutchy/worker.py` was explicitly out of scope for this pass — see Code row above — so "full pack" should be read as scoped to the audited path, not entity-wide). Verified genuine cross-entity integration: `generate_platform_health_report()`/`generate_security_report()` make real calls into 5 other live entities, and `_store_and_publish()` genuinely writes to The Library (confirmed via `Library.create()` call), unlike similar "feeds into X" claims found unimplemented elsewhere in this series. Major finding: a completely separate, unrelated `src/section7/` package (CVE/OSV/CISA threat-intel polling, live-wired via `api.py` startup) shares the "Section 7" name with this entity's actual code path — a genuine naming collision, not previously documented, flagged for future disambiguation. |
 | 2026-07-07 | Claude (session, cubic/CodeRabbit review triage) | `src/research/section7.py` | Fixed the bare `except Exception: pass` around `Library.create()` in `_store_and_publish()` — its comment claimed "error logged upstream" but nothing actually logged the failure, making publish errors invisible. Added `logger.warning(..., exc_info=True)`. Verified via `py_compile`/`ruff check` (both clean); no existing test covers this path to re-run. |
+| 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/the-dutchy/Dockerfile`, `workers/the-dutchy/main.py`, `workers/the-dutchy/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/the-dutchy/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy/The Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, hardcoded empty/placeholder responses) while a genuinely more complete SQLite-backed `worker.py` sat unused in the same directory. **Fixed this time** (unlike Academy's prior pass, this was caught and corrected in the same session rather than left for a follow-up): changed the Dockerfile to build/run `worker.py` and added a named volume (`the-dutchy-data:/app/data`) to `docker-compose.production.yml`. DSM rewritten to reflect the fix. Note this is independent of the `src/research/section7.py` monolith-router finding above (intelligence report generation) — two separate surfaces, two separate fixes. |

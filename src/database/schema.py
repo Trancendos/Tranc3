@@ -69,6 +69,11 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     tier = Column(String(20), default="free")  # free, pro, enterprise
+    # Stripe customer id (cus_...) — the durable link between our user and their
+    # Stripe customer, persisted from webhooks so the billing portal can resolve
+    # it server-side (never from a client-supplied value). Nullable: only set once
+    # a user has transacted through Stripe.
+    stripe_customer_id = Column(String(64), unique=True, nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -87,6 +92,7 @@ class User(Base):
     __table_args__ = (
         Index("ix_users_email", "email"),
         Index("ix_users_username", "username"),
+        Index("ix_users_stripe_customer_id", "stripe_customer_id"),
     )
 
 

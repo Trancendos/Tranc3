@@ -44,13 +44,40 @@ Every service, location, and subsystem has a canonical code name. Use ONLY these
 
 Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `src/entities/platform.py`.
 
+**Location Functions & Job Descriptions.** Every Location has a functional Job Description title
+(e.g. Royal Bank of Arcadia → Chief Financial Officer) distinct from its canonical `lead_ai` name
+— see `docs/governance/LOCATION-FUNCTIONS.md`. Which AI currently holds that Job Description is
+mutable at runtime via the Role Assignment Registry (`src/roles/registry.py`, SQLite-backed,
+exposed at `/roles` — `src/roles/routes.py`, mounted in `api.py`), letting operators add, remove,
+or reassign AIs to a role without a code change; every change is recorded in an audit history.
+
 **Naming rules:**
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
 - "tAimra" = location name; "tAImra" = its Lead AI name (different capitalisation — both correct)
+- "The Nexus" — self-referential by design, not a documentation error: the location and its Lead
+  AI share the same common name because The Nexus is unique among the 43 entities in being both a
+  location and an entity in its own right (it doesn't have a separate humanoid-styled AI persona
+  the way most other locations do). `PLATFORM_ENTITIES.md`'s AID-NXS-01 gives it a formal/full
+  designation, **Nexus-Prime**, for entity-ID contexts — use "The Nexus" in this table and casual
+  references, "Nexus-Prime" where a distinct AID is required (matching how "The Guardian" below
+  gets a full title only in entity contexts).
 - "The Guardian (Anchor: Orb of Orisis)" — full title required in entity contexts
 - `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
 - "Section 7" — internal placeholder name, NOT in the canonical entity hierarchy; closest entity is **The Dutchy** (Intelligence & Market Analysis, Lead AI: Predictive lore)
+- **AeonMind** (`aeonmind/` — Rust/Go/Python/WASM) — a separate, generic polyglot agent-framework
+  specification, NOT one of the 43 platform entities and not a competing description of them. Its
+  own canonical taxonomy lives in `aeonmind/docs/AI_DEFINITIONS_DICTIONARY.md` (a 6-tier
+  HUMAN→ORCHESTRATOR→PRIME→AI→AGENT→BOT hierarchy for *building* agents generically). Only a thin
+  Python bridge (`src/routers/aeonmind.py`, mounted in `api.py` as `_aeonmind_router`) is live; the
+  Rust/Go/WASM agent-runtime code is scanned in CI (`.forgejo/workflows/dependency-scanner.yml`)
+  but has no `docker-compose.production.yml` service of its own — it is not deployed. Do not
+  conflate its Tier 0–5 vocabulary with `PLATFORM_ENTITIES.md`'s own Tier 1–5 (Sovereign/Primes/
+  Lead AI/Agents/**Bots** — note `docs/architecture/infrastructure-modes.md` separately calls Tier
+  5 "Nanos", a third, minor naming variant not resolved here) — they describe different things (a
+  generic agent framework vs. this platform's specific named entities), even though the tier
+  *numbers* loosely correspond in role (Orchestrator≈Sovereign, Prime≈Primes, AI≈Lead AI,
+  Agent≈Agents, Bot≈Bots/BotRegistry).
 
 | Code Name | Lead AI (Tier 3) | Role / Description | Status | Foundation |
 |---|---|---|---|---|
@@ -80,7 +107,7 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | ✅ In repo | `workers/imaginarium/worker.py` (standalone worker); orchestrates the others |
 | **The Lab** | The Dr. & Slime | Code creation platform (Claude Code-style) | ✅ In repo | `src/lab/` (router registered in `api.py`) |
-| **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py` |
+| **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py`; `workers/chaos-party/worker.py` (standalone worker, port 8079) |
 | **The Artifactory** | Lunascene | Central artifact repository library | ✅ In repo | `src/artifactory/` (router registered in `api.py`); Gitea packages / Zot planned backend |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | ✅ In repo | `src/apimarket/` (router registered in `api.py`); Gravitee.io planned integration |
 | **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | `src/cryptex/` (router registered in `api.py`); Wazuh + MISP planned integration |
@@ -142,6 +169,9 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 - `CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python
 - `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
 - `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
+- `docs/architecture/ea-workbook/` — EA/CMDB workbook (17 CSVs + runbooks/API-spec/compliance
+  docs) covering 6 real anchor services in depth (The Spark, The Digital Grid, Infinity,
+  The Void, The Workshop, The Observatory) — not a full inventory of all 90+ services
 
 **Architecture principles:**
 1. **SQLite over Cloudflare D1** — Each worker owns its own database file; no shared state
@@ -397,7 +427,15 @@ EMBED_MODEL              # all-MiniLM-L6-v2 (sentence-transformers)
 
 ## CI/CD
 
-**All CI/CD runs through Forgejo (The Workshop) — NO GitHub Actions.**
+**Forgejo (The Workshop) is the primary CI/CD system for deployment and heavier pipelines.**
+`.github/workflows/` is not dead code, though — it currently has 12 real, active files, several of
+which gate this repo's PRs directly (`ci.yml`'s Ruff/lint checks, `codeql.yml`, `test.yml`,
+`trivy.yml`, `codecov.yml`, `python.yml`, `rust.yml`, `go.yml`). Two more are deliberate, narrow
+exceptions for GitHub-native features with no Forgejo equivalent — `publish-wiki.yml` (GitHub
+Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
+`docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
+deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run
+(PR status checks, CodeQL, Pages/Wiki) rather than being phased out.
 
 Workflow files in `.forgejo/workflows/`:
 - `deploy-fly.yml` — tranc3-backend + tranc3-bots to Fly.io

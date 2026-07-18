@@ -202,7 +202,22 @@ both are reachable only directly by whatever external client knows their contain
   single-instance deployment but would need shared state (e.g. Redis) to work correctly if
   ever horizontally scaled to multiple replicas.
 
-## 7. Technology & Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** two separate standalone workers, each its own `docker-compose.production.yml` service block — `files-service` (port 8014) and `storage-service` (port 8020); neither runs inside the `tranc3-backend` monolith.
+- **Persistence:** both compose services have a named volume attached (fixed in a prior doc-pack pass after finding `files-service`'s volume was mounted at the wrong path, and `storage-service` had none at all — see this pack's own Verification Log).
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | both compose blocks run on a single cloud host; Traefik/edge in front (both are currently internal-only, no Traefik label) | persists via each service's attached volume as long as the disk is preserved | no persistent-volume gap remains, but both services are unauthenticated by default (empty-token defaults) in every mode alike — a real gap, not mode-specific |
+| **Hybrid** | same two compose blocks; per the Hybrid diagram, document/object data could sync to local TrueNAS while the services themselves still run wherever deployed | local-syncable via each service's volume | requires `CITADEL_LOCAL_STACK=true` for a local stack alongside the cloud one |
+| **Local-Only** | same two compose blocks, run entirely on local/Citadel hardware | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); no code change needed for either worker.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Layer | Choice | Cost |
 |---|---|---|
@@ -211,7 +226,19 @@ both are reachable only directly by whatever external client knows their contain
 | Document backends (optional) | Paperless-ngx, Stirling PDF, Gotenberg, Apache Tika | zero (self-hosted OSS, none provisioned in compose today) |
 | Object backends (optional) | MinIO, IPFS (kubo), Valkey, DuckDB, SeaweedFS, Garage | zero (self-hosted OSS/embedded, only `local`+`duckdb` guaranteed available) |
 
-## 8. Policy & Compliance (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment (see §11 PROC for a local run command) |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `files-service / storage-service` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks before Production, though a local run command may be documented in §11 PROC. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy & Compliance (POL)
 
 - Both services currently run **unauthenticated by default** in this compose file (see
   truthfulness header). Any document or object handled by either service should be treated as
@@ -220,7 +247,7 @@ both are reachable only directly by whatever external client knows their contain
 - Uploaded document content and object bytes are not scanned for malware/PII by either
   service — no integration with Cryptex or The Warp Tunnel/The Ice Box exists.
 
-## 9. Procedures (PROC)
+## 11. Procedures (PROC)
 
 - **Local dev:** `cd workers/files-service && pip install -r requirements-worker.txt && uvicorn
   worker:app --port 8014` (and equivalently for `storage-service` on 8020).
@@ -231,7 +258,7 @@ both are reachable only directly by whatever external client knows their contain
   the backend's own container to `docker-compose.production.yml` (none of the 9 optional
   backends across both services are provisioned there today).
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Health check:** `GET http://files-service:8014/health` / `GET http://storage-service:8020/health`.
 - **Symptom: uploaded documents/objects disappear after a redeploy.** Before this pass, this
@@ -241,7 +268,7 @@ both are reachable only directly by whatever external client knows their contain
 - **Symptom: `/api/paperless/search` returns 503.** Expected — `PAPERLESS_API_TOKEN` is unset;
   not a bug.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Follows the same FastAPI/Uvicorn/SQLite-WAL conventions as other standalone workers audited
   this session.

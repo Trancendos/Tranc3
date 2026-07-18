@@ -198,7 +198,7 @@ impl AdaptiveMetaLearner {
             let s: Vec<f64> = self
                 .parameters
                 .iter()
-.zip(prev_params.iter())
+                .zip(prev_params.iter())
                 .map(|(p_new, p_old)| p_new - p_old)
                 .collect();
             let y: Vec<f64> = clipped
@@ -219,7 +219,6 @@ impl AdaptiveMetaLearner {
             }
         }
 
-        let clipped_norm = norm(&clipped);
         self.prev_gradient = Some(clipped);
         self.iteration += 1;
 

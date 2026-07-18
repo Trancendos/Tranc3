@@ -14,3 +14,17 @@ CVE-2026-1260
 # Reason: pod name "fmd-distiller" contains the string "tiller"; there is no Helm Tiller
 # running in this cluster. Suppress on all pod spec templates.
 KSV118
+
+# CVE-2025-69872 (GHSA-w8v5-vhqr-4h9v) — diskcache unsafe pickle deserialization
+# Affects: diskcache <= 5.6.3 (workers/cache-service). 5.6.3 is the LATEST release
+# and the advisory has NO fixed version, so there is no version to upgrade to.
+# Status: NOT EXPLOITABLE in our usage. workers/cache-service/worker.py opens the
+# cache with a hardened _NoPickleJSONDisk (JSONDisk subclass) that serializes/reads
+# values as JSON AND hard-rejects the base Disk's pickle read paths (mode=MODE_PICKLE
+# values and non-raw keys) — so a tampered or legacy pickle row raises (cache miss)
+# instead of reaching pickle.load(). Verified with an adversarial MODE_PICKLE
+# injection test. The finding remains only because scanners match the package
+# version (usage-blind), not the serializer in use. Re-evaluate (and drop this
+# ignore) if a patched diskcache release ships. Full context at the pin in
+# workers/cache-service/requirements-worker.txt.
+CVE-2025-69872

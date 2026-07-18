@@ -62,6 +62,10 @@ BLOCKED_SERVICES: Dict[str, str] = {
     r"api\.stripe\.com": "Stripe payments — only allowed via Royal Bank of Arcadia worker",
     # Paid deepseek direct (use via OpenRouter :free instead)
     r"api\.deepseek\.com": "DeepSeek direct API (paid) — use deepseek/deepseek-r1:free via OpenRouter",
+    # Together.ai — $1 signup credit only, not a guaranteed free tier (see
+    # config/zero_cost/providers.yaml's conditional_cloud entry, risk:
+    # credits_expire) — not on the approved ai_inference rotation chain
+    r"api\.together\.xyz": "Together.ai (credit-based, not guaranteed free) — not an approved zero-cost provider, see config/zero_cost/providers.yaml",
 }
 
 
@@ -230,6 +234,8 @@ class ZeroCostEnforcer:
         for env_var, service_name in [
             ("OPENAI_API_KEY", "OpenAI"),
             ("BUGZY_API_KEY", "Bugzy AI (€250-1,500/month)"),
+            ("TOGETHER_API_KEY", "Together.ai (credit-based, not guaranteed free — workers/infinity-ai)"),
+            ("DEEPSEEK_API_KEY", "DeepSeek direct API (paid — workers/infinity-ai; use OpenRouter's deepseek/deepseek-r1:free instead)"),
         ]:
             if os.environ.get(env_var):
                 violations.append(

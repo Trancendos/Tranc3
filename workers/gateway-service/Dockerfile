@@ -6,7 +6,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 WORKDIR /app
 COPY --chown=worker:worker workers/gateway-service/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker workers/gateway-service/worker.py .
+# worker.py is a thin shim importing app from main.py, which in turn imports
+# config/database/models/service/router from this same directory - copying
+# only worker.py left every one of those imports unresolvable.
+COPY --chown=worker:worker workers/gateway-service/config.py workers/gateway-service/database.py workers/gateway-service/models.py workers/gateway-service/service.py workers/gateway-service/router.py workers/gateway-service/main.py workers/gateway-service/worker.py .
+# service.py/router.py/main.py import Dimensional.dimensionals and
+# Dimensional.infinity.* - vendored from the repo-root build context
+# (context: . — see docker-compose.production.yml note if/when this service
+# is wired in), not duplicated locally.
+COPY --chown=worker:worker Dimensional/ ./Dimensional/
 
 RUN mkdir -p data && chown -R worker:worker data
 

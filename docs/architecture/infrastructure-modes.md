@@ -2,6 +2,15 @@
 
 This document provides Mermaid diagrams for each SYSTEM_MODE deployment topology.
 
+> **Per-service detail lives in each entity's doc-pack.** This document covers the
+> platform-wide topology only. For what Cloud-Only / Hybrid / Local-Only actually means for
+> a *specific* application — what runs where, data locality, per-mode blockers — see that
+> service's **Deployment Scope Matrix (DSM)** artifact in `docs/services/<slug>/README.md`,
+> per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` and
+> `docs/framework/SERVICE-DOC-PACK-TEMPLATE.md` §7. Modes are defined in code by
+> `src/platform/infrastructure_mode.py` (`PlatformInfraMode.CLOUD_ONLY` / `.HYBRID` /
+> `.LOCAL_ONLY`).
+
 ## TrueNAS Mode (TRUE_NAS)
 
 Full local infrastructure — all services run on-premises with TrueNAS DXP4800+ as the primary storage backend.

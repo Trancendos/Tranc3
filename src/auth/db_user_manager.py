@@ -200,6 +200,125 @@ class DBUserManager:
             return True
         return False
 
+    def update_tier_by_id(self, user_id: str, new_tier: str) -> bool:
+        """Update a user's tier keyed by their stable id (UUID).
+
+        Billing/checkout metadata carries the user *id*, not the username, so
+        webhook-driven provisioning must be able to resolve by id. Returns True
+        only if a matching user was found and updated.
+        """
+        # Skip the DB lookup entirely for non-UUID identifiers: apply_provision
+        # deliberately calls this with a *username* as a fallback, and querying
+        # User.id == "<username>" raises a DataError (invalid UUID) that would spam
+        # the logs on every such fallback. A bad UUID here just means "try the
+        # username path", not an error.
+        is_uuid = True
+        try:
+            uuid.UUID(str(user_id))
+        except (ValueError, AttributeError, TypeError):
+            is_uuid = False
+
+        session = self._get_session() if is_uuid else None
+        if session:
+            try:
+                from src.database.schema import User
+
+                user = session.query(User).filter(User.id == user_id).first()
+                if user:
+                    user.tier = new_tier  # type: ignore[assignment]
+                    session.commit()
+                    return True
+            except Exception as e:
+                session.rollback()
+                logger.error("DB update_tier_by_id failed: %s", sanitize_for_log(e))
+            finally:
+                session.close()
+
+        # Fallback store is keyed by username; match on the stored id.
+        for rec in self._fallback.values():
+            if str(rec.get("id")) == str(user_id):
+                rec["tier"] = new_tier
+                rec["roles"] = _tier_to_roles(new_tier)
+                return True
+        return False
+
+    def set_stripe_customer_id(self, user_id: str, customer_id: str) -> bool:
+        """Persist the durable user -> Stripe customer (cus_...) link, keyed by the
+        stable user id. Called from webhook provisioning. Returns True if a matching
+        user was found and updated. Never overwrites with an empty value.
+        """
+        if not customer_id:
+            return False
+
+        is_uuid = True
+        try:
+            uuid.UUID(str(user_id))
+        except (ValueError, AttributeError, TypeError):
+            is_uuid = False
+
+        session = self._get_session() if is_uuid else None
+        if session:
+            try:
+                from src.database.schema import User
+
+                user = session.query(User).filter(User.id == user_id).first()
+                if user:
+                    user.stripe_customer_id = customer_id  # type: ignore[assignment]
+                    session.commit()
+                    return True
+            except Exception as e:
+                session.rollback()
+                logger.error("DB set_stripe_customer_id failed: %s", sanitize_for_log(e))
+            finally:
+                session.close()
+
+        # Fallback store is keyed by username; match on the stored id.
+        for rec in self._fallback.values():
+            if str(rec.get("id")) == str(user_id):
+                rec["stripe_customer_id"] = customer_id
+                return True
+        return False
+
+    def get_stripe_customer_id(self, user_id: str) -> Optional[str]:
+        """Resolve a user's stored Stripe customer id (cus_...), matching by stable
+        id first and then by username (the billing portal passes the token `sub`,
+        which is the id, but older tokens may carry a username). Returns None if the
+        user is unknown or has never transacted through Stripe.
+        """
+        if not user_id:
+            return None
+
+        is_uuid = True
+        try:
+            uuid.UUID(str(user_id))
+        except (ValueError, AttributeError, TypeError):
+            is_uuid = False
+
+        session = self._get_session()
+        if session:
+            try:
+                from src.database.schema import User
+
+                q = session.query(User)
+                user = (
+                    q.filter(User.id == user_id).first()
+                    if is_uuid
+                    else q.filter(User.username == user_id).first()
+                )
+                if user:
+                    return user.stripe_customer_id
+            except Exception as e:
+                logger.error("DB get_stripe_customer_id failed: %s", sanitize_for_log(e))
+            finally:
+                session.close()
+
+        # Fallback: match on stored id, else on username key.
+        for rec in self._fallback.values():
+            if str(rec.get("id")) == str(user_id):
+                return rec.get("stripe_customer_id")
+        rec = self._fallback.get(user_id)
+        return rec.get("stripe_customer_id") if rec else None
+
     @staticmethod
     def _validate_password(password: str):
         """Enforce password strength — SCAMPER-S action."""

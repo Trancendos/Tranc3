@@ -5,18 +5,28 @@
 | **Entity** | The Chaos Party (`PID-TCP`) — Alice-in-Wonderland themed |
 | **Lead AI** | The Mad Hatter (`AID-TCP-01`); Prime: The Doctor (Nikolai O'denhim) |
 | **Status** | 🔧 Partial (per `CLAUDE.md` service table) |
-| **Code** | `tests/test_chaos.py` (fault-injection suite). A `workers/chaos-party/` worker also exists — see the port note below |
+| **Code** | `tests/test_chaos.py` (fault-injection suite) **and** a real, deployable standalone worker, `workers/chaos-party/worker.py` (SQLite-backed test-suite/chaos-experiment tracking API, port 8079) |
 
-> **Worker port — real inconsistency (flagged, not resolved here).** `workers/chaos-party/worker.py`
-> **hardcodes `WORKER_PORT = 8063`** and binds it (`uvicorn.run(..., port=WORKER_PORT)`), **ignoring** the
-> compose `PORT=8079` env; the Dockerfile `EXPOSE`s **8065**; while `docker-compose.production.yml`
-> (Traefik + `ports`) and `CLAUDE.md` use **8079**. So the app listens on 8063 while deployment routes
-> 8079 — a genuine defect (routing would not reach the app). Tracked in issue #188.
-| **Gate tier** | Partial → GOV + RACI + TFM + POL + STD + DDD scoped to the suite that exists |
+> **Worker port defect — resolved, and a second defect found and fixed in this pass.** The prior
+> version of this note (2026-07-03) flagged `workers/chaos-party/worker.py` for hardcoding
+> `WORKER_PORT = 8063` and ignoring the compose `PORT=8079` env. That was true at the time but is
+> **now stale** — commit `a5c74c8` ("honor PORT env in 36 workers") already fixed this across the
+> platform; `worker.py` now correctly reads `int(os.getenv("PORT") or "8063")`. Separately, this
+> pass found and fixed a **second, independent** defect in the same class as The Academy/The
+> Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, always
+> returns empty/404 responses) while this real, SQLite-backed, auth-gated `worker.py` sat unused in
+> the same directory. Fixed — the Dockerfile now builds and runs `worker.py`, with a named volume
+> added. Issue #188 can be considered closed for this entity.
+| **Gate tier** | Partial → GOV + RACI + TFM + DSM + POL + STD + DDD scoped to the suite that exists |
 
-> **Truthfulness:** claims cite `tests/test_chaos.py`. The Chaos Party's in-repo foundation is a
-> **fault-injection test suite**, not a running HTTP service — the pack documents what it actually
-> exercises. Status owned by the `CLAUDE.md` service table; identity by `PLATFORM_ENTITIES.md`.
+> **Truthfulness:** this entity has two genuinely separate surfaces, and claims below cite the
+> correct one for each section. `tests/test_chaos.py` is a **fault-injection test suite, not a
+> running HTTP service** — that specific characterization applies only to the test suite, not to
+> the entity as a whole. `workers/chaos-party/worker.py`, by contrast, **is** a real, deployable
+> standalone HTTP worker (SQLite-backed, port 8079, now the actual build target per the fix
+> above) — see the DDD below for the DDD/architecture claims specific to the test suite, and the
+> DSM for the deployed-worker claims. Status owned by the `CLAUDE.md` service table; identity by
+> `PLATFORM_ENTITIES.md`.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -24,8 +34,10 @@
   platform degrades gracefully (resilience proof).
 - **Owner (RACI-A):** The Mad Hatter (Lead AI); Prime The Doctor (Nikolai O'denhim).
 - **Scope (in-repo):** `pytest` chaos suite covering circuit-breaker, workflow, event-bus, and tool-timeout
-  fault paths. The dedicated `chaos-party` worker is the service-form of this capability (see the port
-  note above — code binds 8063, deployment expects 8079).
+  fault paths, **plus** a real deployed worker (`workers/chaos-party/`) that tracks test suites, test
+  runs, and chaos experiments over a SQLite-backed, auth-gated HTTP API — this is a genuine second
+  capability, not just "the service-form" of the pytest suite; the two are separate code paths that
+  happen to share a theme.
 
 ## 2. Detailed Design Document (DDD) — scoped to `tests/test_chaos.py`
 
@@ -65,11 +77,26 @@ The suite deliberately introduces failures and asserts graceful degradation:
 
 - **Load model:** a bounded, fast `pytest` suite; not a runtime service.
 - **Zero-cost limits & hard stops:** pure `pytest`/asyncio; no paid chaos tooling.
-- **Growth path:** the `chaos-party` worker (deployment port 8079; code currently binds 8063 — see the
-  port note) can expose chaos runs as a service (out of scope of the
-  in-repo suite documented here).
+- **Growth path:** already realized, not just planned — the `chaos-party` worker (port 8079) already
+  exposes chaos-experiment tracking as a real, deployed service (see the DSM below); it is out of
+  scope of the `pytest` suite documented in this ASD/DDD, which covers only `tests/test_chaos.py`.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** **two genuinely separate things, previously conflated in this DSM.** (1) `tests/test_chaos.py` is a test suite executed by CI (Forgejo runner, per `CLAUDE.md`'s "All CI/CD runs through Forgejo — NO GitHub Actions"), not a long-running service. (2) `workers/chaos-party/` **is** a real, deployable standalone worker with its own `docker-compose.production.yml` service block (`chaos-party`, port 8079) and its own Traefik route (`PathPrefix(/chaos-party)`) — the earlier version of this DSM incorrectly said no compose block exists for this entity at all. **Its Dockerfile previously only `COPY`'d a placeholder `main.py`** (the same deployed-stub-vs-undeployed-real defect found for The Academy/The Basement/The Studio) — **fixed**: it now builds and runs the real, SQLite-backed `worker.py`, with a named volume (`chaos-party-data:/app/data`) added.
+- **Persistence:** the `pytest` suite is stateless (results go to `logs/test_results.jsonl` on whatever runner executes it, not a dedicated volume for this entity). The **separate** `chaos-party` worker now has genuine SQLite persistence backed by a named volume, surviving redeploys in every mode.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `pytest` suite runs on a Forgejo CI runner hosted on a cloud VM (see The Workshop's own DSM); separately, the `chaos-party` worker's compose block runs on a single cloud host, now running the real `worker.py` | CI output n/a; worker persists via its attached volume as long as the disk is preserved | worker: none beyond standard single-host durability; suite: depends entirely on The Workshop's Cloud-Only deployment |
+| **Hybrid** | suite runs on whichever Forgejo runner (cloud or local) picks up the job; worker runs as a single instance (cloud or local host) | worker's SQLite volume local-syncable per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | suite runs on a local Forgejo runner; worker runs entirely on local/Citadel hardware behind local Traefik | worker fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** the `pytest` suite has no AI-Gateway or paid-dependency exposure; the `chaos-party` worker's zero-cost posture follows the platform-wide `zero_cost_cloud`/`zero_cost_full` split (`config/platform/infrastructure_mode.yaml`).
+- **Switching modes:** the suite inherits whatever mode The Workshop's CI runners are deployed under; the `chaos-party` worker needs no code change to move between modes, only a redeploy-target change for its own compose block.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -77,24 +104,43 @@ The suite deliberately introduces failures and asserts graceful degradation:
 | Fault injection | in-test exceptions/timeouts/cancellation | in-process |
 | Assertions on behaviour | `caplog` + state checks | in-process |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> A distinct question from DSM: DSM is about *physical location* (Cloud-Only/Hybrid/Local-Only); this is
+> about *SDLC promotion stage* (Dev/UAT/Production). Two genuinely separate surfaces, same as in the DSM
+> above: the `pytest` suite (executed by whatever CI runner picks up the job — an orthogonal concept to
+> the compose-tier environments this ESM measures) and the `chaos-party` compose service (checked
+> directly by name in each environment-tier compose file).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** (`docker-compose.development.yml`) | No | — | no `chaos-party` entry; the `pytest` suite still runs wherever Forgejo CI executes it, independent of this compose file |
+| **UAT** (`docker-compose.uat.yml`) | No | — | no `chaos-party` entry either; same CI-independence note applies |
+| **Production** (`docker-compose.production.yml`) | Yes | `chaos-party` service (port 8079, Traefik route, now running the real `worker.py`) — see DSM above | — |
+
+- **Gap, if any:** the `chaos-party` worker is Production-only in the compose sense, the norm for most
+  standalone workers, not a documentation failure to soften. The `pytest` suite's "environment" is a
+  separate, orthogonal concept — whichever Forgejo runner executes `tests/test_chaos.py` — and is not
+  gated by any of these three compose files at all.
+
+## 10. Policy (POL)
 
 - Chaos tests must exercise **real** platform primitives (no mocking the unit under test) and assert
   graceful degradation, not just failure. Reuses platform test standards.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a chaos scenario:** add a test to the relevant `Test*Chaos` class, inject a concrete fault
   (exception / timeout / cancellation), and assert the system degrades gracefully (state + log signal).
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **A chaos test fails in CI:** a resilience guarantee regressed — inspect which class
   (circuit-breaker / workflow / event-bus / tool-timeout) and treat as a real defect, not flakiness.
 - **`test_concurrent_executions_isolated` failing:** historically a `NodeType.OUTPUT` workflow-executor
   issue — verify against the workflow executor, not the chaos harness.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Deterministic fault injection; assertions on both state and log output; no mocking the SUT.
 
@@ -103,3 +149,4 @@ The suite deliberately introduces failures and asserts graceful degradation:
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-03 | Claude (session) | `tests/test_chaos.py` (module docstring + `TestCircuitBreakerChaos`/`TestWorkflowChaos`/`TestEventBusChaos`/`TestSparkToolNodeChaos`) | Test classes and injected fault scenarios verified against the suite |
+| 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/chaos-party/worker.py`, `Dockerfile`, `docker-compose.production.yml` | Major correction: this pack previously claimed The Chaos Party "is not a deployable service" — false. `workers/chaos-party/` has a real `docker-compose.production.yml` service block, Traefik route, and a genuine SQLite-backed test-suite/chaos-experiment tracking API (`worker.py`, auth-gated). Also found the port-hardcode defect this pack had flagged (2026-07-03) as "not resolved" was actually already fixed platform-wide by commit `a5c74c8` — stale documentation, not a live bug. Separately found and fixed a genuinely new defect: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage) instead of the real `worker.py` — same class as The Academy/The Basement/The Studio. Fixed the Dockerfile and added a named volume. GOV, ASD, and DSM sections rewritten to describe both the `pytest` suite and the worker as two separate, both-real capabilities. |

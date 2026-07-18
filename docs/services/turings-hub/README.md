@@ -79,7 +79,22 @@
 - **Degradation:** if `PersonalityMatrix` import fails, `api.py` logs a warning and continues with
   `EnhancedPersonalityMatrix = None` (import-guarded).
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** two surfaces — a router mounted in the `tranc3-backend` monolith (`src/personality/`, Partial-tier per this pack) *and* a separate standalone worker, `turings-hub-service` (port 8058).
+- **Persistence:** the monolith side shares `tranc3-backend`'s volume; `turings-hub-service` itself has **no** named volume in compose.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | monolith router runs wherever `tranc3-backend` is deployed; `turings-hub-service` runs its own compose block on a single cloud host | monolith side volume-backed; standalone worker ephemeral (no volume) | no entity-specific blocker beyond the standalone worker's missing volume |
+| **Hybrid** | same two surfaces; per the Hybrid diagram, monolith data can sync to local TrueNAS | as above, monolith side local-syncable | requires `CITADEL_LOCAL_STACK=true` for a local stack alongside the cloud one |
+| **Local-Only** | same two surfaces, entirely on local/Citadel hardware | monolith side fully local, volume-backed; standalone worker still has no volume | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); no code change needed for either surface.
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -88,24 +103,36 @@
 | Code generation | template writers in `spawner.py` | in-process |
 | Research NN | `lnn.py`, `snn_qat.py` (PyTorch) | OSS |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `turings-hub-service` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `turings-hub-service` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `turings-hub-service` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Reuses platform policy (`POL-AI-001`, `docs/defstan/`). Generated repos must not embed secrets —
   `_write_env_example` emits an `.env.example`, never real credentials.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Add a personality:** drop a profile JSON in `src/personality/profiles/`; it is picked up by
   `PersonalityMatrix._load_all()`. Materialise via `POST /turingshub/spawn`.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/turingshub/status` shows matrix unavailable:** `PersonalityMatrix` import failed — check the
   `api.py` startup warning and the `profiles/` directory.
 - **`spawn` fails:** verify the resolved output base (`_resolve_output_base`) is writable and inside
   the sandbox; check the returned file list.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Profiles are JSON with a stable schema (`PersonalityProfile._from_dict`).
 - Spawn output is sandboxed via `_resolve_output_base`; no writes outside the resolved base.

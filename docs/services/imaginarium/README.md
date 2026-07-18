@@ -126,7 +126,23 @@
 - **Degradation:** N/A for the deployed stub (nothing to degrade); `worker.py`'s fan-out logic
   was not traced for its own failure-handling depth in this pass.
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`imaginarium`, port 8064) and its own Traefik route — does not run inside the `tranc3-backend` monolith
+- **Persistence:** **no named volume** on the `imaginarium` compose service — any on-disk state is lost on container replace/redeploy in every mode alike
+- **Note:** the *deployed* `main.py` is an honest stub (`/orchestrate` always returns `"orchestrated": false`) regardless of mode — promoting the real, undeployed `worker.py` orchestrator (see this pack's DDD) would not by itself change this DSM, since it has no volume either.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `imaginarium` compose block runs on a single cloud host; Traefik/edge in front | ephemeral — no volume means state does not survive a redeploy | if this worker writes any local file it needs to keep, that data is at risk on every mode until a volume is added |
+| **Hybrid** | same `imaginarium` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `imaginarium` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local (still no volume — same durability gap as Cloud-Only) | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -135,7 +151,19 @@
 | Storage (undeployed only) | SQLite (`templates`/`projects`) | zero infra cost |
 | Auth (undeployed only) | `X-Internal-Secret` via `_auth()`, insecure `dev-secret` fallback | zero cost, currently would-be-unenforced if the fallback isn't fixed first |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | No | not present in `docker-compose.development.yml` (only `api`, `redis`, `infinity-ws`, `infinity-auth`, `infinity-ai`, `mailhog` exist there) | no compose-defined pre-production environment, and no local run command is documented in §11 PROC either |
+| **UAT** | No | not present in `docker-compose.uat.yml` either | same — no compose-defined pre-production environment either |
+| **Production** | Yes | full detail in the DSM above | — |
+
+- **Gap:** this entity has **no non-Production environment at all** — `imaginarium` only exists in `docker-compose.production.yml`. This worker is not exercised by the shared compose-orchestrated Dev/UAT stacks, nor is a local run command documented in §11 PROC — Production is genuinely the first place it runs. This is the norm for most standalone workers on this platform (only The Nexus and Infinity have full pre-production standalone-worker compose coverage, and The Observatory and The Digital Grid have UAT-only standalone-worker coverage), not a defect specific to this entity — stated here so it isn't assumed otherwise.
+
+## 10. Policy (POL)
 
 - No route-level auth on the deployed `main.py` — low risk given `/orchestrate` is an honest
   no-op stub.
@@ -145,7 +173,7 @@
   Sashas Photo Studio, and TateKing.
 - Zero-cost mandate: fully honored on both files.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Check orchestration status (deployed):** `POST /orchestrate` — always returns "not yet
   ready", by honest design, not a bug.
@@ -153,7 +181,7 @@
 - **(Not currently reachable) Create a real multi-service project:** would be `POST /create` on
   `worker.py`, if promoted to deployed status.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **`/orchestrate` always returns `"orchestrated": false`:** expected — this is the deployed
   file's honest, intentional stub behavior, not a bug to chase.
@@ -166,7 +194,7 @@
   orchestration logic exists (`worker.py`) but isn't deployed — see truthfulness header for the
   full finding and the owner decision this requires before promotion.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "Imaginarium" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Config modules invoked via bare `python <file>.py` correctly read `PORT` from the environment

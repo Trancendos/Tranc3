@@ -35,8 +35,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from src.backup.engine import BackupEngine
@@ -53,6 +54,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 WORKER_PORT = int(os.getenv("PORT") or "8078")
 BACKUP_ROOT = Path(os.environ.get("BACKUP_ROOT", "/data/backups"))
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 engine = BackupEngine(backup_root=BACKUP_ROOT, encrypt=True)
 
@@ -120,6 +122,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def _internal_auth(request: Request, call_next):
+    if _INTERNAL_SECRET and request.url.path != "/health":
+        token = request.headers.get("x-internal-secret", "")
+        if token != _INTERNAL_SECRET:
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
+
 
 router = APIRouter(prefix="/backup")
 

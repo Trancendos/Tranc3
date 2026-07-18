@@ -5,7 +5,7 @@
 | **Entity** | DevOcity |
 | **Lead AI** | Kitty |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
-| **Code** | `src/devocity/portal.py`, `src/devocity/routes.py`; router registered in `api.py` (`app.include_router(_devocity_router)`, line 864) — **plus a separate standalone worker**, `workers/devocity/worker.py` not audited in detail by this pack |
+| **Code** | `src/devocity/portal.py`, `src/devocity/routes.py`; router registered in `api.py` (`app.include_router(_devocity_router)`, line 864) — **plus a separate standalone worker**, `workers/devocity/worker.py` (SQLite-backed, now the actual deployed image as of the 2026-07-11 Dockerfile fix — see Verification Log) |
 
 > **Truthfulness:** claims cite `src/devocity/portal.py` and `src/devocity/routes.py` directly,
 > plus grep-verified cross-checks against `src/security/security_framework.py`. Status is owned
@@ -80,7 +80,7 @@
 - **Decision: no key-validation middleware.** Despite `ApiKeyScope` implying gated access to The
   Spark/The Digital Grid, no dependency or middleware in this repo checks a request's key against
   `ApiKey.key_hash`. This is a substantial, real gap between the entity's stated purpose and its
-  actual enforcement — documented, not fixed (adding real key-gated auth to The Spark/Grid routes
+  actual enforcement — documented, not fixed (adding real key-gated auth to The Spark/The Digital Grid routes
   is an architectural change well beyond this docs pass).
 - **Fixed:** account-creation and key-issuance endpoints now require `Depends(get_current_user)`
   plus a self-or-admin ownership check via `_get_owned_account()`, mirroring `api.py`'s
@@ -118,7 +118,24 @@
 - **Degradation:** Redis unavailability degrades to in-memory-only for the running process's
   lifetime (both hydration and persist wrapped in `except Exception`).
 
-## 7. Technology Framework Matrix (TFM)
+## 7. Deployment Scope Matrix (DSM)
+
+- **Mode awareness:** No — this entity's own code does not call `PlatformInfraMode` / `src/platform/infrastructure_mode.py`. (Some platform-wide, cross-cutting code *does* branch on the mode — `src/routers/adaptive.py` and `src/routers/ecosystem.py` read/set `PLATFORM_INFRA_MODE`/`SYSTEM_MODE` directly, and `Dimensional/architecture/storage_factory.py` selects a storage provider from `SYSTEM_MODE` — but none of that code is owned by this or any other one of the 43 named entities; it is shared platform infrastructure, not this service's own logic. The Citadel is the only one of the 43 named entities whose own code branches on the mode — see `docs/services/the-citadel/README.md`.) This entity's deployment scope is determined externally — by which `docker-compose.production.yml` service block runs, and where — not by in-process mode detection.
+- **Runtime placement:** standalone worker with its own `docker-compose.production.yml` service block (`devocity`, port 8110) and its own Traefik route — does not run inside the `tranc3-backend` monolith. **This worker's Dockerfile previously only `COPY`'d a placeholder `main.py`** (the same deployed-stub-vs-undeployed-real defect found for The Academy/The Basement/The Studio) — **fixed**: it now builds and runs the real, more complete SQLite-backed `worker.py`, with a named volume (`devocity-data:/app/data`) added so its data survives redeploys.
+- **Persistence:** named volume now attached to the `devocity` compose service (added alongside the worker.py fix above) — state survives container restarts/redeploys in any mode
+- **Note:** this entity has **two** deployment surfaces — a router mounted in the `tranc3-backend` monolith (`api.py`) *and* a separate standalone worker (`devocity`, port 8110). The table below describes the standalone worker; the monolith-mounted router follows the monolith's own placement (see the monolith pattern noted across this platform's other entities) and shares its volume.
+- **Note:** the monolith router (`src/devocity/portal.py`) has its own, separate persistence story — real Redis-backed storage (per this pack's own DDD/ASD) via the shared platform Redis service. That finding is specifically about the monolith side; checked directly against `workers/devocity/worker.py` and confirmed it does **not** use Redis at all — the standalone worker's persistence is exclusively the SQLite + volume described above, unrelated to the monolith's Redis usage.
+
+| Setup | What runs, and where | Data locality | Hard blockers / caveats |
+|---|---|---|---|
+| **Cloud-Only** | the `devocity` compose block runs on a single cloud host, now running the real `worker.py`; Traefik/edge in front | persists via its attached volume as long as the disk is preserved on that host | none beyond standard single-host durability (no built-in cross-host replication) |
+| **Hybrid** | same `devocity` compose block; per `docs/architecture/infrastructure-modes.md`'s Hybrid diagram, this worker itself still runs as a single instance (cloud or local host), with only shared persistent data (not specific to this worker) split via TrueNAS/Syncthing | as above, optionally local-synced if a volume exists | requires `CITADEL_LOCAL_STACK=true` if a local compose stack should run alongside the cloud one |
+| **Local-Only** | same `devocity` compose block, run entirely on local/Citadel hardware behind local Traefik | fully local, volume-backed | none beyond standard local-hardware ops |
+
+- **Zero-cost posture per mode:** Cloud-Only defaults to the `zero_cost_cloud` AI-rotation chain; Hybrid/Local-Only default to `zero_cost_full` (`config/platform/infrastructure_mode.yaml`) — this only affects AI-Gateway-routed calls, not this entity's own logic
+- **Switching modes:** operator-level via `PLATFORM_INFRA_MODE` (or legacy `SYSTEM_MODE`); this entity needs no code change to move between modes, only a redeploy-target change for its own compose block
+
+## 8. Technology Framework Matrix (TFM)
 
 | Concern | Choice | Zero-cost stance |
 |---|---|---|
@@ -127,14 +144,26 @@
 | Persistence | Redis (`src/core/redis_store`), 1-year TTL | existing platform dependency, zero new cost |
 | Key validation (missing) | none | N/A — not implemented anywhere |
 
-## 8. Policy (POL)
+## 9. Environment Support Matrix (ESM)
+
+> Grounded against `docker-compose.development.yml`, `docker-compose.uat.yml`, and `docker-compose.production.yml` — checked by exact compose service name, not assumed (see `docs/services/INDEX.md` for current platform-wide compose service totals, which change as the topology evolves).
+
+| Environment | Covered? | What runs | Notes |
+|---|---|---|---|
+| **Dev** | Partial | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `devocity` worker is **not** in this compose file | standalone worker has zero Dev coverage |
+| **UAT** | Partial | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `devocity` worker is **not** in this compose file either | standalone worker has zero UAT coverage |
+| **Production** | Yes | both surfaces — full detail in the DSM above | — |
+
+- **Gap:** the standalone `devocity` worker (the more complete of this entity's two surfaces, per the DSM above) has **no Dev or UAT environment at all** — the first place it runs is Production. This is the norm for the ~90 standalone workers on this platform, not specific to this entity, but worth stating plainly rather than assuming pre-production validation exists where it doesn't.
+
+## 10. Policy (POL)
 
 - Every `/devocity/accounts*` route requires `Depends(get_current_user)` plus a self-or-admin
   ownership check — resolves the account-creation and key-issuance auth gap. The key-*validation*
-  gap (issued keys not being checked against The Spark/Grid) remains open; see TASD.
+  gap (issued keys not being checked against The Spark/The Digital Grid) remains open; see TASD.
 - Zero-cost mandate: Redis usage stays within the existing platform budget; no new dependency.
 
-## 9. Procedure (PROC)
+## 11. Procedure (PROC)
 
 - **Create a developer account:** `POST /devocity/accounts` with `{"user_id": "...",
   "display_name": "..."}` as the same user (or an admin) — `user_id` must
@@ -146,7 +175,7 @@
 - **Register a webhook:** `POST /devocity/accounts/{id}/webhooks` — stores the endpoint and a
   signing secret; no delivery mechanism exists to actually call it.
 
-## 10. Runbook (RUN)
+## 12. Runbook (RUN)
 
 - **Issued API keys don't grant any real access:** expected — see the major finding in the
   truthfulness header; this is not a bug to chase, it's an unimplemented enforcement layer.
@@ -157,7 +186,7 @@
 - **Account data missing after a restart:** check Redis connectivity — `_ensure_loaded()`
   degrades to empty in-memory state silently if Redis is unreachable.
 
-## 11. Standards (STD)
+## 13. Standards (STD)
 
 - Naming: canonical entity name "DevOcity" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Any DevOcity-issued API key that is documented as granting a `scope` MUST have a corresponding
@@ -170,5 +199,6 @@
 | Date | Verifier | Against | Result |
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/devocity/portal.py` (350 lines), `src/devocity/routes.py` (103 lines), `api.py` router registration (line 864), grep cross-check against `src/security/security_framework.py` | Confirmed Live-tier, full pack authored. Major finding: DevOcity implements real, well-practiced API key generation (hashed, one-time plaintext reveal) and genuine Redis persistence, but no code anywhere in the repo validates an issued key against any protected route — the `SPARK`/`GRID`/`ADMIN`/`FULL` scopes are purely descriptive with zero enforcement. Also flagged: unauthenticated account creation with unverified `user_id` (contradicts the module's own "wired to Infinity SSO" claim), unauthenticated key issuance for any known account ID, and four dead counters (`usage`, `request_count`, `delivery_count`, `failure_count`) that are declared but never incremented. None of these were code-fixed — each requires an architectural auth/enforcement decision out of scope for a docs pass. |
-| 2026-07-08 | Claude (session) | `src/devocity/routes.py` (168 lines, post-fix), `workers/devocity/worker.py` | Closed the account-creation/key-issuance no-auth gap: every `/devocity/accounts*` route now requires `Depends(get_current_user)` plus `_get_owned_account()`'s self-or-admin check. Verified via `tests/test_devocity_auth.py`. Also fixed a separate, more severe defect in the standalone `workers/devocity/worker.py`: `INTERNAL_SECRET` defaulted to the hardcoded literal `"dev-secret"` rather than failing open on an unset secret (the pattern used by every other `INTERNAL_SECRET`-gated worker in this codebase) — a guessable, undocumented backdoor credential shipped by default in production since `INTERNAL_SECRET` is unset in `docker-compose.production.yml`/`.env.example`. Changed the default to `""`, matching the established fail-open-if-unset convention. The key-*validation* gap (issued DevOcity keys never checked against The Spark/Grid) remains open — unrelated to this fix, requires a separate architectural decision. |
+| 2026-07-08 | Claude (session) | `src/devocity/routes.py` (168 lines, post-fix), `workers/devocity/worker.py` | Closed the account-creation/key-issuance no-auth gap: every `/devocity/accounts*` route now requires `Depends(get_current_user)` plus `_get_owned_account()`'s self-or-admin check. Verified via `tests/test_devocity_auth.py`. Also fixed a separate, more severe defect in the standalone `workers/devocity/worker.py`: `INTERNAL_SECRET` defaulted to the hardcoded literal `"dev-secret"` rather than failing open on an unset secret (the pattern used by every other `INTERNAL_SECRET`-gated worker in this codebase) — a guessable, undocumented backdoor credential shipped by default in production since `INTERNAL_SECRET` is unset in `docker-compose.production.yml`/`.env.example`. Changed the default to `""`, matching the established fail-open-if-unset convention. The key-*validation* gap (issued DevOcity keys never checked against The Spark/The Digital Grid) remains open — unrelated to this fix, requires a separate architectural decision. |
 | 2026-07-09 | Claude (session) | `src/devocity/routes.py` (post-fix), `src/auth/tokens.py` | cubic correctly flagged the same class of bug already found in Tranquility/tAimra: the initial fix's cross-user override checked `tier == "enterprise"`, but real JWTs carry `tier` as a numeric int and never that string. `_require_account_owner()`'s override now checks `role == "admin"` instead. Tests updated to assert real-shaped payloads. |
+| 2026-07-11 | Claude (session, DSM/implementation pass) | `workers/devocity/Dockerfile`, `workers/devocity/main.py`, `workers/devocity/worker.py` | Found, while authoring the Deployment Scope Matrix, that `workers/devocity/` has the same deployed-stub-vs-undeployed-real defect previously found for The Academy/The Basement/The Studio: the Dockerfile only `COPY`'d a placeholder `main.py` (zero storage, hardcoded empty/placeholder responses) while a genuinely more complete SQLite-backed `worker.py` sat unused in the same directory. **Fixed this time** (unlike Academy's prior pass, this was caught and corrected in the same session rather than left for a follow-up): changed the Dockerfile to build/run `worker.py` and added a named volume (`devocity-data:/app/data`) to `docker-compose.production.yml`. DSM rewritten to reflect the fix. Note this is independent of the `src/devocity/portal.py` monolith-router finding above (API-key issuance) — two separate surfaces, two separate fixes. |

@@ -11,9 +11,7 @@ P0 Workers:
 
 from __future__ import annotations
 
-import importlib
 import json
-import sys
 import time
 import uuid
 from pathlib import Path
@@ -22,18 +20,11 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests._worker_import_utils import import_worker as _import_worker
+
 # ── Import helpers for hyphenated package names ──────────────────────────────
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent
-
-
-def _import_worker(module_dotted: str, file_path: Path):
-    """Import a worker module with hyphenated path using importlib."""
-    spec = importlib.util.spec_from_file_location(module_dotted, str(file_path))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[module_dotted] = mod
-    spec.loader.exec_module(mod)
-    return mod
 
 
 ws_mod = _import_worker(

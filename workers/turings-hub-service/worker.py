@@ -55,7 +55,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger("turings-hub")
 
 SERVICE_NAME = "turings-hub"
-PORT = 8085
+PORT = int(os.environ.get("PORT", "8058"))
 
 # ---------------------------------------------------------------------------
 # Paths
