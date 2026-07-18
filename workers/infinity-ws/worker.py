@@ -39,7 +39,6 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")

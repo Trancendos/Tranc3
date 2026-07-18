@@ -172,8 +172,8 @@ async def create_program(body: ProgramCreate) -> dict[str, Any]:
             (pid, body.name, body.description, body.signature, now, now),
         )
         db().commit()
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Program name already exists")
+    except sqlite3.IntegrityError as e:
+        raise HTTPException(status_code=409, detail="Program name already exists") from e
     return {"id": pid, "name": body.name, "signature": body.signature, "created_at": now}
 
 

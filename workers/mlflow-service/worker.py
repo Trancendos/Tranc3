@@ -63,9 +63,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel, Field
-
 from path_validation import PathTraversalError, list_validated_children, validate_path
+from pydantic import BaseModel, Field
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
