@@ -234,8 +234,14 @@ class ZeroCostEnforcer:
         for env_var, service_name in [
             ("OPENAI_API_KEY", "OpenAI"),
             ("BUGZY_API_KEY", "Bugzy AI (€250-1,500/month)"),
-            ("TOGETHER_API_KEY", "Together.ai (credit-based, not guaranteed free — workers/infinity-ai)"),
-            ("DEEPSEEK_API_KEY", "DeepSeek direct API (paid — workers/infinity-ai; use OpenRouter's deepseek/deepseek-r1:free instead)"),
+            (
+                "TOGETHER_API_KEY",
+                "Together.ai (credit-based, not guaranteed free — workers/infinity-ai)",
+            ),
+            (
+                "DEEPSEEK_API_KEY",
+                "DeepSeek direct API (paid — workers/infinity-ai; use OpenRouter's deepseek/deepseek-r1:free instead)",
+            ),
         ]:
             if os.environ.get(env_var):
                 violations.append(

@@ -39,7 +39,9 @@ def test_approved_self_hosted_dict_entries_resolve_by_id() -> None:
     """approved_self_hosted holds {id, category, cost, ...} dicts, not bare strings —
     is_approved() must extract .id rather than checking raw membership."""
     for provider_id in ("groq", "litellm", "gemini", "github-models", "deepseek"):
-        assert is_approved(provider_id), f"{provider_id} should be approved via approved_self_hosted"
+        assert is_approved(provider_id), (
+            f"{provider_id} should be approved via approved_self_hosted"
+        )
 
 
 def test_approved_ids_does_not_crash_on_dict_entries() -> None:

@@ -85,7 +85,7 @@ jobs:
     # to main queue instead of racing.
     runs-on: deploy-host
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Build tranc3-ai worker
         run: |
@@ -130,7 +130,7 @@ jobs:
     needs: build-workers
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # `concurrency: cancel-in-progress: false` (workflow-scoped, above)
       # queues overlapping runs on the same ref instead of cancelling them —

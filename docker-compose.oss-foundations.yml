@@ -54,7 +54,7 @@ services:
   # Port 5678 (internal) → Traefik at /grid-engine
   # ─────────────────────────────────────────────────────────────────
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:latest@sha256:e0d9593724e36d2584a1686148155e881233b38ae1833101c97c6463c0d36711
     container_name: the-digital-grid-n8n
     <<: [*restart, *network]
     profiles: ["grid", "all"]
@@ -88,7 +88,7 @@ services:
   # Requires: outline-postgres, outline-redis
   # ─────────────────────────────────────────────────────────────────
   outline-postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     container_name: outline-postgres
     <<: [*restart, *network]
     profiles: ["library", "all"]
@@ -104,7 +104,7 @@ services:
       retries: 5
 
   outline-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: outline-redis
     <<: [*restart, *network]
     profiles: ["library", "all"]
@@ -117,7 +117,7 @@ services:
       retries: 3
 
   outline:
-    image: outlinewiki/outline:latest
+    image: outlinewiki/outline:latest@sha256:6744a369271ce3c5a37316e5bfc5311d8d4452eb5ee4ca9560c96c15fd718a39
     container_name: the-library-outline
     <<: [*restart, *network]
     profiles: ["library", "all"]
@@ -164,7 +164,7 @@ services:
   # Entity: Fabulousa | Lead AI: Baron Von Hilton
   # ─────────────────────────────────────────────────────────────────
   penpot-frontend:
-    image: penpotapp/frontend:latest
+    image: penpotapp/frontend:latest@sha256:4725b4698d8d1bd25ee1666e0d900d20da8937fea845c6a088f76cd69293560b
     container_name: fabulousa-frontend
     <<: [*restart, *network]
     profiles: ["fabulousa", "all"]
@@ -184,7 +184,7 @@ services:
       - "traefik.http.services.penpot.loadbalancer.server.port=80"
 
   penpot-backend:
-    image: penpotapp/backend:latest
+    image: penpotapp/backend:latest@sha256:6c8e3851f3734e98e48d5a4a68e2c64485f6bd67a1ffec809aa9f1847d90a646
     container_name: fabulousa-backend
     <<: [*restart, *network]
     profiles: ["fabulousa", "all"]
@@ -202,7 +202,7 @@ services:
       - penpot-redis
 
   penpot-postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     container_name: penpot-postgres
     <<: [*restart, *network]
     profiles: ["fabulousa", "all"]
@@ -218,7 +218,7 @@ services:
       retries: 5
 
   penpot-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: penpot-redis
     <<: [*restart, *network]
     profiles: ["fabulousa", "all"]
@@ -231,7 +231,7 @@ services:
   # Port 8108 internal → search-service worker proxies it
   # ─────────────────────────────────────────────────────────────────
   typesense:
-    image: typesense/typesense:27.0
+    image: typesense/typesense:27.0@sha256:20043fbbfa213c5e29fd4bd6f83d4bd73e9b993e183e7774815f6b3369815bf2
     container_name: search-typesense
     <<: [*restart, *network]
     profiles: ["search", "all"]
@@ -252,7 +252,7 @@ services:
   # Port 6333 REST, 6334 gRPC
   # ─────────────────────────────────────────────────────────────────
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:latest@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c
     container_name: vector-qdrant
     <<: [*restart, *network]
     profiles: ["vector", "all"]
@@ -272,7 +272,7 @@ services:
   # Port 4000
   # ─────────────────────────────────────────────────────────────────
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest
+    image: ghcr.io/berriai/litellm:main-latest@sha256:4870893763aca143f590bd5685a25219037af027d1d27e97abcb17ac9ec5d09f
     container_name: ai-gateway-litellm
     <<: [*restart, *network]
     profiles: ["ai-proxy", "all"]
@@ -333,7 +333,7 @@ services:
   # Port 8000 (internal 8000 — mapped to 8390 to avoid clash)
   # ─────────────────────────────────────────────────────────────────
   paperless-postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     container_name: docutari-postgres
     <<: [*restart, *network]
     profiles: ["doc-utari", "all"]
@@ -349,7 +349,7 @@ services:
       retries: 5
 
   paperless-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: docutari-redis
     <<: [*restart, *network]
     profiles: ["doc-utari", "all"]
@@ -362,7 +362,7 @@ services:
       retries: 3
 
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:6c86cad803970ea782683a8e80e7403444c5bf3cf70de63b4d3c8e87500db92f
     container_name: docutari-paperless
     <<: [*restart, *network]
     profiles: ["doc-utari", "all"]
@@ -405,7 +405,7 @@ services:
   # Port 5000
   # ─────────────────────────────────────────────────────────────────
   zot:
-    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    image: ghcr.io/project-zot/zot-linux-amd64:latest@sha256:34f18f783037f967dba10df02f9d4086c4d626f5643ef9f5e51e4a4547280a0b
     container_name: the-artifactory-zot
     <<: [*restart, *network]
     profiles: ["artifactory", "all"]
@@ -424,7 +424,7 @@ services:
   # Port 7233 (gRPC), 8080 (UI)
   # ─────────────────────────────────────────────────────────────────
   temporal:
-    image: temporalio/auto-setup:latest
+    image: temporalio/auto-setup:latest@sha256:9be7b8d98f60d00f4f2ff74731c071a17848d8182bbc8429e314a24c94ea105b
     container_name: workflow-temporal
     <<: [*restart, *network]
     profiles: ["temporal", "all"]
@@ -443,7 +443,7 @@ services:
       - temporal-postgres
 
   temporal-postgres:
-    image: postgres:13-alpine
+    image: postgres:13-alpine@sha256:fb9065b6e3e213bdc07edd372a5b2a26245840b7fb65d1fd8b6700106d51805c
     container_name: temporal-postgres
     <<: [*restart, *network]
     profiles: ["temporal", "all"]
@@ -459,7 +459,7 @@ services:
       retries: 5
 
   temporal-ui:
-    image: temporalio/ui:latest
+    image: temporalio/ui:latest@sha256:fc47cd8202c98ed868745fd9f2f011585232676d08da621b9a6d7bc4653c17aa
     container_name: workflow-temporal-ui
     <<: [*restart, *network]
     profiles: ["temporal", "all"]
@@ -475,7 +475,7 @@ services:
   # Port 3000 (internal) → mapped to 3200
   # ─────────────────────────────────────────────────────────────────
   cal-postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     container_name: chronos-postgres
     <<: [*restart, *network]
     profiles: ["chronos", "all"]
@@ -491,7 +491,7 @@ services:
       retries: 5
 
   calcom:
-    image: calcom/cal.com:latest
+    image: calcom/cal.com:latest@sha256:ace3bb1219fb7306585ab9f4d94d41af7ee064c343db0498173436bbe857bd49
     container_name: chronossphere-calcom
     <<: [*restart, *network]
     profiles: ["chronos", "all"]
@@ -528,7 +528,7 @@ services:
   # Prometheus: 9090, Grafana: 3000 → mapped to 3300
   # ─────────────────────────────────────────────────────────────────
   prometheus-oss:
-    image: prom/prometheus:latest
+    image: prom/prometheus:latest@sha256:c6b27ea434f8389bfe233fbc7be381cf50587c286e871bc842008f5a1b1908a7
     container_name: observatory-prometheus
     <<: [*restart, *network]
     profiles: ["observatory", "all"]
@@ -546,7 +546,7 @@ services:
       <<: *hc-http
 
   grafana-oss:
-    image: grafana/grafana:latest
+    image: grafana/grafana:latest@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
     container_name: observatory-grafana
     <<: [*restart, *network]
     profiles: ["observatory", "all"]

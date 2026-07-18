@@ -260,7 +260,7 @@ services:
 
   # ── Navidrome (Warp Radio backend) ───────────────────────────
   navidrome:
-    image: deluan/navidrome:latest
+    image: deluan/navidrome:latest@sha256:7c43af9f651654e97278be871705aae85a4ee0fa4b310337989699a8ada9b3ed
     container_name: navidrome
     <<: *worker-defaults
     profiles: ["radio", "all"]

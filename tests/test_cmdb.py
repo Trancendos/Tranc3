@@ -143,3 +143,13 @@ def test_docpack_section_detection_handles_real_heading_variants(cmdb_session):
         assert pack is not None, f"{slug} should have loaded"
         assert pack.has_ddd, f"{slug} has a DDD section but was recorded as missing one"
         assert pack.has_tasd, f"{slug} has a TASD section but was recorded as missing one"
+
+
+def test_load_all_on_progress_fires_at_each_checkpoint():
+    """scripts/build_cmdb.py relies on this callback to keep a rebuild
+    heartbeat current throughout the load, not just at start/end — it
+    must actually fire at every real checkpoint, not just the last one."""
+    with tempfile.NamedTemporaryFile(suffix=".db") as tmp:
+        checkpoints = []
+        load_all(tmp.name, on_progress=checkpoints.append)
+    assert checkpoints == ["services", "applications", "committed"]

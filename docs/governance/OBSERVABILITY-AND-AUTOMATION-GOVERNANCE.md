@@ -7,11 +7,12 @@
 > exactly what's real.
 
 **Code:** `src/observability/proactive_health.py` (`ProactiveHealthMonitor`), `self_healer.py`
-(`SelfHealer`), `src/errors/error_catalog.py` (`ErrorCode`), `src/event_bus/`, `src/cmdb/` (new —
-`models.py`, `loader.py`, `service_docpack_map.py`), `scripts/build_cmdb.py`,
-`scripts/link_service_docpacks.py`.
-**Owner:** The Observatory (Norman Hawkins) · **Version:** 1.1.0 · **Created:** 2026-07-18 ·
-**Updated:** 2026-07-18 (ServiceDocPack table + sample_from_cmdb added, still no live data)
+(`SelfHealer`), `src/errors/error_catalog.py` (`ErrorCode`), `src/event_bus/`, `src/cmdb/`
+(`models.py`, `loader.py`, `health_sync.py`, `service_docpack_map.py`), `scripts/build_cmdb.py`,
+`scripts/sync_health_aggregator.py`, `scripts/link_service_docpacks.py`.
+**Owner:** The Observatory (Norman Hawkins) · **Version:** 1.2.0 · **Created:** 2026-07-18 ·
+**Updated:** 2026-07-18 (health-aggregator sync merged to main via PR #223; ServiceDocPack table +
+sample_from_cmdb added via PR #285 — still no live HealthObservation data)
 
 ---
 
@@ -49,11 +50,75 @@ Confidential-classified services have no auth mechanism," found by hand while wr
 a regression test that the join still finds the known `infinity-shards-service` gap.
 
 A sixth table, **`HealthObservation`**, is also defined — `service_id`, `observed_at`,
-`health_score`, `status`, `error_count`, `response_time_ms`, `source`. It is **empty**. Nothing
-writes to it yet. It exists because "capture live traffic/health data so trend detection has
-something to detect trends in" needs a destination before it needs an algorithm, and this is that
-destination, modelled on `ProactiveHealthMonitor`'s own `HealthSample` shape so wiring it in later
-is a straight mapping, not a redesign.
+`health_score`, `status`, `error_count`, `response_time_ms`, `source`. It exists because "capture
+live traffic/health data so trend detection has something to detect trends in" needs a destination
+before it needs an algorithm, and this is that destination, modelled on `ProactiveHealthMonitor`'s
+own `HealthSample` shape so wiring it in later is a straight mapping, not a redesign. A writer for
+it now exists (§2b) — but it is **empty in every real deployment today**, because that writer has
+only been run against synthetic test data, not a live `health-aggregator` instance (§3).
+
+## 2b. Built this pass: the health-aggregator → `HealthObservation` sync
+
+`src/cmdb/health_sync.py` reads `health-aggregator`'s own SQLite DB (`health_checks` table —
+`id, service, port, url, status, latency_ms, checked_at, error`, schema confirmed by reading
+`workers/health-aggregator/worker.py` directly) and writes one `HealthObservation` row per check
+into `data/cmdb.db`, mapped to a real `ServiceID`.
+
+**The mapping problem and how it was solved.** health-aggregator identifies services by compose
+service name (`"infinity-portal"`); CMDB identifies them by `ServiceID` (`"SRV-PORTAL-001"`) — no
+shared key exists in either dataset. Two name-based approaches were tried and rejected before
+landing on a port join:
+
+1. Fuzzy name-matching — rejected earlier this session: it produced two confirmed wrong matches
+   (`blender-worker`, `tranc3-ai`) where an unrelated row's Notes text happened to *mention* the
+   name in a cross-reference (e.g. a port-conflict note), not because it was that service.
+2. Joining on `health_checks.service` against a static copy of health-aggregator's registry names —
+   rejected on PR review (#223): health-aggregator also accepts *dynamic* registrations via
+   `POST /services` (`scripts/register_ea_workbook_services.py`), which register under the CSV's
+   `ServiceName` (e.g. `"MCP Server"`), not the compose name. Those rows would never match a static
+   name list, and worse, `since_id` would still advance past them, making them unrecoverable
+   without manually rewinding the marker file.
+
+The join actually used: **port number**, read directly from `health_checks.port` — which
+health-aggregator populates for both static *and* dynamic targets (`_dynamic_poll_targets()`
+derives a real port from the registered URL). Every CMDB `Service.notes` field that documents a
+verified port states it as the first `port NNNN` mention (later mentions in the same field are
+cross-references to *other* services). Verified by hand against the 7 services in this session's
+audit that had multiple port mentions in their Notes — first-mention was correct in all 7. The
+static `HEALTH_AGGREGATOR_REGISTRY` name list is kept only as a coverage cross-check and a drift
+regression test, not as the sync's actual join key: **all 42 of its entries resolve to a
+ServiceID, 0 ambiguous, 0 unmapped.**
+
+**Two real producer-side bugs found and fixed during PR review**, both in
+`workers/health-aggregator/worker.py`, pre-dating this sync and previously silent because nothing
+read the affected columns:
+- `_persist_check()` read `result.get("latency_ms")` and `result.get("error")`, but `_check_one()`
+  actually returns `"response_ms"` (top-level) and puts a failure message under
+  `"details"."error"` — so `health_checks.latency_ms` and `.error` were always `NULL` for every
+  real poll. Fixed to read the correct keys.
+- The consumer side (`_STATUS_TO_SCORE` in `health_sync.py`) had invented a status vocabulary
+  (`healthy`/`degraded`/`unhealthy`/`unreachable`/`timeout`/`error`/`unknown`) that didn't match
+  what `_check_one()` actually writes (`healthy`/`degraded`/`down`). Every failed probe would have
+  synced with `status="down"` unmapped to any score. Fixed to the real 3-value vocabulary, with
+  `unknown` kept only as a defensive fallback for a future/unrecognised value.
+
+`scripts/sync_health_aggregator.py` is the runnable entry point — reads `health-aggregator`'s DB
+(default `/data/health_aggregator.db`, matching its own `DB_PATH` default) and `data/cmdb.db`,
+writes new `HealthObservation` rows incrementally (tracks the last-synced `health_checks.id` in a
+marker file next to the CMDB db, so repeat runs only pick up new rows). Not a daemon — intended to
+run on a schedule (cron, ChronosSphere) once deployed. Each write is deduplicated against an
+existing `(service_id, observed_at, source)` row, so re-running after a crash between the CMDB
+commit and the marker-file update doesn't insert duplicates — this does not extend to genuinely
+concurrent runs from multiple processes, which the script is documented as not supporting.
+
+**What is and isn't proven here.** `tests/test_cmdb_health_sync.py` (9 tests, all passing) proves
+the join and write logic are correct against a synthetic SQLite DB built with health-aggregator's
+exact schema, including a real known-good case (`infinity-ws` → `SRV-WS-001` via port 8004), a
+dynamic-registration case (a row named `"MCP Server"` still resolving via its port), a
+crash-recovery/dedupe case, and a registry-drift regression test. It does **not** prove this has
+run against a live production
+`health_aggregator.db` — no such file exists in this sandbox. That is real, live verification still
+outstanding, not done.
 
 A seventh table, **`ServiceDocPack`**, links the 43 per-service governance doc-packs under
 `docs/services/*/README.md` (each containing numbered DDD/TASD/RACI/GOV sections per
@@ -68,10 +133,10 @@ a 43-file grep.
 
 ## 3. What this does NOT do yet — named explicitly, not glossed over
 
-- **No live data flows into `HealthObservation`.** Nothing polls the 92 services and writes health
-  samples. `health-aggregator` (port 8029) already polls services for health — the natural next step
-  is having it (or a new thin adapter) write into this table, not building a second poller.
-- **No trend detection runs against this data**, because there is no data yet. `ProactiveHealthMonitor`
+- **No live data has actually flowed into `HealthObservation` yet** — the sync exists and is tested
+  against synthetic data (§2b), but has not been run against a real, running `health-aggregator`
+  instance. That's the next concrete unblocking step, not a redesign.
+- **No trend detection runs against this data**, because there is no live data yet. `ProactiveHealthMonitor`
   already has a 3-sample predictive-degradation algorithm — once `HealthObservation` has real rows,
   wiring that algorithm to read from SQL instead of its own in-memory state is the concrete next
   step, not a new algorithm to invent.
@@ -88,10 +153,10 @@ a 43-file grep.
 
 ## 4. Proposed next steps, in order
 
-1. Wire `health-aggregator` (or a new adapter) to write one `HealthObservation` row per check into
-   `data/cmdb.db` (or a shared Postgres instance if this needs to survive container restarts at
-   scale — SQLite is fine for now, matching the zero-cost architecture). **Not done on this branch**
-   — tracked separately (PR #223, blocked on an external CI check as of this writing).
+1. ~~Wire `health-aggregator` (or a new adapter) to write one `HealthObservation` row per check~~ —
+   **built, unit-tested, and merged to `main` via PR #223.** Still needed: deploy
+   `scripts/sync_health_aggregator.py` on a real schedule against a live `health-aggregator` instance
+   and confirm rows actually land — merging the code doesn't mean it's running anywhere yet.
 2. Once real observations accumulate (days, not minutes), point `ProactiveHealthMonitor`'s existing
    EWMA/trend logic at that table instead of its own per-process memory, so the trend detection that
    already exists gets real, cross-restart data to work with. **The code-level capability now
@@ -113,7 +178,9 @@ a 43-file grep.
 
 ## 5. Open items
 
-- `HealthObservation` has zero rows — step 1 above is the actual unblocking work.
+- `HealthObservation` has zero rows in any real deployment — the sync logic is built, merged, and
+  tested against synthetic data, but has not been run against a live `health_aggregator.db`. That's
+  the actual remaining unblocking work.
 - `ServiceDocPack` covers 34 of 43 doc-packs — the other 9 need a human to resolve the ambiguity
   documented in `service_docpack_map.UNMAPPED_DOCPACKS` (either the CMDB needs a new Service row, or
   an existing ambiguous Owner match needs a human tie-breaker) rather than an automated guess.

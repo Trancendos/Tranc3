@@ -187,8 +187,13 @@ def _persist_check(result: Dict[str, Any]) -> None:
     port = result["port"]
     url = result["health_url"]
     status = result["status"]
-    latency = result.get("latency_ms")
-    error = result.get("error")
+    # _check_one returns "response_ms" (top-level) and puts a failure
+    # message under "details.error", not top-level "latency_ms"/"error" —
+    # reading those keys directly silently persisted NULL for both on every
+    # real poll. Found via CMDB health-aggregator sync review (PR #223).
+    latency = result.get("response_ms")
+    details = result.get("details")
+    error = details.get("error") if isinstance(details, dict) else None
 
     with _conn() as c:
         c.execute(
@@ -244,7 +249,7 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
     svc_name = svc["name"]
     try:
         resp = await _get_http_client().get(url)
-        ms = (time.time() - start) * 1000
+        ms = (time.monotonic() - start) * 1000
         status = "healthy" if resp.status_code < 400 else "degraded"
         try:
             details = resp.json()
@@ -262,7 +267,7 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
             "details": details,
         }
     except Exception:
-        ms = (time.time() - start) * 1000
+        ms = (time.monotonic() - start) * 1000
         return {
             "name": svc_name,
             "port": svc["port"],
