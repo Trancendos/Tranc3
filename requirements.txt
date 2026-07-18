@@ -79,7 +79,7 @@ pydantic==2.13.4
 pydantic-settings==2.14.2
 sse-starlette==3.4.4
 uvicorn==0.48.0
-structlog==25.3.0
+structlog==26.1.0
 python-jose[cryptography]==3.5.0
 email-validator==2.2.0
 # pyasn1: fixes CVE-2026-30922 (integer overflow / DoS in BER/DER parser)
