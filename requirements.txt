@@ -135,7 +135,7 @@ opentelemetry-instrumentation-aiohttp-client==0.63b1
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)
-cachetools==5.5.0
+cachetools==7.1.4
 # diskcache removed — CVE-2025-69872 (pickle deserialization RCE, no upstream fix).
 # Package had zero usages in the codebase; Redis + cachetools cover all caching needs.
 
