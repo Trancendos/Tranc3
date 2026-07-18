@@ -1698,7 +1698,7 @@ services:
   # UI: http://localhost:3301  Backend: ClickHouse + query-service
   # ─────────────────────────────────────────────────────────────────────────
   signoz-clickhouse:
-    image: clickhouse/clickhouse-server:24.1.8-alpine@sha256:3b37c56d912f2b13eab1ba58bfce4b9a1d40ef1bc8cfa772f7920e29da560817
+    image: clickhouse/clickhouse-server:26.5.5-alpine@sha256:d6d599097220479d6a55d6dc838b44fdea7774003666860701c82dc178c6ad13
     container_name: trancendos-signoz-clickhouse
     environment:
       CLICKHOUSE_DB: signoz_traces
