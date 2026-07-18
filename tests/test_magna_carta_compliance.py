@@ -186,6 +186,22 @@ class TestMagnaCartaComplianceEngine:
         result = compliance.check_request({"path": "/api/board", "headers": {}})
         assert result["fail_closed"] is False
 
+    def test_mistyped_string_fail_closed_value_does_not_enable_enforcement(
+        self, monkeypatch, tmp_path
+    ):
+        """
+        Regression test: a JSON config typo like "fail_closed_on_violation": "false"
+        (a non-empty string, not the boolean false) must NOT enable enforcement.
+        bool("false") is True in Python, so a naive bool(...) cast on the raw
+        config value would silently turn an intended advisory config into
+        blocking/403 mode from a config typo alone.
+        """
+        compliance = _make_compliance(
+            monkeypatch, tmp_path, enforcement_overrides={"fail_closed_on_violation": "false"}
+        )
+        result = compliance.check_request({"path": "/api/board", "headers": {}})
+        assert result["fail_closed"] is False
+
 
 class TestMagnaCartaMiddleware:
     def _build_app(self, monkeypatch, tmp_path, *, enabled=True, enforcement_overrides=None):

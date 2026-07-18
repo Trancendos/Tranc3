@@ -119,6 +119,16 @@ class MagnaCartaCompliance:
                 "Magna Carta compliance framework INACTIVE — set MAGNA_CARTA_ENABLED=true to activate"
             )
 
+    def _fail_closed_enabled(self) -> bool:
+        """
+        Strict check for enforcement.fail_closed_on_violation. Deliberately not
+        bool(...): a mistyped JSON string value like "false" is truthy under
+        bool() and would silently flip an intended advisory config into
+        enforcement mode (unexpected 403s in production). Only the real JSON
+        boolean `true` counts.
+        """
+        return self._enforcement.get("fail_closed_on_violation") is True
+
     # ── Config loading ────────────────────────────────────────────────────────
 
     def _load_config(self) -> Optional[Dict[str, Any]]:
@@ -178,10 +188,7 @@ class MagnaCartaCompliance:
             result = self._apply_rule(rule, request_data)
             if not result["passed"]:
                 violations.append(result)
-                if (
-                    self._enforcement.get("fail_closed_on_violation")
-                    and result.get("severity") == "high"
-                ):
+                if self._fail_closed_enabled() and result.get("severity") == "high":
                     break  # stop on first high-severity breach in strict mode
 
         outcome = {
@@ -190,7 +197,7 @@ class MagnaCartaCompliance:
             "framework": "magna_carta_v1",
             "rules_checked": len(rules),
             "mode": self._enforcement.get("mode", "advisory"),
-            "fail_closed": bool(self._enforcement.get("fail_closed_on_violation", False)),
+            "fail_closed": self._fail_closed_enabled(),
         }
 
         if MAGNA_CARTA_AUDIT:
@@ -269,7 +276,7 @@ class MagnaCartaCompliance:
                 sanitize_for_log(exc),
             )
             # Fail safe: don't block on handler errors unless fail-closed
-            passed = not self._enforcement.get("fail_closed_on_violation", False)
+            passed = not self._fail_closed_enabled()
             message = f"Rule handler error ({rule_id})"
             detail = {}
 
