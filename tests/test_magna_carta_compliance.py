@@ -11,6 +11,7 @@ actually enforce anything.
 
 from __future__ import annotations
 
+import copy
 import json
 
 from fastapi import FastAPI
@@ -49,7 +50,7 @@ BASE_CONFIG = {
 
 
 def _write_config(tmp_path, enforcement_overrides=None):
-    cfg = json.loads(json.dumps(BASE_CONFIG))
+    cfg = copy.deepcopy(BASE_CONFIG)
     cfg["enforcement"].update(enforcement_overrides or {})
     path = tmp_path / "magna_carta_config.json"
     path.write_text(json.dumps(cfg))
@@ -86,14 +87,14 @@ class TestMagnaCartaComplianceEngine:
         compliance = _make_compliance(monkeypatch, tmp_path)
         result = compliance.check_request({"path": "/api/board", "headers": {}})
         assert result["compliant"] is False
-        assert "MC-RULE-001" in [v["rule_id"] for v in result["violations"]]
+        assert any(v["rule_id"] == "MC-RULE-001" for v in result["violations"])
 
     def test_mc_rule_001_passes_with_bearer_token(self, monkeypatch, tmp_path):
         compliance = _make_compliance(monkeypatch, tmp_path)
         result = compliance.check_request(
             {"path": "/api/board", "headers": {"authorization": "Bearer x"}}
         )
-        assert "MC-RULE-001" not in [v["rule_id"] for v in result["violations"]]
+        assert not any(v["rule_id"] == "MC-RULE-001" for v in result["violations"])
 
     def test_mc_rule_001_skips_excluded_paths(self, monkeypatch, tmp_path):
         compliance = _make_compliance(monkeypatch, tmp_path)
@@ -109,7 +110,7 @@ class TestMagnaCartaComplianceEngine:
                 "body_keys": ["password", "title"],
             }
         )
-        assert "MC-RULE-002" in [v["rule_id"] for v in result["violations"]]
+        assert any(v["rule_id"] == "MC-RULE-002" for v in result["violations"])
 
     def test_mc_rule_003_enforces_tier_limit(self, monkeypatch, tmp_path):
         compliance = _make_compliance(monkeypatch, tmp_path)
@@ -121,12 +122,12 @@ class TestMagnaCartaComplianceEngine:
                 "request_count": 6,
             }
         )
-        assert "MC-RULE-003" in [v["rule_id"] for v in result["violations"]]
+        assert any(v["rule_id"] == "MC-RULE-003" for v in result["violations"])
 
     def test_disabled_rule_is_skipped(self, monkeypatch, tmp_path):
         import src.compliance.magna_carta as mc
 
-        cfg = json.loads(json.dumps(BASE_CONFIG))
+        cfg = copy.deepcopy(BASE_CONFIG)
         for rule in cfg["rules"]:
             if rule["id"] == "MC-RULE-001":
                 rule["enabled"] = False
@@ -139,18 +140,31 @@ class TestMagnaCartaComplianceEngine:
         compliance = mc.MagnaCartaCompliance()
 
         result = compliance.check_request({"path": "/api/board", "headers": {}})
-        assert "MC-RULE-001" not in [v["rule_id"] for v in result["violations"]]
+        assert not any(v["rule_id"] == "MC-RULE-001" for v in result["violations"])
 
     def test_rule_handler_exception_fails_open_by_default(self, monkeypatch, tmp_path):
         compliance = _make_compliance(monkeypatch, tmp_path)
 
-        def _boom(rule, data):
+        def _boom(*args, **kwargs):
             raise RuntimeError("boom")
 
         monkeypatch.setattr(compliance, "_rule_authentication", _boom)
         result = compliance.check_request({"path": "/api/board", "headers": {}})
         # A handler crash must not itself surface as a blocking violation
-        assert not [v for v in result["violations"] if v["rule_id"] == "MC-RULE-001"]
+        assert not any(v["rule_id"] == "MC-RULE-001" for v in result["violations"])
+
+    def test_rule_handler_exception_fails_closed_when_configured(self, monkeypatch, tmp_path):
+        compliance = _make_compliance(
+            monkeypatch, tmp_path, enforcement_overrides={"fail_closed_on_violation": True}
+        )
+
+        def _boom(*args, **kwargs):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(compliance, "_rule_authentication", _boom)
+        result = compliance.check_request({"path": "/api/board", "headers": {}})
+        assert result["compliant"] is False
+        assert any(v["rule_id"] == "MC-RULE-001" for v in result["violations"])
 
     def test_outcome_reports_fail_closed_flag(self, monkeypatch, tmp_path):
         """
@@ -203,7 +217,7 @@ class TestMagnaCartaMiddleware:
         resp = client.get("/api/board")  # no Authorization header -> MC-RULE-001 violation
         assert resp.status_code == 200
         assert resp.headers["X-MC-Compliant"] == "false"
-        assert int(resp.headers["X-MC-Violations"]) >= 1
+        assert int(resp.headers["X-MC-Violations"]) == 1
 
     def test_skip_paths_bypass_the_engine_entirely(self, monkeypatch, tmp_path):
         app = self._build_app(monkeypatch, tmp_path)
@@ -243,3 +257,29 @@ class TestMagnaCartaMiddleware:
         client = TestClient(app)
         resp = client.get("/api/board", headers={"Authorization": "Bearer x"})
         assert resp.status_code == 200
+
+    def test_fail_closed_does_not_block_low_severity_violations(self, monkeypatch, tmp_path):
+        """
+        fail_closed_on_violation only blocks on high-severity violations
+        (see middleware.py's `any(v["severity"] == "high" ...)` check). A
+        low-severity MC-RULE-003 (rate_limit) violation must be logged in the
+        response headers but must not itself trigger a 403.
+        """
+        app = self._build_app(
+            monkeypatch, tmp_path, enforcement_overrides={"fail_closed_on_violation": True}
+        )
+
+        @app.middleware("http")
+        async def _fake_rate_limiter(request, call_next):
+            # Stand in for whatever upstream middleware would normally set these
+            request.state.request_count = 6
+            request.state.tenant_tier = "free"
+            return await call_next(request)
+
+        client = TestClient(app)
+        # Bearer token satisfies MC-RULE-001 (high); request_count=6 > the
+        # tier's limit of 5 trips MC-RULE-003 (low) but must not block.
+        resp = client.get("/api/board", headers={"Authorization": "Bearer x"})
+        assert resp.status_code == 200
+        assert resp.headers["X-MC-Compliant"] == "false"
+        assert int(resp.headers["X-MC-Violations"]) == 1
