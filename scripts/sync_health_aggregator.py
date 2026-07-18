@@ -22,6 +22,7 @@ import argparse
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -30,9 +31,26 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 from src.cmdb.health_sync import sync_from_health_aggregator_db  # noqa: E402
 from src.cmdb.models import build_engine  # noqa: E402
 
+# scripts/build_cmdb.py finishes a rebuild (19 CSVs, ~92 rows) in well
+# under a second in practice. This is a generous multiple of that, not a
+# tight timeout — it exists only to eventually recover from a build_cmdb.py
+# that crashed or was killed while the REBUILDING sentinel was in place,
+# which would otherwise leave every future sync run silently skipping
+# forever (see _generation_is_stale).
+_REBUILDING_STALE_SECONDS = 600
+
 
 def _marker_path(cmdb_db_path: str) -> str:
     return cmdb_db_path + ".health_sync_marker"
+
+
+def _generation_is_stale(cmdb_db_path: str) -> bool:
+    generation_path = cmdb_db_path + ".generation"
+    try:
+        age = time.time() - os.path.getmtime(generation_path)
+    except OSError:
+        return False
+    return age > _REBUILDING_STALE_SECONDS
 
 
 def _read_generation(cmdb_db_path: str) -> str | None:
@@ -130,12 +148,23 @@ def main():
     # (which drops and recreates every table) and replaces it with a real
     # token only once the rebuild succeeds. Treating it as a real changed
     # generation would trigger a resync while tables are actively being
-    # dropped/recreated underneath this query — defer instead.
+    # dropped/recreated underneath this query — defer instead, UNLESS the
+    # sentinel is stale enough to mean the rebuild that wrote it crashed or
+    # was killed rather than being merely slow. Without this staleness
+    # check, an abandoned REBUILDING sentinel would make every future run
+    # exit "successfully" through this branch forever, silently never
+    # syncing again.
     if cmdb_generation == "REBUILDING":
+        if not _generation_is_stale(args.cmdb_db):
+            print(
+                f"{args.cmdb_db} is mid-rebuild (generation sidecar shows REBUILDING) — skipping this run."
+            )
+            return 0
         print(
-            f"{args.cmdb_db} is mid-rebuild (generation sidecar shows REBUILDING) — skipping this run."
+            f"{args.cmdb_db}'s generation sidecar has shown REBUILDING for over "
+            f"{_REBUILDING_STALE_SECONDS}s — treating as an abandoned/crashed rebuild, not "
+            "an in-progress one, and proceeding rather than deferring forever."
         )
-        return 0
 
     # scripts/build_cmdb.py drops and recreates every table (including
     # HealthObservation) on every rebuild, but the marker file survives on
