@@ -104,7 +104,7 @@ services:
       retries: 5
 
   outline-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: outline-redis
     <<: [*restart, *network]
     profiles: ["library", "all"]
@@ -218,7 +218,7 @@ services:
       retries: 5
 
   penpot-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: penpot-redis
     <<: [*restart, *network]
     profiles: ["fabulousa", "all"]
@@ -349,7 +349,7 @@ services:
       retries: 5
 
   paperless-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: docutari-redis
     <<: [*restart, *network]
     profiles: ["doc-utari", "all"]
