@@ -15,12 +15,16 @@ actual, settled architecture (not an open question):
   - **Local (Self-Hosted)** — fully on owned hardware. Blocked purely on
     server funding, not a rejection of self-hosting.
 
-Each Location also carries Dev, UAT, and Prod per mode. Prod is always-on
-(not gated by this registry — it's seeded provisioned and can't be
-deprovisioned here). Dev and UAT are NOT standing environments: they're
-provisioned on demand, only once Think Tank (Trancendos AI's R&D centre)
-has actually scoped R&D work that needs them, and deprovisioned again once
-that work is done.
+Each Location also carries Dev, UAT, and Prod **per mode**: provisioning
+state is scoped to (Location, mode), not just Location, so switching a
+Location from Cloud Only to Hybrid/Local doesn't silently carry over a
+Dev/UAT environment's provisioned state from the old mode — the new mode
+starts with its own fresh, unprovisioned Dev/UAT (Prod is always-on
+regardless of mode). Prod is never gated by this registry — it's seeded
+provisioned and can't be deprovisioned here. Dev and UAT are NOT standing
+environments: they're provisioned on demand, only once Think Tank
+(Trancendos AI's R&D centre) has actually scoped R&D work that needs them
+(`scoped_by`), and deprovisioned again once that work is done.
 
 Backed by SQLite (zero-cost, self-hosted — no external DB dependency, per
 this platform's architecture principles) so mode/provisioning state and
@@ -83,6 +87,7 @@ class ModeHistoryEntry:
 @dataclass
 class EnvironmentState:
     location: str
+    mode: DeploymentMode
     environment: Environment
     provisioned: bool
     provisioned_at: Optional[float]
@@ -94,6 +99,7 @@ class EnvironmentState:
 @dataclass
 class EnvironmentHistoryEntry:
     location: str
+    mode: DeploymentMode
     environment: Environment
     action: str  # "provisioned" | "deprovisioned"
     changed_at: float
@@ -156,13 +162,14 @@ class DeploymentModeRegistry:
             """
             CREATE TABLE IF NOT EXISTS location_environment (
                 location TEXT NOT NULL,
+                mode TEXT NOT NULL,
                 environment TEXT NOT NULL,
                 provisioned INTEGER NOT NULL,
                 provisioned_at REAL,
                 scoped_by TEXT NOT NULL DEFAULT '',
                 changed_by TEXT NOT NULL DEFAULT 'system',
                 reason TEXT NOT NULL DEFAULT '',
-                PRIMARY KEY (location, environment)
+                PRIMARY KEY (location, mode, environment)
             )
             """
         )
@@ -171,6 +178,7 @@ class DeploymentModeRegistry:
             CREATE TABLE IF NOT EXISTS location_environment_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 location TEXT NOT NULL,
+                mode TEXT NOT NULL,
                 environment TEXT NOT NULL,
                 action TEXT NOT NULL,
                 changed_at REAL NOT NULL,
@@ -183,13 +191,16 @@ class DeploymentModeRegistry:
         self._conn.commit()
 
     def _seed_defaults(self) -> None:
-        """Seed one mode row (Cloud Only) and three environment rows
-        (Dev/UAT unprovisioned, Prod always-provisioned) per platform entity.
+        """Seed one mode row (Cloud Only) per platform entity, and three
+        environment rows (Dev/UAT unprovisioned, Prod always-provisioned)
+        per (entity, mode) combination — so switching modes later finds a
+        fresh, correctly-scoped Dev/UAT already waiting, never a stale row
+        carried over from a different mode.
 
-        Uses INSERT OR IGNORE per-location/environment rather than a
-        table-level skip-guard, so a location added to PLATFORM_ENTITIES
-        after this registry's DB file already exists still gets backfilled
-        on the next startup instead of being silently skipped forever.
+        Uses INSERT OR IGNORE per-row rather than a table-level skip-guard,
+        so a location added to PLATFORM_ENTITIES after this registry's DB
+        file already exists still gets backfilled on the next startup
+        instead of being silently skipped forever.
         """
         now = time.time()
         mode_rows = [
@@ -203,23 +214,25 @@ class DeploymentModeRegistry:
         )
         env_rows = []
         for location in PLATFORM_ENTITIES:
-            for env in Environment:
-                provisioned = env == Environment.PROD
-                env_rows.append(
-                    (
-                        location,
-                        env.value,
-                        1 if provisioned else 0,
-                        now if provisioned else None,
-                        "",
-                        "system:seed",
-                        "always-on" if provisioned else "",
+            for mode in DeploymentMode:
+                for env in Environment:
+                    provisioned = env == Environment.PROD
+                    env_rows.append(
+                        (
+                            location,
+                            mode.value,
+                            env.value,
+                            1 if provisioned else 0,
+                            now if provisioned else None,
+                            "",
+                            "system:seed",
+                            "always-on" if provisioned else "",
+                        )
                     )
-                )
         self._conn.executemany(
             "INSERT OR IGNORE INTO location_environment "
-            "(location, environment, provisioned, provisioned_at, scoped_by, changed_by, reason) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "(location, mode, environment, provisioned, provisioned_at, scoped_by, "
+            "changed_by, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             env_rows,
         )
         self._conn.commit()
@@ -251,6 +264,14 @@ class DeploymentModeRegistry:
             row = cur.fetchone()
             return self._row_to_mode_state(row) if row else None
 
+    def _current_mode(self, location: str) -> DeploymentMode:
+        """Internal helper — assumes `location` has already been validated
+        against PLATFORM_ENTITIES and _seed_defaults has run, so a mode row
+        always exists."""
+        state = self.get_mode(location)
+        assert state is not None  # seeded for every PLATFORM_ENTITIES key
+        return state.mode
+
     def set_mode(
         self,
         location: str,
@@ -258,7 +279,14 @@ class DeploymentModeRegistry:
         changed_by: str = "operator",
         reason: str = "",
     ) -> ModeState:
-        """Set (or change) a Location's deployment mode."""
+        """Set (or change) a Location's deployment mode.
+
+        Does not touch location_environment — Dev/UAT/Prod rows already
+        exist for every mode (seeded upfront by _seed_defaults), so the
+        newly-active mode's environments are simply whatever they were last
+        left as under that mode, independent of the mode being switched
+        away from.
+        """
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
         with self._lock:
@@ -308,6 +336,7 @@ class DeploymentModeRegistry:
     def _row_to_env_state(self, row: sqlite3.Row) -> EnvironmentState:
         return EnvironmentState(
             location=row["location"],
+            mode=DeploymentMode(row["mode"]),
             environment=Environment(row["environment"]),
             provisioned=bool(row["provisioned"]),
             provisioned_at=row["provisioned_at"],
@@ -317,28 +346,32 @@ class DeploymentModeRegistry:
         )
 
     def list_environments(self, location: str) -> List[EnvironmentState]:
+        """Dev/UAT/Prod state for `location` under its *current* mode."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
         with self._lock:
+            mode = self._current_mode(location)
             cur = self._conn.execute(
-                "SELECT location, environment, provisioned, provisioned_at, scoped_by, "
-                "changed_by, reason FROM location_environment WHERE location = ? "
-                "ORDER BY environment",
-                (location,),
+                "SELECT location, mode, environment, provisioned, provisioned_at, scoped_by, "
+                "changed_by, reason FROM location_environment "
+                "WHERE location = ? AND mode = ? ORDER BY environment",
+                (location, mode.value),
             )
             return [self._row_to_env_state(row) for row in cur.fetchall()]
 
     def get_environment(
         self, location: str, environment: Environment
     ) -> Optional[EnvironmentState]:
+        """State of one environment for `location` under its *current* mode."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
         with self._lock:
+            mode = self._current_mode(location)
             cur = self._conn.execute(
-                "SELECT location, environment, provisioned, provisioned_at, scoped_by, "
+                "SELECT location, mode, environment, provisioned, provisioned_at, scoped_by, "
                 "changed_by, reason FROM location_environment "
-                "WHERE location = ? AND environment = ?",
-                (location, environment.value),
+                "WHERE location = ? AND mode = ? AND environment = ?",
+                (location, mode.value, environment.value),
             )
             row = cur.fetchone()
             return self._row_to_env_state(row) if row else None
@@ -351,28 +384,31 @@ class DeploymentModeRegistry:
         changed_by: str = "operator",
         reason: str = "",
     ) -> EnvironmentState:
-        """Provision Dev or UAT for a Location — must be tied to a Think
-        Tank R&D scoping reference (`scoped_by`), matching the platform
-        policy that these are never standing environments."""
+        """Provision Dev or UAT for a Location, under its *current* mode —
+        must be tied to a Think Tank R&D scoping reference (`scoped_by`),
+        matching the platform policy that these are never standing
+        environments."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
         if environment not in _ON_DEMAND_ENVIRONMENTS:
             raise ProdNotOnDemandError(f"{environment.value} is always-on, not on-demand")
+        scoped_by = scoped_by.strip()
         if not scoped_by:
             raise ValueError("scoped_by is required — Dev/UAT only provision against R&D scoping")
         with self._lock:
+            mode = self._current_mode(location)
             now = time.time()
             self._conn.execute(
                 "UPDATE location_environment SET provisioned = 1, provisioned_at = ?, "
                 "scoped_by = ?, changed_by = ?, reason = ? "
-                "WHERE location = ? AND environment = ?",
-                (now, scoped_by, changed_by, reason, location, environment.value),
+                "WHERE location = ? AND mode = ? AND environment = ?",
+                (now, scoped_by, changed_by, reason, location, mode.value, environment.value),
             )
             self._conn.execute(
                 "INSERT INTO location_environment_history "
-                "(location, environment, action, changed_at, changed_by, scoped_by, reason) "
-                "VALUES (?, ?, 'provisioned', ?, ?, ?, ?)",
-                (location, environment.value, now, changed_by, scoped_by, reason),
+                "(location, mode, environment, action, changed_at, changed_by, scoped_by, reason) "
+                "VALUES (?, ?, ?, 'provisioned', ?, ?, ?, ?)",
+                (location, mode.value, environment.value, now, changed_by, scoped_by, reason),
             )
             self._conn.commit()
             result: EnvironmentState = self.get_environment(location, environment)  # type: ignore[assignment]
@@ -385,24 +421,40 @@ class DeploymentModeRegistry:
         changed_by: str = "operator",
         reason: str = "",
     ) -> EnvironmentState:
-        """Tear down Dev or UAT once its scoped R&D work is done."""
+        """Tear down Dev or UAT (under the Location's *current* mode) once
+        its scoped R&D work is done."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
         if environment not in _ON_DEMAND_ENVIRONMENTS:
             raise ProdNotOnDemandError(f"{environment.value} is always-on, not on-demand")
         with self._lock:
+            mode = self._current_mode(location)
+            # Preserve the scope this environment was torn down from in the
+            # audit trail — writing an empty scoped_by here would lose the
+            # one piece of history most worth keeping (what R&D work this
+            # Dev/UAT was for).
+            current = self.get_environment(location, environment)
+            previous_scoped_by = current.scoped_by if current else ""
             now = time.time()
             self._conn.execute(
                 "UPDATE location_environment SET provisioned = 0, provisioned_at = NULL, "
                 "scoped_by = '', changed_by = ?, reason = ? "
-                "WHERE location = ? AND environment = ?",
-                (changed_by, reason, location, environment.value),
+                "WHERE location = ? AND mode = ? AND environment = ?",
+                (changed_by, reason, location, mode.value, environment.value),
             )
             self._conn.execute(
                 "INSERT INTO location_environment_history "
-                "(location, environment, action, changed_at, changed_by, scoped_by, reason) "
-                "VALUES (?, ?, 'deprovisioned', ?, ?, '', ?)",
-                (location, environment.value, now, changed_by, reason),
+                "(location, mode, environment, action, changed_at, changed_by, scoped_by, reason) "
+                "VALUES (?, ?, ?, 'deprovisioned', ?, ?, ?, ?)",
+                (
+                    location,
+                    mode.value,
+                    environment.value,
+                    now,
+                    changed_by,
+                    previous_scoped_by,
+                    reason,
+                ),
             )
             self._conn.commit()
             result: EnvironmentState = self.get_environment(location, environment)  # type: ignore[assignment]
@@ -411,20 +463,23 @@ class DeploymentModeRegistry:
     def get_environment_history(
         self, location: str, environment: Optional[Environment] = None
     ) -> List[EnvironmentHistoryEntry]:
+        """Full provisioning history for `location`, across every mode it
+        has ever run under (each entry carries its own `mode`) — mode
+        switches don't erase or hide prior audit trail."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
         with self._lock:
             if environment is not None:
                 cur = self._conn.execute(
-                    "SELECT location, environment, action, changed_at, changed_by, scoped_by, "
-                    "reason FROM location_environment_history "
+                    "SELECT location, mode, environment, action, changed_at, changed_by, "
+                    "scoped_by, reason FROM location_environment_history "
                     "WHERE location = ? AND environment = ? ORDER BY changed_at DESC, id DESC",
                     (location, environment.value),
                 )
             else:
                 cur = self._conn.execute(
-                    "SELECT location, environment, action, changed_at, changed_by, scoped_by, "
-                    "reason FROM location_environment_history "
+                    "SELECT location, mode, environment, action, changed_at, changed_by, "
+                    "scoped_by, reason FROM location_environment_history "
                     "WHERE location = ? ORDER BY changed_at DESC, id DESC",
                     (location,),
                 )
@@ -432,6 +487,7 @@ class DeploymentModeRegistry:
         return [
             EnvironmentHistoryEntry(
                 location=row["location"],
+                mode=DeploymentMode(row["mode"]),
                 environment=Environment(row["environment"]),
                 action=row["action"],
                 changed_at=row["changed_at"],

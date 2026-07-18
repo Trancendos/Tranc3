@@ -66,6 +66,7 @@ def _serialize_mode(state: ModeState) -> Dict[str, Any]:
 def _serialize_env(state: EnvironmentState) -> Dict[str, Any]:
     return {
         "location": state.location,
+        "mode": state.mode.value,
         "environment": state.environment.value,
         "provisioned": state.provisioned,
         "provisioned_at": state.provisioned_at,
@@ -85,22 +86,29 @@ def list_modes() -> List[Dict[str, Any]]:
 # src/roles/routes.py for the identical rationale and the same ordering
 # requirement: routes with a literal suffix after `{location:path}` must be
 # registered before the bare `get_mode` route below, or it would swallow
-# "<location>/history" (etc.) whole.
+# "<location>/history" (etc.) whole. That greediness also means, among GET
+# routes sharing a "/history" suffix, the MORE specific one must be
+# registered first: `environment_history`'s trailing "/history" is a subset
+# of what `mode_history`'s bare `{location:path}/history` pattern would
+# otherwise match first (treating "<location>/environments/<env>" as the
+# whole `location`), so environment_history is registered ahead of it here.
 
 
-@router.get("/{location:path}/history")
-def mode_history(location: str) -> List[Dict[str, Any]]:
+@router.get("/{location:path}/environments/{environment}/history")
+def environment_history(location: str, environment: Environment) -> List[Dict[str, Any]]:
     try:
-        history = get_registry().get_mode_history(location)
+        history = get_registry().get_environment_history(location, environment)
     except UnknownLocationError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
     return [
         {
             "location": h.location,
-            "previous_mode": h.previous_mode.value if h.previous_mode else None,
-            "new_mode": h.new_mode.value,
+            "mode": h.mode.value,
+            "environment": h.environment.value,
+            "action": h.action,
             "changed_at": h.changed_at,
             "changed_by": h.changed_by,
+            "scoped_by": h.scoped_by,
             "reason": h.reason,
         }
         for h in history
@@ -116,20 +124,19 @@ def list_environments(location: str) -> List[Dict[str, Any]]:
     return [_serialize_env(e) for e in envs]
 
 
-@router.get("/{location:path}/environments/{environment}/history")
-def environment_history(location: str, environment: Environment) -> List[Dict[str, Any]]:
+@router.get("/{location:path}/history")
+def mode_history(location: str) -> List[Dict[str, Any]]:
     try:
-        history = get_registry().get_environment_history(location, environment)
+        history = get_registry().get_mode_history(location)
     except UnknownLocationError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
     return [
         {
             "location": h.location,
-            "environment": h.environment.value,
-            "action": h.action,
+            "previous_mode": h.previous_mode.value if h.previous_mode else None,
+            "new_mode": h.new_mode.value,
             "changed_at": h.changed_at,
             "changed_by": h.changed_by,
-            "scoped_by": h.scoped_by,
             "reason": h.reason,
         }
         for h in history

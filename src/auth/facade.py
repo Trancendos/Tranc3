@@ -163,7 +163,13 @@ async def get_current_user_dep(
     """
     if os.getenv("REQUIRE_AUTH", "true").lower() == "false":
         if not credentials:
-            return {"sub": "anonymous", "username": "anonymous", "role": "user", "tier": 0}
+            return {
+                "sub": "anonymous",
+                "id": "anonymous",
+                "username": "anonymous",
+                "role": "user",
+                "tier": 0,
+            }
 
     if not credentials:
         raise HTTPException(

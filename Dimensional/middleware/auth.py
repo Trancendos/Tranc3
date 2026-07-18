@@ -159,27 +159,17 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if bearer_token:
             try:
                 # Import here to avoid circular imports and missing dependency issues
-                from auth import token_manager
+                from auth import verify_token
 
-                payload = token_manager.decode_token(bearer_token)
-                username = payload.get("sub")
+                payload = verify_token(bearer_token)
+                username = payload.get("username") or payload.get("sub") if payload else None
                 if username:
-                    # Try to get full user info
-                    try:
-                        from auth import user_manager
-
-                        user = user_manager.get_user(username)
-                    except Exception:
-                        pass
-                    if not user:
-                        user = {
-                            "sub": username,
-                            "tier": payload.get("tier", "free"),
-                            "auth_method": "jwt",
-                            "is_active": True,
-                        }
-                    else:
-                        user["auth_method"] = "jwt"
+                    user = {
+                        "sub": username,
+                        "tier": payload.get("tier", "free"),
+                        "auth_method": "jwt",
+                        "is_active": True,
+                    }
             except HTTPException as e:
                 auth_error = e.detail
             except Exception as e:

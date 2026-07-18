@@ -198,3 +198,73 @@ class TestEnvironmentHistory:
     def test_unknown_location_raises(self, registry):
         with pytest.raises(UnknownLocationError):
             registry.get_environment_history("Nonexistent Place")
+
+
+class TestEnvironmentsAreModeScoped:
+    """Regression coverage: Dev/UAT provisioning must not leak across a mode
+    switch — switching from Cloud Only to Hybrid/Local must present fresh,
+    unprovisioned Dev/UAT for the new mode, not the old mode's state."""
+
+    def test_provisioning_under_cloud_only_does_not_carry_to_hybrid(self, registry):
+        registry.provision_environment("The Nexus", Environment.DEV, scoped_by="rfc-1")
+        registry.set_mode("The Nexus", DeploymentMode.HYBRID)
+        dev = registry.get_environment("The Nexus", Environment.DEV)
+        assert dev.provisioned is False
+        assert dev.mode == DeploymentMode.HYBRID
+
+    def test_switching_back_restores_original_mode_state(self, registry):
+        registry.provision_environment("The Nexus", Environment.DEV, scoped_by="rfc-1")
+        registry.set_mode("The Nexus", DeploymentMode.HYBRID)
+        registry.set_mode("The Nexus", DeploymentMode.CLOUD_ONLY)
+        dev = registry.get_environment("The Nexus", Environment.DEV)
+        assert dev.provisioned is True
+        assert dev.scoped_by == "rfc-1"
+
+    def test_list_environments_reflects_current_mode(self, registry):
+        registry.provision_environment("The HIVE", Environment.UAT, scoped_by="rfc-9")
+        registry.set_mode("The HIVE", DeploymentMode.LOCAL)
+        envs = registry.list_environments("The HIVE")
+        uat = next(e for e in envs if e.environment == Environment.UAT)
+        assert uat.provisioned is False
+        assert uat.mode == DeploymentMode.LOCAL
+
+    def test_prod_always_provisioned_regardless_of_mode(self, registry):
+        registry.set_mode("Luminous", DeploymentMode.HYBRID)
+        prod = registry.get_environment("Luminous", Environment.PROD)
+        assert prod.provisioned is True
+        registry.set_mode("Luminous", DeploymentMode.LOCAL)
+        prod = registry.get_environment("Luminous", Environment.PROD)
+        assert prod.provisioned is True
+
+    def test_environment_history_records_mode_per_entry(self, registry):
+        registry.provision_environment("The HIVE", Environment.DEV, scoped_by="rfc-1")
+        registry.set_mode("The HIVE", DeploymentMode.HYBRID)
+        registry.provision_environment("The HIVE", Environment.DEV, scoped_by="rfc-2")
+        history = registry.get_environment_history("The HIVE", Environment.DEV)
+        assert len(history) == 2
+        assert history[0].mode == DeploymentMode.HYBRID
+        assert history[1].mode == DeploymentMode.CLOUD_ONLY
+
+
+class TestScopedByValidation:
+    def test_whitespace_only_scoped_by_rejected(self, registry):
+        with pytest.raises(ValueError):
+            registry.provision_environment("The Nexus", Environment.DEV, scoped_by="   ")
+
+    def test_scoped_by_is_stripped(self, registry):
+        state = registry.provision_environment("The Nexus", Environment.DEV, scoped_by="  rfc-1  ")
+        assert state.scoped_by == "rfc-1"
+
+
+class TestDeprovisionPreservesScopeInHistory:
+    def test_deprovision_history_entry_keeps_scoped_by(self, registry):
+        registry.provision_environment("The HIVE", Environment.DEV, scoped_by="think-tank:rfc-77")
+        registry.deprovision_environment("The HIVE", Environment.DEV, reason="done")
+        history = registry.get_environment_history("The HIVE", Environment.DEV)
+        deprovisioned_entry = next(h for h in history if h.action == "deprovisioned")
+        assert deprovisioned_entry.scoped_by == "think-tank:rfc-77"
+
+    def test_live_state_scoped_by_still_cleared_after_deprovision(self, registry):
+        registry.provision_environment("The HIVE", Environment.DEV, scoped_by="rfc-1")
+        state = registry.deprovision_environment("The HIVE", Environment.DEV)
+        assert state.scoped_by == ""

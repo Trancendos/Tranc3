@@ -84,6 +84,15 @@ class TestReadRoutes:
         dev = next(e for e in resp.json() if e["environment"] == "dev")
         assert dev["provisioned"] is False
 
+    def test_environment_history_route_not_shadowed_by_mode_history(self, client):
+        """mode_history's bare `{location:path}/history` pattern is greedy
+        enough to swallow "<location>/environments/<env>/history" whole if
+        registered ahead of environment_history — regression guard for that
+        route-ordering bug."""
+        resp = client.get("/deployment-modes/The Nexus/environments/dev/history")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
 
 class TestSetModeRoute:
     def test_requires_auth(self, client):
