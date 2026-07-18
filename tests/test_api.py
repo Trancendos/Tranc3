@@ -81,9 +81,7 @@ class TestAuth:
         client.post("/auth/register", json={"username": "enterpriseuser", "password": "Pass123!"})
         db_user_manager.update_tier("enterpriseuser", "enterprise")
 
-        r = client.post(
-            "/auth/token", json={"username": "enterpriseuser", "password": "Pass123!"}
-        )
+        r = client.post("/auth/token", json={"username": "enterpriseuser", "password": "Pass123!"})
         assert r.status_code == 200
         token = r.json()["access_token"]
 
@@ -92,9 +90,7 @@ class TestAuth:
         payload = verify_token(token)
         assert payload["role"] == "admin"
 
-        r2 = client.post(
-            "/auth/refresh", headers={"Authorization": f"Bearer {token}"}
-        )
+        r2 = client.post("/auth/refresh", headers={"Authorization": f"Bearer {token}"})
         assert r2.status_code == 200
         refreshed_payload = verify_token(r2.json()["access_token"])
         assert refreshed_payload["role"] == "admin"
