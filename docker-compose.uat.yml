@@ -73,7 +73,7 @@ services:
 
   # ── Vault (simplified — file backend, auto-unsealed for CI/UAT) ──────────
   vault:
-    image: hashicorp/vault:1.18@sha256:750bb37c1638fa194ab37053a81618c61bb0491ddec6fccac87c07a8e6cd8166
+    image: hashicorp/vault:2.0@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54
     container_name: tranc3-uat-vault
     <<: *uat-common
     env_file: []
