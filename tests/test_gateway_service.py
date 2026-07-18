@@ -29,9 +29,16 @@ _GATEWAY_WORKER_PATH = (
     Path(__file__).resolve().parent.parent / "workers" / "gateway-service" / "worker.py"
 )
 
+_gateway_worker_cache = None
+
 
 def _load_gateway_worker():
-    return _import_worker("workers.gateway-service.worker", _GATEWAY_WORKER_PATH)
+    global _gateway_worker_cache
+    if _gateway_worker_cache is None:
+        _gateway_worker_cache = _import_worker(
+            "workers.gateway-service.worker", _GATEWAY_WORKER_PATH
+        )
+    return _gateway_worker_cache
 
 
 # ---------------------------------------------------------------------------
