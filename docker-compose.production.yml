@@ -1599,7 +1599,7 @@ services:
   # UI: http://localhost:6875
   # ─────────────────────────────────────────────────────────────────────────
   bookstack-db:
-    image: mariadb:11@sha256:efb4959ef2c835cd735dbc388eb9ad6aab0c78dd64febcd51bc17481111890c4
+    image: mariadb:12@sha256:628f228f0fd5913a220438693576b29b6fe4dc1fa0a1298c0e98579fae28635f
     container_name: trancendos-bookstack-db
     environment:
       MYSQL_ROOT_PASSWORD: "${BOOKSTACK_DB_ROOT_PASSWORD:?required}"
