@@ -124,10 +124,20 @@ class TestMagnaCartaComplianceEngine:
         assert "MC-RULE-003" in [v["rule_id"] for v in result["violations"]]
 
     def test_disabled_rule_is_skipped(self, monkeypatch, tmp_path):
-        compliance = _make_compliance(monkeypatch, tmp_path)
-        for rule in compliance.config["rules"]:
+        import src.compliance.magna_carta as mc
+
+        cfg = json.loads(json.dumps(BASE_CONFIG))
+        for rule in cfg["rules"]:
             if rule["id"] == "MC-RULE-001":
                 rule["enabled"] = False
+        config_path = tmp_path / "magna_carta_config.json"
+        config_path.write_text(json.dumps(cfg))
+
+        monkeypatch.setattr(mc, "MAGNA_CARTA_ENABLED", True)
+        monkeypatch.setattr(mc, "MAGNA_CARTA_CONFIG_PATH", str(config_path))
+        monkeypatch.setattr(mc, "MAGNA_CARTA_AUDIT", False)
+        compliance = mc.MagnaCartaCompliance()
+
         result = compliance.check_request({"path": "/api/board", "headers": {}})
         assert "MC-RULE-001" not in [v["rule_id"] for v in result["violations"]]
 
