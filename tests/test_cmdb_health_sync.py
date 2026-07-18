@@ -227,15 +227,43 @@ def test_registry_does_not_drift_from_health_aggregator_worker():
     """HEALTH_AGGREGATOR_REGISTRY is a deliberate static copy (see module
     docstring in src/cmdb/health_sync.py) — this catches it silently going
     stale if workers/health-aggregator/worker.py's SERVICE_REGISTRY changes
-    without the copy being updated by hand."""
-    import importlib.util
+    without the copy being updated by hand.
+
+    Parses the SERVICE_REGISTRY literal out of the worker's source with
+    `ast`, rather than importing/exec'ing worker.py — that module is a
+    service entrypoint, not a library: importing it creates /data,
+    instantiates a FastAPI app, and mutates SERVICE_REGISTRY in place with
+    derived health_url keys, none of which belongs in a test process and
+    which breaks outright in a read-only /data environment."""
+    import ast
 
     worker_path = "workers/health-aggregator/worker.py"
-    spec = importlib.util.spec_from_file_location("_health_aggregator_worker", worker_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    with open(worker_path, encoding="utf-8") as f:
+        tree = ast.parse(f.read(), filename=worker_path)
 
-    live_registry = [(svc["name"], svc["port"]) for svc in module.SERVICE_REGISTRY]
+    registry_node = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "SERVICE_REGISTRY" for t in node.targets
+        ):
+            registry_node = node.value
+            break
+        # SERVICE_REGISTRY is declared with a type annotation
+        # (`SERVICE_REGISTRY: List[Dict[str, Any]] = [...]`), which parses
+        # as ast.AnnAssign, not ast.Assign.
+        if (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "SERVICE_REGISTRY"
+        ):
+            registry_node = node.value
+            break
+    assert registry_node is not None, "SERVICE_REGISTRY assignment not found in worker.py"
+
+    live_registry = [
+        (dict_literal.get("name"), dict_literal.get("port"))
+        for dict_literal in ast.literal_eval(registry_node)
+    ]
     assert HEALTH_AGGREGATOR_REGISTRY == live_registry, (
         "HEALTH_AGGREGATOR_REGISTRY in src/cmdb/health_sync.py has drifted from "
         "workers/health-aggregator/worker.py:SERVICE_REGISTRY — update the copy by hand."

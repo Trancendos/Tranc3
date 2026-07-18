@@ -85,6 +85,8 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+*.db.generation
+*.health_sync_marker
 spawned/
 node_modules/
 .terraform/

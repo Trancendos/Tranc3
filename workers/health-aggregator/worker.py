@@ -192,7 +192,8 @@ def _persist_check(result: Dict[str, Any]) -> None:
     # reading those keys directly silently persisted NULL for both on every
     # real poll. Found via CMDB health-aggregator sync review (PR #223).
     latency = result.get("response_ms")
-    error = (result.get("details") or {}).get("error")
+    details = result.get("details")
+    error = details.get("error") if isinstance(details, dict) else None
 
     with _conn() as c:
         c.execute(

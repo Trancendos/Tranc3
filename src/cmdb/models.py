@@ -208,7 +208,9 @@ class HealthObservation(Base):
     service_id = Column(String(32), ForeignKey("services.service_id"), index=True)
     observed_at = Column(DateTime, index=True)
     health_score = Column(Float)  # 0.0-1.0, matching ProactiveHealthMonitor's convention
-    status = Column(String(32))  # healthy | degraded | unhealthy | unknown
+    status = Column(String(32))  # healthy | degraded | down | unknown — the vocabulary
+    # workers/health-aggregator/worker.py's _check_one() actually writes (plus "unknown"
+    # as src/cmdb/health_sync.py's defensive fallback for a value outside that set)
     error_count = Column(Integer, default=0)
     response_time_ms = Column(Integer)
     source = Column(String(64))  # what recorded this — e.g. "health-aggregator", "manual"

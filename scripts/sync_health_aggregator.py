@@ -16,7 +16,10 @@ marker file next to the CMDB db so repeated runs are incremental, not
 full re-scans.
 """
 
+from __future__ import annotations
+
 import argparse
+import json
 import os
 import sys
 
@@ -25,27 +28,59 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from src.cmdb.health_sync import sync_from_health_aggregator_db  # noqa: E402
-from src.cmdb.models import HealthObservation, build_engine  # noqa: E402
+from src.cmdb.models import build_engine  # noqa: E402
 
 
 def _marker_path(cmdb_db_path: str) -> str:
     return cmdb_db_path + ".health_sync_marker"
 
 
-def _read_since_id(marker_path: str) -> int:
+def _read_generation(cmdb_db_path: str) -> str | None:
+    """A fresh random token written by scripts/build_cmdb.py on every
+    rebuild — NOT the CMDB db file's own mtime, which also changes on
+    every ordinary sync run (this script writes to that same file) and so
+    can't distinguish "rebuilt" from "synced normally" that way. Missing
+    (e.g. a cmdb.db built before this file existed) is treated as unknown,
+    not as "just rebuilt" — see _read_marker.
+    """
+    generation_path = cmdb_db_path + ".generation"
+    if not os.path.exists(generation_path):
+        return None
+    with open(generation_path) as f:
+        return f.read().strip() or None
+
+
+def _read_marker(marker_path: str) -> dict:
+    """{"since_id": int, "cmdb_generation": str|None}. Missing or malformed
+    (including a bare pre-generation-tracking integer) is treated as a
+    first run — since_id=0, cmdb_generation=None so the rebuild check below
+    is skipped rather than misfiring on a marker written by an older
+    version of this script.
+
+    A permission/IO error reading an *existing* marker is NOT treated as
+    "start over": that would turn a persistent permissions misconfiguration
+    into an expensive full health_checks scan on every scheduled run,
+    forever. It's surfaced as a real failure instead.
+    """
     if not os.path.exists(marker_path):
-        return 0
+        return {"since_id": 0, "cmdb_generation": None}
+    with open(marker_path) as f:
+        raw = f.read().strip()
+    if not raw:
+        return {"since_id": 0, "cmdb_generation": None}
     try:
-        with open(marker_path) as f:
-            return int(f.read().strip() or 0)
-    except (ValueError, OSError) as exc:
-        print(f"Marker file {marker_path} unreadable ({exc}) — resyncing from id 0.")
-        return 0
+        data = json.loads(raw)
+        return {"since_id": int(data["since_id"]), "cmdb_generation": data.get("cmdb_generation")}
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        try:
+            return {"since_id": int(raw), "cmdb_generation": None}
+        except ValueError as exc:
+            raise ValueError(f"Marker file {marker_path} is corrupt: {raw!r}") from exc
 
 
-def _write_since_id(marker_path: str, value: int) -> None:
+def _write_marker(marker_path: str, since_id: int, cmdb_generation: str | None) -> None:
     with open(marker_path, "w") as f:
-        f.write(str(value))
+        json.dump({"since_id": since_id, "cmdb_generation": cmdb_generation}, f)
 
 
 def main():
@@ -78,24 +113,36 @@ def main():
         return 1
 
     marker_path = _marker_path(args.cmdb_db)
-    since_id = _read_since_id(marker_path)
+    marker = _read_marker(marker_path)
+    since_id = marker["since_id"]
+    cmdb_generation = _read_generation(args.cmdb_db)
+
+    # scripts/build_cmdb.py drops and recreates every table (including
+    # HealthObservation) on every rebuild, but the marker file survives on
+    # disk untouched — without this check, a rebuilt CMDB would resume from
+    # the old since_id and never backfill the history the rebuild wiped
+    # out. Detected via build_cmdb.py's generation token changing, not via
+    # HealthObservation being empty — a legitimately-empty result (every
+    # fetched check currently unmapped) must NOT trigger this, or every
+    # run would re-trigger a full rescan forever.
+    if (
+        marker["cmdb_generation"] is not None
+        and cmdb_generation is not None
+        and cmdb_generation != marker["cmdb_generation"]
+    ):
+        print(
+            f"{args.cmdb_db} was rebuilt since the last sync (generation changed) — resyncing from 0."
+        )
+        since_id = 0
 
     engine = build_engine(args.cmdb_db)
     session = sessionmaker(bind=engine)()
     try:
-        # scripts/build_cmdb.py drops and recreates every table (including
-        # HealthObservation) on every rebuild, but the marker file survives
-        # on disk untouched — without this check, a rebuilt-but-empty CMDB
-        # would resume from the old since_id and never backfill the history
-        # that was just wiped out.
-        if since_id > 0 and session.query(HealthObservation).first() is None:
-            print(f"HealthObservation is empty but marker was at id {since_id} — resyncing from 0.")
-            since_id = 0
         stats = sync_from_health_aggregator_db(session, args.health_db, since_id=since_id)
     finally:
         session.close()
 
-    _write_since_id(marker_path, stats["max_id"])
+    _write_marker(marker_path, stats["max_id"], cmdb_generation)
     print(f"Synced {args.health_db} -> {args.cmdb_db}")
     for k, v in stats.items():
         print(f"  {k}: {v}")
