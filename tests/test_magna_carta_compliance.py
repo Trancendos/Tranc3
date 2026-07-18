@@ -76,9 +76,7 @@ class TestMagnaCartaComplianceEngine:
         import src.compliance.magna_carta as mc
 
         monkeypatch.setattr(mc, "MAGNA_CARTA_ENABLED", True)
-        monkeypatch.setattr(
-            mc, "MAGNA_CARTA_CONFIG_PATH", str(tmp_path / "does-not-exist.json")
-        )
+        monkeypatch.setattr(mc, "MAGNA_CARTA_CONFIG_PATH", str(tmp_path / "does-not-exist.json"))
         compliance = mc.MagnaCartaCompliance()
         result = compliance.check_request({"path": "/api/board"})
         assert result["compliant"] is True
