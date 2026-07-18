@@ -5,7 +5,37 @@
 
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "pip"
+    directory: "/"
     schedule:
-      interval: "Monthly"
+      interval: "monthly"
+
+  - package-ecosystem: "pip"
+    directories:
+      - "/tranc3-bots"
+      - "/workers/*"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "npm"
+    directories:
+      - "/"
+      - "/web"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/"
+      - "/docker"
+      - "/tranc3-bots"
+      - "/web"
+      - "/workers/*"
+      - "/deploy/*"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

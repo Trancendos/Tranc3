@@ -208,7 +208,11 @@ class HealthObservation(Base):
     service_id = Column(String(32), ForeignKey("services.service_id"), index=True)
     observed_at = Column(DateTime, index=True)
     health_score = Column(Float)  # 0.0-1.0, matching ProactiveHealthMonitor's convention
-    status = Column(String(32))  # healthy | degraded | unhealthy | unknown
+    status = Column(String(32))  # healthy | degraded | down — the 3 values
+    # workers/health-aggregator/worker.py's _check_one() actually writes. Not enforced at
+    # the DB layer: src/cmdb/health_sync.py stores this column's value verbatim from the
+    # source row (preserving it for forensics) and only ever falls back to a health_score
+    # of None (not a rewritten "unknown" status string) for a value outside that set.
     error_count = Column(Integer, default=0)
     response_time_ms = Column(Integer)
     source = Column(String(64))  # what recorded this — e.g. "health-aggregator", "manual"

@@ -120,7 +120,9 @@ def load_ea_workbook_services():
         services = {row["ServiceID"]: row for row in csv.DictReader(f)}
 
     zero_cost = {}
-    with open(os.path.join(ea_dir, "18_cost_and_revenue_review.csv"), newline="", encoding="utf-8") as f:
+    with open(
+        os.path.join(ea_dir, "18_cost_and_revenue_review.csv"), newline="", encoding="utf-8"
+    ) as f:
         for row in csv.DictReader(f):
             zero_cost[row["ServiceID"]] = row["ZeroCostStatus"]
 
@@ -159,7 +161,9 @@ def load_access_control_review():
     — see docs/governance/ACCESS-CONTROL-GOVERNANCE.md for the policy this
     data feeds. Literal copy, same convention as load_ea_workbook_services()."""
     ea_dir = os.path.join(REPO_ROOT, "docs", "architecture", "ea-workbook")
-    with open(os.path.join(ea_dir, "19_access_control_review.csv"), newline="", encoding="utf-8") as f:
+    with open(
+        os.path.join(ea_dir, "19_access_control_review.csv"), newline="", encoding="utf-8"
+    ) as f:
         rows = list(csv.DictReader(f))
     return [
         [
@@ -1362,7 +1366,15 @@ eaw.merge_cells("A2:G2")
 eaw.row_dimensions[2].height = 45
 
 eaw_header_row = 4
-eaw_header = ["ServiceID", "ServiceName", "Owner", "Status", "Criticality", "ZeroCostStatus", "Notes"]
+eaw_header = [
+    "ServiceID",
+    "ServiceName",
+    "Owner",
+    "Status",
+    "Criticality",
+    "ZeroCostStatus",
+    "Notes",
+]
 ea_rows = load_ea_workbook_services()
 write_rows(eaw, eaw_header, ea_rows, widths=[18, 28, 26, 12, 12, 16, 90], start_row=eaw_header_row)
 
@@ -1374,7 +1386,10 @@ eaw_summary_stats = [
     ("Owner = Unmapped", f'=COUNTIF(C{eaw_header_row + 1}:C{eaw_last},"Unmapped")'),
     ("Status = Active", f'=COUNTIF(D{eaw_header_row + 1}:D{eaw_last},"Active")'),
     ("Status = Building (not live)", f'=COUNTIF(D{eaw_header_row + 1}:D{eaw_last},"Building")'),
-    ("ZeroCostStatus = Not yet reviewed", f'=COUNTIF(F{eaw_header_row + 1}:F{eaw_last},"Not yet reviewed")'),
+    (
+        "ZeroCostStatus = Not yet reviewed",
+        f'=COUNTIF(F{eaw_header_row + 1}:F{eaw_last},"Not yet reviewed")',
+    ),
     ("ZeroCostStatus = Flagged", f'=COUNTIF(F{eaw_header_row + 1}:F{eaw_last},"Flagged")'),
 ]
 for i, (label, formula) in enumerate(eaw_summary_stats, start=eaw_summary_row + 1):
@@ -1400,7 +1415,14 @@ acr.merge_cells("A2:F2")
 acr.row_dimensions[2].height = 55
 
 acr_header_row = 4
-acr_header = ["ServiceID", "AuthMechanism", "DataClassification", "DifferentiatesUserAIAgentBot", "RecommendedAction", "Notes"]
+acr_header = [
+    "ServiceID",
+    "AuthMechanism",
+    "DataClassification",
+    "DifferentiatesUserAIAgentBot",
+    "RecommendedAction",
+    "Notes",
+]
 acr_rows = load_access_control_review()
 write_rows(acr, acr_header, acr_rows, widths=[18, 16, 16, 14, 40, 90], start_row=acr_header_row)
 
@@ -1408,9 +1430,18 @@ acr_summary_row = acr_header_row + len(acr_rows) + 3
 acr_last = acr_header_row + len(acr_rows)
 acr.cell(row=acr_summary_row, column=1, value="Summary").font = Font(bold=True)
 acr_summary_stats = [
-    ("Services with a distinct auth signal reviewed", f"=COUNTA(A{acr_header_row + 1}:A{acr_last})"),
-    ("RBAC/ABAC (full tier-aware access control)", f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"RBAC/ABAC")'),
-    ("JWT-only (no role/attribute differentiation)", f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"JWT-only")'),
+    (
+        "Services with a distinct auth signal reviewed",
+        f"=COUNTA(A{acr_header_row + 1}:A{acr_last})",
+    ),
+    (
+        "RBAC/ABAC (full tier-aware access control)",
+        f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"RBAC/ABAC")',
+    ),
+    (
+        "JWT-only (no role/attribute differentiation)",
+        f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"JWT-only")',
+    ),
     ("No auth mechanism detected", f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"None detected")'),
     (
         "No auth AND DC-003/DC-004 (Confidential/Restricted) — urgent",
@@ -1486,9 +1517,17 @@ for i, (label, formula) in enumerate(summary_stats, start=scan_summary_row + 1):
 
 missing_workers = workers_missing_from_ea_workbook([row[0] for row in worker_rows])
 missing_row = scan_summary_row + len(summary_stats) + 2
-scan.cell(row=missing_row, column=1, value="workers/* directories NOT referenced anywhere in the EA workbook").font = Font(bold=True)
+scan.cell(
+    row=missing_row,
+    column=1,
+    value="workers/* directories NOT referenced anywhere in the EA workbook",
+).font = Font(bold=True)
 scan.cell(row=missing_row, column=2, value=len(missing_workers))
-scan.cell(row=missing_row + 1, column=1, value=", ".join(missing_workers) if missing_workers else "(none — full coverage)")
+scan.cell(
+    row=missing_row + 1,
+    column=1,
+    value=", ".join(missing_workers) if missing_workers else "(none — full coverage)",
+)
 scan.cell(row=missing_row + 1, column=1).alignment = WRAP
 scan.merge_cells(start_row=missing_row + 1, start_column=1, end_row=missing_row + 1, end_column=6)
 
@@ -1540,7 +1579,7 @@ checks = [
     ),
     (
         "EA workbook services with Owner = Unmapped (real gap, not yet 0 — tracked here on purpose)",
-        f'=COUNTIF(\'EA Workbook Services\'!C{eaw_header_row + 1}:C{eaw_last},"Unmapped")',
+        f"=COUNTIF('EA Workbook Services'!C{eaw_header_row + 1}:C{eaw_last},\"Unmapped\")",
         0,
     ),
     (

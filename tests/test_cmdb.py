@@ -12,7 +12,6 @@ sqlalchemy = pytest.importorskip("sqlalchemy")
 from src.cmdb.loader import load_all  # noqa: E402
 from src.cmdb.models import (  # noqa: E402
     AccessControlReview,
-    Application,
     CostReview,
     Deployment,
     Service,
@@ -83,3 +82,13 @@ def test_application_service_link_has_no_unlinked_rows(cmdb_session):
     every application should resolve to a service given a correct CSV."""
     _, stats = cmdb_session
     assert stats["applications_unlinked_to_service"] == 0
+
+
+def test_load_all_on_progress_fires_at_each_checkpoint():
+    """scripts/build_cmdb.py relies on this callback to keep a rebuild
+    heartbeat current throughout the load, not just at start/end — it
+    must actually fire at every real checkpoint, not just the last one."""
+    with tempfile.NamedTemporaryFile(suffix=".db") as tmp:
+        checkpoints = []
+        load_all(tmp.name, on_progress=checkpoints.append)
+    assert checkpoints == ["services", "applications", "committed"]

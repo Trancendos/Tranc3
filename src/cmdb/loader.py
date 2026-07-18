@@ -229,7 +229,20 @@ def load_access_control_reviews(session: Session) -> int:
     return n
 
 
-def load_all(db_path: str) -> dict:
+def load_all(db_path: str, on_progress=None) -> dict:
+    """Rebuild every CMDB table from the EA workbook CSVs.
+
+    on_progress, if given, is called after each real loading checkpoint
+    (services / applications / the rest). It exists so a caller (see
+    scripts/build_cmdb.py) can maintain an external liveness signal (a
+    heartbeat file) across the whole rebuild — SQLite only writes dirty
+    pages back to db_path at commit() for a transaction this small, so the
+    db file's own mtime does NOT change during session.flush() calls; a
+    liveness check based solely on that mtime has a real blind spot for
+    the entire load phase, only becoming accurate again at the final
+    commit. on_progress gives an in-progress signal that isn't tied to
+    SQLite's commit timing.
+    """
     engine = build_engine(db_path)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
@@ -238,12 +251,18 @@ def load_all(db_path: str) -> dict:
     try:
         n_services = load_services(session)
         session.flush()
+        if on_progress:
+            on_progress("services")
         n_apps, apps_unlinked = load_applications(session)
         session.flush()
+        if on_progress:
+            on_progress("applications")
         n_deployments = load_deployments(session)
         n_cost = load_cost_reviews(session)
         n_access = load_access_control_reviews(session)
         session.commit()
+        if on_progress:
+            on_progress("committed")
     finally:
         session.close()
     return {
