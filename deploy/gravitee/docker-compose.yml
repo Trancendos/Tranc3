@@ -59,7 +59,7 @@ services:
       - "traefik.http.services.gravitee-portal.loadbalancer.server.port=8080"
 
   gravitee-mongo:
-    image: mongo:6-jammy@sha256:a90cef0143bed76540c2b7e6f299a02165e59b07e459b2fd7fef031c5accf5fd
+    image: mongo:7-jammy@sha256:b0c1f837c31921c93689559d5848fd14b7c421afb92d9b5a11e5a8769f98cad1
     container_name: gravitee-mongo
     restart: unless-stopped
     volumes:
