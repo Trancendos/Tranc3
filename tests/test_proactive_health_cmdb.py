@@ -110,3 +110,38 @@ def test_null_health_score_rows_are_excluded(tmp_path):
     alerts = monitor.sample_from_cmdb(str(cmdb_path))
     assert alerts == []
     assert "SRV-SPARK-001" not in monitor._ewma
+
+
+def test_repeated_calls_against_unchanged_history_do_not_duplicate_alerts(tmp_path):
+    """Regression test: calling sample_from_cmdb twice against the same,
+    unchanged HealthObservation history must not re-raise the same
+    historical alerts a second time — otherwise self._alerts grows
+    unboundedly and the same events get re-logged/re-persisted forever."""
+    cmdb_path = tmp_path / "cmdb.db"
+    _make_cmdb_db(
+        cmdb_path,
+        [("SRV-SPARK-001", 0.02, f"2026-07-{d:02d}T00:00:00") for d in range(1, 7)],
+    )
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+
+    first_alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert first_alerts != []
+    total_after_first = len(monitor._alerts)
+
+    second_alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert second_alerts == []  # nothing *new* — every alert was already raised
+    assert len(monitor._alerts) == total_after_first  # no growth on replay
+
+
+def test_missing_health_observations_table_returns_no_alerts_not_a_crash(tmp_path):
+    """A CMDB db that predates HealthObservation (or points at the wrong
+    file) must report and return no alerts, not raise sqlite3.OperationalError."""
+    cmdb_path = tmp_path / "cmdb.db"
+    conn = sqlite3.connect(cmdb_path)
+    conn.execute("CREATE TABLE services (service_id TEXT PRIMARY KEY)")
+    conn.commit()
+    conn.close()
+
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert alerts == []

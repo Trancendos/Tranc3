@@ -18,7 +18,10 @@ from src.cmdb.models import (  # noqa: E402
     ServiceDocPack,
     build_engine,
 )
-from src.cmdb.service_docpack_map import DOCPACK_TO_SERVICE_ID  # noqa: E402
+from src.cmdb.service_docpack_map import (  # noqa: E402
+    DOCPACK_TO_SERVICE_ID,
+    UNMAPPED_DOCPACKS,
+)
 
 
 @pytest.fixture(scope="module")
@@ -96,6 +99,16 @@ def test_service_doc_pack_count_matches_mapping(cmdb_session):
     assert session.query(ServiceDocPack).count() == len(DOCPACK_TO_SERVICE_ID)
 
 
+def test_unmapped_docpacks_never_produce_rows(cmdb_session):
+    """The 9 slugs deliberately left out of DOCPACK_TO_SERVICE_ID (see
+    UNMAPPED_DOCPACKS) must never appear as ServiceDocPack rows — a future
+    loader change that accidentally started guessing at them would silently
+    undo the point of leaving them unmapped."""
+    session, _ = cmdb_session
+    loaded_slugs = {slug for (slug,) in session.query(ServiceDocPack.docpack_slug).all()}
+    assert not (loaded_slugs & set(UNMAPPED_DOCPACKS))
+
+
 def test_service_doc_pack_foreign_key_resolves(cmdb_session):
     session, _ = cmdb_session
     known_ids = {s.service_id for s in session.query(Service.service_id).all()}
@@ -115,3 +128,18 @@ def test_the_spark_doc_pack_has_all_governance_sections(cmdb_session):
     assert pack.has_tasd
     assert pack.has_raci
     assert pack.has_gov
+
+
+def test_docpack_section_detection_handles_real_heading_variants(cmdb_session):
+    """Regression test: several doc-packs title their DDD/TASD sections
+    differently ("Domain-Driven Design (DDD)" / "Technical Architecture &
+    Solution Design (TASD)" vs. the-spark's "Detailed Design Document (DDD)"
+    / "Technical Architecture Solutions Design (TASD)") — detection must
+    match on the acronym, not the full exact phrase, or these silently
+    record has_ddd/has_tasd=False despite the section being present."""
+    session, _ = cmdb_session
+    for slug in ("chronosphere-arcstream", "fabulousa", "the-ice-box", "warp-radio"):
+        pack = session.get(ServiceDocPack, slug)
+        assert pack is not None, f"{slug} should have loaded"
+        assert pack.has_ddd, f"{slug} has a DDD section but was recorded as missing one"
+        assert pack.has_tasd, f"{slug} has a TASD section but was recorded as missing one"

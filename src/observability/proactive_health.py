@@ -194,12 +194,14 @@ class ProactiveHealthMonitor:
         severity: str,
         message: str,
         context: dict[str, Any] | None = None,
+        alert_id: str | None = None,
     ) -> ProactiveAlert:
         alert = ProactiveAlert(
             entity_id=eid,
             severity=severity,
             message=message,
             context=context or {},
+            **({"alert_id": alert_id} if alert_id is not None else {}),
         )
         self._alerts.append(alert)
         self._persist_alert(alert)
@@ -334,6 +336,18 @@ class ProactiveHealthMonitor:
     # instance for long enough to accumulate real history (days, not
     # minutes) — that accumulation, not this method, is the remaining gap.
 
+    @staticmethod
+    def _replay_alert_id(service_id: str, observed_at: Any, severity: str, kind: str) -> str:
+        """Deterministic id for a replayed alert, so re-running
+        sample_from_cmdb against the same history doesn't re-persist,
+        re-log, or re-accumulate-in-memory the same historical event under a
+        fresh random uuid each time (unlike check_all()'s live alerts, which
+        are genuinely new events and do want a fresh id per raise)."""
+        import hashlib
+
+        seed = f"{service_id}|{observed_at}|{severity}|{kind}"
+        return "replay-" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+
     def sample_from_cmdb(self, cmdb_db_path: str) -> list[ProactiveAlert]:
         """Replay HealthObservation rows (ordered by observed_at) through the
         existing EWMA/trend-detection machinery, one full replay per
@@ -341,13 +355,39 @@ class ProactiveHealthMonitor:
         to call repeatedly — each call replays full history per service
         from that service's EWMA baseline (1.0), it does not resume from a
         prior call's state, so calling it twice in a row does not double-
-        count trends within a single history."""
+        count trends within a single history. Each replayed alert gets a
+        deterministic id keyed on (service_id, observed_at, severity, kind)
+        and is skipped if already present in self._alerts, so repeated calls
+        against unchanged history don't grow self._alerts unboundedly,
+        re-insert duplicate rows into the alerts db (INSERT OR IGNORE relies
+        on this), or re-log the same historical event on every call.
+
+        Shares this instance's _ewma/_scores dicts with check_all()'s live
+        entity tracking, keyed by id — safe in practice because the two id
+        spaces are disjoint by construction (live entities: "AID-*", CMDB
+        services: "SRV-*"), not because of any isolation in this code. A
+        caller mixing both on the same instance with colliding ids would see
+        cross-contaminated EWMA state; use a dedicated ProactiveHealthMonitor
+        instance instead if that's ever a real scenario."""
         import sqlite3
 
         alerts: list[ProactiveAlert] = []
         if not Path(cmdb_db_path).exists():
             logger.warning("sample_from_cmdb: %s does not exist", cmdb_db_path)
             return alerts
+
+        existing_ids = {a.alert_id for a in self._alerts}
+
+        def raise_if_new(
+            service_id: str, severity: str, message: str, context: dict, observed_at: Any, kind: str
+        ) -> None:
+            alert_id = self._replay_alert_id(service_id, observed_at, severity, kind)
+            if alert_id in existing_ids:
+                return
+            existing_ids.add(alert_id)
+            alerts.append(
+                self._raise_alert(service_id, severity, message, context, alert_id=alert_id)
+            )
 
         conn = sqlite3.connect(cmdb_db_path)
         conn.row_factory = sqlite3.Row
@@ -358,6 +398,17 @@ class ProactiveHealthMonitor:
                 "WHERE health_score IS NOT NULL AND service_id IS NOT NULL "
                 "ORDER BY service_id, observed_at ASC"
             ).fetchall()
+        except sqlite3.OperationalError as exc:
+            # e.g. a CMDB db built before HealthObservation existed, or
+            # pointed at the wrong file — report and return no alerts,
+            # same shape as the missing-file case above, rather than
+            # propagating a raw sqlite3 error to the caller.
+            logger.warning(
+                "sample_from_cmdb: failed to query health_observations in %s: %s",
+                cmdb_db_path,
+                exc,
+            )
+            return alerts
         finally:
             conn.close()
 
@@ -371,30 +422,33 @@ class ProactiveHealthMonitor:
             for obs in observations:
                 ewma = self._update_ewma(service_id, obs["health_score"])
                 trending_down = self._detect_trend(service_id, obs["health_score"])
-                context = {
-                    "ewma": ewma,
-                    "raw": obs["health_score"],
-                    "observed_at": obs["observed_at"],
-                }
+                observed_at = obs["observed_at"]
+                context = {"ewma": ewma, "raw": obs["health_score"], "observed_at": observed_at}
                 if ewma < self._CRITICAL_THRESHOLD:
-                    alerts.append(
-                        self._raise_alert(
-                            service_id, "critical", f"Health critical: EWMA={ewma:.2f}", context
-                        )
+                    raise_if_new(
+                        service_id,
+                        "critical",
+                        f"Health critical: EWMA={ewma:.2f}",
+                        context,
+                        observed_at,
+                        "critical",
                     )
                 elif ewma < self._WARNING_THRESHOLD:
-                    alerts.append(
-                        self._raise_alert(
-                            service_id, "warning", f"Health degraded: EWMA={ewma:.2f}", context
-                        )
+                    raise_if_new(
+                        service_id,
+                        "warning",
+                        f"Health degraded: EWMA={ewma:.2f}",
+                        context,
+                        observed_at,
+                        "degraded",
                     )
                 elif trending_down:
-                    alerts.append(
-                        self._raise_alert(
-                            service_id,
-                            "warning",
-                            f"Declining health trend ({self._TREND_WINDOW} samples)",
-                            {"samples": self._scores[service_id][-self._TREND_WINDOW :]},
-                        )
+                    raise_if_new(
+                        service_id,
+                        "warning",
+                        f"Declining health trend ({self._TREND_WINDOW} samples)",
+                        {"samples": self._scores[service_id][-self._TREND_WINDOW :]},
+                        observed_at,
+                        "trend",
                     )
         return alerts

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 
 from sqlalchemy.orm import Session
 
@@ -232,12 +233,27 @@ def load_access_control_reviews(session: Session) -> int:
     return n
 
 
+_HEADING_RE = re.compile(r"^##\s+\d+\.\s+.+$", re.MULTILINE)
+
+# Matched against numbered heading lines only (see _HEADING_RE), not the
+# whole file — avoids false positives from body text mentioning an acronym
+# in passing. Uses the acronym in parens rather than the full section title,
+# because the doc-packs use real wording variants for the same section:
+# "Detailed Design Document (DDD)" vs "Domain-Driven Design (DDD)", and
+# "Technical Architecture Solutions Design (TASD)" vs "Technical Architecture
+# & Solution Design (TASD)" — confirmed by scanning all 34 mapped READMEs.
 _DOCPACK_SECTION_MARKERS = {
-    "has_ddd": "Detailed Design Document (DDD)",
-    "has_tasd": "Technical Architecture Solutions Design (TASD)",
+    "has_ddd": "(DDD)",
+    "has_tasd": "(TASD)",
     "has_raci": "RACI Matrix",
     "has_gov": "Service Governance Charter (GOV)",
 }
+
+
+def _headings_text(readme_text: str) -> str:
+    """Numbered '## N. ...' heading lines only, joined — the surface
+    _DOCPACK_SECTION_MARKERS is matched against."""
+    return "\n".join(_HEADING_RE.findall(readme_text))
 
 
 def load_service_doc_packs(session: Session) -> int:
@@ -255,13 +271,13 @@ def load_service_doc_packs(session: Session) -> int:
         if not os.path.exists(readme_path):
             continue
         with open(readme_path, encoding="utf-8") as f:
-            text = f.read()
+            headings = _headings_text(f.read())
         session.add(
             ServiceDocPack(
                 docpack_slug=slug,
                 doc_path=os.path.relpath(readme_path, REPO_ROOT),
                 service_id=service_id,
-                **{key: marker in text for key, marker in _DOCPACK_SECTION_MARKERS.items()},
+                **{key: marker in headings for key, marker in _DOCPACK_SECTION_MARKERS.items()},
             )
         )
         n += 1
