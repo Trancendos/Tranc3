@@ -214,7 +214,7 @@ services:
 
   # ── Promtail — Log Shipper ───────────────────────────────────────────
   promtail:
-    image: grafana/promtail:2.9.17@sha256:b28495fdab552b183428c5b5cebbf258231fc5f00be7724be2bc091ad21ac390
+    image: grafana/promtail:3.6.11@sha256:a761cb834cfaeee29745440d4884d6748f0a08d8f68928db1d707018c1dcfbe9
     container_name: tranc3-promtail
     <<: *common
     volumes:
