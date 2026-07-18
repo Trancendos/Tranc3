@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+FROM node:24-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
 
 # Remotion's headless Chromium render path needs these system libs.
 RUN apt-get update && apt-get install -y --no-install-recommends \
