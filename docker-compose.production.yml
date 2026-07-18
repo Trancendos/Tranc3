@@ -199,7 +199,7 @@ services:
   # ── Loki — Log Aggregation ───────────────────────────────────────────
   # Replaces: Cloudflare Logs, CF Logpush
   loki:
-    image: grafana/loki:2.9.17@sha256:c4a25af6f2709fa625d88ee5df494a332a85f30e9575854031667823ecc5be04
+    image: grafana/loki:3.7.3@sha256:70b9f699fc9bb868b62f1cfd4f787dfa50242f1fd92e6089787d5d7daea75fe8
     container_name: tranc3-loki
     <<: *common
     ports:
