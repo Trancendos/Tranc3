@@ -1054,7 +1054,7 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
       <<: *healthcheck-default
 
-  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8051) ──
+  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8111) ──
   triposr-worker:
     <<: *worker-common
     build:
@@ -3571,10 +3571,14 @@ services:
       - "traefik.http.services.artifactory-service.loadbalancer.server.port=8047"
 
   # ── Sentinel Station — platform guardian (Port 8041) ──────────────────────────────────────────────
+  # context is repo root, not ./workers/sentinel-station-service: the Dockerfile's own COPY paths
+  # (workers/sentinel-station-service/...) were always written assuming repo-root context - with the
+  # isolated context this used to have, the build failed at the first COPY step (nested path never
+  # existed) and worker.py's Dimensional.infinity.* imports were also unresolvable either way.
   sentinel-station-service:
     build:
-      context: ./workers/sentinel-station-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/sentinel-station-service/Dockerfile
     container_name: tranc3-sentinel-station-service
     <<: *worker-common
     environment:

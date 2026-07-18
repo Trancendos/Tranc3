@@ -7,6 +7,11 @@ WORKDIR /app
 COPY --chown=worker:worker workers/infinity-portal-service/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 COPY --chown=worker:worker workers/infinity-portal-service/ .
+# service.py imports Dimensional.infinity.* (nomenclature, auth_gateway,
+# owasp_hardening, rbac, sentinel_station, worker_integration) and
+# Dimensional.dimensionals - vendored from the repo-root build context
+# (context: . per docker-compose.production.yml), not duplicated locally.
+COPY --chown=worker:worker Dimensional/ ./Dimensional/
 
 RUN mkdir -p data && chown -R worker:worker data
 

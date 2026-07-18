@@ -5,7 +5,16 @@ RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 WORKDIR /app
 COPY --chown=worker:worker requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker worker.py .
+# worker.py is a backwards-compat shim that imports config/database/models/
+# service/router/main from this same directory (see worker.py's own
+# docstring) — copying only worker.py left every one of those imports
+# unresolvable at runtime (ModuleNotFoundError), so the image never
+# actually ran despite building successfully.
+COPY --chown=worker:worker config.py database.py models.py service.py router.py main.py sanitize.py zero_cost_registry.py worker.py .
+# Vendored copy of config/zero_cost/providers.yaml — zero_cost_registry.py reads
+# it from a path relative to this file, not the repo-root config/ directory,
+# which isn't visible inside this worker's isolated build context.
+COPY --chown=worker:worker config/zero_cost/ ./config/zero_cost/
 RUN mkdir -p /app/data \
     && chown -R worker:worker /app/data
 # Security: drop to non-root user

@@ -6,7 +6,7 @@ import os
 import warnings
 
 WORKER_NAME = "vrar3d"
-WORKER_PORT = int(os.environ.get("VRAR3D_PORT", "8063"))
+WORKER_PORT = int(os.environ.get("PORT", "8060"))
 DB_PATH = os.environ.get("VRAR3D_DB_PATH", "/data/vrar3d.db")
 ASSET_DIR = os.environ.get("VRAR3D_ASSET_DIR", "/data/assets")
 

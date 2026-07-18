@@ -172,7 +172,7 @@ class RunRequest(BaseModel):
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8053, "swarm-coordinator"),
+        "entity": health_entity_block(WORKER_PORT, "swarm-coordinator"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

@@ -27,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
-from Dimensional.path_validation import PathTraversalError, safe_join
+from path_validation import PathTraversalError, safe_join
 
 WORKER_PORT = int(os.getenv("PORT") or "8028")
 WORKER_NAME = "cdn-service"

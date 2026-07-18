@@ -1,6 +1,6 @@
 # EA / CMDB Workbook
 
-A 17-file CSV configuration-management-database (CMDB) layer describing Trancendos's
+A 19-file CSV configuration-management-database (CMDB) layer describing Trancendos's
 operational estate: business services → technical services → applications → APIs →
 deployments, down through environments, hosting, servers, databases, storage, DNS,
 load balancers, firewalls, dependencies, vulnerability findings, and configuration
@@ -22,12 +22,27 @@ live monitoring instead of only being read by humans. It now runs automatically 
 (alongside `scripts/post_deploy_verify.py`), both as best-effort/`--soft` steps.
 
 `Trancendos_Master_Service_Matrix.xlsx` (this directory) is a companion workbook mirroring
-the same 8 components (the 6 CSV anchors plus Traefik and health-aggregator) in a
-service/route/endpoint/dependency/security/deployment matrix format, plus a broad
-structural scan of all 94 real `workers/*` directories and a real, non-fictional
-Improvement Roadmap of gaps found while building it. Regenerate it with
+the same 8 anchor components (the 6 CSV anchors plus Traefik and health-aggregator) in a
+service/route/endpoint/dependency/security/deployment matrix format, at hand-verified full
+depth. Two further sheets give it broader coverage at lower depth: **EA Workbook Services**
+mirrors every row of `02_service_inventory.csv` (ServiceID/Owner/Status/Criticality/
+ZeroCostStatus/Notes, cross-joined with `18_cost_and_revenue_review.csv`) — the CSVs remain
+the source of truth, this sheet just makes them visible without leaving the workbook — and
+**All Workers (Broad Scan)** does a structural scan of all 94 real `workers/*` directories
+(worker.py/Dockerfile presence, compose registration, routed port, `/health` reference) and
+cross-checks that every one of them is referenced somewhere in the EA workbook, failing
+`Governance Checks` if a worker is ever added without being documented. Plus a real,
+non-fictional Improvement Roadmap of gaps found while building it. Regenerate it with
 `python scripts/build_master_service_matrix.py` after updating the facts baked into that
-script — it is not hand-edited directly.
+script or the CSVs it now reads from — it is not hand-edited directly.
+
+**`src/cmdb/`** turns these same 19 CSVs into a real relational domain model — a SQLite database
+(`data/cmdb.db`, gitignored, rebuild with `python scripts/build_cmdb.py`) with actual foreign keys
+between `Service`, `Application`, `Deployment`, `CostReview`, and `AccessControlReview`, plus an
+empty `HealthObservation` table ready for live health-check data to land in once something is wired
+to write to it (see `docs/governance/OBSERVABILITY-AND-AUTOMATION-GOVERNANCE.md`). Same "CSVs are
+the source of truth, this is a derived build artifact" convention as the xlsx matrix above —
+covered by `tests/test_cmdb.py`.
 
 `scripts/check_master_matrix_freshness.py` closes the loop so that regeneration step
 isn't just a manual convention: it re-runs the generator against current repo state and
@@ -103,6 +118,8 @@ operationally usable:
 | 15 | `15_dependencies.csv` | Service/app/infra dependency graph incl. circuit breakers |
 | 16 | `16_vulnerability_scans.csv` | Vulnerability findings, CVE/CVSS, remediation status |
 | 17 | `17_configuration_baseline.csv` | Config drift vs. hardening baseline |
+| 18 | `18_cost_and_revenue_review.csv` | Zero-cost verification status and candidate monetization ideas per service, per `docs/governance/COST-AND-REVENUE-GOVERNANCE.md` |
+| 19 | `19_access_control_review.csv` | Access-control mechanism per service (RBAC/ABAC, JWT-only, INTERNAL_SECRET-only, or none) and data-classification cross-reference, per `docs/governance/ACCESS-CONTROL-GOVERNANCE.md` |
 
 File 04 (a duplicate reference copy of File 01 in the source spec) is omitted here as
 redundant.
