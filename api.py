@@ -70,7 +70,7 @@ if not _REDIS_URL:
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
-from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
+from auth import create_token, get_current_user  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
 from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
 from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
@@ -884,6 +884,13 @@ from src.roles.routes import (
 
 app.include_router(_roles_router)
 
+# ── Deployment Mode Registry (Location -> Cloud Only/Hybrid/Local + Dev/UAT) ─
+from src.deployment_modes.routes import (
+    router as _deployment_modes_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_deployment_modes_router)
+
 # ── AI-to-AI Relationship Matrix + Activity Feed + Location Brochure ─────────
 from src.relations.routes import (
     router as _relations_router,  # noqa: F401  # intentional top-level import
@@ -1146,7 +1153,7 @@ async def login(req: TokenRequest):
     user = db_user_manager.authenticate_user(req.username, req.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = token_manager.create_access_token({"sub": user["username"]})
+    token = create_token(user_id=user["id"], username=user["username"], tier=user.get("tier", 0))
     return {"access_token": token, "token_type": "bearer", "expires_in": 3600}
 
 
@@ -1158,9 +1165,10 @@ async def login(req: TokenRequest):
     description="Issue a fresh 1-hour JWT for the currently authenticated user.",
 )
 async def refresh_token(current_user: dict = Depends(get_current_user)):
-    new_token = token_manager.create_access_token(
-        {"sub": current_user["username"]},
-        expires_delta=datetime.timedelta(hours=1),
+    new_token = create_token(
+        user_id=current_user.get("sub") or current_user.get("id", ""),
+        username=current_user["username"],
+        tier=current_user.get("tier", 0),
     )
     return {"access_token": new_token, "token_type": "bearer", "expires_in": 3600}
 
