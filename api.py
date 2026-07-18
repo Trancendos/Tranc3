@@ -1153,7 +1153,10 @@ async def login(req: TokenRequest):
     user = db_user_manager.authenticate_user(req.username, req.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_token(user_id=user["id"], username=user["username"], tier=user.get("tier", 0))
+    role = (user.get("roles") or ["user"])[0]
+    token = create_token(
+        user_id=user["id"], username=user["username"], role=role, tier=user.get("tier", 0)
+    )
     return {"access_token": token, "token_type": "bearer", "expires_in": 3600}
 
 
@@ -1168,6 +1171,7 @@ async def refresh_token(current_user: dict = Depends(get_current_user)):
     new_token = create_token(
         user_id=current_user.get("sub") or current_user.get("id", ""),
         username=current_user["username"],
+        role=current_user.get("role", "user"),
         tier=current_user.get("tier", 0),
     )
     return {"access_token": new_token, "token_type": "bearer", "expires_in": 3600}
