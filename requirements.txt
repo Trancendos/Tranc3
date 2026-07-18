@@ -148,7 +148,7 @@ nats-py==2.7.2
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
 #   src/security/security_framework.py, src/mcp/tools.py for caching, session
 #   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
-redis==7.4.0
+redis==8.0.1
 
 # === Master Worker / BotSwarm / Task Orchestration ===
 # pyyaml: YAML task definition parsing — powers src/master/task_loader.py

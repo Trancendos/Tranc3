@@ -2094,7 +2094,7 @@ services:
       retries: 5
 
   authentik-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: trancendos-authentik-redis
     volumes:
       - authentik-redis-data:/data
@@ -2444,7 +2444,7 @@ services:
       - tranc3-net
 
   paperless-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: trancendos-paperless-redis
     restart: unless-stopped
     networks:
@@ -2686,7 +2686,7 @@ services:
       - tranc3-net
 
   misp-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: trancendos-misp-redis
     restart: unless-stopped
     volumes:
