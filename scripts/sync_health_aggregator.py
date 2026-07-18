@@ -180,9 +180,13 @@ def main():
             return 0
         print(
             f"{args.cmdb_db}'s generation sidecar has shown REBUILDING for over "
-            f"{_REBUILDING_STALE_SECONDS}s — treating as an abandoned/crashed rebuild, not "
-            "an in-progress one, and proceeding rather than deferring forever."
+            f"{_REBUILDING_STALE_SECONDS}s — treating as an abandoned/crashed rebuild. "
+            "Refusing to sync against a possibly half-built CMDB (e.g. tables recreated "
+            "but no services committed yet, which would make every row look unmapped and "
+            "permanently skip them). Re-run scripts/build_cmdb.py to complete the rebuild, "
+            "then re-run this sync."
         )
+        return 1
 
     # scripts/build_cmdb.py drops and recreates every table (including
     # HealthObservation) on every rebuild, but the marker file survives on
