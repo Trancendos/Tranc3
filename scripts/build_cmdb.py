@@ -26,8 +26,16 @@ if __name__ == "__main__":
     # sync_health_aggregator.py uses to tell "this CMDB was rebuilt, reset
     # my incremental marker" apart from "something wrote to the db since
     # I last looked, which happens on every normal sync run too."
-    with open(db_path + ".generation", "w") as f:
+    #
+    # Written atomically (temp file + os.replace): a crash mid-write must
+    # never leave a torn/partial token on disk — that could coincidentally
+    # collide with the *next* real generation and silently disable rebuild
+    # detection, permanently losing a backfill window with no visible error.
+    generation_path = db_path + ".generation"
+    tmp_generation_path = generation_path + ".tmp"
+    with open(tmp_generation_path, "w") as f:
         f.write(uuid.uuid4().hex)
+    os.replace(tmp_generation_path, generation_path)
 
     print(f"Built {db_path}")
     for k, v in stats.items():

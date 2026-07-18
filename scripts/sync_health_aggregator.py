@@ -51,16 +51,14 @@ def _read_generation(cmdb_db_path: str) -> str | None:
 
 
 def _read_marker(marker_path: str) -> dict:
-    """{"since_id": int, "cmdb_generation": str|None}. Missing or malformed
-    (including a bare pre-generation-tracking integer) is treated as a
-    first run — since_id=0, cmdb_generation=None so the rebuild check below
-    is skipped rather than misfiring on a marker written by an older
-    version of this script.
-
-    A permission/IO error reading an *existing* marker is NOT treated as
-    "start over": that would turn a persistent permissions misconfiguration
-    into an expensive full health_checks scan on every scheduled run,
-    forever. It's surfaced as a real failure instead.
+    """{"since_id": int, "cmdb_generation": str|None}. Missing, empty,
+    genuinely corrupt, or a bare pre-generation-tracking integer (from an
+    older version of this script) all resolve to a safe first run —
+    since_id=0, cmdb_generation=None — rather than either crashing the
+    scheduled sync or silently resuming from a since_id with no generation
+    to detect a concurrent rebuild against. The dedupe check in
+    health_sync.py means a spurious full rescan can never create
+    duplicate HealthObservation rows, so "when in doubt, rescan" is safe.
     """
     if not os.path.exists(marker_path):
         return {"since_id": 0, "cmdb_generation": None}
@@ -72,15 +70,26 @@ def _read_marker(marker_path: str) -> dict:
         data = json.loads(raw)
         return {"since_id": int(data["since_id"]), "cmdb_generation": data.get("cmdb_generation")}
     except (ValueError, KeyError, TypeError, json.JSONDecodeError):
-        try:
-            return {"since_id": int(raw), "cmdb_generation": None}
-        except ValueError as exc:
-            raise ValueError(f"Marker file {marker_path} is corrupt: {raw!r}") from exc
+        # Includes a bare pre-generation-tracking integer marker (e.g. "17"),
+        # which int(raw) would happily parse — but resuming from that id
+        # without a generation to compare against means a rebuild that
+        # happened around the same time as this upgrade would never be
+        # detected, permanently skipping backfill for ids <= 17. Any
+        # marker this script can't fully understand — legacy format or
+        # genuinely corrupt — is treated the same way: a safe first run.
+        # A one-time full rescan is the cost; the dedupe check in
+        # health_sync.py means it can never create duplicate rows.
+        print(f"Marker file {marker_path} is legacy/malformed ({raw!r}) — resyncing from id 0.")
+        return {"since_id": 0, "cmdb_generation": None}
 
 
 def _write_marker(marker_path: str, since_id: int, cmdb_generation: str | None) -> None:
-    with open(marker_path, "w") as f:
+    # Atomic (write-temp-then-rename) so a crash mid-write can never leave
+    # a torn/partial JSON file for the next run's _read_marker to choke on.
+    tmp_path = marker_path + ".tmp"
+    with open(tmp_path, "w") as f:
         json.dump({"since_id": since_id, "cmdb_generation": cmdb_generation}, f)
+    os.replace(tmp_path, marker_path)
 
 
 def main():
@@ -142,7 +151,16 @@ def main():
     finally:
         session.close()
 
-    _write_marker(marker_path, stats["max_id"], cmdb_generation)
+    # If the generation sidecar is transiently unreadable this run (mid
+    # deployment, a restore in progress), don't let that overwrite a real,
+    # previously-recorded generation with None — that would silently
+    # disable rebuild detection forever, since a future real rebuild's
+    # token would then always look "different from None" the same as a
+    # transient-miss cycle does, and there'd be no way to tell them apart.
+    generation_to_write = (
+        cmdb_generation if cmdb_generation is not None else marker["cmdb_generation"]
+    )
+    _write_marker(marker_path, stats["max_id"], generation_to_write)
     print(f"Synced {args.health_db} -> {args.cmdb_db}")
     for k, v in stats.items():
         print(f"  {k}: {v}")
