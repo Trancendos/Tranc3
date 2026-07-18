@@ -15,7 +15,12 @@ from src.cmdb.models import (  # noqa: E402
     CostReview,
     Deployment,
     Service,
+    ServiceDocPack,
     build_engine,
+)
+from src.cmdb.service_docpack_map import (  # noqa: E402
+    DOCPACK_TO_SERVICE_ID,
+    UNMAPPED_DOCPACKS,
 )
 
 
@@ -82,6 +87,62 @@ def test_application_service_link_has_no_unlinked_rows(cmdb_session):
     every application should resolve to a service given a correct CSV."""
     _, stats = cmdb_session
     assert stats["applications_unlinked_to_service"] == 0
+
+
+def test_service_doc_pack_count_matches_mapping(cmdb_session):
+    """Every confidently-mapped doc-pack in service_docpack_map.py should
+    load — this is running against the real docs/services/ tree, not a
+    fixture, so a mismatch means a mapped slug's README.md went missing or a
+    ServiceID stopped resolving, not a test-data problem."""
+    session, stats = cmdb_session
+    assert stats["service_doc_packs"] == len(DOCPACK_TO_SERVICE_ID)
+    assert session.query(ServiceDocPack).count() == len(DOCPACK_TO_SERVICE_ID)
+
+
+def test_unmapped_docpacks_never_produce_rows(cmdb_session):
+    """The 9 slugs deliberately left out of DOCPACK_TO_SERVICE_ID (see
+    UNMAPPED_DOCPACKS) must never appear as ServiceDocPack rows — a future
+    loader change that accidentally started guessing at them would silently
+    undo the point of leaving them unmapped."""
+    session, _ = cmdb_session
+    loaded_slugs = {slug for (slug,) in session.query(ServiceDocPack.docpack_slug).all()}
+    assert not (loaded_slugs & set(UNMAPPED_DOCPACKS))
+
+
+def test_service_doc_pack_foreign_key_resolves(cmdb_session):
+    session, _ = cmdb_session
+    known_ids = {s.service_id for s in session.query(Service.service_id).all()}
+    for pack in session.query(ServiceDocPack).all():
+        assert pack.service_id in known_ids
+
+
+def test_the_spark_doc_pack_has_all_governance_sections(cmdb_session):
+    """Regression check against a doc-pack known to be the reference
+    implementation (docs/services/the-spark/README.md's own docstring
+    calls it that) — it should have every governance section detected."""
+    session, _ = cmdb_session
+    pack = session.get(ServiceDocPack, "the-spark")
+    assert pack is not None
+    assert pack.service_id == "SRV-SPARK-001"
+    assert pack.has_ddd
+    assert pack.has_tasd
+    assert pack.has_raci
+    assert pack.has_gov
+
+
+def test_docpack_section_detection_handles_real_heading_variants(cmdb_session):
+    """Regression test: several doc-packs title their DDD/TASD sections
+    differently ("Domain-Driven Design (DDD)" / "Technical Architecture &
+    Solution Design (TASD)" vs. the-spark's "Detailed Design Document (DDD)"
+    / "Technical Architecture Solutions Design (TASD)") — detection must
+    match on the acronym, not the full exact phrase, or these silently
+    record has_ddd/has_tasd=False despite the section being present."""
+    session, _ = cmdb_session
+    for slug in ("chronosphere-arcstream", "fabulousa", "the-ice-box", "warp-radio"):
+        pack = session.get(ServiceDocPack, slug)
+        assert pack is not None, f"{slug} should have loaded"
+        assert pack.has_ddd, f"{slug} has a DDD section but was recorded as missing one"
+        assert pack.has_tasd, f"{slug} has a TASD section but was recorded as missing one"
 
 
 def test_load_all_on_progress_fires_at_each_checkpoint():

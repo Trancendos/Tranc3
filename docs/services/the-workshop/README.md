@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-WORKSHOP-001` |
 | **Entity** | The Workshop (`PID-WRK`) |
 | **Lead AI** | Larry Lowhammer (`AID-WRK-01`); Prime: The Doctor (Nikolai O'denhim) |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) |

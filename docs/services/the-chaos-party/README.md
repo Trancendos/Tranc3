@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-CHAOSPARTY-001` |
 | **Entity** | The Chaos Party (`PID-TCP`) — Alice-in-Wonderland themed |
 | **Lead AI** | The Mad Hatter (`AID-TCP-01`); Prime: The Doctor (Nikolai O'denhim) |
 | **Status** | 🔧 Partial (per `CLAUDE.md` service table) |

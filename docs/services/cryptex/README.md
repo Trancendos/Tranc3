@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-CRYPTEX-001` |
 | **Entity** | Cryptex |
 | **Lead AI** | Renik |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

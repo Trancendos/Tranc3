@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-TURINGSHUB-001` |
 | **Entity** | Turing's Hub |
 | **Lead AI** | Samantha Turing |
 | **Status** | 🔧 Partial (per `CLAUDE.md` service table) |

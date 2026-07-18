@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-WARPTUNNEL-001` |
 | **Entity** | The Warp Tunnel |
 | **Lead AI** | Rocking Ricki |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

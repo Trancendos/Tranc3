@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-LIBRARY-001` |
 | **Entity** | The Library |
 | **Lead AI** | Zimik |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

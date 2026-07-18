@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-DEVOCITY-001` |
 | **Entity** | DevOcity |
 | **Lead AI** | Kitty |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

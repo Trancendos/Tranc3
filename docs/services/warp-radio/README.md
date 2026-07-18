@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-WARPRADIO-001` |
 | **Entity** | Warp Radio |
 | **Lead AI** | Rocking Ricki |
 | **Status** | ✅ Live (deployed worker, port 8073) |

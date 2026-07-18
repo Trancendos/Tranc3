@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-STUDIOWORKER-001` |
 | **Entity** | The Studio |
 | **Lead AI** | Voxx |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

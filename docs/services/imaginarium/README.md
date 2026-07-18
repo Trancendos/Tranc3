@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-IMAGINARIUM-001` |
 | **Entity** | Imaginarium |
 | **Lead AI** | Voxx |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

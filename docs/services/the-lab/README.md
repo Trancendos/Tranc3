@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-LAB-001` |
 | **Entity** | The Lab |
 | **Lead AI** | The Dr. & Slime |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

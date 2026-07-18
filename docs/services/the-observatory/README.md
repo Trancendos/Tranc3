@@ -3,7 +3,7 @@
 > Code-grounded Doc Pack per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 > Claims cite `src/observability/`.
 
-**Service:** The Observatory · **Slug:** `the-observatory` · **Lead AI:** Norman Hawkins (AID-OBS-01, Tier 3) · **Prime:** Cornelius MacIntyre (Tier 2)
+**Service:** The Observatory · **Slug:** `the-observatory` · **Lead AI:** Norman Hawkins (AID-OBS-01, Tier 3) · **Prime:** Cornelius MacIntyre (Tier 2) · **ServiceID (CMDB):** `SRV-OBS-001`
 **Canonical status:** ✅ Self-hosted → **Live** tier (status per `CLAUDE.md`; identity/PID-OBS per `PLATFORM_ENTITIES.md`)
 **Code root:** `src/observability/` · **Worker:** `monitoring` (port 8007) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `70fec6b`
