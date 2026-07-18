@@ -49,7 +49,18 @@ if __name__ == "__main__":
     # generation against a table that may already have been wiped.
     _write_generation_token(generation_path, "REBUILDING")
 
-    stats = load_all(db_path)
+    # scripts/sync_health_aggregator.py's staleness check needs a liveness
+    # signal that updates *during* the rebuild, not just at its start and
+    # end — SQLite doesn't touch db_path's own mtime for the uncommitted
+    # inserts load_all() performs along the way (only at the final
+    # commit()), so relying on the db file's mtime alone has a real blind
+    # spot for the whole load phase on a rebuild slow enough to matter.
+    # Re-writing the same "REBUILDING" sentinel on each checkpoint keeps
+    # its mtime current throughout, independent of SQLite's commit timing.
+    def _heartbeat(_checkpoint: str) -> None:
+        _write_generation_token(generation_path, "REBUILDING")
+
+    stats = load_all(db_path, on_progress=_heartbeat)
 
     _write_generation_token(generation_path, uuid.uuid4().hex)
 
