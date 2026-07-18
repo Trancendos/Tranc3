@@ -115,7 +115,7 @@ services:
   # ── Prometheus — Metrics Collection ──────────────────────────────────
   # Replaces: Cloudflare Analytics, CF Worker Analytics
   prometheus:
-    image: prom/prometheus:v2.50.1@sha256:bc1794e85c9e00293351b967efa267ce6af1c824ac875a9d0c7ac84700a8b53e
+    image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
     container_name: tranc3-prometheus
     <<: *common
     ports:
