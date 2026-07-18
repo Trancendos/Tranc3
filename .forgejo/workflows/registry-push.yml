@@ -46,7 +46,7 @@ jobs:
             context: workers/infinity-auth
 
     steps:
-      - uses: https://code.forgejo.org/actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - uses: https://code.forgejo.org/actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Set up Docker Buildx
         uses: https://code.forgejo.org/docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
