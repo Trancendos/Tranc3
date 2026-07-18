@@ -1,6 +1,6 @@
 # EA / CMDB Workbook
 
-An 18-file CSV configuration-management-database (CMDB) layer describing Trancendos's
+A 19-file CSV configuration-management-database (CMDB) layer describing Trancendos's
 operational estate: business services → technical services → applications → APIs →
 deployments, down through environments, hosting, servers, databases, storage, DNS,
 load balancers, firewalls, dependencies, vulnerability findings, and configuration
@@ -111,6 +111,7 @@ operationally usable:
 | 16 | `16_vulnerability_scans.csv` | Vulnerability findings, CVE/CVSS, remediation status |
 | 17 | `17_configuration_baseline.csv` | Config drift vs. hardening baseline |
 | 18 | `18_cost_and_revenue_review.csv` | Zero-cost verification status and candidate monetization ideas per service, per `docs/governance/COST-AND-REVENUE-GOVERNANCE.md` |
+| 19 | `19_access_control_review.csv` | Access-control mechanism per service (RBAC/ABAC, JWT-only, INTERNAL_SECRET-only, or none) and data-classification cross-reference, per `docs/governance/ACCESS-CONTROL-GOVERNANCE.md` |
 
 File 04 (a duplicate reference copy of File 01 in the source spec) is omitted here as
 redundant.

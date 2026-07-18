@@ -154,6 +154,26 @@ def workers_missing_from_ea_workbook(worker_names):
     return [name for name in worker_names if name not in blob]
 
 
+def load_access_control_review():
+    """Real rows from docs/architecture/ea-workbook/19_access_control_review.csv
+    — see docs/governance/ACCESS-CONTROL-GOVERNANCE.md for the policy this
+    data feeds. Literal copy, same convention as load_ea_workbook_services()."""
+    ea_dir = os.path.join(REPO_ROOT, "docs", "architecture", "ea-workbook")
+    with open(os.path.join(ea_dir, "19_access_control_review.csv"), newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    return [
+        [
+            r["ServiceID"],
+            r["AuthMechanism"],
+            r["DataClassification"],
+            r["DifferentiatesUserAIAgentBot"] == "TRUE",
+            r["RecommendedAction"],
+            r["Notes"],
+        ]
+        for r in rows
+    ]
+
+
 wb = Workbook()
 
 HEADER_FILL = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
@@ -1362,6 +1382,47 @@ for i, (label, formula) in enumerate(eaw_summary_stats, start=eaw_summary_row + 
     eaw.cell(row=i, column=2, value=formula)
 
 # ---------------------------------------------------------------------------
+# Access Control Review — per-service auth mechanism, from
+# 19_access_control_review.csv. See docs/governance/ACCESS-CONTROL-GOVERNANCE.md.
+# ---------------------------------------------------------------------------
+acr = wb.create_sheet("Access Control Review")
+acr["A1"] = "Access Control Review — mirrored from 19_access_control_review.csv"
+acr["A1"].font = Font(bold=True, size=12)
+acr["A2"] = (
+    "Real, code-checked per-service auth classification (RBAC/ABAC, JWT-only, INTERNAL_SECRET-only, "
+    "or none), cross-referenced against DataClassification from 02_service_inventory.csv. Only the "
+    "23 services with a distinct signal are itemised here — see "
+    "docs/governance/ACCESS-CONTROL-GOVERNANCE.md section 2 for the full 85-service breakdown "
+    "including the 62-service INTERNAL_SECRET-only baseline tier not itemised per-row yet."
+)
+acr["A2"].alignment = WRAP
+acr.merge_cells("A2:F2")
+acr.row_dimensions[2].height = 55
+
+acr_header_row = 4
+acr_header = ["ServiceID", "AuthMechanism", "DataClassification", "DifferentiatesUserAIAgentBot", "RecommendedAction", "Notes"]
+acr_rows = load_access_control_review()
+write_rows(acr, acr_header, acr_rows, widths=[18, 16, 16, 14, 40, 90], start_row=acr_header_row)
+
+acr_summary_row = acr_header_row + len(acr_rows) + 3
+acr_last = acr_header_row + len(acr_rows)
+acr.cell(row=acr_summary_row, column=1, value="Summary").font = Font(bold=True)
+acr_summary_stats = [
+    ("Services with a distinct auth signal reviewed", f"=COUNTA(A{acr_header_row + 1}:A{acr_last})"),
+    ("RBAC/ABAC (full tier-aware access control)", f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"RBAC/ABAC")'),
+    ("JWT-only (no role/attribute differentiation)", f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"JWT-only")'),
+    ("No auth mechanism detected", f'=COUNTIF(B{acr_header_row + 1}:B{acr_last},"None detected")'),
+    (
+        "No auth AND DC-003/DC-004 (Confidential/Restricted) — urgent",
+        f'=SUMPRODUCT((B{acr_header_row + 1}:B{acr_last}="None detected")*'
+        f'((C{acr_header_row + 1}:C{acr_last}="DC-003")+(C{acr_header_row + 1}:C{acr_last}="DC-004")))',
+    ),
+]
+for i, (label, formula) in enumerate(acr_summary_stats, start=acr_summary_row + 1):
+    acr.cell(row=i, column=1, value=label)
+    acr.cell(row=i, column=2, value=formula)
+
+# ---------------------------------------------------------------------------
 # All Workers (Broad Scan) — every workers/* directory, structurally scanned
 # ---------------------------------------------------------------------------
 scan = wb.create_sheet("All Workers (Broad Scan)")
@@ -1482,6 +1543,11 @@ checks = [
         f'=COUNTIF(\'EA Workbook Services\'!C{eaw_header_row + 1}:C{eaw_last},"Unmapped")',
         0,
     ),
+    (
+        "Services with NO auth mechanism AND Confidential/Restricted data (see Access Control Review — urgent, see docs/governance/ACCESS-CONTROL-GOVERNANCE.md)",
+        f"='Access Control Review'!B{acr_summary_row + 5}",
+        0,
+    ),
 ]
 for i, (check, formula, target) in enumerate(checks, start=gov_header_row + 1):
     gov.cell(row=i, column=1, value=check).alignment = WRAP
@@ -1503,6 +1569,7 @@ order = [
     "Deprecations",
     "Executive Dashboard",
     "EA Workbook Services",
+    "Access Control Review",
     "All Workers (Broad Scan)",
     "Improvement Roadmap",
     "Governance Checks",
