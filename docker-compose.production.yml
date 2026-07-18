@@ -352,7 +352,7 @@ services:
   # Receives OTLP spans from workers via OpenTelemetry exporter.
   # Integrates with existing Grafana (auto-datasource provisioned).
   tempo:
-    image: grafana/tempo:2.3.0@sha256:c07b89ab1c729c460e8e80f57d46fbfdd3e67573d0d6c479c766b3cab8a3afc5
+    image: grafana/tempo:3.0.2@sha256:cda87c212d8c584dc0b89e337e7ed648a5100feb657e5d528480ee4fa03dbbe3
     container_name: tranc3-tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
