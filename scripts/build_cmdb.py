@@ -32,9 +32,15 @@ if __name__ == "__main__":
     # collide with the *next* real generation and silently disable rebuild
     # detection, permanently losing a backfill window with no visible error.
     generation_path = db_path + ".generation"
-    tmp_generation_path = generation_path + ".tmp"
+    generation_token = uuid.uuid4().hex
+    # Unique per invocation (not a fixed ".tmp" suffix) — two overlapping
+    # rebuilds sharing one temp path could have the second's write clobber
+    # the first's temp file out from under it, or delete-then-replace race
+    # so one process's os.replace raises FileNotFoundError after it already
+    # rebuilt the db, leaving that rebuild's generation token never written.
+    tmp_generation_path = f"{generation_path}.{generation_token}.tmp"
     with open(tmp_generation_path, "w") as f:
-        f.write(uuid.uuid4().hex)
+        f.write(generation_token)
     os.replace(tmp_generation_path, generation_path)
 
     print(f"Built {db_path}")
