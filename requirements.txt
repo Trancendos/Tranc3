@@ -156,7 +156,7 @@ pyyaml==6.0.2
 # apscheduler: Cron/interval/date scheduling — drives src/master/master_worker.py
 apscheduler==3.10.4
 # watchdog: Filesystem events — hot-reload YAML task files without restart
-watchdog==4.0.0
+watchdog==6.0.0
 
 # === Quantum Computing (Think Tank) ===
 # qiskit 2.x + qiskit-aer: quantum circuit simulation for Think Tank features.
