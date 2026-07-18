@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-CRON-001` |
 | **Entity** | ChronosSphere / ArcStream |
 | **Lead AI** | Chronos |
 | **Status** | ✅ Live (deployed worker, port 8021) |

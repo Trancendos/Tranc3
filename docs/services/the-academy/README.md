@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-ACADEMY-001` |
 | **Entity** | The Academy |
 | **Lead AI** | Shimshi |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-RESONATE-001` |
 | **Entity** | Resonate |
 | **Lead AI** | Magdalena |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-HIVE-001` |
 | **Entity** | The HIVE |
 | **Lead AI** | The Queen |
 | **Status** | ✅ Deployed (per `CLAUDE.md` service table) — but no source code in this repo |

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-TAIMRA-001` |
 | **Entity** | tAimra |
 | **Lead AI** | tAImra |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

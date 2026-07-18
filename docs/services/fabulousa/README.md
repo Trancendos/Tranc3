@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-FABULOUSA-001` |
 | **Entity** | Fabulousa |
 | **Lead AI** | Baron Von Hilton |
 | **Status** | ✅ Live (deployed worker, port 8048) |

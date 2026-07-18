@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-ICEBOX-001` |
 | **Entity** | The Ice Box |
 | **Lead AI** | Neonach |
 | **Status** | ✅ Live (deployed worker, port 8046) |

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-WS-001` |
 | **Entity** | The Nexus (`PID-NXS`) |
 | **Lead AI** | Nexus-Prime (`AID-NXS-01`); Prime: Cornelius MacIntyre |
 | **Status** | 🔧 Self-hosted (per `CLAUDE.md` service table) |

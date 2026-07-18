@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-VRAR3D-001` |
 | **Entity** | VRAR3D |
 | **Lead AI** | Entari |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

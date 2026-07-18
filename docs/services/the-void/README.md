@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-VOID-001` |
 | **Entity** | The Void (`PID-VOI`) |
 | **Lead AI** | Prometheus (`AID-VOI-01`); Prime: The Guardian (Marcus Magnolia) |
 | **Status** | 🔧 Migrating (per `CLAUDE.md` service table) — CF Worker → self-hosted |

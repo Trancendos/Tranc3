@@ -4,7 +4,7 @@
 > is grounded in code under `src/mcp/`. Governed by
 > `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 
-**Service:** The Spark · **Slug:** `the-spark` · **Lead AI:** Imfy (AID-SPK-01, Tier 3) · **Prime:** Norman Hawkins (Tier 2)
+**Service:** The Spark · **Slug:** `the-spark` · **Lead AI:** Imfy (AID-SPK-01, Tier 3) · **Prime:** Norman Hawkins (Tier 2) · **ServiceID (CMDB):** `SRV-SPARK-001`
 **Canonical status:** ✅ In repo → **Live** tier (status per `CLAUDE.md`; identity/PID-SPK per `PLATFORM_ENTITIES.md`)
 **Code root:** `src/mcp/` · **Routes prefix:** `/mcp` · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `60b3b18`

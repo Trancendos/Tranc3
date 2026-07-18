@@ -19,11 +19,14 @@ from src.cmdb.models import (
     CostReview,
     Deployment,
     Service,
+    ServiceDocPack,
     build_engine,
 )
+from src.cmdb.service_docpack_map import DOCPACK_TO_SERVICE_ID
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EA_DIR = os.path.join(REPO_ROOT, "docs", "architecture", "ea-workbook")
+SERVICES_DOC_DIR = os.path.join(REPO_ROOT, "docs", "services")
 
 
 def _bool(value: str) -> bool | None:
@@ -229,6 +232,42 @@ def load_access_control_reviews(session: Session) -> int:
     return n
 
 
+_DOCPACK_SECTION_MARKERS = {
+    "has_ddd": "Detailed Design Document (DDD)",
+    "has_tasd": "Technical Architecture Solutions Design (TASD)",
+    "has_raci": "RACI Matrix",
+    "has_gov": "Service Governance Charter (GOV)",
+}
+
+
+def load_service_doc_packs(session: Session) -> int:
+    """Loads docs/services/<slug>/README.md doc-packs, for the subset with a
+    confident CMDB ServiceID match (see service_docpack_map.py). Slugs with
+    no README.md are skipped, not errored — the mapping module is hand-built
+    against a snapshot of docs/services/ and shouldn't hard-fail a full CMDB
+    rebuild if a doc-pack is later renamed or removed."""
+    known_services = {sid for (sid,) in session.query(Service.service_id).all()}
+    n = 0
+    for slug, service_id in DOCPACK_TO_SERVICE_ID.items():
+        if service_id not in known_services:
+            continue
+        readme_path = os.path.join(SERVICES_DOC_DIR, slug, "README.md")
+        if not os.path.exists(readme_path):
+            continue
+        with open(readme_path, encoding="utf-8") as f:
+            text = f.read()
+        session.add(
+            ServiceDocPack(
+                docpack_slug=slug,
+                doc_path=os.path.relpath(readme_path, REPO_ROOT),
+                service_id=service_id,
+                **{key: marker in text for key, marker in _DOCPACK_SECTION_MARKERS.items()},
+            )
+        )
+        n += 1
+    return n
+
+
 def load_all(db_path: str) -> dict:
     engine = build_engine(db_path)
     Base.metadata.drop_all(engine)
@@ -243,6 +282,7 @@ def load_all(db_path: str) -> dict:
         n_deployments = load_deployments(session)
         n_cost = load_cost_reviews(session)
         n_access = load_access_control_reviews(session)
+        n_docpacks = load_service_doc_packs(session)
         session.commit()
     finally:
         session.close()
@@ -253,4 +293,5 @@ def load_all(db_path: str) -> dict:
         "deployments": n_deployments,
         "cost_reviews": n_cost,
         "access_control_reviews": n_access,
+        "service_doc_packs": n_docpacks,
     }

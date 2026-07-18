@@ -3,7 +3,7 @@
 > Code-grounded Doc Pack per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 > Claims cite `workers/infinity-auth/`.
 
-**Service:** Infinity · **Slug:** `infinity` · **Lead AI:** The Guardian (Anchor: Orb of Orisis) (AID-INF-01, Tier 3) · **Prime:** Cornelius MacIntyre (Tier 2)
+**Service:** Infinity · **Slug:** `infinity` · **Lead AI:** The Guardian (Anchor: Orb of Orisis) (AID-INF-01, Tier 3) · **Prime:** Cornelius MacIntyre (Tier 2) · **ServiceID (CMDB):** `SRV-INF-001`
 **Canonical status:** ✅ Self-hosted → **Live** tier (status per `CLAUDE.md`; identity/PID-INF per `PLATFORM_ENTITIES.md`)
 **Code root:** `workers/infinity-auth/` · **Worker:** `infinity-auth` (port 8005) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `70fec6b`

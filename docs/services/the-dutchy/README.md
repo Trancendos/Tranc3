@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-DUTCHY-001` |
 | **Entity** | The Dutchy |
 | **Lead AI** | Predictive lore |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

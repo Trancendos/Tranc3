@@ -8,8 +8,10 @@
 
 **Code:** `src/observability/proactive_health.py` (`ProactiveHealthMonitor`), `self_healer.py`
 (`SelfHealer`), `src/errors/error_catalog.py` (`ErrorCode`), `src/event_bus/`, `src/cmdb/` (new —
-`models.py`, `loader.py`), `scripts/build_cmdb.py`.
-**Owner:** The Observatory (Norman Hawkins) · **Version:** 1.0.0 · **Created:** 2026-07-18
+`models.py`, `loader.py`, `service_docpack_map.py`), `scripts/build_cmdb.py`,
+`scripts/link_service_docpacks.py`.
+**Owner:** The Observatory (Norman Hawkins) · **Version:** 1.1.0 · **Created:** 2026-07-18 ·
+**Updated:** 2026-07-18 (ServiceDocPack table + sample_from_cmdb added, still no live data)
 
 ---
 
@@ -53,6 +55,17 @@ something to detect trends in" needs a destination before it needs an algorithm,
 destination, modelled on `ProactiveHealthMonitor`'s own `HealthSample` shape so wiring it in later
 is a straight mapping, not a redesign.
 
+A seventh table, **`ServiceDocPack`**, links the 43 per-service governance doc-packs under
+`docs/services/*/README.md` (each containing numbered DDD/TASD/RACI/GOV sections per
+`docs/framework/SERVICE-DOC-PACK-TEMPLATE.md`) to real CMDB `ServiceID`s. Only 34 of the 43 have an
+unambiguous match — see `src/cmdb/service_docpack_map.py`'s `UNMAPPED_DOCPACKS` for the other 9 and
+why each was left out rather than guessed (ambiguous owner shared across multiple CMDB rows, or no
+matching row at all). `scripts/link_service_docpacks.py` inserted a `ServiceID (CMDB)` field into
+each of the 34 matched READMEs so the cross-reference is visible in the doc itself, not just in the
+database. Records which governance sections are actually present per doc-pack (`has_ddd`,
+`has_tasd`, `has_raci`, `has_gov`) so "which services have a RACI matrix on file" is a SQL query, not
+a 43-file grep.
+
 ## 3. What this does NOT do yet — named explicitly, not glossed over
 
 - **No live data flows into `HealthObservation`.** Nothing polls the 92 services and writes health
@@ -73,14 +86,23 @@ is a straight mapping, not a redesign.
   materially higher-risk category than documentation or dead-code fixes — any such automation needs
   explicit scope, approval gates, and rollback design before being built, not just wiring.
 
-## 4. Proposed next steps, in order (none done yet — this is a plan, not a status report)
+## 4. Proposed next steps, in order
 
 1. Wire `health-aggregator` (or a new adapter) to write one `HealthObservation` row per check into
    `data/cmdb.db` (or a shared Postgres instance if this needs to survive container restarts at
-   scale — SQLite is fine for now, matching the zero-cost architecture).
+   scale — SQLite is fine for now, matching the zero-cost architecture). **Not done on this branch**
+   — tracked separately (PR #223, blocked on an external CI check as of this writing).
 2. Once real observations accumulate (days, not minutes), point `ProactiveHealthMonitor`'s existing
    EWMA/trend logic at that table instead of its own per-process memory, so the trend detection that
-   already exists gets real, cross-restart data to work with.
+   already exists gets real, cross-restart data to work with. **The code-level capability now
+   exists**: `ProactiveHealthMonitor.sample_from_cmdb(cmdb_db_path)` replays `HealthObservation` rows
+   through the *same* `_update_ewma`/`_detect_trend`/`_raise_alert` machinery `check_all()` uses for
+   live entities, keyed by `service_id`. Unit-tested against synthetic data
+   (`tests/test_proactive_health_cmdb.py` — empty table, missing db, steady-healthy,
+   declining-to-critical, multi-service isolation, `NULL`-score exclusion). This does **not** mean
+   trend detection is live — `HealthObservation` still has zero rows in any real deployment (step 1
+   is still the actual blocker), so calling this against a real `data/cmdb.db` today correctly
+   returns no alerts, not a false trend.
 3. Only after (1) and (2) have run for long enough to have real signal: revisit whether genuine
    predictive/probability modelling is warranted, and what human review gate any automated action
    based on it should have — this is a product decision, not a technical one, and not this
@@ -92,6 +114,9 @@ is a straight mapping, not a redesign.
 ## 5. Open items
 
 - `HealthObservation` has zero rows — step 1 above is the actual unblocking work.
+- `ServiceDocPack` covers 34 of 43 doc-packs — the other 9 need a human to resolve the ambiguity
+  documented in `service_docpack_map.UNMAPPED_DOCPACKS` (either the CMDB needs a new Service row, or
+  an existing ambiguous Owner match needs a human tie-breaker) rather than an automated guess.
 - `ErrorCode` usage coverage across the 92 services was not audited — unknown how many services
   actually raise through the catalogue vs. ad-hoc error handling.
 - The five security-scan CI workflows were not individually reviewed for correctness this pass.

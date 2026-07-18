@@ -308,3 +308,93 @@ class ProactiveHealthMonitor:
                 alert.acknowledged = True
                 return True
         return False
+
+    # ------------------------------------------------------------------
+    # CMDB-backed sampling
+    # ------------------------------------------------------------------
+    #
+    # register()/check_all() above assume a live in-process entity object
+    # (.dna.aid, .status()) — that only covers this process's own
+    # personalities, not the ~90 external CMDB Service rows backed by
+    # separate deployed workers. This is the other data source the trend
+    # logic (EWMA + 3-sample degradation detection) can run against: real
+    # HealthObservation rows written by src/cmdb/health_sync.py from
+    # health-aggregator's polls, replayed through the *same* _update_ewma /
+    # _detect_trend / _raise_alert machinery above by ServiceID instead of
+    # entity_id — no separate scoring algorithm, no duplicated thresholds.
+    #
+    # Per docs/governance/OBSERVABILITY-AND-AUTOMATION-GOVERNANCE.md's own
+    # explicit next-steps ordering: this method makes the *capability* real
+    # and testable against synthetic data (see
+    # tests/test_proactive_health_cmdb.py), but HealthObservation has zero
+    # rows in any live deployment as of this writing — calling this against
+    # a real data/cmdb.db today will correctly report "no observations",
+    # not a false trend. Do not treat its output as validated predictive
+    # signal until health-aggregator's sync has actually run against a live
+    # instance for long enough to accumulate real history (days, not
+    # minutes) — that accumulation, not this method, is the remaining gap.
+
+    def sample_from_cmdb(self, cmdb_db_path: str) -> list[ProactiveAlert]:
+        """Replay HealthObservation rows (ordered by observed_at) through the
+        existing EWMA/trend-detection machinery, one full replay per
+        service_id. Returns newly-raised alerts, same as check_all(). Safe
+        to call repeatedly — each call replays full history per service
+        from that service's EWMA baseline (1.0), it does not resume from a
+        prior call's state, so calling it twice in a row does not double-
+        count trends within a single history."""
+        import sqlite3
+
+        alerts: list[ProactiveAlert] = []
+        if not Path(cmdb_db_path).exists():
+            logger.warning("sample_from_cmdb: %s does not exist", cmdb_db_path)
+            return alerts
+
+        conn = sqlite3.connect(cmdb_db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                "SELECT service_id, health_score, error_count, observed_at "
+                "FROM health_observations "
+                "WHERE health_score IS NOT NULL AND service_id IS NOT NULL "
+                "ORDER BY service_id, observed_at ASC"
+            ).fetchall()
+        finally:
+            conn.close()
+
+        by_service: dict[str, list[sqlite3.Row]] = {}
+        for row in rows:
+            by_service.setdefault(row["service_id"], []).append(row)
+
+        for service_id, observations in by_service.items():
+            self._ewma[service_id] = 1.0
+            self._scores[service_id] = []
+            for obs in observations:
+                ewma = self._update_ewma(service_id, obs["health_score"])
+                trending_down = self._detect_trend(service_id, obs["health_score"])
+                context = {
+                    "ewma": ewma,
+                    "raw": obs["health_score"],
+                    "observed_at": obs["observed_at"],
+                }
+                if ewma < self._CRITICAL_THRESHOLD:
+                    alerts.append(
+                        self._raise_alert(
+                            service_id, "critical", f"Health critical: EWMA={ewma:.2f}", context
+                        )
+                    )
+                elif ewma < self._WARNING_THRESHOLD:
+                    alerts.append(
+                        self._raise_alert(
+                            service_id, "warning", f"Health degraded: EWMA={ewma:.2f}", context
+                        )
+                    )
+                elif trending_down:
+                    alerts.append(
+                        self._raise_alert(
+                            service_id,
+                            "warning",
+                            f"Declining health trend ({self._TREND_WINDOW} samples)",
+                            {"samples": self._scores[service_id][-self._TREND_WINDOW :]},
+                        )
+                    )
+        return alerts

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-TATEKING-001` |
 | **Entity** | TateKing |
 | **Lead AI** | Benji Tate & Sam King |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

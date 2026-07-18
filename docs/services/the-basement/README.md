@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-BASEMENT-001` |
 | **Entity** | The Basement |
 | **Lead AI** | Gary Glowman (Glow-Worm) |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

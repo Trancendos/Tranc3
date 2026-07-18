@@ -217,6 +217,30 @@ class HealthObservation(Base):
     service = relationship("Service", back_populates="health_observations")
 
 
+class ServiceDocPack(Base):
+    """NOT sourced from a CSV — one row per docs/services/<slug>/README.md
+    that src/cmdb/service_docpack_map.py confidently maps to a real
+    ServiceID. Records which of the doc-pack template's numbered governance
+    sections (DDD, TASD, RACI, GOV — see docs/framework/
+    SERVICE-DOC-PACK-TEMPLATE.md) are actually present in that file, so a SQL
+    query can answer "which services have a RACI matrix on file" instead of
+    grepping 43 files by hand. Only the doc-pack -> ServiceID link is
+    represented here; the 9 doc-packs with no unambiguous ServiceID match
+    (see service_docpack_map.UNMAPPED_DOCPACKS) have no row."""
+
+    __tablename__ = "service_doc_packs"
+
+    docpack_slug = Column(String(64), primary_key=True)  # e.g. "the-spark"
+    doc_path = Column(String(128))  # e.g. "docs/services/the-spark/README.md"
+    has_ddd = Column(Boolean, default=False)
+    has_tasd = Column(Boolean, default=False)
+    has_raci = Column(Boolean, default=False)
+    has_gov = Column(Boolean, default=False)
+
+    service_id = Column(String(32), ForeignKey("services.service_id"), index=True)
+    service = relationship("Service")
+
+
 def build_engine(db_path: str):
     engine = create_engine(f"sqlite:///{db_path}")
     Base.metadata.create_all(engine)

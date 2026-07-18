@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-TRANCEFLOW-001` |
 | **Entity** | TranceFlow |
 | **Lead AI** | Junior Cesar |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

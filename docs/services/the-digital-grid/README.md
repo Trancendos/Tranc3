@@ -3,7 +3,7 @@
 > Code-grounded Doc Pack per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 > Claims cite `src/workflow/`.
 
-**Service:** The Digital Grid · **Slug:** `the-digital-grid` · **Lead AI:** Tyler Towncroft (AID-DGR-01, Tier 3) · **Prime:** The Doctor / Nikolai O'denhim (Tier 2)
+**Service:** The Digital Grid · **Slug:** `the-digital-grid` · **Lead AI:** Tyler Towncroft (AID-DGR-01, Tier 3) · **Prime:** The Doctor / Nikolai O'denhim (Tier 2) · **ServiceID (CMDB):** `SRV-THEGRID-001`
 **Canonical status:** ✅ In repo → **Live** tier (status per `CLAUDE.md`; identity/PID-DGR per `PLATFORM_ENTITIES.md`)
 **Code root:** `src/workflow/` · **Worker:** `the-grid` (port 8010) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `2250aaf`

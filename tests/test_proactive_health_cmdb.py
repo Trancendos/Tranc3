@@ -1,0 +1,112 @@
+"""ProactiveHealthMonitor.sample_from_cmdb: the existing EWMA/trend-detection
+machinery must produce correct alerts when replayed against real CMDB
+HealthObservation rows, not just against live in-process entities."""
+
+from __future__ import annotations
+
+import sqlite3
+
+from src.observability.proactive_health import ProactiveHealthMonitor
+
+
+def _make_cmdb_db(path, rows):
+    """rows: list of (service_id, health_score, observed_at) tuples."""
+    conn = sqlite3.connect(path)
+    conn.execute(
+        "CREATE TABLE health_observations ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, service_id TEXT, "
+        "observed_at TEXT, health_score REAL, status TEXT, "
+        "error_count INTEGER, response_time_ms INTEGER, source TEXT, notes TEXT)"
+    )
+    for i, (service_id, score, observed_at) in enumerate(rows):
+        conn.execute(
+            "INSERT INTO health_observations "
+            "(service_id, observed_at, health_score, status, error_count, source) "
+            "VALUES (?, ?, ?, 'healthy', 0, 'test')",
+            (service_id, observed_at, score),
+        )
+    conn.commit()
+    conn.close()
+
+
+def test_missing_db_returns_no_alerts_not_an_error(tmp_path):
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(tmp_path / "does-not-exist.db"))
+    assert alerts == []
+
+
+def test_empty_health_observations_table_returns_no_alerts(tmp_path):
+    cmdb_path = tmp_path / "cmdb.db"
+    _make_cmdb_db(cmdb_path, [])
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert alerts == []
+
+
+def test_steady_healthy_scores_raise_no_alerts(tmp_path):
+    cmdb_path = tmp_path / "cmdb.db"
+    _make_cmdb_db(
+        cmdb_path,
+        [("SRV-SPARK-001", 1.0, f"2026-07-{d:02d}T00:00:00") for d in range(1, 6)],
+    )
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert alerts == []
+
+
+def test_declining_scores_raise_critical_alert(tmp_path):
+    """EWMA (alpha=0.3) smooths from a 1.0 baseline, so driving it under the
+    0.35 critical threshold needs several consecutive low samples, not just
+    one — matches how check_all()'s own EWMA behaves for a live entity."""
+    cmdb_path = tmp_path / "cmdb.db"
+    _make_cmdb_db(
+        cmdb_path,
+        [("SRV-SPARK-001", 0.02, f"2026-07-{d:02d}T00:00:00") for d in range(1, 7)],
+    )
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert any(a.severity == "critical" for a in alerts)
+    assert all(a.entity_id == "SRV-SPARK-001" for a in alerts)
+
+
+def test_multiple_services_scored_independently(tmp_path):
+    """A critical service's low score must not bleed into another
+    service's EWMA — each service_id gets its own baseline."""
+    cmdb_path = tmp_path / "cmdb.db"
+    _make_cmdb_db(
+        cmdb_path,
+        [("SRV-SPARK-001", 0.02, f"2026-07-{d:02d}T00:00:00") for d in range(1, 7)]
+        + [
+            ("SRV-VOID-001", 1.0, "2026-07-01T00:00:00"),
+            ("SRV-VOID-001", 1.0, "2026-07-02T00:00:00"),
+        ],
+    )
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert any(a.entity_id == "SRV-SPARK-001" and a.severity == "critical" for a in alerts)
+    assert not any(a.entity_id == "SRV-VOID-001" for a in alerts)
+
+
+def test_null_health_score_rows_are_excluded(tmp_path):
+    """health_sync.py writes health_score=None for statuses outside the
+    known vocabulary — those rows must not silently count as a 0.0 score."""
+    cmdb_path = tmp_path / "cmdb.db"
+    conn = sqlite3.connect(cmdb_path)
+    conn.execute(
+        "CREATE TABLE health_observations ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, service_id TEXT, "
+        "observed_at TEXT, health_score REAL, status TEXT, "
+        "error_count INTEGER, response_time_ms INTEGER, source TEXT, notes TEXT)"
+    )
+    conn.execute(
+        "INSERT INTO health_observations "
+        "(service_id, observed_at, health_score, status, error_count, source) "
+        "VALUES ('SRV-SPARK-001', '2026-07-01T00:00:00', NULL, 'unknown', 0, 'test')"
+    )
+    conn.commit()
+    conn.close()
+
+    monitor = ProactiveHealthMonitor(db_path=tmp_path / "alerts.db")
+    alerts = monitor.sample_from_cmdb(str(cmdb_path))
+    assert alerts == []
+    assert "SRV-SPARK-001" not in monitor._ewma

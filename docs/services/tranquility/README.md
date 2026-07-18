@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-TRANQUILITY-001` |
 | **Entity** | Tranquility |
 | **Lead AI** | Savania |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

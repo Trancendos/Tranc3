@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-IMIND-001` |
 | **Entity** | I-Mind |
 | **Lead AI** | Elouise |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-ARTIFACTORY-001` |
 | **Entity** | The Artifactory |
 | **Lead AI** | Lunascene |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

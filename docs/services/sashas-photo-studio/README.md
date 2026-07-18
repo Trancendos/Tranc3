@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-SASHASPHOTO-001` |
 | **Entity** | Sashas Photo Studio |
 | **Lead AI** | Madam Krystal |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |

@@ -2,6 +2,7 @@
 
 | Field | Value |
 |---|---|
+| **ServiceID (CMDB)** | `SRV-CRANBANIA-001` |
 | **Entity** | The Town Hall (`PID-TWH`) |
 | **Lead AI** | Tristuran (`AID-TWH-01`); Prime: Cornelius MacIntyre |
 | **Status** | ✅ Integrated (per `CLAUDE.md` service table) |
