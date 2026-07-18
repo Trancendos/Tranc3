@@ -190,6 +190,7 @@ class MagnaCartaCompliance:
             "framework": "magna_carta_v1",
             "rules_checked": len(rules),
             "mode": self._enforcement.get("mode", "advisory"),
+            "fail_closed": bool(self._enforcement.get("fail_closed_on_violation", False)),
         }
 
         if MAGNA_CARTA_AUDIT:
