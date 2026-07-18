@@ -2,6 +2,7 @@
 # Pydantic-settings based configuration with hot-reload support
 # Replaces the scattered os.getenv() calls across the codebase
 
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from pydantic import ConfigDict, Field, field_validator
@@ -10,6 +11,62 @@ try:
     from pydantic_settings import BaseSettings
 except ImportError:
     from pydantic import BaseSettings  # type: ignore[no-redef]
+
+
+@dataclass
+class ModelConfig:
+    """Architecture hyperparameters for the from-scratch Tranc3Model (src/core/model.py).
+
+    d_head is derived from d_model/n_heads rather than passed explicitly —
+    scripts/train.py and scripts/chat.py only ever set vocab_size plus the
+    d_model/n_layers/n_heads/d_ff quartet from their MODEL_SIZES presets.
+    """
+
+    vocab_size: int = 119547
+    d_model: int = 512
+    n_layers: int = 6
+    n_heads: int = 8
+    d_ff: int = 2048
+    dropout: float = 0.1
+    max_seq_len: int = 1024
+    d_head: int = field(init=False)
+
+    def __post_init__(self) -> None:
+        if self.d_model % self.n_heads != 0:
+            raise ValueError(
+                f"d_model ({self.d_model}) must be divisible by n_heads ({self.n_heads})"
+            )
+        self.d_head = self.d_model // self.n_heads
+
+
+@dataclass
+class InferenceConfig:
+    """Runtime settings for Tranc3Engine (src/inference/engine.py)."""
+
+    device: str = "auto"
+
+
+@dataclass
+class TrainingConfig:
+    """Hyperparameters for Trainer (src/training/trainer.py)."""
+
+    data_dir: str = "./data/conversations"
+    checkpoint_dir: str = "./models"
+    run_name: str = "tranc3"
+    device: str = "auto"
+    batch_size: int = 16
+    max_steps: int = 50_000
+    grad_accum_steps: int = 1
+    grad_clip: float = 1.0
+    learning_rate: float = 3e-4
+    beta1: float = 0.9
+    beta2: float = 0.95
+    weight_decay: float = 0.1
+    warmup_steps: int = 1000
+    mixed_precision: bool = True
+    log_interval: int = 50
+    eval_every: int = 500
+    save_every: int = 1000
 
 
 class Tranc3Config(BaseSettings):

@@ -247,6 +247,22 @@ class SystemMetric(Base):
 
 
 # ============================================================
+# USER SETTINGS (encrypted, per-user API keys / secrets)
+# ============================================================
+class UserSetting(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
+    username = Column(String(150), nullable=False)
+    key = Column(String(100), nullable=False)
+    encrypted_value = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (Index("ix_user_settings_username_key", "username", "key", unique=True),)
+
+
+# ============================================================
 # DATABASE MANAGER
 # ============================================================
 class DatabaseManager:
