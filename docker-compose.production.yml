@@ -2672,7 +2672,7 @@ services:
       - "traefik.http.services.misp.loadbalancer.server.port=80"
 
   misp-db:
-    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+    image: mysql:9.7@sha256:8fdf311514c91fa5014e93e98e19d7f5d9eb162a462c13100c956dacc278ee21
     container_name: trancendos-misp-db
     restart: unless-stopped
     environment:
