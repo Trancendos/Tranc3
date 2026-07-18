@@ -57,7 +57,7 @@ services:
   # ── Traefik — Reverse Proxy & Load Balancer ──────────────────────────
   # Replaces: Cloudflare routing, CF Load Balancing
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.0@sha256:a208c74fd80a566d4ea376053bff73d31616d7af3f1465a7747b8b89ee34d97e
     container_name: tranc3-traefik
     <<: *common
     command:
@@ -95,7 +95,7 @@ services:
   # ── Vault — Secrets Management ───────────────────────────────────────
   # Replaces: Cloudflare environment variables, CF Secrets
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.15@sha256:0450896c43b13879b19442b204ce29dd19b5a10fce43d5cf38af17da20f56f4d
     container_name: tranc3-vault
     <<: *common
     command: server -config=/vault/config/vault.hcl
@@ -136,7 +136,7 @@ services:
 
   # ── Alertmanager — Alert Routing & Notifications ──────────────────────
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:v0.27.0@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5
     container_name: tranc3-alertmanager
     <<: *common
     ports:
@@ -156,7 +156,7 @@ services:
 
   # ── OpenTelemetry Collector — Unified Telemetry Pipeline ──────────────
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.96.0
+    image: otel/opentelemetry-collector-contrib:0.96.0@sha256:7ef2a2ff46b9e432321fdd63df104bfeedaf7b4e276950f42c634d0f23521fc4
     container_name: tranc3-otel-collector
     <<: *common
     ports:
@@ -233,7 +233,7 @@ services:
   # Scrapes same targets as Prometheus; Grafana talks to both.
   # Query API: http://victoriametrics:8428  (Prometheus-compatible PromQL)
   victoriametrics:
-    image: victoriametrics/victoria-metrics:latest
+    image: victoriametrics/victoria-metrics:latest@sha256:40ea45a6d14b6ad9f2f1fff597309d456ff9885d77d8d1da5fd559b251db9987
     container_name: tranc3-victoriametrics
     <<: *common
     command:
@@ -256,7 +256,7 @@ services:
   # Drop-in Redis replacement (same redis-py client, same port 6379).
   # BSD-3 licence; community fork of Redis 7.2 under Linux Foundation.
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:8-alpine@sha256:cfe71288f087704b06be45e270afa7a2abbf820093d6b11a23762081f5ff321d
     container_name: tranc3-valkey
     <<: *common
     command: ["valkey-server", "--appendonly", "yes", "--save", "60", "1"]
@@ -274,7 +274,7 @@ services:
   # Apache 2.0. Prevents Docker Hub rate-limiting for the platform.
   # All workers can pull images from http://zot:5000 inside the network.
   zot:
-    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    image: ghcr.io/project-zot/zot-linux-amd64:latest@sha256:34f18f783037f967dba10df02f9d4086c4d626f5643ef9f5e51e4a4547280a0b
     container_name: tranc3-zot
     <<: *common
     ports:
@@ -291,7 +291,7 @@ services:
   # ── IPFS — Distributed Storage ───────────────────────────────────────
   # Replaces: Cloudflare R2, CF IPFS Gateway
   ipfs:
-    image: ipfs/kubo:v0.28.0
+    image: ipfs/kubo:v0.28.0@sha256:1f6e4f870bc3d5b90563a9d29fc399c53a16ef9cf6580e1491b7914a6c8e510e
     container_name: tranc3-ipfs
     <<: *common
     ports:
@@ -309,7 +309,7 @@ services:
   # com.centurylinklabs.watchtower.enable=true
   # Sends Slack/webhook notification on update if WATCHTOWER_NOTIFICATION_URL set.
   watchtower:
-    image: containrrr/watchtower:1.7.1
+    image: containrrr/watchtower:1.7.1@sha256:6dd50763bbd632a83cb154d5451700530d1e44200b268a4e9488fefdfcf2b038
     container_name: tranc3-watchtower
     restart: unless-stopped
     volumes:
@@ -328,7 +328,7 @@ services:
   # JetStream enabled for durable queues (replaces SQLite queue for >1k msg/s).
   # 15MB binary, 1M+ msg/s throughput.
   nats:
-    image: nats:2.10-alpine
+    image: nats:2.10-alpine@sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927
     container_name: tranc3-nats
     restart: unless-stopped
     command: ["-js", "-sd", "/data", "--http_port", "8222"]
@@ -352,7 +352,7 @@ services:
   # Receives OTLP spans from workers via OpenTelemetry exporter.
   # Integrates with existing Grafana (auto-datasource provisioned).
   tempo:
-    image: grafana/tempo:2.3.0
+    image: grafana/tempo:2.3.0@sha256:c07b89ab1c729c460e8e80f57d46fbfdd3e67573d0d6c479c766b3cab8a3afc5
     container_name: tranc3-tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
@@ -1003,7 +1003,7 @@ services:
   # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
   # API-compatible with hvac Python client used by vault-service/openbao_client.py
   openbao:
-    image: openbao/openbao:latest
+    image: openbao/openbao:latest@sha256:6150c4a6b62067db6141c8da7a6a6b5763f4f47c315343d0c848b40fecdfd452
     container_name: trancendos-openbao
     environment:
       BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:?required}"
@@ -1023,7 +1023,7 @@ services:
   # Stateless, no DB; routes /api/v1/* to backend workers with JWT + rate limiting.
   # KrakenD API gateway — main API on :8080 (internal), :8099 (host), metrics on :8090
   krakend:
-    image: devopsfaith/krakend:latest
+    image: devopsfaith/krakend:latest@sha256:f8bdaa8a1a43e157cdebadc8050f4bc8bf1432c29572968e0421c800ba590116
     container_name: trancendos-krakend
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -1093,7 +1093,7 @@ services:
   # Unlimited spans self-hosted; integrates with The Observatory.
   # SDK env vars: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=http://langfuse:3000
   langfuse:
-    image: langfuse/langfuse:latest
+    image: langfuse/langfuse:latest@sha256:f635d308449ea02a182f8d4c156daf5709714badf25fb504e84bb229458204f6
     container_name: trancendos-langfuse
     ports:
       - "3002:3000"
@@ -1116,7 +1116,7 @@ services:
       start_period: 30s
 
   langfuse-db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     container_name: trancendos-langfuse-db
     environment:
       POSTGRES_USER: langfuse
@@ -1277,7 +1277,7 @@ services:
   # Free: self-hosted with unlimited vectors
   # Replaces Pinecone/paid vector services for The Spark RAG-MCP + knowledge search
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:latest@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c
     container_name: trancendos-qdrant
     restart: unless-stopped
     ports:
@@ -1304,7 +1304,7 @@ services:
   # ── Penpot — Open-source design platform (MPL 2.0), Figma alternative ──
   # Fabulousa: Baron Von Hilton — Styling, UX, UI & design center
   penpot-frontend:
-    image: penpotapp/frontend:latest
+    image: penpotapp/frontend:latest@sha256:4725b4698d8d1bd25ee1666e0d900d20da8937fea845c6a088f76cd69293560b
     container_name: trancendos-penpot-frontend
     restart: unless-stopped
     ports:
@@ -1323,7 +1323,7 @@ services:
       traefik.http.routers.penpot.tls.certresolver: "letsencrypt"
 
   penpot-backend:
-    image: penpotapp/backend:latest
+    image: penpotapp/backend:latest@sha256:6c8e3851f3734e98e48d5a4a68e2c64485f6bd67a1ffec809aa9f1847d90a646
     container_name: trancendos-penpot-backend
     restart: unless-stopped
     environment:
@@ -1343,7 +1343,7 @@ services:
       - tranc3-net
 
   penpot-exporter:
-    image: penpotapp/exporter:latest
+    image: penpotapp/exporter:latest@sha256:b370f14927050fb05ac646441b5993d9337dda7eec60d944aa112819c88207bc
     container_name: trancendos-penpot-exporter
     restart: unless-stopped
     environment:
@@ -1352,7 +1352,7 @@ services:
       - tranc3-net
 
   penpot-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: trancendos-penpot-db
     restart: unless-stopped
     environment:
@@ -1367,7 +1367,7 @@ services:
   # ── OWASP Dependency-Track — SBOM vulnerability monitoring (Apache 2.0) ─
   # Consumes CycloneDX SBOMs generated by syft in CI, tracks CVEs continuously
   dependency-track-apiserver:
-    image: dependencytrack/apiserver:latest
+    image: dependencytrack/apiserver:latest@sha256:1ba4f004e1ec4800ec0e0175b0f1cf361a68f6ac3db9274a32d0a47cd4038f51
     container_name: trancendos-dtrack-api
     restart: unless-stopped
     environment:
@@ -1391,7 +1391,7 @@ services:
       start_period: 60s
 
   dependency-track-frontend:
-    image: dependencytrack/frontend:latest
+    image: dependencytrack/frontend:latest@sha256:00560b57a6cfdec3c02a6e02be80fce97029241a9c653e8b83c0b670dff1f3ca
     container_name: trancendos-dtrack-frontend
     restart: unless-stopped
     environment:
@@ -1410,7 +1410,7 @@ services:
 
   # Falco — Runtime security monitoring (Apache 2.0, eBPF-based)
   falco:
-    image: falcosecurity/falco-no-driver:latest
+    image: falcosecurity/falco-no-driver:latest@sha256:ba05dfb209cc1c2e912ce116d230b5f59c4542e7286f05b663c499066d5d6a42
     container_name: trancendos-falco
     restart: unless-stopped
     privileged: true
@@ -1440,7 +1440,7 @@ services:
   # Required env: WOODPECKER_FORGEJO_CLIENT, WOODPECKER_FORGEJO_SECRET,
   #               WOODPECKER_SECRET, WOODPECKER_AGENT_TOKEN
   woodpecker-server:
-    image: woodpeckerci/woodpecker-server:latest
+    image: woodpeckerci/woodpecker-server:latest@sha256:ed8cdc14dad4488d595786373ffbf5c7eea2de9ae183e97fd40308e486cb94a9
     container_name: trancendos-woodpecker-server
     restart: unless-stopped
     ports:
@@ -1467,7 +1467,7 @@ services:
   # ── Woodpecker Agent — CI runner ─────────────────────────────────────
   # Executes pipeline steps inside Docker containers (zero-cost, local).
   woodpecker-agent:
-    image: woodpeckerci/woodpecker-agent:latest
+    image: woodpeckerci/woodpecker-agent:latest@sha256:d95ac8a778881709c05d2ec931577e278447cc4097fd31122955c169d264b7e4
     container_name: trancendos-woodpecker-agent
     restart: unless-stopped
     depends_on:
@@ -1486,7 +1486,7 @@ services:
   # UI: http://localhost:3010  Env-set: http://scheduling.trancendos.com
   # ─────────────────────────────────────────────────────────────────────────
   calcom-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: trancendos-calcom-db
     environment:
       POSTGRES_USER: calcom
@@ -1504,7 +1504,7 @@ services:
       retries: 3
 
   calcom:
-    image: calcom/cal.com:latest
+    image: calcom/cal.com:latest@sha256:ace3bb1219fb7306585ab9f4d94d41af7ee064c343db0498173436bbe857bd49
     container_name: trancendos-calcom
     ports:
       - "3010:3000"
@@ -1535,7 +1535,7 @@ services:
   # UI: http://localhost:3011  Env-set: http://wiki.trancendos.com
   # ─────────────────────────────────────────────────────────────────────────
   outline-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: trancendos-outline-db
     environment:
       POSTGRES_USER: outline
@@ -1553,7 +1553,7 @@ services:
       retries: 3
 
   outline-redis:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:8-alpine@sha256:cfe71288f087704b06be45e270afa7a2abbf820093d6b11a23762081f5ff321d
     container_name: trancendos-outline-redis
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:
@@ -1563,7 +1563,7 @@ services:
     restart: unless-stopped
 
   outline:
-    image: outlinewiki/outline:latest
+    image: outlinewiki/outline:latest@sha256:6744a369271ce3c5a37316e5bfc5311d8d4452eb5ee4ca9560c96c15fd718a39
     container_name: trancendos-outline
     ports:
       - "3011:3000"
@@ -1599,7 +1599,7 @@ services:
   # UI: http://localhost:6875
   # ─────────────────────────────────────────────────────────────────────────
   bookstack-db:
-    image: mariadb:11
+    image: mariadb:11@sha256:efb4959ef2c835cd735dbc388eb9ad6aab0c78dd64febcd51bc17481111890c4
     container_name: trancendos-bookstack-db
     environment:
       MYSQL_ROOT_PASSWORD: "${BOOKSTACK_DB_ROOT_PASSWORD:?required}"
@@ -1618,7 +1618,7 @@ services:
       retries: 3
 
   bookstack:
-    image: lscr.io/linuxserver/bookstack:latest
+    image: lscr.io/linuxserver/bookstack:latest@sha256:13dc508fb46aa7d2b726b6c872e4903892bda68391ac948a5603d3ca60f0937e
     container_name: trancendos-bookstack
     environment:
       PUID: "1000"
@@ -1722,7 +1722,7 @@ services:
       retries: 5
 
   signoz-query-service:
-    image: signoz/query-service:latest
+    image: signoz/query-service:latest@sha256:f65e3eb821a5ce0f30d766de792e83d9ac90cfd953dd5c3742056d2acc444b5c
     container_name: trancendos-signoz-query
     command: ["-config=/root/config/prometheus.yml"]
     environment:
@@ -1742,7 +1742,7 @@ services:
     restart: unless-stopped
 
   signoz-frontend:
-    image: signoz/frontend:latest
+    image: signoz/frontend:latest@sha256:1c1bbb669cec1db31398aafdb8263c848107f78ef838d09659f01aa815362279
     container_name: trancendos-signoz-frontend
     ports:
       - "3301:3301"
@@ -1762,7 +1762,7 @@ services:
 
   # SigNoz OpenTelemetry Collector (receives OTLP from all workers)
   signoz-otel-collector:
-    image: signoz/signoz-otel-collector:latest
+    image: signoz/signoz-otel-collector:latest@sha256:f9bf94d566055d06581f3befbf361cc26d670f31ad00cb31fda2ec380210c5ec
     container_name: trancendos-signoz-otel
     command: ["--config=/etc/otel-collector-config.yaml"]
     environment:
@@ -1787,7 +1787,7 @@ services:
   #            → mistral → huggingface (x8 rotation with hard stops)
   # ══════════════════════════════════════════════════════════════════════════
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest
+    image: ghcr.io/berriai/litellm:main-latest@sha256:4870893763aca143f590bd5685a25219037af027d1d27e97abcb17ac9ec5d09f
     container_name: trancendos-litellm
     command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "4"]
     volumes:
@@ -1832,7 +1832,7 @@ services:
 
   # Ollama — local self-hosted LLM inference (zero-cost, tier 0)
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:latest@sha256:509fdf54e23bd50d87af646cb51c0a7a203d6a83cc4d6695b3b08c5be1c62c0a
     container_name: trancendos-ollama
     volumes:
       - ollama-data:/root/.ollama
@@ -1851,7 +1851,7 @@ services:
   # Default model: meta-llama/Llama-3.2-3B-Instruct (set VLLM_DEFAULT_MODEL to change)
   # Port 8090 — OpenAI-compatible: /v1/chat/completions, /v1/models
   vllm:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:latest@sha256:251eba5cc7c12fed0b75da22a9240e582b1c9e39f6fbc064f86781b963bd814f
     container_name: trancendos-vllm
     command:
       - "--model"
@@ -1916,7 +1916,7 @@ services:
   # Used by: The Library, DocUtari, API Marketplace, The Lab
   # ══════════════════════════════════════════════════════════════════════════
   meilisearch:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:latest@sha256:bdc7d7e7939911c40d88d6bcd01f9c72c81f7293135916d48bce241569f721bd
     container_name: trancendos-meilisearch
     volumes:
       - meilisearch-data:/meili_data
@@ -1977,7 +1977,7 @@ services:
   # Route: s3.trancendos.com (API), s3-console.trancendos.com (console)
   # ══════════════════════════════════════════════════════════════════════════
   minio:
-    image: minio/minio:latest
+    image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     container_name: trancendos-minio
     command: server /data --console-address ":9001"
     volumes:
@@ -2020,7 +2020,7 @@ services:
   # Port 9300 (HTTP), 9443 (HTTPS). Route: sso.trancendos.com
   # ══════════════════════════════════════════════════════════════════════════
   authentik-server:
-    image: ghcr.io/goauthentik/server:latest
+    image: ghcr.io/goauthentik/server:latest@sha256:36233579415aa2e2e52a6b0c45736cb871fe71460bfe0cf95d83f67528fb1182
     container_name: trancendos-authentik-server
     command: server
     volumes:
@@ -2054,7 +2054,7 @@ services:
       traefik.http.services.authentik.loadbalancer.server.port: "9000"
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:latest
+    image: ghcr.io/goauthentik/server:latest@sha256:36233579415aa2e2e52a6b0c45736cb871fe71460bfe0cf95d83f67528fb1182
     container_name: trancendos-authentik-worker
     command: worker
     environment:
@@ -2076,7 +2076,7 @@ services:
     restart: unless-stopped
 
   authentik-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: trancendos-authentik-db
     volumes:
       - authentik-db-data:/var/lib/postgresql/data
@@ -2094,7 +2094,7 @@ services:
       retries: 5
 
   authentik-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: trancendos-authentik-redis
     volumes:
       - authentik-redis-data:/data
@@ -2110,7 +2110,7 @@ services:
   # Route: logs.trancendos.com
   # ══════════════════════════════════════════════════════════════════════════
   dozzle:
-    image: amir20/dozzle:latest
+    image: amir20/dozzle:latest@sha256:d282389858d23858cfe23882f9965d42145f370ac4abc021639efd95c3334336
     container_name: trancendos-dozzle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -2137,7 +2137,7 @@ services:
   # Port 3800. Route: draw.trancendos.com
   # ══════════════════════════════════════════════════════════════════════════
   excalidraw:
-    image: excalidraw/excalidraw:latest
+    image: excalidraw/excalidraw:latest@sha256:f7ee194addd607bf831d2af0f0a34463dd4225e426cf35199ef0b12a803398e9
     container_name: trancendos-excalidraw
     ports:
       - "3800:80"
@@ -2155,7 +2155,7 @@ services:
 # Item 8 — n8n: Workflow node upgrade for The Digital Grid
 # ═══════════════════════════════════════════════════════════════════════════
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:latest@sha256:e0d9593724e36d2584a1686148155e881233b38ae1833101c97c6463c0d36711
     container_name: trancendos-n8n
     restart: unless-stopped
     environment:
@@ -2190,7 +2190,7 @@ services:
 # UI: /prefect  |  API: prefect-server:4200  |  SQLite backend
 # ═══════════════════════════════════════════════════════════════════════════
   prefect-server:
-    image: prefecthq/prefect:3-python3.12
+    image: prefecthq/prefect:3-python3.12@sha256:9fd526c1da3a206ff322087266b01b1d24020331a51b95b768408f078cb315fe
     container_name: trancendos-prefect
     restart: unless-stopped
     command: prefect server start --host 0.0.0.0 --port 4200
@@ -2303,7 +2303,7 @@ services:
 # UI / API: 8060  |  Management API: 8061  |  Traefik: /kestra
 # ═══════════════════════════════════════════════════════════════════════════
   kestra:
-    image: kestra/kestra:latest-full
+    image: kestra/kestra:latest-full@sha256:a105633a94ea55c068476d96223adf1fac17a8116179fd3b7c498253cd399eee
     container_name: trancendos-kestra
     restart: unless-stopped
     command: server standalone --flow-path /flows
@@ -2398,7 +2398,7 @@ services:
 # Item 5 — Paperless-ngx: Document management for DocUtari
 # ═══════════════════════════════════════════════════════════════════════════
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:6c86cad803970ea782683a8e80e7403444c5bf3cf70de63b4d3c8e87500db92f
     container_name: trancendos-paperless
     restart: unless-stopped
     depends_on:
@@ -2431,7 +2431,7 @@ services:
       - "traefik.http.services.paperless.loadbalancer.server.port=8000"
 
   paperless-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: trancendos-paperless-db
     restart: unless-stopped
     environment:
@@ -2444,7 +2444,7 @@ services:
       - tranc3-net
 
   paperless-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: trancendos-paperless-redis
     restart: unless-stopped
     networks:
@@ -2456,7 +2456,7 @@ services:
 # API: trancendos.com/docutari/pdf/api
 # ═══════════════════════════════════════════════════════════════════════════
   stirling-pdf:
-    image: stirlingtools/stirling-pdf:latest
+    image: stirlingtools/stirling-pdf:latest@sha256:7ed4d9681d18e4fbc3aa6a63647c4b5c2bcc4b75841df7c05d7e3d2320f5c9a1
     container_name: trancendos-stirling-pdf
     restart: unless-stopped
     environment:
@@ -2483,7 +2483,7 @@ services:
 # API: internal only, consumed by DocUtari bridge worker
 # ═══════════════════════════════════════════════════════════════════════════
   gotenberg:
-    image: gotenberg/gotenberg:8
+    image: gotenberg/gotenberg:8@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923
     container_name: trancendos-gotenberg
     restart: unless-stopped
     command:
@@ -2500,7 +2500,7 @@ services:
 # API: internal only, consumed by DocUtari bridge worker
 # ═══════════════════════════════════════════════════════════════════════════
   tika:
-    image: apache/tika:latest-full
+    image: apache/tika:latest-full@sha256:d8e6ed96260ad89307a93195a1b856102987a818ac648502f8efbaf313d32470
     container_name: trancendos-tika
     restart: unless-stopped
     ports:
@@ -2538,7 +2538,7 @@ services:
       - "traefik.http.services.openbas.loadbalancer.server.port=8082"
 
   openbas-db:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
     container_name: trancendos-openbas-db
     restart: unless-stopped
     environment:
@@ -2644,7 +2644,7 @@ services:
   # ── MISP — Malware Information Sharing Platform (Cryptex tier 2)
   # Free, self-hosted, open-source. No paid licence required.
   misp:
-    image: ghcr.io/misp/misp-docker/misp-core:latest
+    image: ghcr.io/misp/misp-docker/misp-core:latest@sha256:087e853d0c33eca3405e8e3427d86d404ed646f1f36ed1b9800ad2517beaaa77
     container_name: trancendos-misp
     restart: unless-stopped
     depends_on:
@@ -2672,7 +2672,7 @@ services:
       - "traefik.http.services.misp.loadbalancer.server.port=80"
 
   misp-db:
-    image: mysql:8.0
+    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
     container_name: trancendos-misp-db
     restart: unless-stopped
     environment:
@@ -2686,7 +2686,7 @@ services:
       - tranc3-net
 
   misp-redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: trancendos-misp-redis
     restart: unless-stopped
     volumes:
@@ -2742,7 +2742,7 @@ services:
   # UI: http://trancendos.com/jaeger  OTLP gRPC: 4317 (internal)
   # Badger local storage, 72h retention. Zero cost.
   jaeger:
-    image: jaegertracing/all-in-one:1.55
+    image: jaegertracing/all-in-one:1.55@sha256:f6b5d09073f14f76873d300f565a6691d815e81bea8e07e1dc3ff67e0596dd4e
     container_name: tranc3-jaeger
     restart: unless-stopped
     environment:
@@ -2783,7 +2783,7 @@ services:
   # Exposes Prometheus endpoint at /api/v1/allmetrics for VictoriaMetrics scrape.
   # Dashboard: http://trancendos.com/netdata
   netdata:
-    image: netdata/netdata:latest
+    image: netdata/netdata:latest@sha256:ac44ec899289dffe02b225803c204e95eb426e6439fc5374cc76ce67683cf54b
     container_name: tranc3-netdata
     restart: unless-stopped
     pid: host
@@ -2830,7 +2830,7 @@ services:
   # ── Blackbox Exporter — HTTP/HTTPS/TCP endpoint probing ──────────────────
   # Prometheus community, Apache 2.0. Probes /health endpoints for all workers.
   blackbox-exporter:
-    image: prom/blackbox-exporter:v0.25.0
+    image: prom/blackbox-exporter:v0.25.0@sha256:b04a9fef4fa086a02fc7fcd8dcdbc4b7b35cc30cdee860fdc6a19dd8b208d63e
     container_name: tranc3-blackbox
     restart: unless-stopped
     command:
@@ -2879,7 +2879,7 @@ services:
   # ── node-exporter — Host OS metrics → Prometheus ─────────────────────────
   # Prometheus community, Apache 2.0. CPU/RAM/disk/network at OS level.
   node-exporter:
-    image: prom/node-exporter:v1.7.0
+    image: prom/node-exporter:v1.7.0@sha256:4cb2b9019f1757be8482419002cb7afe028fdba35d47958829e4cfeaf6246d80
     container_name: tranc3-node-exporter
     restart: unless-stopped
     pid: host
@@ -3834,7 +3834,7 @@ services:
 
   # ── Self-hosted Renovate — dependency update bot ──────────────────────
   renovate-bot:
-    image: renovate/renovate:latest
+    image: renovate/renovate:latest@sha256:39182d1ab9fbf428bd702cb737c49197aa18930de666d7d57336468c5ecb8d63
     container_name: trancendos-renovate-bot
     restart: "no"
     environment:
@@ -3896,7 +3896,7 @@ services:
       - "traefik.http.services.mattermost.loadbalancer.server.port=8065"
 
   mattermost-db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     container_name: trancendos-mattermost-db
     restart: unless-stopped
     environment:

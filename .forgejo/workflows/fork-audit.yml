@@ -10,7 +10,7 @@ jobs:
     name: GitHub fork inventory
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Fork audit (requires gh)
         run: |
@@ -23,7 +23,7 @@ jobs:
           fi
 
       - name: Upload fork audit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: fork-audit

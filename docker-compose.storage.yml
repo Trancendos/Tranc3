@@ -38,7 +38,7 @@ services:
   # Self-hosted, unlimited, free. Primary local object store.
   # Replaces AWS S3, GCS, Azure Blob in zero-cost architecture.
   minio:
-    image: minio/minio:RELEASE.2024-08-29T01-40-52Z
+    image: minio/minio:RELEASE.2024-08-29T01-40-52Z@sha256:0bd79595dbcf155782860716abf4cf79d5ee32a9508b60fa1a88793bbe55b245
     container_name: tranc3-minio
     command: server /data --console-address ":9001"
     environment:
@@ -125,7 +125,7 @@ services:
   # Production: Use separate Ceph cluster or CephAnsible deployment.
   # Self-hosted, scalable, free. RADOS Gateway provides S3-compatible API.
   ceph:
-    image: quay.io/ceph/ceph:v18
+    image: quay.io/ceph/ceph:v18@sha256:69cbef90eb58cf96e572e7497227a2bcb0ec9175bc2247809c0a37857db9b820
     container_name: tranc3-ceph
     entrypoint: >
       /bin/bash -c "
@@ -171,7 +171,7 @@ services:
   # ── Node Exporter — Host Metrics (ZFS pool capacity) ───────────────────────
   # Collects host-level metrics including disk usage (for ZFS pool monitoring).
   node-exporter:
-    image: prom/node-exporter:v1.8.2
+    image: prom/node-exporter:v1.8.2@sha256:4032c6d5bfd752342c3e631c2f1de93ba6b86c41db6b167b9a35372c139e7706
     container_name: tranc3-node-exporter
     command:
       - "--path.rootfs=/host"
@@ -192,7 +192,7 @@ services:
   # Sends alerts when storage approaches capacity thresholds.
   # Zero-cost enforcement: Triggers SmartStorageOrchestrator auto-migration.
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:v0.27.0@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5
     container_name: tranc3-alertmanager
     command:
       - "--config.file=/etc/alertmanager/config.yml"

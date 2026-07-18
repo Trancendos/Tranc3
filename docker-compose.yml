@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: tranc3-redis
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
@@ -50,7 +50,7 @@ services:
       retries: 3
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.105.0
+    image: otel/opentelemetry-collector-contrib:0.105.0@sha256:3ff721e65733a9c2d94e81cfb350e76f1cd218964d5608848e2e73293ea88114
     container_name: tranc3-otel
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
@@ -61,7 +61,7 @@ services:
     restart: unless-stopped
 
   prometheus:
-    image: prom/prometheus:v2.54.1
+    image: prom/prometheus:v2.54.1@sha256:f6639335d34a77d9d9db382b92eeb7fc00934be8eae81dbc03b31cfe90411a94
     container_name: tranc3-prometheus
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
     volumes:
