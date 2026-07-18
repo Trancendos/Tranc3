@@ -32,6 +32,8 @@ class ModelConfig:
     d_head: int = field(init=False)
 
     def __post_init__(self) -> None:
+        if self.n_heads <= 0:
+            raise ValueError(f"n_heads must be greater than 0 (got {self.n_heads})")
         if self.d_model % self.n_heads != 0:
             raise ValueError(
                 f"d_model ({self.d_model}) must be divisible by n_heads ({self.n_heads})"

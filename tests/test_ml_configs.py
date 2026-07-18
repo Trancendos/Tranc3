@@ -34,6 +34,10 @@ class TestModelConfig:
         with pytest.raises(ValueError):
             ModelConfig(d_model=257, n_heads=4)
 
+    def test_zero_n_heads_rejected_not_zero_division_error(self):
+        with pytest.raises(ValueError):
+            ModelConfig(n_heads=0)
+
     def test_builds_and_runs_a_real_model(self):
         cfg = ModelConfig(
             vocab_size=500, d_model=64, n_layers=2, n_heads=4, d_ff=256, max_seq_len=32
@@ -43,6 +47,9 @@ class TestModelConfig:
         logits, loss = model(x, targets=x)
         assert logits.shape == (2, 16, 500)
         assert loss is not None
+        # Ensure ModelConfig remains compatible with parameter_count() wiring
+        assert model.parameter_count() is not None
+        assert sum(p.numel() for p in model.parameters()) > 0
 
     def test_generate_produces_new_tokens(self):
         cfg = ModelConfig(
@@ -76,7 +83,8 @@ class TestUserSettingModel:
     def test_table_registered_on_base_metadata(self):
         assert "user_settings" in Base.metadata.tables
 
-    def test_settings_store_round_trip(self, tmp_path):
+    def test_settings_store_round_trip(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-at-least-32-characters-long")
         from src.settings_store import UserSettingsStore
 
         db_path = tmp_path / "settings.db"
