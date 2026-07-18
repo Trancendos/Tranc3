@@ -125,7 +125,7 @@ services:
   # Production: Use separate Ceph cluster or CephAnsible deployment.
   # Self-hosted, scalable, free. RADOS Gateway provides S3-compatible API.
   ceph:
-    image: quay.io/ceph/ceph:v18@sha256:69cbef90eb58cf96e572e7497227a2bcb0ec9175bc2247809c0a37857db9b820
+    image: quay.io/ceph/ceph:v20@sha256:6b4b5ae33acd3d736eb26d2a19238bce71a22f9cfb99cca887ba6312d0957644
     container_name: tranc3-ceph
     entrypoint: >
       /bin/bash -c "
