@@ -184,14 +184,30 @@ def sync_from_health_aggregator_db(
     would silently and unrecoverably skip every dynamic registration (see
     module docstring).
 
-    Rows whose port has no CMDB ServiceID match are skipped and counted,
-    not guessed at or dropped silently. Each write is deduplicated against
-    an existing (service_id, observed_at, source) row so that re-running
-    this sync after a crash between the CMDB commit and the marker-file
-    update (see scripts/sync_health_aggregator.py) does not insert
-    duplicate observations — this script is documented as a scheduled,
-    single-runner job, not one safe to run concurrently from multiple
-    processes; that stronger guarantee is not implemented here.
+    Rows whose port has no CMDB ServiceID match, or whose checked_at can't
+    be parsed, are skipped and counted (skipped_unmapped /
+    skipped_unparseable_timestamp) — not guessed at or dropped silently.
+    In both cases max_id still advances past them: the alternative (holding
+    the marker back, or persisting unresolved row ids in a retry table)
+    would mean a service that's permanently unmapped, or a source that
+    writes malformed timestamps, causes every future run to rescan an
+    ever-growing prefix of health_checks forever. Trading a small,
+    one-time loss of not-yet-mappable history for a sync that stays
+    bounded is the deliberate choice here — if a service is added to the
+    CMDB port map *after* its historical checks were already skipped,
+    those specific historical rows are not retroactively recovered (only
+    checks from that point forward will map). A dedicated retry/dead-letter
+    table would close that gap but is real new surface area (its own
+    unbounded-growth risk to manage) that this sync — with zero live
+    verification behind it yet — doesn't take on speculatively.
+
+    Each write is deduplicated against an existing (service_id,
+    observed_at, source) row so that re-running this sync after a crash
+    between the CMDB commit and the marker-file update (see
+    scripts/sync_health_aggregator.py) does not insert duplicate
+    observations — this script is documented as a scheduled, single-runner
+    job, not one safe to run concurrently from multiple processes; that
+    stronger guarantee is not implemented here.
     """
     port_to_service_id = build_port_to_service_id(cmdb_session)
 

@@ -126,6 +126,17 @@ def main():
     since_id = marker["since_id"]
     cmdb_generation = _read_generation(args.cmdb_db)
 
+    # scripts/build_cmdb.py writes this sentinel before load_all() runs
+    # (which drops and recreates every table) and replaces it with a real
+    # token only once the rebuild succeeds. Treating it as a real changed
+    # generation would trigger a resync while tables are actively being
+    # dropped/recreated underneath this query — defer instead.
+    if cmdb_generation == "REBUILDING":
+        print(
+            f"{args.cmdb_db} is mid-rebuild (generation sidecar shows REBUILDING) — skipping this run."
+        )
+        return 0
+
     # scripts/build_cmdb.py drops and recreates every table (including
     # HealthObservation) on every rebuild, but the marker file survives on
     # disk untouched — without this check, a rebuilt CMDB would resume from
