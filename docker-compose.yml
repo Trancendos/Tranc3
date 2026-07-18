@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:11.1.13@sha256:dfdfd26cc20a5e8861259ae624b39ac38013e8c85805b21c06c00e2f18f1689c
+    image: grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
     container_name: tranc3-grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin

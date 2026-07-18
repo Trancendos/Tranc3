@@ -175,7 +175,7 @@ services:
   # ── Grafana — Observability Dashboard ────────────────────────────────
   # Replaces: Cloudflare Dashboard, CF Analytics
   grafana:
-    image: grafana/grafana:10.3.12@sha256:0b9a007bcf831c0d9840b28588f6bcfa12d79fbf4defa8412f9f78329abe211c
+    image: grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
     container_name: tranc3-grafana
     <<: *common
     environment:
