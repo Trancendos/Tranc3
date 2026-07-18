@@ -31,6 +31,8 @@ from models import (
     ChatMessage,
     ProviderName,
 )
+from sanitize import sanitize_for_log
+from zero_cost_registry import is_approved
 
 from config import (
     CEREBRAS_API_KEY,
@@ -52,8 +54,6 @@ from config import (
     WORKER_NAME,
 )
 from database import AIDatabase
-from sanitize import sanitize_for_log
-from zero_cost_registry import is_approved
 
 logger = logging.getLogger(WORKER_NAME)
 

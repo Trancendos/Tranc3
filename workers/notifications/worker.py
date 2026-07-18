@@ -24,11 +24,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from error_handlers import safe_error_detail
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from error_handlers import safe_error_detail
 from sanitize import sanitize_for_log
 from url_validation import SSRFError, validate_webhook_url
 

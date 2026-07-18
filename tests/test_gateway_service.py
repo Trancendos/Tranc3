@@ -16,11 +16,51 @@ Covers the unified gateway (port 8040) that aggregates all P4 worker data:
   - Access audit, threat level, and policy endpoints (Phase 22)
 """
 
+import importlib.util
 import os
+import sys
 import tempfile
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+
+_GATEWAY_WORKER_DIR = Path(__file__).resolve().parent.parent / "workers" / "gateway-service"
+_GATEWAY_WORKER_PATH = _GATEWAY_WORKER_DIR / "worker.py"
+
+_gateway_worker_cache = None
+
+
+def _load_gateway_worker():
+    """Import gateway-service's worker.py, keeping its directory on sys.path
+    and its sibling modules (service.py, config.py, ...) live in sys.modules
+    for the rest of the process.
+
+    Unlike tests/_worker_import_utils.import_worker, this does NOT evict/restore
+    those names afterward — router.py performs several *lazy*, request-time
+    `from service import ...` imports (see workers/gateway-service/router.py),
+    which would raise ModuleNotFoundError once the shared helper's cleanup
+    already ran, since sys.path/sys.modules would no longer resolve them. This
+    file only ever imports gateway-service, so there's no cross-worker
+    same-named-sibling collision risk to guard against here.
+    """
+    global _gateway_worker_cache
+    if _gateway_worker_cache is not None:
+        return _gateway_worker_cache
+
+    worker_dir = str(_GATEWAY_WORKER_DIR)
+    if worker_dir not in sys.path:
+        sys.path.insert(0, worker_dir)
+
+    spec = importlib.util.spec_from_file_location(
+        "workers.gateway-service.worker", _GATEWAY_WORKER_PATH
+    )
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["workers.gateway-service.worker"] = mod
+    spec.loader.exec_module(mod)
+    _gateway_worker_cache = mod
+    return mod
+
 
 # ---------------------------------------------------------------------------
 # Test API Key — configured via API_KEYS env var before importing the worker
@@ -51,9 +91,7 @@ def client():
         ]
     )
 
-    import importlib
-
-    mod = importlib.import_module("workers.gateway-service.worker")
+    mod = _load_gateway_worker()
     mod._init_db()
 
     with TestClient(mod.app) as c:
@@ -402,18 +440,14 @@ class TestGatewaySSE:
 class TestGatewayCache:
     def test_cache_ttl_config(self, client):
         """Verify cache TTL is configurable via env var."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         assert hasattr(mod, "CACHE_TTL")
         assert isinstance(mod.CACHE_TTL, int)
         assert mod.CACHE_TTL >= 1
 
     def test_cache_in_memory_structure(self, client):
         """Verify the in-memory cache dict exists."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         assert hasattr(mod, "_cache")
         assert isinstance(mod._cache, dict)
 
@@ -424,9 +458,7 @@ class TestGatewayCache:
 class TestGatewayCircuitBreaker:
     def test_circuit_breaker_initialized(self, client):
         """Verify circuit breakers are initialized for all upstream workers."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         assert hasattr(mod, "_circuit_breaker")
         cb = mod._circuit_breaker
         # Should have entries for all 8 workers
@@ -437,9 +469,7 @@ class TestGatewayCircuitBreaker:
 
     def test_upstream_workers_config(self, client):
         """Verify all 8 upstream workers are configured."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         uw = mod.UPSTREAM_WORKERS
         assert len(uw) == 8
         expected = {

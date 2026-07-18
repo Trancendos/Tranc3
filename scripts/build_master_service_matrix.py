@@ -16,7 +16,7 @@ import re
 
 import yaml
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

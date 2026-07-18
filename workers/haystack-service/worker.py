@@ -145,8 +145,8 @@ async def create_pipeline(body: PipelineCreate) -> dict[str, Any]:
             (pid, body.name, body.description, json.dumps(body.components), now, now),
         )
         db().commit()
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Pipeline name already exists")
+    except sqlite3.IntegrityError as e:
+        raise HTTPException(status_code=409, detail="Pipeline name already exists") from e
     return {"id": pid, "name": body.name, "components": body.components, "created_at": now}
 
 

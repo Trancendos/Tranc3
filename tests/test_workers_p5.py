@@ -14,13 +14,13 @@ Also validates the swarm-coordinator-service /run auth fix.
 
 from __future__ import annotations
 
-import importlib.util
 import os
-import sys
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests._worker_import_utils import import_worker as _import_worker_impl
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -36,11 +36,7 @@ def _import_worker(rel_path: str) -> object:
     if rel_path in _module_cache:
         return _module_cache[rel_path]
     full = ROOT / rel_path
-    spec = importlib.util.spec_from_file_location(rel_path.replace("/", "."), full)
-    assert spec and spec.loader, f"Could not load spec for {full}"
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[rel_path.replace("/", ".")] = mod  # type: ignore[assignment]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    mod = _import_worker_impl(rel_path.replace("/", "."), full)
     _module_cache[rel_path] = mod
     return mod
 

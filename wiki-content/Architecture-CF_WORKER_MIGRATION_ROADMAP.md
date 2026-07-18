@@ -1,9 +1,16 @@
 # Cloudflare Worker Migration Roadmap
 ## Trancendos Platform — Zero-Cost Self-Hosted Architecture
 
+> **Status note.** Every Location supports three deployment modes — Cloud Only (current
+> default for all Locations), Hybrid, and Local/Self-Hosted. Migrating the workers below is
+> the **Hybrid/Local path**, gated on funding a repaired or replacement local server — it is
+> not a committed timeline, and the CF Workers this document maps are the correct, intentional
+> Cloud Only implementation until that funding exists. Nothing here implies these workers are
+> being abandoned or are "wrong" as currently deployed.
+
 ### Executive Summary
 
-This document maps all 26+ deployed Cloudflare Workers to self-hosted Python/FastAPI equivalents. Every worker will be migrated from Cloudflare's proprietary platform to self-hosted containers running on the Trancendos infrastructure. This eliminates all third-party dependencies that could incur costs, protects the zero-cost model, and gives full control over the platform.
+This document maps all 26+ deployed Cloudflare Workers to self-hosted Python/FastAPI equivalents, for when the platform moves a Location from Cloud Only toward Hybrid or Local mode. This eliminates all third-party dependencies that could incur costs, protects the zero-cost model, and gives full control over the platform.
 
 **Strategy**: Replace Cloudflare Workers with Python FastAPI workers, SQLite for D1, in-memory/file storage for KV/R2, and the newly-ported Service Mesh for inter-worker communication.
 
@@ -220,9 +227,12 @@ All workers validate JWT tokens using the shared `src/auth/` module. The API gat
 
 ## Timeline
 
+Phase ordering below is priority, not a scheduled/committed timeline — actual execution
+starts once Hybrid/Local funding exists, per the status note at the top of this document.
+
 | Phase | Workers | Estimated Effort |
 |---|---|---|
-| **Phase 1** (This PR) | P0: infinity-ws, infinity-auth | 2 workers |
-| **Phase 2** (Next PR) | P1: users, monitoring, notifications, ai-api | 4 workers |
-| **Phase 3** (Future) | P2: products, orders, payments, files, identity | 5 workers |
-| **Phase 4** (Future) | P3: All stubs | 14 workers |
+| **Phase 1** | P0: infinity-ws, infinity-auth | 2 workers |
+| **Phase 2** | P1: users, monitoring, notifications, ai-api | 4 workers |
+| **Phase 3** | P2: products, orders, payments, files, identity | 5 workers |
+| **Phase 4** | P3: All stubs | 14 workers |

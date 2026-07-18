@@ -39,6 +39,12 @@ def create_access_token(
     """
     claims: dict[str, Any] = {
         "sub": user_id,
+        # Several call sites across the codebase (api.py's /chat, /feedback,
+        # /usage, GDPR erasure, plus src/{taimra,tranquility,access,devocity}
+        # routes) index the authenticated user dict as current_user["id"],
+        # not ["sub"] — mirror the same value under both keys so tokens
+        # issued here satisfy that existing convention.
+        "id": user_id,
         "username": username,
         "role": role,
         "tier": tier_value,

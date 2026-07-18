@@ -60,7 +60,7 @@ def instrument_worker(
                 should_ignore_untemplated=True,
                 should_respect_env_var=False,
                 should_instrument_requests_inprogress=True,
-                excluded_handlers=[p for p in _excluded],
+                excluded_handlers=list(_excluded),
                 inprogress_name=f"{_sanitise(service_name)}_inprogress_requests",
                 inprogress_labels=True,
             )

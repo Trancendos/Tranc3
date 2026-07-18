@@ -62,8 +62,8 @@ def _validate_input_url(url: str) -> None:
     """Reject URLs that could trigger SSRF via FFmpeg protocol handlers."""
     try:
         parsed = urllib.parse.urlparse(url)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid input_url")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid input_url") from e
     if parsed.scheme not in _ALLOWED_INPUT_SCHEMES:
         raise HTTPException(
             status_code=400,

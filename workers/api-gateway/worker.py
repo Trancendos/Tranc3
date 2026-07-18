@@ -41,7 +41,6 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
 from sanitize import sanitize_for_log
 
 # ── Configuration ───────────────────────────────────────────────

@@ -159,27 +159,26 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if bearer_token:
             try:
                 # Import here to avoid circular imports and missing dependency issues
-                from auth import token_manager
+                from auth import verify_token
 
-                payload = token_manager.decode_token(bearer_token)
-                username = payload.get("sub")
+                payload = verify_token(bearer_token)
+                username = payload.get("username") or payload.get("sub") if payload else None
                 if username:
-                    # Try to get full user info
-                    try:
-                        from auth import user_manager
-
-                        user = user_manager.get_user(username)
-                    except Exception:
-                        pass
-                    if not user:
-                        user = {
-                            "sub": username,
-                            "tier": payload.get("tier", "free"),
-                            "auth_method": "jwt",
-                            "is_active": True,
-                        }
-                    else:
-                        user["auth_method"] = "jwt"
+                    # create_access_token() (src/auth/tokens.py) stores tier as an
+                    # int (default 0), but every RBAC/tier consumer in this codebase
+                    # (src/auth/rbac.py's _TIER_PERMISSIONS, src/monetisation/billing.py's
+                    # TIERS) is keyed by tier NAME strings ("free"/"pro"/"business"/
+                    # "enterprise") — there is no established int->name mapping anywhere
+                    # to recover "pro"/"business" from a bare int, so fail closed to
+                    # "free" rather than crash .lower() on an int or guess a mapping.
+                    raw_tier = payload.get("tier", "free") if payload else "free"
+                    user = {
+                        "sub": username,
+                        "role": payload.get("role", "user") if payload else "user",
+                        "tier": raw_tier if isinstance(raw_tier, str) else "free",
+                        "auth_method": "jwt",
+                        "is_active": True,
+                    }
             except HTTPException as e:
                 auth_error = e.detail
             except Exception as e:

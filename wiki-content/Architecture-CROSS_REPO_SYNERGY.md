@@ -1,5 +1,10 @@
 # Cross-Repo Synergy Report: Trancendos Ecosystem
 
+> **Status note.** Porting these packages to Python is part of the Hybrid/Local deployment
+> path (see `Architecture-CF_WORKER_MIGRATION_ROADMAP.md`), gated on funding a repaired or
+> replacement local server. Cloud Only remains the default for every Location in the
+> meantime — this report describes a destination, not a committed schedule.
+
 ## Executive Summary
 
 Analysis of 16 Trancendos repositories reveals that **infinity-adminOS** is a critical monorepo containing 29 production-ready TypeScript packages that form the backbone of the Trancendos platform. These packages must be ported to Python to power Tranc3's self-hosted, zero-cost architecture. The remaining repos are mostly scaffold/stub implementations that will be absorbed into Tranc3's unified worker model.

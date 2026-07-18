@@ -142,10 +142,10 @@ class RBACMiddleware(BaseHTTPMiddleware):
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
             try:
-                from auth import token_manager as _tm  # lazy, avoids circular import
+                from auth import verify_token  # lazy, avoids circular import
 
-                payload = _tm.decode_token(token)
-                username = payload.get("sub")
+                payload = verify_token(token)
+                username = payload.get("username") or payload.get("sub") if payload else None
                 if username:
                     user: dict | None = None
                     try:
@@ -156,10 +156,6 @@ class RBACMiddleware(BaseHTTPMiddleware):
                             user = mgr.get_user(username)
                     except Exception as _exc:
                         logger.debug("db_user_manager lookup failed: %s", _exc)
-                    if user is None:
-                        from auth import user_manager as _um
-
-                        user = _um.get_user(username)
                     if user:
                         request.state.user = user
             except Exception:

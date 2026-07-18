@@ -138,6 +138,7 @@ class DBUserManager:
                     "username": user.username,
                     "tier": user.tier,
                     "is_active": user.is_active,
+                    "roles": _tier_to_roles(user.tier),
                 }
             except Exception as e:
                 logger.error("DB authenticate_user failed: %s", sanitize_for_log(e))
