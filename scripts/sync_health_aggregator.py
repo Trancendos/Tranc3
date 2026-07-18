@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from src.cmdb.health_sync import sync_from_health_aggregator_db  # noqa: E402
-from src.cmdb.models import build_engine  # noqa: E402
+from src.cmdb.models import HealthObservation, build_engine  # noqa: E402
 
 
 def _marker_path(cmdb_db_path: str) -> str:
@@ -74,6 +74,14 @@ def main():
     engine = build_engine(args.cmdb_db)
     session = sessionmaker(bind=engine)()
     try:
+        # scripts/build_cmdb.py drops and recreates every table (including
+        # HealthObservation) on every rebuild, but the marker file survives
+        # on disk untouched — without this check, a rebuilt-but-empty CMDB
+        # would resume from the old since_id and never backfill the history
+        # that was just wiped out.
+        if since_id > 0 and session.query(HealthObservation).first() is None:
+            print(f"HealthObservation is empty but marker was at id {since_id} — resyncing from 0.")
+            since_id = 0
         stats = sync_from_health_aggregator_db(session, args.health_db, since_id=since_id)
     finally:
         session.close()
