@@ -35,8 +35,12 @@ def _marker_path(cmdb_db_path: str) -> str:
 def _read_since_id(marker_path: str) -> int:
     if not os.path.exists(marker_path):
         return 0
-    with open(marker_path) as f:
-        return int(f.read().strip() or 0)
+    try:
+        with open(marker_path) as f:
+            return int(f.read().strip() or 0)
+    except (ValueError, OSError) as exc:
+        print(f"Marker file {marker_path} unreadable ({exc}) — resyncing from id 0.")
+        return 0
 
 
 def _write_since_id(marker_path: str, value: int) -> None:

@@ -12,7 +12,6 @@ sqlalchemy = pytest.importorskip("sqlalchemy")
 from src.cmdb.loader import load_all  # noqa: E402
 from src.cmdb.models import (  # noqa: E402
     AccessControlReview,
-    Application,
     CostReview,
     Deployment,
     Service,

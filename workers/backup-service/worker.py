@@ -123,6 +123,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.middleware("http")
 async def _internal_auth(request: Request, call_next):
     if _INTERNAL_SECRET and request.url.path != "/health":

@@ -64,27 +64,57 @@ into `data/cmdb.db`, mapped to a real `ServiceID`.
 
 **The mapping problem and how it was solved.** health-aggregator identifies services by compose
 service name (`"infinity-portal"`); CMDB identifies them by `ServiceID` (`"SRV-PORTAL-001"`) — no
-shared key exists in either dataset. Fuzzy name-matching was tried and rejected earlier this
-session: it produced two confirmed wrong matches (`blender-worker`, `tranc3-ai`) where an unrelated
-row's Notes text happened to *mention* the name in a cross-reference (e.g. a port-conflict note),
-not because it was that service. The approach actually used instead: join on port number — every
-health-aggregator registry entry has an unambiguous port, and every CMDB `Service.notes` field that
-documents a verified port states it as the first `port NNNN` mention (later mentions in the same
-field are cross-references to *other* services). Verified by hand against the 7 services in this
-session's audit that had multiple port mentions in their Notes — first-mention was correct in all
-7. Running the join against the full 92-service CMDB: **all 42 of health-aggregator's registry
-entries resolve to a ServiceID, 0 ambiguous, 0 unmapped.**
+shared key exists in either dataset. Two name-based approaches were tried and rejected before
+landing on a port join:
+
+1. Fuzzy name-matching — rejected earlier this session: it produced two confirmed wrong matches
+   (`blender-worker`, `tranc3-ai`) where an unrelated row's Notes text happened to *mention* the
+   name in a cross-reference (e.g. a port-conflict note), not because it was that service.
+2. Joining on `health_checks.service` against a static copy of health-aggregator's registry names —
+   rejected on PR review (#223): health-aggregator also accepts *dynamic* registrations via
+   `POST /services` (`scripts/register_ea_workbook_services.py`), which register under the CSV's
+   `ServiceName` (e.g. `"MCP Server"`), not the compose name. Those rows would never match a static
+   name list, and worse, `since_id` would still advance past them, making them unrecoverable
+   without manually rewinding the marker file.
+
+The join actually used: **port number**, read directly from `health_checks.port` — which
+health-aggregator populates for both static *and* dynamic targets (`_dynamic_poll_targets()`
+derives a real port from the registered URL). Every CMDB `Service.notes` field that documents a
+verified port states it as the first `port NNNN` mention (later mentions in the same field are
+cross-references to *other* services). Verified by hand against the 7 services in this session's
+audit that had multiple port mentions in their Notes — first-mention was correct in all 7. The
+static `HEALTH_AGGREGATOR_REGISTRY` name list is kept only as a coverage cross-check and a drift
+regression test, not as the sync's actual join key: **all 42 of its entries resolve to a
+ServiceID, 0 ambiguous, 0 unmapped.**
+
+**Two real producer-side bugs found and fixed during PR review**, both in
+`workers/health-aggregator/worker.py`, pre-dating this sync and previously silent because nothing
+read the affected columns:
+- `_persist_check()` read `result.get("latency_ms")` and `result.get("error")`, but `_check_one()`
+  actually returns `"response_ms"` (top-level) and puts a failure message under
+  `"details"."error"` — so `health_checks.latency_ms` and `.error` were always `NULL` for every
+  real poll. Fixed to read the correct keys.
+- The consumer side (`_STATUS_TO_SCORE` in `health_sync.py`) had invented a status vocabulary
+  (`healthy`/`degraded`/`unhealthy`/`unreachable`/`timeout`/`error`/`unknown`) that didn't match
+  what `_check_one()` actually writes (`healthy`/`degraded`/`down`). Every failed probe would have
+  synced with `status="down"` unmapped to any score. Fixed to the real 3-value vocabulary, with
+  `unknown` kept only as a defensive fallback for a future/unrecognised value.
 
 `scripts/sync_health_aggregator.py` is the runnable entry point — reads `health-aggregator`'s DB
 (default `/data/health_aggregator.db`, matching its own `DB_PATH` default) and `data/cmdb.db`,
 writes new `HealthObservation` rows incrementally (tracks the last-synced `health_checks.id` in a
 marker file next to the CMDB db, so repeat runs only pick up new rows). Not a daemon — intended to
-run on a schedule (cron, ChronosSphere) once deployed.
+run on a schedule (cron, ChronosSphere) once deployed. Each write is deduplicated against an
+existing `(service_id, observed_at, source)` row, so re-running after a crash between the CMDB
+commit and the marker-file update doesn't insert duplicates — this does not extend to genuinely
+concurrent runs from multiple processes, which the script is documented as not supporting.
 
-**What is and isn't proven here.** `tests/test_cmdb_health_sync.py` (5 tests, all passing) proves
+**What is and isn't proven here.** `tests/test_cmdb_health_sync.py` (9 tests, all passing) proves
 the join and write logic are correct against a synthetic SQLite DB built with health-aggregator's
-exact schema, including a real known-good case (`infinity-ws` → `SRV-WS-001` via port 8004) and an
-incremental-sync test. It does **not** prove this has run against a live production
+exact schema, including a real known-good case (`infinity-ws` → `SRV-WS-001` via port 8004), a
+dynamic-registration case (a row named `"MCP Server"` still resolving via its port), a
+crash-recovery/dedupe case, and a registry-drift regression test. It does **not** prove this has
+run against a live production
 `health_aggregator.db` — no such file exists in this sandbox. That is real, live verification still
 outstanding, not done.
 

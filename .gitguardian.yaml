@@ -40,3 +40,7 @@ secret:
       match: "aa064ae803e5423db7b517400187b693"
     - name: Cloudflare D1 database ID — infinity-void (non-secret resource identifier)
       match: "48e89d58-abd8-456b-a6ad-58ededaba597"
+    - name: ErrorCode.AUTH_WRONG_PASSWORD enum value — a structured error-code string ("TRANC3-AUTH-005"), not a credential; already suppressed for bandit via inline `# nosec B105`
+      match: "TRANC3-AUTH-005"
+    - name: ErrorCode.AUTH_WEAK_PASSWORD enum value — a structured error-code string ("TRANC3-AUTH-007"), not a credential; already suppressed for bandit via inline `# nosec B105`
+      match: "TRANC3-AUTH-007"

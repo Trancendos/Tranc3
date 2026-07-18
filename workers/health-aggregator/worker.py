@@ -187,8 +187,12 @@ def _persist_check(result: Dict[str, Any]) -> None:
     port = result["port"]
     url = result["health_url"]
     status = result["status"]
-    latency = result.get("latency_ms")
-    error = result.get("error")
+    # _check_one returns "response_ms" (top-level) and puts a failure
+    # message under "details.error", not top-level "latency_ms"/"error" —
+    # reading those keys directly silently persisted NULL for both on every
+    # real poll. Found via CMDB health-aggregator sync review (PR #223).
+    latency = result.get("response_ms")
+    error = (result.get("details") or {}).get("error")
 
     with _conn() as c:
         c.execute(
