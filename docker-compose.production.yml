@@ -256,7 +256,7 @@ services:
   # Drop-in Redis replacement (same redis-py client, same port 6379).
   # BSD-3 licence; community fork of Redis 7.2 under Linux Foundation.
   valkey:
-    image: valkey/valkey:8-alpine@sha256:cfe71288f087704b06be45e270afa7a2abbf820093d6b11a23762081f5ff321d
+    image: valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02
     container_name: tranc3-valkey
     <<: *common
     command: ["valkey-server", "--appendonly", "yes", "--save", "60", "1"]
@@ -1553,7 +1553,7 @@ services:
       retries: 3
 
   outline-redis:
-    image: valkey/valkey:8-alpine@sha256:cfe71288f087704b06be45e270afa7a2abbf820093d6b11a23762081f5ff321d
+    image: valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02
     container_name: trancendos-outline-redis
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:
