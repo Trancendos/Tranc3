@@ -50,7 +50,7 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Dict, Optional, Set
 
 from sqlalchemy.orm import Session
@@ -198,6 +198,25 @@ def sync_from_health_aggregator_db(
     conn = sqlite3.connect(health_aggregator_db_path)
     conn.row_factory = sqlite3.Row
     try:
+        # Symmetric to the CMDB-side rebuild detection in
+        # scripts/sync_health_aggregator.py, but for the *source* db: if
+        # health_aggregator.db itself was replaced/restored and its
+        # AUTOINCREMENT id sequence restarted below since_id, `WHERE id >
+        # since_id` would silently return nothing until the new sequence
+        # organically grows past the old marker value again — a silent gap
+        # with no error. Detect it by comparing since_id against the
+        # source's own current MAX(id) before querying.
+        (max_source_id,) = conn.execute("SELECT COALESCE(MAX(id), 0) FROM health_checks").fetchone()
+        if since_id > max_source_id:
+            logger.warning(
+                "%s's current MAX(id)=%s is below the marker's since_id=%s — "
+                "the source db was likely replaced/restored; resyncing from 0.",
+                health_aggregator_db_path,
+                max_source_id,
+                since_id,
+            )
+            since_id = 0
+
         rows = conn.execute(
             "SELECT id, service, port, status, latency_ms, checked_at, error "
             "FROM health_checks WHERE id > ? ORDER BY id ASC",
@@ -209,6 +228,7 @@ def sync_from_health_aggregator_db(
     written = 0
     skipped_unmapped = 0
     skipped_duplicate = 0
+    skipped_unparseable_timestamp = 0
     max_id = since_id
 
     for row in rows:
@@ -225,14 +245,22 @@ def sync_from_health_aggregator_db(
                 checked_at = checked_at[:-1] + "+00:00"
             observed_at = datetime.fromisoformat(checked_at)
         except (TypeError, ValueError):
+            # Was previously a datetime.now() fallback — rejected on review: that
+            # gives a malformed row a *different* observed_at (and thus dedupe
+            # key) on every retry, so a crash-and-resume before the marker
+            # advances could insert it more than once, defeating the dedupe
+            # check just below. Skipping (like skipped_unmapped) is safe and
+            # consistent instead: since max_id still advances past it, it's
+            # counted and not retried forever, but also never fabricates a
+            # timestamp or risks a duplicate row.
             logger.warning(
-                "Could not parse checked_at %r for service %r (row id %s) — "
-                "falling back to current time; this loses the real observation time.",
+                "Could not parse checked_at %r for service %r (row id %s) — skipping row.",
                 row["checked_at"],
                 row["service"],
                 row["id"],
             )
-            observed_at = datetime.now(timezone.utc)
+            skipped_unparseable_timestamp += 1
+            continue
 
         already_present = (
             cmdb_session.query(HealthObservation.id)
@@ -268,6 +296,7 @@ def sync_from_health_aggregator_db(
         "written": written,
         "skipped_unmapped": skipped_unmapped,
         "skipped_duplicate": skipped_duplicate,
+        "skipped_unparseable_timestamp": skipped_unparseable_timestamp,
         "max_id": max_id,
         "mapped_static_registry_services": len(known_static_names),
         "unmapped_static_registry_entries": len(HEALTH_AGGREGATOR_REGISTRY)

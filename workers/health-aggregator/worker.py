@@ -249,7 +249,7 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
     svc_name = svc["name"]
     try:
         resp = await _get_http_client().get(url)
-        ms = (time.time() - start) * 1000
+        ms = (time.monotonic() - start) * 1000
         status = "healthy" if resp.status_code < 400 else "degraded"
         try:
             details = resp.json()
@@ -267,7 +267,7 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
             "details": details,
         }
     except Exception:
-        ms = (time.time() - start) * 1000
+        ms = (time.monotonic() - start) * 1000
         return {
             "name": svc_name,
             "port": svc["port"],

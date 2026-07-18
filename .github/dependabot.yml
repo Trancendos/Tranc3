@@ -11,17 +11,27 @@ updates:
       interval: "monthly"
 
   - package-ecosystem: "pip"
-    directory: "/tranc3-bots"
+    directories:
+      - "/tranc3-bots"
+      - "/workers/*"
     schedule:
       interval: "monthly"
 
   - package-ecosystem: "npm"
-    directory: "/web"
+    directories:
+      - "/"
+      - "/web"
     schedule:
       interval: "monthly"
 
   - package-ecosystem: "docker"
-    directory: "/"
+    directories:
+      - "/"
+      - "/docker"
+      - "/tranc3-bots"
+      - "/web"
+      - "/workers/*"
+      - "/deploy/*"
     schedule:
       interval: "monthly"
 

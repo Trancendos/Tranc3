@@ -268,3 +268,59 @@ def test_registry_does_not_drift_from_health_aggregator_worker():
         "HEALTH_AGGREGATOR_REGISTRY in src/cmdb/health_sync.py has drifted from "
         "workers/health-aggregator/worker.py:SERVICE_REGISTRY — update the copy by hand."
     )
+
+
+def test_sync_resets_since_id_when_source_db_was_replaced(cmdb_session, make_health_aggregator_db):
+    """If health_aggregator.db itself is replaced/restored and its own
+    AUTOINCREMENT id sequence restarts below the marker's since_id,
+    `WHERE id > since_id` would otherwise silently return nothing until the
+    new sequence organically grows past the old value again. A since_id
+    ahead of the source's own current MAX(id) must be treated as a source
+    reset and resynced from 0."""
+    db_path = make_health_aggregator_db(
+        [
+            (
+                "infinity-ws",
+                8004,
+                "http://infinity-ws:8004/health",
+                "healthy",
+                12,
+                "2026-07-18T10:00:00+00:00",
+                None,
+            ),
+        ]
+    )
+    # This source db's real MAX(id) is 1 — passing since_id=999 simulates a
+    # marker left over from before the source db was replaced/restored.
+    stats = sync_from_health_aggregator_db(cmdb_session, db_path, since_id=999)
+
+    assert stats["rows_read"] == 1
+    assert stats["written"] == 1
+    assert stats["max_id"] == 1
+
+
+def test_sync_skips_rows_with_unparseable_checked_at(cmdb_session, make_health_aggregator_db):
+    """A malformed checked_at must be skipped and counted, not silently
+    given datetime.now() as a stand-in — that would give the same row a
+    different (and thus non-deduplicating) observed_at on every retry."""
+    db_path = make_health_aggregator_db(
+        [
+            (
+                "infinity-ws",
+                8004,
+                "http://infinity-ws:8004/health",
+                "healthy",
+                12,
+                "not-a-real-timestamp",
+                None,
+            ),
+        ]
+    )
+    stats = sync_from_health_aggregator_db(cmdb_session, db_path)
+
+    assert stats["rows_read"] == 1
+    assert stats["written"] == 0
+    assert stats["skipped_unparseable_timestamp"] == 1
+    assert stats["max_id"] == 1  # still advances, so this row isn't retried forever
+
+    assert cmdb_session.query(HealthObservation).count() == 0
