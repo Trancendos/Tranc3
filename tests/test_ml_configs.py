@@ -115,9 +115,11 @@ class TestUserSettingModel:
         migration's INTEGER autoincrement PK), inserts against a real migrated
         database would fail even though tests against a fresh create_all() db
         would pass."""
+        from sqlalchemy import Integer
+
         table = Base.metadata.tables["user_settings"]
         assert table.c.id.autoincrement in (True, "auto")
-        assert not isinstance(table.c.id.type, type(table.c.encrypted_value.type))
+        assert isinstance(table.c.id.type, Integer)
         assert table.c.username.type.length == 64
         assert table.c.key.type.length == 128
 
