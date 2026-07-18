@@ -105,9 +105,14 @@ class TestWorkflowChaos:
             async def execute(self, inputs, context):
                 raise RuntimeError("chaos: deliberate node failure")
 
-        # Monkey-patch NODE_REGISTRY temporarily
+        # Monkey-patch NODE_REGISTRY temporarily. Force real initialization first —
+        # _init_registry() only populates the registry once (guarded by a flag, not
+        # dict truthiness); without this, seeding TRIGGER below would count as "already
+        # initialized" and permanently starve every other node type of registration.
         from src.workflow import nodes as _nodes
+        from src.workflow.nodes.registry import _init_registry
 
+        _init_registry()
         _nodes.NODE_REGISTRY[NodeType.TRIGGER] = BoomNode
 
         try:

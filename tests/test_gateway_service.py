@@ -18,9 +18,21 @@ Covers the unified gateway (port 8040) that aggregates all P4 worker data:
 
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests._worker_import_utils import import_worker as _import_worker
+
+_GATEWAY_WORKER_PATH = (
+    Path(__file__).resolve().parent.parent / "workers" / "gateway-service" / "worker.py"
+)
+
+
+def _load_gateway_worker():
+    return _import_worker("workers.gateway-service.worker", _GATEWAY_WORKER_PATH)
+
 
 # ---------------------------------------------------------------------------
 # Test API Key — configured via API_KEYS env var before importing the worker
@@ -51,9 +63,7 @@ def client():
         ]
     )
 
-    import importlib
-
-    mod = importlib.import_module("workers.gateway-service.worker")
+    mod = _load_gateway_worker()
     mod._init_db()
 
     with TestClient(mod.app) as c:
@@ -402,18 +412,14 @@ class TestGatewaySSE:
 class TestGatewayCache:
     def test_cache_ttl_config(self, client):
         """Verify cache TTL is configurable via env var."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         assert hasattr(mod, "CACHE_TTL")
         assert isinstance(mod.CACHE_TTL, int)
         assert mod.CACHE_TTL >= 1
 
     def test_cache_in_memory_structure(self, client):
         """Verify the in-memory cache dict exists."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         assert hasattr(mod, "_cache")
         assert isinstance(mod._cache, dict)
 
@@ -424,9 +430,7 @@ class TestGatewayCache:
 class TestGatewayCircuitBreaker:
     def test_circuit_breaker_initialized(self, client):
         """Verify circuit breakers are initialized for all upstream workers."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         assert hasattr(mod, "_circuit_breaker")
         cb = mod._circuit_breaker
         # Should have entries for all 8 workers
@@ -437,9 +441,7 @@ class TestGatewayCircuitBreaker:
 
     def test_upstream_workers_config(self, client):
         """Verify all 8 upstream workers are configured."""
-        import importlib
-
-        mod = importlib.import_module("workers.gateway-service.worker")
+        mod = _load_gateway_worker()
         uw = mod.UPSTREAM_WORKERS
         assert len(uw) == 8
         expected = {

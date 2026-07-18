@@ -15,7 +15,6 @@ import json
 import time
 import uuid
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -461,15 +460,24 @@ class TestInfinityAuthHTTPEndpoints:
 
     @pytest.fixture
     def auth_client(self, tmp_path):
-        """Create a TestClient with a temporary database."""
-        db_path = str(tmp_path / "test_auth.db")
-        test_db = auth_mod.AuthDatabase(db_path=db_path)
+        """Create a TestClient with a temporary database.
 
-        # Patch the module-level db and rate_limiter
-        with patch.object(auth_mod, "db", test_db):
-            with patch.object(auth_mod, "rate_limiter", auth_mod.RateLimiter(max_requests=100)):
-                client = TestClient(auth_mod.app)
-                yield client
+        `db`/`rate_limiter` no longer live on the `worker.py` shim (they were
+        refactored into `main.py`, with routes reading them via
+        `router.py`'s `_get_db()`/`init_router()`), so this imports `main.py`
+        directly and rebinds the router's globals to test-isolated instances
+        via the same `init_router()` the real app startup uses.
+        """
+        main_mod = _import_worker(
+            "infinity_auth_main", _TRANC3_ROOT / "workers" / "infinity-auth" / "main.py"
+        )
+        db_path = str(tmp_path / "test_auth.db")
+        test_db = main_mod.AuthDatabase(db_path=db_path)
+        test_rate_limiter = main_mod.RateLimiter(max_requests=100)
+        main_mod.init_router(test_db, test_rate_limiter, main_mod.worker_kit)
+
+        client = TestClient(main_mod.app)
+        yield client
 
         test_db._conn.close()
 
