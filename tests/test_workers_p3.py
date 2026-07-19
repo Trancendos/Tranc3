@@ -58,6 +58,7 @@ os.environ.setdefault("DB_PATH", os.path.join(_TEST_DATA_DIR, "health_aggregator
 os.environ.setdefault("STORAGE_DB_PATH", os.path.join(_TEST_DATA_DIR, "storage.db"))
 os.environ.setdefault("STORAGE_DUCKDB_PATH", os.path.join(_TEST_DATA_DIR, "storage.duckdb"))
 os.environ.setdefault("STORAGE_LOCAL_ROOT", os.path.join(_TEST_DATA_DIR, "objects"))
+os.environ.setdefault("GRID_DB_PATH", os.path.join(_TEST_DATA_DIR, "grid.db"))
 
 
 analytics_mod = _import_worker(
@@ -139,7 +140,7 @@ class TestAnalyticsService:
         db_path = str(tmp_path / "analytics.db")
         with patch.object(analytics_mod, "DB_PATH", db_path):
             analytics_mod.init_db()
-            secret = getattr(analytics_mod, "_INTERNAL_SECRET", "")
+            secret = getattr(analytics_mod, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
             yield TestClient(analytics_mod.app, headers=headers)
 
@@ -520,7 +521,7 @@ class TestStorageService:
             patch.object(storage_mod, "LOCAL_ROOT", storage_path),
         ):
             storage_mod.init_db()
-            secret = getattr(storage_mod, "_INTERNAL_SECRET", "")
+            secret = getattr(storage_mod, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
             yield TestClient(storage_mod.app, headers=headers)
 
@@ -594,7 +595,7 @@ class TestStorageService:
     def test_delete_bucket(self, client):
         client.post("/buckets", json={"name": "del-bucket"})
         r = client.delete("/buckets/del-bucket")
-        assert r.status_code == 200
+        assert r.status_code == 204
 
 
 # ===========================================================================
@@ -1059,7 +1060,7 @@ class TestAuditService:
         db_path = str(tmp_path / "audit.db")
         with patch.object(audit_mod, "DB_PATH", db_path):
             audit_mod.init_db()
-            secret = getattr(audit_mod, "_INTERNAL_SECRET", "")
+            secret = getattr(audit_mod, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
             yield TestClient(audit_mod.app, headers=headers)
 
@@ -1385,7 +1386,7 @@ class TestHealthAggregator:
         with patch.object(health_agg_mod, "DB_PATH", db_path):
             health_agg_mod._latest.clear()
             health_agg_mod.init_db()
-            secret = getattr(health_agg_mod, "_INTERNAL_SECRET", "")
+            secret = getattr(health_agg_mod, "INTERNAL_SECRET", "")
             headers = {"X-Internal-Secret": secret} if secret else {}
             yield TestClient(health_agg_mod.app, headers=headers)
         health_agg_mod._latest.clear()
@@ -1401,7 +1402,9 @@ class TestHealthAggregator:
             "/services",
             json={
                 "name": "tranc3-api",
-                "url": "http://localhost:8000/health",
+                # A real container hostname, not localhost — the worker's SSRF
+                # guard (worker.py) deliberately rejects loopback/link-local URLs.
+                "url": "http://tranc3-backend:8000/health",
                 "interval_seconds": 30,
             },
         )
@@ -1567,13 +1570,14 @@ class TestTheGrid:
 
     @pytest.fixture
     def client(self, tmp_path):
-        db_path = tmp_path / "grid.db"
-        with patch.object(grid_mod, "DB_PATH", db_path):
-            grid_mod.db = grid_mod.GridDatabase(db_path)
-            grid_mod.engine = grid_mod.WorkflowEngine(grid_mod.db)
-            secret = getattr(grid_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(grid_mod.app, headers=headers)
+        # config.DB_PATH is read once at collection time via GRID_DB_PATH
+        # (set to a shared session temp dir above); GridDatabase/WorkflowEngineRouter
+        # are constructed once inside main.create_app() at that same import time,
+        # so — unlike workers with a lazy per-test reload — all TestTheGrid tests
+        # share one grid.db for the session rather than getting per-test isolation.
+        secret = os.environ.get("INTERNAL_SECRET", "")
+        headers = {"X-Internal-Secret": secret} if secret else {}
+        yield TestClient(grid_mod.app, headers=headers)
 
     def test_health(self, client):
         r = client.get("/health")

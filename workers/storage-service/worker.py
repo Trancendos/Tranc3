@@ -205,6 +205,9 @@ def _init_db() -> None:
         c.commit()
 
 
+init_db = _init_db  # public alias for tests
+
+
 def _etag(data: bytes) -> str:
     return hashlib.md5(data, usedforsecurity=False).hexdigest()
 
@@ -419,7 +422,7 @@ def health() -> JSONResponse:
             "service": WORKER_NAME,
             "entity": "DocUtari",
             "lead_ai": "To be Defined",
-            "status": "ok",
+            "status": "healthy",
             "uptime_s": round((datetime.now(timezone.utc) - STARTED_AT).total_seconds(), 1),
             "objects": obj_count,
             "buckets": bucket_count,
@@ -432,14 +435,14 @@ def health() -> JSONResponse:
 # ── Buckets ───────────────────────────────────────────────────────────────────
 
 
-@_router.get("/storage/buckets")
+@_router.get("/buckets")
 def list_buckets() -> Dict[str, Any]:
     with _conn() as c:
         rows = c.execute("SELECT * FROM buckets ORDER BY name").fetchall()
     return {"buckets": [dict(r) for r in rows]}
 
 
-@_router.post("/storage/buckets", status_code=201)
+@_router.post("/buckets", status_code=201)
 def create_bucket(req: BucketCreate) -> Dict[str, Any]:
     with _conn() as c:
         if c.execute("SELECT name FROM buckets WHERE name=?", (req.name,)).fetchone():
@@ -453,7 +456,7 @@ def create_bucket(req: BucketCreate) -> Dict[str, Any]:
     return {"name": req.name}
 
 
-@_router.delete("/storage/buckets/{bucket}", status_code=204)
+@_router.delete("/buckets/{bucket}", status_code=204)
 def delete_bucket(bucket: str) -> None:
     with _conn() as c:
         if not c.execute("SELECT name FROM buckets WHERE name=?", (bucket,)).fetchone():
@@ -477,7 +480,7 @@ def _ensure_bucket(bucket: str) -> None:
 # ── Objects ───────────────────────────────────────────────────────────────────
 
 
-@_router.get("/storage/buckets/{bucket}/objects")
+@_router.get("/buckets/{bucket}/objects")
 def list_objects(
     bucket: str,
     prefix: Optional[str] = None,
@@ -505,7 +508,7 @@ def list_objects(
     return {"bucket": bucket, "total": total, "objects": [dict(r) for r in rows]}
 
 
-@_router.put("/storage/buckets/{bucket}/objects/{key:path}", status_code=201)
+@_router.put("/buckets/{bucket}/objects/{key:path}", status_code=201)
 async def upload_object(bucket: str, key: str, file: UploadFile = File(...)) -> Dict[str, Any]:
     _ensure_bucket(bucket)
     data = await file.read()
@@ -584,7 +587,7 @@ async def upload_object(bucket: str, key: str, file: UploadFile = File(...)) -> 
     return {"bucket": bucket, "key": key, "size": len(data), "etag": tag, "backend": backend}
 
 
-@_router.get("/storage/buckets/{bucket}/objects/{key:path}/meta")
+@_router.get("/buckets/{bucket}/objects/{key:path}/meta")
 def get_object_meta(bucket: str, key: str) -> Dict[str, Any]:
     _ensure_bucket(bucket)
     with _conn() as c:
@@ -594,7 +597,7 @@ def get_object_meta(bucket: str, key: str) -> Dict[str, Any]:
     return dict(row)
 
 
-@_router.get("/storage/buckets/{bucket}/objects/{key:path}")
+@_router.get("/buckets/{bucket}/objects/{key:path}")
 async def download_object(bucket: str, key: str):
     _ensure_bucket(bucket)
     with _conn() as c:
@@ -642,7 +645,7 @@ async def download_object(bucket: str, key: str):
     raise HTTPException(status_code=404, detail="Object data unavailable")
 
 
-@_router.delete("/storage/buckets/{bucket}/objects/{key:path}", status_code=204)
+@_router.delete("/buckets/{bucket}/objects/{key:path}", status_code=204)
 def delete_object(bucket: str, key: str) -> None:
     _ensure_bucket(bucket)
     with _conn() as c:
@@ -659,7 +662,7 @@ def delete_object(bucket: str, key: str) -> None:
         c.commit()
 
 
-@_router.post("/storage/buckets/{bucket}/objects/{key:path}/token")
+@_router.post("/buckets/{bucket}/objects/{key:path}/token")
 def create_token(bucket: str, key: str, ttl: int = Query(3600)) -> Dict[str, Any]:
     _ensure_bucket(bucket)
     with _conn() as c:
@@ -676,7 +679,7 @@ def create_token(bucket: str, key: str, ttl: int = Query(3600)) -> Dict[str, Any
     return {"token": token, "expires_in": ttl}
 
 
-@_router.get("/storage/download/{token}")
+@_router.get("/download/{token}")
 async def download_via_token(token: str):
     with _conn() as c:
         row = c.execute(
@@ -687,7 +690,7 @@ async def download_via_token(token: str):
     return await download_object(row["bucket"], row["key"])
 
 
-@_router.get("/storage/status")
+@_router.get("/status")
 def storage_status() -> Dict[str, Any]:
     with _conn() as c:
         by_bucket = c.execute(

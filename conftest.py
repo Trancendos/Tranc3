@@ -27,6 +27,19 @@ for _var, _default in (
 ):
     os.environ[_var] = os.environ.get(_var) or _default
 
+# ── Disable non-essential observability instrumentation for tests ───────────
+# src.observability.worker_setup.instrument_worker() registers Prometheus
+# metrics into prometheus_client's process-wide default CollectorRegistry,
+# which persists across the whole pytest process — unlike the FastAPI `app`
+# instances it's guarding against re-instrumenting. Any worker re-imported
+# fresh more than once in the same process (a common test-harness pattern,
+# e.g. tests/_worker_import_utils.import_worker) hits
+# "ValueError: Duplicated timeseries in CollectorRegistry" on the second
+# import. OTel's OTLP exporter also spends the whole run retrying a
+# nonexistent otel-collector:4317. Neither is needed for unit tests.
+os.environ.setdefault("PROMETHEUS_ENABLED", "false")
+os.environ.setdefault("OTEL_ENABLED", "false")
+
 # ── Redirect worker SQLite databases to a writable temp dir ──────────────────
 # Several workers default their DB path to "/data/..." (the production Docker
 # volume mount). That directory does not exist / is not writable in CI or local

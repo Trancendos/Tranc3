@@ -176,6 +176,9 @@ def _init_db() -> None:
         c.commit()
 
 
+init_db = _init_db  # public alias for tests
+
+
 def _record_backend_event(backend: str, success: bool) -> None:
     try:
         with _db_conn() as c:
@@ -375,7 +378,7 @@ def health() -> JSONResponse:
     return JSONResponse(
         {
             "service": WORKER_NAME,
-            "status": "ok",
+            "status": "healthy",
             "uptime_s": round((datetime.now(timezone.utc) - STARTED_AT).total_seconds(), 1),
             "event_count": ev,
             "metric_count": me,
@@ -384,7 +387,7 @@ def health() -> JSONResponse:
     )
 
 
-@_router.post("/analytics/events", status_code=201)
+@_router.post("/events", status_code=201)
 def ingest_event(ev: EventIn) -> Dict[str, Any]:
     ts = ev.timestamp or time.time()
     date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -401,21 +404,23 @@ def ingest_event(ev: EventIn) -> Dict[str, Any]:
             _GUARDS[backend].decay()
             backend = "sqlite"
 
+    event_id = None
     if backend in ("sqlite", "offline", "polars", "pandas", "minio_parquet", "motherduck"):
         with _db_conn() as c:
-            c.execute(
+            cur = c.execute(
                 "INSERT INTO events (event_type,user_id,session_id,properties,timestamp,date_str) VALUES (?,?,?,?,?,?)",
                 (ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str),
             )
+            event_id = cur.lastrowid
             c.commit()
     if success:
         _GUARDS[backend].reinforce()
     _record_backend_event(backend, success)
 
-    return {"event_type": ev.event_type, "timestamp": ts, "backend": backend}
+    return {"id": event_id, "event_type": ev.event_type, "timestamp": ts, "backend": backend}
 
 
-@_router.post("/analytics/events/batch", status_code=201)
+@_router.post("/events/batch", status_code=201)
 def ingest_batch(batch: BatchEventsIn) -> Dict[str, Any]:
     rows = []
     for ev in batch.events:
@@ -433,7 +438,7 @@ def ingest_batch(batch: BatchEventsIn) -> Dict[str, Any]:
     return {"inserted": len(rows)}
 
 
-@_router.get("/analytics/events")
+@_router.get("/events")
 def query_events(
     event_type: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -474,7 +479,7 @@ def query_events(
     return {"total": total, "events": [dict(r) for r in sql_rows], "limit": limit, "offset": offset}
 
 
-@_router.get("/analytics/events/types")
+@_router.get("/events/types")
 def event_types() -> Dict[str, Any]:
     with _db_conn() as c:
         rows = c.execute(
@@ -483,7 +488,7 @@ def event_types() -> Dict[str, Any]:
     return {"types": [dict(r) for r in rows]}
 
 
-@_router.post("/analytics/events/funnel")
+@_router.post("/events/funnel")
 def funnel(req: FunnelIn) -> Dict[str, Any]:
     with _db_conn() as c:
         counts = []
@@ -500,7 +505,7 @@ def funnel(req: FunnelIn) -> Dict[str, Any]:
     return {"funnel": counts}
 
 
-@_router.post("/analytics/metrics", status_code=201)
+@_router.post("/metrics", status_code=201)
 def record_metric(m: MetricIn) -> Dict[str, Any]:
     ts = m.timestamp or time.time()
     date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -513,7 +518,7 @@ def record_metric(m: MetricIn) -> Dict[str, Any]:
     return {"id": cur.lastrowid, "name": m.name, "value": m.value, "timestamp": ts}
 
 
-@_router.get("/analytics/metrics/{name}")
+@_router.get("/metrics/{name}")
 def get_metric(
     name: str,
     agg: str = Query("avg", pattern="^(avg|sum|min|max|count)$"),
@@ -545,7 +550,7 @@ def get_metric(
     return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
 
 
-@_router.get("/analytics/metrics/{name}/timeseries")
+@_router.get("/metrics/{name}/timeseries")
 def metric_timeseries(
     name: str,
     bucket: str = Query("day", pattern="^(hour|day)$"),
@@ -571,7 +576,7 @@ def metric_timeseries(
     return {"name": name, "bucket": bucket, "series": [dict(r) for r in rows]}
 
 
-@_router.get("/analytics/summary")
+@_router.get("/summary")
 def summary() -> Dict[str, Any]:
     with _db_conn() as c:
         event_count = c.execute("SELECT COUNT(*) FROM events").fetchone()[0]
@@ -590,7 +595,7 @@ def summary() -> Dict[str, Any]:
     }
 
 
-@_router.get("/analytics/status")
+@_router.get("/status")
 def analytics_status() -> Dict[str, Any]:
     return {
         "active_backend": _select_backend(),

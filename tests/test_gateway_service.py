@@ -92,7 +92,9 @@ def client():
     )
 
     mod = _load_gateway_worker()
-    mod._init_db()
+    import database as _database  # noqa: E402 — only resolvable after _load_gateway_worker()
+
+    _database.init_db()
 
     with TestClient(mod.app) as c:
         yield c
@@ -440,16 +442,18 @@ class TestGatewaySSE:
 class TestGatewayCache:
     def test_cache_ttl_config(self, client):
         """Verify cache TTL is configurable via env var."""
-        mod = _load_gateway_worker()
-        assert hasattr(mod, "CACHE_TTL")
-        assert isinstance(mod.CACHE_TTL, int)
-        assert mod.CACHE_TTL >= 1
+        import config
+
+        assert hasattr(config, "CACHE_TTL")
+        assert isinstance(config.CACHE_TTL, int)
+        assert config.CACHE_TTL >= 1
 
     def test_cache_in_memory_structure(self, client):
         """Verify the in-memory cache dict exists."""
-        mod = _load_gateway_worker()
-        assert hasattr(mod, "_cache")
-        assert isinstance(mod._cache, dict)
+        import service
+
+        assert hasattr(service, "_cache")
+        assert isinstance(service._cache, dict)
 
 
 # ── Circuit Breaker ─────────────────────────────────────────────────────────
@@ -458,9 +462,9 @@ class TestGatewayCache:
 class TestGatewayCircuitBreaker:
     def test_circuit_breaker_initialized(self, client):
         """Verify circuit breakers are initialized for all upstream workers."""
-        mod = _load_gateway_worker()
-        assert hasattr(mod, "_circuit_breaker")
-        cb = mod._circuit_breaker
+        import service
+
+        cb = service._circuit_breaker
         # Should have entries for all 8 workers
         assert len(cb) == 8
         for name, state in cb.items():
@@ -469,8 +473,9 @@ class TestGatewayCircuitBreaker:
 
     def test_upstream_workers_config(self, client):
         """Verify all 8 upstream workers are configured."""
-        mod = _load_gateway_worker()
-        uw = mod.UPSTREAM_WORKERS
+        import config
+
+        uw = config.UPSTREAM_WORKERS
         assert len(uw) == 8
         expected = {
             "vault",
