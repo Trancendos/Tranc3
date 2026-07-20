@@ -21,7 +21,7 @@ torch==2.12.1
 sentencepiece==0.2.1
 
 # === Datasets ===
-datasets==3.0.0
+datasets==5.0.0
 
 # === Numerical Computing ===
 numpy==2.1.3
@@ -79,7 +79,7 @@ pydantic==2.13.4
 pydantic-settings==2.14.2
 sse-starlette==3.4.4
 uvicorn==0.48.0
-structlog==25.3.0
+structlog==26.1.0
 python-jose[cryptography]==3.5.0
 email-validator==2.2.0
 # pyasn1: fixes CVE-2026-30922 (integer overflow / DoS in BER/DER parser)
@@ -135,7 +135,7 @@ opentelemetry-instrumentation-aiohttp-client==0.63b1
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)
-cachetools==5.5.0
+cachetools==7.1.4
 # diskcache removed — CVE-2025-69872 (pickle deserialization RCE, no upstream fix).
 # Package had zero usages in the codebase; Redis + cachetools cover all caching needs.
 
@@ -148,7 +148,7 @@ nats-py==2.7.2
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
 #   src/security/security_framework.py, src/mcp/tools.py for caching, session
 #   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
-redis==7.4.0
+redis==8.0.1
 
 # === Master Worker / BotSwarm / Task Orchestration ===
 # pyyaml: YAML task definition parsing — powers src/master/task_loader.py
@@ -156,7 +156,7 @@ pyyaml==6.0.2
 # apscheduler: Cron/interval/date scheduling — drives src/master/master_worker.py
 apscheduler==3.10.4
 # watchdog: Filesystem events — hot-reload YAML task files without restart
-watchdog==4.0.0
+watchdog==6.0.0
 
 # === Quantum Computing (Think Tank) ===
 # qiskit 2.x + qiskit-aer: quantum circuit simulation for Think Tank features.

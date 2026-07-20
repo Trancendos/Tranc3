@@ -8,6 +8,6 @@
     "tail": "wrangler tail"
   },
   "devDependencies": {
-    "wrangler": "4.102.0"
+    "wrangler": "4.111.0"
   }
 }
