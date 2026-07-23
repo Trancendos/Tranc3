@@ -20,6 +20,72 @@ active_frameworks:
     register_path: "compliance/register.yaml"
     cab_required: false
 
+domains:
+  governance:
+    - id: "foundation-framework"
+      name: "Foundation Framework Charter"
+      standard: "Trancendos Foundation"
+      status: "active"
+    - id: "universe-framework"
+      name: "Trancendos Universe Framework"
+      standard: "Trancendos Universe"
+      status: "active"
+    - id: "app-per-app-framework"
+      name: "App per App Framework"
+      standard: "Trancendos App-per-App"
+      status: "active"
+    - id: "design-system-framework"
+      name: "Design System Template"
+      standard: "Trancendos Design System"
+      status: "draft"
+  agile:
+    - id: "kanban"
+      name: "Kanban Board Charter"
+      standard: "Kanban"
+      status: "active"
+    - id: "agile-delivery"
+      name: "Agile Delivery Framework"
+      standard: "Agile"
+      status: "active"
+  itsm:
+    - id: "itil-incident-mgmt"
+      name: "ITIL Incident Management"
+      standard: "ITIL 4"
+      status: "active"
+    - id: "itil-change-mgmt"
+      name: "ITIL Change Management"
+      standard: "ITIL 4"
+      status: "active"
+  project_management:
+    - id: "prince2-stage-gate"
+      name: "PRINCE2 Stage Gate"
+      standard: "PRINCE2 7"
+      status: "active"
+  legal_ip_finance:
+    - id: "legal-compliance"
+      name: "Legal Compliance Checklist"
+      standard: "UK Companies Act"
+      status: "active"
+    - id: "financial-oversight"
+      name: "Financial Oversight Review"
+      standard: "Zero-Cost Financial Controls"
+      status: "active"
+    - id: "intellectual-property"
+      name: "Intellectual Property Register"
+      standard: "IP Register"
+      status: "active"
+
+rooms:
+  - id: "board-room"
+    name: "Board Room"
+    purpose: "Executive governance and strategic decisions"
+  - id: "war-room"
+    name: "War Room"
+    purpose: "Incident response and crisis coordination"
+  - id: "meeting-room"
+    name: "Meeting Room"
+    purpose: "General team meetings and standups"
+
 cab:
   enabled: true
   require_approval_for:

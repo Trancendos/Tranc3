@@ -5,6 +5,9 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, Query
 
+from src.townhall.agile import get_kanban_service
+from src.townhall.documents import list_templates
+from src.townhall.framework_registry import get_framework_registry
 from src.townhall.governance import ComplianceResult, get_townhall
 
 router = APIRouter(prefix="/townhall", tags=["townhall"])
@@ -12,7 +15,19 @@ router = APIRouter(prefix="/townhall", tags=["townhall"])
 
 @router.get("/status")
 async def townhall_status():
-    return get_townhall().status()
+    status = get_townhall().status()
+    status["kanban_boards"] = len(get_kanban_service().list_boards())
+    return status
+
+
+@router.get("/frameworks")
+async def townhall_frameworks():
+    return get_framework_registry().to_dict()
+
+
+@router.get("/documents/templates")
+async def townhall_document_templates(category: Optional[str] = Query(None)):
+    return {"templates": list_templates(category=category)}
 
 
 @router.get("/policies")

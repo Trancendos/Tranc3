@@ -149,6 +149,8 @@ class TownHall:
         return sum(p.score for p in policies) / len(policies)
 
     def status(self) -> Dict[str, Any]:
+        from src.townhall.framework_registry import get_framework_registry
+
         policies = self.active_policies()
         return {
             "policies": len(policies),
@@ -156,6 +158,7 @@ class TownHall:
             "frameworks": list({p.framework for p in policies}),
             "recent_events": len(self._history),
             "policy_scores": {p.id: p.score for p in policies},
+            "registry": get_framework_registry().to_dict(),
         }
 
     # ── Default policies ──────────────────────────────────────────────────────
