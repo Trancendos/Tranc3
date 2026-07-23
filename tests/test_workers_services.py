@@ -119,7 +119,11 @@ class TestUsersService:
             # Re-initialise DB at the patched path
             db = mod.UsersDatabase(db_path=db_path)
             with patch.object(mod, "db", db):
-                yield TestClient(mod.app)
+                # /users routes require X-Internal-Secret whenever
+                # INTERNAL_SECRET is set (conftest.py always sets it for
+                # tests), matching require_internal_auth in worker.py.
+                headers = {"X-Internal-Secret": mod._INTERNAL_SECRET}
+                yield TestClient(mod.app, headers=headers)
 
     def test_health(self, client):
         resp = client.get("/health")
@@ -193,7 +197,9 @@ class TestProductsService:
 
     @pytest.fixture
     def client(self, mod):
-        return TestClient(mod.app)
+        # /  routes require X-Internal-Secret whenever INTERNAL_SECRET is
+        # set (conftest.py always sets it for tests).
+        return TestClient(mod.app, headers={"X-Internal-Secret": mod._INTERNAL_SECRET})
 
     def test_health(self, client):
         resp = client.get("/health")
@@ -212,7 +218,7 @@ class TestProductsService:
                 "sku": "WGT-001",
             },
         )
-        assert resp.status_code == 201
+        assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "Widget Pro"
         assert "product_id" in data or "id" in data
@@ -230,8 +236,8 @@ class TestProductsService:
         resp = client.get("/")
         assert resp.status_code == 200
         body = resp.json()
-        # Response may be a list or an object with a "products" / "items" key
-        items = body if isinstance(body, list) else body.get("products", body.get("items", []))
+        # products-service wraps its list under "data" (see test_workers_p2.py)
+        items = body if isinstance(body, list) else body.get("data", [])
         assert isinstance(items, list)
         assert len(items) >= 1
 
@@ -244,7 +250,7 @@ class TestProductsService:
                 "sku": "WGT-GET-001",
             },
         )
-        assert create_resp.status_code == 201
+        assert create_resp.status_code == 200
         body = create_resp.json()
         product_id = body.get("product_id") or body.get("id")
 
@@ -278,7 +284,7 @@ class TestVaultService:
         db_path = str(tmp_path / "vault.db")
         with patch.object(mod, "DB_PATH", db_path):
             mod._init_db()
-            yield TestClient(mod.app)
+            yield TestClient(mod.app, headers={"X-Internal-Secret": mod._INTERNAL_SECRET})
 
     def test_health(self, client):
         resp = client.get("/health")
@@ -300,7 +306,7 @@ class TestVaultService:
         db_path = str(tmp_path / "vault_create.db")
         with patch.object(mod, "DB_PATH", db_path):
             mod._init_db()
-            c = TestClient(mod.app)
+            c = TestClient(mod.app, headers={"X-Internal-Secret": mod._INTERNAL_SECRET})
             resp = c.post("/secrets", json={"key": "my-api-key", "value": "supersecret123"})
         assert resp.status_code == 201
         data = resp.json()
@@ -311,7 +317,7 @@ class TestVaultService:
         db_path = str(tmp_path / "vault_retrieve.db")
         with patch.object(mod, "DB_PATH", db_path):
             mod._init_db()
-            c = TestClient(mod.app)
+            c = TestClient(mod.app, headers={"X-Internal-Secret": mod._INTERNAL_SECRET})
             create = c.post("/secrets", json={"key": "retrieve-me", "value": "hidden_value"})
             assert create.status_code == 201
             secret_id = create.json()["id"]
@@ -353,7 +359,9 @@ class TestNotificationsService:
 
     @pytest.fixture
     def client(self, mod):
-        return TestClient(mod.app)
+        # /notifications routes require X-Internal-Secret whenever
+        # INTERNAL_SECRET is set (conftest.py always sets it for tests).
+        return TestClient(mod.app, headers={"X-Internal-Secret": mod._INTERNAL_SECRET})
 
     def test_health(self, client):
         resp = client.get("/health")
@@ -404,7 +412,11 @@ class TestAuditService:
         with patch.object(mod, "DB_PATH", db_path):
             # Re-init the DB at the temp path so each test gets a clean slate
             mod._init_db()
-            yield TestClient(mod.app)
+            # Write endpoints require X-Internal-Secret whenever
+            # INTERNAL_SECRET is set (conftest.py always sets it for
+            # tests); audit-service uses the public name (no underscore
+            # prefix), unlike the other workers in this file.
+            yield TestClient(mod.app, headers={"X-Internal-Secret": mod.INTERNAL_SECRET})
 
     def test_health(self, client):
         resp = client.get("/health")

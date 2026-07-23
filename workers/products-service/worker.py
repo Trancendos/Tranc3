@@ -73,6 +73,7 @@ class ProductsDatabase:
                     description TEXT DEFAULT '',
                     price REAL NOT NULL DEFAULT 0,
                     category TEXT DEFAULT '',
+                    sku TEXT DEFAULT '',
                     tags TEXT DEFAULT '[]',
                     metadata TEXT DEFAULT '{}',
                     is_active INTEGER DEFAULT 1,
