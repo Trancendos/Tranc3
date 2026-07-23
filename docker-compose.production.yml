@@ -1087,7 +1087,7 @@ services:
       - tranc3-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8052/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Langfuse — AI Observability (Port 3002) ──────────────────────────
@@ -1215,7 +1215,7 @@ services:
     volumes:
       - shards-data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8045/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8045/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Infinity Bridge — Human Traffic Transfer Hub (Port 8070) ──────────────
@@ -1231,7 +1231,7 @@ services:
       INFINITY_BRIDGE_PORT: "8070"
       INTERNAL_SECRET: ${INTERNAL_SECRET:?required}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8070/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8070/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── CranBania — The Town Hall (Kanban + ITSM + Agile, Port 8071) ─────────────
