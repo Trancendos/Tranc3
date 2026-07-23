@@ -65,6 +65,11 @@ class PlatformEventType(str, enum.Enum):
     NOTIFICATION_SENT = "notification.sent"
     NOTIFICATION_READ = "notification.read"
 
+    # Security events
+    SECURITY_CVE_INGESTED = "security.cve.ingested"
+    SECURITY_THREAT_DETECTED = "security.threat.detected"
+    SECURITY_ANOMALY_FLAGGED = "security.anomaly.flagged"
+
 
 class DeliveryStatus(str, enum.Enum):
     """Event delivery status."""
