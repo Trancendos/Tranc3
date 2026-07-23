@@ -169,7 +169,11 @@ def read_validated_file_text(
         raise FileNotFoundError(f"Validated path is not a regular file: {resolved}")
     # Open via file descriptor to keep the validated path object out of the
     # taint flow that static analyzers (CodeQL) track from user-supplied input.
-    fd = os.open(str(resolved), os.O_RDONLY)
+    # O_NOFOLLOW closes the check-to-open symlink race on the final path
+    # component: resolved's own final component is never itself a symlink
+    # (Path.resolve() already dereferenced it), so this only ever rejects a
+    # symlink an attacker swapped in after validate_path() ran.
+    fd = os.open(str(resolved), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
     try:
         stat = os.fstat(fd)
         size = stat.st_size
@@ -244,7 +248,12 @@ def list_validated_children_fd(
     """
     resolved = validate_path(rel, base_dir, must_exist=True)
     try:
-        fd = os.open(str(resolved), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        # O_NOFOLLOW closes the check-to-open symlink race on the final path
+        # component (see read_validated_file_text's matching comment).
+        fd = os.open(
+            str(resolved),
+            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
     except NotADirectoryError as exc:
         raise NotADirectoryError(f"Validated path is not a directory: {resolved}") from exc
     except FileNotFoundError as exc:

@@ -779,6 +779,27 @@ class TestQueueService:
         assert r.status_code == 200
         assert r.json()["status"] == "pending"
 
+    def test_fail_task_terminal_status_after_max_retries(self, client):
+        """Failing a task through its max_retries limit lands it in the
+        terminal "failed" state instead of being requeued indefinitely."""
+        created = client.post(
+            "/tasks", json={"queue_name": "flaky-dlq", "payload": {}, "max_retries": 2}
+        ).json()
+        task_id = created["id"]
+
+        client.get("/tasks/next/flaky-dlq", params={"worker_id": "worker-1"})
+        r1 = client.post(f"/tasks/{task_id}/fail", json={"error": "boom-1"})
+        assert r1.status_code == 200
+        assert r1.json()["status"] == "pending"
+
+        client.get("/tasks/next/flaky-dlq", params={"worker_id": "worker-1"})
+        r2 = client.post(f"/tasks/{task_id}/fail", json={"error": "boom-2"})
+        assert r2.status_code == 200
+        assert r2.json()["status"] == "failed"
+
+        status = client.get(f"/tasks/status/{task_id}")
+        assert status.json()["status"] == "failed"
+
     def test_task_status(self, client):
         created = client.post("/tasks", json={"queue_name": "status-check", "payload": {}}).json()
         r = client.get(f"/tasks/status/{created['id']}")
