@@ -14,7 +14,10 @@ P2 Workers:
 
 from __future__ import annotations
 
+import atexit
 import os
+import shutil
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -26,6 +29,15 @@ from tests._worker_import_utils import import_worker as _import_worker
 # ─── Import helpers for hyphenated package names ────────────────────────────────────────────────────────────────────────────────
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent
+
+# config.py falls back to workers/the-grid/data/grid.db (a real, non-test path)
+# when GRID_DB_PATH is unset. tests/test_workers_p3.py happens to set this env
+# var too, but this file must not depend on that file having already run first
+# — set our own default (only if nothing else already set one) before the
+# import below triggers the-grid's config.py to read it.
+_GRID_TEST_DATA_DIR = tempfile.mkdtemp(prefix="tranc3-test-p2-grid-")
+atexit.register(shutil.rmtree, _GRID_TEST_DATA_DIR, ignore_errors=True)
+os.environ.setdefault("GRID_DB_PATH", os.path.join(_GRID_TEST_DATA_DIR, "grid.db"))
 
 
 grid_mod = _import_worker("the_grid_worker", _TRANC3_ROOT / "workers" / "the-grid" / "worker.py")

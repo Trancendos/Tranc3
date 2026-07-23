@@ -52,7 +52,29 @@ def _import_gateway_worker_no_evict(full: Path) -> object:
     mod = importlib.util.module_from_spec(spec)
     sys.modules["workers.gateway-service.worker"] = mod
     spec.loader.exec_module(mod)
+    # Stash direct references so callers can re-assert sys.modules right
+    # before exercising this app — other workers imported later via the
+    # shared evicting loader restore whatever "config"/"database"/"service"
+    # were cached under those bare names at the *start* of their own import,
+    # which (since these three are deliberately left live for gateway-service's
+    # own lazy imports) is usually gateway's own copies again by the time they
+    # finish — but nothing guarantees that for every ordering, so don't rely
+    # on sys.modules alone staying correct between imports and requests.
+    mod.config = sys.modules["config"]
+    mod.database = sys.modules["database"]
+    mod.service = sys.modules["service"]
     return mod
+
+
+def _reassert_gateway_sibling_modules(mod: object) -> None:
+    """Re-install gateway-service's own config/database/service into
+    sys.modules right before exercising its app, undoing anything another
+    worker's import may have swapped in under those bare names since this
+    module was first (and only, per _module_cache) loaded.
+    """
+    sys.modules["config"] = mod.config
+    sys.modules["database"] = mod.database
+    sys.modules["service"] = mod.service
 
 
 def _import_worker(rel_path: str) -> object:
@@ -260,8 +282,17 @@ class TestGatewayService:
         # (which TestClient triggers per request) — there's no `_init_db` or
         # `DB_PATH` attribute on worker.py itself (a `from main import app`
         # shim) to call/reassign directly, so don't try to re-point per test.
-        os.environ.setdefault("GATEWAY_DB_PATH", str(tmp_path / "gateway_test.db"))
+        # Use a plain assignment (not setdefault): some other test file may
+        # have already set GATEWAY_DB_PATH to its own now-torn-down tmp_path
+        # earlier in the same pytest session, and setdefault would silently
+        # keep that stale value for our own first (and only, since this
+        # module is cached) import instead of using this test's own tmp_path.
+        os.environ["GATEWAY_DB_PATH"] = str(tmp_path / "gateway_test.db")
         self.mod = _import_worker("workers/gateway-service/worker.py")
+        # Guard against another worker's import clobbering the bare
+        # config/database/service names between this module's first import
+        # and this request (see _reassert_gateway_sibling_modules's docstring).
+        _reassert_gateway_sibling_modules(self.mod)
         self.client = _client_for(self.mod)
 
     def test_health(self):
@@ -443,12 +474,17 @@ class TestInfinityPortalService:
             "/portal/login",
             json={"username": "nobody", "password": "wrongpassword"},
         )
-        # Should fail auth, not crash. 503 is service.py's own honest
-        # ConnectError handling — there's no real Infinity Auth backend
-        # (port 8005) running in this test sandbox, so credentials can't be
-        # verified either way; that's a legitimate degraded-mode outcome
-        # here, not a code defect.
-        assert r.status_code in (401, 403, 404, 422, 400, 503)
+        if r.status_code == 503:
+            # service.py's own honest httpx.ConnectError handling — there's
+            # no real Infinity Auth backend (port 8005) running in this test
+            # sandbox, so credentials can't be verified either way. Only
+            # accept this specific, known "unreachable backend" response
+            # (not any arbitrary 503), so a genuinely broken /portal/login
+            # can't hide behind this branch.
+            assert "Infinity Auth service unavailable" in r.json().get("detail", "")
+        else:
+            # Should fail auth, not crash.
+            assert r.status_code in (401, 403, 404, 422, 400)
 
     def test_register_missing_fields(self):
         r = self.client.post("/portal/register", json={})
