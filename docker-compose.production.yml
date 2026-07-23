@@ -401,6 +401,8 @@ services:
       - backend-models:/app/models
       - backend-cache:/app/cache
       - backend-logs:/app/logs
+    depends_on:
+      - valkey
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tranc3-backend.rule=PathPrefix(`/api/backend`) || PathPrefix(`/mcp`)"
@@ -463,8 +465,8 @@ services:
   api-gateway:
     <<: *worker-common
     build:
-      context: ./workers/api-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/api-gateway/Dockerfile
     container_name: trancendos-api-gateway-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -498,8 +500,8 @@ services:
   infinity-ws:
     <<: *worker-common
     build:
-      context: ./workers/infinity-ws
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/infinity-ws/Dockerfile
     container_name: infinity-ws-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -518,8 +520,8 @@ services:
   infinity-auth:
     <<: *worker-common
     build:
-      context: ./workers/infinity-auth
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/infinity-auth/Dockerfile
     container_name: infinity-auth-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -545,8 +547,8 @@ services:
   users-service:
     <<: *worker-common
     build:
-      context: ./workers/users-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/users-service/Dockerfile
     container_name: users-service-worker
     ports:
       - "8006:8006"
@@ -1085,7 +1087,7 @@ services:
       - tranc3-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8052/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Langfuse — AI Observability (Port 3002) ──────────────────────────
@@ -1213,7 +1215,7 @@ services:
     volumes:
       - shards-data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8045/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8045/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── Infinity Bridge — Human Traffic Transfer Hub (Port 8070) ──────────────
@@ -1229,7 +1231,7 @@ services:
       INFINITY_BRIDGE_PORT: "8070"
       INTERNAL_SECRET: ${INTERNAL_SECRET:?required}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8070/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8070/health', timeout=5).read()\""]
       <<: *healthcheck-default
 
   # ── CranBania — The Town Hall (Kanban + ITSM + Agile, Port 8071) ─────────────

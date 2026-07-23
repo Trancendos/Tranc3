@@ -717,7 +717,7 @@ class TestCronService:
 
 
 class TestQueueService:
-    """Tests for queue-service: pub/sub message broker."""
+    """Tests for queue-service (The HIVE): priority task queue with retry/DLQ."""
 
     @pytest.fixture
     def client(self, tmp_path):
@@ -733,75 +733,82 @@ class TestQueueService:
         assert r.status_code == 200
         assert r.json()["status"] == "healthy"
 
-    def test_create_topic(self, client):
-        r = client.post("/topics", json={"name": "events", "description": "Platform events"})
+    def test_enqueue_task(self, client):
+        r = client.post("/tasks", json={"queue_name": "events", "payload": {"x": 1}})
         assert r.status_code == 201
         data = r.json()
-        assert data["name"] == "events"
+        assert data["queue_name"] == "events"
+        assert data["status"] == "pending"
 
-    def test_list_topics(self, client):
-        client.post("/topics", json={"name": "notifications"})
-        r = client.get("/topics")
+    def test_list_queues(self, client):
+        client.post("/tasks", json={"queue_name": "notifications", "payload": {}})
+        r = client.get("/queues")
         assert r.status_code == 200
         data = r.json()
-        assert "topics" in data
+        assert any(q["queue_name"] == "notifications" for q in data["queues"])
 
-    def test_publish_message(self, client):
-        client.post("/topics", json={"name": "orders"})
-        r = client.post(
-            "/topics/orders/publish",
-            json={"payload": {"order_id": "ord-001", "amount": 99.99}},
-        )
-        assert r.status_code == 201
-        data = r.json()
-        assert "id" in data
-        assert data["topic"] == "orders"
-
-    def test_publish_batch(self, client):
-        client.post("/topics", json={"name": "logs"})
-        r = client.post(
-            "/topics/logs/publish/batch",
-            json={
-                "messages": [
-                    {"payload": {"level": "INFO", "msg": "App started"}},
-                    {"payload": {"level": "WARN", "msg": "High CPU"}},
-                ]
-            },
-        )
-        assert r.status_code == 201
-        data = r.json()
-        assert data["published"] == 2
-
-    def test_consume_message(self, client):
-        client.post("/topics", json={"name": "tasks"})
-        client.post("/topics/tasks/publish", json={"payload": {"task": "process_file"}})
-        r = client.get("/topics/tasks/consume", params={"consumer_id": "worker-1"})
+    def test_dequeue_task(self, client):
+        client.post("/tasks", json={"queue_name": "orders", "payload": {"order_id": "ord-001"}})
+        r = client.get("/tasks/next/orders", params={"worker_id": "worker-1"})
         assert r.status_code == 200
         data = r.json()
-        assert "messages" in data
-        assert len(data["messages"]) >= 1
+        assert data["task"] is not None
+        assert data["task"]["queue_name"] == "orders"
+        assert data["task"]["status"] == "processing"
 
-    def test_acknowledge_message(self, client):
-        client.post("/topics", json={"name": "ack-topic"})
-        client.post("/topics/ack-topic/publish", json={"payload": {"x": 1}})
-        consume = client.get(
-            "/topics/ack-topic/consume", params={"consumer_id": "worker-ack"}
+    def test_dequeue_empty_queue_returns_none(self, client):
+        r = client.get("/tasks/next/no-such-queue", params={"worker_id": "worker-1"})
+        assert r.status_code == 200
+        assert r.json()["task"] is None
+
+    def test_complete_task(self, client):
+        created = client.post(
+            "/tasks", json={"queue_name": "tasks", "payload": {"task": "process_file"}}
         ).json()
-        msg_id = consume["messages"][0]["id"]
-        r = client.post(f"/topics/ack-topic/ack/{msg_id}")
+        client.get("/tasks/next/tasks", params={"worker_id": "worker-1"})
+        r = client.post(f"/tasks/{created['id']}/complete", json={"result": "ok"})
         assert r.status_code == 200
+        assert r.json()["status"] == "done"
 
-    def test_dead_letters(self, client):
-        client.post("/topics", json={"name": "dl-topic"})
-        r = client.get("/topics/dl-topic/dead-letters")
+    def test_fail_task_requeues_when_retries_remain(self, client):
+        created = client.post(
+            "/tasks", json={"queue_name": "flaky", "payload": {}, "max_retries": 3}
+        ).json()
+        client.get("/tasks/next/flaky", params={"worker_id": "worker-1"})
+        r = client.post(f"/tasks/{created['id']}/fail", json={"error": "boom"})
         assert r.status_code == 200
-        data = r.json()
-        assert "dead_letters" in data
+        assert r.json()["status"] == "pending"
 
-    def test_delete_topic(self, client):
-        client.post("/topics", json={"name": "delete-me"})
-        r = client.delete("/topics/delete-me")
+    def test_fail_task_terminal_status_after_max_retries(self, client):
+        """Failing a task through its max_retries limit lands it in the
+        terminal "failed" state instead of being requeued indefinitely."""
+        created = client.post(
+            "/tasks", json={"queue_name": "flaky-dlq", "payload": {}, "max_retries": 2}
+        ).json()
+        task_id = created["id"]
+
+        client.get("/tasks/next/flaky-dlq", params={"worker_id": "worker-1"})
+        r1 = client.post(f"/tasks/{task_id}/fail", json={"error": "boom-1"})
+        assert r1.status_code == 200
+        assert r1.json()["status"] == "pending"
+
+        client.get("/tasks/next/flaky-dlq", params={"worker_id": "worker-1"})
+        r2 = client.post(f"/tasks/{task_id}/fail", json={"error": "boom-2"})
+        assert r2.status_code == 200
+        assert r2.json()["status"] == "failed"
+
+        status = client.get(f"/tasks/status/{task_id}")
+        assert status.json()["status"] == "failed"
+
+    def test_task_status(self, client):
+        created = client.post("/tasks", json={"queue_name": "status-check", "payload": {}}).json()
+        r = client.get(f"/tasks/status/{created['id']}")
         assert r.status_code == 200
+        assert r.json()["status"] == "pending"
+
+    def test_task_status_not_found(self, client):
+        r = client.get("/tasks/status/does-not-exist")
+        assert r.status_code == 404
 
 
 # ===========================================================================

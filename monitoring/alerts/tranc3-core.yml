@@ -2,13 +2,13 @@ groups:
   - name: tranc3-core
     rules:
       - alert: Tranc3BackendDown
-        expr: up{job="tranc3-backend-health"} == 0
+        expr: up{job="tranc3-backend"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "Tranc3 backend health probe down"
-          description: "tranc3-backend:8000/health unreachable for 2 minutes."
+          summary: "Tranc3 backend down"
+          description: "tranc3-backend:8000/metrics unreachable for 2 minutes."
 
       - alert: ApiGatewayDown
         expr: up{job="api-gateway"} == 0

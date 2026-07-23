@@ -31,15 +31,13 @@ DB_WORKERS = {
     "infinity_ai": "AIDatabase",
     "the_grid": "GridDatabase",
     "products_service": "ProductsDatabase",
-    "orders_service": "OrdersDatabase",
-    "payments_service": "PaymentsDatabase",
     "files_service": "FilesDatabase",
     "identity_service": "IdentitiesDatabase",
 }
 
 # Workers that have an 'engine' attribute that also needs patching
 ENGINE_WORKERS = {
-    "the_grid": "WorkflowEngine",
+    "the_grid": "WorkflowEngineRouter",
 }
 
 # Workers that need special initialization (startup events that create tables)
@@ -56,6 +54,8 @@ LIFESPAN_DB_WORKERS = {
     "cron_service",
     "email_service",
     "geo_service",
+    "orders_service",
+    "payments_service",
     "queue_service",
     "search_service",
     "sms_service",
@@ -212,8 +212,8 @@ class TestWorkerCounts:
         assert len(ALL_WORKERS) == 29
 
     def test_db_worker_count(self):
-        """Verify we have 11 database-backed workers."""
-        assert len(DB_WORKERS) == 11
+        """Verify we have 9 class-based-database-backed workers."""
+        assert len(DB_WORKERS) == 9
 
     def test_p0_worker_count(self):
         """Verify P0 workers (infinity-ws, infinity-auth)."""

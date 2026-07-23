@@ -76,17 +76,21 @@ def validate_path(
             f"Path escapes base directory: {resolved} is not under {base}"
         ) from None
 
-    try:
-        if must_exist and not resolved.exists():
+    if must_exist:
+        try:
+            exists = resolved.exists()
+        except OSError as exc:
+            raise PathTraversalError(f"Path resolution failed: {resolved}: {exc}") from exc
+        if not exists:
             raise FileNotFoundError(f"Validated path does not exist: {resolved}")
-    except OSError as exc:
-        raise PathTraversalError(f"Path resolution failed: {resolved}: {exc}") from exc
 
-    try:
-        if not allow_create and not resolved.exists():
+    if not allow_create:
+        try:
+            exists = resolved.exists()
+        except OSError as exc:
+            raise PathTraversalError(f"Path resolution failed: {resolved}: {exc}") from exc
+        if not exists:
             raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
-    except OSError as exc:
-        raise PathTraversalError(f"Path resolution failed: {resolved}: {exc}") from exc
 
     return resolved
 
@@ -165,7 +169,11 @@ def read_validated_file_text(
         raise FileNotFoundError(f"Validated path is not a regular file: {resolved}")
     # Open via file descriptor to keep the validated path object out of the
     # taint flow that static analyzers (CodeQL) track from user-supplied input.
-    fd = os.open(str(resolved), os.O_RDONLY)
+    # O_NOFOLLOW closes the check-to-open symlink race on the final path
+    # component: resolved's own final component is never itself a symlink
+    # (Path.resolve() already dereferenced it), so this only ever rejects a
+    # symlink an attacker swapped in after validate_path() ran.
+    fd = os.open(str(resolved), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
     try:
         stat = os.fstat(fd)
         size = stat.st_size
@@ -215,6 +223,61 @@ def sanitize_filename(name: str, max_length: int = 255) -> str:
         sanitized = sanitized[:max_length]
 
     return sanitized
+
+
+def list_validated_children_fd(
+    rel: Union[str, Path],
+    base_dir: Union[str, Path],
+) -> list[dict]:
+    """List children of a validated directory path via a file descriptor.
+
+    Same containment guarantee as list_validated_children(), but avoids
+    calling exists()/is_dir()/iterdir() on the validated Path object — those
+    calls keep the user-supplied path in the taint flow that static analyzers
+    (CodeQL) track, the same reason read_validated_file_text() reads through
+    an fd instead of Path.open(). os.scandir() accepts a directory fd
+    directly, so iteration never touches the tainted string/Path again.
+
+    Returns a list of dicts with keys: name, type ('file'/'directory'), size,
+    modified.
+
+    Raises:
+        PathTraversalError: If the path escapes *base_dir*.
+        FileNotFoundError: If the directory does not exist.
+        NotADirectoryError: If the validated path is not a directory.
+    """
+    resolved = validate_path(rel, base_dir, must_exist=True)
+    try:
+        # O_NOFOLLOW closes the check-to-open symlink race on the final path
+        # component (see read_validated_file_text's matching comment).
+        fd = os.open(
+            str(resolved),
+            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
+    except NotADirectoryError as exc:
+        raise NotADirectoryError(f"Validated path is not a directory: {resolved}") from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Validated path does not exist: {resolved}") from exc
+
+    children: list[dict] = []
+    try:
+        with os.scandir(fd) as it:
+            for entry in it:
+                try:
+                    entry_stat = entry.stat()
+                    children.append(
+                        {
+                            "name": entry.name,
+                            "type": "directory" if entry.is_dir() else "file",
+                            "size": entry_stat.st_size if entry.is_file() else 0,
+                            "modified": entry_stat.st_mtime,
+                        }
+                    )
+                except OSError:
+                    continue
+    finally:
+        os.close(fd)
+    return sorted(children, key=lambda c: (c["type"] != "directory", c["name"].lower()))
 
 
 def list_validated_children(

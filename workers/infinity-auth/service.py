@@ -91,6 +91,8 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, stored_hash: str) -> bool:
     """Verify a password against stored hash (supports argon2, pbkdf2, and legacy formats)."""
+    if not stored_hash:
+        return False
     if stored_hash.startswith("$argon2") and _ARGON2_AVAILABLE:
         try:
             return _ph.verify(stored_hash, password)

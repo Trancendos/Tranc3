@@ -193,9 +193,11 @@ class CABGate:
         if risk in ("high", "critical"):
             return True
 
-        # Governance domain from frameworks.yaml lists change types that need CAB
-        governance = self._config.get("domains", {}).get("governance", [])
-        cab_types = {entry.get("id", "") for entry in governance if entry.get("status") == "active"}
+        # cab.require_approval_for lists the actual change-type strings that
+        # need CAB approval — domains.governance holds registry framework
+        # entries (foundation-framework, etc.), not change types, and must
+        # not be conflated with this list.
+        cab_types = set(self._config.get("cab", {}).get("require_approval_for", []))
         return change_type in cab_types or risk == "medium"
 
 

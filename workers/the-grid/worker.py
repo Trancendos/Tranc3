@@ -24,6 +24,9 @@ Uvicorn deployments that reference ``worker:app`` continue to work
 because this shim re-exports ``app`` from ``main``.
 """
 
-from main import app  # noqa: F401  re-exported for uvicorn worker:app
+from main import app, db, engine  # noqa: F401  re-exported for uvicorn worker:app
+from service import WorkflowEngineRouter  # noqa: F401
 
-__all__ = ["app"]
+from database import GridDatabase  # noqa: F401
+
+__all__ = ["app", "db", "engine", "GridDatabase", "WorkflowEngineRouter"]

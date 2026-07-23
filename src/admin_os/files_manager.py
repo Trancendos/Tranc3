@@ -8,7 +8,12 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from Dimensional.path_validation import PathTraversalError, read_validated_file_text, validate_path
+from Dimensional.path_validation import (
+    PathTraversalError,
+    list_validated_children_fd,
+    read_validated_file_text,
+    validate_path,
+)
 
 _SAFE_PATH_RE = re.compile(r"[^A-Za-z0-9_./-]")
 
@@ -35,26 +40,29 @@ def _safe_path(relative: str) -> Path:
 
 
 def list_dir(relative: str = "") -> dict[str, Any]:
-    path = _safe_path(relative)
-    if not path.exists():
-        raise FileNotFoundError(relative or "/")
-    if not path.is_dir():
-        raise NotADirectoryError(relative)
-    entries = []
-    for child in sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
-        try:
-            stat = child.stat()
-            entries.append(
-                {
-                    "name": child.name,
-                    "path": str(child.relative_to(workspace_root())).replace("\\", "/"),
-                    "type": "directory" if child.is_dir() else "file",
-                    "size": stat.st_size if child.is_file() else None,
-                    "modified": stat.st_mtime,
-                },
-            )
-        except OSError:
-            continue
+    rel = (relative or "").strip().replace("\\", "/").lstrip("/")
+    sanitized = _SAFE_PATH_RE.sub("_", rel) if rel else rel
+    if sanitized != rel:
+        raise PermissionError("Path contains invalid characters")
+    prefix = rel.rstrip("/") if rel and rel != "." else ""
+    try:
+        children = list_validated_children_fd(rel or ".", workspace_root())
+    except PathTraversalError as exc:
+        raise PermissionError("Path escapes workspace root") from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(relative or "/") from exc
+    except NotADirectoryError as exc:
+        raise NotADirectoryError(relative) from exc
+    entries = [
+        {
+            "name": child["name"],
+            "path": f"{prefix}/{child['name']}" if prefix else child["name"],
+            "type": child["type"],
+            "size": child["size"] if child["type"] == "file" else None,
+            "modified": child["modified"],
+        }
+        for child in children
+    ]
     return {
         "path": relative or "/",
         "root": str(workspace_root()),

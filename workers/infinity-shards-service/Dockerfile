@@ -1,7 +1,5 @@
 FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-  && rm -rf /var/lib/apt/lists/* \
-  && groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
+RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
 COPY --chown=worker:worker workers/infinity-shards-service/requirements-worker.txt .
@@ -19,6 +17,6 @@ RUN mkdir -p data && chown -R worker:worker data
 USER worker
 EXPOSE 8045
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:8045/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8045/health', timeout=5).read()" || exit 1
 
 CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8045"]

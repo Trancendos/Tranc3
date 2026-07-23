@@ -54,20 +54,40 @@ async def test_admin_os_routes():
     from fastapi.testclient import TestClient
 
     import api
+    from auth import get_current_user
 
-    client = TestClient(api.app)
-    r = client.get("/admin-os/status")
-    assert r.status_code == 200
-    assert "domain-model" in r.json()["features"]
+    api.app.dependency_overrides[get_current_user] = lambda: {"sub": "admin1", "role": "admin"}
+    try:
+        client = TestClient(api.app)
+        r = client.get("/admin-os/status")
+        assert r.status_code == 200
+        assert "domain-model" in r.json()["features"]
 
-    r2 = client.get("/admin-os/domain-model")
-    assert r2.status_code == 200
-    assert len(r2.json()["entities"]) > 0
+        r2 = client.get("/admin-os/domain-model")
+        assert r2.status_code == 200
+        assert len(r2.json()["entities"]) > 0
 
-    r3 = client.get("/admin-os/system")
-    assert r3.status_code == 200
-    assert "infrastructure" in r3.json()
+        r3 = client.get("/admin-os/system")
+        assert r3.status_code == 200
+        assert "infrastructure" in r3.json()
 
-    r4 = client.get("/admin-os/events?limit=5")
-    assert r4.status_code == 200
-    assert r4.json()["source"] == "The Observatory"
+        r4 = client.get("/admin-os/events?limit=5")
+        assert r4.status_code == 200
+        assert r4.json()["source"] == "The Observatory"
+    finally:
+        api.app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_admin_os_requires_admin():
+    from fastapi.testclient import TestClient
+
+    import api
+    from auth import get_current_user
+
+    api.app.dependency_overrides[get_current_user] = lambda: {"sub": "u1", "role": "user"}
+    try:
+        client = TestClient(api.app)
+        r = client.get("/admin-os/status")
+        assert r.status_code == 403
+    finally:
+        api.app.dependency_overrides.pop(get_current_user, None)

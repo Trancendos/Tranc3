@@ -109,8 +109,8 @@ services:
 
   users-service:
     build:
-      context: workers/users-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/users-service/Dockerfile
     container_name: tranc3-users-service
     environment:
       WORKER_PORT: "8006"

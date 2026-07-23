@@ -36,8 +36,11 @@ from pydantic import BaseModel, Field
 
 from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
+from src.core.startup_validator import validate_startup
+from src.entities.health_metadata import health_entity_block
 
 load_dotenv()
+validate_startup()
 
 # ── Fail fast on missing critical secrets ────────────────────────────────────
 _SECRET_KEY = os.getenv("SECRET_KEY")
@@ -88,7 +91,6 @@ from src.core.multilingual_tokenizer import (
     MultilingualTokenizer,  # noqa: F401  # intentional top-level import
 )
 from src.core.security import safe_torch_load
-from src.core.startup_validator import validate_startup  # noqa: F401
 from src.database.schema import (  # noqa: F401  # intentional top-level import
     Conversation,
     DatabaseManager,
@@ -789,6 +791,13 @@ from src.basement.routes import (
 
 app.include_router(_basement_router)
 
+# ── Infinity Admin OS (domain model, system viewer, events, files, backups) ───
+from src.admin_os.routes import (
+    router as _admin_os_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_admin_os_router)
+
 # ── Cryptex (threat detection + cyber defence) ────────────────────────────────
 from src.cryptex.routes import (
     router as _cryptex_router,  # noqa: F401  # intentional top-level import
@@ -1260,7 +1269,20 @@ async def health():
         "timestamp": datetime.datetime.utcnow().isoformat(),
         "uptime_seconds": round(time.time() - _start_time, 1),
         "components": components,
+        "entity": health_entity_block(8000, "tranc3-backend"),
     }
+
+
+@app.get(
+    "/adaptive/layers",
+    tags=["system"],
+    summary="Platform layer rotator status (database/blob/knowledge/api/frontend backends)",
+)
+async def adaptive_layers():
+    """Return the current status of every platform layer (active backend, rotation state)."""
+    from src.platform.layer_rotator import get_layer_rotator
+
+    return await asyncio.to_thread(get_layer_rotator().status)
 
 
 @app.get(

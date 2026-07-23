@@ -761,20 +761,21 @@ def _fan_out(user_id: str, payload: dict) -> None:
 _orig_create = db.create_notification
 
 
-def _patched_create(notif):
-    result = _orig_create(notif)
+def _patched_create(notif, status=NotificationStatus.pending):
+    # create_notification returns a plain {"notification_id", "status"} dict,
+    # not an object with .id/.title/.created_at/.channel attributes — build
+    # the fan-out payload from the request itself instead.
+    result = _orig_create(notif, status=status)
     _fan_out(
         notif.user_id,
         {
-            "id": result.id,
-            "title": result.title,
-            "message": getattr(result, "body", ""),
+            "id": result["notification_id"],
+            "title": notif.subject,
+            "message": notif.body,
             "type": "info",
-            "timestamp": result.created_at.isoformat()
-            if hasattr(result.created_at, "isoformat")
-            else str(result.created_at),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "read": False,
-            "channel": result.channel,
+            "channel": notif.channel.value,
         },
     )
     return result

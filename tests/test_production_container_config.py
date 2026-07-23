@@ -24,8 +24,35 @@ def test_worker_dockerfiles_do_not_depend_on_curl_for_healthchecks():
 
 
 def test_production_compose_worker_healthchecks_do_not_depend_on_curl():
-    compose = Path("docker-compose.production.yml").read_text()
-    assert '"CMD", "curl", "-f", "http://localhost:' not in compose
+    # Scoped to services built from our own workers/*/Dockerfile — those run
+    # on python:3.11-slim without curl installed (see the sibling Dockerfile-
+    # level test). Vendor images (qdrant, minio, mattermost, ...) and
+    # tranc3-backend's root Dockerfile (which does install curl) are exempt:
+    # curl is legitimately available there.
+    import yaml
+
+    compose = yaml.safe_load(Path("docker-compose.production.yml").read_text())
+    offenders = []
+    for name, svc in compose["services"].items():
+        build = svc.get("build")
+        if not isinstance(build, dict):
+            continue
+        dockerfile = str(build.get("dockerfile", "Dockerfile"))
+        context = str(build.get("context", "."))
+        # Two valid build styles coexist: root context with a
+        # workers/<name>/Dockerfile path, or a worker-dir context
+        # (./workers/<name>) with a bare Dockerfile — either marks this as
+        # our own worker build (vs. tranc3-backend's root Dockerfile or a
+        # vendor image with no "workers/" anywhere).
+        is_worker_build = dockerfile.startswith("workers/") or context.lstrip("./").startswith(
+            "workers/"
+        )
+        if not is_worker_build:
+            continue
+        test = (svc.get("healthcheck") or {}).get("test")
+        if test and "curl" in str(test):
+            offenders.append(name)
+    assert offenders == []
 
 
 def test_p3_worker_services_have_buildable_docker_contexts():

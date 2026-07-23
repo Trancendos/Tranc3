@@ -24,6 +24,8 @@ def list_events(
             pass
     if actor or event_type:
         events = obs.search(actor=actor, event_type=event_type, limit=limit)
+        if cat:
+            events = [e for e in events if e.category == cat]
     else:
         events = obs.recent(limit=limit, category=cat)
 

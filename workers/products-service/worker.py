@@ -73,6 +73,7 @@ class ProductsDatabase:
                     description TEXT DEFAULT '',
                     price REAL NOT NULL DEFAULT 0,
                     category TEXT DEFAULT '',
+                    sku TEXT DEFAULT '',
                     tags TEXT DEFAULT '[]',
                     metadata TEXT DEFAULT '{}',
                     is_active INTEGER DEFAULT 1,
@@ -80,6 +81,12 @@ class ProductsDatabase:
                     updated_at TEXT
                 )
             """)
+            # CREATE TABLE IF NOT EXISTS doesn't touch an already-existing
+            # table, so a pre-existing products.db from before the sku
+            # column was added needs an explicit, guarded migration.
+            existing_cols = {row[1] for row in cur.execute("PRAGMA table_info(products)")}
+            if "sku" not in existing_cols:
+                cur.execute("ALTER TABLE products ADD COLUMN sku TEXT DEFAULT ''")
 
     def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()

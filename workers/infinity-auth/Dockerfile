@@ -3,9 +3,16 @@ FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
-COPY --chown=worker:worker requirements-worker.txt .
+COPY --chown=worker:worker workers/infinity-auth/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker worker.py .
+COPY --chown=worker:worker workers/infinity-auth/*.py ./
+COPY --chown=worker:worker shared_core/ shared_core/
+COPY --chown=worker:worker Dimensional/ Dimensional/
+COPY --chown=worker:worker src/__init__.py src/__init__.py
+COPY --chown=worker:worker src/entities/ src/entities/
+COPY --chown=worker:worker src/database/ src/database/
+COPY --chown=worker:worker src/errors/ src/errors/
+RUN mkdir -p /app/data && chown -R worker:worker /app/data
 # Security: drop to non-root user
 USER worker
 

@@ -66,8 +66,8 @@ services:
   # JWT auth, circuit breakers, rate limiting, request proxying.
   api-gateway:
     build:
-      context: ./workers/api-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/api-gateway/Dockerfile
     container_name: trancendos-api-gateway-worker
     ports:
       - "8003:8003"

@@ -41,6 +41,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sanitize import sanitize_for_log
 
+from src.entities.health_metadata import health_entity_block
+
 logger = logging.getLogger("tranc3.workers.infinity-ws")
 
 # ── Fail-fast on missing critical secrets ──────────────────────
@@ -331,13 +333,7 @@ async def health():
         "service": "infinity-ws",
         "connections": manager.total_connections,
         "channels": manager.total_channels,
-        "entity": {
-            "location": "The Nexus",
-            "pillar": "Architectural",
-            "lead_ai": "The Nexus",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "AI Communication Gateway & Transfer Hub",
-        },
+        "entity": health_entity_block(8004, "infinity-ws"),
     }
 
 
