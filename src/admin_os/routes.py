@@ -1,12 +1,15 @@
 # src/admin_os/routes.py
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from src.admin_os import backups, domain_model, events, files_manager, system_viewer
+
+logger = logging.getLogger("tranc3.admin_os")
 
 router = APIRouter(prefix="/admin-os", tags=["admin-os"])
 
@@ -65,16 +68,18 @@ async def get_events(
 async def list_files(path: str = Query("")):
     try:
         return files_manager.list_dir(path)
-    except (FileNotFoundError, NotADirectoryError, PermissionError) as exc:
-        return JSONResponse({"error": str(exc)}, status_code=404)
+    except (FileNotFoundError, NotADirectoryError, PermissionError):
+        logger.info("admin-os /files: not found or not permitted", exc_info=True)
+        return JSONResponse({"error": "Not found"}, status_code=404)
 
 
 @router.get("/files/content")
 async def read_file(path: str = Query(...)):
     try:
         return files_manager.read_file(path)
-    except (FileNotFoundError, PermissionError) as exc:
-        return JSONResponse({"error": str(exc)}, status_code=404)
+    except (FileNotFoundError, PermissionError):
+        logger.info("admin-os /files/content: not found or not permitted", exc_info=True)
+        return JSONResponse({"error": "Not found"}, status_code=404)
 
 
 @router.get("/backups")

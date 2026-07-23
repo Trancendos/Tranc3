@@ -36,6 +36,13 @@ def _safe_path(relative: str) -> Path:
 
 def list_dir(relative: str = "") -> dict[str, Any]:
     path = _safe_path(relative)
+    root = workspace_root()
+    # Re-assert containment in this function (not just inside _safe_path) so
+    # the directory-listing calls below never operate on a path that a static
+    # analyzer can't prove is still bounded by root — same rationale as the
+    # os.open/fstat indirection in Dimensional.path_validation.read_validated_file_text.
+    if os.path.commonpath([str(path), str(root)]) != str(root):
+        raise PermissionError("Path escapes workspace root")
     if not path.exists():
         raise FileNotFoundError(relative or "/")
     if not path.is_dir():
