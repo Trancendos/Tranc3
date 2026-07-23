@@ -201,7 +201,7 @@ def _duckdb_insert_event(
     props: Dict[str, Any],
     ts: float,
     date_str: str,
-) -> bool:
+) -> Optional[int]:
     try:
         import duckdb  # type: ignore[import-untyped]
 
@@ -220,14 +220,16 @@ def _duckdb_insert_event(
         con.execute("""
             CREATE SEQUENCE IF NOT EXISTS events_seq START 1
         """)
+        row = con.execute("SELECT nextval('events_seq')").fetchone()
+        new_id = row[0]
         con.execute(
-            "INSERT INTO events VALUES (nextval('events_seq'),?,?,?,?,?,?)",
-            [ev_type, user_id, session_id, json.dumps(props), ts, date_str],
+            "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
+            [new_id, ev_type, user_id, session_id, json.dumps(props), ts, date_str],
         )
         con.close()
-        return True
+        return new_id
     except Exception:  # DuckDB failure — fall through to SQLite
-        return False
+        return None
 
 
 def _duckdb_query_events(
@@ -395,16 +397,17 @@ def ingest_event(ev: EventIn) -> Dict[str, Any]:
     backend = _select_backend()
     _GUARDS[backend].record()
     success = True
+    event_id: Optional[int] = None
 
     if backend == "duckdb":
-        success = _duckdb_insert_event(
+        event_id = _duckdb_insert_event(
             ev.event_type, ev.user_id, ev.session_id, ev.properties, ts, date_str
         )
+        success = event_id is not None
         if not success:
             _GUARDS[backend].decay()
             backend = "sqlite"
 
-    event_id = None
     if backend in ("sqlite", "offline", "polars", "pandas", "minio_parquet", "motherduck"):
         with _db_conn() as c:
             cur = c.execute(
@@ -413,6 +416,7 @@ def ingest_event(ev: EventIn) -> Dict[str, Any]:
             )
             event_id = cur.lastrowid
             c.commit()
+        success = True
     if success:
         _GUARDS[backend].reinforce()
     _record_backend_event(backend, success)

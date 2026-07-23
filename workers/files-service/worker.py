@@ -536,7 +536,7 @@ async def upload_document(
 
 
 @router.get("/documents")
-async def list_documents(
+def list_documents(
     owner_id: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = 50,
@@ -546,7 +546,7 @@ async def list_documents(
 
 
 @router.get("/documents/{doc_id}")
-async def get_document(doc_id: str):
+def get_document(doc_id: str):
     doc = db.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -554,21 +554,21 @@ async def get_document(doc_id: str):
 
 
 @router.patch("/documents/{doc_id}")
-async def update_document(doc_id: str, data: Dict[str, Any]):
+def update_document(doc_id: str, data: Dict[str, Any]):
     if not db.update_document(doc_id, data):
         raise HTTPException(status_code=404, detail="Document not found")
     return db.get_document(doc_id)
 
 
 @router.delete("/documents/{doc_id}")
-async def delete_document(doc_id: str):
+def delete_document(doc_id: str):
     if not db.soft_delete(doc_id):
         raise HTTPException(status_code=404, detail="Document not found")
     return {"deleted": True}
 
 
 @router.get("/documents/{doc_id}/download")
-async def download_document(doc_id: str):
+def download_document(doc_id: str):
     doc = db.get_document(doc_id)
     if not doc or not doc.get("storage_path"):
         raise HTTPException(status_code=404, detail="Document not found")
@@ -592,7 +592,7 @@ async def download_document(doc_id: str):
 # PDF Operations (Stirling PDF → Gotenberg fallback)
 # ---------------------------------------------------------------------------
 @router.post("/pdf/jobs")
-async def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
+def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
     """Queue an async PDF operation — returns job_id to poll."""
     doc = db.get_document(req.doc_id)
     if not doc:
@@ -622,7 +622,7 @@ async def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
 
 
 @router.get("/pdf/jobs/{job_id}")
-async def get_pdf_job(job_id: str):
+def get_pdf_job(job_id: str):
     with db._cur() as c:
         c.execute("SELECT * FROM pdf_jobs WHERE id=?", (job_id,))
         row = c.fetchone()
@@ -632,7 +632,7 @@ async def get_pdf_job(job_id: str):
 
 
 @router.get("/pdf/jobs/{job_id}/download")
-async def download_pdf_result(job_id: str):
+def download_pdf_result(job_id: str):
     with db._cur() as c:
         c.execute("SELECT * FROM pdf_jobs WHERE id=? AND status='done'", (job_id,))
         row = c.fetchone()
@@ -703,7 +703,7 @@ async def stirling_status():
 # Stats
 # ---------------------------------------------------------------------------
 @router.get("/stats")
-async def stats():
+def stats():
     with db._cur() as c:
         c.execute("SELECT COUNT(*) FROM documents WHERE deleted_at IS NULL")
         total = c.fetchone()[0]

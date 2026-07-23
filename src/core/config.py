@@ -190,6 +190,8 @@ class Tranc3Config(BaseSettings):
         infinity-void) already branch on ENVIRONMENT == "test" to enable
         test-mode behavior — it's a real, relied-upon value, not a typo.
         """
+        if not isinstance(v, str):
+            raise ValueError("ENVIRONMENT must be a string")
         valid = {"development", "staging", "production", "test"}
         lower = v.lower()
         if lower not in valid:

@@ -240,6 +240,7 @@ class TestInstrumentWorker:
 
     def test_instrument_worker_prometheus_branch(self):
         """Prometheus branch executes when prometheus_fastapi_instrumentator is present."""
+        import os
         import sys
 
         from fastapi import FastAPI
@@ -260,7 +261,12 @@ class TestInstrumentWorker:
             "opentelemetry.instrumentation.aiohttp_client": MagicMock(),
         }
         app = FastAPI()
-        with patch.dict(sys.modules, patches):
+        # conftest.py defaults PROMETHEUS_ENABLED=false for the test process
+        # (to avoid duplicate-metric registration when workers are re-imported
+        # across tests) — this test exercises the enabled branch, so opt back in.
+        with patch.dict(sys.modules, patches), patch.dict(
+            os.environ, {"PROMETHEUS_ENABLED": "true"}
+        ):
             instrument_worker(app, service_name="tranc3.test", worker_port=9999)
 
         # Prometheus instrumentator was called
@@ -319,6 +325,7 @@ class TestInstrumentWorker:
 
     def test_instrument_worker_exclude_paths(self):
         """Custom exclude_paths are merged with default exclusions."""
+        import os
         import sys
 
         from fastapi import FastAPI
@@ -334,7 +341,11 @@ class TestInstrumentWorker:
             "opentelemetry.instrumentation.aiohttp_client": MagicMock(),
         }
         app = FastAPI()
-        with patch.dict(sys.modules, patches):
+        # See test_instrument_worker_prometheus_branch — opt back into the
+        # Prometheus branch this test is specifically exercising.
+        with patch.dict(sys.modules, patches), patch.dict(
+            os.environ, {"PROMETHEUS_ENABLED": "true"}
+        ):
             instrument_worker(
                 app,
                 service_name="tranc3.test",

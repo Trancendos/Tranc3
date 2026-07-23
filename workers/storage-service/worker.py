@@ -714,6 +714,10 @@ def storage_status() -> Dict[str, Any]:
 
 
 app.include_router(_router)
+# Also mount under the documented /storage/... prefix (docs/services/docutari/README.md)
+# for existing direct clients — the unprefixed mount above is what the current
+# in-repo test suite and any new consumers use.
+app.include_router(_router, prefix="/storage")
 
 if __name__ == "__main__":
     import uvicorn

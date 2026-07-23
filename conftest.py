@@ -37,8 +37,8 @@ for _var, _default in (
 # "ValueError: Duplicated timeseries in CollectorRegistry" on the second
 # import. OTel's OTLP exporter also spends the whole run retrying a
 # nonexistent otel-collector:4317. Neither is needed for unit tests.
-os.environ.setdefault("PROMETHEUS_ENABLED", "false")
-os.environ.setdefault("OTEL_ENABLED", "false")
+os.environ["PROMETHEUS_ENABLED"] = os.environ.get("PROMETHEUS_ENABLED") or "false"
+os.environ["OTEL_ENABLED"] = os.environ.get("OTEL_ENABLED") or "false"
 
 # ── Redirect worker SQLite databases to a writable temp dir ──────────────────
 # Several workers default their DB path to "/data/..." (the production Docker
