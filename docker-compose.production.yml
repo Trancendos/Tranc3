@@ -95,7 +95,7 @@ services:
   # ── Vault — Secrets Management ───────────────────────────────────────
   # Replaces: Cloudflare environment variables, CF Secrets
   vault:
-    image: hashicorp/vault:1.15@sha256:0450896c43b13879b19442b204ce29dd19b5a10fce43d5cf38af17da20f56f4d
+    image: hashicorp/vault:2.0@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54
     container_name: tranc3-vault
     <<: *common
     command: server -config=/vault/config/vault.hcl
@@ -115,7 +115,7 @@ services:
   # ── Prometheus — Metrics Collection ──────────────────────────────────
   # Replaces: Cloudflare Analytics, CF Worker Analytics
   prometheus:
-    image: prom/prometheus:v2.50.1@sha256:bc1794e85c9e00293351b967efa267ce6af1c824ac875a9d0c7ac84700a8b53e
+    image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
     container_name: tranc3-prometheus
     <<: *common
     ports:
@@ -175,7 +175,7 @@ services:
   # ── Grafana — Observability Dashboard ────────────────────────────────
   # Replaces: Cloudflare Dashboard, CF Analytics
   grafana:
-    image: grafana/grafana:10.3.12@sha256:0b9a007bcf831c0d9840b28588f6bcfa12d79fbf4defa8412f9f78329abe211c
+    image: grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
     container_name: tranc3-grafana
     <<: *common
     environment:
@@ -199,7 +199,7 @@ services:
   # ── Loki — Log Aggregation ───────────────────────────────────────────
   # Replaces: Cloudflare Logs, CF Logpush
   loki:
-    image: grafana/loki:2.9.17@sha256:c4a25af6f2709fa625d88ee5df494a332a85f30e9575854031667823ecc5be04
+    image: grafana/loki:3.7.3@sha256:70b9f699fc9bb868b62f1cfd4f787dfa50242f1fd92e6089787d5d7daea75fe8
     container_name: tranc3-loki
     <<: *common
     ports:
@@ -214,7 +214,7 @@ services:
 
   # ── Promtail — Log Shipper ───────────────────────────────────────────
   promtail:
-    image: grafana/promtail:2.9.17@sha256:b28495fdab552b183428c5b5cebbf258231fc5f00be7724be2bc091ad21ac390
+    image: grafana/promtail:3.6.11@sha256:a761cb834cfaeee29745440d4884d6748f0a08d8f68928db1d707018c1dcfbe9
     container_name: tranc3-promtail
     <<: *common
     volumes:
@@ -256,7 +256,7 @@ services:
   # Drop-in Redis replacement (same redis-py client, same port 6379).
   # BSD-3 licence; community fork of Redis 7.2 under Linux Foundation.
   valkey:
-    image: valkey/valkey:8-alpine@sha256:cfe71288f087704b06be45e270afa7a2abbf820093d6b11a23762081f5ff321d
+    image: valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02
     container_name: tranc3-valkey
     <<: *common
     command: ["valkey-server", "--appendonly", "yes", "--save", "60", "1"]
@@ -352,7 +352,7 @@ services:
   # Receives OTLP spans from workers via OpenTelemetry exporter.
   # Integrates with existing Grafana (auto-datasource provisioned).
   tempo:
-    image: grafana/tempo:2.3.0@sha256:c07b89ab1c729c460e8e80f57d46fbfdd3e67573d0d6c479c766b3cab8a3afc5
+    image: grafana/tempo:3.0.2@sha256:cda87c212d8c584dc0b89e337e7ed648a5100feb657e5d528480ee4fa03dbbe3
     container_name: tranc3-tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
@@ -1553,7 +1553,7 @@ services:
       retries: 3
 
   outline-redis:
-    image: valkey/valkey:8-alpine@sha256:cfe71288f087704b06be45e270afa7a2abbf820093d6b11a23762081f5ff321d
+    image: valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02
     container_name: trancendos-outline-redis
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:
@@ -1599,7 +1599,7 @@ services:
   # UI: http://localhost:6875
   # ─────────────────────────────────────────────────────────────────────────
   bookstack-db:
-    image: mariadb:11@sha256:efb4959ef2c835cd735dbc388eb9ad6aab0c78dd64febcd51bc17481111890c4
+    image: mariadb:12@sha256:628f228f0fd5913a220438693576b29b6fe4dc1fa0a1298c0e98579fae28635f
     container_name: trancendos-bookstack-db
     environment:
       MYSQL_ROOT_PASSWORD: "${BOOKSTACK_DB_ROOT_PASSWORD:?required}"
@@ -1698,7 +1698,7 @@ services:
   # UI: http://localhost:3301  Backend: ClickHouse + query-service
   # ─────────────────────────────────────────────────────────────────────────
   signoz-clickhouse:
-    image: clickhouse/clickhouse-server:24.1.8-alpine@sha256:3b37c56d912f2b13eab1ba58bfce4b9a1d40ef1bc8cfa772f7920e29da560817
+    image: clickhouse/clickhouse-server:26.5.5-alpine@sha256:d6d599097220479d6a55d6dc838b44fdea7774003666860701c82dc178c6ad13
     container_name: trancendos-signoz-clickhouse
     environment:
       CLICKHOUSE_DB: signoz_traces
@@ -2094,7 +2094,7 @@ services:
       retries: 5
 
   authentik-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: trancendos-authentik-redis
     volumes:
       - authentik-redis-data:/data
@@ -2444,7 +2444,7 @@ services:
       - tranc3-net
 
   paperless-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: trancendos-paperless-redis
     restart: unless-stopped
     networks:
@@ -2672,7 +2672,7 @@ services:
       - "traefik.http.services.misp.loadbalancer.server.port=80"
 
   misp-db:
-    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+    image: mysql:9.7@sha256:8fdf311514c91fa5014e93e98e19d7f5d9eb162a462c13100c956dacc278ee21
     container_name: trancendos-misp-db
     restart: unless-stopped
     environment:
@@ -2686,7 +2686,7 @@ services:
       - tranc3-net
 
   misp-redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
     container_name: trancendos-misp-redis
     restart: unless-stopped
     volumes:

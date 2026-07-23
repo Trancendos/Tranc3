@@ -46,13 +46,13 @@ jobs:
             context: workers/infinity-auth
 
     steps:
-      - uses: https://code.forgejo.org/actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - uses: https://code.forgejo.org/actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Set up Docker Buildx
-        uses: https://code.forgejo.org/docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: https://code.forgejo.org/docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Log in to Forgejo Package Registry
-        uses: https://code.forgejo.org/docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: https://code.forgejo.org/docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4
         with:
           registry: ${{ env.FORGEJO_REGISTRY }}
           username: ${{ env.FORGEJO_REGISTRY_USER }}
@@ -69,7 +69,7 @@ jobs:
 
       - name: Build and push to Forgejo registry
         id: push-forgejo
-        uses: https://code.forgejo.org/docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        uses: https://code.forgejo.org/docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
@@ -83,7 +83,7 @@ jobs:
       # Fallback: push to Zot if Forgejo registry fails (adaptive rotation)
       - name: Fallback — log in to Zot registry
         if: steps.push-forgejo.outcome == 'failure'
-        uses: https://code.forgejo.org/docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: https://code.forgejo.org/docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4
         with:
           registry: ${{ env.ZOT_REGISTRY }}
           username: ${{ secrets.ZOT_REGISTRY_USER }}
@@ -91,7 +91,7 @@ jobs:
 
       - name: Fallback — push to Zot registry
         if: steps.push-forgejo.outcome == 'failure'
-        uses: https://code.forgejo.org/docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        uses: https://code.forgejo.org/docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
