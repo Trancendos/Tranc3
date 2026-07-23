@@ -68,8 +68,11 @@ async def get_events(
 async def list_files(path: str = Query("")):
     try:
         return files_manager.list_dir(path)
-    except (FileNotFoundError, NotADirectoryError, PermissionError):
-        logger.info("admin-os /files: not found or not permitted", exc_info=True)
+    except PermissionError:
+        logger.info("admin-os /files: permission denied", exc_info=True)
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    except (FileNotFoundError, NotADirectoryError):
+        logger.info("admin-os /files: not found", exc_info=True)
         return JSONResponse({"error": "Not found"}, status_code=404)
 
 
@@ -77,8 +80,11 @@ async def list_files(path: str = Query("")):
 async def read_file(path: str = Query(...)):
     try:
         return files_manager.read_file(path)
-    except (FileNotFoundError, PermissionError):
-        logger.info("admin-os /files/content: not found or not permitted", exc_info=True)
+    except PermissionError:
+        logger.info("admin-os /files/content: permission denied", exc_info=True)
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    except FileNotFoundError:
+        logger.info("admin-os /files/content: not found", exc_info=True)
         return JSONResponse({"error": "Not found"}, status_code=404)
 
 

@@ -47,7 +47,7 @@ _CANONICAL_ROUTES_ENV_DEFAULTS = {
 def _canonical_routes_env():
     original = {_var: os.environ.get(_var) for _var in _CANONICAL_ROUTES_ENV_DEFAULTS}
     for _var, _default in _CANONICAL_ROUTES_ENV_DEFAULTS.items():
-        os.environ.setdefault(_var, _default)
+        os.environ[_var] = _default
     yield
     for _var, _original in original.items():
         if _original is None:

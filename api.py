@@ -36,8 +36,10 @@ from pydantic import BaseModel, Field
 
 from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
+from src.core.startup_validator import validate_startup
 
 load_dotenv()
+validate_startup()
 
 # ── Fail fast on missing critical secrets ────────────────────────────────────
 _SECRET_KEY = os.getenv("SECRET_KEY")
@@ -88,7 +90,6 @@ from src.core.multilingual_tokenizer import (
     MultilingualTokenizer,  # noqa: F401  # intentional top-level import
 )
 from src.core.security import safe_torch_load
-from src.core.startup_validator import validate_startup  # noqa: F401
 from src.database.schema import (  # noqa: F401  # intentional top-level import
     Conversation,
     DatabaseManager,
