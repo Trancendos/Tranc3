@@ -11,7 +11,7 @@ WORKDIR /app
 COPY --chown=worker:worker workers/api-gateway/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 
-COPY --chown=worker:worker workers/api-gateway/sanitize.py workers/api-gateway/worker.py .
+COPY --chown=worker:worker workers/api-gateway/sanitize.py workers/api-gateway/worker.py ./
 
 # Security: drop to non-root user
 USER worker

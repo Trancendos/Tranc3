@@ -5,7 +5,7 @@ RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 WORKDIR /app
 COPY --chown=worker:worker workers/infinity-ws/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker workers/infinity-ws/sanitize.py workers/infinity-ws/worker.py .
+COPY --chown=worker:worker workers/infinity-ws/sanitize.py workers/infinity-ws/worker.py ./
 # Security: drop to non-root user
 USER worker
 
