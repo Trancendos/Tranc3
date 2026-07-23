@@ -401,6 +401,8 @@ services:
       - backend-models:/app/models
       - backend-cache:/app/cache
       - backend-logs:/app/logs
+    depends_on:
+      - valkey
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tranc3-backend.rule=PathPrefix(`/api/backend`) || PathPrefix(`/mcp`)"
@@ -463,8 +465,8 @@ services:
   api-gateway:
     <<: *worker-common
     build:
-      context: ./workers/api-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/api-gateway/Dockerfile
     container_name: trancendos-api-gateway-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -498,8 +500,8 @@ services:
   infinity-ws:
     <<: *worker-common
     build:
-      context: ./workers/infinity-ws
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/infinity-ws/Dockerfile
     container_name: infinity-ws-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -518,8 +520,8 @@ services:
   infinity-auth:
     <<: *worker-common
     build:
-      context: ./workers/infinity-auth
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/infinity-auth/Dockerfile
     container_name: infinity-auth-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -545,8 +547,8 @@ services:
   users-service:
     <<: *worker-common
     build:
-      context: ./workers/users-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: workers/users-service/Dockerfile
     container_name: users-service-worker
     ports:
       - "8006:8006"

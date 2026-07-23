@@ -17,6 +17,7 @@ alerting:
 
 rule_files:
   - /etc/prometheus/alerts/*.yml
+  - /etc/prometheus/alerts/tranc3-core.yml
 
 scrape_configs:
   # ── OpenTelemetry Collector ───────────────────────────────────────────
@@ -94,6 +95,16 @@ scrape_configs:
         labels:
           service: 'zot'
           category: 'infrastructure'
+
+  # ── Core Backend API ─────────────────────────────────────────────────
+  - job_name: 'tranc3-backend'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['tranc3-backend:8000']
+        labels:
+          service: 'tranc3-backend'
+          priority: 'P0'
+          named: 'tranc3-backend'
 
   # ── P0 Workers ───────────────────────────────────────────────────────
   - job_name: 'tranc3-ai'
