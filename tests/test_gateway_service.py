@@ -57,6 +57,15 @@ def _load_gateway_worker():
     )
     mod = importlib.util.module_from_spec(spec)
     sys.modules["workers.gateway-service.worker"] = mod
+
+    # Evict any stale config/database/service left in sys.modules by another
+    # worker's tests before executing gateway-service's own worker.py — a
+    # bare `import config` inside main.py/router.py during exec_module()
+    # would otherwise silently bind to whatever same-named module is already
+    # cached instead of (re-)executing gateway-service's own config.py.
+    for _name in ("config", "database", "service"):
+        sys.modules.pop(_name, None)
+
     spec.loader.exec_module(mod)
 
     # Attach the sibling modules right now, while sys.modules["config"] /
