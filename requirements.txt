@@ -10,7 +10,7 @@
 # See SECURITY-ASSESSMENT.md for full risk analysis. No upstream fix version available yet.
 # Mitigations: weights_only=True on all torch.load(), no untrusted model loading,
 #              no JIT compilation of untrusted code, no CUDA allocator direct calls.
-torch==2.12.1
+torch==2.13.0
 
 # === Tokenization ===
 # Fixes: CVE-2026-1260 (GHSA-38vq-g6vr-w8wf) — heap overflow via crafted model file.
