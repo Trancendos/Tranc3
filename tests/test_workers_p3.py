@@ -593,9 +593,15 @@ class TestStorageService:
         assert "objects" in data
 
     def test_delete_bucket(self, client):
-        client.post("/buckets", json={"name": "del-bucket"})
+        create = client.post("/buckets", json={"name": "del-bucket"})
+        assert create.status_code == 201
+
         r = client.delete("/buckets/del-bucket")
         assert r.status_code == 204
+
+        listed = client.get("/buckets")
+        assert listed.status_code == 200
+        assert all(b["name"] != "del-bucket" for b in listed.json()["buckets"])
 
 
 # ===========================================================================

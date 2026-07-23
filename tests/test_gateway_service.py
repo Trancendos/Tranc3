@@ -58,6 +58,18 @@ def _load_gateway_worker():
     mod = importlib.util.module_from_spec(spec)
     sys.modules["workers.gateway-service.worker"] = mod
     spec.loader.exec_module(mod)
+
+    # Attach the sibling modules right now, while sys.modules["config"] /
+    # ["database"] / ["service"] are still guaranteed to be gateway-service's
+    # own (just populated by the exec_module() above) — a bare `import
+    # database` anywhere later in the test run would instead resolve to
+    # whichever worker's same-named module happened to be imported most
+    # recently, since this loader deliberately never evicts them (see
+    # docstring above).
+    mod.config = sys.modules["config"]
+    mod.database = sys.modules["database"]
+    mod.service = sys.modules["service"]
+
     _gateway_worker_cache = mod
     return mod
 
@@ -92,9 +104,7 @@ def client():
     )
 
     mod = _load_gateway_worker()
-    import database as _database  # noqa: E402 — only resolvable after _load_gateway_worker()
-
-    _database.init_db()
+    mod.database.init_db()
 
     with TestClient(mod.app) as c:
         yield c
@@ -442,7 +452,7 @@ class TestGatewaySSE:
 class TestGatewayCache:
     def test_cache_ttl_config(self, client):
         """Verify cache TTL is configurable via env var."""
-        import config
+        config = _load_gateway_worker().config
 
         assert hasattr(config, "CACHE_TTL")
         assert isinstance(config.CACHE_TTL, int)
@@ -450,7 +460,7 @@ class TestGatewayCache:
 
     def test_cache_in_memory_structure(self, client):
         """Verify the in-memory cache dict exists."""
-        import service
+        service = _load_gateway_worker().service
 
         assert hasattr(service, "_cache")
         assert isinstance(service._cache, dict)
@@ -462,7 +472,7 @@ class TestGatewayCache:
 class TestGatewayCircuitBreaker:
     def test_circuit_breaker_initialized(self, client):
         """Verify circuit breakers are initialized for all upstream workers."""
-        import service
+        service = _load_gateway_worker().service
 
         cb = service._circuit_breaker
         # Should have entries for all 8 workers
@@ -473,9 +483,7 @@ class TestGatewayCircuitBreaker:
 
     def test_upstream_workers_config(self, client):
         """Verify all 8 upstream workers are configured."""
-        import config
-
-        uw = config.UPSTREAM_WORKERS
+        uw = _load_gateway_worker().config.UPSTREAM_WORKERS
         assert len(uw) == 8
         expected = {
             "vault",
