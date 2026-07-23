@@ -57,7 +57,28 @@ def _load_gateway_worker():
     )
     mod = importlib.util.module_from_spec(spec)
     sys.modules["workers.gateway-service.worker"] = mod
+
+    # Evict any stale config/database/service left in sys.modules by another
+    # worker's tests before executing gateway-service's own worker.py — a
+    # bare `import config` inside main.py/router.py during exec_module()
+    # would otherwise silently bind to whatever same-named module is already
+    # cached instead of (re-)executing gateway-service's own config.py.
+    for _name in ("config", "database", "service"):
+        sys.modules.pop(_name, None)
+
     spec.loader.exec_module(mod)
+
+    # Attach the sibling modules right now, while sys.modules["config"] /
+    # ["database"] / ["service"] are still guaranteed to be gateway-service's
+    # own (just populated by the exec_module() above) — a bare `import
+    # database` anywhere later in the test run would instead resolve to
+    # whichever worker's same-named module happened to be imported most
+    # recently, since this loader deliberately never evicts them (see
+    # docstring above).
+    mod.config = sys.modules["config"]
+    mod.database = sys.modules["database"]
+    mod.service = sys.modules["service"]
+
     _gateway_worker_cache = mod
     return mod
 
@@ -92,7 +113,7 @@ def client():
     )
 
     mod = _load_gateway_worker()
-    mod._init_db()
+    mod.database.init_db()
 
     with TestClient(mod.app) as c:
         yield c
@@ -440,16 +461,18 @@ class TestGatewaySSE:
 class TestGatewayCache:
     def test_cache_ttl_config(self, client):
         """Verify cache TTL is configurable via env var."""
-        mod = _load_gateway_worker()
-        assert hasattr(mod, "CACHE_TTL")
-        assert isinstance(mod.CACHE_TTL, int)
-        assert mod.CACHE_TTL >= 1
+        config = _load_gateway_worker().config
+
+        assert hasattr(config, "CACHE_TTL")
+        assert isinstance(config.CACHE_TTL, int)
+        assert config.CACHE_TTL >= 1
 
     def test_cache_in_memory_structure(self, client):
         """Verify the in-memory cache dict exists."""
-        mod = _load_gateway_worker()
-        assert hasattr(mod, "_cache")
-        assert isinstance(mod._cache, dict)
+        service = _load_gateway_worker().service
+
+        assert hasattr(service, "_cache")
+        assert isinstance(service._cache, dict)
 
 
 # ── Circuit Breaker ─────────────────────────────────────────────────────────
@@ -458,9 +481,9 @@ class TestGatewayCache:
 class TestGatewayCircuitBreaker:
     def test_circuit_breaker_initialized(self, client):
         """Verify circuit breakers are initialized for all upstream workers."""
-        mod = _load_gateway_worker()
-        assert hasattr(mod, "_circuit_breaker")
-        cb = mod._circuit_breaker
+        service = _load_gateway_worker().service
+
+        cb = service._circuit_breaker
         # Should have entries for all 8 workers
         assert len(cb) == 8
         for name, state in cb.items():
@@ -469,8 +492,7 @@ class TestGatewayCircuitBreaker:
 
     def test_upstream_workers_config(self, client):
         """Verify all 8 upstream workers are configured."""
-        mod = _load_gateway_worker()
-        uw = mod.UPSTREAM_WORKERS
+        uw = _load_gateway_worker().config.UPSTREAM_WORKERS
         assert len(uw) == 8
         expected = {
             "vault",

@@ -95,7 +95,7 @@ _parse_guard = _ThresholdGuard(THRESHOLD_PARSE_OPS)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-class DocDatabase:
+class FilesDatabase:
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._local = threading.local()
@@ -303,7 +303,7 @@ class DocDatabase:
             )
 
 
-_db = DocDatabase(DB_PATH)
+db = FilesDatabase(DB_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -474,7 +474,7 @@ async def health():
         except Exception:
             backends[name] = "down"
     return {
-        "service": WORKER_NAME,
+        "service": "files-service",
         "status": "healthy",
         "port": WORKER_PORT,
         "backends": backends,
@@ -506,7 +506,7 @@ async def upload_document(
     dest.mkdir(parents=True, exist_ok=True)
     (dest / filename).write_bytes(content)
 
-    doc = _db.create_document(
+    doc = db.create_document(
         {
             "id": doc_id,
             "filename": filename,
@@ -522,7 +522,7 @@ async def upload_document(
     async def _process():
         tika_meta = await _tika_parse(content, content_type)
         paperless_id = await _paperless_ingest(filename, content, content_type, title)
-        _db.update_document(
+        db.update_document(
             doc_id,
             {
                 "tika_metadata": tika_meta,
@@ -536,40 +536,40 @@ async def upload_document(
 
 
 @router.get("/documents")
-async def list_documents(
+def list_documents(
     owner_id: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ):
-    return _db.list_documents(owner_id=owner_id, status=status, limit=limit, offset=offset)
+    return db.list_documents(owner_id=owner_id, status=status, limit=limit, offset=offset)
 
 
 @router.get("/documents/{doc_id}")
-async def get_document(doc_id: str):
-    doc = _db.get_document(doc_id)
+def get_document(doc_id: str):
+    doc = db.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
 
 
 @router.patch("/documents/{doc_id}")
-async def update_document(doc_id: str, data: Dict[str, Any]):
-    if not _db.update_document(doc_id, data):
+def update_document(doc_id: str, data: Dict[str, Any]):
+    if not db.update_document(doc_id, data):
         raise HTTPException(status_code=404, detail="Document not found")
-    return _db.get_document(doc_id)
+    return db.get_document(doc_id)
 
 
 @router.delete("/documents/{doc_id}")
-async def delete_document(doc_id: str):
-    if not _db.soft_delete(doc_id):
+def delete_document(doc_id: str):
+    if not db.soft_delete(doc_id):
         raise HTTPException(status_code=404, detail="Document not found")
     return {"deleted": True}
 
 
 @router.get("/documents/{doc_id}/download")
-async def download_document(doc_id: str):
-    doc = _db.get_document(doc_id)
+def download_document(doc_id: str):
+    doc = db.get_document(doc_id)
     if not doc or not doc.get("storage_path"):
         raise HTTPException(status_code=404, detail="Document not found")
     path = Path(doc["storage_path"])
@@ -592,13 +592,13 @@ async def download_document(doc_id: str):
 # PDF Operations (Stirling PDF → Gotenberg fallback)
 # ---------------------------------------------------------------------------
 @router.post("/pdf/jobs")
-async def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
+def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
     """Queue an async PDF operation — returns job_id to poll."""
-    doc = _db.get_document(req.doc_id)
+    doc = db.get_document(req.doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    job_id = _db.create_pdf_job(
+    job_id = db.create_pdf_job(
         {
             "doc_id": req.doc_id,
             "operation": req.operation,
@@ -613,17 +613,17 @@ async def create_pdf_job(req: PdfJobRequest, background_tasks: BackgroundTasks):
             result = await _stirling_pdf_op(req.operation, content, req.params)
             out_path = UPLOAD_DIR / req.doc_id / f"{job_id}_{req.operation}.pdf"
             out_path.write_bytes(result)
-            _db.update_pdf_job(job_id, "done", str(out_path))
+            db.update_pdf_job(job_id, "done", str(out_path))
         except Exception as exc:
-            _db.update_pdf_job(job_id, "failed", error=str(exc))
+            db.update_pdf_job(job_id, "failed", error=str(exc))
 
     background_tasks.add_task(_run_job)
     return {"job_id": job_id, "status": "queued"}
 
 
 @router.get("/pdf/jobs/{job_id}")
-async def get_pdf_job(job_id: str):
-    with _db._cur() as c:
+def get_pdf_job(job_id: str):
+    with db._cur() as c:
         c.execute("SELECT * FROM pdf_jobs WHERE id=?", (job_id,))
         row = c.fetchone()
     if not row:
@@ -632,8 +632,8 @@ async def get_pdf_job(job_id: str):
 
 
 @router.get("/pdf/jobs/{job_id}/download")
-async def download_pdf_result(job_id: str):
-    with _db._cur() as c:
+def download_pdf_result(job_id: str):
+    with db._cur() as c:
         c.execute("SELECT * FROM pdf_jobs WHERE id=? AND status='done'", (job_id,))
         row = c.fetchone()
     if not row or not row["result_path"]:
@@ -703,8 +703,8 @@ async def stirling_status():
 # Stats
 # ---------------------------------------------------------------------------
 @router.get("/stats")
-async def stats():
-    with _db._cur() as c:
+def stats():
+    with db._cur() as c:
         c.execute("SELECT COUNT(*) FROM documents WHERE deleted_at IS NULL")
         total = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM documents WHERE status='ready' AND deleted_at IS NULL")

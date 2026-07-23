@@ -183,8 +183,16 @@ class Tranc3Config(BaseSettings):
     @field_validator("ENVIRONMENT", mode="before")
     @classmethod
     def validate_environment(cls, v: str) -> str:
-        """Ensure ENVIRONMENT is one of the accepted deployment stages."""
-        valid = {"development", "staging", "production"}
+        """Ensure ENVIRONMENT is one of the accepted deployment stages.
+
+        "test" is included alongside the three deployment stages because
+        src/security/middleware.py and several workers (tranc3-ai,
+        infinity-void) already branch on ENVIRONMENT == "test" to enable
+        test-mode behavior — it's a real, relied-upon value, not a typo.
+        """
+        if not isinstance(v, str):
+            raise ValueError("ENVIRONMENT must be a string")
+        valid = {"development", "staging", "production", "test"}
         lower = v.lower()
         if lower not in valid:
             raise ValueError(f"ENVIRONMENT must be one of {valid}")

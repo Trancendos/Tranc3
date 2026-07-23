@@ -7,7 +7,7 @@ from pathlib import Path
 
 WORKER_PORT = 8010
 WORKER_NAME = "the-grid-api"
-DB_PATH = Path(__file__).parent / "data" / "grid.db"
+DB_PATH = Path(os.environ.get("GRID_DB_PATH", str(Path(__file__).parent / "data" / "grid.db")))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from models import EngineType, WorkflowDefinition
+from models import EngineType, WorkflowDefinition, WorkflowStep
 from service import WorkflowEngineRouter
 
 import config
@@ -66,10 +67,6 @@ def _make_grid_router(db: GridDatabase, engine_router: WorkflowEngineRouter) -> 
         row = db.get_definition(workflow_id)
         if not row:
             raise HTTPException(404, f"Workflow not found: {workflow_id}")
-
-        import json
-
-        from models import WorkflowStep
 
         steps = [WorkflowStep(**s) for s in json.loads(row["steps"] or "[]")]
         metadata = json.loads(row["metadata"] or "{}")

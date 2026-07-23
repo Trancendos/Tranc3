@@ -176,6 +176,9 @@ def _init_db() -> None:
         c.commit()
 
 
+init_db = _init_db  # public alias for tests
+
+
 def _record_backend_event(backend: str, success: bool) -> None:
     try:
         with _db_conn() as c:
@@ -198,33 +201,37 @@ def _duckdb_insert_event(
     props: Dict[str, Any],
     ts: float,
     date_str: str,
-) -> bool:
+) -> Optional[int]:
     try:
         import duckdb  # type: ignore[import-untyped]
 
         con = duckdb.connect(DUCKDB_PATH)
-        con.execute("""
-            CREATE TABLE IF NOT EXISTS events (
-                id INTEGER PRIMARY KEY,
-                event_type TEXT NOT NULL,
-                user_id TEXT,
-                session_id TEXT,
-                properties TEXT,
-                timestamp DOUBLE NOT NULL,
-                date_str TEXT NOT NULL
+        try:
+            con.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id INTEGER PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    user_id TEXT,
+                    session_id TEXT,
+                    properties TEXT,
+                    timestamp DOUBLE NOT NULL,
+                    date_str TEXT NOT NULL
+                )
+            """)
+            con.execute("""
+                CREATE SEQUENCE IF NOT EXISTS events_seq START 1
+            """)
+            row = con.execute("SELECT nextval('events_seq')").fetchone()
+            new_id = row[0]
+            con.execute(
+                "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
+                [new_id, ev_type, user_id, session_id, json.dumps(props), ts, date_str],
             )
-        """)
-        con.execute("""
-            CREATE SEQUENCE IF NOT EXISTS events_seq START 1
-        """)
-        con.execute(
-            "INSERT INTO events VALUES (nextval('events_seq'),?,?,?,?,?,?)",
-            [ev_type, user_id, session_id, json.dumps(props), ts, date_str],
-        )
-        con.close()
-        return True
+            return new_id
+        finally:
+            con.close()
     except Exception:  # DuckDB failure — fall through to SQLite
-        return False
+        return None
 
 
 def _duckdb_query_events(
@@ -239,27 +246,29 @@ def _duckdb_query_events(
         import duckdb  # type: ignore[import-untyped]
 
         con = duckdb.connect(DUCKDB_PATH)
-        clauses, params = [], []
-        if event_type:
-            clauses.append("event_type = ?")
-            params.append(event_type)
-        if user_id:
-            clauses.append("user_id = ?")
-            params.append(user_id)
-        if since:
-            clauses.append("timestamp >= ?")
-            params.append(since)
-        if until:
-            clauses.append("timestamp <= ?")
-            params.append(until)
-        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
-        rows = con.execute(
-            f"SELECT * FROM events {where} ORDER BY timestamp DESC LIMIT ? OFFSET ?",
-            params + [limit, offset],
-        ).fetchall()
-        cols = [d[0] for d in con.description]
-        con.close()
-        return [dict(zip(cols, r, strict=False)) for r in rows]
+        try:
+            clauses, params = [], []
+            if event_type:
+                clauses.append("event_type = ?")
+                params.append(event_type)
+            if user_id:
+                clauses.append("user_id = ?")
+                params.append(user_id)
+            if since:
+                clauses.append("timestamp >= ?")
+                params.append(since)
+            if until:
+                clauses.append("timestamp <= ?")
+                params.append(until)
+            where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+            rows = con.execute(
+                f"SELECT * FROM events {where} ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+                params + [limit, offset],
+            ).fetchall()
+            cols = [d[0] for d in con.description]
+            return [dict(zip(cols, r, strict=False)) for r in rows]
+        finally:
+            con.close()
     except Exception:  # DuckDB failure
         return None
 
@@ -375,7 +384,7 @@ def health() -> JSONResponse:
     return JSONResponse(
         {
             "service": WORKER_NAME,
-            "status": "ok",
+            "status": "healthy",
             "uptime_s": round((datetime.now(timezone.utc) - STARTED_AT).total_seconds(), 1),
             "event_count": ev,
             "metric_count": me,
@@ -384,7 +393,7 @@ def health() -> JSONResponse:
     )
 
 
-@_router.post("/analytics/events", status_code=201)
+@_router.post("/events", status_code=201)
 def ingest_event(ev: EventIn) -> Dict[str, Any]:
     ts = ev.timestamp or time.time()
     date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -392,30 +401,34 @@ def ingest_event(ev: EventIn) -> Dict[str, Any]:
     backend = _select_backend()
     _GUARDS[backend].record()
     success = True
+    event_id: Optional[int] = None
 
     if backend == "duckdb":
-        success = _duckdb_insert_event(
+        event_id = _duckdb_insert_event(
             ev.event_type, ev.user_id, ev.session_id, ev.properties, ts, date_str
         )
+        success = event_id is not None
         if not success:
             _GUARDS[backend].decay()
             backend = "sqlite"
 
     if backend in ("sqlite", "offline", "polars", "pandas", "minio_parquet", "motherduck"):
         with _db_conn() as c:
-            c.execute(
+            cur = c.execute(
                 "INSERT INTO events (event_type,user_id,session_id,properties,timestamp,date_str) VALUES (?,?,?,?,?,?)",
                 (ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str),
             )
+            event_id = cur.lastrowid
             c.commit()
+        success = True
     if success:
         _GUARDS[backend].reinforce()
     _record_backend_event(backend, success)
 
-    return {"event_type": ev.event_type, "timestamp": ts, "backend": backend}
+    return {"id": event_id, "event_type": ev.event_type, "timestamp": ts, "backend": backend}
 
 
-@_router.post("/analytics/events/batch", status_code=201)
+@_router.post("/events/batch", status_code=201)
 def ingest_batch(batch: BatchEventsIn) -> Dict[str, Any]:
     rows = []
     for ev in batch.events:
@@ -433,7 +446,7 @@ def ingest_batch(batch: BatchEventsIn) -> Dict[str, Any]:
     return {"inserted": len(rows)}
 
 
-@_router.get("/analytics/events")
+@_router.get("/events")
 def query_events(
     event_type: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -474,7 +487,7 @@ def query_events(
     return {"total": total, "events": [dict(r) for r in sql_rows], "limit": limit, "offset": offset}
 
 
-@_router.get("/analytics/events/types")
+@_router.get("/events/types")
 def event_types() -> Dict[str, Any]:
     with _db_conn() as c:
         rows = c.execute(
@@ -483,7 +496,7 @@ def event_types() -> Dict[str, Any]:
     return {"types": [dict(r) for r in rows]}
 
 
-@_router.post("/analytics/events/funnel")
+@_router.post("/events/funnel")
 def funnel(req: FunnelIn) -> Dict[str, Any]:
     with _db_conn() as c:
         counts = []
@@ -500,7 +513,7 @@ def funnel(req: FunnelIn) -> Dict[str, Any]:
     return {"funnel": counts}
 
 
-@_router.post("/analytics/metrics", status_code=201)
+@_router.post("/metrics", status_code=201)
 def record_metric(m: MetricIn) -> Dict[str, Any]:
     ts = m.timestamp or time.time()
     date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -513,7 +526,7 @@ def record_metric(m: MetricIn) -> Dict[str, Any]:
     return {"id": cur.lastrowid, "name": m.name, "value": m.value, "timestamp": ts}
 
 
-@_router.get("/analytics/metrics/{name}")
+@_router.get("/metrics/{name}")
 def get_metric(
     name: str,
     agg: str = Query("avg", pattern="^(avg|sum|min|max|count)$"),
@@ -545,7 +558,7 @@ def get_metric(
     return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
 
 
-@_router.get("/analytics/metrics/{name}/timeseries")
+@_router.get("/metrics/{name}/timeseries")
 def metric_timeseries(
     name: str,
     bucket: str = Query("day", pattern="^(hour|day)$"),
@@ -571,7 +584,7 @@ def metric_timeseries(
     return {"name": name, "bucket": bucket, "series": [dict(r) for r in rows]}
 
 
-@_router.get("/analytics/summary")
+@_router.get("/summary")
 def summary() -> Dict[str, Any]:
     with _db_conn() as c:
         event_count = c.execute("SELECT COUNT(*) FROM events").fetchone()[0]
@@ -590,7 +603,7 @@ def summary() -> Dict[str, Any]:
     }
 
 
-@_router.get("/analytics/status")
+@_router.get("/status")
 def analytics_status() -> Dict[str, Any]:
     return {
         "active_backend": _select_backend(),
