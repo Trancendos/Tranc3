@@ -304,7 +304,7 @@ def _polars_aggregate(
 
 
 class EventIn(BaseModel):
-    event_type: str
+    event_type: str = Field(..., min_length=1)
     user_id: Optional[str] = None
     session_id: Optional[str] = None
     properties: Dict[str, Any] = {}

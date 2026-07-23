@@ -92,11 +92,12 @@ class TestHealth:
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "healthy"
-        assert "live_events" in data
+        assert "event_count" in data
+        assert "metric_count" in data
 
     def test_reports_duckdb_availability(self, client):
         r = client.get("/health")
-        assert "duckdb_available" in r.json()
+        assert "active_backend" in r.json()
 
 
 # ── Event Ingestion ───────────────────────────────────────────────────────────
@@ -177,8 +178,8 @@ class TestSummary:
         r = client.get("/summary")
         assert r.status_code == 200
         data = r.json()
-        assert "live_events" in data
-        assert "live_metrics" in data
+        assert "total_events" in data
+        assert "total_metric_points" in data
         assert "top_event_types" in data
 
 
