@@ -134,7 +134,7 @@ class TestPhase4WorkflowNodes:
 
         expected = {
             "NEURAL_MESH",
-            "COLLECTIVE_MEM",
+            "COLLECTIVE_MEMORY",
             "META_LEARN",
             "ATTENTION_ROUTE",
             "CAUSAL_REASON",
@@ -169,7 +169,7 @@ class TestPhase4WorkflowNodes:
 
         cfg = NodeConfig(
             id="cm_test",
-            type="COLLECTIVE_MEM",
+            type="COLLECTIVE_MEMORY",
             name="Memory Test",
             config={"action": "store", "key": "test_k", "topic": "test"},
         )
