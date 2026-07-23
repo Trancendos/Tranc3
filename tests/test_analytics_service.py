@@ -22,6 +22,15 @@ def client(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("analytics_data")
     os.environ["ANALYTICS_DATA_DIR"] = str(tmp)
     os.environ["ANALYTICS_ARCHIVE_AFTER_DAYS"] = "1"
+    # INTERNAL_SECRET is a shared, generic env var read by many other workers'
+    # config.py at their own import time — permanently blanking it here (this
+    # fixture is module-scoped, so it only runs once, with no per-test
+    # restore) silently changes what every worker imported *after* this one
+    # in the same pytest session sees, even though those workers' apps may
+    # already be built with the real conftest.py secret baked into request
+    # handlers/closures. Save and restore it so this file's test-local
+    # override never leaks into other test modules.
+    _original_internal_secret = os.environ.get("INTERNAL_SECRET")
     os.environ["INTERNAL_SECRET"] = ""  # disable internal auth for analytics worker tests
 
     tranc3_root = Path(__file__).resolve().parent.parent
@@ -68,6 +77,10 @@ def client(tmp_path_factory):
             sys.modules["src.database.encrypted_sqlite"] = original_enc
         else:
             sys.modules["src.database.encrypted_sqlite"] = real_enc
+        if _original_internal_secret is None:
+            os.environ.pop("INTERNAL_SECRET", None)
+        else:
+            os.environ["INTERNAL_SECRET"] = _original_internal_secret
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
