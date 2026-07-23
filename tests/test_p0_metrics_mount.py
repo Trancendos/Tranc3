@@ -28,13 +28,21 @@ METRICS_MARKERS = (
     "mount_prometheus_endpoint",
     "InfinityWorkerKit",
     "_mount_endpoints",
+    "instrument_worker",
 )
 
 
 def test_p0_workers_declare_metrics_endpoint():
     missing = []
     for rel in P0_WORKERS:
-        text = read_repo_text(ROOT / rel)
+        path = ROOT / rel
+        text = read_repo_text(path)
+        # Some P0 workers keep worker.py as a `from main import app` backwards-
+        # compatibility shim, with the actual app factory (and its metrics
+        # wiring) living in a sibling main.py.
+        main_py = path.parent / "main.py"
+        if main_py.is_file():
+            text += "\n" + read_repo_text(main_py)
         if not any(m in text for m in METRICS_MARKERS):
             missing.append(rel)
     assert not missing, f"P0 workers missing /metrics wiring: {missing}"
