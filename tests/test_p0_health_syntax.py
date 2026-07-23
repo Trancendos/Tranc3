@@ -25,7 +25,9 @@ def test_p0_worker_files_parse():
 
 
 def test_infinity_auth_health_includes_entity_in_source():
-    text = read_repo_text(ROOT / "workers/infinity-auth/worker.py")
+    # infinity-auth's /health route lives in router.py, not worker.py — the
+    # latter is just a `from main import app` backwards-compat shim.
+    text = read_repo_text(ROOT / "workers/infinity-auth/router.py")
     assert "health_entity_block(8005" in text
     assert '"version": "2.0.0",' in text
 

@@ -5,3 +5,4 @@ uvicorn==0.34.3
 websockets==16.1.1
 pydantic==2.11.5
 PyJWT==2.13.0
+cryptography==48.0.1

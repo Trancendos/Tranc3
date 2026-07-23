@@ -37,6 +37,7 @@ from pydantic import BaseModel, Field
 from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 from src.core.startup_validator import validate_startup
+from src.entities.health_metadata import health_entity_block
 
 load_dotenv()
 validate_startup()
@@ -1268,6 +1269,7 @@ async def health():
         "timestamp": datetime.datetime.utcnow().isoformat(),
         "uptime_seconds": round(time.time() - _start_time, 1),
         "components": components,
+        "entity": health_entity_block(8000, "tranc3-backend"),
     }
 
 
