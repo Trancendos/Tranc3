@@ -1282,7 +1282,7 @@ async def adaptive_layers():
     """Return the current status of every platform layer (active backend, rotation state)."""
     from src.platform.layer_rotator import get_layer_rotator
 
-    return get_layer_rotator().status()
+    return await asyncio.to_thread(get_layer_rotator().status)
 
 
 @app.get(

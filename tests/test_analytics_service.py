@@ -191,8 +191,8 @@ class TestDuckDBOlap:
 
     def _skip_if_no_duckdb(self, client):
         r = client.get("/health")
-        if not r.json().get("duckdb_available"):
-            pytest.skip("DuckDB not installed")
+        if r.json().get("active_backend") != "duckdb":
+            pytest.skip("DuckDB not installed or not the active backend")
 
     def test_dau(self, client):
         self._skip_if_no_duckdb(client)

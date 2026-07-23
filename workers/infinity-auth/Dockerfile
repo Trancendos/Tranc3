@@ -12,6 +12,7 @@ COPY --chown=worker:worker src/__init__.py src/__init__.py
 COPY --chown=worker:worker src/entities/ src/entities/
 COPY --chown=worker:worker src/database/ src/database/
 COPY --chown=worker:worker src/errors/ src/errors/
+RUN mkdir -p /app/data && chown -R worker:worker /app/data
 # Security: drop to non-root user
 USER worker
 

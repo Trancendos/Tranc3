@@ -4,14 +4,24 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
+from auth import get_current_user
 from src.admin_os import backups, domain_model, events, files_manager, system_viewer
 
 logger = logging.getLogger("tranc3.admin_os")
 
-router = APIRouter(prefix="/admin-os", tags=["admin-os"])
+
+def _require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """Admin OS exposes filesystem, backup, and system-internals access —
+    every route requires an authenticated admin, not just mutations."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required for Admin OS access")
+    return current_user
+
+
+router = APIRouter(prefix="/admin-os", tags=["admin-os"], dependencies=[Depends(_require_admin)])
 
 _FEATURES = ["domain-model", "system", "events", "files", "backups"]
 

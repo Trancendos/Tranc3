@@ -40,10 +40,10 @@ jobs:
             context: tranc3-bots
           - image: infinity-ws
             dockerfile: workers/infinity-ws/Dockerfile
-            context: workers/infinity-ws
+            context: .
           - image: infinity-auth
             dockerfile: workers/infinity-auth/Dockerfile
-            context: workers/infinity-auth
+            context: .
 
     steps:
       - uses: https://code.forgejo.org/actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7

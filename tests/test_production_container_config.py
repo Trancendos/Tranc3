@@ -37,8 +37,17 @@ def test_production_compose_worker_healthchecks_do_not_depend_on_curl():
         build = svc.get("build")
         if not isinstance(build, dict):
             continue
-        dockerfile = build.get("dockerfile", "")
-        if not str(dockerfile).startswith("workers/"):
+        dockerfile = str(build.get("dockerfile", "Dockerfile"))
+        context = str(build.get("context", "."))
+        # Two valid build styles coexist: root context with a
+        # workers/<name>/Dockerfile path, or a worker-dir context
+        # (./workers/<name>) with a bare Dockerfile — either marks this as
+        # our own worker build (vs. tranc3-backend's root Dockerfile or a
+        # vendor image with no "workers/" anywhere).
+        is_worker_build = dockerfile.startswith("workers/") or context.lstrip("./").startswith(
+            "workers/"
+        )
+        if not is_worker_build:
             continue
         test = (svc.get("healthcheck") or {}).get("test")
         if test and "curl" in str(test):

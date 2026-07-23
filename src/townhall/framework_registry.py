@@ -85,9 +85,10 @@ def load_framework_registry() -> FrameworkRegistry:
         logger.warning("frameworks.yaml load failed: %s", exc)
         return reg
 
-    reg.version = str(data.get("version", ""))
-    reg.location = str(data.get("location", reg.location))
-    reg.lead_ai = str(data.get("lead_ai", reg.lead_ai))
+    meta = data.get("meta") or {}
+    reg.version = str(data.get("version") or meta.get("version") or "")
+    reg.location = str(data.get("location") or meta.get("location") or reg.location)
+    reg.lead_ai = str(data.get("lead_ai") or meta.get("lead_ai") or reg.lead_ai)
 
     domains = data.get("domains") or {}
     if isinstance(domains, dict):

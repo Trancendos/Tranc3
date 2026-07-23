@@ -106,7 +106,7 @@ jobs:
       - name: Build api-gateway worker
         run: |
           if [ -f workers/api-gateway/Dockerfile ]; then
-            docker build -t trancendos-api-gateway:latest workers/api-gateway/ || echo "api-gateway Dockerfile not ready yet"
+            docker build -t trancendos-api-gateway:latest -f workers/api-gateway/Dockerfile . || echo "api-gateway Dockerfile not ready yet"
           else
             echo "api-gateway: Using Python worker (no Dockerfile needed)"
           fi
