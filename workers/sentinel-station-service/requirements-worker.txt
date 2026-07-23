@@ -5,5 +5,5 @@ uvicorn==0.34.3
 pydantic==2.11.5
 sse-starlette==3.4.5
 python-jose[cryptography]==3.5.0
-pyasn1==0.6.3
+pyasn1==0.6.4
 email-validator==2.2.0
