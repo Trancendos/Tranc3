@@ -789,6 +789,13 @@ from src.basement.routes import (
 
 app.include_router(_basement_router)
 
+# ── Infinity Admin OS (domain model, system viewer, events, files, backups) ───
+from src.admin_os.routes import (
+    router as _admin_os_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_admin_os_router)
+
 # ── Cryptex (threat detection + cyber defence) ────────────────────────────────
 from src.cryptex.routes import (
     router as _cryptex_router,  # noqa: F401  # intentional top-level import

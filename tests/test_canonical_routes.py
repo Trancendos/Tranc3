@@ -19,15 +19,41 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# ── Environment defaults must be set before any app import ────────────────────
+# ── Environment defaults, scoped to this file's own test execution ────────────
+# REQUIRE_AUTH in particular is read live (not cached at import time) by
+# src.auth.facade.get_current_user_dep on every request. Setting it as a bare
+# module-level os.environ.setdefault() would apply it at *collection* time —
+# pytest imports every test_*.py file to discover tests before any test in any
+# file actually runs — silently disabling auth-rejection checks for every
+# other test file's tests that execute earlier in the run order, well before
+# this module-scoped fixture's own teardown would ever fire (e.g.
+# tests/test_access_routes.py's test_requires_auth, collected/imported after
+# this file alphabetically but *executed* before it, expects a 401/403 and
+# instead got 200). Apply these only inside the autouse fixture's setup, so
+# the window they're live in is exactly "while this file's own tests run".
 
-os.environ.setdefault("ENVIRONMENT", "test")
-os.environ.setdefault("REQUIRE_AUTH", "false")
-os.environ.setdefault("ALLOWED_ORIGINS", "*")
-os.environ.setdefault("SECRET_KEY", "test-secret-key-canonical-routes-00001")
-os.environ.setdefault("JWT_SECRET", "test-jwt-secret-canonical-routes-32ch")
-os.environ.setdefault("TRANC3_API_KEY", "test-key-canonical")
-os.environ.setdefault("ZERO_TRUST_ENABLED", "false")
+_CANONICAL_ROUTES_ENV_DEFAULTS = {
+    "ENVIRONMENT": "test",
+    "REQUIRE_AUTH": "false",
+    "ALLOWED_ORIGINS": "*",
+    "SECRET_KEY": "test-secret-key-canonical-routes-00001",
+    "JWT_SECRET": "test-jwt-secret-canonical-routes-32ch",
+    "TRANC3_API_KEY": "test-key-canonical",
+    "ZERO_TRUST_ENABLED": "false",
+}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _canonical_routes_env():
+    original = {_var: os.environ.get(_var) for _var in _CANONICAL_ROUTES_ENV_DEFAULTS}
+    for _var, _default in _CANONICAL_ROUTES_ENV_DEFAULTS.items():
+        os.environ.setdefault(_var, _default)
+    yield
+    for _var, _original in original.items():
+        if _original is None:
+            os.environ.pop(_var, None)
+        else:
+            os.environ[_var] = _original
 
 
 # ── Shared mock helpers ───────────────────────────────────────────────────────

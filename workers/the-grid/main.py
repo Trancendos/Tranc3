@@ -22,6 +22,9 @@ logger = logging.getLogger(config.WORKER_NAME)
 
 _STARTED_AT = datetime.now(timezone.utc)
 
+db = GridDatabase(config.DB_PATH)
+engine = WorkflowEngineRouter(db)
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
@@ -65,9 +68,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    db = GridDatabase(config.DB_PATH)
-    engine_router = WorkflowEngineRouter(db)
-
     @app.get("/health")
     async def health():
         return {
@@ -78,7 +78,7 @@ def create_app() -> FastAPI:
             "engine_count": 8,
         }
 
-    app.include_router(_make_grid_router(db, engine_router))
+    app.include_router(_make_grid_router(db, engine))
     return app
 
 
