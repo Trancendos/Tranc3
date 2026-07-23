@@ -264,8 +264,9 @@ class TestInstrumentWorker:
         # conftest.py defaults PROMETHEUS_ENABLED=false for the test process
         # (to avoid duplicate-metric registration when workers are re-imported
         # across tests) — this test exercises the enabled branch, so opt back in.
-        with patch.dict(sys.modules, patches), patch.dict(
-            os.environ, {"PROMETHEUS_ENABLED": "true"}
+        with (
+            patch.dict(sys.modules, patches),
+            patch.dict(os.environ, {"PROMETHEUS_ENABLED": "true"}),
         ):
             instrument_worker(app, service_name="tranc3.test", worker_port=9999)
 
@@ -343,8 +344,9 @@ class TestInstrumentWorker:
         app = FastAPI()
         # See test_instrument_worker_prometheus_branch — opt back into the
         # Prometheus branch this test is specifically exercising.
-        with patch.dict(sys.modules, patches), patch.dict(
-            os.environ, {"PROMETHEUS_ENABLED": "true"}
+        with (
+            patch.dict(sys.modules, patches),
+            patch.dict(os.environ, {"PROMETHEUS_ENABLED": "true"}),
         ):
             instrument_worker(
                 app,
