@@ -206,28 +206,30 @@ def _duckdb_insert_event(
         import duckdb  # type: ignore[import-untyped]
 
         con = duckdb.connect(DUCKDB_PATH)
-        con.execute("""
-            CREATE TABLE IF NOT EXISTS events (
-                id INTEGER PRIMARY KEY,
-                event_type TEXT NOT NULL,
-                user_id TEXT,
-                session_id TEXT,
-                properties TEXT,
-                timestamp DOUBLE NOT NULL,
-                date_str TEXT NOT NULL
+        try:
+            con.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id INTEGER PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    user_id TEXT,
+                    session_id TEXT,
+                    properties TEXT,
+                    timestamp DOUBLE NOT NULL,
+                    date_str TEXT NOT NULL
+                )
+            """)
+            con.execute("""
+                CREATE SEQUENCE IF NOT EXISTS events_seq START 1
+            """)
+            row = con.execute("SELECT nextval('events_seq')").fetchone()
+            new_id = row[0]
+            con.execute(
+                "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
+                [new_id, ev_type, user_id, session_id, json.dumps(props), ts, date_str],
             )
-        """)
-        con.execute("""
-            CREATE SEQUENCE IF NOT EXISTS events_seq START 1
-        """)
-        row = con.execute("SELECT nextval('events_seq')").fetchone()
-        new_id = row[0]
-        con.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?,?)",
-            [new_id, ev_type, user_id, session_id, json.dumps(props), ts, date_str],
-        )
-        con.close()
-        return new_id
+            return new_id
+        finally:
+            con.close()
     except Exception:  # DuckDB failure — fall through to SQLite
         return None
 
@@ -244,27 +246,29 @@ def _duckdb_query_events(
         import duckdb  # type: ignore[import-untyped]
 
         con = duckdb.connect(DUCKDB_PATH)
-        clauses, params = [], []
-        if event_type:
-            clauses.append("event_type = ?")
-            params.append(event_type)
-        if user_id:
-            clauses.append("user_id = ?")
-            params.append(user_id)
-        if since:
-            clauses.append("timestamp >= ?")
-            params.append(since)
-        if until:
-            clauses.append("timestamp <= ?")
-            params.append(until)
-        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
-        rows = con.execute(
-            f"SELECT * FROM events {where} ORDER BY timestamp DESC LIMIT ? OFFSET ?",
-            params + [limit, offset],
-        ).fetchall()
-        cols = [d[0] for d in con.description]
-        con.close()
-        return [dict(zip(cols, r, strict=False)) for r in rows]
+        try:
+            clauses, params = [], []
+            if event_type:
+                clauses.append("event_type = ?")
+                params.append(event_type)
+            if user_id:
+                clauses.append("user_id = ?")
+                params.append(user_id)
+            if since:
+                clauses.append("timestamp >= ?")
+                params.append(since)
+            if until:
+                clauses.append("timestamp <= ?")
+                params.append(until)
+            where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+            rows = con.execute(
+                f"SELECT * FROM events {where} ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+                params + [limit, offset],
+            ).fetchall()
+            cols = [d[0] for d in con.description]
+            return [dict(zip(cols, r, strict=False)) for r in rows]
+        finally:
+            con.close()
     except Exception:  # DuckDB failure
         return None
 
