@@ -72,8 +72,14 @@ def test_layer_rotation_enabled_flag(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_adaptive_layers_route():
+async def test_adaptive_layers_route(monkeypatch):
     from fastapi.testclient import TestClient
+
+    # The file's autouse _clear_layer_env fixture deletes DATABASE_URL to
+    # exercise layer_rotator's own fallback behavior in the other tests here;
+    # this test instead needs a real `import api`, which hard-fails without
+    # it on a process where api.py hasn't been imported yet.
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./test.db")
 
     import api
 

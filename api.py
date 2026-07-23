@@ -1274,6 +1274,18 @@ async def health():
 
 
 @app.get(
+    "/adaptive/layers",
+    tags=["system"],
+    summary="Platform layer rotator status (database/blob/knowledge/api/frontend backends)",
+)
+async def adaptive_layers():
+    """Return the current status of every platform layer (active backend, rotation state)."""
+    from src.platform.layer_rotator import get_layer_rotator
+
+    return get_layer_rotator().status()
+
+
+@app.get(
     "/health/platform",
     tags=["system"],
     summary="Platform-wide service health for PlatformPulse widget",
