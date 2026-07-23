@@ -42,16 +42,28 @@ def _import_gateway_worker_no_evict(full: Path) -> object:
     import 404s with ModuleNotFoundError once a real request comes in.
     Keep them live for the rest of the process instead, matching
     tests/test_gateway_service.py's own loader.
+
+    tests/test_gateway_service.py uses this exact same sys.modules key
+    ("workers.gateway-service.worker"), so if it already ran (it collects
+    before this file, alphabetically), that module is already live and its
+    own main.py has already executed — reuse it instead of blindly evicting
+    config/database/service and re-execing worker.py: `from main import
+    app` would just rebind to the already-cached `main` module without
+    re-running its body (main/router are deliberately never evicted), so
+    the freshly-popped config/database/service would never get
+    repopulated, leaving them missing from sys.modules entirely.
     """
     worker_dir = str(full.parent)
     if worker_dir not in sys.path:
         sys.path.insert(0, worker_dir)
-    for name in ("config", "database", "service"):
-        sys.modules.pop(name, None)
-    spec = importlib.util.spec_from_file_location("workers.gateway-service.worker", full)
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["workers.gateway-service.worker"] = mod
-    spec.loader.exec_module(mod)
+    mod = sys.modules.get("workers.gateway-service.worker")
+    if mod is None:
+        for name in ("config", "database", "service"):
+            sys.modules.pop(name, None)
+        spec = importlib.util.spec_from_file_location("workers.gateway-service.worker", full)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["workers.gateway-service.worker"] = mod
+        spec.loader.exec_module(mod)
     # Stash direct references so callers can re-assert sys.modules right
     # before exercising this app — other workers imported later via the
     # shared evicting loader restore whatever "config"/"database"/"service"
