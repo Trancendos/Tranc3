@@ -14,7 +14,9 @@ Also validates the swarm-coordinator-service /run auth fix.
 
 from __future__ import annotations
 
+import importlib.util
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -31,12 +33,37 @@ ROOT = Path(__file__).resolve().parents[1]
 _module_cache: dict[str, object] = {}
 
 
+def _import_gateway_worker_no_evict(full: Path) -> object:
+    """gateway-service's router.py performs lazy, request-time `from service
+    import ...` calls (see its own comments) — the shared, evicting
+    _worker_import_utils.import_worker() would remove gateway-service's
+    directory from sys.path and its `service`/`config`/`database` siblings
+    from sys.modules right after import returns, so any such request-time
+    import 404s with ModuleNotFoundError once a real request comes in.
+    Keep them live for the rest of the process instead, matching
+    tests/test_gateway_service.py's own loader.
+    """
+    worker_dir = str(full.parent)
+    if worker_dir not in sys.path:
+        sys.path.insert(0, worker_dir)
+    for name in ("config", "database", "service"):
+        sys.modules.pop(name, None)
+    spec = importlib.util.spec_from_file_location("workers.gateway-service.worker", full)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["workers.gateway-service.worker"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def _import_worker(rel_path: str) -> object:
     """Import a worker module from its file path, bypassing hyphenated-dir issues."""
     if rel_path in _module_cache:
         return _module_cache[rel_path]
     full = ROOT / rel_path
-    mod = _import_worker_impl(rel_path.replace("/", "."), full)
+    if rel_path == "workers/gateway-service/worker.py":
+        mod = _import_gateway_worker_no_evict(full)
+    else:
+        mod = _import_worker_impl(rel_path.replace("/", "."), full)
     _module_cache[rel_path] = mod
     return mod
 
@@ -225,11 +252,14 @@ class TestFfmpegWorker:
 class TestGatewayService:
     @pytest.fixture(autouse=True)
     def setup(self, tmp_path):
-        os.environ["GATEWAY_DB_PATH"] = str(tmp_path / "gateway_test.db")
+        # config.DB_PATH is read from GATEWAY_DB_PATH once at first import of
+        # this cached module (see _import_worker's _module_cache above), and
+        # main.py's own lifespan already calls database.init_db() on startup
+        # (which TestClient triggers per request) — there's no `_init_db` or
+        # `DB_PATH` attribute on worker.py itself (a `from main import app`
+        # shim) to call/reassign directly, so don't try to re-point per test.
+        os.environ.setdefault("GATEWAY_DB_PATH", str(tmp_path / "gateway_test.db"))
         self.mod = _import_worker("workers/gateway-service/worker.py")
-        # re-point DB and init in case module was already cached
-        self.mod.DB_PATH = str(tmp_path / "gateway_test.db")
-        self.mod._init_db()
         self.client = _client_for(self.mod)
 
     def test_health(self):
@@ -656,6 +686,15 @@ class TestTriposrWorker:
 class TestTuringsHubService:
     @pytest.fixture(autouse=True)
     def setup(self):
+        # worker.py mounts StaticFiles(directory=...) over these three asset
+        # dirs at *module import* time (before its own lifespan's mkdir runs)
+        # — its Dockerfile pre-creates them at build time (`RUN mkdir -p
+        # assets/vrm assets/animations assets/portraits`) so this never bites
+        # in a real deployment. Mirror that here since tests import worker.py
+        # straight from the checkout, with no Docker build step to do it.
+        assets_dir = ROOT / "workers" / "turings-hub-service" / "assets"
+        for sub in ("vrm", "animations", "portraits"):
+            (assets_dir / sub).mkdir(parents=True, exist_ok=True)
         self.mod = _import_worker("workers/turings-hub-service/worker.py")
         self.client = _client_for(self.mod)
 
