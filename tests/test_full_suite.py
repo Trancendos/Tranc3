@@ -424,6 +424,71 @@ class TestNeuromorphicProcessor:
         assert fired
 
 
+class TestConsciousnessIntegration:
+    """
+    Regression coverage for the ConsciousnessAwareGenerator consolidation:
+    two divergent copies used to exist (src/bio_neural — real, unused;
+    src/core — fake np.random metrics, wired into the CONSCIOUSNESS bot
+    type but constructed with zero args against a two-arg constructor, so
+    every call raised TypeError and silently fell back to a lexical-diversity
+    heuristic). Only the bio_neural copy remains now.
+    """
+
+    @pytest.mark.asyncio
+    async def test_constructs_without_explicit_feature_manager(self):
+        from src.bio_neural.consciousness_integration import ConsciousnessIntegration
+
+        ci = ConsciousnessIntegration()
+        assert ci.consciousness is not None
+
+    @pytest.mark.asyncio
+    async def test_compute_phi_returns_bounded_float(self):
+        from src.bio_neural.consciousness_integration import ConsciousnessIntegration
+
+        ci = ConsciousnessIntegration()
+        phi = await ci.compute_phi("the quick brown fox jumps over the lazy dog")
+        assert isinstance(phi, float)
+        assert 0.0 <= phi <= 1.0
+
+    @pytest.mark.asyncio
+    async def test_compute_phi_handles_empty_text(self):
+        from src.bio_neural.consciousness_integration import ConsciousnessIntegration
+
+        ci = ConsciousnessIntegration()
+        phi = await ci.compute_phi("")
+        assert isinstance(phi, float)
+
+    @pytest.mark.asyncio
+    async def test_inference_worker_consciousness_job_reaches_real_model(self, caplog):
+        # End-to-end regression for the actual bot-registry call path: this
+        # used to always hit the except-Exception fallback in
+        # InferenceWorker._do_consciousness before the model ever loaded.
+        import logging
+
+        from src.workers.inference_worker import InferenceWorker
+
+        worker = InferenceWorker()
+        with caplog.at_level(logging.INFO, logger="src.bio_neural.consciousness_engine"):
+            result = await worker._do_consciousness({"text": "hello world, this is a real test"})
+        assert result["model"] == "tranc3-consciousness"
+        assert "ConsciousnessModel initialized" in caplog.text
+
+    def test_disabled_feature_flag_skips_model_construction(self):
+        from src.bio_neural.consciousness_integration import (
+            ConsciousnessAwareGenerator,
+        )
+        from src.core.feature_flags import FeatureFlag
+
+        class _AlwaysDisabled:
+            def is_enabled(self, flag, user_id=None):  # noqa: ARG002
+                return False
+
+        gen = ConsciousnessAwareGenerator(feature_manager=_AlwaysDisabled())
+        assert gen.consciousness is None
+        # sanity: FeatureFlag import path still resolves (used by the real manager)
+        assert FeatureFlag.CONSCIOUSNESS_ENGINE.value == "consciousness_engine"
+
+
 # ── Evolution Engine Tests ────────────────────────────────────────────────────
 
 

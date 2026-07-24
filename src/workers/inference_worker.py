@@ -308,7 +308,7 @@ class InferenceWorker:
     async def _do_consciousness(self, p: dict) -> dict:
         text = p.get("text", "")
         try:
-            from src.core.consciousness_integration import ConsciousnessIntegration
+            from src.bio_neural.consciousness_integration import ConsciousnessIntegration
 
             ci = ConsciousnessIntegration()
             phi = await ci.compute_phi(text)
