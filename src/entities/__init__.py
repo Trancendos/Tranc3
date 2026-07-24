@@ -18,6 +18,7 @@ from .ollama import (
 )
 from .platform import (
     LOCATION_ABBREVS,
+    ORCHESTRATION_TIER,
     PILLAR_ABBREVS,
     PLATFORM_ENTITIES,
     PRIME_ABBREVS,
@@ -25,12 +26,14 @@ from .platform import (
     Agent,
     Bot,
     LocationEntity,
+    OrchestrationTier,
     Pillar,
     get_all_ids,
     get_entity_by_aid,
     get_entity_by_pid,
     get_entity_for_location,
     get_entity_for_port,
+    get_orchestration_tier,
 )
 from .templates import (
     InfinityAgent,
@@ -51,9 +54,11 @@ __all__ = [
     "Agent",
     "Bot",
     "LOCATION_ABBREVS",
+    "ORCHESTRATION_TIER",
     "PILLAR_ABBREVS",
     "PRIME_ABBREVS",
     "LocationEntity",
+    "OrchestrationTier",
     "Pillar",
     "PLATFORM_ENTITIES",
     "WORKER_ENTITY_MAP",
@@ -62,6 +67,7 @@ __all__ = [
     "get_entity_by_pid",
     "get_entity_for_location",
     "get_entity_for_port",
+    "get_orchestration_tier",
     # Lifecycle
     "LifecycleEmitter",
     "LifecycleEvent",

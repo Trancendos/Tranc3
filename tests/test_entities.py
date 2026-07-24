@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from src.entities.platform import (
     LOCATION_ABBREVS,
+    ORCHESTRATION_TIER,
     PILLAR_ABBREVS,
     PLATFORM_ENTITIES,
     PRIME_ABBREVS,
@@ -20,6 +21,7 @@ from src.entities.platform import (
     get_entity_by_pid,
     get_entity_for_location,
     get_entity_for_port,
+    get_orchestration_tier,
 )
 
 # ── Pillar enum ──────────────────────────────────────────────────────
@@ -339,6 +341,54 @@ class TestAbbreviationDicts:
     def test_prime_abbrevs_non_empty(self):
         assert len(PRIME_ABBREVS) > 0
 
+    def test_prime_abbrevs_guardian_and_dr_canonical(self):
+        assert PRIME_ABBREVS["The Guardian (Marcus Magnolia)"] == "GRD"
+        assert PRIME_ABBREVS["The Dr. (Nikolai O'denhime)"] == "DOC"
+
     def test_location_abbrevs_3_chars(self):
         for name, abbrev in LOCATION_ABBREVS.items():
             assert len(abbrev) == 3, f"Abbrev for '{name}' is not 3 chars: '{abbrev}'"
+
+
+class TestOrchestrationTier:
+    def test_trance_one_orchestrators(self):
+        for name in ("Cornelius MacIntyre", "The Queen", "tAImra"):
+            assert get_orchestration_tier(name) == "Trance-One"
+
+    def test_t2ance_primes(self):
+        for name in (
+            "Dorris Fontaine",
+            "Norman Hawkins",
+            "Trancendos",
+            "Voxx",
+            "Savania",
+            "The Guardian (Marcus Magnolia)",
+            "The Dr. (Nikolai O'denhime)",
+        ):
+            assert get_orchestration_tier(name) == "T2ance"
+
+    def test_unlisted_lead_ai_defaults_to_tranc3(self):
+        # Every named AI not explicitly elevated defaults to Tier 3 (Tranc3)
+        # — this is the "the other AI's" case from the user's own framing.
+        for name in ("Zimik", "Shimshi", "Tyler Towncroft", "The Orb of Orisis", "Slime"):
+            assert get_orchestration_tier(name) == "Tranc3"
+
+    def test_orchestration_tier_dict_matches_helper(self):
+        # Helper and source-of-truth dictionary must stay in sync.
+        for name, tier in ORCHESTRATION_TIER.items():
+            assert get_orchestration_tier(name) == tier
+
+        # Every resolved tier must be one of the 3 allowed values, for
+        # every entity's actual lead_ai — catches a typo'd or unexpected
+        # tier string that the Literal type alone wouldn't catch at runtime.
+        allowed_tiers = {"Trance-One", "T2ance", "Tranc3"}
+        for entity in PLATFORM_ENTITIES.values():
+            assert get_orchestration_tier(entity.lead_ai) in allowed_tiers
+
+    def test_elevated_names_still_hold_their_own_location_lead_ai_seat(self):
+        # Orchestration tier is an overlay, not a replacement — Cornelius,
+        # Dorris, etc. remain each hold their own Location's Tier-3 "Lead AI"
+        # seat (per CLAUDE.md's service table) despite also being elevated.
+        lead_ai_names = {e.lead_ai for e in PLATFORM_ENTITIES.values()}
+        for name in ORCHESTRATION_TIER:
+            assert name in lead_ai_names, f"{name!r} elevated but not any Location's lead_ai"
