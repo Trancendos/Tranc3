@@ -1775,7 +1775,7 @@ async def chat_stream(
         raise HTTPException(
             status_code=400,
             detail="location-based personality resolution is not supported for /chat/stream yet; "
-            "use /chat, or omit location and pass personality directly",
+            "use /chat",
         )
 
     try:
