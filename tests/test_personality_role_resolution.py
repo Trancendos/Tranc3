@@ -39,6 +39,20 @@ class TestResolvePersonalityForLocation:
     def test_unknown_location_returns_none(self, registry):
         assert resolve_personality_for_location("Not A Real Location") is None
 
+    def test_reassigning_to_a_co_lead_still_resolves(self, registry):
+        # Sam King, Slime, and the four non-primary Porters are real
+        # assign_ai() targets (an operator can reassign a seat to any of
+        # them), not just entries in lead_ais — each must resolve to its
+        # location's shared profile rather than falling back to None.
+        registry.assign_ai("TateKing", "Sam King", changed_by="test")
+        assert resolve_personality_for_location("TateKing") == "benji-tate-sam-king"
+
+        registry.assign_ai("The Lab", "Slime", changed_by="test")
+        assert resolve_personality_for_location("The Lab") == "the-dr-slime"
+
+        registry.assign_ai("Arcadian Exchange", "Ann Porter", changed_by="test")
+        assert resolve_personality_for_location("Arcadian Exchange") == "the-porter-family"
+
     def test_vacant_seat_returns_none(self, registry):
         registry.remove_ai("Royal Bank of Arcadia", changed_by="test")
         assert resolve_personality_for_location("Royal Bank of Arcadia") is None

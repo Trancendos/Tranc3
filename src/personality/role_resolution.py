@@ -29,11 +29,15 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Junior Cesar": "junior-cesar",
     # TateKing's seed lead_ai is "Benji Tate" (primary of two, per
     # trance_one/platform_manifest.py's lead_ais split) — the shared
-    # benji-tate-sam-king profile still voices both.
+    # benji-tate-sam-king profile still voices both. Sam King is a valid
+    # assign_ai() target too (a live co-lead, not just a lead_ais entry),
+    # so he needs his own key rather than falling back to None.
     "Benji Tate": "benji-tate-sam-king",
+    "Sam King": "benji-tate-sam-king",
     "Baron Von Hilton": "baron-von-hilton",
     "Tyler Towncroft": "tyler-towncroft",
     "The Dr. (Nikolai O'denhime)": "the-dr-slime",
+    "Slime": "the-dr-slime",
     "Larry Lowhammer": "larry-lowhammer",
     "The Mad Hatter": "the-mad-hatter",
     "Lunascene": "lunascene",
@@ -41,8 +45,14 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Dorris Fontaine": "dorris-fontaine",
     # Arcadian Exchange's seed lead_ai is "Clarence Porter" (primary of
     # five, per trance_one/platform_manifest.py's lead_ais split) — the
-    # shared the-porter-family profile still voices the whole family.
+    # shared the-porter-family profile still voices the whole family. The
+    # other four Porters are valid assign_ai() targets too, not just
+    # lead_ais entries, so each needs its own key.
     "Clarence Porter": "the-porter-family",
+    "Ann Porter": "the-porter-family",
+    "George Porter": "the-porter-family",
+    "Edward Porter": "the-porter-family",
+    "James Porter": "the-porter-family",
     "Norman Hawkins": "norman-hawkins",
     "Zimik": "zimik",
     "Shimshi": "shimshi",
