@@ -64,7 +64,7 @@ wiring work (§3–4).
 |---|---|---|---|---|
 | The Spark | Head of AI Tooling | Imfy | none under an `"Imfy"` code_name — but `norman-hawkins.json` already declares `"serves": ["the-spark", "the-observatory"]` | **No new file** — the resolver maps `Imfy` → `norman-hawkins`, honoring that profile's own pre-existing `serves` declaration instead of inventing a second, competing voice for the same seat. See the inconsistency note below. |
 | The Citadel, Think Tank | Chief Operations Officer, Head of R&D | Trancendos | **none** (no profile anywhere declares `serves` for `the-citadel` or `think-tank`) | Added `src/personality/profiles/trancendos.json` — hybrid COO/R&D-visionary archetype: very high conscientiousness + assertiveness (ops authority), high openness (R&D drive), low neuroticism, formal but not humorless — the platform's own top-level "founder entity" voice. |
-| DocUtari | Head of Document Management | Fiddsy | none | **Correctly none** — this seat has a named holder (Fiddsy) but no personality profile authored per canon; the resolver (§4) falls back to the platform default rather than fabricating a persona for it. |
+| DocUtari | Head of Document Management | Fiddsy | none | **Correctly none** — this seat has a named holder (Fiddsy), and `AI_NAME_TO_PROFILE_ID` intentionally has no entry for it; the resolver falls back to the platform default rather than fabricating a persona for it. |
 
 `src/personality/profiles/norman-hawkins.json` (`domain: "tooling"`) pre-dates this pass and
 already claims The Spark via its own `serves` list, even though `CLAUDE.md`'s platform table lists

@@ -22,6 +22,21 @@ class TestEffectiveEntity:
         assert ent.location == "The Laboratory"
         assert ent.canonical_location == "The Lab"
 
+    def test_lead_ais_without_overrides(self):
+        ent = resolve_entity("PID-LAB")
+        assert ent is not None
+        assert ent.lead_ais == ["The Dr. (Nikolai O'denhime)", "Slime"]
+
+    def test_lead_ais_reflects_primary_override(self):
+        ov = {"lead_ai": "New Dr."}
+        ent = resolve_entity("PID-LAB", ov)
+        assert ent is not None
+        assert ent.lead_ai == "New Dr."
+        # The overridden name replaces its own slot in the list — not a
+        # stale canonical entry contradicting the resolved lead_ai — while
+        # the untouched co-lead is left alone.
+        assert ent.lead_ais == ["New Dr.", "Slime"]
+
     def test_build_overrides_map_from_rows(self):
         rows = [
             {"entity_type": "lead_ai", "slot": "", "override_name": "Dr. Slime"},
