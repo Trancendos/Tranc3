@@ -164,20 +164,22 @@ class NexusHub:
         raises and never blocks publish() on the WS hub being slow or down —
         this is an additional delivery path, not a required one.
         """
+        global _ws_forward_inflight
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return  # publish() called outside an event loop — skip WS fan-out
+        # Reserve capacity here, before create_task() — a Task object already
+        # exists the instant create_task() returns, so checking/reserving
+        # inside the task body (after the fact) doesn't actually bound how
+        # many accumulate under a publish() burst.
+        if _ws_forward_inflight >= _WS_FORWARD_CONCURRENCY:
+            return
+        _ws_forward_inflight += 1
         loop.create_task(self._post_broadcast(topic, msg))
 
     async def _post_broadcast(self, topic: str, msg: NexusMessage) -> None:
         global _ws_forward_inflight
-        if _ws_forward_inflight >= _WS_FORWARD_CONCURRENCY:
-            # At capacity — infinity-ws is slow/down and forwards are piling
-            # up. Drop this one rather than adding yet another in-flight
-            # task/socket on top of an already-backed-up hub.
-            return
-        _ws_forward_inflight += 1
         try:
             import httpx
 

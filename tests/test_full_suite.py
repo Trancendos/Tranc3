@@ -597,18 +597,25 @@ class TestQuantumInferenceEngine:
         out = qi.quantum_attention(torch.randn(1, 4, 8))
         assert out.shape == (1, 4, 8)
 
-    def test_zero_norm_input_falls_back_to_basis_state_not_nan(self, monkeypatch):
+    def test_zero_norm_input_falls_back_to_basis_state_not_nan(self, monkeypatch, caplog):
         # Regression test: the zero-norm fallback used to trigger for NaN
         # inputs too (NaN > 0 is False), silently fabricating a finite
         # |0...0> attention result instead of preserving the invalid input
-        # through the existing classical-fallback error path.
+        # through the existing classical-fallback error path. Assert on the
+        # absence of the classical-fallback log too, so this test actually
+        # distinguishes "quantum path succeeded on true zero-norm input" from
+        # "classical fallback happened to also produce a finite result".
+        import logging
+
         monkeypatch.setenv("ENABLE_QUANTUM_OPT", "true")
         from src.core.quantum_inference import QuantumInferenceEngine
 
         qi = QuantumInferenceEngine({"num_qubits": 4})
-        out = qi.quantum_attention(torch.zeros(1, 4, 8))
+        with caplog.at_level(logging.WARNING, logger="src.core.quantum_inference"):
+            out = qi.quantum_attention(torch.zeros(1, 4, 8))
         assert out.shape == (1, 4, 8)
         assert torch.isfinite(out).all()
+        assert "falling back to classical" not in caplog.text
 
     def test_nan_input_falls_back_to_classical_not_fabricated_state(self, monkeypatch, caplog):
         import logging
@@ -622,6 +629,7 @@ class TestQuantumInferenceEngine:
             out = qi.quantum_attention(nan_input)
         assert "falling back to classical" in caplog.text
         assert out.shape == (1, 4, 8)
+        assert torch.isnan(out).all()
 
 
 # ── Evolution Engine Tests ────────────────────────────────────────────────────

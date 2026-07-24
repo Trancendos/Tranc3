@@ -92,9 +92,14 @@ class TestNexusHubWsFanOut:
         fake_response.raise_for_status.side_effect = httpx.HTTPStatusError(
             "403", request=MagicMock(), response=MagicMock(status_code=403)
         )
-        with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=fake_response):
+        with patch(
+            "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=fake_response
+        ) as mock_post:
             hub.publish("audit.event", {"foo": "bar"})
             await asyncio.sleep(0)  # a rejected broadcast must not surface here
+
+        assert mock_post.await_count == 1
+        fake_response.raise_for_status.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_ws_hub_unreachable_does_not_propagate(self):
@@ -106,17 +111,21 @@ class TestNexusHubWsFanOut:
     @pytest.mark.asyncio
     async def test_drops_forward_at_capacity_instead_of_piling_up(self):
         # A stuck/slow infinity-ws must not let a publish() burst accumulate
-        # unbounded in-flight HTTP tasks — verify the drop path directly
-        # rather than trying to race real concurrency.
+        # unbounded in-flight HTTP tasks. The capacity check+reservation
+        # happens synchronously in _forward_to_ws_hub (before create_task),
+        # so at-capacity publish() calls must never even schedule a task,
+        # let alone make an HTTP call.
         from src.nexus import hub as hub_module
-        from src.nexus.hub import NexusMessage
 
         hub = NexusHub()
-        msg = NexusMessage(topic="audit.event", payload={})
+        prior = hub_module._ws_forward_inflight
         hub_module._ws_forward_inflight = hub_module._WS_FORWARD_CONCURRENCY
         try:
             with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-                await hub._post_broadcast("audit.event", msg)
+                hub.publish("audit.event", {"foo": "bar"})
+                await asyncio.sleep(0)
             mock_post.assert_not_called()
+            # The dropped call must not have incremented the counter either.
+            assert hub_module._ws_forward_inflight == hub_module._WS_FORWARD_CONCURRENCY
         finally:
-            hub_module._ws_forward_inflight = 0
+            hub_module._ws_forward_inflight = prior

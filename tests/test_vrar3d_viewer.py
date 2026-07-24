@@ -125,6 +125,30 @@ class TestAssetDownloadRoute:
         response = client.get("/vrar3d/assets/job-pending/download", headers=_HEADERS)
         assert response.status_code == 404
 
+    def test_download_rejects_non_self_contained_format(self, client):
+        # A .gltf's external .bin/texture sidecars have no serving route here,
+        # and GLTFLoader.setRequestHeader() can propagate the caller's auth
+        # header to those subresource fetches (including external origins) —
+        # only glb/vrm (self-contained, single-file) are downloadable.
+        asset_dir = Path(os.environ["VRAR3D_ASSET_DIR"])
+        asset_dir.mkdir(parents=True, exist_ok=True)
+        output_file = asset_dir / "job-gltf.gltf"
+        output_file.write_text("{}")
+
+        _db.save_asset_job(
+            {
+                "asset_id": "job-gltf",
+                "scene_id": None,
+                "source_format": "obj",
+                "target_format": "gltf",
+                "backend": "trimesh",
+                "status": "done",
+                "output_path": str(output_file),
+            }
+        )
+        response = client.get("/vrar3d/assets/job-gltf/download", headers=_HEADERS)
+        assert response.status_code == 404
+
     def test_download_rejects_path_outside_asset_dir(self, client):
         # Defense-in-depth: every writer already constrains output_path to
         # ASSET_DIR, but the download route itself should never trust a DB
