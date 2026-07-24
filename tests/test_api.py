@@ -131,7 +131,12 @@ class TestChat:
     def test_chat_location_resolves_personality_from_role_registry(self):
         # A caller scoping /chat to a Location gets whoever the Role Registry
         # currently says holds that seat, not a hardcoded string — see
-        # src/personality/role_resolution.py.
+        # src/personality/role_resolution.py. Explicitly (re-)assign the seat
+        # first so this test doesn't depend on test-execution order or on
+        # nothing else in the suite having touched this Location's seed.
+        from src.roles.registry import get_registry
+
+        get_registry().assign_ai("Royal Bank of Arcadia", "Dorris Fontaine", changed_by="test")
         token = self._get_token()
         r = client.post(
             "/chat",
@@ -140,6 +145,23 @@ class TestChat:
         )
         assert r.status_code == 200
         assert r.json()["personality"] == "dorris-fontaine"
+
+    def test_chat_known_location_with_unmapped_ai_falls_back(self):
+        # DocUtari's seed assigned_ai is the literal placeholder "To be
+        # Defined" — a known Location whose seat resolves to no profile at
+        # all (distinct from "unknown location" and "vacant seat" above).
+        token = self._get_token()
+        r = client.post(
+            "/chat",
+            json={
+                "message": "Hello",
+                "personality": "tranc3-creative",
+                "location": "DocUtari",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        assert r.json()["personality"] == "tranc3-creative"
 
     def test_chat_unknown_location_falls_back_to_supplied_personality(self):
         token = self._get_token()
@@ -180,6 +202,19 @@ class TestChat:
         finally:
             if original and original.assigned_ai:
                 registry.assign_ai("The HIVE", original.assigned_ai, changed_by="test-restore")
+
+    def test_chat_stream_rejects_location(self):
+        # /chat/stream doesn't wire Role-Registry-based personality
+        # resolution yet — it must reject `location` explicitly rather than
+        # silently ignoring it and giving different persona behavior than
+        # /chat for the same payload.
+        token = self._get_token()
+        r = client.post(
+            "/chat/stream",
+            json={"message": "Hello", "location": "Royal Bank of Arcadia"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 400
 
 
 class TestInfo:

@@ -1766,6 +1766,18 @@ async def chat_stream(
     user_id = current_user["id"]
     tier = current_user.get("tier", "free")
 
+    if chat_req.location:
+        # Role-Registry-based personality resolution (see /chat and
+        # src/personality/role_resolution.py) isn't wired into the streaming
+        # path yet — reject explicitly rather than silently accepting
+        # `location` and giving different persona behavior than /chat for
+        # the same payload.
+        raise HTTPException(
+            status_code=400,
+            detail="location-based personality resolution is not supported for /chat/stream yet; "
+            "use /chat, or omit location and pass personality directly",
+        )
+
     try:
         InputSanitizer.sanitize(chat_req.message)
         tier_enforcer.check_and_increment(user_id, tier)

@@ -71,14 +71,19 @@ def resolve_personality_for_location(location: str) -> Optional[str]:
     """Resolve a Location to its currently-assigned personality profile id.
 
     Returns None (never raises) when the Location is unknown to the Role
-    Registry, its seat is currently vacant, or the assigned AI has no mapped
-    profile yet — callers should fall back to their own default
-    (e.g. "tranc3-base") rather than treat this as an error, since an
-    unfilled seat is valid platform state, not a bug.
+    Registry, its seat is currently vacant, the assigned AI has no mapped
+    profile yet, or the Role Registry itself is unavailable (e.g. its SQLite
+    file can't be opened) — callers should fall back to their own default
+    (e.g. "tranc3-base") rather than treat any of these as a hard error,
+    since a registry outage shouldn't take /chat down when a perfectly usable
+    fallback personality is available.
     """
     from src.roles.registry import get_registry
 
-    role = get_registry().get_role(location)
+    try:
+        role = get_registry().get_role(location)
+    except Exception:
+        return None
     if role is None or not role.assigned_ai:
         return None
     return AI_NAME_TO_PROFILE_ID.get(role.assigned_ai)

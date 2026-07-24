@@ -18,6 +18,12 @@ from src.roles.registry import RoleRegistry
 def registry(tmp_path, monkeypatch):
     reg = RoleRegistry(db_path=tmp_path / "role_registry_test.db")
     monkeypatch.setattr("src.roles.registry._registry", reg)
+    # assign_ai()/remove_ai() best-effort-notify the Relations activity feed
+    # via the *default* module-level singleton (src/relations/registry.py),
+    # which this fixture's temp RoleRegistry doesn't touch or override — left
+    # unmocked, every reassignment test here would write real rows into the
+    # shared default relations DB. No-op it for the duration of the test.
+    monkeypatch.setattr("src.roles.registry._emit_relations_event", lambda *a, **k: None)
     yield reg
     reg.close()
 
@@ -58,6 +64,15 @@ class TestResolvePersonalityForLocation:
     def test_the_citadel_and_think_tank_resolve_to_trancendos(self, registry):
         assert resolve_personality_for_location("The Citadel") == "trancendos"
         assert resolve_personality_for_location("Think Tank") == "trancendos"
+
+    def test_registry_failure_returns_none_instead_of_raising(self, registry, monkeypatch):
+        # A Role Registry outage (e.g. its SQLite file can't be opened)
+        # must degrade to the caller's fallback, not take /chat down with it.
+        def _boom(self, location):
+            raise RuntimeError("registry unavailable")
+
+        monkeypatch.setattr(type(registry), "get_role", _boom)
+        assert resolve_personality_for_location("Royal Bank of Arcadia") is None
 
 
 class TestMappingTableIntegrity:

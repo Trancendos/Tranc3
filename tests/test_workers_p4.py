@@ -326,6 +326,22 @@ class TestModelRouterService:
         )
         assert r.status_code == 422
 
+    def test_non_persona_aware_strategy_ignores_malformed_persona_traits(self, client):
+        # persona_traits is documented as ignored by every strategy except
+        # persona_aware — a hint that would fail PersonaTraits' strict
+        # validation (misspelled key, out-of-range value) must not turn
+        # into a validation error when attached to a plain round_robin
+        # request that never looks at it.
+        r = client.post(
+            "/route",
+            json={
+                "strategy": "round_robin",
+                "persona_traits": {"precison": 5.0},
+            },
+        )
+        assert r.status_code == 200
+        assert "model" in r.json()
+
     def test_report_health(self, client):
         models = client.get("/models").json()
         if models:

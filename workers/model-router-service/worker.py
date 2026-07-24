@@ -24,7 +24,7 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import (
     APIRouter,
@@ -37,7 +37,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
 # ---------------------------------------------------------------------------
@@ -197,9 +197,14 @@ class RouteRequest(BaseModel):
     strategy: str = "round_robin"
     capabilities: List[str] = Field(default_factory=list)
     max_cost: float = 0.0
-    # Only consulted when strategy == "persona_aware"; every other strategy
-    # ignores it, so existing callers are unaffected.
-    persona_traits: Optional[PersonaTraits] = None
+    # Deliberately a permissive Dict here, not PersonaTraits directly:
+    # FastAPI validates the whole request body against this model before the
+    # handler ever sees `strategy`, so a PersonaTraits(extra="forbid") field
+    # type would reject a malformed/extra-key hint even for a plain
+    # round_robin/cost_aware request that's documented to ignore it entirely.
+    # route_request() below converts+validates this into a PersonaTraits only
+    # when strategy == "persona_aware".
+    persona_traits: Optional[Dict[str, float]] = None
 
 
 class HealthReport(BaseModel):
@@ -418,7 +423,17 @@ async def route_request(body: RouteRequest):
     if not models:
         raise HTTPException(404, "No available models match the criteria") from None
 
-    selected = _select_model(models, body.strategy, body.persona_traits)
+    # Only validate persona_traits under persona_aware — every other
+    # strategy is documented to ignore the field entirely, so a malformed or
+    # extra-key hint must not break a plain round_robin/cost_aware/etc call.
+    persona_traits: Optional[PersonaTraits] = None
+    if body.strategy == "persona_aware" and body.persona_traits is not None:
+        try:
+            persona_traits = PersonaTraits(**body.persona_traits)
+        except ValidationError as exc:
+            raise HTTPException(422, f"Invalid persona_traits: {exc}") from None
+
+    selected = _select_model(models, body.strategy, persona_traits)
 
     if not selected:
         raise HTTPException(404, "No model selected") from None
