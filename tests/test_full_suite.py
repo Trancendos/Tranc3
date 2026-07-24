@@ -563,8 +563,7 @@ class TestVectorStore:
         store.upsert("v2", [0.2] * 4, {"user_id": "u2"})
         store.delete_by_metadata("user_id", "u1")
         ids = {r["id"] for r in store.query([0.2] * 4, top_k=5)}
-        assert "v1" not in ids
-        assert "v2" in ids
+        assert ids == {"v2"}
 
 
 # ── API Integration Tests ─────────────────────────────────────────────────────
