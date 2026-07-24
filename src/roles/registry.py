@@ -169,7 +169,7 @@ class RoleRegistry:
 
     # Retired `lead_ai` display names -> their current canonical replacement,
     # keyed by Location. INSERT OR IGNORE above never touches a row that
-    # already exists, so a DB seeded before these three Locations' names were
+    # already exists, so a DB seeded before these Locations' names were
     # reconciled to trance_one/platform_manifest.py's spelling (see
     # docs/governance/LOCATION-FUNCTIONS.md's 2026-07-24 verification-log
     # entry) would otherwise keep resolving to the old name forever, and
