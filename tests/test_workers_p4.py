@@ -304,9 +304,19 @@ class TestModelRouterService:
         assert r.json()["model"] == "gemini-2.5-pro"
 
     def test_persona_aware_without_traits_still_selects_a_model(self, client):
-        # An empty/omitted persona_traits dict must not error — every model
-        # scores 0 and any one of them is a valid pick.
+        # Omitted persona_traits must not error — every model scores 0 and
+        # any one of them is a valid pick.
         r = client.post("/route", json={"strategy": "persona_aware"})
+        assert r.status_code == 200
+        assert "model" in r.json()
+
+    def test_persona_aware_with_empty_traits_dict_still_selects_a_model(self, client):
+        # Same as above, but an explicit empty dict rather than an omitted
+        # field — both must be accepted identically.
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {}},
+        )
         assert r.status_code == 200
         assert "model" in r.json()
 

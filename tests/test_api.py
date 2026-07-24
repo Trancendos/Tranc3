@@ -128,12 +128,19 @@ class TestChat:
         )
         assert r.status_code == 422
 
-    def test_chat_location_resolves_personality_from_role_registry(self):
+    def test_chat_location_resolves_personality_from_role_registry(self, monkeypatch):
         # A caller scoping /chat to a Location gets whoever the Role Registry
         # currently says holds that seat, not a hardcoded string — see
         # src/personality/role_resolution.py. Explicitly (re-)assign the seat
         # first so this test doesn't depend on test-execution order or on
         # nothing else in the suite having touched this Location's seed.
+        # This deliberately exercises the real process-wide Role Registry
+        # singleton (the same one /chat's handler resolves against) rather
+        # than an isolated instance — that's the point of an integration
+        # test for this wiring — but the Relations activity-feed side effect
+        # of assign_ai() is muted so this doesn't write real events into the
+        # shared default Relations DB.
+        monkeypatch.setattr("src.roles.registry._emit_relations_event", lambda *a, **k: None)
         from src.roles.registry import get_registry
 
         get_registry().assign_ai("Royal Bank of Arcadia", "Dorris Fontaine", changed_by="test")
@@ -177,10 +184,12 @@ class TestChat:
         assert r.status_code == 200
         assert r.json()["personality"] == "tranc3-creative"
 
-    def test_chat_vacant_seat_falls_back_to_supplied_personality(self):
+    def test_chat_vacant_seat_falls_back_to_supplied_personality(self, monkeypatch):
         # A known Location whose seat is currently vacant must also fall
         # back — resolve_personality_for_location() returns None for a
-        # vacated role, not just for an unknown location name.
+        # vacated role, not just for an unknown location name. Same
+        # real-singleton-plus-muted-events approach as the test above.
+        monkeypatch.setattr("src.roles.registry._emit_relations_event", lambda *a, **k: None)
         from src.roles.registry import get_registry
 
         registry = get_registry()
@@ -215,6 +224,7 @@ class TestChat:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r.status_code == 400
+        assert "not supported for /chat/stream" in r.json()["detail"]
 
 
 class TestInfo:
