@@ -552,7 +552,10 @@ class TestVectorStore:
         store.upsert("vec1", vec, {"user_id": "u1", "text": "hello"})
         results = store.query(vec, top_k=1)
         assert len(results) == 1
-        assert results[0]["id"] == "vec1"
+        # Assert on metadata, not the raw id: some backends (e.g. Qdrant) remap
+        # string doc_ids to their own UUIDs, so only payload/metadata round-trips
+        # unchanged across every backend.
+        assert results[0]["metadata"]["text"] == "hello"
         assert results[0]["score"] > 0.99
 
     def test_delete_by_user(self):
@@ -562,8 +565,8 @@ class TestVectorStore:
         store.upsert("v1", [0.1] * 4, {"user_id": "u1"})
         store.upsert("v2", [0.2] * 4, {"user_id": "u2"})
         store.delete_by_metadata("user_id", "u1")
-        ids = {r["id"] for r in store.query([0.2] * 4, top_k=5)}
-        assert ids == {"v2"}
+        remaining_users = {r["metadata"].get("user_id") for r in store.query([0.2] * 4, top_k=5)}
+        assert remaining_users == {"u2"}
 
 
 # ── API Integration Tests ─────────────────────────────────────────────────────
