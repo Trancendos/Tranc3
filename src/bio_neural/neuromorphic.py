@@ -185,25 +185,70 @@ class SpikingNeuralNetwork(nn.Module):
 # TOP-LEVEL PROCESSOR
 # ============================================================
 class NeuromorphicProcessor:
+    # Caller-controlled input length becomes the SNN's input/output layer
+    # width (see _build_snn) — cap it so an oversized request can't allocate
+    # unbounded Linear layers and exhaust worker memory.
+    MAX_HIDDEN_SIZE = 4096
+
     def __init__(self, config):
-        hidden_size = getattr(config, "hidden_size", 768)
+        # A real config object (e.g. api.py's Config()) carries an explicit
+        # hidden_size, so build the SNN eagerly for that case. Callers that
+        # pass a bare {} (routes.py, the MCP tool bridge) have no dimension
+        # to offer yet — build lazily, sized to whatever the first real
+        # input turns out to be, instead of forcing every caller to know
+        # about an internal 768 default.
+        self._configured_hidden_size = getattr(config, "hidden_size", None)
+        self.snn: Optional[SpikingNeuralNetwork] = None
+        if self._configured_hidden_size:
+            self._build_snn(self._configured_hidden_size)
+        self.enabled = True
+        logger.info("NeuromorphicProcessor initialised")
+
+    def _build_snn(self, hidden_size: int) -> None:
+        if hidden_size <= 0 or hidden_size > self.MAX_HIDDEN_SIZE:
+            raise ValueError(
+                f"input dimension {hidden_size} exceeds the allowed range "
+                f"(1-{self.MAX_HIDDEN_SIZE})"
+            )
         self.snn = SpikingNeuralNetwork(
             input_size=hidden_size,
             hidden_sizes=[512, 256],
             output_size=hidden_size,
             timesteps=20,
         )
-        self.enabled = True
-        logger.info("NeuromorphicProcessor initialised")
 
     def process(self, x: torch.Tensor, learn: bool = False) -> Dict:
         if not self.enabled:
             return {"output": x, "spike_rate": 0.0, "energy_estimate": 0.0}
+        if x.dim() == 2:
+            # (batch, features) -> (batch, 1 timestep, features). The SNN's
+            # own `timesteps` loop runs regardless of sequence length,
+            # re-using this single slice (mod T) at every internal step.
+            x = x.unsqueeze(1)
+        if self.snn is None:
+            self._build_snn(x.shape[-1])
         try:
             return self.snn(x, use_stdp=learn)
         except Exception as e:
             logger.warning("Neuromorphic processing failed: %s", sanitize_for_log(e))
             return {"output": x, "spike_rate": 0.0, "energy_estimate": 0.0}
 
+    def serializable_result(self, result: Dict) -> Dict:
+        """Convert a process() result's torch.Tensor values to JSON-safe lists."""
+        return {
+            key: value.detach().cpu().tolist() if isinstance(value, torch.Tensor) else value
+            for key, value in result.items()
+        }
+
     def get_stats(self) -> Dict:
-        return self.snn.get_neuromorphic_stats()
+        if self.snn is None:
+            return {
+                "timesteps": 0,
+                "num_layers": 0,
+                "avg_spike_rate": 0.0,
+                "total_neurons": 0,
+                "initialised": False,
+            }
+        stats = self.snn.get_neuromorphic_stats()
+        stats["initialised"] = True
+        return stats

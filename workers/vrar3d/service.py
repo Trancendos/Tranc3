@@ -382,6 +382,42 @@ class VRARRouter:
             latency_ms=latency_ms,
         )
 
+    # Self-contained binary formats only: a .gltf's external .bin/texture
+    # sidecars have no serving route here, and GLTFLoader.setRequestHeader()
+    # can propagate the caller's auth header to those subresource fetches —
+    # including ones resolved against an external origin. GLB/VRM embed
+    # everything in one file, so neither risk applies.
+    _DOWNLOADABLE_FORMATS = frozenset({"glb", "vrm"})
+
+    def get_asset_download_path(self, asset_id: str) -> Optional[str]:
+        """
+        Resolve a completed asset job to a locally-servable file path.
+
+        Returns None for unknown jobs, jobs whose status isn't "done",
+        offline-backend placeholders (offline://... isn't a real file),
+        remote outputs (e.g. a Sketchfab model URL) — those are already
+        directly fetchable by a browser and don't need this route — and
+        non-self-contained formats (see _DOWNLOADABLE_FORMATS).
+        """
+        job = self._db.get_asset_job(asset_id)
+        if not job or job.get("status") != "done":
+            return None
+        if job.get("target_format") not in self._DOWNLOADABLE_FORMATS:
+            return None
+        output_path = job.get("output_path")
+        if not output_path or "://" in output_path:
+            return None
+        resolved = Path(output_path).resolve()
+        asset_dir = Path(config.ASSET_DIR).resolve()
+        if not resolved.is_relative_to(asset_dir):
+            # Defense-in-depth: every writer in this file already constrains
+            # output_path to ASSET_DIR, but a served file should never trust
+            # a DB value alone against path traversal.
+            return None
+        if not resolved.is_file():
+            return None
+        return str(resolved)
+
     def status(self) -> VRARStatus:
         active = _select_backend() or ProcessingBackend.offline
         backends = [

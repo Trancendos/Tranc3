@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -25,6 +26,21 @@ from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
+
+# workers/infinity-ws is a separate process (its own WebSocket connections,
+# its own event loop) — reach it over HTTP, not by importing it directly.
+_INFINITY_WS_URL = os.environ.get("INFINITY_WS_URL", "http://infinity-ws:8004")
+_INFINITY_WS_INTERNAL_SECRET = os.environ.get("INFINITY_WS_INTERNAL_SECRET", "")
+
+# Caps concurrent in-flight forward requests so a slow/down infinity-ws can't
+# have a publish() burst pile up unbounded tasks/sockets. This path is
+# best-effort by design — dropping a forward under sustained overload is the
+# correct behavior, not a bug to fix by queueing indefinitely. A plain counter
+# (not asyncio.Semaphore, which has no non-blocking "would this exceed
+# capacity" check) is safe here because asyncio is single-threaded — nothing
+# can interleave between the check and the increment below.
+_WS_FORWARD_CONCURRENCY = int(os.environ.get("NEXUS_WS_FORWARD_CONCURRENCY", "10"))
+_ws_forward_inflight = 0
 
 
 class MessagePriority(int, Enum):
@@ -137,7 +153,61 @@ class NexusHub:
             ttl_seconds=ttl_seconds,
         )
         self._fan_out(topic, msg)
+        self._forward_to_ws_hub(topic, msg)
         return msg
+
+    def _forward_to_ws_hub(self, topic: str, msg: NexusMessage) -> None:
+        """
+        Best-effort fan-out to workers/infinity-ws (The Nexus's WebSocket hub),
+        so browser/external clients subscribed there see the same in-process
+        events section7/cryptex/the Digital Grid already publish here. Never
+        raises and never blocks publish() on the WS hub being slow or down —
+        this is an additional delivery path, not a required one.
+        """
+        global _ws_forward_inflight
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # publish() called outside an event loop — skip WS fan-out
+        # Reserve capacity here, before create_task() — a Task object already
+        # exists the instant create_task() returns, so checking/reserving
+        # inside the task body (after the fact) doesn't actually bound how
+        # many accumulate under a publish() burst.
+        if _ws_forward_inflight >= _WS_FORWARD_CONCURRENCY:
+            return
+        _ws_forward_inflight += 1
+        loop.create_task(self._post_broadcast(topic, msg))
+
+    async def _post_broadcast(self, topic: str, msg: NexusMessage) -> None:
+        global _ws_forward_inflight
+        try:
+            import httpx
+
+            headers = (
+                {"X-Internal-Secret": _INFINITY_WS_INTERNAL_SECRET}
+                if _INFINITY_WS_INTERNAL_SECRET
+                else {}
+            )
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                response = await client.post(
+                    f"{_INFINITY_WS_URL}/broadcast",
+                    json={"channel": topic, "type": msg.type.value, "data": msg.payload},
+                    headers=headers,
+                )
+                response.raise_for_status()
+        except Exception as exc:
+            # sanitize_for_log() does strip CR/LF, but CodeQL's py/log-injection
+            # query doesn't trace through it as a sanitizer across the module
+            # boundary — inline .replace() too so the barrier is visible to it
+            # directly (same pattern as src/relations/registry.py).
+            safe_topic = str(topic).replace("\r", "").replace("\n", "")
+            logger.debug(
+                "nexus: WS hub fan-out skipped (topic=%s): %s",
+                safe_topic,
+                sanitize_for_log(exc),
+            )  # codeql[py/cleartext-logging]
+        finally:
+            _ws_forward_inflight -= 1
 
     def _fan_out(self, topic: str, msg: NexusMessage) -> None:
         self._stats["sent"] += 1

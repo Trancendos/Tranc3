@@ -316,8 +316,12 @@ _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
+    # Fail closed, not open: an unset INTERNAL_SECRET used to make this a
+    # no-op, leaving /stats, /channels, and (now) the message-injecting
+    # /broadcast reachable by anyone who can reach this port. Matches the
+    # convention already used by workers/vrar3d/router.py's _auth().
     if not _INTERNAL_SECRET:
-        return
+        raise HTTPException(status_code=503, detail="Service auth not configured")
     if x_internal_secret != _INTERNAL_SECRET:
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
@@ -347,6 +351,32 @@ async def stats():
 async def list_channels():
     """List all active channels."""
     return {"channels": [c.model_dump() for c in manager.get_channels()]}
+
+
+class BroadcastRequest(BaseModel):
+    """Server-to-server broadcast request — lets other platform services
+    (e.g. src.nexus.hub.NexusHub) fan an event out to WS subscribers without
+    holding their own persistent connection to this worker."""
+
+    channel: str
+    data: Any = None
+    type: str = "message"
+
+
+@_router.post("/broadcast")
+async def broadcast(body: BroadcastRequest):
+    """Broadcast a server-originated message to all subscribers of a channel."""
+    message = WSMessage(
+        type=body.type,
+        channel=body.channel,
+        data=body.data,
+        sender="system",
+        message_id=str(uuid.uuid4()),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )
+    recipients = await manager._broadcast_to_channel(body.channel, message)
+    manager._messages_sent += recipients
+    return {"channel": body.channel, "recipients": recipients}
 
 
 @app.websocket("/ws")

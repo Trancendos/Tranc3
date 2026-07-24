@@ -394,6 +394,8 @@ services:
       - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - HF_API_KEY=${HF_API_KEY:-}
+      - INFINITY_WS_URL=http://infinity-ws:8004
+      - INFINITY_WS_INTERNAL_SECRET=${INTERNAL_SECRET}
     ports:
       - "8000:8000"
     volumes:
@@ -506,12 +508,18 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - ENVIRONMENT=production
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
     ports:
       - "8004:8004"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.infinity-ws.rule=PathPrefix(`/ws/`)"
+      # The worker's only route is exactly /ws (see workers/infinity-ws/worker.py) —
+      # no stripprefix middleware here: the old `/ws/` (trailing slash) rule required
+      # a path segment past /ws that never existed, so it never matched. No
+      # stripping is needed since the backend route already is /ws.
+      - "traefik.http.routers.infinity-ws.rule=PathPrefix(`/ws`)"
       - "traefik.http.routers.infinity-ws.entrypoints=web"
+      - "traefik.http.services.infinity-ws.loadbalancer.server.port=8004"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8004/health', timeout=5).read()\""]
       <<: *healthcheck-default

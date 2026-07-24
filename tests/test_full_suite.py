@@ -371,6 +371,267 @@ class TestConsciousnessEngine:
         assert 0.0 <= score <= 1.0
 
 
+class TestNeuromorphicProcessor:
+    def test_process_accepts_2d_input_without_error(self):
+        # Regression test: SpikingNeuralNetwork.forward() requires a 3D
+        # (batch, timesteps, features) tensor via `B, T, H = x.shape`, but
+        # every real caller (HTTP route, MCP tool) only ever produced a 2D
+        # (batch, features) tensor via a single .unsqueeze(0) — always
+        # raising "not enough values to unpack" internally and silently
+        # falling back to a zero-valued result.
+        from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+        processor = NeuromorphicProcessor({})
+        x = torch.randn(1, 8)
+        result = processor.process(x)
+        assert "spike_trains" in result, "fell back to the zero-result path"
+        assert result["spike_trains"].shape == (1, 20, 8)
+
+    def test_process_lazily_sizes_to_input_dimension(self):
+        from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+        processor = NeuromorphicProcessor({})
+        assert processor.snn is None
+        processor.process(torch.randn(1, 5))
+        assert processor.snn is not None
+        assert processor.snn.layers[0].input_size == 5
+
+    def test_process_honours_explicit_hidden_size_config(self):
+        from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+        class _Cfg:
+            hidden_size = 16
+
+        processor = NeuromorphicProcessor(_Cfg())
+        assert processor.snn is not None
+        assert processor.snn.layers[0].input_size == 16
+
+    def test_spiking_layer_fires_when_driven_hard(self):
+        # Sanity-check the LIF/spiking mechanism itself works — isolates the
+        # mechanism from the untrained-weights case, which legitimately
+        # produces a near-zero spike rate over just 20 steps.
+        from src.bio_neural.neuromorphic import SpikingLayer
+
+        layer = SpikingLayer(4, 4)
+        layer.weights.data.fill_(5.0)
+        mem, syn = None, None
+        x = torch.ones(1, 4)
+        fired = False
+        for _ in range(5):
+            spikes, mem, syn = layer(x, mem, syn)
+            if spikes.sum().item() > 0:
+                fired = True
+        assert fired
+
+
+class TestConsciousnessIntegration:
+    """
+    Regression coverage for the ConsciousnessAwareGenerator consolidation:
+    two divergent copies used to exist (src/bio_neural — real, unused;
+    src/core — fake np.random metrics, wired into the CONSCIOUSNESS bot
+    type but constructed with zero args against a two-arg constructor, so
+    every call raised TypeError and silently fell back to a lexical-diversity
+    heuristic). Only the bio_neural copy remains now.
+    """
+
+    @pytest.mark.asyncio
+    async def test_constructs_without_explicit_feature_manager(self, monkeypatch):
+        # AlwaysEnabledFeatureManager reads ENABLE_CONSCIOUSNESS (same env var
+        # FeatureFlagManager defaults from) rather than being unconditionally on.
+        monkeypatch.setenv("ENABLE_CONSCIOUSNESS", "true")
+        from src.bio_neural.consciousness_integration import ConsciousnessIntegration
+
+        ci = ConsciousnessIntegration()
+        assert ci.consciousness is not None
+
+    @pytest.mark.asyncio
+    async def test_compute_phi_returns_bounded_float(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_CONSCIOUSNESS", "true")
+        from src.bio_neural.consciousness_integration import ConsciousnessIntegration
+
+        ci = ConsciousnessIntegration()
+        phi = await ci.compute_phi("the quick brown fox jumps over the lazy dog")
+        assert isinstance(phi, float)
+        assert 0.0 <= phi <= 1.0
+
+    @pytest.mark.asyncio
+    async def test_compute_phi_handles_empty_text(self):
+        from src.bio_neural.consciousness_integration import ConsciousnessIntegration
+
+        ci = ConsciousnessIntegration()
+        phi = await ci.compute_phi("")
+        assert isinstance(phi, float)
+        assert phi == 0.0
+
+    @pytest.mark.asyncio
+    async def test_inference_worker_consciousness_job_reaches_real_model(self, caplog, monkeypatch):
+        # End-to-end regression for the actual bot-registry call path: this
+        # used to always hit the except-Exception fallback in
+        # InferenceWorker._do_consciousness before the model ever loaded.
+        import logging
+
+        monkeypatch.setenv("ENABLE_CONSCIOUSNESS", "true")
+        from src.workers.inference_worker import InferenceWorker
+
+        worker = InferenceWorker()
+        with caplog.at_level(logging.INFO):
+            result = await worker._do_consciousness({"text": "hello world, this is a real test"})
+        assert result["model"] == "tranc3-consciousness"
+        assert "ConsciousnessModel initialized" in caplog.text
+        # Also confirm calculate_phi() itself succeeded rather than silently
+        # falling back to the lexical-diversity heuristic.
+        assert "compute_phi failed, falling back to heuristic" not in caplog.text
+
+    def test_disabled_feature_flag_skips_model_construction(self):
+        from src.bio_neural.consciousness_integration import (
+            ConsciousnessAwareGenerator,
+        )
+        from src.core.feature_flags import FeatureFlag
+
+        class _AlwaysDisabled:
+            def is_enabled(self, flag, user_id=None):  # noqa: ARG002
+                return False
+
+        gen = ConsciousnessAwareGenerator(feature_manager=_AlwaysDisabled())
+        assert gen.consciousness is None
+        # sanity: FeatureFlag import path still resolves (used by the real manager)
+        assert FeatureFlag.CONSCIOUSNESS_ENGINE.value == "consciousness_engine"
+
+
+class TestSelfEvolvingInference:
+    """
+    Previously had zero test coverage anywhere in the repo, and its
+    two-arg constructor (config, feature_manager: FeatureFlagManager)
+    had no real caller either — api.py talks to the underlying
+    SelfEvolvingArchitecture directly instead. Constructor is now
+    ergonomic (both args optional) so this is independently usable.
+    """
+
+    def test_constructs_without_explicit_feature_manager(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_EVOLUTION", "true")
+        from src.core.self_evolution import SelfEvolvingInference
+
+        se = SelfEvolvingInference()
+        assert se.evolution_engine is not None
+
+    def test_collect_feedback_computes_quality_score(self):
+        from src.core.self_evolution import SelfEvolvingInference
+
+        se = SelfEvolvingInference()
+        feedback = se.collect_feedback(
+            {
+                "response": "a fairly detailed and useful answer here",
+                "processing_time_ms": 300,
+                "consciousness_level": 1.2,
+            },
+            user_feedback={"rating": 5},
+        )
+        assert 0.0 <= feedback["quality_score"] <= 1.0
+        assert feedback["response_length"] > 0
+
+    def test_adapt_model_returns_usable_layer(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_EVOLUTION", "true")
+        from src.core.self_evolution import SelfEvolvingInference
+
+        se = SelfEvolvingInference()
+        feedback = se.collect_feedback({"response": "ok"}, user_feedback={"rating": 4})
+        layer = se.adapt_model(torch.randn(1, 16), feedback)
+        assert layer is not None
+        out = se.apply_adaptation(torch.randn(1, 16), layer)
+        assert out.shape == (1, 16)
+
+    def test_disabled_feature_flag_skips_engine_construction(self):
+        from src.core.self_evolution import SelfEvolvingInference
+
+        class _AlwaysDisabled:
+            def is_enabled(self, flag, user_id=None):  # noqa: ARG002
+                return False
+
+        se = SelfEvolvingInference(feature_manager=_AlwaysDisabled())
+        assert se.evolution_engine is None
+        assert se.adapt_model(torch.randn(1, 8), {"quality_score": 0.5}) is None
+
+
+class TestQuantumInferenceEngine:
+    """
+    Regression coverage for src/core/quantum_inference.py, which had zero
+    test coverage and zero callers anywhere in the repo. Its core quantum
+    path called qc.qft(qreg) — QuantumCircuit has no such method — so every
+    real invocation raised AttributeError, silently caught and routed to the
+    classical fallback; the bug was never observable because nothing
+    exercised the quantum path directly. A near-identical, already-fixed
+    copy exists at src/quantum/quantum_inference.py (build QFT from
+    qiskit.circuit.library instead) but it's also unused — production
+    quantum attention actually goes through the differently-implemented
+    src/quantum/quantum_core.py::QuantumNeuralCore.
+    """
+
+    def test_constructs_without_explicit_feature_manager(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_QUANTUM_OPT", "true")
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        qi = QuantumInferenceEngine()
+        assert qi.quantum_enabled is True
+
+    def test_quantum_attention_runs_without_falling_back(self, caplog, monkeypatch):
+        import logging
+
+        monkeypatch.setenv("ENABLE_QUANTUM_OPT", "true")
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        qi = QuantumInferenceEngine({"num_qubits": 4})
+        with caplog.at_level(logging.WARNING, logger="src.core.quantum_inference"):
+            out = qi.quantum_attention(torch.randn(1, 4, 8))
+        assert out.shape == (1, 4, 8)
+        assert "falling back to classical" not in caplog.text
+
+    def test_classical_attention_fallback_when_disabled(self):
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        class _AlwaysDisabled:
+            def is_enabled(self, flag, user_id=None):  # noqa: ARG002
+                return False
+
+        qi = QuantumInferenceEngine(feature_manager=_AlwaysDisabled())
+        assert qi.quantum_enabled is False
+        out = qi.quantum_attention(torch.randn(1, 4, 8))
+        assert out.shape == (1, 4, 8)
+
+    def test_zero_norm_input_falls_back_to_basis_state_not_nan(self, monkeypatch, caplog):
+        # Regression test: the zero-norm fallback used to trigger for NaN
+        # inputs too (NaN > 0 is False), silently fabricating a finite
+        # |0...0> attention result instead of preserving the invalid input
+        # through the existing classical-fallback error path. Assert on the
+        # absence of the classical-fallback log too, so this test actually
+        # distinguishes "quantum path succeeded on true zero-norm input" from
+        # "classical fallback happened to also produce a finite result".
+        import logging
+
+        monkeypatch.setenv("ENABLE_QUANTUM_OPT", "true")
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        qi = QuantumInferenceEngine({"num_qubits": 4})
+        with caplog.at_level(logging.WARNING, logger="src.core.quantum_inference"):
+            out = qi.quantum_attention(torch.zeros(1, 4, 8))
+        assert out.shape == (1, 4, 8)
+        assert torch.isfinite(out).all()
+        assert "falling back to classical" not in caplog.text
+
+    def test_nan_input_falls_back_to_classical_not_fabricated_state(self, monkeypatch, caplog):
+        import logging
+
+        monkeypatch.setenv("ENABLE_QUANTUM_OPT", "true")
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        qi = QuantumInferenceEngine({"num_qubits": 4})
+        nan_input = torch.full((1, 4, 8), float("nan"))
+        with caplog.at_level(logging.WARNING, logger="src.core.quantum_inference"):
+            out = qi.quantum_attention(nan_input)
+        assert "falling back to classical" in caplog.text
+        assert out.shape == (1, 4, 8)
+        assert torch.isnan(out).all()
+
+
 # ── Evolution Engine Tests ────────────────────────────────────────────────────
 
 

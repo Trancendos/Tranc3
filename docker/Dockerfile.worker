@@ -1,0 +1,25 @@
+# Generic dev/UAT worker image — shared by docker-compose.development.yml's and
+# docker-compose.uat.yml's x-worker-dev / x-worker-uat anchors.
+#
+# These composes bind-mount the whole repo over /app at runtime (hot-reload), so
+# this image only needs Python + the project's dependencies installed; the actual
+# application code comes from the volume mount, not from a COPY here.
+FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+
+RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+USER worker
+
+# Each service sets PORT in its docker-compose environment: block; every worker
+# under this image exposes GET /health (see workers/*/worker.py).
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD python -c 'import os, urllib.request; urllib.request.urlopen("http://localhost:" + os.environ["PORT"] + "/health", timeout=5).read()'
+
+# No CMD — each service in docker-compose.development.yml / docker-compose.uat.yml
+# overrides `command:` with its own `uvicorn <module>:app --reload` invocation.

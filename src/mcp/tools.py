@@ -579,11 +579,6 @@ class SparkToolRegistry:
                             "items": {"type": "number"},
                             "description": "Input float vector to process.",
                         },
-                        "timesteps": {
-                            "type": "integer",
-                            "description": "Simulation timesteps (default 10).",
-                            "default": 10,
-                        },
                     },
                     "required": ["input"],
                 },
@@ -1159,6 +1154,7 @@ class SparkToolRegistry:
     async def _handle_luminous_phi(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
             import numpy as np
+            import torch
 
             from src.bio_neural.consciousness_engine import (
                 IITCalculator,  # noqa: F401  # intentional top-level import
@@ -1166,10 +1162,20 @@ class SparkToolRegistry:
 
             state = params["state"]
             arr = np.array(state, dtype=float)
-            if arr.sum() > 0:
-                arr = arr / arr.sum()
+            if arr.ndim != 1 or arr.size == 0:
+                return {"error": "state must be a non-empty one-dimensional array"}
+            if not np.all(np.isfinite(arr)) or np.any(arr < 0):
+                return {"error": "state must contain only finite, non-negative values"}
+            total = arr.sum()
+            if total <= 0:
+                return {"error": "state must have positive total mass"}
+            arr = arr / total
             calc = IITCalculator()
-            phi = calc.calculate_phi(arr) if hasattr(calc, "calculate_phi") else 0.0
+            # IITCalculator.calculate_phi expects a torch.Tensor (it calls
+            # .detach().cpu().numpy() internally) — pass a tensor, not the ndarray
+            # (mirrors the fix in src/bio_neural/routes.py's HTTP equivalent).
+            state_tensor = torch.tensor(arr, dtype=torch.float32)
+            phi = calc.calculate_phi(state_tensor) if hasattr(calc, "calculate_phi") else 0.0
             return {"phi": float(phi), "state_dim": len(state)}
         except ImportError as exc:
             return {
@@ -1188,19 +1194,20 @@ class SparkToolRegistry:
             )
 
             input_data = params["input"]
-            timesteps = int(params.get("timesteps", 10))
             processor = NeuromorphicProcessor({})
             tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
             result = (
-                processor.process(tensor, timesteps=timesteps)
+                processor.process(tensor)
                 if hasattr(processor, "process")
                 else {"note": "neuromorphic scaffold — wire input dimensions to activate"}
             )
-            if hasattr(result, "tolist"):
-                result = result.tolist()
+            if isinstance(result, dict) and hasattr(processor, "serializable_result"):
+                result = processor.serializable_result(result)
+            # timesteps is fixed at SNN construction (not a caller-supplied kwarg) —
+            # report what actually ran, not the caller's requested value.
             return {
                 "input_dim": len(input_data),
-                "timesteps": timesteps,
+                "timesteps": processor.get_stats().get("timesteps"),
                 "output": result,
             }
         except ImportError as exc:

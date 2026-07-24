@@ -10,7 +10,11 @@ import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
-from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
+from src.core.feature_flags import (  # noqa: E402
+    AlwaysEnabledFeatureManager,
+    FeatureFlag,
+    FeatureFlagManager,
+)
 from src.evolution.self_improving_core import SelfEvolvingArchitecture  # noqa: E402
 
 
@@ -19,13 +23,13 @@ class SelfEvolvingInference:
     Self-improving inference with evolutionary adaptation
     """
 
-    def __init__(self, config, feature_manager: FeatureFlagManager):
-        self.config = config
-        self.feature_manager = feature_manager
+    def __init__(self, config=None, feature_manager: Optional[FeatureFlagManager] = None):
+        self.config = config or {"population_size": 8, "genome_dim": 32}
+        self.feature_manager = feature_manager or AlwaysEnabledFeatureManager()
 
         self.evolution_engine: Optional[SelfEvolvingArchitecture] = None
-        if feature_manager.is_enabled(FeatureFlag.SELF_EVOLUTION):
-            self.evolution_engine = SelfEvolvingArchitecture(config)
+        if self.feature_manager.is_enabled(FeatureFlag.SELF_EVOLUTION):
+            self.evolution_engine = SelfEvolvingArchitecture(self.config)
 
     def adapt_model(
         self,

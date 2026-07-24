@@ -8,6 +8,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY config.py models.py database.py service.py router.py main.py ./
+COPY static/ ./static/
 
 RUN mkdir -p /data/assets && chown vrar3d:vrar3d /data /data/assets
 

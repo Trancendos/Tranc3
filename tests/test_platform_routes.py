@@ -391,6 +391,54 @@ class TestSparkPlatformTools:
         assert tool is not None
         assert tool.category == "ai"
 
+    @pytest.mark.asyncio
+    async def test_luminous_phi_tool_returns_nonzero_phi(self):
+        # Regression test: the handler used to pass a raw ndarray into
+        # IITCalculator.calculate_phi(), which expects a torch.Tensor and
+        # silently returned 0.0 on the resulting AttributeError.
+        pytest.importorskip("torch")
+        from src.mcp.tools import SparkToolRegistry
+
+        reg = SparkToolRegistry()
+        tool = reg.get("luminous_phi")
+        result = await tool.handler({"state": [0.1, 0.1, 0.4, 0.4]})
+        assert "error" not in result
+        assert result["state_dim"] == 4
+        assert isinstance(result["phi"], float)
+        assert result["phi"] > 0.0
+
+    @pytest.mark.asyncio
+    async def test_luminous_phi_tool_rejects_invalid_state(self):
+        pytest.importorskip("torch")
+        from src.mcp.tools import SparkToolRegistry
+
+        reg = SparkToolRegistry()
+        tool = reg.get("luminous_phi")
+
+        assert "error" in await tool.handler({"state": [-0.1, 0.2, 0.3, 0.4]})
+        assert "error" in await tool.handler({"state": [0.0, 0.0, 0.0]})
+        assert "error" in await tool.handler({"state": []})
+
+    @pytest.mark.asyncio
+    async def test_luminous_process_tool_runs_without_error(self):
+        # Regression test: the handler used to call
+        # NeuromorphicProcessor.process(x, timesteps=...), but the real
+        # signature is process(x, learn=False) — every call raised TypeError.
+        pytest.importorskip("torch")
+        import json
+
+        from src.mcp.tools import SparkToolRegistry
+
+        reg = SparkToolRegistry()
+        tool = reg.get("luminous_process")
+        result = await tool.handler({"input": [0.1, 0.2, 0.3]})
+        assert "error" not in result
+        assert result["input_dim"] == 3
+        assert isinstance(result["timesteps"], int)
+        # The processor returns torch.Tensor values internally — confirm the
+        # handler actually converts them before they cross the JSON-RPC boundary.
+        json.dumps(result)
+
     def test_quantum_simulate_tool_registered(self):
         from src.mcp.tools import SparkToolRegistry
 

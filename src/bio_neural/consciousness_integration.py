@@ -1,4 +1,4 @@
-# src/core/consciousness_integration.py
+# src/bio_neural/consciousness_integration.py
 
 import logging
 
@@ -10,7 +10,15 @@ import torch  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: E402
-from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
+from src.core.feature_flags import (  # noqa: E402
+    AlwaysEnabledFeatureManager,
+    FeatureFlag,
+    FeatureFlagManager,
+)
+
+
+class _DefaultConfig:
+    hidden_size = 768
 
 
 class ConsciousnessAwareGenerator:
@@ -18,13 +26,13 @@ class ConsciousnessAwareGenerator:
     Response generation with consciousness awareness
     """
 
-    def __init__(self, config, feature_manager: FeatureFlagManager):
-        self.config = config
-        self.feature_manager = feature_manager
+    def __init__(self, config=None, feature_manager: Optional[FeatureFlagManager] = None):
+        self.config = config or _DefaultConfig()
+        self.feature_manager = feature_manager or AlwaysEnabledFeatureManager()
 
         self.consciousness: Optional[ConsciousnessModel] = None
-        if feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE):
-            self.consciousness = ConsciousnessModel(config)
+        if self.feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE):
+            self.consciousness = ConsciousnessModel(self.config)
 
     def generate_with_consciousness(
         self,
@@ -188,3 +196,30 @@ class ConsciousnessAwareGenerator:
             suggestions.append("Enhance quantum inspiration")
 
         return suggestions
+
+    async def compute_phi(self, text: str) -> float:
+        """Compute an Integrated Information Theory (IIT) phi estimate for *text*."""
+        if not text.strip():
+            return 0.0
+        if self.consciousness is not None:
+            try:
+                # Reuse the same char-code embedding _conscious_generate() already
+                # uses, and go through calculate_phi() (IITCalculator underneath) —
+                # not the full ConsciousnessModel.forward(), which requires an
+                # exact hidden_size-shaped input via its nn.Linear layers.
+                codes = [float(ord(c)) for c in text[:768]] or [0.0]
+                input_tensor = torch.tensor(codes, dtype=torch.float)
+                phi = self.consciousness.calculate_phi(input_tensor)
+                return max(0.0, min(1.0, phi))
+            except Exception as e:
+                logger.warning(
+                    "compute_phi failed, falling back to heuristic: %s", sanitize_for_log(e)
+                )
+        # Heuristic fallback: lexical diversity as a phi proxy
+        words = text.split()
+        vocab = len(set(words))
+        return min(1.0, vocab / max(len(words), 1) * 2.0)
+
+
+# Alias for import compatibility with callers expecting the older name.
+ConsciousnessIntegration = ConsciousnessAwareGenerator

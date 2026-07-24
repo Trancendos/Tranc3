@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from router import _make_vrar3d_router
 from service import VRARRouter
 
@@ -14,6 +16,7 @@ import config
 from database import VRARDatabase
 
 _START = time.time()
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 def _build_app() -> FastAPI:
@@ -50,6 +53,13 @@ def _build_app() -> FastAPI:
     db = VRARDatabase(config.DB_PATH)
     vrar = VRARRouter(db)
     app.include_router(_make_vrar3d_router(db, vrar))
+
+    @app.get("/vrar3d/viewer", include_in_schema=False)
+    def viewer() -> FileResponse:
+        return FileResponse(_STATIC_DIR / "viewer.html")
+
+    if _STATIC_DIR.is_dir():
+        app.mount("/vrar3d/static", StaticFiles(directory=str(_STATIC_DIR)), name="vrar3d-static")
 
     @app.get("/health", include_in_schema=False)
     def health() -> JSONResponse:

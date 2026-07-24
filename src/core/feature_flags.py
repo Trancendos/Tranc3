@@ -81,3 +81,33 @@ class FeatureFlagManager:
             rollout = int(self.redis.get(f"rollout:{flag.value}") or 0)
             flags[flag.value] = {"enabled": enabled, "rollout_percentage": rollout}
         return flags
+
+
+class AlwaysEnabledFeatureManager:
+    """
+    Redis-free stand-in for FeatureFlagManager. Used by callers that want to
+    exercise a feature-flagged subsystem (consciousness engine, self-evolution)
+    without wiring up a Redis-backed FeatureFlagManager first — e.g. a one-off
+    worker job rather than the main API process.
+
+    Reads the same environment variables FeatureFlagManager._load_defaults()
+    seeds Redis from, so operators keep the same on/off control surface (e.g.
+    ENABLE_EVOLUTION=false in production) without needing a live Redis
+    connection. Real FeatureFlagManager instances remain fully supported for
+    callers that need actual rollout/percentage control or a live kill switch.
+    """
+
+    _ENV_VARS = {
+        FeatureFlag.QUANTUM_OPTIMIZATION: "ENABLE_QUANTUM_OPT",
+        FeatureFlag.CONSCIOUSNESS_ENGINE: "ENABLE_CONSCIOUSNESS",
+        FeatureFlag.NEUROMORPHIC_PROCESSING: "ENABLE_NEUROMORPHIC",
+        FeatureFlag.HOLOGRAPHIC_MEMORY: "ENABLE_HOLOGRAPHIC",
+        FeatureFlag.SELF_EVOLUTION: "ENABLE_EVOLUTION",
+        FeatureFlag.SWARM_INTELLIGENCE: "ENABLE_SWARM",
+    }
+
+    def is_enabled(self, flag: FeatureFlag, user_id: Optional[str] = None) -> bool:  # noqa: ARG002
+        env_var = self._ENV_VARS.get(flag)
+        if env_var is None:
+            return False
+        return os.getenv(env_var, "false").lower() == "true"
