@@ -24,7 +24,7 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import (
     APIRouter,
@@ -37,7 +37,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
 # ---------------------------------------------------------------------------
@@ -176,11 +176,35 @@ class ModelRegister(BaseModel):
     priority: int = 5
 
 
+class PersonaTraits(BaseModel):
+    """
+    Strict subset of a Turing's Hub PersonalityProfile's trait vector
+    (src/personality/matrix.py) consulted by the "persona_aware" routing
+    strategy. `extra="forbid"` rejects unknown/misspelled keys outright
+    (e.g. a typo'd "precison") instead of silently treating them as
+    unsupported and scoring as if they were absent.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    precision: float = Field(0.0, ge=0.0, le=1.0)
+    creativity: float = Field(0.0, ge=0.0, le=1.0)
+    formality: float = Field(0.0, ge=0.0, le=1.0)
+
+
 class RouteRequest(BaseModel):
     prompt: str = ""
     strategy: str = "round_robin"
     capabilities: List[str] = Field(default_factory=list)
     max_cost: float = 0.0
+    # Deliberately a permissive Dict here, not PersonaTraits directly:
+    # FastAPI validates the whole request body against this model before the
+    # handler ever sees `strategy`, so a PersonaTraits(extra="forbid") field
+    # type would reject a malformed/extra-key hint even for a plain
+    # round_robin/cost_aware request that's documented to ignore it entirely.
+    # route_request() below converts+validates this into a PersonaTraits only
+    # when strategy == "persona_aware".
+    persona_traits: Optional[Dict[str, float]] = None
 
 
 class HealthReport(BaseModel):
@@ -201,7 +225,38 @@ def _new_id() -> str:
     return uuid.uuid4().hex[:16]
 
 
-def _select_model(models: list, strategy: str) -> Optional[dict]:
+def _persona_score(model: dict, persona_traits: "PersonaTraits") -> float:
+    """
+    Nudge model selection using a persona's trait vector — a subset of
+    src/personality/matrix.py's PersonalityProfile.traits: precision,
+    creativity, formality (each 0..1, validated by PersonaTraits).
+    Precision-heavy personas (Precision/Finance, Security, Governance
+    archetypes — see docs/governance/PERSONALITY-ARCHETYPES.md) favor models
+    tagged "reasoning"; creativity-heavy personas (Creative archetype) favor
+    generalist models over narrowly coding-specialized ones; formality
+    nudges toward higher-seed-priority (more established) models. A caller
+    that omits persona_traits entirely gets the all-zero default, which
+    scores every model identically.
+    """
+    caps = model.get("capabilities") or []
+    if isinstance(caps, str):
+        caps = json.loads(caps)
+    precision = persona_traits.precision
+    creativity = persona_traits.creativity
+    formality = persona_traits.formality
+
+    score = 0.0
+    if "reasoning" in caps:
+        score += precision
+    if creativity and "coding" not in caps and len(caps) > 1:
+        score += creativity * 0.5
+    score += formality * (model.get("priority", 0) / 10.0) * 0.5
+    return score
+
+
+def _select_model(
+    models: list, strategy: str, persona_traits: Optional["PersonaTraits"] = None
+) -> Optional[dict]:
     """Select a model based on routing strategy."""
     if not models:
         return None
@@ -212,6 +267,8 @@ def _select_model(models: list, strategy: str) -> Optional[dict]:
         return min(models, key=lambda m: m["avg_latency_ms"])
     elif strategy == "priority":
         return max(models, key=lambda m: m["priority"])
+    elif strategy == "persona_aware":
+        return max(models, key=lambda m: _persona_score(m, persona_traits or PersonaTraits()))
     else:  # round_robin
         return models[0]
 
@@ -366,7 +423,17 @@ async def route_request(body: RouteRequest):
     if not models:
         raise HTTPException(404, "No available models match the criteria") from None
 
-    selected = _select_model(models, body.strategy)
+    # Only validate persona_traits under persona_aware — every other
+    # strategy is documented to ignore the field entirely, so a malformed or
+    # extra-key hint must not break a plain round_robin/cost_aware/etc call.
+    persona_traits: Optional[PersonaTraits] = None
+    if body.strategy == "persona_aware" and body.persona_traits is not None:
+        try:
+            persona_traits = PersonaTraits(**body.persona_traits)
+        except ValidationError as exc:
+            raise HTTPException(422, f"Invalid persona_traits: {exc}") from None
+
+    selected = _select_model(models, body.strategy, persona_traits)
 
     if not selected:
         raise HTTPException(404, "No model selected") from None

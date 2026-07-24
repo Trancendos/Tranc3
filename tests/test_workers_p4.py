@@ -290,6 +290,68 @@ class TestModelRouterService:
         assert r.status_code == 200
         assert "model" in r.json()
 
+    def test_persona_aware_precision_prefers_reasoning_model(self, client):
+        # A precision-heavy persona (e.g. Dorris Fontaine / CFO archetype,
+        # see docs/governance/PERSONALITY-ARCHETYPES.md) should be routed to
+        # the seeded model tagged "reasoning" (gemini-2.5-pro) over the
+        # cheaper/faster "gemini-2.0-flash" that a plain round_robin/priority
+        # strategy would pick first.
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {"precision": 0.95}},
+        )
+        assert r.status_code == 200
+        assert r.json()["model"] == "gemini-2.5-pro"
+
+    def test_persona_aware_without_traits_still_selects_a_model(self, client):
+        # Omitted persona_traits must not error — every model scores 0 and
+        # any one of them is a valid pick.
+        r = client.post("/route", json={"strategy": "persona_aware"})
+        assert r.status_code == 200
+        assert "model" in r.json()
+
+    def test_persona_aware_with_empty_traits_dict_still_selects_a_model(self, client):
+        # Same as above, but an explicit empty dict rather than an omitted
+        # field — both must be accepted identically.
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {}},
+        )
+        assert r.status_code == 200
+        assert "model" in r.json()
+
+    def test_persona_traits_rejects_unknown_key(self, client):
+        # PersonaTraits.extra="forbid" — a misspelled trait (e.g. "precison")
+        # must be reported as invalid input, not silently ignored/scored as 0.
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {"precison": 0.9}},
+        )
+        assert r.status_code == 422
+
+    def test_persona_traits_rejects_out_of_range_value(self, client):
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {"precision": 5.0}},
+        )
+        assert r.status_code == 422
+
+    def test_non_persona_aware_strategy_ignores_malformed_persona_traits(self, client):
+        # persona_traits is documented as ignored by every strategy except
+        # persona_aware — a hint that would fail PersonaTraits' strict
+        # validation (misspelled key, out-of-range value) must not turn
+        # into a validation error when attached to a plain round_robin
+        # request that never looks at it.
+        r = client.post(
+            "/route",
+            json={
+                "strategy": "round_robin",
+                "persona_traits": {"precison": 5.0},
+            },
+        )
+        assert r.status_code == 200
+        assert "model" in r.json()
+
     def test_report_health(self, client):
         models = client.get("/models").json()
         if models:
