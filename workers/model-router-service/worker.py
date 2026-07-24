@@ -222,9 +222,12 @@ def _persona_score(model: dict, persona_traits: Dict[str, float]) -> float:
     caps = model.get("capabilities") or []
     if isinstance(caps, str):
         caps = json.loads(caps)
-    precision = float(persona_traits.get("precision", 0.0))
-    creativity = float(persona_traits.get("creativity", 0.0))
-    formality = float(persona_traits.get("formality", 0.0))
+    # Clamp to the documented 0..1 range — an out-of-range caller value (e.g.
+    # a raw, unnormalized trait) should saturate the bonus it contributes
+    # rather than silently dominating or inverting model selection.
+    precision = max(0.0, min(1.0, float(persona_traits.get("precision", 0.0))))
+    creativity = max(0.0, min(1.0, float(persona_traits.get("creativity", 0.0))))
+    formality = max(0.0, min(1.0, float(persona_traits.get("formality", 0.0))))
 
     score = 0.0
     if "reasoning" in caps:

@@ -155,6 +155,32 @@ class TestChat:
         assert r.status_code == 200
         assert r.json()["personality"] == "tranc3-creative"
 
+    def test_chat_vacant_seat_falls_back_to_supplied_personality(self):
+        # A known Location whose seat is currently vacant must also fall
+        # back — resolve_personality_for_location() returns None for a
+        # vacated role, not just for an unknown location name.
+        from src.roles.registry import get_registry
+
+        registry = get_registry()
+        original = registry.get_role("The HIVE")
+        registry.remove_ai("The HIVE", changed_by="test")
+        try:
+            token = self._get_token()
+            r = client.post(
+                "/chat",
+                json={
+                    "message": "Hello",
+                    "personality": "tranc3-creative",
+                    "location": "The HIVE",
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert r.status_code == 200
+            assert r.json()["personality"] == "tranc3-creative"
+        finally:
+            if original and original.assigned_ai:
+                registry.assign_ai("The HIVE", original.assigned_ai, changed_by="test-restore")
+
 
 class TestInfo:
     def test_languages(self):
