@@ -36,11 +36,14 @@
 // VRAR3D avatar viewer — loads a scene from this worker's own
 // GET /vrar3d/scenes/{scene_id} API and renders its first VRM/GLB object.
 //
-// Query params:
-//   ?scene=<scene_id>&secret=<x-internal-secret>   render a real scene
+// Query param + URL fragment:
+//   ?scene=<scene_id>#secret=<x-internal-secret>   render a real scene
 //   (no params)                                    idle demo scene, no
 //                                                   backend call — confirms
 //                                                   the renderer itself works
+//
+// The secret goes after # (a fragment), not in the query string — fragments
+// are never sent to the server or logged, unlike query params.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -52,9 +55,14 @@ function setStatus(text, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
+// The internal secret is read from the URL *fragment* (after #), not the
+// query string — fragments are never sent to the server or included in
+// Referer headers, so it doesn't end up in server/proxy access logs,
+// browser history entries that get shared, or the query string of a
+// copy-pasted link. Scene id is not sensitive, so it stays a normal param.
 const params = new URLSearchParams(window.location.search);
 const sceneId = params.get("scene");
-const secret = params.get("secret") || "";
+const secret = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("secret") || "";
 
 const host = document.getElementById("canvas-host");
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -109,19 +117,40 @@ function placeholderIdleMesh() {
   return mesh;
 }
 
-async function loadGltfOrVrm(url) {
+function applyObjectTransform(root, obj) {
+  if (Array.isArray(obj.position) && obj.position.length === 3) {
+    root.position.set(...obj.position);
+  }
+  if (Array.isArray(obj.rotation) && obj.rotation.length === 3) {
+    root.rotation.set(...obj.rotation);
+  }
+  if (Array.isArray(obj.scale) && obj.scale.length === 3) {
+    root.scale.set(...obj.scale);
+  }
+}
+
+async function loadGltfOrVrm(url, sceneObject) {
   const loader = new GLTFLoader();
   loader.register((parser) => new VRMLoaderPlugin(parser));
+  // /vrar3d/assets/{id}/download is internal-auth-gated like every other
+  // VRAR3D route — without this, GLTFLoader's fetch has no way to send the
+  // header and the request always 403s. Only ever sent to this same-origin
+  // download route, never to an external asset_url (Sketchfab, CDN, etc.).
+  if (secret && url.startsWith("/vrar3d/assets/")) {
+    loader.setRequestHeader({ "X-Internal-Secret": secret });
+  }
 
   const gltf = await loader.loadAsync(url);
   const vrm = gltf.userData.vrm;
   if (vrm) {
     VRMUtils.removeUnnecessaryVertices(gltf.scene);
     VRMUtils.combineSkeletons(gltf.scene);
+    applyObjectTransform(vrm.scene, sceneObject);
     scene.add(vrm.scene);
     currentVrm = vrm;
     return "vrm";
   }
+  applyObjectTransform(gltf.scene, sceneObject);
   scene.add(gltf.scene);
   return "gltf";
 }
@@ -153,7 +182,7 @@ function resolveObjectAssetUrl(obj) {
 
 async function main() {
   if (!sceneId) {
-    setStatus("No ?scene= given — showing idle placeholder. Pass ?scene=<id>&secret=<x-internal-secret> to render a real VRAR3D scene.");
+    setStatus("No ?scene= given — showing idle placeholder. Pass ?scene=<id>#secret=<x-internal-secret> to render a real VRAR3D scene.");
     placeholderIdleMesh();
     return;
   }
@@ -178,7 +207,7 @@ async function main() {
   const url = resolveObjectAssetUrl(withAsset);
   setStatus(`Loading asset ${withAsset.asset_id || withAsset.object_id}…`);
   try {
-    const kind = await loadGltfOrVrm(url);
+    const kind = await loadGltfOrVrm(url, withAsset);
     setStatus(`Rendering "${sceneData.name}" — object ${withAsset.object_id} (${kind}).`);
   } catch (err) {
     setStatus(`Failed to load asset from ${url}: ${err.message}`, true);

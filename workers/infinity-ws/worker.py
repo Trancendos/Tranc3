@@ -316,8 +316,12 @@ _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
+    # Fail closed, not open: an unset INTERNAL_SECRET used to make this a
+    # no-op, leaving /stats, /channels, and (now) the message-injecting
+    # /broadcast reachable by anyone who can reach this port. Matches the
+    # convention already used by workers/vrar3d/router.py's _auth().
     if not _INTERNAL_SECRET:
-        return
+        raise HTTPException(status_code=503, detail="Service auth not configured")
     if x_internal_secret != _INTERNAL_SECRET:
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 

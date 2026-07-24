@@ -14,7 +14,7 @@ survey notes.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -65,15 +65,36 @@ class TestNexusHubWsFanOut:
     @pytest.mark.asyncio
     async def test_publish_forwards_to_ws_hub_when_loop_is_running(self):
         hub = NexusHub()
-        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        # raise_for_status is a *sync* method on a real httpx.Response — give
+        # the mocked response a plain (non-async) one so nothing goes
+        # unawaited when _post_broadcast calls it.
+        fake_response = MagicMock()
+        fake_response.raise_for_status = MagicMock()
+        with patch(
+            "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=fake_response
+        ) as mock_post:
             hub.publish("audit.event", {"foo": "bar"}, priority=MessagePriority.HIGH)
             # publish() schedules the forward via loop.create_task — let it run.
             await asyncio.sleep(0)
 
         assert mock_post.await_count == 1
+        fake_response.raise_for_status.assert_called_once()
         _, kwargs = mock_post.call_args
         assert kwargs["json"]["channel"] == "audit.event"
         assert kwargs["json"]["data"] == {"foo": "bar"}
+
+    @pytest.mark.asyncio
+    async def test_publish_does_not_propagate_http_error_status(self):
+        hub = NexusHub()
+        import httpx
+
+        fake_response = MagicMock()
+        fake_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "403", request=MagicMock(), response=MagicMock(status_code=403)
+        )
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=fake_response):
+            hub.publish("audit.event", {"foo": "bar"})
+            await asyncio.sleep(0)  # a rejected broadcast must not surface here
 
     @pytest.mark.asyncio
     async def test_ws_hub_unreachable_does_not_propagate(self):
@@ -81,3 +102,21 @@ class TestNexusHubWsFanOut:
         with patch("httpx.AsyncClient.post", side_effect=OSError("connection refused")):
             hub.publish("audit.event", {"foo": "bar"})
             await asyncio.sleep(0)  # the swallowed exception must not surface here
+
+    @pytest.mark.asyncio
+    async def test_drops_forward_at_capacity_instead_of_piling_up(self):
+        # A stuck/slow infinity-ws must not let a publish() burst accumulate
+        # unbounded in-flight HTTP tasks — verify the drop path directly
+        # rather than trying to race real concurrency.
+        from src.nexus import hub as hub_module
+        from src.nexus.hub import NexusMessage
+
+        hub = NexusHub()
+        msg = NexusMessage(topic="audit.event", payload={})
+        hub_module._ws_forward_inflight = hub_module._WS_FORWARD_CONCURRENCY
+        try:
+            with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+                await hub._post_broadcast("audit.event", msg)
+            mock_post.assert_not_called()
+        finally:
+            hub_module._ws_forward_inflight = 0

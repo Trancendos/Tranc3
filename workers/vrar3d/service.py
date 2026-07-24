@@ -386,7 +386,7 @@ class VRARRouter:
         """
         Resolve a completed asset job to a locally-servable file path.
 
-        Returns None for unknown jobs, jobs that haven't finished ("done"),
+        Returns None for unknown jobs, jobs whose status isn't "done",
         offline-backend placeholders (offline://... isn't a real file), and
         remote outputs (e.g. a Sketchfab model URL) — those are already
         directly fetchable by a browser and don't need this route.
@@ -397,9 +397,16 @@ class VRARRouter:
         output_path = job.get("output_path")
         if not output_path or "://" in output_path:
             return None
-        if not Path(output_path).is_file():
+        resolved = Path(output_path).resolve()
+        asset_dir = Path(config.ASSET_DIR).resolve()
+        if not resolved.is_relative_to(asset_dir):
+            # Defense-in-depth: every writer in this file already constrains
+            # output_path to ASSET_DIR, but a served file should never trust
+            # a DB value alone against path traversal.
             return None
-        return output_path
+        if not resolved.is_file():
+            return None
+        return str(resolved)
 
     def status(self) -> VRARStatus:
         active = _select_backend() or ProcessingBackend.offline

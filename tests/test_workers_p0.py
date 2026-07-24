@@ -177,6 +177,15 @@ class TestInfinityWSHTTP:
         assert "channels" in data
         assert isinstance(data["channels"], list)
 
+    def test_internal_auth_fails_closed_when_secret_unset(self, monkeypatch):
+        # An unset INTERNAL_SECRET used to make require_internal_auth a
+        # no-op, leaving /stats, /channels, and /broadcast reachable by
+        # anyone who could reach this port. It must now reject instead.
+        monkeypatch.setattr(ws_mod, "_INTERNAL_SECRET", "")
+        unauthenticated_client = TestClient(ws_mod.app)
+        response = unauthenticated_client.get("/stats")
+        assert response.status_code == 503
+
     def test_health_has_correct_service_name(self, client):
         response = client.get("/health")
         data = response.json()

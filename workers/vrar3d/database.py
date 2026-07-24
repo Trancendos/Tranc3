@@ -170,7 +170,9 @@ class VRARDatabase:
             row = cur.fetchone()
         if not row:
             return None
-        d = dict(row)
+        return self._deserialize_asset(dict(row))
+
+    def _deserialize_asset(self, d: Dict[str, Any]) -> Dict[str, Any]:
         d["metadata"] = json.loads(d["metadata"])
         return d
 

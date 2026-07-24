@@ -32,6 +32,16 @@ logger = logging.getLogger(__name__)
 _INFINITY_WS_URL = os.environ.get("INFINITY_WS_URL", "http://infinity-ws:8004")
 _INFINITY_WS_INTERNAL_SECRET = os.environ.get("INFINITY_WS_INTERNAL_SECRET", "")
 
+# Caps concurrent in-flight forward requests so a slow/down infinity-ws can't
+# have a publish() burst pile up unbounded tasks/sockets. This path is
+# best-effort by design — dropping a forward under sustained overload is the
+# correct behavior, not a bug to fix by queueing indefinitely. A plain counter
+# (not asyncio.Semaphore, which has no non-blocking "would this exceed
+# capacity" check) is safe here because asyncio is single-threaded — nothing
+# can interleave between the check and the increment below.
+_WS_FORWARD_CONCURRENCY = int(os.environ.get("NEXUS_WS_FORWARD_CONCURRENCY", "10"))
+_ws_forward_inflight = 0
+
 
 class MessagePriority(int, Enum):
     LOW = 0
@@ -161,6 +171,13 @@ class NexusHub:
         loop.create_task(self._post_broadcast(topic, msg))
 
     async def _post_broadcast(self, topic: str, msg: NexusMessage) -> None:
+        global _ws_forward_inflight
+        if _ws_forward_inflight >= _WS_FORWARD_CONCURRENCY:
+            # At capacity — infinity-ws is slow/down and forwards are piling
+            # up. Drop this one rather than adding yet another in-flight
+            # task/socket on top of an already-backed-up hub.
+            return
+        _ws_forward_inflight += 1
         try:
             import httpx
 
@@ -170,11 +187,12 @@ class NexusHub:
                 else {}
             )
             async with httpx.AsyncClient(timeout=2.0) as client:
-                await client.post(
+                response = await client.post(
                     f"{_INFINITY_WS_URL}/broadcast",
                     json={"channel": topic, "type": msg.type.value, "data": msg.payload},
                     headers=headers,
                 )
+                response.raise_for_status()
         except Exception as exc:
             # sanitize_for_log() does strip CR/LF, but CodeQL's py/log-injection
             # query doesn't trace through it as a sanitizer across the module
@@ -186,6 +204,8 @@ class NexusHub:
                 safe_topic,
                 sanitize_for_log(exc),
             )  # codeql[py/cleartext-logging]
+        finally:
+            _ws_forward_inflight -= 1
 
     def _fan_out(self, topic: str, msg: NexusMessage) -> None:
         self._stats["sent"] += 1

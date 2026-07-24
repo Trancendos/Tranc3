@@ -17,7 +17,9 @@ unrelated to this worker.
 
 from __future__ import annotations
 
+import atexit
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -28,6 +30,7 @@ from tests._worker_import_utils import import_worker as _import_worker
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent
 _TMP_DIR = tempfile.mkdtemp(prefix="vrar3d-test-")
+atexit.register(shutil.rmtree, _TMP_DIR, ignore_errors=True)
 
 os.environ["VRAR3D_DB_PATH"] = str(Path(_TMP_DIR) / "vrar3d.db")
 os.environ["VRAR3D_ASSET_DIR"] = str(Path(_TMP_DIR) / "assets")
@@ -120,4 +123,28 @@ class TestAssetDownloadRoute:
             }
         )
         response = client.get("/vrar3d/assets/job-pending/download", headers=_HEADERS)
+        assert response.status_code == 404
+
+    def test_download_rejects_path_outside_asset_dir(self, client):
+        # Defense-in-depth: every writer already constrains output_path to
+        # ASSET_DIR, but the download route itself should never trust a DB
+        # value against path traversal (e.g. DB tampering, a future writer
+        # bug) without an independent boundary check.
+        outside_dir = Path(_TMP_DIR) / "outside-asset-dir"
+        outside_dir.mkdir(parents=True, exist_ok=True)
+        outside_file = outside_dir / "secret.txt"
+        outside_file.write_text("should never be served")
+
+        _db.save_asset_job(
+            {
+                "asset_id": "job-escape",
+                "scene_id": None,
+                "source_format": "obj",
+                "target_format": "glb",
+                "backend": "trimesh",
+                "status": "done",
+                "output_path": str(outside_file),
+            }
+        )
+        response = client.get("/vrar3d/assets/job-escape/download", headers=_HEADERS)
         assert response.status_code == 404

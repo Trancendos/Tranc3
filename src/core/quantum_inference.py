@@ -69,14 +69,20 @@ class QuantumInferenceEngine:
         flat_input = input_tensor.flatten()[: 2**num_qubits].detach().cpu().numpy()
         flat_input = flat_input.astype(np.complex128 if np.iscomplexobj(flat_input) else np.float64)
         norm = np.linalg.norm(flat_input)
-        if norm > 0:
-            normalized_input = flat_input / norm
-        else:
+        if norm == 0:
             # All-zero input has no valid direction to normalize — qiskit's
             # initialize() requires sum(|amplitude|^2) == 1, so fall back to
             # the |0...0> basis state rather than passing an all-zero vector.
             normalized_input = np.zeros_like(flat_input)
             normalized_input[0] = 1.0
+        elif np.isfinite(norm):
+            normalized_input = flat_input / norm
+        else:
+            # NaN/inf in the input (norm is NaN or inf) is genuinely invalid —
+            # let qc.initialize() reject it below and hit the classical
+            # fallback in quantum_attention(), rather than silently
+            # substituting a fabricated |0...0> state for bad input.
+            normalized_input = flat_input
 
         qc.initialize(normalized_input, qreg)
 
