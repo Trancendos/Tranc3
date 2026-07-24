@@ -59,7 +59,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 |---------|--------|---------|------|-------|
 | **The Spark** | ✅ In repo | Imfy (Prime: Norman Hawkins) | ✅ **Complete** (reference) | `docs/services/the-spark/` |
 | **The Digital Grid** | ✅ In repo | Tyler Towncroft (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-digital-grid/` |
-| **Infinity** | ✅ Self-hosted | The Guardian (Anchor: Orb of Orisis) (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/infinity/` |
+| **Infinity** | ✅ Self-hosted | The Guardian (Marcus Magnolia) & The Orb of Orisis (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/infinity/` |
 | **The Nexus** | 🔧 Self-hosted | Nexus-Prime (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-nexus/` |
 | **The Observatory** | ✅ Self-hosted | Norman Hawkins (Prime: Cornelius MacIntyre) | ✅ **Complete** | `docs/services/the-observatory/` |
 | **The Workshop** | ✅ In repo | Larry Lowhammer (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-workshop/` |
@@ -76,7 +76,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Chaos Party** | 🔧 Partial | The Mad Hatter (Prime: The Doctor) | ✅ **Complete** | `docs/services/the-chaos-party/` |
 | **The Library** | ✅ In repo | Zimik | ✅ **Complete** | `docs/services/the-library/` |
 | **The Academy** | ✅ In repo | Shimshi | ✅ **Complete** | `docs/services/the-academy/` |
-| **DocUtari** | ✅ In repo | To be Defined | ✅ **Complete** | `docs/services/docutari/` |
+| **DocUtari** | ✅ In repo | Fiddsy | ✅ **Complete** | `docs/services/docutari/` |
 | **The Basement** | ✅ In repo | Gary Glowman (Glow-Worm) | ✅ **Complete** | `docs/services/the-basement/` |
 | **The Studio** | ✅ In repo | Voxx | ✅ **Complete** | `docs/services/the-studio/` |
 | **Sashas Photo Studio** | ✅ In repo | Madam Krystal | ✅ **Complete** | `docs/services/sashas-photo-studio/` |
@@ -84,7 +84,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **TateKing** | ✅ In repo | Benji Tate & Sam King | ✅ **Complete** | `docs/services/tateking/` |
 | **Fabulousa** | ✅ In repo | Baron Von Hilton | ✅ **Complete** | `docs/services/fabulousa/` |
 | **Imaginarium** | ✅ In repo | Voxx | ✅ **Complete** | `docs/services/imaginarium/` |
-| **The Lab** | ✅ In repo | The Dr. & Slime | ✅ **Complete** | `docs/services/the-lab/` |
+| **The Lab** | ✅ In repo | The Dr. (Nikolai O'denhime) & Slime | ✅ **Complete** | `docs/services/the-lab/` |
 | **The Artifactory** | ✅ In repo | Lunascene | ✅ **Complete** | `docs/services/the-artifactory/` |
 | **API Marketplace** | ✅ In repo | Solarscene | ✅ **Complete** | `docs/services/api-marketplace/` |
 | **Cryptex** | ✅ In repo | Renik | ✅ **Complete** | `docs/services/cryptex/` |

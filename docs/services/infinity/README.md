@@ -3,7 +3,7 @@
 > Code-grounded Doc Pack per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.
 > Claims cite `workers/infinity-auth/`.
 
-**Service:** Infinity · **Slug:** `infinity` · **Lead AI:** The Guardian (Anchor: Orb of Orisis) (AID-INF-01, Tier 3) · **Prime:** Cornelius MacIntyre (Tier 2) · **ServiceID (CMDB):** `SRV-INF-001`
+**Service:** Infinity · **Slug:** `infinity` · **Lead AI:** The Guardian (Marcus Magnolia) & The Orb of Orisis (AID-INF-01, Tier 3) · **Prime:** Cornelius MacIntyre (Tier 2) · **ServiceID (CMDB):** `SRV-INF-001`
 **Canonical status:** ✅ Self-hosted → **Live** tier (status per `CLAUDE.md`; identity/PID-INF per `PLATFORM_ENTITIES.md`)
 **Code root:** `workers/infinity-auth/` · **Worker:** `infinity-auth` (port 8005) · **Owner:** Platform Engineering
 **Version:** 1.0.0 · **Last verified against `main`:** 2026-07-02 @ `70fec6b`
@@ -19,7 +19,7 @@
   TOTP MFA (setup/enable/disable + backup codes), role/tier management, per-caller rate limiting.
 - **Out of scope:** secrets/vault storage (The Void), tool registry (The Spark), workflow
   execution (The Digital Grid), payment identity (Royal Bank of Arcadia).
-- **Lead AI (Tier 3):** The Guardian (Anchor: Orb of Orisis); **Prime (Tier 2):** Cornelius MacIntyre.
+- **Lead AI (Tier 3):** The Guardian (Marcus Magnolia) & The Orb of Orisis; **Prime (Tier 2):** Cornelius MacIntyre.
 - **SLOs (target):** availability 99.9% (auth is on the critical path), p99 token verify
   < 50 ms, error budget 0.1%/30d.
 - **Review cadence:** Quarterly, or on any change to the token/OIDC surface or crypto.
@@ -207,7 +207,7 @@
 - **Error standard:** canonical `ErrorCode` enum — `src/errors/error_catalog.py`; standard 401/403.
 - **Logging standard:** structured JSON, `trace_id`, **never** log secrets/tokens/hashes.
 - **Test standard:** `workers/infinity-auth/tests/` (`test_router.py`, `test_service.py`).
-- **Naming standard:** "The Guardian (Anchor: Orb of Orisis)" full title in entity contexts (per `CLAUDE.md`).
+- **Naming standard:** "The Guardian (Marcus Magnolia)" full title in entity contexts (per `CLAUDE.md`).
 
 ---
 

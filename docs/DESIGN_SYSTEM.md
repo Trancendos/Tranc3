@@ -48,7 +48,7 @@ All 43 platform entities are defined in `PLATFORM_ENTITIES.md` and `src/entities
 | Space in The Digital Grid | `The Digital Grid` | `TheDigitalGrid` |
 | No apostrophe | `Sashas Photo Studio` | `Sasha's Photo Studio` |
 | Lead AI capitalisation | `tAImra` (Lead AI) | `tAimra` (location name) |
-| Full Guardian title | `The Guardian (Anchor: Orb of Orisis)` | `The Guardian` |
+| Full Guardian title | `The Guardian (Marcus Magnolia)` | `The Guardian` |
 
 ### Naming in code
 

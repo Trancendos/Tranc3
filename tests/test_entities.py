@@ -78,8 +78,15 @@ class TestLocationEntity:
         assert meta["location"] == "The Nexus"
         assert meta["pillar"] == "Architectural"
         assert meta["lead_ai"] == "Nexus-Prime"
+        assert meta["lead_ais"] == []
         assert isinstance(meta["primes"], list)
         assert isinstance(meta["primary_function"], str)
+
+    def test_to_health_meta_multi_lead(self):
+        entity = PLATFORM_ENTITIES["Infinity"]
+        meta = entity.to_health_meta()
+        assert meta["lead_ai"] == "The Guardian (Marcus Magnolia)"
+        assert meta["lead_ais"] == ["The Guardian (Marcus Magnolia)", "The Orb of Orisis"]
 
 
 # ── PLATFORM_ENTITIES registry ──────────────────────────────────────
@@ -132,9 +139,11 @@ class TestPlatformEntities:
         assert "The Guardian (Marcus Magnolia)" in the_void.primes
 
         the_lab = PLATFORM_ENTITIES["The Lab"]
+        assert the_lab.lead_ai == "The Dr. (Nikolai O'denhime)"
         assert the_lab.lead_ais == ["The Dr. (Nikolai O'denhime)", "Slime"]
 
         docutari = PLATFORM_ENTITIES["DocUtari"]
+        assert docutari.lead_ai == "Fiddsy"
         assert docutari.lead_ais == []
 
 

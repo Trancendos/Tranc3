@@ -329,7 +329,7 @@ services:
 
   # ─────────────────────────────────────────────────────────────────
   # DOCUTARI — Paperless-ngx document management (GPL 3.0)
-  # Entity: DocUtari | Lead AI: To be Defined
+  # Entity: DocUtari | Lead AI: Fiddsy
   # Port 8000 (internal 8000 — mapped to 8390 to avoid clash)
   # ─────────────────────────────────────────────────────────────────
   paperless-postgres:

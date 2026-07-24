@@ -120,3 +120,107 @@ class TestHistory:
 
     def test_no_history_before_any_change(self, registry):
         assert registry.get_history("Luminous") == []
+
+
+class TestRenameMigration:
+    """A DB seeded before Infinity/The Lab/DocUtari's lead_ai names were
+    reconciled to trance_one/platform_manifest.py's spelling (2026-07-24)
+    must not get stuck resolving to the retired name forever — see
+    docs/governance/LOCATION-FUNCTIONS.md's Verification Log."""
+
+    def _seed_stale_db(self, db_path, overrides: dict) -> None:
+        import sqlite3
+        import time
+
+        conn = sqlite3.connect(str(db_path))
+        conn.execute(
+            """
+            CREATE TABLE role_assignments (
+                location TEXT PRIMARY KEY,
+                job_description TEXT NOT NULL,
+                assigned_ai TEXT,
+                assigned_at REAL NOT NULL,
+                assigned_by TEXT NOT NULL DEFAULT 'system'
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE role_assignment_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                location TEXT NOT NULL,
+                previous_ai TEXT,
+                new_ai TEXT,
+                changed_at REAL NOT NULL,
+                changed_by TEXT NOT NULL,
+                reason TEXT NOT NULL DEFAULT ''
+            )
+            """
+        )
+        now = time.time()
+        for location, entity in PLATFORM_ENTITIES.items():
+            assigned_ai = overrides.get(location, entity.lead_ai)
+            conn.execute(
+                "INSERT INTO role_assignments "
+                "(location, job_description, assigned_ai, assigned_at, assigned_by) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (location, JOB_DESCRIPTIONS.get(location, ""), assigned_ai, now, "system:seed"),
+            )
+        conn.commit()
+        conn.close()
+
+    def test_retired_names_are_backfilled_on_open(self, tmp_path):
+        db_path = tmp_path / "stale.db"
+        self._seed_stale_db(
+            db_path,
+            {
+                "Infinity": "The Guardian (Anchor: Orb of Orisis)",
+                "The Lab": "The Dr. & Slime",
+                "DocUtari": "To be Defined",
+            },
+        )
+
+        reg = RoleRegistry(db_path=db_path)
+        try:
+            assert reg.get_role("Infinity").assigned_ai == "The Guardian (Marcus Magnolia)"
+            assert reg.get_role("The Lab").assigned_ai == "The Dr. (Nikolai O'denhime)"
+            assert reg.get_role("DocUtari").assigned_ai == "Fiddsy"
+        finally:
+            reg.close()
+
+    def test_migration_is_recorded_in_history(self, tmp_path):
+        db_path = tmp_path / "stale_history.db"
+        self._seed_stale_db(db_path, {"Infinity": "The Guardian (Anchor: Orb of Orisis)"})
+
+        reg = RoleRegistry(db_path=db_path)
+        try:
+            history = reg.get_history("Infinity")
+            assert len(history) == 1
+            assert history[0].previous_ai == "The Guardian (Anchor: Orb of Orisis)"
+            assert history[0].new_ai == "The Guardian (Marcus Magnolia)"
+        finally:
+            reg.close()
+
+    def test_operator_reassignment_is_not_clobbered(self, tmp_path):
+        db_path = tmp_path / "reassigned.db"
+        self._seed_stale_db(db_path, {"The Lab": "A Different Operator-Assigned AI"})
+
+        reg = RoleRegistry(db_path=db_path)
+        try:
+            assert reg.get_role("The Lab").assigned_ai == "A Different Operator-Assigned AI"
+            assert reg.get_history("The Lab") == []
+        finally:
+            reg.close()
+
+    def test_migration_is_idempotent_across_reconnect(self, tmp_path):
+        db_path = tmp_path / "idempotent.db"
+        self._seed_stale_db(db_path, {"DocUtari": "To be Defined"})
+
+        reg1 = RoleRegistry(db_path=db_path)
+        reg1.close()
+        reg2 = RoleRegistry(db_path=db_path)
+        try:
+            assert reg2.get_role("DocUtari").assigned_ai == "Fiddsy"
+            assert len(reg2.get_history("DocUtari")) == 1
+        finally:
+            reg2.close()

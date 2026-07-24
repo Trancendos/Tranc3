@@ -164,7 +164,11 @@ async def health():
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
-        "entity": {"name": "The Lab", "lead_ai": "The Dr. (Nikolai O'denhime)"},
+        "entity": {
+            "name": "The Lab",
+            "lead_ai": "The Dr. (Nikolai O'denhime)",
+            "lead_ais": ["The Dr. (Nikolai O'denhime)", "Slime"],
+        },
         "snippets": snippets,
         "total_runs": runs,
     }

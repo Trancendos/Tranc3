@@ -79,6 +79,7 @@ def create_app() -> FastAPI:
             "service": config.WORKER_NAME,
             "named": "The Lab",
             "lead_ai": "The Dr. (Nikolai O'denhime)",
+            "lead_ais": ["The Dr. (Nikolai O'denhime)", "Slime"],
             "port": config.WORKER_PORT,
             "uptime_seconds": (datetime.now(timezone.utc) - _STARTED_AT).total_seconds(),
             "backends": 6,

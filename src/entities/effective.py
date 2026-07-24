@@ -46,6 +46,7 @@ class EffectiveEntity:
     pillar: str | None
     lead_ai: str
     canonical_lead_ai: str
+    lead_ais: list[str]
     aid: str | None
     primes: list[str]
     canonical_primes: list[str]
@@ -156,6 +157,7 @@ def resolve_entity(
         pillar=entity.pillar.value if entity.pillar else None,
         lead_ai=lead_ai,
         canonical_lead_ai=lead_canonical,
+        lead_ais=list(entity.lead_ais),
         aid=getattr(entity, "aid", None),
         primes=primes,
         canonical_primes=raw_primes,

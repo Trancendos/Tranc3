@@ -93,7 +93,7 @@ with no specific counterpart AI — feeds the brochure's sentiment stats, not th
 
 Best-effort loader over `src/personality/profiles/*.json`, keyed by `code_name` (the same name used
 by `lead_ai`). Not every Lead AI has a matching profile today — some spellings differ (e.g. "The
-Guardian" in profiles vs. "The Guardian (Anchor: Orb of Orisis)" in `PLATFORM_ENTITIES`) — every
+Guardian" in profiles vs. "The Guardian (Marcus Magnolia)" in `PLATFORM_ENTITIES`) — every
 lookup falls back to a neutral trait set (`0.5` across the board) rather than raising, so scoring
 and brochures work identically whether or not a profile exists; a matching profile only adds
 flavor and sharper nudges, it's never required.

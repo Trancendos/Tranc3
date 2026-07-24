@@ -85,6 +85,7 @@ class LocationEntity:
             "location": self.location,
             "pillar": self.pillar.value,
             "lead_ai": self.lead_ai,
+            "lead_ais": self.lead_ais,
             "primes": self.primes,
             "primary_function": self.primary_function,
         }

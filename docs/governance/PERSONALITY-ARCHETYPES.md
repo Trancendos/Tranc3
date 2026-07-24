@@ -12,8 +12,9 @@
 > wholesale rewrite. Two Job Description holders (`Imfy` — The Spark, `Trancendos` — The Citadel /
 > Think Tank) had no profile mapped to them; §3 resolves both — `Imfy` via the existing
 > `norman-hawkins` profile's own `serves` declaration, `Trancendos` via a newly added profile file.
-> One Location (`DocUtari`) has no AI assigned yet (`lead_ai = "To be Defined"`) and correctly gets
-> no profile.
+> One Location (`DocUtari`) has a named Lead AI (`lead_ai = "Fiddsy"`, per
+> `trance_one/platform_manifest.py` — see `docs/governance/LOCATION-FUNCTIONS.md`'s 2026-07-24
+> verification-log entry) but no personality profile authored for it yet, and correctly gets none.
 
 ## 1. Archetype research (Big Five / extended traits)
 
@@ -63,7 +64,7 @@ wiring work (§3–4).
 |---|---|---|---|---|
 | The Spark | Head of AI Tooling | Imfy | none under an `"Imfy"` code_name — but `norman-hawkins.json` already declares `"serves": ["the-spark", "the-observatory"]` | **No new file** — the resolver maps `Imfy` → `norman-hawkins`, honoring that profile's own pre-existing `serves` declaration instead of inventing a second, competing voice for the same seat. See the inconsistency note below. |
 | The Citadel, Think Tank | Chief Operations Officer, Head of R&D | Trancendos | **none** (no profile anywhere declares `serves` for `the-citadel` or `think-tank`) | Added `src/personality/profiles/trancendos.json` — hybrid COO/R&D-visionary archetype: very high conscientiousness + assertiveness (ops authority), high openness (R&D drive), low neuroticism, formal but not humorless — the platform's own top-level "founder entity" voice. |
-| DocUtari | Head of Document Management | To be Defined | none | **Correctly none** — this Job Description has no assigned AI yet per canon; the resolver (§4) falls back to the platform default rather than fabricating a persona for an unfilled seat. |
+| DocUtari | Head of Document Management | Fiddsy | none | **Correctly none** — this seat has a named holder (Fiddsy) but no personality profile authored per canon; the resolver (§4) falls back to the platform default rather than fabricating a persona for it. |
 
 `src/personality/profiles/norman-hawkins.json` (`domain: "tooling"`) pre-dates this pass and
 already claims The Spark via its own `serves` list, even though `CLAUDE.md`'s platform table lists

@@ -75,7 +75,7 @@ def generate_platform_entities_md():
         "| Photo studio | Sashas Photo Studio (no apostrophe) | Sasha's Photo Studio (apostrophe) |",
     )
     lines.append(
-        "| Guardian title | The Guardian (Anchor: Orb of Orisis) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |",
+        "| Guardian title | The Guardian (Marcus Magnolia) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |",
     )
     lines.append(
         "| Nexus AI | Nexus-Prime (Lead AI) | The Nexus (same name as location — tight coupling) |",
@@ -120,7 +120,7 @@ def generate_platform_entities_md():
             8005,
             "infinity-auth",
             "Infinity",
-            "The Guardian (Anchor: Orb of Orisis)",
+            "The Guardian (Marcus Magnolia)",
             "PID-INF",
             "Primary worker",
         ),
@@ -128,7 +128,7 @@ def generate_platform_entities_md():
             8006,
             "users-service",
             "Infinity",
-            "The Guardian (Anchor: Orb of Orisis)",
+            "The Guardian (Marcus Magnolia)",
             "PID-INF",
             "Supporting layer",
         ),
@@ -160,7 +160,7 @@ def generate_platform_entities_md():
             "PID-RBA",
             "Primary worker",
         ),
-        (8014, "files-service", "DocUtari", "To be Defined", "PID-DOC", "Primary worker"),
+        (8014, "files-service", "DocUtari", "Fiddsy", "PID-DOC", "Primary worker"),
         (8015, "identity-service", "The Lighthouse", "Rocking Ricki", "PID-LTH", "Primary worker"),
         (
             8016,
@@ -173,7 +173,7 @@ def generate_platform_entities_md():
         (8017, "search-service", "The Library", "Zimik", "PID-LIB", "Primary worker"),
         (8018, "email-service", "Arcadia", "Lilli SC", "PID-ARC", "Supporting layer"),
         (8019, "sms-service", "The Nexus", "Nexus-Prime", "PID-NXS", "Supporting layer"),
-        (8020, "storage-service", "DocUtari", "To be Defined", "PID-DOC", "Supporting layer"),
+        (8020, "storage-service", "DocUtari", "Fiddsy", "PID-DOC", "Supporting layer"),
         (8021, "cron-service", "ChronosSphere / ArcStream", "Chronos", "PID-CHR", "Primary worker"),
         (8022, "queue-service", "The HIVE", "The Queen", "PID-HVE", "Primary worker"),
         (8023, "cache-service", "The HIVE", "The Queen", "PID-HVE", "Supporting layer"),

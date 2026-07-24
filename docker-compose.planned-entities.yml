@@ -186,7 +186,7 @@ services:
       - "traefik.http.routers.imaginarium.entrypoints=web"
       - "traefik.http.services.imaginarium.loadbalancer.server.port=8054"
 
-  # ── The Lab — The Dr. & Slime — Port 8055 ────────────────────
+  # ── The Lab — The Dr. (Nikolai O'denhime) & Slime — Port 8055 ────────────────────
   the-lab:
     build:
       context: ./workers/the-lab

@@ -391,7 +391,7 @@ scrape_configs:
         labels:
           service: 'lab-service'
           named: 'The Lab'
-          lead_ai: 'The Dr. & Slime'
+          lead_ai: "The Dr. (Nikolai O'denhime) & Slime"
           category: 'code-generation'
 
   # ── tranceflow — TranceFlow 3D/games studio (Port 8059) ───────────────

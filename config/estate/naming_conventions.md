@@ -109,7 +109,8 @@ Special cases:
 - "The Digital Grid" — always with a space (ignore the known typo in the entity table)
 - "Sashas Photo Studio" — no apostrophe
 - "tAimra" (location) vs "tAImra" (Lead AI) — different capitalisation, both correct
-- "The Guardian (Anchor: Orb of Orisis)" — full title required in entity contexts
+- "The Guardian (Marcus Magnolia)" — full title required in entity contexts; Infinity has a
+  second co-lead, "The Orb of Orisis"
 
 ---
 
