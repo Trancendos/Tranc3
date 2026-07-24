@@ -545,9 +545,9 @@ class TestIntelligenceBlockchain:
 
 class TestVectorStore:
     def test_upsert_and_query(self):
-        from src.database.vector_store import InMemoryVectorStore
+        from src.database.vector_store import get_vector_store
 
-        store = InMemoryVectorStore()
+        store = get_vector_store("test_upsert_and_query", dim=768)
         vec = [0.1] * 768
         store.upsert("vec1", vec, {"user_id": "u1", "text": "hello"})
         results = store.query(vec, top_k=1)
@@ -556,14 +556,15 @@ class TestVectorStore:
         assert results[0]["score"] > 0.99
 
     def test_delete_by_user(self):
-        from src.database.vector_store import InMemoryVectorStore
+        from src.database.vector_store import get_vector_store
 
-        store = InMemoryVectorStore()
+        store = get_vector_store("test_delete_by_user", dim=4)
         store.upsert("v1", [0.1] * 4, {"user_id": "u1"})
         store.upsert("v2", [0.2] * 4, {"user_id": "u2"})
         store.delete_by_metadata("user_id", "u1")
-        assert "v1" not in store._store
-        assert "v2" in store._store
+        ids = {r["id"] for r in store.query([0.2] * 4, top_k=5)}
+        assert "v1" not in ids
+        assert "v2" in ids
 
 
 # ── API Integration Tests ─────────────────────────────────────────────────────
