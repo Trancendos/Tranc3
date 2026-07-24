@@ -489,6 +489,58 @@ class TestConsciousnessIntegration:
         assert FeatureFlag.CONSCIOUSNESS_ENGINE.value == "consciousness_engine"
 
 
+class TestSelfEvolvingInference:
+    """
+    Previously had zero test coverage anywhere in the repo, and its
+    two-arg constructor (config, feature_manager: FeatureFlagManager)
+    had no real caller either — api.py talks to the underlying
+    SelfEvolvingArchitecture directly instead. Constructor is now
+    ergonomic (both args optional) so this is independently usable.
+    """
+
+    def test_constructs_without_explicit_feature_manager(self):
+        from src.core.self_evolution import SelfEvolvingInference
+
+        se = SelfEvolvingInference()
+        assert se.evolution_engine is not None
+
+    def test_collect_feedback_computes_quality_score(self):
+        from src.core.self_evolution import SelfEvolvingInference
+
+        se = SelfEvolvingInference()
+        feedback = se.collect_feedback(
+            {
+                "response": "a fairly detailed and useful answer here",
+                "processing_time_ms": 300,
+                "consciousness_level": 1.2,
+            },
+            user_feedback={"rating": 5},
+        )
+        assert 0.0 <= feedback["quality_score"] <= 1.0
+        assert feedback["response_length"] > 0
+
+    def test_adapt_model_returns_usable_layer(self):
+        from src.core.self_evolution import SelfEvolvingInference
+
+        se = SelfEvolvingInference()
+        feedback = se.collect_feedback({"response": "ok"}, user_feedback={"rating": 4})
+        layer = se.adapt_model(torch.randn(1, 16), feedback)
+        assert layer is not None
+        out = se.apply_adaptation(torch.randn(1, 16), layer)
+        assert out.shape == (1, 16)
+
+    def test_disabled_feature_flag_skips_engine_construction(self):
+        from src.core.self_evolution import SelfEvolvingInference
+
+        class _AlwaysDisabled:
+            def is_enabled(self, flag, user_id=None):  # noqa: ARG002
+                return False
+
+        se = SelfEvolvingInference(feature_manager=_AlwaysDisabled())
+        assert se.evolution_engine is None
+        assert se.adapt_model(torch.randn(1, 8), {"quality_score": 0.5}) is None
+
+
 # ── Evolution Engine Tests ────────────────────────────────────────────────────
 
 

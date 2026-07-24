@@ -81,3 +81,17 @@ class FeatureFlagManager:
             rollout = int(self.redis.get(f"rollout:{flag.value}") or 0)
             flags[flag.value] = {"enabled": enabled, "rollout_percentage": rollout}
         return flags
+
+
+class AlwaysEnabledFeatureManager:
+    """
+    Redis-free stand-in for FeatureFlagManager. Used by callers that want to
+    exercise a feature-flagged subsystem (consciousness engine, self-evolution)
+    without wiring up a Redis-backed FeatureFlagManager first — e.g. a one-off
+    worker job rather than the main API process. Real FeatureFlagManager
+    instances remain fully supported for callers that need actual
+    rollout/percentage control.
+    """
+
+    def is_enabled(self, flag: FeatureFlag, user_id: Optional[str] = None) -> bool:  # noqa: ARG002
+        return True

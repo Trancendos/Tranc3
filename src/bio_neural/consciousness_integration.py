@@ -10,20 +10,11 @@ import torch  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: E402
-from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
-
-
-class _AlwaysEnabledFeatureManager:
-    """
-    Redis-free stand-in for FeatureFlagManager, used when a caller wants
-    consciousness processing without wiring up a Redis-backed flag manager
-    (e.g. a one-off worker job rather than the main API process). Real
-    FeatureFlagManager instances remain fully supported for DI callers that
-    need actual rollout/percentage control.
-    """
-
-    def is_enabled(self, flag: FeatureFlag, user_id: Optional[str] = None) -> bool:  # noqa: ARG002
-        return True
+from src.core.feature_flags import (  # noqa: E402
+    AlwaysEnabledFeatureManager,
+    FeatureFlag,
+    FeatureFlagManager,
+)
 
 
 class _DefaultConfig:
@@ -37,7 +28,7 @@ class ConsciousnessAwareGenerator:
 
     def __init__(self, config=None, feature_manager: Optional[FeatureFlagManager] = None):
         self.config = config or _DefaultConfig()
-        self.feature_manager = feature_manager or _AlwaysEnabledFeatureManager()
+        self.feature_manager = feature_manager or AlwaysEnabledFeatureManager()
 
         self.consciousness: Optional[ConsciousnessModel] = None
         if self.feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE):
