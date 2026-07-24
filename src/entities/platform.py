@@ -51,6 +51,20 @@ class Agent:
 
 
 @dataclass
+class AgentPair:
+    """One named Tier-3 AI's own dedicated Agent Alpha/Beta pair.
+
+    Used only for Locations where each name in `lead_ais` runs its own
+    agent team rather than sharing the Location's single agent_alpha/beta
+    (e.g. TateKing's Benji Tate vs. Sam King, Arcadian Exchange's five
+    Porters) — see `LocationEntity.agent_teams`.
+    """
+
+    alpha: Agent
+    beta: Agent
+
+
+@dataclass
 class LocationEntity:
     location: str
     pillar: Pillar
@@ -78,6 +92,13 @@ class LocationEntity:
     # which this mirrors). Empty for single-AI Locations; lead_ai stays the
     # primary/canonical name in either case.
     lead_ais: List[str] = field(default_factory=list)
+    # Per-name Agent Alpha/Beta pairs, keyed by each entry in `lead_ais`,
+    # for Locations where each named AI runs its own dedicated team instead
+    # of sharing agent_alpha/agent_beta (TateKing, Arcadian Exchange — see
+    # _wire_multi_agent_teams()). Empty for every other Location; where
+    # populated, agent_teams[lead_ais[0]] is the same pair as agent_alpha/
+    # agent_beta above, not a duplicate team.
+    agent_teams: Dict[str, AgentPair] = field(default_factory=dict)
 
     def to_health_meta(self) -> Dict:
         """Return a dict suitable for embedding in a worker /health response."""
@@ -269,7 +290,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "TateKing": LocationEntity(
         location="TateKing",
         pillar=Pillar.CREATIVITY,
-        lead_ai="Benji Tate & Sam King",
+        lead_ai="Benji Tate",
+        lead_ais=["Benji Tate", "Sam King"],
         abilities=[
             "Cloud-Native NLE: Browser-based video editing.",
             "Timeline-as-Code: Translates edits into code.",
@@ -279,9 +301,9 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Cloud video production; distributed swarm rendering.",
         offline_mode="Local timeline editing; low-res proxy rendering.",
         agent_alpha=Agent(
-            "The Director", "Coordinates timeline-as-code scripting from video data."
+            "The Director-B", "Coordinates timeline-as-code scripting from video data."
         ),
-        agent_beta=Agent("The Editor", "Suggests cuts, music shifts, and scene transitions."),
+        agent_beta=Agent("The Editor-B", "Suggests cuts, music shifts, and scene transitions."),
         bot_01=Bot("Cutter-Bot", "Slices video and audio tracks at precise timestamps."),
         bot_02=Bot("Splicer-Bot", "Joins video clips and audio tracks into unified tracks."),
         bot_03=Bot("Renderer-Bot", "Compresses/outputs video files into target formats."),
@@ -526,7 +548,14 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Arcadian Exchange": LocationEntity(
         location="Arcadian Exchange",
         pillar=Pillar.COMMERCIAL_FINANCIAL,
-        lead_ai="The Porter Family",
+        lead_ai="Clarence Porter",
+        lead_ais=[
+            "Clarence Porter",
+            "Ann Porter",
+            "George Porter",
+            "Edward Porter",
+            "James Porter",
+        ],
         abilities=[
             "Micro-Transaction Trading: HFT trades of digital assets.",
             "Passive Income Routing: Invests idle system resources.",
@@ -536,10 +565,10 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Real-Time Trading; active passive income generation.",
         offline_mode="Offline portfolio review; delayed trade queuing.",
         agent_alpha=Agent(
-            "The Speculator", "Assesses server cost trends to buy bulk compute resources."
+            "The Speculator-C", "Assesses server cost trends to buy bulk compute resources."
         ),
         agent_beta=Agent(
-            "The Trader", "Automates bidding on open compute marketplaces for affordability."
+            "The Trader-C", "Automates bidding on open compute marketplaces for affordability."
         ),
         bot_01=Bot(
             "Bidder-Bot", "Submits buy requests on real-time server auctions for processes."
@@ -738,6 +767,11 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         location="Infinity",
         pillar=Pillar.SECURITY,
         lead_ai="The Guardian (Marcus Magnolia)",
+        # The Guardian handles security (auth, access control); The Orb of
+        # Orisis is precognitive — generating foresight into the platform's
+        # future architectural direction, not a second security role. See
+        # "Predictive Threat Modeling" below. No personality profile exists
+        # for the Orb yet (only "the-guardian").
         lead_ais=["The Guardian (Marcus Magnolia)", "The Orb of Orisis"],
         abilities=[
             "Predictive Threat Modeling: Orb provides 'Future Sight.'",
@@ -1473,6 +1507,88 @@ PRIME_ABBREVS: Dict[str, str] = {
 }
 
 
+def _wire_multi_agent_teams() -> None:
+    """Populate agent_teams for the two Locations where each `lead_ais`
+    name runs its own dedicated Agent Alpha/Beta pair instead of sharing
+    the Location's agent_alpha/agent_beta — TateKing (Benji Tate vs. Sam
+    King) and Arcadian Exchange (the five Porters). Per each pillar's own
+    mind-map data (2026-07-24); every other Location's agent_teams stays
+    empty.
+
+    Called once at module import time, before _assign_ids() so the new
+    Agent objects get SIDs too. The primary name's pair reuses the
+    Location's existing agent_alpha/agent_beta objects (same identity, not
+    a duplicate team) so assigning SIDs below doesn't double-number them.
+    """
+    # Benji Tate directs (creative direction, editing); Sam King produces
+    # (logistics, scheduling, delivery) — distinct specialties, not a
+    # duplicate of Benji's team under a different name.
+    tateking = PLATFORM_ENTITIES["TateKing"]
+    tateking.agent_teams = {
+        "Benji Tate": AgentPair(tateking.agent_alpha, tateking.agent_beta),
+        "Sam King": AgentPair(
+            Agent(
+                "The Director-S",
+                "Oversees production logistics, scheduling, and resource coordination "
+                "across video projects.",
+            ),
+            Agent(
+                "The Editor-S",
+                "Manages asset delivery pipelines, versioning, and platform-specific "
+                "format finishing.",
+            ),
+        ),
+    }
+
+    # Each Porter specializes in one area of the resource marketplace
+    # (compute, storage, models, workflows, API credits) rather than
+    # duplicating Clarence's compute-trading role under a different name.
+    arcadian_exchange = PLATFORM_ENTITIES["Arcadian Exchange"]
+    arcadian_exchange.agent_teams = {
+        "Clarence Porter": AgentPair(arcadian_exchange.agent_alpha, arcadian_exchange.agent_beta),
+        "Ann Porter": AgentPair(
+            Agent(
+                "The Speculator-A",
+                "Assesses storage cost trends across providers to secure bulk capacity.",
+            ),
+            Agent(
+                "The Trader-A",
+                "Automates bidding on storage marketplaces for the best rates.",
+            ),
+        ),
+        "George Porter": AgentPair(
+            Agent(
+                "The Speculator-G",
+                "Assesses AI model licensing and inference cost trends.",
+            ),
+            Agent(
+                "The Trader-G",
+                "Automates bidding on model marketplaces for compute-efficient access.",
+            ),
+        ),
+        "Edward Porter": AgentPair(
+            Agent(
+                "The Speculator-E",
+                "Assesses workflow and orchestration tooling costs.",
+            ),
+            Agent(
+                "The Trader-E",
+                "Automates bidding on workflow-automation marketplaces.",
+            ),
+        ),
+        "James Porter": AgentPair(
+            Agent(
+                "The Speculator-J",
+                "Assesses API credit pricing trends across providers.",
+            ),
+            Agent(
+                "The Trader-J",
+                "Automates bidding on API-credit marketplaces for cost efficiency.",
+            ),
+        ),
+    }
+
+
 def _assign_ids() -> None:
     """Assign PID, AID, SID, and NID fields to all entities in PLATFORM_ENTITIES.
 
@@ -1490,8 +1606,20 @@ def _assign_ids() -> None:
         entity.aid = f"AID-{abbrev}-01"
 
         # Agent SIDs (Tier 4)
-        entity.agent_alpha.sid = f"SID-{abbrev}-01"
-        entity.agent_beta.sid = f"SID-{abbrev}-02"
+        if entity.agent_teams:
+            # Multi-agent Location: one SID pair per lead_ais entry, in
+            # order. The primary entry's pair is the same object as
+            # agent_alpha/agent_beta, so this also sets their SIDs.
+            seq = 1
+            for name in entity.lead_ais:
+                pair = entity.agent_teams[name]
+                pair.alpha.sid = f"SID-{abbrev}-{seq:02d}"
+                seq += 1
+                pair.beta.sid = f"SID-{abbrev}-{seq:02d}"
+                seq += 1
+        else:
+            entity.agent_alpha.sid = f"SID-{abbrev}-01"
+            entity.agent_beta.sid = f"SID-{abbrev}-02"
 
         # Bot NIDs (Tier 5)
         entity.bot_01.nid = f"NID-{abbrev}-01"
@@ -1500,7 +1628,8 @@ def _assign_ids() -> None:
         entity.bot_04.nid = f"NID-{abbrev}-04"
 
 
-# Auto-assign IDs on import
+# Auto-wire multi-agent teams, then auto-assign IDs on import
+_wire_multi_agent_teams()
 _assign_ids()
 
 
@@ -1618,6 +1747,32 @@ def get_all_ids() -> List[Dict]:
                 "role": "Beta",
             }
         )
+        # Non-primary agent_teams pairs (e.g. Sam King, or Ann/George/
+        # Edward/James Porter) — the primary pair is agent_alpha/beta
+        # above, already included.
+        for name, pair in entity.agent_teams.items():
+            if name == entity.lead_ai:
+                continue
+            result.append(
+                {
+                    "id": pair.alpha.sid,
+                    "tier": 4,
+                    "name": pair.alpha.code_name,
+                    "location": loc_name,
+                    "role": "Alpha",
+                    "lead_ai": name,
+                }
+            )
+            result.append(
+                {
+                    "id": pair.beta.sid,
+                    "tier": 4,
+                    "name": pair.beta.code_name,
+                    "location": loc_name,
+                    "role": "Beta",
+                    "lead_ai": name,
+                }
+            )
         for bot_field, slot in [
             ("bot_01", "01"),
             ("bot_02", "02"),

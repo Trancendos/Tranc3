@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Entity** | Arcadian Exchange |
-| **Lead AI** | The Porter Family |
+| **Lead AI** | Clarence, Ann, George, Edward & James Porter |
 | **Status** | ✅ Deployed (per `CLAUDE.md` service table) — but no source code in this repo |
 | **Foundation** | Cloudflare Worker `arcadia-exchange` (deployed; no source in this repo) |
 
@@ -25,7 +25,8 @@
   exists yet in this repo — this is a deployed Cloudflare Worker with no source under version control here.
 - **Out of scope:** anything not named in the mission above; scope will be re-chartered once
   implementation begins, per the framework's Planned→Partial promotion process.
-- **Lead AI (Tier 3):** The Porter Family — role per `PLATFORM_ENTITIES.md`.
+- **Lead AI (Tier 3):** Clarence Porter (primary), plus Ann, George, Edward, and James Porter,
+  each with their own dedicated Agent Alpha/Beta pair — role per `PLATFORM_ENTITIES.md`.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to The Porter Family.
 - **Review cadence:** re-review at Planned→Partial promotion (i.e. when code first lands),
   or quarterly per framework default, whichever is sooner.

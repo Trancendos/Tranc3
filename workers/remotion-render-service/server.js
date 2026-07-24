@@ -7,7 +7,7 @@
  *   GET  /render/:renderId   -> { status: "rendering" | "done" | "error", ... }
  *
  * Entity: TateKing
- * Lead AI: Benji Tate & Sam King
+ * Lead AI: Benji Tate (+ Sam King)
  */
 
 const path = require('path');

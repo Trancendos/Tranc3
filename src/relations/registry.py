@@ -61,7 +61,25 @@ PERMISSION_TIERS = (
     (float("-inf"), "blocked"),
 )
 
-_LEAD_AIS: Dict[str, str] = {e.lead_ai: location for location, e in PLATFORM_ENTITIES.items()}
+
+def _build_lead_ais_map() -> Dict[str, str]:
+    """Map every Lead AI name — primary or additional co-lead — to its Location.
+
+    Includes each `lead_ais` entry (Sam King, The Orb of Orisis, the four
+    non-primary Porters, ...), not just the primary `lead_ai`, so a
+    co-lead's relationships get the correct same-pillar baseline instead of
+    silently falling back to neutral because only the primary name was
+    recognized.
+    """
+    mapping: Dict[str, str] = {}
+    for location, entity in PLATFORM_ENTITIES.items():
+        mapping[entity.lead_ai] = location
+        for name in entity.lead_ais:
+            mapping.setdefault(name, location)
+    return mapping
+
+
+_LEAD_AIS: Dict[str, str] = _build_lead_ais_map()
 
 
 def permission_tier(score: float) -> str:

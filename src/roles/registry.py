@@ -179,6 +179,8 @@ class RoleRegistry:
         "Infinity": ("The Guardian (Anchor: Orb of Orisis)", "The Guardian (Marcus Magnolia)"),
         "The Lab": ("The Dr. & Slime", "The Dr. (Nikolai O'denhime)"),
         "DocUtari": ("To be Defined", "Fiddsy"),
+        "TateKing": ("Benji Tate & Sam King", "Benji Tate"),
+        "Arcadian Exchange": ("The Porter Family", "Clarence Porter"),
     }
 
     def _migrate_renamed_lead_ais(self) -> None:

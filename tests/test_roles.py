@@ -177,6 +177,8 @@ class TestRenameMigration:
                 "Infinity": "The Guardian (Anchor: Orb of Orisis)",
                 "The Lab": "The Dr. & Slime",
                 "DocUtari": "To be Defined",
+                "TateKing": "Benji Tate & Sam King",
+                "Arcadian Exchange": "The Porter Family",
             },
         )
 
@@ -185,6 +187,8 @@ class TestRenameMigration:
             assert reg.get_role("Infinity").assigned_ai == "The Guardian (Marcus Magnolia)"
             assert reg.get_role("The Lab").assigned_ai == "The Dr. (Nikolai O'denhime)"
             assert reg.get_role("DocUtari").assigned_ai == "Fiddsy"
+            assert reg.get_role("TateKing").assigned_ai == "Benji Tate"
+            assert reg.get_role("Arcadian Exchange").assigned_ai == "Clarence Porter"
         finally:
             reg.close()
 

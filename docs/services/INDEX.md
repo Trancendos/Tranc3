@@ -67,7 +67,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Lighthouse** | ✅ Deployed | Rocking Ricki | ✅ **Complete** (charter-only) | `docs/services/the-lighthouse/` |
 | **The HIVE** | ✅ Deployed | The Queen | ✅ **Complete** (charter-only) | `docs/services/the-hive/` |
 | **Royal Bank of Arcadia** | ✅ Deployed | Dorris Fontaine | ✅ **Complete** (charter-only) | `docs/services/royal-bank-of-arcadia/` |
-| **Arcadian Exchange** | ✅ Deployed | The Porter Family | ✅ **Complete** (charter-only) | `docs/services/arcadian-exchange/` |
+| **Arcadian Exchange** | ✅ Deployed | Clarence, Ann, George, Edward & James Porter | ✅ **Complete** (charter-only) | `docs/services/arcadian-exchange/` |
 | **The Citadel** | ✅ Self-hosted | Trancendos | ✅ **Complete** | `docs/services/the-citadel/` |
 | **The Void** | 🔧 Migrating | Prometheus (Prime: The Guardian) | ✅ **Complete** | `docs/services/the-void/` [^void-port] |
 | **Luminous** | 🔧 Partial | Cornelius MacIntyre | ✅ **Complete** | `docs/services/luminous/` |

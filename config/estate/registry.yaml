@@ -939,7 +939,7 @@ components:
   - ref: TRC-P3-027
     name: "Arcadian Exchange"
     short_id: arcadian-exchange
-    lead_ai: "The Porter Family"
+    lead_ai: "Clarence Porter & Ann, George, Edward, James Porter"
     role: "Financial exchange — procurement & resource trading"
     status: active
     version: "1.0.0"

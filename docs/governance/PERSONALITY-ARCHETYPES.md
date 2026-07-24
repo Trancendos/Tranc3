@@ -84,8 +84,9 @@ See `src/personality/role_resolution.py`: `resolve_personality_for_location(loca
 Role Registry's current `assigned_ai` for a Location, maps it to a `PersonalityMatrix` profile id
 via an explicit table (`AI_NAME_TO_PROFILE_ID`, built from each profile's actual `code_name`/`id` —
 deliberately not a slug-guessing function, since several names need exact overrides: `"The Guardian
-(Anchor: Orb of Orisis)"` → `the-guardian`, `"tAImra"` → `taimra`, `"Benji Tate & Sam King"` →
-`benji-tate-sam-king`), and falls back to `None` (caller decides the default, typically
+(Marcus Magnolia)"` → `the-guardian`, `"tAImra"` → `taimra`, `"Benji Tate"` →
+`benji-tate-sam-king`, `"Clarence Porter"` → `the-porter-family`), and falls back to `None`
+(caller decides the default, typically
 `tranc3-base`) when the Location is unknown, unassigned, or mapped to an AI with no profile yet
 (Imfy and Trancendos no longer hit this path; a location vacated via `DELETE /roles/{location}/assign`
 still would, correctly).

@@ -53,7 +53,7 @@ actually holds it right now."
 | **The Artifactory** | Commercial / Financial | Central Artifact Repository Library (JFrog style) | Head of Artifact Management | Lunascene |
 | **API Marketplace** | Commercial / Financial | Central Integration Hub (APIs, Webhooks, OAuth) | Head of API Integrations | Solarscene |
 | **Royal Bank of Arcadia** | Commercial / Financial | Financial & Operations Management | Chief Financial Officer | Dorris Fontaine |
-| **Arcadian Exchange** | Commercial / Financial | Procurement & Resource Trading | Chief Procurement Officer | The Porter Family |
+| **Arcadian Exchange** | Commercial / Financial | Procurement & Resource Trading | Chief Procurement Officer | Clarence Porter + Ann Porter + George Porter + Edward Porter + James Porter |
 | **The Observatory** | Knowledge | Audit Log & Monitoring Platform | Chief Audit & Monitoring Officer | Norman Hawkins |
 | **The Library** | Knowledge | Knowledge Base & Wiki | Chief Knowledge Officer | Zimik |
 | **The Academy** | Knowledge | Education & Skill Training | Head of Learning & Development | Shimshi |

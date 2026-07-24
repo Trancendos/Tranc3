@@ -63,6 +63,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
   references, "Nexus-Prime" where a distinct AID is required (matching how "The Guardian" below
   gets a full title only in entity contexts).
 - Infinity's Lead AI is "The Guardian (Marcus Magnolia)" — Infinity has two distinct Tier-3 AIs (`lead_ais` in `src/entities/platform.py`): The Guardian (Marcus Magnolia) and The Orb of Orisis. As Prime (Tier 2) elsewhere (The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box), use "The Guardian (Marcus Magnolia)" without a qualifier — "(Anchor: Orb of Orisis)" is retired as a combined title.
+- TateKing's Lead AI is "Benji Tate" and Arcadian Exchange's is "Clarence Porter" — both have several distinct Tier-3 AIs (`lead_ais`) that, unlike Infinity/The Lab's shared team, each run their own dedicated Agent Alpha/Beta pair (`agent_teams` in `src/entities/platform.py`): TateKing's Sam King has The Director-S/The Editor-S; Arcadian Exchange's Ann, George, Edward, and James Porter each have their own Speculator-X/Trader-X pair.
 - `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
 - "Section 7" — internal placeholder name, NOT in the canonical entity hierarchy; closest entity is **The Dutchy** (Intelligence & Market Analysis, Lead AI: Predictive lore)
 - **AeonMind** (`aeonmind/` — Rust/Go/Python/WASM) — a separate, generic polyglot agent-framework
@@ -89,7 +90,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
 | **The Lighthouse** | Rocking Ricki | Cryptographic token assignment, authenticator, token scanner | ✅ Deployed | CF: `infinity-lighthouse` |
 | **The HIVE** | The Queen | Data transport hub, agent + queue coordination | ✅ Deployed | CF: `infinity-hive` |
 | **Royal Bank of Arcadia** | Dorris Fontaine | Financial hub — billing, payments | ✅ Deployed | CF: `arcadia-royal-bank` |
-| **Arcadian Exchange** | The Porter Family | Financial exchange — procurement & resource trading | ✅ Deployed | CF: `arcadia-exchange` |
+| **Arcadian Exchange** | Clarence, Ann, George, Edward & James Porter | Financial exchange — procurement & resource trading | ✅ Deployed | CF: `arcadia-exchange` |
 | **The Observatory** | Norman Hawkins | Audit log — every action, change, activity on Trancendos | ✅ Self-hosted | `src/observability/`, `workers/monitoring/` |
 | **Luminous** | Cornelius MacIntyre | Core platform brain — AI intelligence & orchestration engine | 🔧 Partial | `src/bio_neural/`, `src/core/` |
 | **Turing's Hub** | Samantha Turing | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |

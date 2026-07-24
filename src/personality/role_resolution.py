@@ -27,7 +27,10 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Voxx": "voxx",
     "Madam Krystal": "madam-krystal",
     "Junior Cesar": "junior-cesar",
-    "Benji Tate & Sam King": "benji-tate-sam-king",
+    # TateKing's seed lead_ai is "Benji Tate" (primary of two, per
+    # trance_one/platform_manifest.py's lead_ais split) — the shared
+    # benji-tate-sam-king profile still voices both.
+    "Benji Tate": "benji-tate-sam-king",
     "Baron Von Hilton": "baron-von-hilton",
     "Tyler Towncroft": "tyler-towncroft",
     "The Dr. (Nikolai O'denhime)": "the-dr-slime",
@@ -36,7 +39,10 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Lunascene": "lunascene",
     "Solarscene": "solarscene",
     "Dorris Fontaine": "dorris-fontaine",
-    "The Porter Family": "the-porter-family",
+    # Arcadian Exchange's seed lead_ai is "Clarence Porter" (primary of
+    # five, per trance_one/platform_manifest.py's lead_ais split) — the
+    # shared the-porter-family profile still voices the whole family.
+    "Clarence Porter": "the-porter-family",
     "Norman Hawkins": "norman-hawkins",
     "Zimik": "zimik",
     "Shimshi": "shimshi",

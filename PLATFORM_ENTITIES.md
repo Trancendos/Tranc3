@@ -64,8 +64,8 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | 8008 | `notifications` | Arcadia | Lilli SC | PID-ARC | Supporting layer |
 | 8009 | `infinity-ai` | Luminous | Cornelius MacIntyre | PID-LUM | Primary worker |
 | 8010 | `the-grid` | The Digital Grid | Tyler Towncroft | PID-DGR | Primary worker |
-| 8011 | `products-service` | Arcadian Exchange | The Porter Family | PID-AEX | Supporting layer |
-| 8012 | `orders-service` | Arcadian Exchange | The Porter Family | PID-AEX | Primary worker |
+| 8011 | `products-service` | Arcadian Exchange | Clarence Porter | PID-AEX | Supporting layer |
+| 8012 | `orders-service` | Arcadian Exchange | Clarence Porter | PID-AEX | Primary worker |
 | 8013 | `payments-service` | Royal Bank of Arcadia | Dorris Fontaine | PID-RBA | Primary worker |
 | 8014 | `files-service` | DocUtari | Fiddsy | PID-DOC | Primary worker |
 | 8015 | `identity-service` | The Lighthouse | Rocking Ricki | PID-LTH | Primary worker |
@@ -120,12 +120,12 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **PID-ART** | **The Artifactory** | Commercial / Financial | Lunascene (AID-ART-01) | Dorris Fontaine | The Librarian (SID-ART-01) | The Archivist (SID-ART-02) | Packer-Bot (NID-ART-01) | Unpacker-Bot (NID-ART-02) | Checksum-Bot (NID-ART-03) | Versioner-Bot (NID-ART-04) |
 | **PID-APM** | **API Marketplace** | Commercial / Financial | Solarscene (AID-APM-01) | Dorris Fontaine | The Broker (SID-APM-01) | The Diplomat (SID-APM-02) | GET-Bot (NID-APM-01) | POST-Bot (NID-APM-02) | PUT-Bot (NID-APM-03) | DELETE-Bot (NID-APM-04) |
 | **PID-RBA** | **Royal Bank of Arcadia** | Commercial / Financial | Dorris Fontaine (AID-RBA-01) | Cornelius MacIntyre | The Treasurer (SID-RBA-01) | The Actuary (SID-RBA-02) | Ledger-Bot (NID-RBA-01) | Coin-Bot (NID-RBA-02) | Ticker-Bot (NID-RBA-03) | Receipt-Bot (NID-RBA-04) |
-| **PID-AEX** | **Arcadian Exchange** | Commercial / Financial | The Porter Family (AID-AEX-01) | Dorris Fontaine | The Speculator (SID-AEX-01) | The Trader (SID-AEX-02) | Bidder-Bot (NID-AEX-01) | Asker-Bot (NID-AEX-02) | Miner-Bot (NID-AEX-03) | Harvester-Bot (NID-AEX-04) |
+| **PID-AEX** | **Arcadian Exchange** | Commercial / Financial | Clarence, Ann, George, Edward & James Porter (AID-AEX-01) | Dorris Fontaine | The Speculator-C (SID-AEX-01) | The Trader-C (SID-AEX-02) | Bidder-Bot (NID-AEX-01) | Asker-Bot (NID-AEX-02) | Miner-Bot (NID-AEX-03) | Harvester-Bot (NID-AEX-04) |
 | **PID-WRA** | **Warp Radio** | Commercial / Financial | Rocking Ricki (AID-WRA-01) | Dorris Fontaine | The DJ (SID-WRA-01) | The Maestro (SID-WRA-02) | Play-Bot (NID-WRA-01) | Pause-Bot (NID-WRA-02) | Skip-Bot (NID-WRA-03) | Volume-Bot (NID-WRA-04) |
 | **PID-STD** | **The Studio** | Creativity | Voxx (AID-STD-01) | Cornelius MacIntyre | The Conductor (SID-STD-01) | The Muse (SID-STD-02) | Palette-Bot (NID-STD-01) | Easel-Bot (NID-STD-02) | Clay-Bot (NID-STD-03) | Layout-Bot (NID-STD-04) |
 | **PID-SPS** | **Sashas Photo Studio** | Creativity | Madam Krystal (AID-SPS-01) | Voxx | The Retoucher (SID-SPS-01) | Prompt-Smith (SID-SPS-02) | Aperture-Bot (NID-SPS-01) | Shutter-Bot (NID-SPS-02) | Flash-Bot (NID-SPS-03) | Lens-Bot (NID-SPS-04) |
 | **PID-TFL** | **TranceFlow** | Creativity | Junior Cesar (AID-TFL-01) | Voxx | Mesh-Weaver (SID-TFL-01) | The Physicist (SID-TFL-02) | Voxel-1-Bot (NID-TFL-01) | Collider-Bot (NID-TFL-02) | Ray-Tracer-Bot (NID-TFL-03) | Sprite-Bot (NID-TFL-04) |
-| **PID-TKG** | **TateKing** | Creativity | Benji Tate & Sam King (AID-TKG-01) | Voxx | The Director (SID-TKG-01) | The Editor (SID-TKG-02) | Cutter-Bot (NID-TKG-01) | Splicer-Bot (NID-TKG-02) | Renderer-Bot (NID-TKG-03) | Scrubber-Bot (NID-TKG-04) |
+| **PID-TKG** | **TateKing** | Creativity | Benji Tate & Sam King (AID-TKG-01) | Voxx | The Director-B (SID-TKG-01) | The Editor-B (SID-TKG-02) | Cutter-Bot (NID-TKG-01) | Splicer-Bot (NID-TKG-02) | Renderer-Bot (NID-TKG-03) | Scrubber-Bot (NID-TKG-04) |
 | **PID-FAB** | **Fabulousa** | Creativity | Baron Von Hilton (AID-FAB-01) | Voxx | The Tailor (SID-FAB-01) | The Weaver (SID-FAB-02) | Pixel-Pusher-Bot (NID-FAB-01) | Hex-Code-Bot (NID-FAB-02) | Font-Fetcher-Bot (NID-FAB-03) | Padding-Bot (NID-FAB-04) |
 | **PID-IMG** | **Imaginarium** | Creativity | Voxx (AID-IMG-01) | Voxx | The Alchemist (SID-IMG-01) | The Architect (SID-IMG-02) | Mixer-Bot (NID-IMG-01) | Blender-Bot (NID-IMG-02) | Welder-Bot (NID-IMG-03) | Polisher-Bot (NID-IMG-04) |
 | **PID-DGR** | **The Digital Grid** | Development (Code) | Tyler Towncroft (AID-DGR-01) | The Doctor (Nikolai O'denhime) | The Flow-Weaver (SID-DGR-01) | Event-Broker (SID-DGR-02) | Trigger-Bot (NID-DGR-01) | Action-Bot (NID-DGR-02) | Condition-Bot (NID-DGR-03) | Loop-Bot (NID-DGR-04) |
@@ -155,6 +155,14 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **PID-TMR** | **tAimra** | Wellbeing | tAimra (AID-TMR-01) | Savania | The Shadow (SID-TMR-01) | The Scheduler (SID-TMR-02) | Sync-Bot (NID-TMR-01) | Fetch-Bot (NID-TMR-02) | Nudge-Bot (NID-TMR-03) | Alert-Bot (NID-TMR-04) |
 | **PID-VR3** | **VRAR3D** | Wellbeing | Entari (AID-VR3-01) | Savania | World-Builder (SID-VR3-01) | The VR-Guide (SID-VR3-02) | Render-Bot (NID-VR3-01) | Track-Bot (NID-VR3-02) | Haptic-Bot (NID-VR3-03) | VR-Lens-Bot (NID-VR3-04) |
 | **PID-RES** | **Resonate** | Wellbeing | Magdalena (AID-RES-01) | Savania | The Tuner (SID-RES-01) | The Balancer (SID-RES-02) | Frequency-Bot (NID-RES-01) | Wave-Bot (NID-RES-02) | Pitch-Bot (NID-RES-03) | Harmonic-Bot (NID-RES-04) |
+
+> **Per-name agent teams (TateKing, Arcadian Exchange).** These two rows show only the
+> primary name's Agent Alpha/Beta pair — the table has room for one pair per row. Each
+> additional name runs its own dedicated pair (`src/entities/platform.py`'s
+> `agent_teams`), not the shared pair shown above: TateKing's Sam King has The
+> Director-S (SID-TKG-03) / The Editor-S (SID-TKG-04); Arcadian Exchange's Ann, George,
+> Edward, and James Porter have their own Speculator-X/Trader-X pairs at SID-AEX-03
+> through SID-AEX-10.
 
 ---
 
