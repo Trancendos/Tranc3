@@ -545,25 +545,28 @@ class TestIntelligenceBlockchain:
 
 class TestVectorStore:
     def test_upsert_and_query(self):
-        from src.database.vector_store import InMemoryVectorStore
+        from src.database.vector_store import get_vector_store
 
-        store = InMemoryVectorStore()
+        store = get_vector_store("test_upsert_and_query", dim=768)
         vec = [0.1] * 768
         store.upsert("vec1", vec, {"user_id": "u1", "text": "hello"})
         results = store.query(vec, top_k=1)
         assert len(results) == 1
-        assert results[0]["id"] == "vec1"
+        # Assert on metadata, not the raw id: some backends (e.g. Qdrant) remap
+        # string doc_ids to their own UUIDs, so only payload/metadata round-trips
+        # unchanged across every backend.
+        assert results[0]["metadata"]["text"] == "hello"
         assert results[0]["score"] > 0.99
 
     def test_delete_by_user(self):
-        from src.database.vector_store import InMemoryVectorStore
+        from src.database.vector_store import get_vector_store
 
-        store = InMemoryVectorStore()
+        store = get_vector_store("test_delete_by_user", dim=4)
         store.upsert("v1", [0.1] * 4, {"user_id": "u1"})
         store.upsert("v2", [0.2] * 4, {"user_id": "u2"})
         store.delete_by_metadata("user_id", "u1")
-        assert "v1" not in store._store
-        assert "v2" in store._store
+        remaining_users = {r["metadata"].get("user_id") for r in store.query([0.2] * 4, top_k=5)}
+        assert remaining_users == {"u2"}
 
 
 # ── API Integration Tests ─────────────────────────────────────────────────────
