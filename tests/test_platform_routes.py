@@ -391,6 +391,36 @@ class TestSparkPlatformTools:
         assert tool is not None
         assert tool.category == "ai"
 
+    @pytest.mark.asyncio
+    async def test_luminous_phi_tool_returns_nonzero_phi(self):
+        # Regression test: the handler used to pass a raw ndarray into
+        # IITCalculator.calculate_phi(), which expects a torch.Tensor and
+        # silently returned 0.0 on the resulting AttributeError.
+        pytest.importorskip("torch")
+        from src.mcp.tools import SparkToolRegistry
+
+        reg = SparkToolRegistry()
+        tool = reg.get("luminous_phi")
+        result = await tool.handler({"state": [0.1, 0.2, 0.3, 0.4]})
+        assert "error" not in result
+        assert result["state_dim"] == 4
+        assert isinstance(result["phi"], float)
+
+    @pytest.mark.asyncio
+    async def test_luminous_process_tool_runs_without_error(self):
+        # Regression test: the handler used to call
+        # NeuromorphicProcessor.process(x, timesteps=...), but the real
+        # signature is process(x, learn=False) — every call raised TypeError.
+        pytest.importorskip("torch")
+        from src.mcp.tools import SparkToolRegistry
+
+        reg = SparkToolRegistry()
+        tool = reg.get("luminous_process")
+        result = await tool.handler({"input": [0.1, 0.2, 0.3], "timesteps": 5})
+        assert "error" not in result
+        assert result["input_dim"] == 3
+        assert result["timesteps"] == 5
+
     def test_quantum_simulate_tool_registered(self):
         from src.mcp.tools import SparkToolRegistry
 

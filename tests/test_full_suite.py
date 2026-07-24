@@ -371,6 +371,59 @@ class TestConsciousnessEngine:
         assert 0.0 <= score <= 1.0
 
 
+class TestNeuromorphicProcessor:
+    def test_process_accepts_2d_input_without_error(self):
+        # Regression test: SpikingNeuralNetwork.forward() requires a 3D
+        # (batch, timesteps, features) tensor via `B, T, H = x.shape`, but
+        # every real caller (HTTP route, MCP tool) only ever produced a 2D
+        # (batch, features) tensor via a single .unsqueeze(0) — always
+        # raising "not enough values to unpack" internally and silently
+        # falling back to a zero-valued result.
+        from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+        processor = NeuromorphicProcessor({})
+        x = torch.randn(1, 8)
+        result = processor.process(x)
+        assert "spike_trains" in result, "fell back to the zero-result path"
+        assert result["spike_trains"].shape == (1, 20, 8)
+
+    def test_process_lazily_sizes_to_input_dimension(self):
+        from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+        processor = NeuromorphicProcessor({})
+        assert processor.snn is None
+        processor.process(torch.randn(1, 5))
+        assert processor.snn is not None
+        assert processor.snn.layers[0].input_size == 5
+
+    def test_process_honours_explicit_hidden_size_config(self):
+        from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+        class _Cfg:
+            hidden_size = 16
+
+        processor = NeuromorphicProcessor(_Cfg())
+        assert processor.snn is not None
+        assert processor.snn.layers[0].input_size == 16
+
+    def test_spiking_layer_fires_when_driven_hard(self):
+        # Sanity-check the LIF/spiking mechanism itself works — isolates the
+        # mechanism from the untrained-weights case, which legitimately
+        # produces a near-zero spike rate over just 20 steps.
+        from src.bio_neural.neuromorphic import SpikingLayer
+
+        layer = SpikingLayer(4, 4)
+        layer.weights.data.fill_(5.0)
+        mem, syn = None, None
+        x = torch.ones(1, 4)
+        fired = False
+        for _ in range(5):
+            spikes, mem, syn = layer(x, mem, syn)
+            if spikes.sum().item() > 0:
+                fired = True
+        assert fired
+
+
 # ── Evolution Engine Tests ────────────────────────────────────────────────────
 
 

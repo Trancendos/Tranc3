@@ -1159,6 +1159,7 @@ class SparkToolRegistry:
     async def _handle_luminous_phi(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
             import numpy as np
+            import torch
 
             from src.bio_neural.consciousness_engine import (
                 IITCalculator,  # noqa: F401  # intentional top-level import
@@ -1169,7 +1170,11 @@ class SparkToolRegistry:
             if arr.sum() > 0:
                 arr = arr / arr.sum()
             calc = IITCalculator()
-            phi = calc.calculate_phi(arr) if hasattr(calc, "calculate_phi") else 0.0
+            # IITCalculator.calculate_phi expects a torch.Tensor (it calls
+            # .detach().cpu().numpy() internally) — pass a tensor, not the ndarray
+            # (mirrors the fix in src/bio_neural/routes.py's HTTP equivalent).
+            state_tensor = torch.tensor(arr, dtype=torch.float32)
+            phi = calc.calculate_phi(state_tensor) if hasattr(calc, "calculate_phi") else 0.0
             return {"phi": float(phi), "state_dim": len(state)}
         except ImportError as exc:
             return {
@@ -1191,8 +1196,11 @@ class SparkToolRegistry:
             timesteps = int(params.get("timesteps", 10))
             processor = NeuromorphicProcessor({})
             tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
+            # NeuromorphicProcessor.process(x, learn=False) — timesteps is fixed at
+            # construction, not a call kwarg; echo the requested value in the response
+            # (mirrors the fix in src/bio_neural/routes.py's HTTP equivalent).
             result = (
-                processor.process(tensor, timesteps=timesteps)
+                processor.process(tensor)
                 if hasattr(processor, "process")
                 else {"note": "neuromorphic scaffold — wire input dimensions to activate"}
             )
