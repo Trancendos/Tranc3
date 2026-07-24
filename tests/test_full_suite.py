@@ -435,14 +435,18 @@ class TestConsciousnessIntegration:
     """
 
     @pytest.mark.asyncio
-    async def test_constructs_without_explicit_feature_manager(self):
+    async def test_constructs_without_explicit_feature_manager(self, monkeypatch):
+        # AlwaysEnabledFeatureManager reads ENABLE_CONSCIOUSNESS (same env var
+        # FeatureFlagManager defaults from) rather than being unconditionally on.
+        monkeypatch.setenv("ENABLE_CONSCIOUSNESS", "true")
         from src.bio_neural.consciousness_integration import ConsciousnessIntegration
 
         ci = ConsciousnessIntegration()
         assert ci.consciousness is not None
 
     @pytest.mark.asyncio
-    async def test_compute_phi_returns_bounded_float(self):
+    async def test_compute_phi_returns_bounded_float(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_CONSCIOUSNESS", "true")
         from src.bio_neural.consciousness_integration import ConsciousnessIntegration
 
         ci = ConsciousnessIntegration()
@@ -457,21 +461,26 @@ class TestConsciousnessIntegration:
         ci = ConsciousnessIntegration()
         phi = await ci.compute_phi("")
         assert isinstance(phi, float)
+        assert phi == 0.0
 
     @pytest.mark.asyncio
-    async def test_inference_worker_consciousness_job_reaches_real_model(self, caplog):
+    async def test_inference_worker_consciousness_job_reaches_real_model(self, caplog, monkeypatch):
         # End-to-end regression for the actual bot-registry call path: this
         # used to always hit the except-Exception fallback in
         # InferenceWorker._do_consciousness before the model ever loaded.
         import logging
 
+        monkeypatch.setenv("ENABLE_CONSCIOUSNESS", "true")
         from src.workers.inference_worker import InferenceWorker
 
         worker = InferenceWorker()
-        with caplog.at_level(logging.INFO, logger="src.bio_neural.consciousness_engine"):
+        with caplog.at_level(logging.INFO):
             result = await worker._do_consciousness({"text": "hello world, this is a real test"})
         assert result["model"] == "tranc3-consciousness"
         assert "ConsciousnessModel initialized" in caplog.text
+        # Also confirm calculate_phi() itself succeeded rather than silently
+        # falling back to the lexical-diversity heuristic.
+        assert "compute_phi failed, falling back to heuristic" not in caplog.text
 
     def test_disabled_feature_flag_skips_model_construction(self):
         from src.bio_neural.consciousness_integration import (
@@ -498,7 +507,8 @@ class TestSelfEvolvingInference:
     ergonomic (both args optional) so this is independently usable.
     """
 
-    def test_constructs_without_explicit_feature_manager(self):
+    def test_constructs_without_explicit_feature_manager(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_EVOLUTION", "true")
         from src.core.self_evolution import SelfEvolvingInference
 
         se = SelfEvolvingInference()
@@ -519,7 +529,8 @@ class TestSelfEvolvingInference:
         assert 0.0 <= feedback["quality_score"] <= 1.0
         assert feedback["response_length"] > 0
 
-    def test_adapt_model_returns_usable_layer(self):
+    def test_adapt_model_returns_usable_layer(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_EVOLUTION", "true")
         from src.core.self_evolution import SelfEvolvingInference
 
         se = SelfEvolvingInference()
@@ -555,15 +566,17 @@ class TestQuantumInferenceEngine:
     src/quantum/quantum_core.py::QuantumNeuralCore.
     """
 
-    def test_constructs_without_explicit_feature_manager(self):
+    def test_constructs_without_explicit_feature_manager(self, monkeypatch):
+        monkeypatch.setenv("ENABLE_QUANTUM_OPT", "true")
         from src.core.quantum_inference import QuantumInferenceEngine
 
         qi = QuantumInferenceEngine()
         assert qi.quantum_enabled is True
 
-    def test_quantum_attention_runs_without_falling_back(self, caplog):
+    def test_quantum_attention_runs_without_falling_back(self, caplog, monkeypatch):
         import logging
 
+        monkeypatch.setenv("ENABLE_QUANTUM_OPT", "true")
         from src.core.quantum_inference import QuantumInferenceEngine
 
         qi = QuantumInferenceEngine({"num_qubits": 4})

@@ -9,12 +9,12 @@ for observability.
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from src.core.adaptive_fabric import fabric as _fabric
 
 
-def _current_load() -> Dict[str, float]:
+def _current_load() -> Dict[str, Union[float, int]]:
     try:
         load1, _, _ = os.getloadavg()
         cpu_count = os.cpu_count() or 1
@@ -26,5 +26,8 @@ def _current_load() -> Dict[str, float]:
 
 
 def status() -> Dict[str, Any]:
-    _fabric.context.load.value = _current_load()
-    return _fabric.status()
+    load = _current_load()
+    _fabric.context.load.value = load
+    result = _fabric.status()
+    result["context"]["load"] = load
+    return result

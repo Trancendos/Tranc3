@@ -223,5 +223,22 @@ class NeuromorphicProcessor:
             logger.warning("Neuromorphic processing failed: %s", sanitize_for_log(e))
             return {"output": x, "spike_rate": 0.0, "energy_estimate": 0.0}
 
+    def serializable_result(self, result: Dict) -> Dict:
+        """Convert a process() result's torch.Tensor values to JSON-safe lists."""
+        return {
+            key: value.detach().cpu().tolist() if isinstance(value, torch.Tensor) else value
+            for key, value in result.items()
+        }
+
     def get_stats(self) -> Dict:
-        return self.snn.get_neuromorphic_stats()
+        if self.snn is None:
+            return {
+                "timesteps": 0,
+                "num_layers": 0,
+                "avg_spike_rate": 0.0,
+                "total_neurons": 0,
+                "initialised": False,
+            }
+        stats = self.snn.get_neuromorphic_stats()
+        stats["initialised"] = True
+        return stats

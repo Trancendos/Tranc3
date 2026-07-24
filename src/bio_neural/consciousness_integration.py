@@ -212,7 +212,9 @@ class ConsciousnessAwareGenerator:
                 phi = self.consciousness.calculate_phi(input_tensor)
                 return max(0.0, min(1.0, phi))
             except Exception as e:
-                logger.warning("compute_phi failed, falling back to heuristic: %s", sanitize_for_log(e))
+                logger.warning(
+                    "compute_phi failed, falling back to heuristic: %s", sanitize_for_log(e)
+                )
         # Heuristic fallback: lexical diversity as a phi proxy
         words = text.split()
         vocab = len(set(words))

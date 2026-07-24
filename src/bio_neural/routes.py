@@ -92,22 +92,25 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
         from src.bio_neural.neuromorphic import NeuromorphicProcessor
 
         input_data = body.get("input", [])
-        timesteps = int(body.get("timesteps", 10))
         if not input_data:
             return JSONResponse({"error": "input (list of floats) is required"}, status_code=400)
 
         processor = NeuromorphicProcessor({})
         tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
-        # NeuromorphicProcessor.process(x, learn=False) — timesteps is fixed at
-        # construction, not a call kwarg; echo the requested value in the response.
         result = (
             processor.process(tensor)
             if hasattr(processor, "process")
             else {"note": "processor scaffold — wire input dimensions to activate"}
         )
-        if hasattr(result, "tolist"):
-            result = result.tolist()
-        return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}
+        if isinstance(result, dict) and hasattr(processor, "serializable_result"):
+            result = processor.serializable_result(result)
+        # timesteps is fixed at SNN construction (not a caller-supplied kwarg) —
+        # report what actually ran, not the caller's requested value.
+        return {
+            "input_dim": len(input_data),
+            "timesteps": processor.get_stats().get("timesteps"),
+            "output": result,
+        }
     except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:

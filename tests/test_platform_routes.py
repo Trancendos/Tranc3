@@ -401,10 +401,11 @@ class TestSparkPlatformTools:
 
         reg = SparkToolRegistry()
         tool = reg.get("luminous_phi")
-        result = await tool.handler({"state": [0.1, 0.2, 0.3, 0.4]})
+        result = await tool.handler({"state": [0.1, 0.1, 0.4, 0.4]})
         assert "error" not in result
         assert result["state_dim"] == 4
         assert isinstance(result["phi"], float)
+        assert result["phi"] > 0.0
 
     @pytest.mark.asyncio
     async def test_luminous_process_tool_runs_without_error(self):
@@ -412,14 +413,19 @@ class TestSparkPlatformTools:
         # NeuromorphicProcessor.process(x, timesteps=...), but the real
         # signature is process(x, learn=False) — every call raised TypeError.
         pytest.importorskip("torch")
+        import json
+
         from src.mcp.tools import SparkToolRegistry
 
         reg = SparkToolRegistry()
         tool = reg.get("luminous_process")
-        result = await tool.handler({"input": [0.1, 0.2, 0.3], "timesteps": 5})
+        result = await tool.handler({"input": [0.1, 0.2, 0.3]})
         assert "error" not in result
         assert result["input_dim"] == 3
-        assert result["timesteps"] == 5
+        assert isinstance(result["timesteps"], int)
+        # The processor returns torch.Tensor values internally — confirm the
+        # handler actually converts them before they cross the JSON-RPC boundary.
+        json.dumps(result)
 
     def test_quantum_simulate_tool_registered(self):
         from src.mcp.tools import SparkToolRegistry

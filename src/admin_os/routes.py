@@ -5,11 +5,12 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
-
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from auth import get_current_user
+from Dimensional.sanitize import sanitize_for_log
 from src.admin_os import backups, cells, domain_model, events, fabric, files_manager, system_viewer
 
 logger = logging.getLogger("tranc3.admin_os")
@@ -34,6 +35,20 @@ class SpawnCellRequest(BaseModel):
     port: Optional[int] = None
     warmup_s: float = 5.0
     max_age_s: float = 0.0
+
+    @field_validator("command")
+    @classmethod
+    def _command_not_empty(cls, v: list[str]) -> list[str]:
+        if not v or not any(arg.strip() for arg in v):
+            raise ValueError("command must contain at least one non-blank argument")
+        return v
+
+    @field_validator("warmup_s")
+    @classmethod
+    def _warmup_non_negative(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("warmup_s must be non-negative")
+        return v
 
 
 @router.get("/status")
@@ -132,13 +147,17 @@ async def post_cell(body: SpawnCellRequest):
             max_age_s=body.max_age_s,
         )
     except RuntimeError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=409)
+        logger.info("admin-os /cells spawn rejected: %s", sanitize_for_log(exc))
+        return JSONResponse({"error": "Cell capacity limit reached"}, status_code=409)
+    except (OSError, ValueError) as exc:
+        logger.warning("admin-os /cells spawn failed to launch: %s", sanitize_for_log(exc))
+        return JSONResponse({"error": "Failed to launch cell process"}, status_code=400)
 
 
 @router.post("/cells/{cell_id}/apoptosis")
 async def post_cell_apoptosis(cell_id: str):
     try:
-        return cells.apoptosis_cell(cell_id)
+        return await run_in_threadpool(cells.apoptosis_cell, cell_id)
     except KeyError:
         return JSONResponse({"error": f"Unknown cell: {cell_id}"}, status_code=404)
 
@@ -150,7 +169,8 @@ async def post_cell_replicate(cell_id: str):
     except KeyError:
         return JSONResponse({"error": f"Unknown cell: {cell_id}"}, status_code=404)
     except RuntimeError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=409)
+        logger.info("admin-os /cells replicate rejected: %s", sanitize_for_log(exc))
+        return JSONResponse({"error": "Cell is not eligible for replication"}, status_code=409)
 
 
 @router.get("/fabric")

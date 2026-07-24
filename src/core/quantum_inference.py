@@ -67,9 +67,16 @@ class QuantumInferenceEngine:
         # routinely misses by ~1e-7 — do the normalization in float64 numpy,
         # not torch float32, to actually satisfy it.
         flat_input = input_tensor.flatten()[: 2**num_qubits].detach().cpu().numpy()
-        flat_input = flat_input.astype(np.float64)
+        flat_input = flat_input.astype(np.complex128 if np.iscomplexobj(flat_input) else np.float64)
         norm = np.linalg.norm(flat_input)
-        normalized_input = flat_input / norm if norm > 0 else flat_input
+        if norm > 0:
+            normalized_input = flat_input / norm
+        else:
+            # All-zero input has no valid direction to normalize — qiskit's
+            # initialize() requires sum(|amplitude|^2) == 1, so fall back to
+            # the |0...0> basis state rather than passing an all-zero vector.
+            normalized_input = np.zeros_like(flat_input)
+            normalized_input[0] = 1.0
 
         qc.initialize(normalized_input, qreg)
 
