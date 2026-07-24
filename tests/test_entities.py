@@ -341,6 +341,10 @@ class TestAbbreviationDicts:
     def test_prime_abbrevs_non_empty(self):
         assert len(PRIME_ABBREVS) > 0
 
+    def test_prime_abbrevs_guardian_and_dr_canonical(self):
+        assert PRIME_ABBREVS["The Guardian (Marcus Magnolia)"] == "GRD"
+        assert PRIME_ABBREVS["The Dr. (Nikolai O'denhime)"] == "DOC"
+
     def test_location_abbrevs_3_chars(self):
         for name, abbrev in LOCATION_ABBREVS.items():
             assert len(abbrev) == 3, f"Abbrev for '{name}' is not 3 chars: '{abbrev}'"
@@ -370,8 +374,16 @@ class TestOrchestrationTier:
             assert get_orchestration_tier(name) == "Tranc3"
 
     def test_orchestration_tier_dict_matches_helper(self):
+        # Helper and source-of-truth dictionary must stay in sync.
         for name, tier in ORCHESTRATION_TIER.items():
             assert get_orchestration_tier(name) == tier
+
+        # Every resolved tier must be one of the 3 allowed values, for
+        # every entity's actual lead_ai — catches a typo'd or unexpected
+        # tier string that the Literal type alone wouldn't catch at runtime.
+        allowed_tiers = {"Trance-One", "T2ance", "Tranc3"}
+        for entity in PLATFORM_ENTITIES.values():
+            assert get_orchestration_tier(entity.lead_ai) in allowed_tiers
 
     def test_elevated_names_still_hold_their_own_location_lead_ai_seat(self):
         # Orchestration tier is an overlay, not a replacement — Cornelius,

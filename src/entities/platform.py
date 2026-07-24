@@ -1535,16 +1535,18 @@ ORCHESTRATION_TIER: Dict[str, OrchestrationTier] = {
     "The Dr. (Nikolai O'denhime)": "T2ance",
 }
 
+DEFAULT_ORCHESTRATION_TIER: OrchestrationTier = "Tranc3"
+
 
 def get_orchestration_tier(ai_name: str) -> OrchestrationTier:
     """Resolve a named AI's Trance-One/T2ance/Tranc3 orchestration tier.
 
-    Defaults to "Tranc3" (Tier 3, Lead AI) for any name not explicitly
-    elevated in ORCHESTRATION_TIER — this covers every named AI in
-    PLATFORM_ENTITIES not called out above, including every entity's own
-    lead_ai/lead_ais entries by default.
+    Defaults to DEFAULT_ORCHESTRATION_TIER (Tier 3, Lead AI) for any name
+    not explicitly elevated in ORCHESTRATION_TIER — this covers every named
+    AI in PLATFORM_ENTITIES not called out above, including every entity's
+    own lead_ai/lead_ais entries by default.
     """
-    return ORCHESTRATION_TIER.get(ai_name, "Tranc3")
+    return ORCHESTRATION_TIER.get(ai_name, DEFAULT_ORCHESTRATION_TIER)
 
 
 def _wire_multi_agent_teams() -> None:
