@@ -56,14 +56,26 @@ class TestResolvePersonalityForLocation:
         # the-spark. See docs/governance/PERSONALITY-ARCHETYPES.md §3.
         assert resolve_personality_for_location("The Spark") == "norman-hawkins"
 
-    def test_docutari_seed_is_unassigned(self, registry):
-        # DocUtari's lead_ai is the literal placeholder "To be Defined" —
-        # not a real AI, so it must resolve to no profile.
+    def test_docutari_seed_has_no_profile_yet(self, registry):
+        # DocUtari's lead_ai is "Fiddsy" (per trance_one/platform_manifest.py)
+        # — a real named AI, but no personality profile has been authored
+        # for it yet, so it must resolve to no profile.
         assert resolve_personality_for_location("DocUtari") is None
 
     def test_the_citadel_and_think_tank_resolve_to_trancendos(self, registry):
         assert resolve_personality_for_location("The Citadel") == "trancendos"
         assert resolve_personality_for_location("Think Tank") == "trancendos"
+
+    def test_infinity_resolves_via_guardian_marcus_magnolia(self, registry):
+        # Infinity's seed lead_ai is "The Guardian (Marcus Magnolia)" (synced
+        # from trance_one/platform_manifest.py's lead_ais split — see
+        # docs/governance/PERSONALITY-ARCHETYPES.md).
+        assert resolve_personality_for_location("Infinity") == "the-guardian"
+
+    def test_the_lab_resolves_via_the_dr_nikolai_odenhime(self, registry):
+        # The Lab's seed lead_ai is "The Dr. (Nikolai O'denhime)", also
+        # synced from trance_one/platform_manifest.py.
+        assert resolve_personality_for_location("The Lab") == "the-dr-slime"
 
     def test_registry_failure_returns_none_instead_of_raising(self, registry, monkeypatch):
         # A Role Registry outage (e.g. its SQLite file can't be opened)

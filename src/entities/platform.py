@@ -20,7 +20,7 @@ Tier System:
   Tier 5 - Bots (task-specific micro-workers: 01-04)
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -73,6 +73,11 @@ class LocationEntity:
     worker_port: Optional[int] = None
     # Path in this repo to the worker or source module
     worker_path: Optional[str] = None
+    # All Tier 3 AIs when a Location has more than one (e.g. Infinity, The
+    # Lab — see trance_one/platform_manifest.py's EntityManifestEntry,
+    # which this mirrors). Empty for single-AI Locations; lead_ai stays the
+    # primary/canonical name in either case.
+    lead_ais: List[str] = field(default_factory=list)
 
     def to_health_meta(self) -> Dict:
         """Return a dict suitable for embedding in a worker /health response."""
@@ -359,7 +364,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "The Lab": LocationEntity(
         location="The Lab",
         pillar=Pillar.DEVELOPMENT_CODE,
-        lead_ai="The Dr. & Slime",
+        lead_ai="The Dr. (Nikolai O'denhime)",
+        lead_ais=["The Dr. (Nikolai O'denhime)", "Slime"],
         abilities=[
             "Generative Syntax Matrix: Real-time pair programming.",
             "Instant Sandbox Compiling: Executes isolated code.",
@@ -641,7 +647,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "DocUtari": LocationEntity(
         location="DocUtari",
         pillar=Pillar.KNOWLEDGE,
-        lead_ai="To be Defined",
+        lead_ai="Fiddsy",
         abilities=[
             "Intelligent Auto-Tagging: Categorizes uploaded documents.",
             "Structured Foldering: Organizes files dynamically.",
@@ -730,7 +736,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Infinity": LocationEntity(
         location="Infinity",
         pillar=Pillar.SECURITY,
-        lead_ai="The Guardian (Anchor: Orb of Orisis)",
+        lead_ai="The Guardian (Marcus Magnolia)",
+        lead_ais=["The Guardian (Marcus Magnolia)", "The Orb of Orisis"],
         abilities=[
             "Predictive Threat Modeling: Orb provides 'Future Sight.'",
             "Quantum Access Tokens: Expiring tokens for user transfer.",

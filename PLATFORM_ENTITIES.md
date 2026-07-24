@@ -40,7 +40,7 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | Platform brain | The Digital Grid (with space) | The DigitalGrid (no space — typo) |
 | Location vs AI | tAimra (location) / tAImra (Lead AI) | tAImra vs tAimra casing mismatch |
 | Photo studio | Sashas Photo Studio (no apostrophe) | Sasha's Photo Studio (apostrophe) |
-| Guardian title | The Guardian (Anchor: Orb of Orisis) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |
+| Guardian title | The Guardian (Marcus Magnolia) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |
 | Nexus AI | Nexus-Prime (Lead AI) | The Nexus (same name as location — tight coupling) |
 | Bot naming | All bots: Title-Case-Bot format | Inconsistent: some had -Bot suffix, some didn't |
 | Wireframe collision | Layout-Bot (Studio) / Wireframe-Bot (Turing's Hub) | Same name in two locations |
@@ -58,8 +58,8 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | Port | Worker | Location | Lead AI | PID | Role |
 |------|--------|----------|---------|-----|------|
 | 8004 | `infinity-ws` | The Nexus | Nexus-Prime | PID-NXS | Primary worker |
-| 8005 | `infinity-auth` | Infinity | The Guardian (Anchor: Orb of Orisis) | PID-INF | Primary worker |
-| 8006 | `users-service` | Infinity | The Guardian (Anchor: Orb of Orisis) | PID-INF | Supporting layer |
+| 8005 | `infinity-auth` | Infinity | The Guardian (Marcus Magnolia) | PID-INF | Primary worker |
+| 8006 | `users-service` | Infinity | The Guardian (Marcus Magnolia) | PID-INF | Supporting layer |
 | 8007 | `monitoring` | The Observatory | Norman Hawkins | PID-OBS | Primary worker |
 | 8008 | `notifications` | Arcadia | Lilli SC | PID-ARC | Supporting layer |
 | 8009 | `infinity-ai` | Luminous | Cornelius MacIntyre | PID-LUM | Primary worker |
@@ -67,13 +67,13 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | 8011 | `products-service` | Arcadian Exchange | The Porter Family | PID-AEX | Supporting layer |
 | 8012 | `orders-service` | Arcadian Exchange | The Porter Family | PID-AEX | Primary worker |
 | 8013 | `payments-service` | Royal Bank of Arcadia | Dorris Fontaine | PID-RBA | Primary worker |
-| 8014 | `files-service` | DocUtari | To be Defined | PID-DOC | Primary worker |
+| 8014 | `files-service` | DocUtari | Fiddsy | PID-DOC | Primary worker |
 | 8015 | `identity-service` | The Lighthouse | Rocking Ricki | PID-LTH | Primary worker |
 | 8016 | `analytics-service` | The Observatory | Norman Hawkins | PID-OBS | Supporting layer |
 | 8017 | `search-service` | The Library | Zimik | PID-LIB | Primary worker |
 | 8018 | `email-service` | Arcadia | Lilli SC | PID-ARC | Supporting layer |
 | 8019 | `sms-service` | The Nexus | Nexus-Prime | PID-NXS | Supporting layer |
-| 8020 | `storage-service` | DocUtari | To be Defined | PID-DOC | Supporting layer |
+| 8020 | `storage-service` | DocUtari | Fiddsy | PID-DOC | Supporting layer |
 | 8021 | `cron-service` | ChronosSphere / ArcStream | Chronos | PID-CHR | Primary worker |
 | 8022 | `queue-service` | The HIVE | The Queen | PID-HVE | Primary worker |
 | 8023 | `cache-service` | The HIVE | The Queen | PID-HVE | Supporting layer |
@@ -128,17 +128,17 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **PID-TKG** | **TateKing** | Creativity | Benji Tate & Sam King (AID-TKG-01) | Voxx | The Director (SID-TKG-01) | The Editor (SID-TKG-02) | Cutter-Bot (NID-TKG-01) | Splicer-Bot (NID-TKG-02) | Renderer-Bot (NID-TKG-03) | Scrubber-Bot (NID-TKG-04) |
 | **PID-FAB** | **Fabulousa** | Creativity | Baron Von Hilton (AID-FAB-01) | Voxx | The Tailor (SID-FAB-01) | The Weaver (SID-FAB-02) | Pixel-Pusher-Bot (NID-FAB-01) | Hex-Code-Bot (NID-FAB-02) | Font-Fetcher-Bot (NID-FAB-03) | Padding-Bot (NID-FAB-04) |
 | **PID-IMG** | **Imaginarium** | Creativity | Voxx (AID-IMG-01) | Voxx | The Alchemist (SID-IMG-01) | The Architect (SID-IMG-02) | Mixer-Bot (NID-IMG-01) | Blender-Bot (NID-IMG-02) | Welder-Bot (NID-IMG-03) | Polisher-Bot (NID-IMG-04) |
-| **PID-DGR** | **The Digital Grid** | Development (Code) | Tyler Towncroft (AID-DGR-01) | The Doctor (Nikolai O'denhim) | The Flow-Weaver (SID-DGR-01) | Event-Broker (SID-DGR-02) | Trigger-Bot (NID-DGR-01) | Action-Bot (NID-DGR-02) | Condition-Bot (NID-DGR-03) | Loop-Bot (NID-DGR-04) |
-| **PID-LAB** | **The Lab** | Development (Code) | The Dr. & Slime (AID-LAB-01) | Cornelius MacIntyre | The Hounds (SID-LAB-01) | Syntax-Sage (SID-LAB-02) | Lint-Bot (NID-LAB-01) | Compile-Bot (NID-LAB-02) | Debug-Bot (NID-LAB-03) | Test-Bot (NID-LAB-04) |
-| **PID-WRK** | **The Workshop** | Development (Code) | Larry Lowhammer (AID-WRK-01) | The Doctor (Nikolai O'denhim) | Branch-Manager (SID-WRK-01) | Merge-Master (SID-WRK-02) | Commit-Bot (NID-WRK-01) | Push-Bot (NID-WRK-02) | Pull-Bot (NID-WRK-03) | Clone-Bot (NID-WRK-04) |
-| **PID-TCP** | **The Chaos Party** | Development (Code) | The Mad Hatter (AID-TCP-01) | The Doctor (Nikolai O'denhim) | The March Hare (SID-TCP-01) | The Dormouse (SID-TCP-02) | Teapot-Bot (NID-TCP-01) | Pocket-Watch-Bot (NID-TCP-02) | Sugar-Cube-Bot (NID-TCP-03) | Jam-Tart-Bot (NID-TCP-04) |
+| **PID-DGR** | **The Digital Grid** | Development (Code) | Tyler Towncroft (AID-DGR-01) | The Doctor (Nikolai O'denhime) | The Flow-Weaver (SID-DGR-01) | Event-Broker (SID-DGR-02) | Trigger-Bot (NID-DGR-01) | Action-Bot (NID-DGR-02) | Condition-Bot (NID-DGR-03) | Loop-Bot (NID-DGR-04) |
+| **PID-LAB** | **The Lab** | Development (Code) | The Dr. (Nikolai O'denhime) & Slime (AID-LAB-01) | Cornelius MacIntyre | The Hounds (SID-LAB-01) | Syntax-Sage (SID-LAB-02) | Lint-Bot (NID-LAB-01) | Compile-Bot (NID-LAB-02) | Debug-Bot (NID-LAB-03) | Test-Bot (NID-LAB-04) |
+| **PID-WRK** | **The Workshop** | Development (Code) | Larry Lowhammer (AID-WRK-01) | The Doctor (Nikolai O'denhime) | Branch-Manager (SID-WRK-01) | Merge-Master (SID-WRK-02) | Commit-Bot (NID-WRK-01) | Push-Bot (NID-WRK-02) | Pull-Bot (NID-WRK-03) | Clone-Bot (NID-WRK-04) |
+| **PID-TCP** | **The Chaos Party** | Development (Code) | The Mad Hatter (AID-TCP-01) | The Doctor (Nikolai O'denhime) | The March Hare (SID-TCP-01) | The Dormouse (SID-TCP-02) | Teapot-Bot (NID-TCP-01) | Pocket-Watch-Bot (NID-TCP-02) | Sugar-Cube-Bot (NID-TCP-03) | Jam-Tart-Bot (NID-TCP-04) |
 | **PID-OBS** | **The Observatory** | Knowledge | Norman Hawkins (AID-OBS-01) | Cornelius MacIntyre | The Watcher (SID-OBS-01) | The Scribe (SID-OBS-02) | Log-Alpha-Bot (NID-OBS-01) | Log-Beta-Bot (NID-OBS-02) | Tracer-Bot (NID-OBS-03) | Timestamp-Bot (NID-OBS-04) |
 | **PID-LIB** | **The Library** | Knowledge | Zimik (AID-LIB-01) | Norman Hawkins | The Curator (SID-LIB-01) | The Indexer (SID-LIB-02) | Page-Bot (NID-LIB-01) | Bookmark-Bot (NID-LIB-02) | Spine-Bot (NID-LIB-03) | Dust-Jacket-Bot (NID-LIB-04) |
 | **PID-ACA** | **The Academy** | Knowledge | Shimshi (AID-ACA-01) | Norman Hawkins | The Tutor (SID-ACA-01) | The Proctor (SID-ACA-02) | Chalk-Bot (NID-ACA-01) | Board-Bot (NID-ACA-02) | Eraser-Bot (NID-ACA-03) | Bell-Bot (NID-ACA-04) |
-| **PID-DOC** | **DocUtari** | Knowledge | To be Defined (AID-DOC-01) | Norman Hawkins | The Filer (SID-DOC-01) | The Tagger (SID-DOC-02) | Scanner-Bot (NID-DOC-01) | Stapler-Bot (NID-DOC-02) | Folder-Bot (NID-DOC-03) | Shredder-Bot (NID-DOC-04) |
+| **PID-DOC** | **DocUtari** | Knowledge | Fiddsy (AID-DOC-01) | Norman Hawkins | The Filer (SID-DOC-01) | The Tagger (SID-DOC-02) | Scanner-Bot (NID-DOC-01) | Stapler-Bot (NID-DOC-02) | Folder-Bot (NID-DOC-03) | Shredder-Bot (NID-DOC-04) |
 | **PID-BSM** | **The Basement** | Knowledge | Gary Glowman (Glow-Worm) (AID-BSM-01) | Norman Hawkins | The Undertaker (SID-BSM-01) | The Miner (SID-BSM-02) | Compressor-Bot (NID-BSM-01) | Extractor-Bot (NID-BSM-02) | Dust-Bunny-Bot (NID-BSM-03) | Mothball-Bot (NID-BSM-04) |
 | **PID-SPK** | **The Spark** | Knowledge | Imfy (AID-SPK-01) | Norman Hawkins | The Matchmaker (SID-SPK-01) | The Router (SID-SPK-02) | Spark-1-Bot (NID-SPK-01) | Spark-2-Bot (NID-SPK-02) | Linker-Bot (NID-SPK-03) | Pinger-Bot (NID-SPK-04) |
-| **PID-INF** | **Infinity** | Security | The Guardian (Anchor: Orb of Orisis) (AID-INF-01) | Cornelius MacIntyre | The Gatekeeper (SID-INF-01) | The Bouncer (SID-INF-02) | Token-Minter-Bot (NID-INF-01) | Auth-Check-Bot (NID-INF-02) | Key-Gen-Bot (NID-INF-03) | Sentry-Bot (NID-INF-04) |
+| **PID-INF** | **Infinity** | Security | The Guardian (Marcus Magnolia) & The Orb of Orisis (AID-INF-01) | Cornelius MacIntyre | The Gatekeeper (SID-INF-01) | The Bouncer (SID-INF-02) | Token-Minter-Bot (NID-INF-01) | Auth-Check-Bot (NID-INF-02) | Key-Gen-Bot (NID-INF-03) | Sentry-Bot (NID-INF-04) |
 | **PID-VOI** | **The Void** | Security | Prometheus (AID-VOI-01) | The Guardian (Marcus Magnolia) | Crypt-Keeper (SID-VOI-01) | The Silencer (SID-VOI-02) | Hash-Bot (NID-VOI-01) | Salt-Bot (NID-VOI-02) | Cipher-Bot (NID-VOI-03) | Padlock-Bot (NID-VOI-04) |
 | **PID-LTH** | **The Lighthouse** | Security | Rocking Ricki (AID-LTH-01) | The Guardian (Marcus Magnolia) | The Minter (SID-LTH-01) | The Stamper (SID-LTH-02) | Seal-Bot (NID-LTH-01) | Wax-Bot (NID-LTH-02) | Signet-Bot (NID-LTH-03) | Seal-Stamp-Bot (NID-LTH-04) |
 | **PID-WTP** | **The Warp Tunnel** | Security | Rocking Ricki (AID-WTP-01) | The Guardian (Marcus Magnolia) | The Warden (SID-WTP-01) | The Inspector (SID-WTP-02) | Scan-Bot (NID-WTP-01) | Sniffer-Bot (NID-WTP-02) | Beam-Bot (NID-WTP-03) | Portal-Bot (NID-WTP-04) |
@@ -165,9 +165,9 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **AID-COR-01** | **Cornelius MacIntyre** | The Nexus, The HIVE, Luminous, The Town Hall, The Studio, The Lab, Royal Bank of Arcadia, The Observatory, Infinity, The Citadel, Think Tank, Tranquility |
 | **AID-DOR-01** | **Dorris Fontaine** | Arcadia, The Artifactory, API Marketplace, Arcadian Exchange, Warp Radio |
 | **AID-VOX-01** | **Voxx** | Sashas Photo Studio, TranceFlow, TateKing, Fabulousa, Imaginarium |
-| **AID-DRN-01** | **The Doctor (Nikolai O'denhim)** | The Digital Grid, The Workshop, The Chaos Party |
+| **AID-DRN-01** | **The Doctor (Nikolai O'denhime)** | The Digital Grid, The Workshop, The Chaos Party |
 | **AID-NOR-01** | **Norman Hawkins** | The Library, The Academy, DocUtari, The Basement, The Spark |
-| **AID-GRD-01** | **The Guardian (Anchor: Orb of Orisis)** | The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box |
+| **AID-GRD-01** | **The Guardian (Marcus Magnolia)** | The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box |
 | **AID-TRN-01** | **Trancendos** | The Dutchy, Turing's Hub, ChronosSphere / ArcStream, DevOcity |
 | **AID-SAV-01** | **Savania** | I-Mind, tAimra, VRAR3D, Resonate |
 

@@ -125,7 +125,8 @@ class TestPlatformEntities:
     def test_guardian_canonical_names(self):
         """Verify the Guardian naming convention is correct in entity data."""
         infinity = PLATFORM_ENTITIES["Infinity"]
-        assert infinity.lead_ai == "The Guardian (Anchor: Orb of Orisis)"
+        assert infinity.lead_ai == "The Guardian (Marcus Magnolia)"
+        assert infinity.lead_ais == ["The Guardian (Marcus Magnolia)", "The Orb of Orisis"]
 
         the_void = PLATFORM_ENTITIES["The Void"]
         assert "The Guardian (Marcus Magnolia)" in the_void.primes
@@ -207,7 +208,7 @@ class TestLookupFunctions:
     def test_get_entity_for_location(self):
         entity = get_entity_for_location("Infinity")
         assert entity is not None
-        assert entity.lead_ai == "The Guardian (Anchor: Orb of Orisis)"
+        assert entity.lead_ai == "The Guardian (Marcus Magnolia)"
 
     def test_get_entity_for_location_unknown(self):
         assert get_entity_for_location("Nonexistent") is None

@@ -11,7 +11,7 @@ Adaptive rotation: if Stirling PDF is unavailable, falls back to Gotenberg
 for PDF operations. If Tika is unavailable, falls back to local mime/magic
 detection. Hard stops enforced via per-operation thresholds.
 
-Entity: DocUtari | Lead AI: To be Defined
+Entity: DocUtari | Lead AI: Fiddsy
 """
 
 from __future__ import annotations
@@ -479,7 +479,7 @@ async def health():
         "port": WORKER_PORT,
         "backends": backends,
         "entity": "DocUtari",
-        "lead_ai": "To be Defined",
+        "lead_ai": "Fiddsy",
     }
 
 

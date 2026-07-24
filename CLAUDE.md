@@ -62,7 +62,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
   designation, **Nexus-Prime**, for entity-ID contexts — use "The Nexus" in this table and casual
   references, "Nexus-Prime" where a distinct AID is required (matching how "The Guardian" below
   gets a full title only in entity contexts).
-- "The Guardian (Anchor: Orb of Orisis)" — full title required in entity contexts
+- Infinity's Lead AI is "The Guardian (Marcus Magnolia)" — Infinity has two distinct Tier-3 AIs (`lead_ais` in `src/entities/platform.py`): The Guardian (Marcus Magnolia) and The Orb of Orisis. As Prime (Tier 2) elsewhere (The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box), use "The Guardian (Marcus Magnolia)" without a qualifier — "(Anchor: Orb of Orisis)" is retired as a combined title.
 - `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
 - "Section 7" — internal placeholder name, NOT in the canonical entity hierarchy; closest entity is **The Dutchy** (Intelligence & Market Analysis, Lead AI: Predictive lore)
 - **AeonMind** (`aeonmind/` — Rust/Go/Python/WASM) — a separate, generic polyglot agent-framework
@@ -85,7 +85,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
 | **The Digital Grid** | Tyler Towncroft | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
 | **The Void** | Prometheus | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
 | **The Workshop** | Larry Lowhammer | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
-| **Infinity** | The Guardian (Anchor: Orb of Orisis) | OAuth, SSO, central user management (1 account, all services) | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
+| **Infinity** | The Guardian (Marcus Magnolia) + The Orb of Orisis | OAuth, SSO, central user management (1 account, all services) | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
 | **The Lighthouse** | Rocking Ricki | Cryptographic token assignment, authenticator, token scanner | ✅ Deployed | CF: `infinity-lighthouse` |
 | **The HIVE** | The Queen | Data transport hub, agent + queue coordination | ✅ Deployed | CF: `infinity-hive` |
 | **Royal Bank of Arcadia** | Dorris Fontaine | Financial hub — billing, payments | ✅ Deployed | CF: `arcadia-royal-bank` |
@@ -98,7 +98,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
 | **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | ✅ Integrated | `workers/cranbania/` (CranBania submodule, Port 8071), `src/townhall/`, `src/compliance/middleware.py` |
 | **The Library** | Zimik | Knowledge base & wiki | ✅ In repo | `src/library/` (router registered in `api.py`); Outline (self-hosted) planned frontend |
 | **The Academy** | Shimshi | Learning management — education & skill training | ✅ In repo | `workers/the-academy/worker.py` (standalone worker, port 8056); Custom LMS |
-| **DocUtari** | To be Defined | Document management hub | ✅ In repo | `workers/files-service/`, `workers/storage-service/` (standalone workers); Paperless-ngx planned frontend |
+| **DocUtari** | Fiddsy | Document management hub | ✅ In repo | `workers/files-service/`, `workers/storage-service/` (standalone workers); Paperless-ngx planned frontend |
 | **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | ✅ In repo | `src/basement/` (router registered in `api.py`) |
 | **The Studio** | Voxx | Central hub of the Creativity Center | ✅ In repo | `src/studio/` (router registered in `api.py`) |
 | **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | ✅ In repo | `workers/sashas-photo-studio/worker.py` (standalone worker); Stable Diffusion + ComfyUI planned backend |
@@ -106,7 +106,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
 | **TateKing** | Benji Tate & Sam King | Video creation & editing platform | ✅ In repo | `workers/tateking/worker.py` (standalone worker); FFmpeg + custom UI planned |
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | ✅ In repo | `workers/imaginarium/worker.py` (standalone worker); orchestrates the others |
-| **The Lab** | The Dr. & Slime | Code creation platform (Claude Code-style) | ✅ In repo | `src/lab/` (router registered in `api.py`) |
+| **The Lab** | The Dr. (Nikolai O'denhime) + Slime | Code creation platform (Claude Code-style) | ✅ In repo | `src/lab/` (router registered in `api.py`) |
 | **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py`; `workers/chaos-party/worker.py` (standalone worker, port 8079) |
 | **The Artifactory** | Lunascene | Central artifact repository library | ✅ In repo | `src/artifactory/` (router registered in `api.py`); Gitea packages / Zot planned backend |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | ✅ In repo | `src/apimarket/` (router registered in `api.py`); Gravitee.io planned integration |

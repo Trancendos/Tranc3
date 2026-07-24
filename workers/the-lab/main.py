@@ -6,7 +6,7 @@ AI code creation platform. Full TabbyML integration.
 Adaptive chain: TabbyML (self-hosted) -> Ollama (code model) -> LiteLLM -> offline.
 
 Entity: The Lab
-Lead AI: The Dr. & Slime
+Lead AI: The Dr. (Nikolai O'denhime)
 Foundation: TabbyML
 """
 
@@ -199,7 +199,7 @@ async def status() -> dict[str, Any]:
         logger.debug("Tabby status check failed: %s", exc)
     return {
         "entity": "The Lab",
-        "lead_ai": "The Dr. & Slime",
+        "lead_ai": "The Dr. (Nikolai O'denhime)",
         "version": VERSION,
         "tabby_reachable": tabby_ok,
         "tabby_url": TABBY_URL,

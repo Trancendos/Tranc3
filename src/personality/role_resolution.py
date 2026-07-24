@@ -30,7 +30,7 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Benji Tate & Sam King": "benji-tate-sam-king",
     "Baron Von Hilton": "baron-von-hilton",
     "Tyler Towncroft": "tyler-towncroft",
-    "The Dr. & Slime": "the-dr-slime",
+    "The Dr. (Nikolai O'denhime)": "the-dr-slime",
     "Larry Lowhammer": "larry-lowhammer",
     "The Mad Hatter": "the-mad-hatter",
     "Lunascene": "lunascene",
@@ -40,16 +40,17 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Norman Hawkins": "norman-hawkins",
     "Zimik": "zimik",
     "Shimshi": "shimshi",
-    # DocUtari's seat is explicitly unfilled per PLATFORM_ENTITIES — not a
-    # real AI name, so it maps to no profile rather than a guessed one.
-    "To be Defined": None,
+    # DocUtari's seat has a named holder (Fiddsy, per
+    # trance_one/platform_manifest.py) but no personality profile authored
+    # for it yet — maps to no profile rather than a guessed one.
+    "Fiddsy": None,
     "Gary Glowman (Glow-Worm)": "gary-glowman",
     # norman-hawkins.json's own "serves" list already names The Spark
     # alongside The Observatory — see docs/governance/PERSONALITY-ARCHETYPES.md
     # §3 for the pre-existing Imfy/Norman-Hawkins naming inconsistency this
     # sidesteps rather than silently resolves.
     "Imfy": "norman-hawkins",
-    "The Guardian (Anchor: Orb of Orisis)": "the-guardian",
+    "The Guardian (Marcus Magnolia)": "the-guardian",
     "Prometheus": "prometheus",
     "Rocking Ricki": "rocking-ricki",
     "Renik": "renik",

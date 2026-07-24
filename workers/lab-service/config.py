@@ -1,4 +1,4 @@
-"""The Lab — configuration (Lead AI: The Dr. & Slime)"""
+"""The Lab — configuration (Lead AI: The Dr. (Nikolai O'denhime))"""
 
 from __future__ import annotations
 

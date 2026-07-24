@@ -47,7 +47,7 @@ actually holds it right now."
 | **Fabulousa** | Creativity | Styling, UX, UI & Design Center | Chief Design Officer | Baron Von Hilton |
 | **Imaginarium** | Creativity | Omni-Creative Masterpiece Wizard | Chief Creative Orchestration Officer | Voxx |
 | **The Digital Grid** | Development (Code) | Workflow Platform | Head of Workflow Engineering | Tyler Towncroft |
-| **The Lab** | Development (Code) | Code Creation Platform | Chief Engineering Officer | The Dr. & Slime |
+| **The Lab** | Development (Code) | Code Creation Platform | Chief Engineering Officer | The Dr. (Nikolai O'denhime) + Slime |
 | **The Workshop** | Development (Code) | Repository Storage (Forgejo) | Head of Source Control & CI/CD | Larry Lowhammer |
 | **The Chaos Party** | Development (Code) | Central Testing Platform (Wonderland Theme) | Head of Quality Assurance & Testing | The Mad Hatter |
 | **The Artifactory** | Commercial / Financial | Central Artifact Repository Library (JFrog style) | Head of Artifact Management | Lunascene |
@@ -57,10 +57,10 @@ actually holds it right now."
 | **The Observatory** | Knowledge | Audit Log & Monitoring Platform | Chief Audit & Monitoring Officer | Norman Hawkins |
 | **The Library** | Knowledge | Knowledge Base & Wiki | Chief Knowledge Officer | Zimik |
 | **The Academy** | Knowledge | Education & Skill Training | Head of Learning & Development | Shimshi |
-| **DocUtari** | Knowledge | Document Management Hub | Head of Document Management | To be Defined |
+| **DocUtari** | Knowledge | Document Management Hub | Head of Document Management | Fiddsy |
 | **The Basement** | Knowledge | Archived Information Store | Head of Archives | Gary Glowman (Glow-Worm) |
 | **The Spark** | Knowledge | The MCP Skills Matrix | Head of AI Tooling | Imfy |
-| **Infinity** | Security | Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer | Chief Identity & Access Officer | The Guardian (Anchor: Orb of Orisis) |
+| **Infinity** | Security | Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer | Chief Identity & Access Officer | The Guardian (Marcus Magnolia) + The Orb of Orisis |
 | **The Void** | Security | Secrets Vault, Password Store & Sensitive Data Store | Chief Secrets & Vault Officer | Prometheus |
 | **The Lighthouse** | Security | Cryptographic Token Applicator | Head of Cryptographic Token Services | Rocking Ricki |
 | **The Warp Tunnel** | Security | Cryptographic Scanner & Automated Quarantine Transport | Head of Threat Scanning & Quarantine | Rocking Ricki |
@@ -141,8 +141,8 @@ is assigned separately (see `master-schema.md` §SCHEMA-CORE-001) and is out of 
 
 | Location | Assigned AI (seed) | Key Metrics | Escalation Path |
 |---|---|---|---|
-| **Infinity** | The Guardian (Anchor: Orb of Orisis) | Authentication success rate 99.99%; MTTD anomaly < 5 min; access review completion 100%; security incidents 0; token generation latency < 100ms | SEV-1 security incident → immediate escalation; compliance violation → Tier 2 Prime sponsor; policy change → Tier 2 Prime sponsor approval |
-| **The Lab** | The Dr. & Slime | Compilation success rate 99.95%; average compilation time < 2 min; queue depth < 100 jobs; developer satisfaction > 90%; code coverage > 80%; incident MTTR < 30 min | Compilation failure > 5 min → immediate investigation; performance degradation > 20% → optimization sprint; quality metric drop → root cause analysis; SEV-1 → immediate escalation to Tier 2 Prime sponsor |
+| **Infinity** | The Guardian (Marcus Magnolia) + The Orb of Orisis | Authentication success rate 99.99%; MTTD anomaly < 5 min; access review completion 100%; security incidents 0; token generation latency < 100ms | SEV-1 security incident → immediate escalation; compliance violation → Tier 2 Prime sponsor; policy change → Tier 2 Prime sponsor approval |
+| **The Lab** | The Dr. (Nikolai O'denhime) + Slime | Compilation success rate 99.95%; average compilation time < 2 min; queue depth < 100 jobs; developer satisfaction > 90%; code coverage > 80%; incident MTTR < 30 min | Compilation failure > 5 min → immediate investigation; performance degradation > 20% → optimization sprint; quality metric drop → root cause analysis; SEV-1 → immediate escalation to Tier 2 Prime sponsor |
 | **The Workshop** | Larry Lowhammer | Repository availability 99.99%; response time < 500ms; backup success 100%; RTO < 15 min; RPO < 5 min; artifact storage utilization < 80% | Repository unavailable > 5 min → immediate investigation (see `deploy/forgejo/RUNBOOK.md`); backup failure → immediate remediation; data loss incident → SEV-1 escalation; compliance violation → Tier 2 Prime sponsor |
 | **The Observatory** | Norman Hawkins | Audit log availability 99.99%; audit log latency < 1s; compliance score 100%; critical audit findings 0; monitoring coverage 100%; alert accuracy > 95% | Audit log failure → immediate escalation; compliance violation → Tier 2 Prime sponsor; data loss → SEV-1 incident; privacy breach → immediate escalation |
 | **The Void** | Prometheus | Vault availability 99.99%; secret rotation success 100%; encryption key rotation 100%; backup success 100%; security incidents 0; compliance violations 0 | Vault unavailable → immediate escalation (highest blast radius — see `docs/architecture/ea-workbook/runbooks.md`); encryption key loss → SEV-1; security breach → immediate escalation; compliance violation → Tier 2 Prime sponsor |
@@ -171,3 +171,4 @@ either set to its mismatched Location would have been misleading rather than use
 |---|---|---|
 | 2026-07-11 | Claude (session) | Confirmed `JOB_DESCRIPTIONS` covers exactly the same 43 keys as `PLATFORM_ENTITIES`; manually exercised `RoleRegistry` (seed, get, assign, reassign, remove, re-assign-after-removal, history ordering, reconnect-idempotency) against a temp SQLite file — all behaviors verified correct. `pytest` unavailable in this sandbox; `tests/test_roles.py` added for CI to run. |
 | 2026-07-16 | Claude (session) | Added §6 (Key metrics & escalation paths) from externally-supplied role material; cross-checked every entry against this file's §2 seed assignments before including it, and excluded two entries (Solarscene, Dorris Fontaine) whose source metrics targeted a different Job Description than their canonical assignment here. Did not adopt the source material's Tier 1/2/3 org-chart, which conflicted with `master-schema.md`'s `PID-PRIME-XXX` tier assignments. |
+| 2026-07-24 | Claude (session) | Reconciled `src/entities/platform.py`'s `lead_ai` naming against `trance_one/platform_manifest.py` (already-authoritative for this data, per user decision to adopt its names). Infinity → `The Guardian (Marcus Magnolia)` (was `The Guardian (Anchor: Orb of Orisis)`), with a new `lead_ais` field capturing the second co-lead `The Orb of Orisis`. The Lab → `The Dr. (Nikolai O'denhime)` (was `The Dr. & Slime`), `lead_ais` adds `Slime`. DocUtari → `Fiddsy` (was `To be Defined`). Updated §2 and §6 rows here, `role_resolution.py`'s name map, the affected personality profile JSON, worker `/health` responses, and `tests/test_entities.py` / `tests/test_personality_role_resolution.py`. |

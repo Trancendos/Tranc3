@@ -386,7 +386,7 @@ STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(
     title="storage-service",
-    description="Multi-backend ACO object storage (8 zero-cost backends) — Lead AI: To be Defined",
+    description="Multi-backend ACO object storage (8 zero-cost backends) — Lead AI: Fiddsy",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -421,7 +421,7 @@ def health() -> JSONResponse:
         {
             "service": WORKER_NAME,
             "entity": "DocUtari",
-            "lead_ai": "To be Defined",
+            "lead_ai": "Fiddsy",
             "status": "healthy",
             "uptime_s": round((datetime.now(timezone.utc) - STARTED_AT).total_seconds(), 1),
             "objects": obj_count,

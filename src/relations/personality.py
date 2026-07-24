@@ -5,7 +5,7 @@ Reads `src/personality/profiles/*.json` keyed by `code_name`, which is the
 same canonical AI name used by `src/entities/platform.py`'s `lead_ai` field
 and the Role Assignment Registry. Not every Lead AI has a matching profile
 (profiles predate the full 43-entity roster and some use different
-spellings — e.g. "The Guardian" vs. "The Guardian (Anchor: Orb of Orisis)")
+spellings — e.g. "The Guardian" vs. "The Guardian (Marcus Magnolia)")
 so every lookup falls back to a neutral default rather than raising.
 """
 
