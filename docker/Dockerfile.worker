@@ -1,0 +1,16 @@
+# Generic dev/UAT worker image — shared by docker-compose.development.yml's and
+# docker-compose.uat.yml's x-worker-dev / x-worker-uat anchors.
+#
+# These composes bind-mount the whole repo over /app at runtime (hot-reload), so
+# this image only needs Python + the project's dependencies installed; the actual
+# application code comes from the volume mount, not from a COPY here.
+FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# No CMD — each service in docker-compose.development.yml / docker-compose.uat.yml
+# overrides `command:` with its own `uvicorn <module>:app --reload` invocation.

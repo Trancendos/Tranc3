@@ -182,6 +182,32 @@ class TestInfinityWSHTTP:
         data = response.json()
         assert data["service"] == "infinity-ws"
 
+    def test_broadcast_delivers_to_subscribed_connection(self, client):
+        # Regression coverage for the server-to-server fan-out endpoint that
+        # src.nexus.hub.NexusHub.publish() forwards platform events through —
+        # without this, in-process pub/sub events never reach WS subscribers.
+        with client.websocket_connect("/ws?user_id=broadcast-listener") as ws:
+            ws.send_text(json.dumps({"type": "subscribe", "channel": "audit.event"}))
+            ws.receive_json()  # "subscribed" ack
+
+            response = client.post(
+                "/broadcast",
+                json={"channel": "audit.event", "type": "message", "data": {"foo": "bar"}},
+            )
+            assert response.status_code == 200
+            assert response.json()["recipients"] == 1
+
+            received = ws.receive_json()
+            assert received["type"] == "message"
+            assert received["channel"] == "audit.event"
+            assert received["data"] == {"foo": "bar"}
+            assert received["sender"] == "system"
+
+    def test_broadcast_to_empty_channel_returns_zero_recipients(self, client):
+        response = client.post("/broadcast", json={"channel": "nobody-here", "data": {}})
+        assert response.status_code == 200
+        assert response.json() == {"channel": "nobody-here", "recipients": 0}
+
     def test_stats_returns_valid_numbers(self, client):
         response = client.get("/stats")
         data = response.json()

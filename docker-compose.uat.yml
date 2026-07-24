@@ -128,7 +128,7 @@ services:
     <<: *worker-uat
     container_name: tranc3-uat-ws
     working_dir: /app/workers/infinity-ws
-    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8004"]
+    command: ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8004"]
     ports:
       - "18004:8004"
     environment:

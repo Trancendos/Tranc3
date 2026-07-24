@@ -349,6 +349,32 @@ async def list_channels():
     return {"channels": [c.model_dump() for c in manager.get_channels()]}
 
 
+class BroadcastRequest(BaseModel):
+    """Server-to-server broadcast request — lets other platform services
+    (e.g. src.nexus.hub.NexusHub) fan an event out to WS subscribers without
+    holding their own persistent connection to this worker."""
+
+    channel: str
+    data: Any = None
+    type: str = "message"
+
+
+@_router.post("/broadcast")
+async def broadcast(body: BroadcastRequest):
+    """Broadcast a server-originated message to all subscribers of a channel."""
+    message = WSMessage(
+        type=body.type,
+        channel=body.channel,
+        data=body.data,
+        sender="system",
+        message_id=str(uuid.uuid4()),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )
+    recipients = await manager._broadcast_to_channel(body.channel, message)
+    manager._messages_sent += recipients
+    return {"channel": body.channel, "recipients": recipients}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(
     ws: WebSocket,

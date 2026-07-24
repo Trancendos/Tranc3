@@ -89,7 +89,7 @@ services:
     <<: *worker-dev
     container_name: tranc3-dev-ws
     working_dir: /app/workers/infinity-ws
-    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+    command: ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
     ports:
       - "8004:8004"
     environment:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -25,6 +26,11 @@ from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
+
+# workers/infinity-ws is a separate process (its own WebSocket connections,
+# its own event loop) — reach it over HTTP, not by importing it directly.
+_INFINITY_WS_URL = os.environ.get("INFINITY_WS_URL", "http://infinity-ws:8004")
+_INFINITY_WS_INTERNAL_SECRET = os.environ.get("INFINITY_WS_INTERNAL_SECRET", "")
 
 
 class MessagePriority(int, Enum):
@@ -137,7 +143,44 @@ class NexusHub:
             ttl_seconds=ttl_seconds,
         )
         self._fan_out(topic, msg)
+        self._forward_to_ws_hub(topic, msg)
         return msg
+
+    def _forward_to_ws_hub(self, topic: str, msg: NexusMessage) -> None:
+        """
+        Best-effort fan-out to workers/infinity-ws (The Nexus's WebSocket hub),
+        so browser/external clients subscribed there see the same in-process
+        events section7/cryptex/the Digital Grid already publish here. Never
+        raises and never blocks publish() on the WS hub being slow or down —
+        this is an additional delivery path, not a required one.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # publish() called outside an event loop — skip WS fan-out
+        loop.create_task(self._post_broadcast(topic, msg))
+
+    async def _post_broadcast(self, topic: str, msg: NexusMessage) -> None:
+        try:
+            import httpx
+
+            headers = (
+                {"X-Internal-Secret": _INFINITY_WS_INTERNAL_SECRET}
+                if _INFINITY_WS_INTERNAL_SECRET
+                else {}
+            )
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                await client.post(
+                    f"{_INFINITY_WS_URL}/broadcast",
+                    json={"channel": topic, "type": msg.type.value, "data": msg.payload},
+                    headers=headers,
+                )
+        except Exception as exc:
+            logger.debug(
+                "nexus: WS hub fan-out skipped (topic=%s): %s",
+                sanitize_for_log(topic),
+                sanitize_for_log(exc),
+            )  # codeql[py/cleartext-logging]
 
     def _fan_out(self, topic: str, msg: NexusMessage) -> None:
         self._stats["sent"] += 1
