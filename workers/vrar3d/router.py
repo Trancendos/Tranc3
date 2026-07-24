@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi.responses import FileResponse
 from models import (
     AssetProcessRequest,
     AssetProcessResponse,
@@ -70,6 +71,17 @@ def _make_vrar3d_router(db: VRARDatabase, vrar: VRARRouter) -> APIRouter:
     ) -> AssetProcessResponse:
         _auth(_)
         return await vrar.process_asset(req)
+
+    @router.get("/assets/{asset_id}/download")
+    def download_asset(
+        asset_id: str,
+        _: Optional[str] = Header(default=None, alias="x-internal-secret"),
+    ) -> FileResponse:
+        _auth(_)
+        path = vrar.get_asset_download_path(asset_id)
+        if path is None:
+            raise HTTPException(status_code=404, detail="Asset not found or not locally servable")
+        return FileResponse(path)
 
     @router.get("/status", response_model=VRARStatus)
     def get_status(

@@ -164,6 +164,16 @@ class VRARDatabase:
             )
         return data
 
+    def get_asset_job(self, asset_id: str) -> Optional[Dict[str, Any]]:
+        with self._cursor() as cur:
+            cur.execute("SELECT * FROM assets WHERE asset_id=?", (asset_id,))
+            row = cur.fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["metadata"] = json.loads(d["metadata"])
+        return d
+
     def record_event(self, backend: str, success: bool) -> None:
         import time
 

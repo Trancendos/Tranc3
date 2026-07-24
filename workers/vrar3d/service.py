@@ -382,6 +382,25 @@ class VRARRouter:
             latency_ms=latency_ms,
         )
 
+    def get_asset_download_path(self, asset_id: str) -> Optional[str]:
+        """
+        Resolve a completed asset job to a locally-servable file path.
+
+        Returns None for unknown jobs, jobs that haven't finished ("done"),
+        offline-backend placeholders (offline://... isn't a real file), and
+        remote outputs (e.g. a Sketchfab model URL) — those are already
+        directly fetchable by a browser and don't need this route.
+        """
+        job = self._db.get_asset_job(asset_id)
+        if not job or job.get("status") != "done":
+            return None
+        output_path = job.get("output_path")
+        if not output_path or "://" in output_path:
+            return None
+        if not Path(output_path).is_file():
+            return None
+        return output_path
+
     def status(self) -> VRARStatus:
         active = _select_backend() or ProcessingBackend.offline
         backends = [
