@@ -4,7 +4,7 @@ Trancendos tateking — Video Creation & Editing Platform
 Video project management, FFmpeg job scheduling, clip metadata store.
 Zero-cost: FFmpeg integration (must be installed), no paid video APIs.
 
-Port: 8066  Entity: TateKing  Lead AI: Benji Tate & Sam King
+Port: 8066  Entity: TateKing  Lead AI: Benji Tate (+ Sam King)
 """
 
 from __future__ import annotations
@@ -170,7 +170,11 @@ async def health():
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
-        "entity": {"name": "TateKing", "lead_ai": "Benji Tate & Sam King"},
+        "entity": {
+            "name": "TateKing",
+            "lead_ai": "Benji Tate",
+            "lead_ais": ["Benji Tate", "Sam King"],
+        },
         "ffmpeg_available": _ffmpeg_available(),
         "projects": projects,
         "clips": clips,

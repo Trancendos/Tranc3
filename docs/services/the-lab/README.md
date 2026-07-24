@@ -4,7 +4,7 @@
 |---|---|
 | **ServiceID (CMDB)** | `SRV-LAB-001` |
 | **Entity** | The Lab |
-| **Lead AI** | The Dr. & Slime |
+| **Lead AI** | The Dr. (Nikolai O'denhime) & Slime |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
 | **Code** | `src/lab/code_lab.py`, `src/lab/routes.py`; router registered in `api.py` (`app.include_router(_lab_router)`, line 843) — **plus two separate standalone workers**: `workers/the-lab/worker.py` (SQLite, sandboxed subprocess code execution, port 8055) and `workers/lab-service/` (SQLite, Ollama/Tabby/HuggingFace/OpenRouter code-model backend, port 8066) |
 
@@ -36,7 +36,7 @@
 
 - **Mission:** in-platform code creation — a Claude Code-style coding assistant surface for
   session-based, multi-turn code generation, review, and scaffolding tasks.
-- **Owner (RACI-A):** The Dr. & Slime; Platform Owner Trancendos.
+- **Owner (RACI-A):** The Dr. (Nikolai O'denhime) & Slime; Platform Owner Trancendos.
 - **Scope:** `src/lab/*` provides session/message/context-file/artifact CRUD only — it is a
   storage and bookkeeping layer, not a code-generation engine. Actual AI code generation (against
   Ollama/Tabby/HuggingFace/OpenRouter code models) and actual sandboxed code execution live
@@ -102,7 +102,7 @@
 
 ## 4. RACI Matrix
 
-| Activity | The Dr. & Slime (Lead) | Platform Owner | Platform Engineering | The Observatory |
+| Activity | The Dr. (Nikolai O'denhime) & Slime (Lead) | Platform Owner | Platform Engineering | The Observatory |
 |---|---|---|---|---|
 | Session/message CRUD changes (`src/lab/*`) | **R** | A | C | I |
 | AI generation wiring (connecting `src/lab/*` to `workers/lab-service/`) | C | **A** | **R** | I |

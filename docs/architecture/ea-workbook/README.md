@@ -75,7 +75,7 @@ Rows are seeded from six services already live or partial in this repo, per `CLA
 |---|---|---|---|---|
 | SPARK | The Spark (MCP tool registry) | Norman Hawkins | `src/mcp/` | mounted on tranc3-backend :8000 |
 | GRID | The Digital Grid (workflow engine) | Tyler Towncroft | `src/workflow/`, `workers/workflow-engine-service/` | 8034 |
-| INF | Infinity (OAuth2/SSO) | The Guardian (Anchor: Orb of Orisis) | `workers/infinity-auth/` | 8005 |
+| INF | Infinity (OAuth2/SSO) | The Guardian (Marcus Magnolia) | `workers/infinity-auth/` | 8005 |
 | VOID | The Void (secrets vault) | Prometheus | `workers/vault-service/` | 8038 |
 | WORKSHOP | The Workshop (Forgejo CI/CD) | Larry Lowhammer | `deploy/forgejo/` | 3456 |
 | OBS | The Observatory (audit/monitoring) | Norman Hawkins | `src/observability/`, `workers/observatory/` | 8065 |

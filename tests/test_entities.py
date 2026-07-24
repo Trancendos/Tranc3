@@ -12,6 +12,7 @@ from src.entities.platform import (
     PRIME_ABBREVS,
     WORKER_ENTITY_MAP,
     Agent,
+    AgentPair,
     Bot,
     Pillar,
     get_all_ids,
@@ -78,8 +79,60 @@ class TestLocationEntity:
         assert meta["location"] == "The Nexus"
         assert meta["pillar"] == "Architectural"
         assert meta["lead_ai"] == "Nexus-Prime"
+        assert meta["lead_ais"] == []
         assert isinstance(meta["primes"], list)
         assert isinstance(meta["primary_function"], str)
+
+    def test_to_health_meta_multi_lead(self):
+        entity = PLATFORM_ENTITIES["Infinity"]
+        meta = entity.to_health_meta()
+        assert meta["lead_ai"] == "The Guardian (Marcus Magnolia)"
+        assert meta["lead_ais"] == ["The Guardian (Marcus Magnolia)", "The Orb of Orisis"]
+
+
+# ── Per-name agent teams (TateKing, Arcadian Exchange) ───────────────
+
+
+class TestAgentTeams:
+    def test_locations_without_teams_have_empty_dict(self):
+        for name, entity in PLATFORM_ENTITIES.items():
+            if name in ("TateKing", "Arcadian Exchange"):
+                continue
+            assert entity.agent_teams == {}, f"{name} has unexpected agent_teams"
+
+    def test_tateking_has_a_pair_per_lead_ai(self):
+        entity = PLATFORM_ENTITIES["TateKing"]
+        assert set(entity.agent_teams.keys()) == set(entity.lead_ais)
+        assert entity.agent_teams["Sam King"].alpha.code_name == "The Director-S"
+        assert entity.agent_teams["Sam King"].beta.code_name == "The Editor-S"
+
+    def test_tateking_primary_pair_is_agent_alpha_beta(self):
+        entity = PLATFORM_ENTITIES["TateKing"]
+        primary = entity.agent_teams["Benji Tate"]
+        assert primary.alpha is entity.agent_alpha
+        assert primary.beta is entity.agent_beta
+
+    def test_arcadian_exchange_has_a_pair_per_lead_ai(self):
+        entity = PLATFORM_ENTITIES["Arcadian Exchange"]
+        assert set(entity.agent_teams.keys()) == set(entity.lead_ais)
+        assert len(entity.agent_teams) == 5
+        assert entity.agent_teams["Ann Porter"].alpha.code_name == "The Speculator-A"
+        assert entity.agent_teams["James Porter"].beta.code_name == "The Trader-J"
+
+    def test_agent_team_sids_are_unique_and_sequential(self):
+        entity = PLATFORM_ENTITIES["Arcadian Exchange"]
+        sids = []
+        for name in entity.lead_ais:
+            pair = entity.agent_teams[name]
+            sids.append(pair.alpha.sid)
+            sids.append(pair.beta.sid)
+        assert len(sids) == len(set(sids)), "duplicate SIDs across agent_teams"
+        assert sids == [f"SID-AEX-{i:02d}" for i in range(1, 11)]
+
+    def test_agent_pair_is_a_dataclass_of_two_agents(self):
+        pair = AgentPair(Agent("A", "d"), Agent("B", "d"))
+        assert isinstance(pair.alpha, Agent)
+        assert isinstance(pair.beta, Agent)
 
 
 # ── PLATFORM_ENTITIES registry ──────────────────────────────────────
@@ -125,10 +178,19 @@ class TestPlatformEntities:
     def test_guardian_canonical_names(self):
         """Verify the Guardian naming convention is correct in entity data."""
         infinity = PLATFORM_ENTITIES["Infinity"]
-        assert infinity.lead_ai == "The Guardian (Anchor: Orb of Orisis)"
+        assert infinity.lead_ai == "The Guardian (Marcus Magnolia)"
+        assert infinity.lead_ais == ["The Guardian (Marcus Magnolia)", "The Orb of Orisis"]
 
         the_void = PLATFORM_ENTITIES["The Void"]
         assert "The Guardian (Marcus Magnolia)" in the_void.primes
+
+        the_lab = PLATFORM_ENTITIES["The Lab"]
+        assert the_lab.lead_ai == "The Dr. (Nikolai O'denhime)"
+        assert the_lab.lead_ais == ["The Dr. (Nikolai O'denhime)", "Slime"]
+
+        docutari = PLATFORM_ENTITIES["DocUtari"]
+        assert docutari.lead_ai == "Fiddsy"
+        assert docutari.lead_ais == []
 
 
 # ── Universal ID Taxonomy ────────────────────────────────────────────
@@ -207,7 +269,7 @@ class TestLookupFunctions:
     def test_get_entity_for_location(self):
         entity = get_entity_for_location("Infinity")
         assert entity is not None
-        assert entity.lead_ai == "The Guardian (Anchor: Orb of Orisis)"
+        assert entity.lead_ai == "The Guardian (Marcus Magnolia)"
 
     def test_get_entity_for_location_unknown(self):
         assert get_entity_for_location("Nonexistent") is None
@@ -239,10 +301,12 @@ class TestGetAllIds:
         assert len(ids) > 0
 
     def test_total_ids(self):
-        """43 locations × 7 IDs each (PID + AID + 2 SIDs + 4 NIDs) = 301."""
+        """43 locations x 7 base IDs (PID + AID + 2 SIDs + 4 NIDs) = 344,
+        plus 10 extra SIDs for TateKing's and Arcadian Exchange's
+        non-primary agent_teams pairs (Sam King; Ann/George/Edward/James
+        Porter) = 354."""
         ids = get_all_ids()
-        # 43 PIDs + 43 AIDs + 86 SIDs + 172 NIDs = 344
-        assert len(ids) == 344
+        assert len(ids) == 354
 
     def test_each_entry_has_id_field(self):
         ids = get_all_ids()

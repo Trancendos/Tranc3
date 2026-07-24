@@ -4,6 +4,17 @@ Tranc3 — Comprehensive Naming Repair & ID Registry Generator
 Applies all naming convention fixes and generates the master ID Registry.
 
 This is the canonical repair script. Run once to apply all fixes.
+
+HISTORICAL, predates the 2026-07-24 lead_ai reconciliation (see
+docs/governance/LOCATION-FUNCTIONS.md's Verification Log): its embedded
+Guardian/Doctor/DocUtari naming decisions (e.g. "The Guardian (Anchor: Orb
+of Orisis)" as Infinity's full title, "The Doctor (Nikolai O'denhim)",
+DocUtari left unassigned) reflect the naming rules in force when this
+script was last run, not the current canonical values in
+src/entities/platform.py and trance_one/platform_manifest.py. Not re-run
+since, and its output (src/config/id_registry.{json,csv}) is not read by
+any runtime code — treat both the script and its output as a point-in-time
+snapshot, not a live generator to re-run as-is.
 """
 
 import csv

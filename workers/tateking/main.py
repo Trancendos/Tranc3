@@ -6,7 +6,7 @@ Video creation & editing platform. FFmpeg + Remotion pipeline integration.
 Adaptive chain: local FFmpeg -> Remotion serverless -> offline stub.
 
 Entity: TateKing
-Lead AI: Benji Tate & Sam King
+Lead AI: Benji Tate (+ Sam King)
 """
 
 from __future__ import annotations
@@ -185,7 +185,8 @@ async def health() -> dict[str, Any]:
 async def status() -> dict[str, Any]:
     return {
         "entity": "TateKing",
-        "lead_ai": "Benji Tate & Sam King",
+        "lead_ai": "Benji Tate",
+        "lead_ais": ["Benji Tate", "Sam King"],
         "version": VERSION,
         "ffmpeg_available": _ffmpeg_available(),
         "ffmpeg_path": FFMPEG_PATH,

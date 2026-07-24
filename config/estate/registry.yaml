@@ -939,7 +939,7 @@ components:
   - ref: TRC-P3-027
     name: "Arcadian Exchange"
     short_id: arcadian-exchange
-    lead_ai: "The Porter Family"
+    lead_ai: "Clarence Porter & Ann, George, Edward, James Porter"
     role: "Financial exchange — procurement & resource trading"
     status: active
     version: "1.0.0"
@@ -1003,7 +1003,7 @@ components:
   - ref: TRC-P3-031
     name: "DocUtari"
     short_id: docutari
-    lead_ai: null
+    lead_ai: "Fiddsy"
     role: "Document management hub (Paperless-ngx)"
     status: planned
     version: "0.0.0"
@@ -1131,7 +1131,7 @@ components:
   - ref: TRC-P3-039
     name: "The Lab"
     short_id: lab
-    lead_ai: "The Dr. & Slime"
+    lead_ai: "The Dr. (Nikolai O'denhime) & Slime"
     role: "Code creation platform (Claude Code-style)"
     status: planned
     version: "0.0.0"

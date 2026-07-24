@@ -4,7 +4,7 @@ Trancendos the-lab — Code Creation Platform
 Code snippet store with sandboxed subprocess execution.
 Supports python3, node, bash (with strict allowlist).
 
-Port: 8055  Entity: The Lab  Lead AI: The Dr. & Slime
+Port: 8055  Entity: The Lab  Lead AI: The Dr. (Nikolai O'denhime)
 """
 
 from __future__ import annotations
@@ -164,7 +164,11 @@ async def health():
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
-        "entity": {"name": "The Lab", "lead_ai": "The Dr. & Slime"},
+        "entity": {
+            "name": "The Lab",
+            "lead_ai": "The Dr. (Nikolai O'denhime)",
+            "lead_ais": ["The Dr. (Nikolai O'denhime)", "Slime"],
+        },
         "snippets": snippets,
         "total_runs": runs,
     }

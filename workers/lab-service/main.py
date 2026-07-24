@@ -1,4 +1,4 @@
-"""The Lab — FastAPI app factory (Lead AI: The Dr. & Slime)"""
+"""The Lab — FastAPI app factory (Lead AI: The Dr. (Nikolai O'denhime))"""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def create_app() -> FastAPI:
             "Primary: Ollama (zero-cost, local). "
             "Fallbacks: Tabby (self-hosted), HuggingFace free tier, OpenRouter free models. "
             "Compatible with Continue.dev, Cline, Aider via OpenAI-compat endpoint. "
-            "Lead AI: The Dr. & Slime."
+            "Lead AI: The Dr. (Nikolai O'denhime)."
         ),
         version="1.0.0",
         lifespan=_lifespan,
@@ -78,7 +78,8 @@ def create_app() -> FastAPI:
             "status": "healthy",
             "service": config.WORKER_NAME,
             "named": "The Lab",
-            "lead_ai": "The Dr. & Slime",
+            "lead_ai": "The Dr. (Nikolai O'denhime)",
+            "lead_ais": ["The Dr. (Nikolai O'denhime)", "Slime"],
             "port": config.WORKER_PORT,
             "uptime_seconds": (datetime.now(timezone.utc) - _STARTED_AT).total_seconds(),
             "backends": 6,

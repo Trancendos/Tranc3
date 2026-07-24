@@ -31,6 +31,7 @@ async def platform_manifest():
                 "entity_id": e.entity_id,
                 "display_name": e.display_name,
                 "lead_ai": e.lead_ai,
+                "lead_ais": e.lead_ais,
                 "pillar": e.pillar.value,
                 "status": e.status,
                 "src_path": e.src_path,
@@ -63,6 +64,7 @@ async def manifest_by_pillar(pillar: str):
                 "entity_id": e.entity_id,
                 "display_name": e.display_name,
                 "lead_ai": e.lead_ai,
+                "lead_ais": e.lead_ais,
                 "status": e.status,
             }
             for e in entities

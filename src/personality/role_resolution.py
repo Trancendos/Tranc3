@@ -27,29 +27,46 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Voxx": "voxx",
     "Madam Krystal": "madam-krystal",
     "Junior Cesar": "junior-cesar",
-    "Benji Tate & Sam King": "benji-tate-sam-king",
+    # TateKing's seed lead_ai is "Benji Tate" (primary of two, per
+    # trance_one/platform_manifest.py's lead_ais split) — the shared
+    # benji-tate-sam-king profile still voices both. Sam King is a valid
+    # assign_ai() target too (a live co-lead, not just a lead_ais entry),
+    # so he needs his own key rather than falling back to None.
+    "Benji Tate": "benji-tate-sam-king",
+    "Sam King": "benji-tate-sam-king",
     "Baron Von Hilton": "baron-von-hilton",
     "Tyler Towncroft": "tyler-towncroft",
-    "The Dr. & Slime": "the-dr-slime",
+    "The Dr. (Nikolai O'denhime)": "the-dr-slime",
+    "Slime": "the-dr-slime",
     "Larry Lowhammer": "larry-lowhammer",
     "The Mad Hatter": "the-mad-hatter",
     "Lunascene": "lunascene",
     "Solarscene": "solarscene",
     "Dorris Fontaine": "dorris-fontaine",
-    "The Porter Family": "the-porter-family",
+    # Arcadian Exchange's seed lead_ai is "Clarence Porter" (primary of
+    # five, per trance_one/platform_manifest.py's lead_ais split) — the
+    # shared the-porter-family profile still voices the whole family. The
+    # other four Porters are valid assign_ai() targets too, not just
+    # lead_ais entries, so each needs its own key.
+    "Clarence Porter": "the-porter-family",
+    "Ann Porter": "the-porter-family",
+    "George Porter": "the-porter-family",
+    "Edward Porter": "the-porter-family",
+    "James Porter": "the-porter-family",
     "Norman Hawkins": "norman-hawkins",
     "Zimik": "zimik",
     "Shimshi": "shimshi",
-    # DocUtari's seat is explicitly unfilled per PLATFORM_ENTITIES — not a
-    # real AI name, so it maps to no profile rather than a guessed one.
-    "To be Defined": None,
+    # DocUtari's seat has a named holder (Fiddsy, per
+    # trance_one/platform_manifest.py) but no personality profile authored
+    # for it yet — maps to no profile rather than a guessed one.
+    "Fiddsy": None,
     "Gary Glowman (Glow-Worm)": "gary-glowman",
     # norman-hawkins.json's own "serves" list already names The Spark
     # alongside The Observatory — see docs/governance/PERSONALITY-ARCHETYPES.md
     # §3 for the pre-existing Imfy/Norman-Hawkins naming inconsistency this
     # sidesteps rather than silently resolves.
     "Imfy": "norman-hawkins",
-    "The Guardian (Anchor: Orb of Orisis)": "the-guardian",
+    "The Guardian (Marcus Magnolia)": "the-guardian",
     "Prometheus": "prometheus",
     "Rocking Ricki": "rocking-ricki",
     "Renik": "renik",

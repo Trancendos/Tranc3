@@ -93,7 +93,7 @@ Queue depth returns to baseline, `/health` green for 3 consecutive checks.
 ---
 
 ## RUNBOOK: Infinity (OAuth2/OIDC)
-**Owner:** The Guardian (Anchor: Orb of Orisis) · **SLA:** 99.95% · **CriticalityCode:** CRT-001
+**Owner:** The Guardian (Marcus Magnolia) · **SLA:** 99.95% · **CriticalityCode:** CRT-001
 **Service/App IDs:** `SRV-INF-001` / `APP-INF-001`
 **Hard dependency:** `SRV-VOID-001` — Infinity cannot sign tokens if it can't reach the vault.
 

@@ -57,10 +57,17 @@ class TestBaselineSeeding:
     def test_same_pillar_pair_has_positive_baseline(self, registry):
         # Royal Bank of Arcadia and Arcadian Exchange are both
         # Commercial / Financial.
-        rel = registry.get_relationship("Dorris Fontaine", "The Porter Family")
+        rel = registry.get_relationship("Dorris Fontaine", "Clarence Porter")
         assert rel.baseline == 25.0
         assert rel.score == 25.0
         assert rel.interactions_count == 0
+
+    def test_same_pillar_pair_resolves_via_non_primary_co_lead(self, registry):
+        # Ann Porter is Arcadian Exchange's Lead AI too (co-lead, not
+        # primary) — she must resolve to the same Location/pillar as
+        # Clarence Porter, not silently fall back to a neutral baseline.
+        rel = registry.get_relationship("Dorris Fontaine", "Ann Porter")
+        assert rel.baseline == 25.0
 
     def test_different_pillar_pair_has_neutral_baseline(self, registry):
         # Dorris Fontaine (Commercial/Financial) vs. Larry Lowhammer (DevOps).
@@ -216,7 +223,14 @@ class TestRelationshipOrderIndependence:
 
 class TestListRelationships:
     def test_returns_one_entry_per_other_lead_ai(self, registry):
-        others = {e.lead_ai for e in PLATFORM_ENTITIES.values()} - {"Dorris Fontaine"}
+        # Includes every recognized name, not just each Location's primary
+        # lead_ai — co-leads (Sam King, The Orb of Orisis, the four
+        # non-primary Porters, ...) are recognized Lead AIs too.
+        others = set()
+        for e in PLATFORM_ENTITIES.values():
+            others.add(e.lead_ai)
+            others.update(e.lead_ais)
+        others.discard("Dorris Fontaine")
         rels = registry.list_relationships("Dorris Fontaine")
         assert {r.ai_b if r.ai_a == "Dorris Fontaine" else r.ai_a for r in rels} == others
 

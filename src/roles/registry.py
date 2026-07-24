@@ -20,7 +20,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES
 
@@ -164,6 +164,60 @@ class RoleRegistry:
             "VALUES (?, ?, ?, ?, ?)",
             rows,
         )
+        self._conn.commit()
+        self._migrate_renamed_lead_ais()
+
+    # Retired `lead_ai` display names -> their current canonical replacement,
+    # keyed by Location. INSERT OR IGNORE above never touches a row that
+    # already exists, so a DB seeded before these Locations' names were
+    # reconciled to trance_one/platform_manifest.py's spelling (see
+    # docs/governance/LOCATION-FUNCTIONS.md's 2026-07-24 verification-log
+    # entry) would otherwise keep resolving to the old name forever, and
+    # AI_NAME_TO_PROFILE_ID (src/personality/role_resolution.py) no longer
+    # has an entry for it — silently dropping the assigned personality.
+    _RENAMED_LEAD_AIS: Dict[str, Tuple[str, str]] = {
+        "Infinity": ("The Guardian (Anchor: Orb of Orisis)", "The Guardian (Marcus Magnolia)"),
+        "The Lab": ("The Dr. & Slime", "The Dr. (Nikolai O'denhime)"),
+        "DocUtari": ("To be Defined", "Fiddsy"),
+        "TateKing": ("Benji Tate & Sam King", "Benji Tate"),
+        "Arcadian Exchange": ("The Porter Family", "Clarence Porter"),
+    }
+
+    def _migrate_renamed_lead_ais(self) -> None:
+        """Backfill a persisted DB's stale `assigned_ai` values after a rename.
+
+        Only rewrites a row still holding the exact retired name — an
+        operator who has since manually reassigned that seat is left alone.
+        Idempotent: once migrated, `assigned_ai` no longer matches
+        `old_name` and this is a no-op on every later startup.
+        """
+        now = time.time()
+        for location, (old_name, new_name) in self._RENAMED_LEAD_AIS.items():
+            cur = self._conn.execute(
+                "SELECT assigned_ai FROM role_assignments WHERE location = ?",
+                (location,),
+            )
+            row = cur.fetchone()
+            if row is None or row["assigned_ai"] != old_name:
+                continue
+            self._conn.execute(
+                "UPDATE role_assignments SET assigned_ai = ?, assigned_at = ?, "
+                "assigned_by = ? WHERE location = ?",
+                (new_name, now, "system:rename_migration", location),
+            )
+            self._conn.execute(
+                "INSERT INTO role_assignment_history "
+                "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    location,
+                    old_name,
+                    new_name,
+                    now,
+                    "system:rename_migration",
+                    "canonical lead_ai display name reconciled to trance_one/platform_manifest.py",
+                ),
+            )
         self._conn.commit()
 
     def _row_to_assignment(self, row: sqlite3.Row) -> RoleAssignment:

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Entity** | DocUtari |
-| **Lead AI** | To be Defined |
+| **Lead AI** | Fiddsy |
 | **Status** | ✅ Live (two deployed workers: `files-service` port 8014, `storage-service` port 8020) |
 | **Foundation** | `workers/files-service/worker.py` (Paperless-ngx/Stirling PDF/Gotenberg/Tika bridge) + `workers/storage-service/worker.py` (8-backend ACO object store) |
 
@@ -84,10 +84,10 @@
   heuristic that reinforces successful backends and decays failing ones.
 - **Out of scope:** DRM; paid cloud storage APIs (explicitly zero-cost per both workers'
   own module docstrings); any UI (this is an API-only backend pair).
-- **Lead AI (Tier 3):** To be Defined — per `PLATFORM_ENTITIES.md`, this entity has not yet
-  been assigned a Lead AI persona, despite having real, substantial code.
+- **Lead AI (Tier 3):** Fiddsy — per `PLATFORM_ENTITIES.md`, no personality profile has been
+  authored for this seat yet, despite the entity having real, substantial code.
 - **Owner (RACI-A):** Platform Owner (Trancendos), delegated to Platform Engineering pending
-  Lead AI assignment.
+  a Fiddsy personality profile.
 - **Review cadence:** quarterly per framework default, or immediately if auth is enabled for
   either service.
 - **Dependencies (soft, all optional with fallback/offline behaviour):** Paperless-ngx,

@@ -2,7 +2,7 @@
 Arcadian Exchange — Self-Hosted Worker
 =======================================
 Resource marketplace: listings, orders, stats.
-Lead AI: The Porter Family
+Lead AI: Clarence Porter (+ Ann, George, Edward, James Porter)
 
 Port: 8012
 Zero-cost: FastAPI + SQLite, no external dependencies.
@@ -148,7 +148,7 @@ STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(
     title="Arcadian Exchange",
-    description="Resource marketplace — API credits, compute, storage, models, workflows. Lead AI: The Porter Family.",
+    description="Resource marketplace — API credits, compute, storage, models, workflows. Lead AI: Clarence Porter.",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -191,7 +191,14 @@ async def health():
         "total_orders": order_count,
         "entity": {
             "name": "Arcadian Exchange",
-            "lead_ai": "The Porter Family",
+            "lead_ai": "Clarence Porter",
+            "lead_ais": [
+                "Clarence Porter",
+                "Ann Porter",
+                "George Porter",
+                "Edward Porter",
+                "James Porter",
+            ],
             "role": "Financial exchange — procurement & resource trading",
         },
     }

@@ -54,11 +54,17 @@ class TestReadRoutes:
         assert resp.status_code == 200
         body = resp.json()
         assert isinstance(body, list)
-        # every *other* unique Lead AI — derive from PLATFORM_ENTITIES rather
-        # than hardcoding, so a roster change doesn't silently break this.
+        # every *other* recognized Lead AI name — primary or additional
+        # co-lead (e.g. Sam King, The Orb of Orisis, the four non-primary
+        # Porters) — derive from PLATFORM_ENTITIES rather than hardcoding,
+        # so a roster change doesn't silently break this.
         from src.entities.platform import PLATFORM_ENTITIES
 
-        expected = len({e.lead_ai for e in PLATFORM_ENTITIES.values()}) - 1
+        names = set()
+        for e in PLATFORM_ENTITIES.values():
+            names.add(e.lead_ai)
+            names.update(e.lead_ais)
+        expected = len(names) - 1
         assert len(body) == expected
 
     def test_brochure_for_known_location(self, client):

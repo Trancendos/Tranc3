@@ -1,4 +1,4 @@
-"""The Lab — ACO pheromone router across 6 free code AI backends (Lead AI: The Dr. & Slime)"""
+"""The Lab — ACO pheromone router across 6 free code AI backends (Lead AI: The Dr. (Nikolai O'denhime))"""
 
 from __future__ import annotations
 
