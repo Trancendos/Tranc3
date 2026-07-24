@@ -50,10 +50,16 @@ Copy this table and precede with: *"Treat the following as absolute source of tr
 |---|---|---|---|
 | 0 | Human | End user | — |
 | 1 | Orchestrator | Cornelius MacIntyre, The Queen, tAImra (off by default) | Trance-One |
-| 2 | Prime | Dorris Fontaine, The Guardian, Voxx, … | T2ance |
-| 3 | AI (Lead AI) | Norman Hawkins, Tyler Towncroft, Zimik, … | Tranc3 |
+| 2 | Prime | Dorris Fontaine, Norman Hawkins, Trancendos, Voxx, Savania, The Guardian (Marcus Magnolia), The Dr. (Nikolai O'denhime), … | T2ance |
+| 3 | AI (Lead AI) | Tyler Towncroft, Zimik, … (every other named Lead AI not elevated above) | Tranc3 |
 | 4 | Agent | Pathfinder, Synapse, Syntax-Sage, … | Infinity-Agent |
 | 5 | Bot / Service Worker | Ping-Bot, Neuron-1-Bot, … | Infinity-Bot |
+
+**Code:** formalized as `ORCHESTRATION_TIER` / `get_orchestration_tier()` in
+`src/entities/platform.py` (2026-07-24) — every named Lead AI not explicitly elevated to
+Trance-One or T2ance defaults to Tranc3 (Tier 3), matching its own Location's "Lead AI (Tier 3)"
+designation in `CLAUDE.md`'s service table. This is an overlay, not a replacement: an elevated
+name (e.g. Cornelius MacIntyre) still holds its own Location's Tier-3 seat.
 
 **Dimensional** = Shared-Core cross-cutting systems (not a tier).
 

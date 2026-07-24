@@ -22,7 +22,7 @@ Tier System:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 
 class Pillar(str, Enum):
@@ -368,7 +368,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Event-Driven Execution: Automates actions on triggers.",
         ],
         primary_function="Workflow Platform",
-        primes=["The Doctor (Nikolai O'denhim)"],
+        primes=["The Dr. (Nikolai O'denhime)"],
         online_mode="Live workflow execution; event triggering; automation.",
         offline_mode="Local workflow drafting; offline sequence building.",
         agent_alpha=Agent(
@@ -419,7 +419,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Disaster Recovery Backup: Instant code regeneration.",
         ],
         primary_function="Repository Storage (Forgejo)",
-        primes=["The Doctor (Nikolai O'denhim)"],
+        primes=["The Dr. (Nikolai O'denhime)"],
         online_mode="Active repo hosting; cloud PR management; live merging.",
         offline_mode="Local Git tree management; offline commits/branching.",
         agent_alpha=Agent(
@@ -444,7 +444,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Mutation Testing: Mutates code to catch regressions.",
         ],
         primary_function="Central Testing Platform (Wonderland Theme)",
-        primes=["The Doctor (Nikolai O'denhim)"],
+        primes=["The Dr. (Nikolai O'denhime)"],
         online_mode="Live mutation tests; real-time anomaly reporting.",
         offline_mode="Local test execution; offline review of test logs.",
         agent_alpha=Agent(
@@ -1498,13 +1498,53 @@ PILLAR_ABBREVS: Dict[str, str] = {
 PRIME_ABBREVS: Dict[str, str] = {
     "Cornelius MacIntyre": "COR",
     "Dorris Fontaine": "DOR",
-    "The Guardian": "GRD",
-    "The Doctor (Nikolai O'denhim)": "DOC",
+    "The Guardian (Marcus Magnolia)": "GRD",
+    "The Dr. (Nikolai O'denhime)": "DOC",
     "Voxx": "VOX",
     "Norman Hawkins": "NOR",
     "Savania": "SAV",
     "Trancendos": "TRN",
 }
+
+OrchestrationTier = Literal["Trance-One", "T2ance", "Tranc3"]
+
+# Explicit per-AI overlay onto CLAUDE.md's own Tier 1-5 hierarchy
+# (Sovereign/Primes/Lead AI/Agents/Bots), giving each of those three tiers
+# an Infinity designation per wiki-content/Architecture-INFINITY_ECOSYSTEM_MATRIX.md
+# and wiki-content/Architecture-TIER_ARCHITECTURE.md:
+#   Tier 1 (Sovereign/Orchestrator)  -> "Trance-One"
+#   Tier 2 (Primes)                  -> "T2ance"
+#   Tier 3 (Lead AI)                 -> "Tranc3" (the default for every
+#                                        named AI not elevated below)
+# This is an orthogonal classification, not a replacement for a Location's
+# own "Lead AI (Tier 3)" designation in CLAUDE.md's service table: an AI
+# named here still holds its own Location's Tier-3 seat, and is
+# additionally elevated to a cross-cutting Orchestrator/Prime role. Every
+# other Lead AI (the ~40 not listed here) defaults to "Tranc3" via
+# get_orchestration_tier() below, matching the user's "the other AI's" scope.
+ORCHESTRATION_TIER: Dict[str, OrchestrationTier] = {
+    "Cornelius MacIntyre": "Trance-One",
+    "The Queen": "Trance-One",
+    "tAImra": "Trance-One",
+    "Dorris Fontaine": "T2ance",
+    "Norman Hawkins": "T2ance",
+    "Trancendos": "T2ance",
+    "Voxx": "T2ance",
+    "Savania": "T2ance",
+    "The Guardian (Marcus Magnolia)": "T2ance",
+    "The Dr. (Nikolai O'denhime)": "T2ance",
+}
+
+
+def get_orchestration_tier(ai_name: str) -> OrchestrationTier:
+    """Resolve a named AI's Trance-One/T2ance/Tranc3 orchestration tier.
+
+    Defaults to "Tranc3" (Tier 3, Lead AI) for any name not explicitly
+    elevated in ORCHESTRATION_TIER — this covers every named AI in
+    PLATFORM_ENTITIES not called out above, including every entity's own
+    lead_ai/lead_ais entries by default.
+    """
+    return ORCHESTRATION_TIER.get(ai_name, "Tranc3")
 
 
 def _wire_multi_agent_teams() -> None:
