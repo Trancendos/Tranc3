@@ -290,6 +290,26 @@ class TestModelRouterService:
         assert r.status_code == 200
         assert "model" in r.json()
 
+    def test_persona_aware_precision_prefers_reasoning_model(self, client):
+        # A precision-heavy persona (e.g. Dorris Fontaine / CFO archetype,
+        # see docs/governance/PERSONALITY-ARCHETYPES.md) should be routed to
+        # the seeded model tagged "reasoning" (gemini-2.5-pro) over the
+        # cheaper/faster "gemini-2.0-flash" that a plain round_robin/priority
+        # strategy would pick first.
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {"precision": 0.95}},
+        )
+        assert r.status_code == 200
+        assert r.json()["model"] == "gemini-2.5-pro"
+
+    def test_persona_aware_without_traits_still_selects_a_model(self, client):
+        # An empty/omitted persona_traits dict must not error — every model
+        # scores 0 and any one of them is a valid pick.
+        r = client.post("/route", json={"strategy": "persona_aware"})
+        assert r.status_code == 200
+        assert "model" in r.json()
+
     def test_report_health(self, client):
         models = client.get("/models").json()
         if models:

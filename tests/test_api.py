@@ -128,6 +128,33 @@ class TestChat:
         )
         assert r.status_code == 422
 
+    def test_chat_location_resolves_personality_from_role_registry(self):
+        # A caller scoping /chat to a Location gets whoever the Role Registry
+        # currently says holds that seat, not a hardcoded string — see
+        # src/personality/role_resolution.py.
+        token = self._get_token()
+        r = client.post(
+            "/chat",
+            json={"message": "What's our exposure?", "location": "Royal Bank of Arcadia"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        assert r.json()["personality"] == "dorris-fontaine"
+
+    def test_chat_unknown_location_falls_back_to_supplied_personality(self):
+        token = self._get_token()
+        r = client.post(
+            "/chat",
+            json={
+                "message": "Hello",
+                "personality": "tranc3-creative",
+                "location": "Not A Real Location",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        assert r.json()["personality"] == "tranc3-creative"
+
 
 class TestInfo:
     def test_languages(self):

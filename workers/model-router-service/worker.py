@@ -24,7 +24,7 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import (
     APIRouter,
@@ -181,6 +181,11 @@ class RouteRequest(BaseModel):
     strategy: str = "round_robin"
     capabilities: List[str] = Field(default_factory=list)
     max_cost: float = 0.0
+    # Optional subset of a Turing's Hub PersonalityProfile's trait vector
+    # (src/personality/matrix.py) — precision, creativity, formality, each
+    # 0..1. Only consulted when strategy == "persona_aware"; every other
+    # strategy ignores it, so existing callers are unaffected.
+    persona_traits: Optional[Dict[str, float]] = None
 
 
 class HealthReport(BaseModel):
@@ -201,7 +206,38 @@ def _new_id() -> str:
     return uuid.uuid4().hex[:16]
 
 
-def _select_model(models: list, strategy: str) -> Optional[dict]:
+def _persona_score(model: dict, persona_traits: Dict[str, float]) -> float:
+    """
+    Nudge model selection using a persona's trait vector — a subset of
+    src/personality/matrix.py's PersonalityProfile.traits: precision,
+    creativity, formality (each 0..1, caller-supplied). Precision-heavy
+    personas (Precision/Finance, Security, Governance archetypes — see
+    docs/governance/PERSONALITY-ARCHETYPES.md) favor models tagged
+    "reasoning"; creativity-heavy personas (Creative archetype) favor
+    generalist models over narrowly coding-specialized ones; formality
+    nudges toward higher-seed-priority (more established) models. A caller
+    that omits a trait contributes 0 for it, so an empty persona_traits
+    dict scores every model identically.
+    """
+    caps = model.get("capabilities") or []
+    if isinstance(caps, str):
+        caps = json.loads(caps)
+    precision = float(persona_traits.get("precision", 0.0))
+    creativity = float(persona_traits.get("creativity", 0.0))
+    formality = float(persona_traits.get("formality", 0.0))
+
+    score = 0.0
+    if "reasoning" in caps:
+        score += precision
+    if creativity and "coding" not in caps and len(caps) > 1:
+        score += creativity * 0.5
+    score += formality * (model.get("priority", 0) / 10.0) * 0.5
+    return score
+
+
+def _select_model(
+    models: list, strategy: str, persona_traits: Optional[Dict[str, float]] = None
+) -> Optional[dict]:
     """Select a model based on routing strategy."""
     if not models:
         return None
@@ -212,6 +248,8 @@ def _select_model(models: list, strategy: str) -> Optional[dict]:
         return min(models, key=lambda m: m["avg_latency_ms"])
     elif strategy == "priority":
         return max(models, key=lambda m: m["priority"])
+    elif strategy == "persona_aware":
+        return max(models, key=lambda m: _persona_score(m, persona_traits or {}))
     else:  # round_robin
         return models[0]
 
@@ -366,7 +404,7 @@ async def route_request(body: RouteRequest):
     if not models:
         raise HTTPException(404, "No available models match the criteria") from None
 
-    selected = _select_model(models, body.strategy)
+    selected = _select_model(models, body.strategy, body.persona_traits)
 
     if not selected:
         raise HTTPException(404, "No model selected") from None

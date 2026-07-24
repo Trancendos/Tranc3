@@ -1015,6 +1015,11 @@ class ChatRequest(BaseModel):
     user_emotion: Optional[str] = "neutral"
     conversation_history: Optional[List[Dict]] = []
     session_id: Optional[str] = None
+    # Optional Location name (e.g. "Royal Bank of Arcadia") to resolve the
+    # active personality from the Role Registry's current assignment instead
+    # of trusting `personality` as a static string. See
+    # src/personality/role_resolution.py.
+    location: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -1540,6 +1545,20 @@ async def chat(
     if chat_req.language not in supported:
         raise HTTPException(status_code=400, detail=f"Unsupported language. Supported: {supported}")
 
+    # Personality resolution — if the caller scoped this chat to a Location
+    # (e.g. "Royal Bank of Arcadia"), prefer whoever the Role Registry
+    # currently says holds that seat over a hardcoded personality string,
+    # which goes stale the moment an operator reassigns the role via
+    # POST /roles/{location}/assign. Falls back to the caller-supplied
+    # `personality` field when unscoped, unassigned, or unmapped.
+    effective_personality = chat_req.personality
+    if chat_req.location:
+        from src.personality.role_resolution import resolve_personality_for_location
+
+        resolved = resolve_personality_for_location(chat_req.location)
+        if resolved:
+            effective_personality = resolved
+
     try:
         # Emotion detection
         detected_emotion = chat_req.user_emotion or "neutral"
@@ -1558,7 +1577,7 @@ async def chat(
             message=chat_req.message,
             emotion=detected_emotion,
             language=chat_req.language,
-            personality=chat_req.personality,
+            personality=effective_personality,
         )
 
         # Foresight
@@ -1582,7 +1601,7 @@ async def chat(
         )
         if callable(_get_vec):
             personality_vector = _get_vec(
-                chat_req.personality,
+                effective_personality,
                 emotion_scores,
                 chat_req.language,
             )
@@ -1674,7 +1693,7 @@ async def chat(
             user_id,
             request_id,
             chat_req.language,
-            chat_req.personality,
+            effective_personality,
             detected_emotion,
             processing_ms,
         )
@@ -1685,7 +1704,7 @@ async def chat(
             chat_req.message,
             response_text,
             chat_req.language,
-            chat_req.personality,
+            effective_personality,
             detected_emotion,
             processing_ms,
             phi_score,
@@ -1696,7 +1715,7 @@ async def chat(
             response=response_text,
             detected_emotion=detected_emotion,
             language=chat_req.language,
-            personality=chat_req.personality,
+            personality=effective_personality,
             timestamp=datetime.datetime.utcnow(),
             processing_time_ms=round(processing_ms, 2),
             request_id=request_id,
