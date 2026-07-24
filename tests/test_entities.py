@@ -131,6 +131,12 @@ class TestPlatformEntities:
         the_void = PLATFORM_ENTITIES["The Void"]
         assert "The Guardian (Marcus Magnolia)" in the_void.primes
 
+        the_lab = PLATFORM_ENTITIES["The Lab"]
+        assert the_lab.lead_ais == ["The Dr. (Nikolai O'denhime)", "Slime"]
+
+        docutari = PLATFORM_ENTITIES["DocUtari"]
+        assert docutari.lead_ais == []
+
 
 # ── Universal ID Taxonomy ────────────────────────────────────────────
 
