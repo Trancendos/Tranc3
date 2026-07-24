@@ -541,6 +541,50 @@ class TestSelfEvolvingInference:
         assert se.adapt_model(torch.randn(1, 8), {"quality_score": 0.5}) is None
 
 
+class TestQuantumInferenceEngine:
+    """
+    Regression coverage for src/core/quantum_inference.py, which had zero
+    test coverage and zero callers anywhere in the repo. Its core quantum
+    path called qc.qft(qreg) — QuantumCircuit has no such method — so every
+    real invocation raised AttributeError, silently caught and routed to the
+    classical fallback; the bug was never observable because nothing
+    exercised the quantum path directly. A near-identical, already-fixed
+    copy exists at src/quantum/quantum_inference.py (build QFT from
+    qiskit.circuit.library instead) but it's also unused — production
+    quantum attention actually goes through the differently-implemented
+    src/quantum/quantum_core.py::QuantumNeuralCore.
+    """
+
+    def test_constructs_without_explicit_feature_manager(self):
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        qi = QuantumInferenceEngine()
+        assert qi.quantum_enabled is True
+
+    def test_quantum_attention_runs_without_falling_back(self, caplog):
+        import logging
+
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        qi = QuantumInferenceEngine({"num_qubits": 4})
+        with caplog.at_level(logging.WARNING, logger="src.core.quantum_inference"):
+            out = qi.quantum_attention(torch.randn(1, 4, 8))
+        assert out.shape == (1, 4, 8)
+        assert "falling back to classical" not in caplog.text
+
+    def test_classical_attention_fallback_when_disabled(self):
+        from src.core.quantum_inference import QuantumInferenceEngine
+
+        class _AlwaysDisabled:
+            def is_enabled(self, flag, user_id=None):  # noqa: ARG002
+                return False
+
+        qi = QuantumInferenceEngine(feature_manager=_AlwaysDisabled())
+        assert qi.quantum_enabled is False
+        out = qi.quantum_attention(torch.randn(1, 4, 8))
+        assert out.shape == (1, 4, 8)
+
+
 # ── Evolution Engine Tests ────────────────────────────────────────────────────
 
 

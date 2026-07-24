@@ -8,12 +8,17 @@ from typing import Optional  # noqa: E402
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
-import torch.nn as nn  # noqa: E402
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # noqa: E402
+from qiskit import transpile as qiskit_transpile  # noqa: E402
+from qiskit.circuit.library import QFT  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
-from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
+from src.core.feature_flags import (  # noqa: E402
+    AlwaysEnabledFeatureManager,
+    FeatureFlag,
+    FeatureFlagManager,
+)
 
 
 class QuantumInferenceEngine:
@@ -21,17 +26,14 @@ class QuantumInferenceEngine:
     Quantum-enhanced inference with fallback to classical
     """
 
-    def __init__(self, config, feature_manager: FeatureFlagManager):
-        self.config = config
-        self.feature_manager = feature_manager
-        self.quantum_enabled = feature_manager.is_enabled(FeatureFlag.QUANTUM_OPTIMIZATION)
+    def __init__(self, config=None, feature_manager: Optional[FeatureFlagManager] = None):
+        self.config = config or {"num_qubits": 8}
+        self.feature_manager = feature_manager or AlwaysEnabledFeatureManager()
+        self.quantum_enabled = self.feature_manager.is_enabled(FeatureFlag.QUANTUM_OPTIMIZATION)
 
         if self.quantum_enabled:
             self.backend = AerSimulator(method="statevector")
-            self.num_qubits = min(config.get("num_qubits", 8), 16)  # Limit for simulation
-
-        # Classical fallback
-        self.classical_model = nn.Linear(768, 768)  # Placeholder
+            self.num_qubits = min(self.config.get("num_qubits", 8), 16)  # Limit for simulation
 
     def quantum_attention(
         self, input_tensor: torch.Tensor, user_id: Optional[str] = None
@@ -60,20 +62,28 @@ class QuantumInferenceEngine:
         creg = ClassicalRegister(num_qubits, "measure")
         qc = QuantumCircuit(qreg, creg)
 
-        # Encode input into quantum state
-        flat_input = input_tensor.flatten()[: 2**num_qubits]
-        normalized_input = flat_input / torch.norm(flat_input)
+        # Encode input into quantum state. qiskit's initialize() enforces a
+        # strict sum-of-|amplitude|^2 == 1 tolerance that float32 division
+        # routinely misses by ~1e-7 — do the normalization in float64 numpy,
+        # not torch float32, to actually satisfy it.
+        flat_input = input_tensor.flatten()[: 2**num_qubits].detach().cpu().numpy()
+        flat_input = flat_input.astype(np.float64)
+        norm = np.linalg.norm(flat_input)
+        normalized_input = flat_input / norm if norm > 0 else flat_input
 
-        qc.initialize(normalized_input.numpy(), qreg)
+        qc.initialize(normalized_input, qreg)
 
         # Quantum Fourier Transform for attention
-        qc.append(qc.qft(qreg), qreg)
+        # (QuantumCircuit has no .qft() method — build it from the circuit
+        # library instead, as its sibling in src/quantum/quantum_inference.py
+        # already does correctly.)
+        qc.append(QFT(num_qubits, do_swaps=True).decompose(), qreg)
 
         # Measure
         qc.measure(qreg, creg)
 
         # Execute
-        job = self.backend.run(qc, shots=1024)
+        job = self.backend.run(qiskit_transpile(qc, self.backend), shots=1024)
         counts = job.result().get_counts()
 
         # Convert back to tensor
