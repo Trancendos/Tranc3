@@ -24,7 +24,7 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
@@ -37,7 +37,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sse_starlette.sse import EventSourceResponse
 
 # ---------------------------------------------------------------------------
@@ -176,16 +176,30 @@ class ModelRegister(BaseModel):
     priority: int = 5
 
 
+class PersonaTraits(BaseModel):
+    """
+    Strict subset of a Turing's Hub PersonalityProfile's trait vector
+    (src/personality/matrix.py) consulted by the "persona_aware" routing
+    strategy. `extra="forbid"` rejects unknown/misspelled keys outright
+    (e.g. a typo'd "precison") instead of silently treating them as
+    unsupported and scoring as if they were absent.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    precision: float = Field(0.0, ge=0.0, le=1.0)
+    creativity: float = Field(0.0, ge=0.0, le=1.0)
+    formality: float = Field(0.0, ge=0.0, le=1.0)
+
+
 class RouteRequest(BaseModel):
     prompt: str = ""
     strategy: str = "round_robin"
     capabilities: List[str] = Field(default_factory=list)
     max_cost: float = 0.0
-    # Optional subset of a Turing's Hub PersonalityProfile's trait vector
-    # (src/personality/matrix.py) — precision, creativity, formality, each
-    # 0..1. Only consulted when strategy == "persona_aware"; every other
-    # strategy ignores it, so existing callers are unaffected.
-    persona_traits: Optional[Dict[str, float]] = None
+    # Only consulted when strategy == "persona_aware"; every other strategy
+    # ignores it, so existing callers are unaffected.
+    persona_traits: Optional[PersonaTraits] = None
 
 
 class HealthReport(BaseModel):
@@ -206,28 +220,25 @@ def _new_id() -> str:
     return uuid.uuid4().hex[:16]
 
 
-def _persona_score(model: dict, persona_traits: Dict[str, float]) -> float:
+def _persona_score(model: dict, persona_traits: "PersonaTraits") -> float:
     """
     Nudge model selection using a persona's trait vector — a subset of
     src/personality/matrix.py's PersonalityProfile.traits: precision,
-    creativity, formality (each 0..1, caller-supplied). Precision-heavy
-    personas (Precision/Finance, Security, Governance archetypes — see
-    docs/governance/PERSONALITY-ARCHETYPES.md) favor models tagged
-    "reasoning"; creativity-heavy personas (Creative archetype) favor
+    creativity, formality (each 0..1, validated by PersonaTraits).
+    Precision-heavy personas (Precision/Finance, Security, Governance
+    archetypes — see docs/governance/PERSONALITY-ARCHETYPES.md) favor models
+    tagged "reasoning"; creativity-heavy personas (Creative archetype) favor
     generalist models over narrowly coding-specialized ones; formality
     nudges toward higher-seed-priority (more established) models. A caller
-    that omits a trait contributes 0 for it, so an empty persona_traits
-    dict scores every model identically.
+    that omits persona_traits entirely gets the all-zero default, which
+    scores every model identically.
     """
     caps = model.get("capabilities") or []
     if isinstance(caps, str):
         caps = json.loads(caps)
-    # Clamp to the documented 0..1 range — an out-of-range caller value (e.g.
-    # a raw, unnormalized trait) should saturate the bonus it contributes
-    # rather than silently dominating or inverting model selection.
-    precision = max(0.0, min(1.0, float(persona_traits.get("precision", 0.0))))
-    creativity = max(0.0, min(1.0, float(persona_traits.get("creativity", 0.0))))
-    formality = max(0.0, min(1.0, float(persona_traits.get("formality", 0.0))))
+    precision = persona_traits.precision
+    creativity = persona_traits.creativity
+    formality = persona_traits.formality
 
     score = 0.0
     if "reasoning" in caps:
@@ -239,7 +250,7 @@ def _persona_score(model: dict, persona_traits: Dict[str, float]) -> float:
 
 
 def _select_model(
-    models: list, strategy: str, persona_traits: Optional[Dict[str, float]] = None
+    models: list, strategy: str, persona_traits: Optional["PersonaTraits"] = None
 ) -> Optional[dict]:
     """Select a model based on routing strategy."""
     if not models:
@@ -252,7 +263,7 @@ def _select_model(
     elif strategy == "priority":
         return max(models, key=lambda m: m["priority"])
     elif strategy == "persona_aware":
-        return max(models, key=lambda m: _persona_score(m, persona_traits or {}))
+        return max(models, key=lambda m: _persona_score(m, persona_traits or PersonaTraits()))
     else:  # round_robin
         return models[0]
 

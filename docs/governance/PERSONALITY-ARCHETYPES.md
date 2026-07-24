@@ -10,8 +10,10 @@
 > **Finding, up front:** the existing 38 profile files were already well-tuned and largely
 > archetype-consistent (see §2's evidence table) — this pass is a validation + gap-fill, not a
 > wholesale rewrite. Two Job Description holders (`Imfy` — The Spark, `Trancendos` — The Citadel /
-> Think Tank) had **no** profile file at all; §3 adds them. One Location (`DocUtari`) has no AI
-> assigned yet (`lead_ai = "To be Defined"`) and correctly gets no profile.
+> Think Tank) had no profile mapped to them; §3 resolves both — `Imfy` via the existing
+> `norman-hawkins` profile's own `serves` declaration, `Trancendos` via a newly added profile file.
+> One Location (`DocUtari`) has no AI assigned yet (`lead_ai = "To be Defined"`) and correctly gets
+> no profile.
 
 ## 1. Archetype research (Big Five / extended traits)
 
@@ -108,4 +110,4 @@ omits the hint.
 
 | Date | Verifier | Result |
 |---|---|---|
-| 2026-07-24 | Claude (session) | Web-researched 8 archetypes (sources cited above); spot-validated 8 existing profiles against their archetype (all consistent, no rewrite needed); confirmed via `src/entities/platform.py` that exactly 2 of 43 `lead_ai` holders (Imfy, Trancendos) had no profile file and added both; confirmed DocUtari's "To be Defined" correctly has none; documented the pre-existing Norman-Hawkins/Imfy naming inconsistency without resolving it unilaterally.
+| 2026-07-24 | Claude (session) | Web-researched 8 archetypes (sources cited above); spot-validated 8 existing profiles against their archetype (all consistent, no rewrite needed); confirmed via `src/entities/platform.py` that exactly 2 of 43 `lead_ai` holders (Imfy, Trancendos) had no profile mapped to them and resolved both (Imfy via `norman-hawkins`'s existing `serves` declaration, Trancendos via a new profile file); confirmed DocUtari's "To be Defined" correctly has none; documented the pre-existing Norman-Hawkins/Imfy naming inconsistency without resolving it unilaterally. |

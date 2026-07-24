@@ -310,6 +310,22 @@ class TestModelRouterService:
         assert r.status_code == 200
         assert "model" in r.json()
 
+    def test_persona_traits_rejects_unknown_key(self, client):
+        # PersonaTraits.extra="forbid" — a misspelled trait (e.g. "precison")
+        # must be reported as invalid input, not silently ignored/scored as 0.
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {"precison": 0.9}},
+        )
+        assert r.status_code == 422
+
+    def test_persona_traits_rejects_out_of_range_value(self, client):
+        r = client.post(
+            "/route",
+            json={"strategy": "persona_aware", "persona_traits": {"precision": 5.0}},
+        )
+        assert r.status_code == 422
+
     def test_report_health(self, client):
         models = client.get("/models").json()
         if models:
