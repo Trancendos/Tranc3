@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -46,8 +47,8 @@ class SpawnCellRequest(BaseModel):
     @field_validator("warmup_s")
     @classmethod
     def _warmup_non_negative(cls, v: float) -> float:
-        if v < 0:
-            raise ValueError("warmup_s must be non-negative")
+        if not math.isfinite(v) or v < 0:
+            raise ValueError("warmup_s must be a finite, non-negative number")
         return v
 
 

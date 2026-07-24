@@ -84,7 +84,8 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     """
     Process input through the neuromorphic spiking network.
-    Body: { input: list[float], timesteps: int }
+    Body: { input: list[float] }. The response's "timesteps" reports the
+    processor's actually-configured value — it is not caller-settable.
     """
     try:  # pragma: no cover  — torch path; CI coverage job omits torch
         import torch

@@ -1162,8 +1162,14 @@ class SparkToolRegistry:
 
             state = params["state"]
             arr = np.array(state, dtype=float)
-            if arr.sum() > 0:
-                arr = arr / arr.sum()
+            if arr.ndim != 1 or arr.size == 0:
+                return {"error": "state must be a non-empty one-dimensional array"}
+            if not np.all(np.isfinite(arr)) or np.any(arr < 0):
+                return {"error": "state must contain only finite, non-negative values"}
+            total = arr.sum()
+            if total <= 0:
+                return {"error": "state must have positive total mass"}
+            arr = arr / total
             calc = IITCalculator()
             # IITCalculator.calculate_phi expects a torch.Tensor (it calls
             # .detach().cpu().numpy() internally) — pass a tensor, not the ndarray

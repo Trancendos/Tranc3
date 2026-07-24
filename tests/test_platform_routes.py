@@ -408,6 +408,18 @@ class TestSparkPlatformTools:
         assert result["phi"] > 0.0
 
     @pytest.mark.asyncio
+    async def test_luminous_phi_tool_rejects_invalid_state(self):
+        pytest.importorskip("torch")
+        from src.mcp.tools import SparkToolRegistry
+
+        reg = SparkToolRegistry()
+        tool = reg.get("luminous_phi")
+
+        assert "error" in await tool.handler({"state": [-0.1, 0.2, 0.3, 0.4]})
+        assert "error" in await tool.handler({"state": [0.0, 0.0, 0.0]})
+        assert "error" in await tool.handler({"state": []})
+
+    @pytest.mark.asyncio
     async def test_luminous_process_tool_runs_without_error(self):
         # Regression test: the handler used to call
         # NeuromorphicProcessor.process(x, timesteps=...), but the real

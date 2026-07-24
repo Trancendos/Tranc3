@@ -176,9 +176,14 @@ class NexusHub:
                     headers=headers,
                 )
         except Exception as exc:
+            # sanitize_for_log() does strip CR/LF, but CodeQL's py/log-injection
+            # query doesn't trace through it as a sanitizer across the module
+            # boundary — inline .replace() too so the barrier is visible to it
+            # directly (same pattern as src/relations/registry.py).
+            safe_topic = str(topic).replace("\r", "").replace("\n", "")
             logger.debug(
                 "nexus: WS hub fan-out skipped (topic=%s): %s",
-                sanitize_for_log(topic),
+                safe_topic,
                 sanitize_for_log(exc),
             )  # codeql[py/cleartext-logging]
 

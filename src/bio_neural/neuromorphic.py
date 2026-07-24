@@ -185,6 +185,11 @@ class SpikingNeuralNetwork(nn.Module):
 # TOP-LEVEL PROCESSOR
 # ============================================================
 class NeuromorphicProcessor:
+    # Caller-controlled input length becomes the SNN's input/output layer
+    # width (see _build_snn) — cap it so an oversized request can't allocate
+    # unbounded Linear layers and exhaust worker memory.
+    MAX_HIDDEN_SIZE = 4096
+
     def __init__(self, config):
         # A real config object (e.g. api.py's Config()) carries an explicit
         # hidden_size, so build the SNN eagerly for that case. Callers that
@@ -200,6 +205,11 @@ class NeuromorphicProcessor:
         logger.info("NeuromorphicProcessor initialised")
 
     def _build_snn(self, hidden_size: int) -> None:
+        if hidden_size <= 0 or hidden_size > self.MAX_HIDDEN_SIZE:
+            raise ValueError(
+                f"input dimension {hidden_size} exceeds the allowed range "
+                f"(1-{self.MAX_HIDDEN_SIZE})"
+            )
         self.snn = SpikingNeuralNetwork(
             input_size=hidden_size,
             hidden_sizes=[512, 256],
