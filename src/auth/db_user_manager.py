@@ -12,24 +12,41 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from Dimensional.sanitize import sanitize_for_log
+from src.auth.passwords import hash_password as _hash_password
+from src.auth.passwords import verify_password as _verify_password
 
 logger = logging.getLogger(__name__)
 
+_BCRYPT_PREFIXES = ("$2a$", "$2b$", "$2y$")
 
-class _BcryptContext:
-    """Minimal bcrypt wrapper replacing passlib.CryptContext — avoids crypt DeprecationWarning."""
+
+def _is_legacy_bcrypt_hash(hashed: str) -> bool:
+    return hashed.startswith(_BCRYPT_PREFIXES)
+
+
+class _PasswordContext:
+    """Password hashing/verification context.
+
+    New hashes go through src.auth.passwords.hash_password (argon2id preferred),
+    consolidating with the rest of the platform's auth stack instead of keeping
+    a separate bcrypt path. Pre-existing bcrypt hashes already stored in the
+    database still verify via bcrypt.checkpw — authenticate_user() upgrades
+    them to argon2id on successful login rather than requiring a bulk migration.
+    """
 
     def hash(self, password: str) -> str:
-        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        return _hash_password(password)
 
     def verify(self, plain: str, hashed: str) -> bool:
-        try:
-            return bcrypt.checkpw(plain.encode(), hashed.encode())
-        except Exception:
-            return False
+        if _is_legacy_bcrypt_hash(hashed):
+            try:
+                return bcrypt.checkpw(plain.encode(), hashed.encode())
+            except Exception:
+                return False
+        return _verify_password(plain, hashed)
 
 
-pwd_context = _BcryptContext()
+pwd_context = _PasswordContext()
 
 # Map billing tiers to default RBAC roles
 _TIER_ROLE_MAP = {
@@ -130,6 +147,8 @@ class DBUserManager:
                     return None
                 if not user.is_active:
                     return None
+                if _is_legacy_bcrypt_hash(user.hashed_password):
+                    user.hashed_password = pwd_context.hash(password)  # type: ignore[assignment]
                 # Update last login
                 user.last_login = datetime.datetime.utcnow()  # type: ignore[assignment]
                 session.commit()
@@ -151,6 +170,8 @@ class DBUserManager:
             return None
         if not pwd_context.verify(password, user["hashed_password"]):
             return None
+        if _is_legacy_bcrypt_hash(user["hashed_password"]):
+            user["hashed_password"] = pwd_context.hash(password)
         return user
 
     def get_user(self, username: str) -> Optional[dict]:

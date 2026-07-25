@@ -97,6 +97,27 @@ def check_tls_routers_have_host_matcher() -> list[str]:
     return [f"router '{r}' has tls=true but no Host() matcher in its rule" for r in missing]
 
 
+def check_db_user_manager_uses_consolidated_hashing() -> list[str]:
+    """MC-014 encryption.secrets_and_signing.password_hashing: db_user_manager.py
+    must hash new passwords through src.auth.passwords (argon2id-preferred),
+    not a standalone bcrypt-only context — the consolidation fixed 2026-07-25."""
+    db_mgr = ROOT / "src" / "auth" / "db_user_manager.py"
+    if not db_mgr.is_file():
+        return [f"{db_mgr.relative_to(ROOT)} not found"]
+    text = db_mgr.read_text(errors="ignore")
+    violations = []
+    if "from src.auth.passwords import hash_password" not in text:
+        violations.append(
+            "db_user_manager.py no longer imports hash_password from src.auth.passwords"
+        )
+    if "class _BcryptContext" in text:
+        violations.append(
+            "db_user_manager.py still defines a bcrypt-only _BcryptContext — "
+            "consolidation to _PasswordContext was reverted"
+        )
+    return violations
+
+
 def check_library_classification() -> list[str]:
     """MC-018 knowledge.central_finding: The Library's Article dataclass
     must carry a classification field, not just status/tags."""
@@ -117,6 +138,7 @@ CHECKS = {
     "no_dev_secret_default": check_no_dev_secret_default,
     "websecure_tls_labels": check_websecure_tls_labels,
     "tls_routers_have_host_matcher": check_tls_routers_have_host_matcher,
+    "db_user_manager_consolidated_hashing": check_db_user_manager_uses_consolidated_hashing,
     "library_classification": check_library_classification,
 }
 
