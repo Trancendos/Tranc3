@@ -170,6 +170,40 @@ def check_library_classification() -> list[str]:
     return []
 
 
+def check_observatory_library_pipeline_wired() -> list[str]:
+    """MC-018 knowledge.federation_paths.observatory_to_library: Observatory.record()
+    must actually forward events into library_pipeline.ingest(), and ingest()'s own
+    trigger filter must key off AuditEvent's real fields (event_type/severity), not
+    the nonexistent action/resource keys that silently dropped every event before
+    the 2026-07-25 fix."""
+    violations = []
+
+    observatory_py = ROOT / "src" / "observability" / "observatory.py"
+    if not observatory_py.is_file():
+        return [f"{observatory_py.relative_to(ROOT)} not found"]
+    observatory_text = observatory_py.read_text(errors="ignore")
+    if "library_pipeline import ingest" not in observatory_text:
+        violations.append(
+            "observatory.py's record() no longer forwards events to library_pipeline.ingest()"
+        )
+
+    pipeline_py = ROOT / "src" / "observability" / "library_pipeline.py"
+    if not pipeline_py.is_file():
+        return violations + [f"{pipeline_py.relative_to(ROOT)} not found"]
+    pipeline_text = pipeline_py.read_text(errors="ignore")
+    if 'event.get("event_type"' not in pipeline_text:
+        violations.append(
+            "library_pipeline.py's _should_trigger()/ingest() no longer reads "
+            "event_type — the action/resource-key regression may have returned"
+        )
+    if 'event.get("action"' in pipeline_text:
+        violations.append(
+            "library_pipeline.py still checks event['action'] — a key AuditEvent.to_dict() "
+            "never sets, which silently drops every event from the trigger filter"
+        )
+    return violations
+
+
 CHECKS = {
     "no_wildcard_cors": check_no_wildcard_cors,
     "no_dev_secret_default": check_no_dev_secret_default,
@@ -177,6 +211,7 @@ CHECKS = {
     "tls_routers_have_host_matcher": check_tls_routers_have_host_matcher,
     "db_user_manager_consolidated_hashing": check_db_user_manager_uses_consolidated_hashing,
     "library_classification": check_library_classification,
+    "observatory_library_pipeline_wired": check_observatory_library_pipeline_wired,
 }
 
 
