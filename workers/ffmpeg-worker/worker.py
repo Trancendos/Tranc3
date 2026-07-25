@@ -17,7 +17,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
@@ -25,6 +25,25 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ffmpeg-worker")
+
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 # ---------------------------------------------------------------------------
 # App
@@ -381,7 +400,7 @@ async def health() -> dict:
     }
 
 
-@app.post("/transcode", status_code=202)
+@app.post("/transcode", status_code=202, dependencies=[Depends(_require_internal_auth)])
 async def transcode(req: TranscodeRequest) -> dict:
     """Queue a video transcoding job.
 
@@ -398,7 +417,7 @@ async def transcode(req: TranscodeRequest) -> dict:
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 
-@app.get("/jobs/{job_id}")
+@app.get("/jobs/{job_id}", dependencies=[Depends(_require_internal_auth)])
 async def get_job(job_id: str) -> dict:
     """Return status and output path for a job."""
     job = _jobs.get(job_id)
@@ -407,7 +426,7 @@ async def get_job(job_id: str) -> dict:
     return job.to_dict()
 
 
-@app.post("/thumbnail", status_code=202)
+@app.post("/thumbnail", status_code=202, dependencies=[Depends(_require_internal_auth)])
 async def thumbnail(req: ThumbnailRequest) -> dict:
     """Extract a single thumbnail frame from a video."""
     if not _ffmpeg_available():
@@ -419,7 +438,7 @@ async def thumbnail(req: ThumbnailRequest) -> dict:
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 
-@app.post("/compress", status_code=202)
+@app.post("/compress", status_code=202, dependencies=[Depends(_require_internal_auth)])
 async def compress(req: CompressRequest) -> dict:
     """Compress a video to approximately the target file size."""
     if not _ffmpeg_available():

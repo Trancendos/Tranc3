@@ -1106,6 +1106,7 @@ services:
   # Zero-cost self-hosted video transcoding, thumbnail extraction, compression.
   # Provides non-blocking job queue via asyncio subprocesses.
   ffmpeg-worker:
+    <<: *worker-common
     build:
       context: ./workers/ffmpeg-worker
     container_name: trancendos-ffmpeg-worker
@@ -1113,9 +1114,6 @@ services:
       - "8052:8052"
     volumes:
       - ffmpeg-workdir:/app/workdir
-    networks:
-      - tranc3-net
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8052/health', timeout=5).read()\""]
       <<: *healthcheck-default

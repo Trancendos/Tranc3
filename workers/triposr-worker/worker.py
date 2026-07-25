@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -35,6 +35,25 @@ OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", "/app/outputs"))
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", "/app/models"))
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -200,7 +219,7 @@ async def health():
     }
 
 
-@app.post("/reconstruct")
+@app.post("/reconstruct", dependencies=[Depends(_require_internal_auth)])
 async def reconstruct(req: ReconstructRequest):
     """Reconstruct a 3D mesh from a single base64-encoded image.
 

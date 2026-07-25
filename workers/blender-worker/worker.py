@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -31,6 +31,25 @@ WORKER_NAME = "blender-worker"
 
 RENDERS_DIR = Path(os.environ.get("RENDERS_DIR", "/app/renders"))
 RENDERS_DIR.mkdir(parents=True, exist_ok=True)
+
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -298,7 +317,7 @@ async def health():
     }
 
 
-@app.post("/render")
+@app.post("/render", dependencies=[Depends(_require_internal_auth)])
 async def render_script(req: RenderRequest):
     """Run an arbitrary Blender Python script headlessly.
 
@@ -323,7 +342,7 @@ async def render_script(req: RenderRequest):
     )
 
 
-@app.post("/blend/create")
+@app.post("/blend/create", dependencies=[Depends(_require_internal_auth)])
 async def create_scene(req: CreateSceneRequest):
     """Create a 3D scene from a JSON description.
 
