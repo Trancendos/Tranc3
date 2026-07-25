@@ -21,6 +21,7 @@ Features:
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import os
@@ -176,7 +177,7 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if x_internal_secret != _INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
 
@@ -198,7 +199,7 @@ _cors_origins = [
     for o in os.environ.get(
         "CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
     ).split(",")
-    if o.strip()
+    if o.strip() and o.strip() != "*"
 ]
 
 app.add_middleware(

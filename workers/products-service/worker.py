@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import sqlite3
@@ -181,7 +182,7 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if x_internal_secret != _INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
 

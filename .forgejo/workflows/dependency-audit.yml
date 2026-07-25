@@ -33,7 +33,7 @@ jobs:
 
       - name: Install audit tools
         run: |
-          pip install --quiet pip-audit pip-outdated
+          pip install --quiet pip-audit pip-outdated pip-licenses
 
       - name: Install OSV-Scanner
         run: |
@@ -64,6 +64,16 @@ jobs:
           pip list --outdated || true
           echo "::endgroup::"
 
+      - name: License compliance scan (pip-licenses)
+        run: |
+          echo "::group::pip-licenses — dependency license classification (MC-012)"
+          pip-licenses --format=json --with-urls --output-file=pip-licenses-report.json
+          pip-licenses --format=markdown
+          echo "::endgroup::"
+          echo "::group::Strong-copyleft gate (GPL/AGPL) — fails the job if a shipped dependency carries one"
+          pip-licenses --fail-on="GNU General Public License (GPL);GNU Affero General Public License v3 or later (AGPLv3+);GNU Affero General Public License v3"
+          echo "::endgroup::"
+
       - name: Upload audit reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -74,6 +84,7 @@ jobs:
             osv-report.json
             osv-summary.txt
             pip-outdated.json
+            pip-licenses-report.json
           retention-days: 30
 
   node-audit:

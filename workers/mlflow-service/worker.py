@@ -52,6 +52,7 @@ Trancendos-native endpoints
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import os
@@ -88,7 +89,7 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if x_internal_secret != INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 

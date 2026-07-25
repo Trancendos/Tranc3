@@ -6,6 +6,7 @@ skill-based routing, and execution logging. Zero-cost self-hosted design.
 """
 
 import asyncio
+import hmac
 import json
 import os
 import sqlite3
@@ -67,7 +68,7 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if x_internal_secret != _INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
 

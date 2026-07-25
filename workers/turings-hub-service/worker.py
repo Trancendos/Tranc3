@@ -36,6 +36,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -72,7 +73,7 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if x_internal_secret != INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
@@ -428,7 +429,7 @@ app.add_middleware(
         for o in os.getenv(
             "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
         ).split(",")
-        if o.strip()
+        if o.strip() and o.strip() != "*"
     ],
     allow_methods=["*"],
     allow_headers=["*"],

@@ -16,6 +16,7 @@ Entity: DocUtari | Lead AI: Fiddsy
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import mimetypes
@@ -58,7 +59,8 @@ if (
     or _internal_secret_raw.strip() == "dev-secret"
 ):
     raise RuntimeError(
-        "INTERNAL_SECRET is not set (or still the default). "
+        "INTERNAL_SECRET (or legacy INTERNAL_SERVICE_TOKEN) is not set "
+        "(or still the default). "
         "This worker cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
@@ -458,7 +460,7 @@ app.add_middleware(
         for o in os.getenv(
             "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
         ).split(",")
-        if o.strip()
+        if o.strip() and o.strip() != "*"
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -468,8 +470,8 @@ app.add_middleware(
 async def _auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 router = APIRouter(prefix="/api", dependencies=[Depends(_auth)])

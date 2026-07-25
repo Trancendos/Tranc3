@@ -294,7 +294,7 @@ app.add_middleware(
         for o in os.getenv(
             "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
         ).split(",")
-        if o.strip()
+        if o.strip() and o.strip() != "*"
     ],
     allow_methods=["*"],
     allow_headers=["*"],

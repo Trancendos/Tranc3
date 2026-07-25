@@ -276,7 +276,7 @@ app.add_middleware(
     allow_origins=[
         o.strip()
         for o in os.environ.get("CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")).split(",")
-        if o.strip()
+        if o.strip() and o.strip() != "*"
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -393,7 +393,7 @@ app.add_middleware(
     allow_origins=[
         o.strip()
         for o in os.environ.get("CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")).split(",")
-        if o.strip()
+        if o.strip() and o.strip() != "*"
     ],
     allow_methods=["*"],
     allow_headers=["*"],

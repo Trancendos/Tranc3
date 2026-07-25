@@ -27,12 +27,39 @@ if str(SERVICE_DIR) not in sys.path:
 
 @pytest.fixture()
 def test_app(stub_dimensional, in_memory_db):
-    """Build a minimal FastAPI test app with just the portal router."""
+    """Build a minimal FastAPI test app with just the portal router.
+
+    Simulates AuthGatewayMiddleware having already populated request.state.user
+    (as it does in production) so route-level `getattr(request.state, "user", None)`
+    checks see an authenticated caller.
+    """
     import router as router_module
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
     # Inject stubs into the router module
+    router_module._sentinel = stub_dimensional["sentinel"]
+    router_module._worker_kit = stub_dimensional["worker_kit"]
+
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def _inject_authenticated_user(request, call_next):
+        request.state.user = {"sub": "test-admin", "role": "admin", "tier": "human"}
+        return await call_next(request)
+
+    app.include_router(router_module.router)
+
+    return TestClient(app, raise_server_exceptions=True)
+
+
+@pytest.fixture()
+def unauthenticated_test_app(stub_dimensional, in_memory_db):
+    """Same as test_app but without request.state.user — for 401 assertions."""
+    import router as router_module
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
     router_module._sentinel = stub_dimensional["sentinel"]
     router_module._worker_kit = stub_dimensional["worker_kit"]
 
@@ -94,7 +121,7 @@ class TestGateInfo:
 
 
 # ---------------------------------------------------------------------------
-# /portal/sessions (no auth enforced in test app)
+# /portal/sessions (admin endpoint — requires an authenticated request.state.user)
 # ---------------------------------------------------------------------------
 
 
@@ -107,6 +134,10 @@ class TestPortalSessions:
         data = test_app.get("/portal/sessions").json()
         assert "sessions" in data
         assert isinstance(data["sessions"], list)
+
+    def test_requires_auth(self, unauthenticated_test_app):
+        response = unauthenticated_test_app.get("/portal/sessions")
+        assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +154,10 @@ class TestPortalEvents:
         data = test_app.get("/portal/events").json()
         assert "events" in data
 
+    def test_requires_auth(self, unauthenticated_test_app):
+        response = unauthenticated_test_app.get("/portal/events")
+        assert response.status_code == 401
+
 
 # ---------------------------------------------------------------------------
 # /portal/routing-history
@@ -137,6 +172,10 @@ class TestRoutingHistory:
     def test_response_shape(self, test_app):
         data = test_app.get("/portal/routing-history").json()
         assert "routing_history" in data
+
+    def test_requires_auth(self, unauthenticated_test_app):
+        response = unauthenticated_test_app.get("/portal/routing-history")
+        assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------

@@ -73,7 +73,7 @@ def create_bridge_app() -> FastAPI:
         for o in os.environ.get(
             "CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
         ).split(",")
-        if o.strip()
+        if o.strip() and o.strip() != "*"
     ]
     app.add_middleware(
         CORSMiddleware,

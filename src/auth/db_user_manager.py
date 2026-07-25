@@ -17,7 +17,7 @@ from src.auth.passwords import verify_password as _verify_password
 
 logger = logging.getLogger(__name__)
 
-_BCRYPT_PREFIXES = ("$2a$", "$2b$", "$2y$")
+_BCRYPT_PREFIXES = ("$2$", "$2a$", "$2b$", "$2x$", "$2y$")
 
 
 def _is_legacy_bcrypt_hash(hashed: str) -> bool:
@@ -41,7 +41,7 @@ class _PasswordContext:
         if _is_legacy_bcrypt_hash(hashed):
             try:
                 return bcrypt.checkpw(plain.encode(), hashed.encode())
-            except Exception:
+            except (ValueError, TypeError):
                 return False
         return _verify_password(plain, hashed)
 
