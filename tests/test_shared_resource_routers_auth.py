@@ -120,6 +120,12 @@ def test_library_delete_requires_auth():
     assert resp.status_code in (401, 403)
 
 
+def test_library_apply_retention_requires_auth():
+    _clear_override()
+    resp = client.post("/library/retention/apply")
+    assert resp.status_code in (401, 403)
+
+
 def test_studio_capabilities_requires_auth():
     _clear_override()
     resp = client.get("/studio/capabilities")
@@ -206,6 +212,7 @@ def test_library_create_and_delete_with_auth():
 
         assert client.get(f"/library/articles/{article_id}").status_code == 200
         assert client.get("/library/articles/search", params={"q": "Test"}).status_code == 200
+        assert client.post("/library/retention/apply").status_code == 200
 
         deleted = client.delete(f"/library/articles/{article_id}")
         assert deleted.status_code == 200

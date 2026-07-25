@@ -7,7 +7,7 @@ from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 
 from auth import get_current_user
-from src.library.knowledge_base import ArticleStatus, get_library
+from src.library.knowledge_base import ArticleStatus, DataClassification, get_library
 
 router = APIRouter(prefix="/library", tags=["library"])
 
@@ -59,9 +59,23 @@ async def create_article(
     body: str = Body(...),
     tags: Optional[List[str]] = Body(None),
     author: str = Body("system"),
+    classification: str = Body("internal"),
+    retention_days: Optional[int] = Body(None),
     current_user: dict = Depends(get_current_user),
 ):
-    art = get_library().create(title=title, body=body, tags=tags, author=author)
+    try:
+        classification_enum = DataClassification(classification)
+    except ValueError:
+        valid = [c.value for c in DataClassification]
+        return JSONResponse({"error": f"Unknown classification. Valid: {valid}"}, status_code=400)
+    art = get_library().create(
+        title=title,
+        body=body,
+        tags=tags,
+        author=author,
+        classification=classification_enum,
+        retention_days=retention_days,
+    )
     return art.to_dict()
 
 
@@ -73,3 +87,9 @@ async def delete_article(
     if get_library().delete(article_id):
         return {"deleted": article_id}
     return JSONResponse({"error": "Not found"}, status_code=404)
+
+
+@router.post("/retention/apply")
+async def apply_retention(current_user: dict = Depends(get_current_user)):
+    removed = get_library().apply_retention()
+    return {"articles_removed": removed}
