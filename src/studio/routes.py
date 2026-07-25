@@ -20,7 +20,7 @@ async def studio_status() -> Dict[str, Any]:
 
 
 @router.get("/capabilities")
-async def capabilities() -> Dict[str, Any]:
+async def capabilities(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     return get_studio().capabilities()
 
 

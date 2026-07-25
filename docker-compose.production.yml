@@ -71,6 +71,10 @@ services:
       - "--entrypoints.metrics.address=:9090"
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entrypoint=metrics"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@trancendos.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--log.level=INFO"
       - "--accesslog=true"
       - "--accesslog.format=json"
@@ -408,7 +412,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tranc3-backend.rule=PathPrefix(`/api/backend`) || PathPrefix(`/mcp`)"
-      - "traefik.http.routers.tranc3-backend.entrypoints=web"
+      - "traefik.http.routers.tranc3-backend.entrypoints=websecure"
+      - "traefik.http.routers.tranc3-backend.tls=true"
+      - "traefik.http.routers.tranc3-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.tranc3-backend.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -431,7 +437,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.tranc3-ai.rule=PathPrefix(`/api/ai`)"
-      - "traefik.http.routers.tranc3-ai.entrypoints=web"
+      - "traefik.http.routers.tranc3-ai.entrypoints=websecure"
+      - "traefik.http.routers.tranc3-ai.tls=true"
+      - "traefik.http.routers.tranc3-ai.tls.certresolver=letsencrypt"
       - "traefik.http.services.tranc3-ai.loadbalancer.server.port=8001"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=5).read()\""]
@@ -458,7 +466,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.infinity-void.rule=PathPrefix(`/api/void`)"
-      - "traefik.http.routers.infinity-void.entrypoints=web"
+      - "traefik.http.routers.infinity-void.entrypoints=websecure"
+      - "traefik.http.routers.infinity-void.tls=true"
+      - "traefik.http.routers.infinity-void.tls.certresolver=letsencrypt"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=5).read()\""]
       <<: *healthcheck-default
@@ -492,7 +502,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api-gateway.rule=PathPrefix(`/api/`)"
-      - "traefik.http.routers.api-gateway.entrypoints=web"
+      - "traefik.http.routers.api-gateway.entrypoints=websecure"
+      - "traefik.http.routers.api-gateway.tls=true"
+      - "traefik.http.routers.api-gateway.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api-gateway.priority=1"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=5).read()\""]
@@ -518,7 +530,9 @@ services:
       # a path segment past /ws that never existed, so it never matched. No
       # stripping is needed since the backend route already is /ws.
       - "traefik.http.routers.infinity-ws.rule=PathPrefix(`/ws`)"
-      - "traefik.http.routers.infinity-ws.entrypoints=web"
+      - "traefik.http.routers.infinity-ws.entrypoints=websecure"
+      - "traefik.http.routers.infinity-ws.tls=true"
+      - "traefik.http.routers.infinity-ws.tls.certresolver=letsencrypt"
       - "traefik.http.services.infinity-ws.loadbalancer.server.port=8004"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8004/health', timeout=5).read()\""]
@@ -542,7 +556,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.infinity-auth.rule=PathPrefix(`/auth/`)"
-      - "traefik.http.routers.infinity-auth.entrypoints=web"
+      - "traefik.http.routers.infinity-auth.entrypoints=websecure"
+      - "traefik.http.routers.infinity-auth.tls=true"
+      - "traefik.http.routers.infinity-auth.tls.certresolver=letsencrypt"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8005/health', timeout=5).read()\""]
       <<: *healthcheck-default

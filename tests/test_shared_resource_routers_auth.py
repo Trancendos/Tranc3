@@ -57,9 +57,8 @@ def test_library_stats_is_public():
     assert client.get("/library/stats").status_code == 200
 
 
-def test_studio_status_and_capabilities_are_public():
+def test_studio_status_is_public():
     assert client.get("/studio/status").status_code == 200
-    assert client.get("/studio/capabilities").status_code == 200
 
 
 def test_imind_status_is_public():
@@ -118,6 +117,12 @@ def test_library_get_requires_auth():
 def test_library_delete_requires_auth():
     _clear_override()
     resp = client.delete("/library/articles/does-not-exist")
+    assert resp.status_code in (401, 403)
+
+
+def test_studio_capabilities_requires_auth():
+    _clear_override()
+    resp = client.get("/studio/capabilities")
     assert resp.status_code in (401, 403)
 
 
@@ -211,6 +216,8 @@ def test_library_create_and_delete_with_auth():
 def test_studio_submit_job_with_auth():
     app.dependency_overrides[get_current_user] = _override("u1")
     try:
+        assert client.get("/studio/capabilities").status_code == 200
+
         resp = client.post("/studio/jobs", json={"service": "imaginarium", "payload": {}})
         assert resp.status_code == 200
         job_id = resp.json()["id"]
