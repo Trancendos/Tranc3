@@ -30,7 +30,7 @@ PROCESS_TIMEOUT = float(os.environ.get("TRANCEFLOW_PROCESS_TIMEOUT", "120.0"))
 
 # ── Internal auth ──────────────────────────────────────────────────────────────
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-if not INTERNAL_SECRET.strip() or INTERNAL_SECRET == "dev-secret":
+if not INTERNAL_SECRET.strip() or INTERNAL_SECRET.strip() == "dev-secret":
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "This worker cannot start without a strong unique internal secret. "

@@ -20,7 +20,7 @@ _internal_secret_raw = os.getenv("INTERNAL_SECRET")
 if (
     not _internal_secret_raw
     or not _internal_secret_raw.strip()
-    or _internal_secret_raw == "dev-secret"
+    or _internal_secret_raw.strip() == "dev-secret"
 ):
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "

@@ -42,12 +42,17 @@ async def list_articles(
     current_user: dict = Depends(get_current_user),
 ):
     lib = get_library()
+    # Overfetch to the full candidate pool before filtering by visibility, so
+    # restricted articles the caller can't see don't crowd authorized ones
+    # out of the truncated `limit` window.
+    total = lib.stats()["total_articles"]
     if tag:
-        articles = lib.by_tag(tag, limit=limit)
+        candidates = lib.by_tag(tag, limit=total)
     else:
         st = ArticleStatus(status) if status else ArticleStatus.PUBLISHED
-        articles = lib.recent(limit=limit, status=st)
-    return [a.to_dict() for a in articles if _can_read(a, current_user)]
+        candidates = lib.recent(limit=total, status=st)
+    visible = [a for a in candidates if _can_read(a, current_user)]
+    return [a.to_dict() for a in visible[:limit]]
 
 
 @router.get("/articles/search")
@@ -56,7 +61,11 @@ async def search_articles(
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
 ):
-    return [a.to_dict() for a in get_library().search(q, limit=limit) if _can_read(a, current_user)]
+    lib = get_library()
+    total = lib.stats()["total_articles"]
+    candidates = lib.search(q, limit=total)
+    visible = [a for a in candidates if _can_read(a, current_user)]
+    return [a.to_dict() for a in visible[:limit]]
 
 
 @router.get("/articles/{article_id}")
@@ -77,7 +86,10 @@ async def create_article(
     title: str = Body(...),
     body: str = Body(...),
     tags: Optional[List[str]] = Body(None),
-    author: str = Body("system"),
+    author: Optional[str] = Body(
+        None,
+        description="Only honored for admin callers; other callers always author as themselves.",
+    ),
     classification: str = Body("internal"),
     retention_days: Optional[int] = Body(None, ge=0),
     current_user: dict = Depends(get_current_user),
@@ -87,11 +99,15 @@ async def create_article(
     except ValueError:
         valid = [c.value for c in DataClassification]
         return JSONResponse({"error": f"Unknown classification. Valid: {valid}"}, status_code=400)
+    caller_id = current_user.get("id") or current_user.get("sub") or "system"
+    resolved_author = (
+        author if author is not None and current_user.get("role") == "admin" else caller_id
+    )
     art = get_library().create(
         title=title,
         body=body,
         tags=tags,
-        author=author,
+        author=resolved_author,
         classification=classification_enum,
         retention_days=retention_days,
     )

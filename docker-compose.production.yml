@@ -902,6 +902,8 @@ services:
     <<: *worker-common
     build: { context: ./workers/workflow-engine-service, dockerfile: Dockerfile }
     container_name: workflow-engine-service-worker
+    environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
     ports: ["8034:8034"]
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8034/health', timeout=5).read()\""]
@@ -1697,6 +1699,7 @@ services:
       INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
       LIBRARY_TLS_VERIFY: "${LIBRARY_TLS_VERIFY:-0}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000}"
     volumes:
       - library-data:/data
     depends_on:
@@ -2943,6 +2946,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8064
+      - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
     expose:
       - "8064"
     ports:
@@ -2968,6 +2972,7 @@ services:
     environment:
       - PORT=8061
       - REMOTION_SERVE_URL=http://remotion-render-service:8093
+      - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
     volumes:
       - remotion-renders:/renders:ro
     expose:
@@ -3137,6 +3142,7 @@ services:
     <<: *worker-common
     environment:
       - PORT=8055
+      - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
     expose:
       - "8055"
     ports:
@@ -3747,6 +3753,7 @@ services:
     environment:
       - PORT=8097
       - OLLAMA_URL=http://ollama:11434
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
     expose:
       - "8097"
     ports:

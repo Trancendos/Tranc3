@@ -237,12 +237,14 @@ def test_library_create_rejects_unknown_classification():
 
 def test_library_restricted_article_hidden_from_other_users():
     app.dependency_overrides[get_current_user] = _override("owner")
-    created = client.post(
-        "/library/articles",
-        json={"title": "Secret", "body": "Body", "classification": "restricted"},
-    )
-    article_id = created.json()["id"]
-    _clear_override()
+    try:
+        created = client.post(
+            "/library/articles",
+            json={"title": "Secret", "body": "Body", "classification": "restricted"},
+        )
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
 
     app.dependency_overrides[get_current_user] = _override("someone-else")
     try:
@@ -251,6 +253,12 @@ def test_library_restricted_article_hidden_from_other_users():
 
         listed = client.get("/library/articles", params={"limit": 200}).json()
         assert all(a["id"] != article_id for a in listed)
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        client.delete(f"/library/articles/{article_id}")
     finally:
         _clear_override()
 
@@ -271,22 +279,125 @@ def test_library_restricted_article_visible_to_author():
         resp = client.get(f"/library/articles/{article_id}")
         assert resp.status_code == 200
     finally:
+        client.delete(f"/library/articles/{article_id}")
         _clear_override()
 
 
 def test_library_restricted_article_visible_to_admin():
     app.dependency_overrides[get_current_user] = _override("owner")
-    created = client.post(
-        "/library/articles",
-        json={"title": "Secret", "body": "Body", "classification": "restricted"},
-    )
-    article_id = created.json()["id"]
-    _clear_override()
+    try:
+        created = client.post(
+            "/library/articles",
+            json={"title": "Secret", "body": "Body", "classification": "restricted"},
+        )
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
 
     app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
     try:
         resp = client.get(f"/library/articles/{article_id}")
         assert resp.status_code == 200
+        client.delete(f"/library/articles/{article_id}")
+    finally:
+        _clear_override()
+
+
+def test_library_create_ignores_client_supplied_author_for_non_admin():
+    """A non-admin caller cannot forge an arbitrary `author` to grant read
+    access to a restricted article to some other principal — the server
+    always attributes authorship to the caller's own identity instead."""
+    app.dependency_overrides[get_current_user] = _override("owner")
+    try:
+        created = client.post(
+            "/library/articles",
+            json={
+                "title": "Secret",
+                "body": "Body",
+                "author": "someone-else",
+                "classification": "restricted",
+            },
+        )
+        assert created.json()["author"] == "owner"
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("someone-else")
+    try:
+        resp = client.get(f"/library/articles/{article_id}")
+        assert resp.status_code == 403
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("owner")
+    try:
+        client.delete(f"/library/articles/{article_id}")
+    finally:
+        _clear_override()
+
+
+def test_library_create_honors_explicit_author_for_admin():
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        created = client.post(
+            "/library/articles",
+            json={
+                "title": "Assigned",
+                "body": "Body",
+                "author": "designated-owner",
+                "classification": "restricted",
+            },
+        )
+        assert created.json()["author"] == "designated-owner"
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("designated-owner")
+    try:
+        resp = client.get(f"/library/articles/{article_id}")
+        assert resp.status_code == 200
+    finally:
+        client.delete(f"/library/articles/{article_id}")
+        _clear_override()
+
+
+def test_library_list_does_not_let_restricted_articles_crowd_out_visible_ones():
+    """Restricted articles filling the recency window ahead of a caller's own
+    visible article must not push it out of a small `limit` — the route must
+    filter by visibility before truncating, not after."""
+    app.dependency_overrides[get_current_user] = _override("owner")
+    try:
+        created = client.post("/library/articles", json={"title": "Visible", "body": "Body"})
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("someone-else")
+    noise_ids = []
+    try:
+        for i in range(5):
+            resp = client.post(
+                "/library/articles",
+                json={"title": f"Noise {i}", "body": "Body", "classification": "restricted"},
+            )
+            noise_ids.append(resp.json()["id"])
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("owner")
+    try:
+        listed = client.get("/library/articles", params={"limit": 1}).json()
+        assert any(a["id"] == article_id for a in listed)
+    finally:
+        client.delete(f"/library/articles/{article_id}")
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("someone-else")
+    try:
+        for nid in noise_ids:
+            client.delete(f"/library/articles/{nid}")
     finally:
         _clear_override()
 

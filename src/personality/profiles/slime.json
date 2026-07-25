@@ -40,7 +40,6 @@
     "platform-diagnostics"
   ],
   "mcp_tools_priority": ["get_system_health", "search_skills", "run_workflow"],
-  "prime_ai": false,
   "serves": ["the-lab"],
   "spawned_from": "tranc3-base",
   "version": "1.0.0"

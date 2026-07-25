@@ -40,9 +40,7 @@
     "ai-assisted-development"
   ],
   "mcp_tools_priority": ["run_workflow", "search_skills", "get_system_health", "query_vector_store"],
-  "prime_ai": true,
   "serves": ["the-lab"],
-  "incorporates_logic_from": ["the-dr-ai"],
   "spawned_from": "tranc3-base",
-  "version": "2.0.0"
+  "version": "1.0.0"
 }

@@ -34,7 +34,7 @@ _internal_secret_raw = os.getenv("INTERNAL_SECRET")
 if (
     not _internal_secret_raw
     or not _internal_secret_raw.strip()
-    or _internal_secret_raw == "dev-secret"
+    or _internal_secret_raw.strip() == "dev-secret"
 ):
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
@@ -195,7 +195,11 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=[
+        o.strip()
+        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+        if o.strip()
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -360,7 +364,7 @@ async def lab_generate(req: GenerateRequest) -> dict[str, Any]:
     }
 
 
-@app.get("/lab/models")
+@app.get("/lab/models", dependencies=[Depends(_require_internal_auth)])
 async def lab_models() -> dict[str, Any]:
     """List TabbyML models."""
     try:
@@ -441,7 +445,7 @@ async def lab_run(req: RunRequest) -> dict[str, Any]:
     )
 
 
-@app.get("/workspaces")
+@app.get("/workspaces", dependencies=[Depends(_require_internal_auth)])
 async def workspaces() -> dict[str, Any]:
     return {"workspaces": [], "total": 0, "message": "Workspace management coming soon."}
 

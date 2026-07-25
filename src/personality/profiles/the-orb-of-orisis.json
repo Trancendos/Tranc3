@@ -39,7 +39,6 @@
     "scaling-risk-assessment"
   ],
   "mcp_tools_priority": ["query_vector_store", "get_system_health", "search_skills"],
-  "prime_ai": false,
   "serves": ["infinity"],
   "spawned_from": "tranc3-base",
   "version": "1.0.0"

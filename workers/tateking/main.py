@@ -41,7 +41,7 @@ _internal_secret_raw = os.getenv("INTERNAL_SECRET")
 if (
     not _internal_secret_raw
     or not _internal_secret_raw.strip()
-    or _internal_secret_raw == "dev-secret"
+    or _internal_secret_raw.strip() == "dev-secret"
 ):
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
@@ -188,7 +188,11 @@ async def _remotion_render(req: VideoCreateRequest, job_id: str) -> Optional[str
 app = FastAPI(title="TateKing", description="Video creation & editing platform", version=VERSION)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=[
+        o.strip()
+        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+        if o.strip()
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -512,7 +516,7 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
     raise HTTPException(status_code=500, detail=f"Subtitle burn-in failed: {err}")
 
 
-@app.get("/projects")
+@app.get("/projects", dependencies=[Depends(_require_internal_auth)])
 async def projects() -> dict[str, Any]:
     return {"projects": list(_jobs.values()), "total": len(_jobs)}
 

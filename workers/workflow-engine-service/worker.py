@@ -243,7 +243,11 @@ async def _lifespan(app: FastAPI):
 app = FastAPI(title="Tranc3 Workflow Engine Service", version="0.1.0", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=[
+        o.strip()
+        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+        if o.strip()
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
