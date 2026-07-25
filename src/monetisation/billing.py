@@ -628,16 +628,23 @@ class TaxMonitor:
     Zero-cost tax compliance monitoring for UK/EU SaaS.
 
     VAT rules:
-      - UK VAT: 20% on digital services to UK consumers (threshold: £85,000/yr)
-      - EU VAT OSS: varies by country (15-27%); register via One Stop Shop
+      - UK VAT: 20% on digital services to UK consumers (threshold: £90,000/yr,
+        per "The Value Added Tax (Increase of Registration Limits) Order 2024",
+        effective 2024-04-01)
+      - EU VAT OSS: varies by country (17-27%); register via One Stop Shop
       - US: no federal VAT; state sales tax varies — Stripe Tax handles this
       - Free tools: VIES API (EU VAT validation), HMRC Making Tax Digital API
 
     Stripe Tax (enabled above in checkout) handles collection automatically
     once real price IDs are configured. This monitor tracks obligations.
+
+    EU_VAT_RATES last re-verified against public reporting as of this
+    session's knowledge cutoff (2026-01); rates change on national budget
+    cycles, so this list should be periodically re-checked against a real
+    tax/accounting source rather than assumed evergreen.
     """
 
-    UK_VAT_THRESHOLD_GBP = 85_000
+    UK_VAT_THRESHOLD_GBP = 90_000
     UK_VAT_RATE = 0.20
     EU_DEFAULT_VAT_RATE = 0.20  # varies; use Stripe Tax for per-country rates
 
@@ -652,13 +659,13 @@ class TaxMonitor:
         "PL": 0.23,
         "SE": 0.25,
         "DK": 0.25,
-        "FI": 0.24,
+        "FI": 0.255,  # raised from 24% effective 2024-09-01
         "IE": 0.23,
         "PT": 0.23,
-        "RO": 0.19,
+        "RO": 0.21,  # raised from 19% effective 2025-08-01
         "HU": 0.27,
         "CZ": 0.21,
-        "SK": 0.20,
+        "SK": 0.23,  # raised from 20% effective 2025-01-01
         "BG": 0.20,
         "HR": 0.25,
         "LT": 0.21,
