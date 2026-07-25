@@ -7,9 +7,26 @@ from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 
 from auth import get_current_user
-from src.library.knowledge_base import ArticleStatus, DataClassification, get_library
+from src.library.knowledge_base import Article, ArticleStatus, DataClassification, get_library
 
 router = APIRouter(prefix="/library", tags=["library"])
+
+_RESTRICTED_CLASSIFICATIONS = frozenset(
+    {DataClassification.RESTRICTED, DataClassification.TOP_SECRET}
+)
+
+
+def _can_read(article: Article, current_user: dict) -> bool:
+    """PUBLIC/INTERNAL/CONFIDENTIAL articles are readable by any authenticated
+    caller (the platform-wide auth gate already covers those). RESTRICTED and
+    TOP_SECRET additionally require the caller to be an admin or the article's
+    own author."""
+    if article.classification not in _RESTRICTED_CLASSIFICATIONS:
+        return True
+    if current_user.get("role") == "admin":
+        return True
+    caller_id = current_user.get("id") or current_user.get("sub")
+    return caller_id == article.author
 
 
 @router.get("/stats")
@@ -30,7 +47,7 @@ async def list_articles(
     else:
         st = ArticleStatus(status) if status else ArticleStatus.PUBLISHED
         articles = lib.recent(limit=limit, status=st)
-    return [a.to_dict() for a in articles]
+    return [a.to_dict() for a in articles if _can_read(a, current_user)]
 
 
 @router.get("/articles/search")
@@ -39,7 +56,7 @@ async def search_articles(
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
 ):
-    return [a.to_dict() for a in get_library().search(q, limit=limit)]
+    return [a.to_dict() for a in get_library().search(q, limit=limit) if _can_read(a, current_user)]
 
 
 @router.get("/articles/{article_id}")
@@ -50,6 +67,8 @@ async def get_article(
     art = get_library().get(article_id)
     if not art:
         return JSONResponse({"error": "Not found"}, status_code=404)
+    if not _can_read(art, current_user):
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
     return {**art.to_dict(), "body": art.body}
 
 
@@ -60,7 +79,7 @@ async def create_article(
     tags: Optional[List[str]] = Body(None),
     author: str = Body("system"),
     classification: str = Body("internal"),
-    retention_days: Optional[int] = Body(None),
+    retention_days: Optional[int] = Body(None, ge=0),
     current_user: dict = Depends(get_current_user),
 ):
     try:

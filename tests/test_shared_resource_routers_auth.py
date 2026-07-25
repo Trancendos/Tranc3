@@ -220,6 +220,77 @@ def test_library_create_and_delete_with_auth():
         _clear_override()
 
 
+def test_library_create_rejects_unknown_classification():
+    app.dependency_overrides[get_current_user] = _override("u1")
+    try:
+        resp = client.post(
+            "/library/articles",
+            json={"title": "Bad", "body": "Body", "classification": "not-a-real-level"},
+        )
+        assert resp.status_code == 400
+    finally:
+        _clear_override()
+
+
+# ── Classification gates read access, not just write access ─────────────
+
+
+def test_library_restricted_article_hidden_from_other_users():
+    app.dependency_overrides[get_current_user] = _override("owner")
+    created = client.post(
+        "/library/articles",
+        json={"title": "Secret", "body": "Body", "classification": "restricted"},
+    )
+    article_id = created.json()["id"]
+    _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("someone-else")
+    try:
+        resp = client.get(f"/library/articles/{article_id}")
+        assert resp.status_code == 403
+
+        listed = client.get("/library/articles", params={"limit": 200}).json()
+        assert all(a["id"] != article_id for a in listed)
+    finally:
+        _clear_override()
+
+
+def test_library_restricted_article_visible_to_author():
+    app.dependency_overrides[get_current_user] = _override("owner")
+    try:
+        created = client.post(
+            "/library/articles",
+            json={
+                "title": "Secret",
+                "body": "Body",
+                "author": "owner",
+                "classification": "top_secret",
+            },
+        )
+        article_id = created.json()["id"]
+        resp = client.get(f"/library/articles/{article_id}")
+        assert resp.status_code == 200
+    finally:
+        _clear_override()
+
+
+def test_library_restricted_article_visible_to_admin():
+    app.dependency_overrides[get_current_user] = _override("owner")
+    created = client.post(
+        "/library/articles",
+        json={"title": "Secret", "body": "Body", "classification": "restricted"},
+    )
+    article_id = created.json()["id"]
+    _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        resp = client.get(f"/library/articles/{article_id}")
+        assert resp.status_code == 200
+    finally:
+        _clear_override()
+
+
 def test_studio_submit_job_with_auth():
     app.dependency_overrides[get_current_user] = _override("u1")
     try:
@@ -320,6 +391,21 @@ def test_vrar3d_user_can_end_own_session():
 
         resp = client.post(f"/vrar3d/sessions/{session_id}/end", json={"mood_after": 4})
         assert resp.status_code == 200
+
+        # Already-ended session: get_session() still finds it, but
+        # end_session() itself refuses a second end — the 404 in that
+        # second, inner check.
+        resp2 = client.post(f"/vrar3d/sessions/{session_id}/end", json={"mood_after": 3})
+        assert resp2.status_code == 404
+    finally:
+        _clear_override()
+
+
+def test_vrar3d_end_session_not_found():
+    app.dependency_overrides[get_current_user] = _override("u1")
+    try:
+        resp = client.post("/vrar3d/sessions/does-not-exist/end", json={"mood_after": 4})
+        assert resp.status_code == 404
     finally:
         _clear_override()
 

@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -36,6 +36,19 @@ from pydantic import BaseModel, Field
 PORT = int(os.getenv("PORT", "8061"))
 WORKER_NAME = "tateking"
 VERSION = "2.0.0"
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw
 
 FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
 REMOTION_SERVE_URL = os.getenv("REMOTION_SERVE_URL", "")
@@ -78,6 +91,11 @@ def _validate_input_url(url: str) -> None:
 
 def _ffmpeg_available() -> bool:
     return shutil.which(FFMPEG_PATH) is not None
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +213,7 @@ async def status() -> dict[str, Any]:
     }
 
 
-@app.post("/video/create")
+@app.post("/video/create", dependencies=[Depends(_require_internal_auth)])
 async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
     """Create a new video job using FFmpeg or Remotion."""
     job_id = str(uuid.uuid4())
@@ -284,7 +302,7 @@ async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
     return {"job_id": job_id, "status": "completed", "source": "offline", "placeholder": True}
 
 
-@app.post("/video/compose")
+@app.post("/video/compose", dependencies=[Depends(_require_internal_auth)])
 async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     """Compose video from multiple input assets using FFmpeg."""
     job_id = str(uuid.uuid4())
@@ -355,7 +373,7 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"FFmpeg compose failed: {err}")
 
 
-@app.post("/video/thumbnail")
+@app.post("/video/thumbnail", dependencies=[Depends(_require_internal_auth)])
 async def extract_thumbnail(req: ThumbnailRequest) -> dict[str, Any]:
     """Extract a thumbnail from a completed video job."""
     job = _jobs.get(req.job_id)
@@ -417,7 +435,7 @@ async def get_video_status(job_id: str) -> dict[str, Any]:
     return {"job_id": job_id, **job}
 
 
-@app.get("/video/result/{job_id}")
+@app.get("/video/result/{job_id}", dependencies=[Depends(_require_internal_auth)])
 async def get_video_result(job_id: str) -> FileResponse:
     job = _jobs.get(job_id)
     if not job:
@@ -438,7 +456,7 @@ async def get_video_result(job_id: str) -> FileResponse:
     return FileResponse(str(resolved), media_type="video/mp4", filename=resolved.name)
 
 
-@app.post("/video/subtitle")
+@app.post("/video/subtitle", dependencies=[Depends(_require_internal_auth)])
 async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
     """Add SRT subtitles to a completed video via FFmpeg."""
     job = _jobs.get(req.job_id)
@@ -494,7 +512,7 @@ async def projects() -> dict[str, Any]:
     return {"projects": list(_jobs.values()), "total": len(_jobs)}
 
 
-@app.post("/render")
+@app.post("/render", dependencies=[Depends(_require_internal_auth)])
 async def render_compat(req: VideoCreateRequest) -> dict[str, Any]:
     """Legacy /render endpoint delegates to /video/create."""
     return await create_video(req)

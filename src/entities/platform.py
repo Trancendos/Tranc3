@@ -57,7 +57,8 @@ class AgentPair:
     Used only for Locations where each name in `lead_ais` runs its own
     agent team rather than sharing the Location's single agent_alpha/beta
     (e.g. TateKing's Benji Tate vs. Sam King, Arcadian Exchange's five
-    Porters) — see `LocationEntity.agent_teams`.
+    Porters, The Lab's The Dr. vs. Slime, Infinity's The Guardian vs. The
+    Orb of Orisis) — see `LocationEntity.agent_teams`.
     """
 
     alpha: Agent
@@ -94,10 +95,10 @@ class LocationEntity:
     lead_ais: List[str] = field(default_factory=list)
     # Per-name Agent Alpha/Beta pairs, keyed by each entry in `lead_ais`,
     # for Locations where each named AI runs its own dedicated team instead
-    # of sharing agent_alpha/agent_beta (TateKing, Arcadian Exchange — see
-    # _wire_multi_agent_teams()). Empty for every other Location; where
-    # populated, agent_teams[lead_ais[0]] is the same pair as agent_alpha/
-    # agent_beta above, not a duplicate team.
+    # of sharing agent_alpha/agent_beta (TateKing, Arcadian Exchange, The
+    # Lab, Infinity — see _wire_multi_agent_teams()). Empty for every other
+    # Location; where populated, agent_teams[lead_ais[0]] is the same pair
+    # as agent_alpha/agent_beta above, not a duplicate team.
     agent_teams: Dict[str, AgentPair] = field(default_factory=dict)
 
     def to_health_meta(self) -> Dict:
@@ -770,8 +771,9 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         # The Guardian handles security (auth, access control); The Orb of
         # Orisis is precognitive — generating foresight into the platform's
         # future architectural direction, not a second security role. See
-        # "Predictive Threat Modeling" below. No personality profile exists
-        # for the Orb yet (only "the-guardian").
+        # "Predictive Threat Modeling" below. Each has its own dedicated
+        # agent_teams pair (see _wire_multi_agent_teams()) and personality
+        # profile ("the-guardian" / "the-orb-of-orisis").
         lead_ais=["The Guardian (Marcus Magnolia)", "The Orb of Orisis"],
         abilities=[
             "Predictive Threat Modeling: Orb provides 'Future Sight.'",
@@ -1550,12 +1552,13 @@ def get_orchestration_tier(ai_name: str) -> OrchestrationTier:
 
 
 def _wire_multi_agent_teams() -> None:
-    """Populate agent_teams for the two Locations where each `lead_ais`
+    """Populate agent_teams for the four Locations where each `lead_ais`
     name runs its own dedicated Agent Alpha/Beta pair instead of sharing
     the Location's agent_alpha/agent_beta — TateKing (Benji Tate vs. Sam
-    King) and Arcadian Exchange (the five Porters). Per each pillar's own
-    mind-map data (2026-07-24); every other Location's agent_teams stays
-    empty.
+    King), Arcadian Exchange (the five Porters), The Lab (The Dr. vs.
+    Slime), and Infinity (The Guardian vs. The Orb of Orisis). Per each
+    pillar's own mind-map data (2026-07-24, extended 2026-07-25 for The
+    Lab/Infinity); every other Location's agent_teams stays empty.
 
     Called once at module import time, before _assign_ids() so the new
     Agent objects get SIDs too. The primary name's pair reuses the
@@ -1626,6 +1629,48 @@ def _wire_multi_agent_teams() -> None:
             Agent(
                 "The Trader-J",
                 "Automates bidding on API-credit marketplaces for cost efficiency.",
+            ),
+        ),
+    }
+
+    # The Dr. writes and reviews code (primary); Slime is a dedicated
+    # debugger — tracing failures to their root cause and verifying
+    # fixes — not a duplicate of The Dr.'s own diagnostics-and-health
+    # remit under a different name.
+    the_lab = PLATFORM_ENTITIES["The Lab"]
+    the_lab.agent_teams = {
+        "The Dr. (Nikolai O'denhime)": AgentPair(the_lab.agent_alpha, the_lab.agent_beta),
+        "Slime": AgentPair(
+            Agent(
+                "The Root-Causer",
+                "Traces failing tests and stack traces back to their originating "
+                "commit or logic error.",
+            ),
+            Agent(
+                "The Patch-Weaver",
+                "Drafts targeted fixes and re-runs the failing case to confirm the "
+                "regression is resolved.",
+            ),
+        ),
+    }
+
+    # The Guardian handles security (auth, access control, threat response);
+    # The Orb of Orisis is precognitive — projecting the platform's future
+    # architectural direction — not a second security role under a
+    # different name.
+    infinity = PLATFORM_ENTITIES["Infinity"]
+    infinity.agent_teams = {
+        "The Guardian (Marcus Magnolia)": AgentPair(infinity.agent_alpha, infinity.agent_beta),
+        "The Orb of Orisis": AgentPair(
+            Agent(
+                "The Seer",
+                "Projects how current architectural decisions will scale or strain "
+                "months ahead.",
+            ),
+            Agent(
+                "The Cartographer",
+                "Maps dependency and growth trends into a forward-looking "
+                "architecture roadmap.",
             ),
         ),
     }

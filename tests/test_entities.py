@@ -92,13 +92,15 @@ class TestLocationEntity:
         assert meta["lead_ais"] == ["The Guardian (Marcus Magnolia)", "The Orb of Orisis"]
 
 
-# ── Per-name agent teams (TateKing, Arcadian Exchange) ───────────────
+# ── Per-name agent teams (TateKing, Arcadian Exchange, The Lab, Infinity) ──
+
+_MULTI_AGENT_TEAM_LOCATIONS = ("TateKing", "Arcadian Exchange", "The Lab", "Infinity")
 
 
 class TestAgentTeams:
     def test_locations_without_teams_have_empty_dict(self):
         for name, entity in PLATFORM_ENTITIES.items():
-            if name in ("TateKing", "Arcadian Exchange"):
+            if name in _MULTI_AGENT_TEAM_LOCATIONS:
                 continue
             assert entity.agent_teams == {}, f"{name} has unexpected agent_teams"
 
@@ -135,6 +137,30 @@ class TestAgentTeams:
         pair = AgentPair(Agent("A", "d"), Agent("B", "d"))
         assert isinstance(pair.alpha, Agent)
         assert isinstance(pair.beta, Agent)
+
+    def test_the_lab_has_a_pair_per_lead_ai(self):
+        entity = PLATFORM_ENTITIES["The Lab"]
+        assert set(entity.agent_teams.keys()) == set(entity.lead_ais)
+        assert entity.agent_teams["Slime"].alpha.code_name == "The Root-Causer"
+        assert entity.agent_teams["Slime"].beta.code_name == "The Patch-Weaver"
+
+    def test_the_lab_primary_pair_is_agent_alpha_beta(self):
+        entity = PLATFORM_ENTITIES["The Lab"]
+        primary = entity.agent_teams["The Dr. (Nikolai O'denhime)"]
+        assert primary.alpha is entity.agent_alpha
+        assert primary.beta is entity.agent_beta
+
+    def test_infinity_has_a_pair_per_lead_ai(self):
+        entity = PLATFORM_ENTITIES["Infinity"]
+        assert set(entity.agent_teams.keys()) == set(entity.lead_ais)
+        assert entity.agent_teams["The Orb of Orisis"].alpha.code_name == "The Seer"
+        assert entity.agent_teams["The Orb of Orisis"].beta.code_name == "The Cartographer"
+
+    def test_infinity_primary_pair_is_agent_alpha_beta(self):
+        entity = PLATFORM_ENTITIES["Infinity"]
+        primary = entity.agent_teams["The Guardian (Marcus Magnolia)"]
+        assert primary.alpha is entity.agent_alpha
+        assert primary.beta is entity.agent_beta
 
 
 # ── PLATFORM_ENTITIES registry ──────────────────────────────────────
@@ -306,9 +332,10 @@ class TestGetAllIds:
         """43 locations x 7 base IDs (PID + AID + 2 SIDs + 4 NIDs) = 344,
         plus 10 extra SIDs for TateKing's and Arcadian Exchange's
         non-primary agent_teams pairs (Sam King; Ann/George/Edward/James
-        Porter) = 354."""
+        Porter), plus 4 more for The Lab's Slime and Infinity's The Orb of
+        Orisis = 358."""
         ids = get_all_ids()
-        assert len(ids) == 354
+        assert len(ids) == 358
 
     def test_each_entry_has_id_field(self):
         ids = get_all_ids()

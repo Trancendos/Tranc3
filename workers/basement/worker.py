@@ -29,7 +29,11 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 AUDIT_SERVICE_URL = os.getenv("AUDIT_SERVICE_URL", "http://localhost:8025")
 _internal_secret_raw = os.getenv("INTERNAL_SECRET")
-if not _internal_secret_raw or _internal_secret_raw == "dev-secret":
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw == "dev-secret"
+):
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "This worker cannot start without a strong unique internal secret. "

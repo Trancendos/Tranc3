@@ -42,13 +42,14 @@ class TestResolvePersonalityForLocation:
     def test_reassigning_to_a_co_lead_still_resolves(self, registry):
         # Sam King, Slime, and the four non-primary Porters are real
         # assign_ai() targets (an operator can reassign a seat to any of
-        # them), not just entries in lead_ais — each must resolve to its
-        # location's shared profile rather than falling back to None.
+        # them), not just entries in lead_ais. Sam King and the Porters
+        # still resolve to their Location's shared profile; Slime resolves
+        # to its own dedicated profile (2026-07-25 split from "the-dr-slime").
         registry.assign_ai("TateKing", "Sam King", changed_by="test")
         assert resolve_personality_for_location("TateKing") == "benji-tate-sam-king"
 
         registry.assign_ai("The Lab", "Slime", changed_by="test")
-        assert resolve_personality_for_location("The Lab") == "the-dr-slime"
+        assert resolve_personality_for_location("The Lab") == "slime"
 
         registry.assign_ai("Arcadian Exchange", "Ann Porter", changed_by="test")
         assert resolve_personality_for_location("Arcadian Exchange") == "the-porter-family"
@@ -86,10 +87,16 @@ class TestResolvePersonalityForLocation:
         # docs/governance/PERSONALITY-ARCHETYPES.md).
         assert resolve_personality_for_location("Infinity") == "the-guardian"
 
+    def test_infinity_orb_of_orisis_resolves_to_its_own_profile(self, registry):
+        # The Orb of Orisis previously had no profile mapped at all —
+        # added 2026-07-25 alongside its own agent_teams pair.
+        registry.assign_ai("Infinity", "The Orb of Orisis", changed_by="test")
+        assert resolve_personality_for_location("Infinity") == "the-orb-of-orisis"
+
     def test_the_lab_resolves_via_the_dr_nikolai_odenhime(self, registry):
         # The Lab's seed lead_ai is "The Dr. (Nikolai O'denhime)", also
         # synced from trance_one/platform_manifest.py.
-        assert resolve_personality_for_location("The Lab") == "the-dr-slime"
+        assert resolve_personality_for_location("The Lab") == "the-dr"
 
     def test_registry_failure_returns_none_instead_of_raising(self, registry, monkeypatch):
         # A Role Registry outage (e.g. its SQLite file can't be opened)

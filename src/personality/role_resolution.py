@@ -36,8 +36,11 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Sam King": "benji-tate-sam-king",
     "Baron Von Hilton": "baron-von-hilton",
     "Tyler Towncroft": "tyler-towncroft",
-    "The Dr. (Nikolai O'denhime)": "the-dr-slime",
-    "Slime": "the-dr-slime",
+    # The Dr. and Slime each have their own dedicated profile (2026-07-25 —
+    # previously shared "the-dr-slime", when Slime was voiced as a
+    # companion inside The Dr.'s own prompt rather than a distinct AI).
+    "The Dr. (Nikolai O'denhime)": "the-dr",
+    "Slime": "slime",
     "Larry Lowhammer": "larry-lowhammer",
     "The Mad Hatter": "the-mad-hatter",
     "Lunascene": "lunascene",
@@ -67,6 +70,10 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     # sidesteps rather than silently resolves.
     "Imfy": "norman-hawkins",
     "The Guardian (Marcus Magnolia)": "the-guardian",
+    # The Orb of Orisis (Infinity's precognitive AI) previously had no
+    # profile mapped at all — added 2026-07-25 alongside its own
+    # agent_teams pair (The Seer / The Cartographer).
+    "The Orb of Orisis": "the-orb-of-orisis",
     "Prometheus": "prometheus",
     "Rocking Ricki": "rocking-ricki",
     "Renik": "renik",

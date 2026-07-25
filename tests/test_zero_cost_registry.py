@@ -116,6 +116,7 @@ def test_zero_cost_audit_script_exits_zero() -> None:
         cwd=root,
         capture_output=True,
         text=True,
+        timeout=30,
     )
     assert result.returncode == 0, result.stderr
     assert (root / "docs" / "ZERO_COST_VENDOR_MATRIX.md").is_file()

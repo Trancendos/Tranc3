@@ -33,7 +33,11 @@ logger = logging.getLogger(WORKER_NAME)
 
 MASTER_KEY_ENV = os.getenv("VAULT_MASTER_KEY", "dev-master-key-change-in-prod")
 _internal_secret_raw = os.getenv("INTERNAL_SECRET")
-if not _internal_secret_raw or _internal_secret_raw == "dev-secret":
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw == "dev-secret"
+):
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "This worker cannot start without a strong unique internal secret. "

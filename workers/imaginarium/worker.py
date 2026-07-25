@@ -28,7 +28,11 @@ DB_PATH = Path(__file__).parent / "data" / "imaginarium.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 _internal_secret_raw = os.getenv("INTERNAL_SECRET")
-if not _internal_secret_raw or _internal_secret_raw == "dev-secret":
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw == "dev-secret"
+):
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "This worker cannot start without a strong unique internal secret. "
