@@ -139,6 +139,17 @@ class Observatory:
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
+            # Forward the same events to The Library for KB article generation.
+            # ingest() is async; schedule it rather than block record()'s caller.
+            try:
+                from src.observability.library_pipeline import ingest as _library_ingest
+
+                asyncio.get_running_loop().create_task(_library_ingest(event.to_dict()))
+            except RuntimeError:
+                pass  # nosec B110 — no running event loop (e.g. sync test context)
+            except Exception:
+                pass  # nosec B110 — graceful degradation; error logged upstream
+
         return event
 
     def _notify_subscribers(self, event: AuditEvent) -> None:
