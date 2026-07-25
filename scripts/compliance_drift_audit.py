@@ -166,9 +166,7 @@ def check_library_classification() -> list[str]:
 
     annotation = ast.unparse(classification_field.annotation)
     if "DataClassification" not in annotation:
-        return [
-            f"Article.classification is annotated '{annotation}', not DataClassification"
-        ]
+        return [f"Article.classification is annotated '{annotation}', not DataClassification"]
     return []
 
 

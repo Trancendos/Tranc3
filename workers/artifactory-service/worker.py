@@ -35,7 +35,11 @@ WORKER_NAME = "artifactory-service"
 VERSION = "1.0.0"
 
 _internal_secret_raw = os.getenv("INTERNAL_SECRET")
-if not _internal_secret_raw or not _internal_secret_raw.strip() or _internal_secret_raw.strip() == "dev-secret":
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "This worker cannot start without a strong unique internal secret. "
@@ -47,6 +51,7 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
     if x_internal_secret != INTERNAL_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden")
+
 
 ZOT_URL = os.getenv("ZOT_URL", "http://localhost:5000").rstrip("/")
 GITEA_URL = os.getenv("GITEA_URL", "http://localhost:3000").rstrip("/")
@@ -265,7 +270,9 @@ async def list_repositories() -> dict[str, Any]:
     return {"repositories": repos, "total": len(repos), "source": "local"}
 
 
-@app.get("/artifactory/repositories/{repo:path}/tags", dependencies=[Depends(_require_internal_auth)])
+@app.get(
+    "/artifactory/repositories/{repo:path}/tags", dependencies=[Depends(_require_internal_auth)]
+)
 async def list_tags(repo: str) -> dict[str, Any]:
     """List tags for a repository in Zot."""
     safe_repo = repo.replace("\n", "").replace("\r", "")[:100]
