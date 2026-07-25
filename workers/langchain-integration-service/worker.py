@@ -281,7 +281,12 @@ async def _lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Tranc3 LangChain Integration Service", version="0.1.0", lifespan=_lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")

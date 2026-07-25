@@ -244,7 +244,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Resonate — Empathy Engine", version="1.0.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 _router = APIRouter()
 
 

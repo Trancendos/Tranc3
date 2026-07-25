@@ -193,7 +193,12 @@ def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
 app = FastAPI(
     title="The Lab", description="AI code creation platform — TabbyML bridge", version=VERSION
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

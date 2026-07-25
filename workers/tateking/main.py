@@ -186,7 +186,12 @@ async def _remotion_render(req: VideoCreateRequest, job_id: str) -> Optional[str
 # App
 # ---------------------------------------------------------------------------
 app = FastAPI(title="TateKing", description="Video creation & editing platform", version=VERSION)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

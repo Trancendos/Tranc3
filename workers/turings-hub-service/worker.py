@@ -402,7 +402,12 @@ app = FastAPI(
     version="1.0.0",
     lifespan=_lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Serve static VRM/GLB/portrait assets
 app.mount("/assets/vrm", StaticFiles(directory=str(VRM_DIR)), name="vrm_assets")

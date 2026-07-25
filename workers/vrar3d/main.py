@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -28,7 +29,7 @@ def _build_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
         allow_methods=["*"],
         allow_headers=["*"],
     )

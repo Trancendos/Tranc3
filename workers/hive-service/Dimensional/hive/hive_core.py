@@ -935,7 +935,10 @@ def create_hive_app() -> FastAPI:
         lifespan=_lifespan,
     )
     app.add_middleware(
-        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+        CORSMiddleware,
+        allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     @app.get("/", tags=["hive"])
