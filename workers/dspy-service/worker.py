@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -31,6 +31,25 @@ VERSION = "1.0.0"
 DB_PATH = os.getenv("DSPY_DB_PATH", "data/dspy.db")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 STARTED_AT = datetime.now(timezone.utc)
 
@@ -173,7 +192,7 @@ async def status() -> dict[str, Any]:
     }
 
 
-@app.post("/dspy/programs")
+@app.post("/dspy/programs", dependencies=[Depends(_require_internal_auth)])
 async def create_program(body: ProgramCreate) -> dict[str, Any]:
     pid = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -188,13 +207,13 @@ async def create_program(body: ProgramCreate) -> dict[str, Any]:
     return {"id": pid, "name": body.name, "signature": body.signature, "created_at": now}
 
 
-@app.get("/dspy/programs")
+@app.get("/dspy/programs", dependencies=[Depends(_require_internal_auth)])
 async def list_programs() -> dict[str, Any]:
     rows = db().execute("SELECT * FROM programs ORDER BY created_at DESC").fetchall()
     return {"programs": [dict(r) for r in rows], "total": len(rows)}
 
 
-@app.get("/dspy/programs/{program_id}")
+@app.get("/dspy/programs/{program_id}", dependencies=[Depends(_require_internal_auth)])
 async def get_program(program_id: str) -> dict[str, Any]:
     row = db().execute("SELECT * FROM programs WHERE id=?", (program_id,)).fetchone()
     if not row:
@@ -202,7 +221,7 @@ async def get_program(program_id: str) -> dict[str, Any]:
     return dict(row)
 
 
-@app.post("/dspy/examples")
+@app.post("/dspy/examples", dependencies=[Depends(_require_internal_auth)])
 async def add_example(body: ExampleAdd) -> dict[str, Any]:
     import json
 
@@ -223,7 +242,7 @@ async def add_example(body: ExampleAdd) -> dict[str, Any]:
     return {"id": eid, "program_id": body.program_id, "created_at": now}
 
 
-@app.post("/dspy/compile")
+@app.post("/dspy/compile", dependencies=[Depends(_require_internal_auth)])
 async def compile_program(body: CompileRequest) -> dict[str, Any]:
     """
     Simulate DSPy compilation: generate an optimized prompt from examples.
@@ -267,7 +286,7 @@ async def compile_program(body: CompileRequest) -> dict[str, Any]:
     }
 
 
-@app.post("/dspy/execute")
+@app.post("/dspy/execute", dependencies=[Depends(_require_internal_auth)])
 async def execute_program(body: ProgramExecute) -> dict[str, Any]:
     import json
 
@@ -309,7 +328,7 @@ async def execute_program(body: ProgramExecute) -> dict[str, Any]:
     }
 
 
-@app.get("/dspy/executions")
+@app.get("/dspy/executions", dependencies=[Depends(_require_internal_auth)])
 async def list_executions(
     program_id: Optional[str] = Query(None), limit: int = Query(50, le=200)
 ) -> dict[str, Any]:

@@ -9,6 +9,7 @@ instead of the matrices silently drifting out of sync with the code again.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -22,10 +23,16 @@ DEV_SECRET_DEFAULT_RE = re.compile(
 )
 
 
+_EXCLUDED_DIR_PARTS = {"node_modules", "__pycache__", ".venv", "venv", "site-packages"}
+
+
 def _iter_worker_source_files() -> list[Path]:
+    """Every worker's Python source, not just its worker.py/main.py entrypoint —
+    CORS/secret-fallback regressions can just as easily live in an imported
+    config.py, app.py, or router.py sibling module."""
     workers_dir = ROOT / "workers"
-    files = list(workers_dir.rglob("worker.py")) + list(workers_dir.rglob("main.py"))
-    return sorted(f for f in files if "node_modules" not in f.parts)
+    files = workers_dir.rglob("*.py")
+    return sorted(f for f in files if not _EXCLUDED_DIR_PARTS & set(f.parts))
 
 
 def check_no_wildcard_cors() -> list[str]:
@@ -120,17 +127,49 @@ def check_db_user_manager_uses_consolidated_hashing() -> list[str]:
 
 def check_library_classification() -> list[str]:
     """MC-018 knowledge.central_finding: The Library's Article dataclass
-    must carry a classification field, not just status/tags."""
+    must carry a classification field typed as DataClassification, not just
+    status/tags.
+
+    Parses the module's AST rather than grepping raw text, so a stray
+    comment, docstring, or unrelated symbol named "classification" can't
+    make this pass while the Article dataclass itself lacks the field.
+    """
     kb = ROOT / "src" / "library" / "knowledge_base.py"
     if not kb.is_file():
         return [f"{kb.relative_to(ROOT)} not found"]
     text = kb.read_text(errors="ignore")
-    violations = []
-    if "classification" not in text:
-        violations.append("Article dataclass has no classification field")
-    if "DataClassification" not in text:
-        violations.append("knowledge_base.py does not import/reuse DataClassification")
-    return violations
+
+    try:
+        tree = ast.parse(text, filename=str(kb))
+    except SyntaxError as exc:
+        return [f"knowledge_base.py failed to parse: {exc}"]
+
+    article_cls = next(
+        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == "Article"),
+        None,
+    )
+    if article_cls is None:
+        return ["knowledge_base.py has no Article class"]
+
+    classification_field = next(
+        (
+            n
+            for n in article_cls.body
+            if isinstance(n, ast.AnnAssign)
+            and isinstance(n.target, ast.Name)
+            and n.target.id == "classification"
+        ),
+        None,
+    )
+    if classification_field is None:
+        return ["Article dataclass has no classification field"]
+
+    annotation = ast.unparse(classification_field.annotation)
+    if "DataClassification" not in annotation:
+        return [
+            f"Article.classification is annotated '{annotation}', not DataClassification"
+        ]
+    return []
 
 
 CHECKS = {

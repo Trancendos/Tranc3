@@ -238,8 +238,11 @@ async def verify_auth(authorization: str | None) -> dict | None:
             return {"userId": "test-user", "role": "admin"}
         return None
 
-    # Dev bypass when no auth URL is configured
-    if not AUTH_URL and ENVIRONMENT != "production":
+    # Dev bypass when no auth URL is configured — gated on an explicit
+    # "development" opt-in rather than "not production", so an unset,
+    # mistyped, or new (e.g. "staging") ENVIRONMENT value fails closed
+    # (401) instead of silently granting admin access.
+    if not AUTH_URL and ENVIRONMENT == "development":
         return {"userId": "dev", "role": "admin"}
 
     async with httpx.AsyncClient(timeout=10.0) as client:

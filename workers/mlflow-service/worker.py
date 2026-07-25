@@ -62,7 +62,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from path_validation import PathTraversalError, list_validated_children, validate_path
 from pydantic import BaseModel, Field
 
@@ -72,6 +72,25 @@ DATA_DIR = Path(os.environ.get("MLFLOW_DATA_DIR", "/data/mlflow-service"))
 DB_PATH = DATA_DIR / "mlflow.db"
 ARTIFACT_ROOT = DATA_DIR / "artifacts"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "production")
+
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 logger = logging.getLogger("mlflow-service")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -355,7 +374,7 @@ async def health():
 # ── Experiments ────────────────────────────────────────────────────────────────
 
 
-@app.post("/api/2.0/mlflow/experiments/create")
+@app.post("/api/2.0/mlflow/experiments/create", dependencies=[Depends(_require_internal_auth)])
 async def create_experiment(body: CreateExperimentIn):
     db = _db()
     existing = db.execute(
@@ -378,7 +397,7 @@ async def create_experiment(body: CreateExperimentIn):
     return {"experiment_id": exp_id}
 
 
-@app.get("/api/2.0/mlflow/experiments/get")
+@app.get("/api/2.0/mlflow/experiments/get", dependencies=[Depends(_require_internal_auth)])
 async def get_experiment(experiment_id: str):
     db = _db()
     row = db.execute(
@@ -389,7 +408,7 @@ async def get_experiment(experiment_id: str):
     return {"experiment": _experiment_to_dict(row)}
 
 
-@app.get("/api/2.0/mlflow/experiments/get-by-name")
+@app.get("/api/2.0/mlflow/experiments/get-by-name", dependencies=[Depends(_require_internal_auth)])
 async def get_experiment_by_name(experiment_name: str):
     db = _db()
     row = db.execute("SELECT * FROM experiments WHERE name = ?", (experiment_name,)).fetchone()
@@ -398,7 +417,7 @@ async def get_experiment_by_name(experiment_name: str):
     return {"experiment": _experiment_to_dict(row)}
 
 
-@app.get("/api/2.0/mlflow/experiments/list")
+@app.get("/api/2.0/mlflow/experiments/list", dependencies=[Depends(_require_internal_auth)])
 async def list_experiments(view_type: str = "ACTIVE_ONLY"):
     db = _db()
     rows = db.execute("SELECT * FROM experiments ORDER BY creation_time DESC").fetchall()
@@ -408,7 +427,7 @@ async def list_experiments(view_type: str = "ACTIVE_ONLY"):
     return {"experiments": experiments}
 
 
-@app.get("/experiments")
+@app.get("/experiments", dependencies=[Depends(_require_internal_auth)])
 async def list_experiments_shortcut():
     db = _db()
     rows = db.execute(
@@ -420,7 +439,7 @@ async def list_experiments_shortcut():
 # ── Runs ───────────────────────────────────────────────────────────────────────
 
 
-@app.post("/api/2.0/mlflow/runs/create")
+@app.post("/api/2.0/mlflow/runs/create", dependencies=[Depends(_require_internal_auth)])
 async def create_run(body: CreateRunIn):
     db = _db()
     exp = db.execute(
@@ -459,7 +478,7 @@ async def create_run(body: CreateRunIn):
     return {"run": _run_to_dict(row, db)}
 
 
-@app.post("/api/2.0/mlflow/runs/update")
+@app.post("/api/2.0/mlflow/runs/update", dependencies=[Depends(_require_internal_auth)])
 async def update_run(body: UpdateRunIn):
     db = _db()
     run = db.execute("SELECT run_id FROM runs WHERE run_id = ?", (body.run_id,)).fetchone()
@@ -487,7 +506,7 @@ async def update_run(body: UpdateRunIn):
     return {"run_info": _run_to_dict(row, db)}
 
 
-@app.post("/api/2.0/mlflow/runs/log-metric")
+@app.post("/api/2.0/mlflow/runs/log-metric", dependencies=[Depends(_require_internal_auth)])
 async def log_metric(body: LogMetricIn):
     db = _db()
     if not db.execute("SELECT 1 FROM runs WHERE run_id = ?", (body.run_id,)).fetchone():
@@ -500,7 +519,7 @@ async def log_metric(body: LogMetricIn):
     return {}
 
 
-@app.post("/api/2.0/mlflow/runs/log-parameter")
+@app.post("/api/2.0/mlflow/runs/log-parameter", dependencies=[Depends(_require_internal_auth)])
 async def log_parameter(body: LogParamIn):
     db = _db()
     if not db.execute("SELECT 1 FROM runs WHERE run_id = ?", (body.run_id,)).fetchone():
@@ -513,7 +532,7 @@ async def log_parameter(body: LogParamIn):
     return {}
 
 
-@app.post("/api/2.0/mlflow/runs/set-tag")
+@app.post("/api/2.0/mlflow/runs/set-tag", dependencies=[Depends(_require_internal_auth)])
 async def set_tag(body: SetTagIn):
     db = _db()
     if not db.execute("SELECT 1 FROM runs WHERE run_id = ?", (body.run_id,)).fetchone():
@@ -526,7 +545,7 @@ async def set_tag(body: SetTagIn):
     return {}
 
 
-@app.post("/api/2.0/mlflow/runs/log-batch")
+@app.post("/api/2.0/mlflow/runs/log-batch", dependencies=[Depends(_require_internal_auth)])
 async def log_batch(body: LogBatchIn):
     db = _db()
     if not db.execute("SELECT 1 FROM runs WHERE run_id = ?", (body.run_id,)).fetchone():
@@ -551,7 +570,7 @@ async def log_batch(body: LogBatchIn):
     return {}
 
 
-@app.get("/api/2.0/mlflow/runs/get")
+@app.get("/api/2.0/mlflow/runs/get", dependencies=[Depends(_require_internal_auth)])
 async def get_run(run_id: str):
     db = _db()
     row = db.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,)).fetchone()
@@ -560,7 +579,7 @@ async def get_run(run_id: str):
     return {"run": _run_to_dict(row, db)}
 
 
-@app.post("/api/2.0/mlflow/runs/search")
+@app.post("/api/2.0/mlflow/runs/search", dependencies=[Depends(_require_internal_auth)])
 async def search_runs(body: SearchRunsIn):
     db = _db()
     conditions = ["r.lifecycle_stage != 'deleted'"]
@@ -592,7 +611,7 @@ async def search_runs(body: SearchRunsIn):
 # ── Metrics ────────────────────────────────────────────────────────────────────
 
 
-@app.get("/api/2.0/mlflow/metrics/get-history")
+@app.get("/api/2.0/mlflow/metrics/get-history", dependencies=[Depends(_require_internal_auth)])
 async def get_metric_history(run_id: str, metric_key: str):
     db = _db()
     rows = db.execute(
@@ -611,7 +630,7 @@ async def get_metric_history(run_id: str, metric_key: str):
 # ── Artifacts ─────────────────────────────────────────────────────────────────
 
 
-@app.get("/api/2.0/mlflow/artifacts/list")
+@app.get("/api/2.0/mlflow/artifacts/list", dependencies=[Depends(_require_internal_auth)])
 async def list_artifacts(run_id: str, path: str = ""):
     """List artifacts for a run.
 
@@ -653,7 +672,7 @@ async def list_artifacts(run_id: str, path: str = ""):
 # ── Trancendos-native endpoints ────────────────────────────────────────────────
 
 
-@app.get("/runs/{run_id}/summary")
+@app.get("/runs/{run_id}/summary", dependencies=[Depends(_require_internal_auth)])
 async def run_summary(run_id: str):
     """Human-readable run card with all params, latest metrics, and tags."""
     db = _db()
@@ -683,7 +702,7 @@ async def run_summary(run_id: str):
     }
 
 
-@app.post("/runs/compare")
+@app.post("/runs/compare", dependencies=[Depends(_require_internal_auth)])
 async def compare_runs(body: CompareRunsIn):
     """Side-by-side metric comparison across multiple runs."""
     db = _db()
@@ -721,7 +740,7 @@ async def compare_runs(body: CompareRunsIn):
     return result
 
 
-@app.get("/runs/leaderboard")
+@app.get("/runs/leaderboard", dependencies=[Depends(_require_internal_auth)])
 async def leaderboard(
     experiment_id: str,
     metric: str,

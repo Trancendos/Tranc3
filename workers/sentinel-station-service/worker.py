@@ -52,10 +52,10 @@ from Dimensional.dimensionals import (
 )
 
 # Phase 22: Infinity Ecosystem security integration
-from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.auth_gateway import DEFAULT_ENFORCED_PATHS, AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
+from Dimensional.infinity.rbac import ENDPOINT_PERMISSIONS, Permission, RBACEngine
 
 # Sentinel Station core
 from Dimensional.infinity.sentinel_config import sentinel_config
@@ -84,7 +84,19 @@ except ImportError:
 
 PORT = int(os.environ.get("SENTINEL_PORT", "8041"))
 DB_PATH = os.environ.get("SENTINEL_DB_PATH", "data/sentinel_station.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if (
+    not _jwt_secret_raw
+    or not _jwt_secret_raw.strip()
+    or _jwt_secret_raw.strip() == "CHANGE_ME_generate_with_python_secrets_token_hex_32"
+):
+    raise RuntimeError(
+        "JWT_SECRET is not set (or still the .env.example placeholder). "
+        "This worker cannot start without a strong unique JWT secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET = _jwt_secret_raw.strip()
 
 logger = logging.getLogger("sentinel-station-service")
 
@@ -92,7 +104,31 @@ logger = logging.getLogger("sentinel-station-service")
 # Security Engines
 # ---------------------------------------------------------------------------
 
-rbac_engine = RBACEngine()
+# The shared ENDPOINT_PERMISSIONS/DEFAULT_ENFORCED_PATHS only cover the
+# generic Infinity Ecosystem gateway routes (/events, /api/agents, ...).
+# Sentinel Station's own routes (/api/events, /api/subscriptions,
+# /api/channels, /stats) aren't in either mapping, so — even with a valid
+# JWT — AuthGatewayMiddleware never enforced auth on them and RBACEngine's
+# check_access() default-allows any endpoint it doesn't recognize. Extend
+# both locally (rather than editing the shared module, which
+# infinity-one-service also depends on) so this worker's own API is
+# actually gated.
+_SENTINEL_ENDPOINT_PERMISSIONS = {
+    **ENDPOINT_PERMISSIONS,
+    "/api/events": Permission.READ_SENTINEL,
+    "POST:/api/events": Permission.WRITE_SENTINEL,
+    "/api/subscriptions": Permission.READ_SENTINEL,
+    "POST:/api/subscriptions": Permission.WRITE_SENTINEL,
+    "DELETE:/api/subscriptions": Permission.WRITE_SENTINEL,
+}
+_SENTINEL_ENFORCED_PATHS = DEFAULT_ENFORCED_PATHS | {
+    "/api/events",
+    "/api/subscriptions",
+    "/api/channels",
+    "/stats",
+}
+
+rbac_engine = RBACEngine(endpoint_permissions=_SENTINEL_ENDPOINT_PERMISSIONS)
 
 # ---------------------------------------------------------------------------
 # Sentinel Station Instance
@@ -328,6 +364,7 @@ app.add_middleware(
 app.add_middleware(
     AuthGatewayMiddleware,
     jwt_secret=JWT_SECRET,
+    enforced_paths=_SENTINEL_ENFORCED_PATHS,
 )
 
 _cors_origins = [

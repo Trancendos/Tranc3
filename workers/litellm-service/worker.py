@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -51,6 +51,25 @@ LITELLM_MASTER_KEY = os.getenv("LITELLM_MASTER_KEY", "")
 
 DB_PATH = Path(__file__).parent / "data" / "litellm_usage.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 STARTED_AT = datetime.now(timezone.utc)
 
@@ -248,7 +267,7 @@ async def health() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/litellm/models")
+@app.get("/litellm/models", dependencies=[Depends(_require_internal_auth)])
 async def list_models() -> dict[str, Any]:
     """List available free models from LiteLLM proxy."""
     try:
@@ -296,7 +315,7 @@ async def list_models() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.post("/litellm/chat")
+@app.post("/litellm/chat", dependencies=[Depends(_require_internal_auth)])
 async def chat(body: ChatRequest) -> dict[str, Any]:
     """Proxy to LiteLLM /chat/completions with adaptive provider selection."""
     provider = body.provider or _select_provider()
@@ -353,7 +372,7 @@ async def chat(body: ChatRequest) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.post("/litellm/embed")
+@app.post("/litellm/embed", dependencies=[Depends(_require_internal_auth)])
 async def embed(body: EmbedRequest) -> dict[str, Any]:
     """Proxy to LiteLLM /embeddings."""
     headers: dict[str, str] = {"Content-Type": "application/json"}
@@ -374,7 +393,7 @@ async def embed(body: EmbedRequest) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/litellm/usage")
+@app.get("/litellm/usage", dependencies=[Depends(_require_internal_auth)])
 async def get_usage() -> dict[str, Any]:
     """Get usage stats per provider."""
     usage = {}
@@ -398,7 +417,7 @@ async def get_usage() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/litellm/budget")
+@app.get("/litellm/budget", dependencies=[Depends(_require_internal_auth)])
 async def get_budget() -> dict[str, Any]:
     """Get budget status for all providers."""
     budget = {}

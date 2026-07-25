@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import httpx
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -33,6 +33,20 @@ from pydantic import BaseModel, Field
 WORKER_PORT = int(os.getenv("PORT", "8047"))
 WORKER_NAME = "artifactory-service"
 VERSION = "1.0.0"
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if not _internal_secret_raw or not _internal_secret_raw.strip() or _internal_secret_raw.strip() == "dev-secret":
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 ZOT_URL = os.getenv("ZOT_URL", "http://localhost:5000").rstrip("/")
 GITEA_URL = os.getenv("GITEA_URL", "http://localhost:3000").rstrip("/")
@@ -221,7 +235,7 @@ async def artifactory_status() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/artifactory/repositories")
+@app.get("/artifactory/repositories", dependencies=[Depends(_require_internal_auth)])
 async def list_repositories() -> dict[str, Any]:
     """List repositories: Zot → Gitea → local filesystem."""
     # Primary: Zot v2 catalog
@@ -251,7 +265,7 @@ async def list_repositories() -> dict[str, Any]:
     return {"repositories": repos, "total": len(repos), "source": "local"}
 
 
-@app.get("/artifactory/repositories/{repo:path}/tags")
+@app.get("/artifactory/repositories/{repo:path}/tags", dependencies=[Depends(_require_internal_auth)])
 async def list_tags(repo: str) -> dict[str, Any]:
     """List tags for a repository in Zot."""
     safe_repo = repo.replace("\n", "").replace("\r", "")[:100]
@@ -264,7 +278,7 @@ async def list_tags(repo: str) -> dict[str, Any]:
         return {"repo": repo, "tags": [], "total": 0, "error": "Tags unavailable"}
 
 
-@app.post("/artifactory/repositories")
+@app.post("/artifactory/repositories", dependencies=[Depends(_require_internal_auth)])
 async def create_repository(body: RepoCreate) -> dict[str, Any]:
     """Create a repository (Zot config API or Gitea)."""
     # Zot doesn't have a create-repo endpoint; repos are auto-created on push.
@@ -304,7 +318,7 @@ async def create_repository(body: RepoCreate) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/artifactory/search")
+@app.get("/artifactory/search", dependencies=[Depends(_require_internal_auth)])
 async def search_artifacts(q: str = "") -> dict[str, Any]:
     """Search artifacts across all available backends."""
     results: list[dict[str, Any]] = []
@@ -334,7 +348,7 @@ def _sanitize_log(value: str) -> str:
     return value.replace("\r", "").replace("\n", "").replace("\t", " ")[:200]
 
 
-@app.post("/artifactory/pull")
+@app.post("/artifactory/pull", dependencies=[Depends(_require_internal_auth)])
 async def log_pull(body: PullRequest) -> dict[str, Any]:
     """Log an image pull request (audit trail). Does not execute docker pull."""
     safe_image = _sanitize_log(body.image)
