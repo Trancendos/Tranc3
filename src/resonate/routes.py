@@ -5,19 +5,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, Path
 from fastapi.responses import JSONResponse
 
 from auth import get_current_user
+from src.auth.ownership import require_self_or_admin as _require_self_or_admin
 from src.resonate.empathy import get_resonate
 
 router = APIRouter(prefix="/resonate", tags=["resonate"])
-
-
-def _require_self_or_admin(user_id: str, current_user: dict) -> None:
-    caller_id = current_user.get("id") or current_user.get("sub")
-    if caller_id != user_id and current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Can only access your own data")
 
 
 @router.get("/status")

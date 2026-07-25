@@ -85,9 +85,33 @@ def test_artifactory_delete_requires_auth():
     assert resp.status_code in (401, 403)
 
 
+def test_artifactory_push_version_requires_auth():
+    _clear_override()
+    resp = client.post("/artifactory/artifacts/does-not-exist/versions", json={"version": "1.0"})
+    assert resp.status_code in (401, 403)
+
+
+def test_artifactory_apply_retention_requires_auth():
+    _clear_override()
+    resp = client.post("/artifactory/retention/apply")
+    assert resp.status_code in (401, 403)
+
+
 def test_library_list_requires_auth():
     _clear_override()
     resp = client.get("/library/articles")
+    assert resp.status_code in (401, 403)
+
+
+def test_library_search_requires_auth():
+    _clear_override()
+    resp = client.get("/library/articles/search", params={"q": "test"})
+    assert resp.status_code in (401, 403)
+
+
+def test_library_get_requires_auth():
+    _clear_override()
+    resp = client.get("/library/articles/does-not-exist")
     assert resp.status_code in (401, 403)
 
 
@@ -103,6 +127,18 @@ def test_studio_submit_job_requires_auth():
     assert resp.status_code in (401, 403)
 
 
+def test_studio_list_jobs_requires_auth():
+    _clear_override()
+    resp = client.get("/studio/jobs")
+    assert resp.status_code in (401, 403)
+
+
+def test_studio_get_job_requires_auth():
+    _clear_override()
+    resp = client.get("/studio/jobs/does-not-exist")
+    assert resp.status_code in (401, 403)
+
+
 def test_imind_assess_requires_auth():
     _clear_override()
     resp = client.post("/imind/assess", json={"text": "hello"})
@@ -112,6 +148,18 @@ def test_imind_assess_requires_auth():
 def test_vrar3d_scenes_requires_auth():
     _clear_override()
     resp = client.get("/vrar3d/scenes")
+    assert resp.status_code in (401, 403)
+
+
+def test_vrar3d_get_scene_requires_auth():
+    _clear_override()
+    resp = client.get("/vrar3d/scenes/does-not-exist")
+    assert resp.status_code in (401, 403)
+
+
+def test_vrar3d_recommend_requires_auth():
+    _clear_override()
+    resp = client.get("/vrar3d/recommend")
     assert resp.status_code in (401, 403)
 
 
@@ -127,6 +175,13 @@ def test_artifactory_create_list_and_delete_with_auth():
 
         assert client.get("/artifactory/artifacts").status_code == 200
         assert client.get(f"/artifactory/artifacts/{artifact_id}").status_code == 200
+
+        pushed = client.post(
+            f"/artifactory/artifacts/{artifact_id}/versions", json={"version": "1.0"}
+        )
+        assert pushed.status_code == 200
+
+        assert client.post("/artifactory/retention/apply").status_code == 200
 
         deleted = client.delete(f"/artifactory/artifacts/{artifact_id}")
         assert deleted.status_code == 200
@@ -145,6 +200,7 @@ def test_library_create_and_delete_with_auth():
         article_id = created.json()["id"]
 
         assert client.get(f"/library/articles/{article_id}").status_code == 200
+        assert client.get("/library/articles/search", params={"q": "Test"}).status_code == 200
 
         deleted = client.delete(f"/library/articles/{article_id}")
         assert deleted.status_code == 200
@@ -157,6 +213,10 @@ def test_studio_submit_job_with_auth():
     try:
         resp = client.post("/studio/jobs", json={"service": "imaginarium", "payload": {}})
         assert resp.status_code == 200
+        job_id = resp.json()["id"]
+
+        assert client.get("/studio/jobs").status_code == 200
+        assert client.get(f"/studio/jobs/{job_id}").status_code == 200
     finally:
         _clear_override()
 
@@ -175,6 +235,10 @@ def test_vrar3d_scenes_with_auth():
     try:
         resp = client.get("/vrar3d/scenes")
         assert resp.status_code == 200
+        scene_id = resp.json()[0]["id"]
+
+        assert client.get(f"/vrar3d/scenes/{scene_id}").status_code == 200
+        assert client.get("/vrar3d/recommend").status_code in (200, 404)
     finally:
         _clear_override()
 
@@ -221,6 +285,58 @@ def test_vrar3d_admin_can_start_session_for_any_user():
         resp = client.post(
             "/vrar3d/sessions", json={"user_id": "some-other-user", "scene_id": scene_id}
         )
+        assert resp.status_code == 200
+    finally:
+        _clear_override()
+
+
+# ── /sessions/{id}/end resolves the session first and authorizes against its
+#    owner, not just "any authenticated caller" — a user must not be able to
+#    end (and overwrite mood_after on) another user's session just by
+#    guessing/knowing its session_id ───────────────────────────────────────
+
+
+def test_vrar3d_user_can_end_own_session():
+    app.dependency_overrides[get_current_user] = _override("u1")
+    try:
+        scenes = client.get("/vrar3d/scenes").json()
+        scene_id = scenes[0]["id"]
+        started = client.post("/vrar3d/sessions", json={"user_id": "u1", "scene_id": scene_id})
+        session_id = started.json()["id"]
+
+        resp = client.post(f"/vrar3d/sessions/{session_id}/end", json={"mood_after": 4})
+        assert resp.status_code == 200
+    finally:
+        _clear_override()
+
+
+def test_vrar3d_user_cannot_end_another_users_session():
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    scenes = client.get("/vrar3d/scenes").json()
+    scene_id = scenes[0]["id"]
+    started = client.post("/vrar3d/sessions", json={"user_id": "victim-user", "scene_id": scene_id})
+    session_id = started.json()["id"]
+    _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("attacker-user")
+    try:
+        resp = client.post(f"/vrar3d/sessions/{session_id}/end", json={"mood_after": 1})
+        assert resp.status_code == 403
+    finally:
+        _clear_override()
+
+
+def test_vrar3d_admin_can_end_any_users_session():
+    app.dependency_overrides[get_current_user] = _override("u1")
+    scenes = client.get("/vrar3d/scenes").json()
+    scene_id = scenes[0]["id"]
+    started = client.post("/vrar3d/sessions", json={"user_id": "u1", "scene_id": scene_id})
+    session_id = started.json()["id"]
+    _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
+    try:
+        resp = client.post(f"/vrar3d/sessions/{session_id}/end", json={"mood_after": 3})
         assert resp.status_code == 200
     finally:
         _clear_override()
