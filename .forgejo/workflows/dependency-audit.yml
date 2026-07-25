@@ -187,10 +187,64 @@ jobs:
           path: worker-audit-report.md
           retention-days: 30
 
+  zero-cost-audit:
+    name: Zero-Cost Registry Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Run zero-cost registry audit
+        run: |
+          set -o pipefail
+          echo "::group::scripts/zero_cost_audit.py — Zero-cost provider registry + doc-presence check"
+          python3 scripts/zero_cost_audit.py | tee zero-cost-audit-report.json
+          echo "::endgroup::"
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: zero-cost-audit-report
+          path: zero-cost-audit-report.json
+          retention-days: 30
+
+  compliance-drift-audit:
+    name: Compliance Drift Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Run compliance drift audit
+        run: |
+          set -o pipefail
+          echo "::group::scripts/compliance_drift_audit.py — Security/Encryption/Knowledge matrix findings"
+          python3 scripts/compliance_drift_audit.py | tee compliance-drift-report.json
+          echo "::endgroup::"
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: compliance-drift-report
+          path: compliance-drift-report.json
+          retention-days: 30
+
   audit-dashboard:
     name: Audit Dashboard
     runs-on: ubuntu-latest
-    needs: [python-audit, node-audit, worker-dependency-scan]
+    needs: [python-audit, node-audit, worker-dependency-scan, zero-cost-audit, compliance-drift-audit]
     if: always()
     steps:
       - name: Download all reports

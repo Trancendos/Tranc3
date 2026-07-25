@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Assert that the code-grounded claims in Magna-Carta's compliance matrices
+(Security MC-015, Encryption MC-014, Knowledge MC-018) still hold.
+
+Unlike a generic security scanner, this script checks the *specific* findings
+those matrices assert are fixed — so a regression shows up as a CI failure
+instead of the matrices silently drifting out of sync with the code again.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+WILDCARD_CORS_RE = re.compile(r"""allow_origins\s*=\s*\[\s*["']\*["']\s*\]""")
+DEV_SECRET_DEFAULT_RE = re.compile(
+    r"""os\.(?:getenv|environ\.get)\(\s*["']INTERNAL_SECRET["']\s*,\s*["']dev-secret["']\s*\)"""
+)
+
+
+def _iter_worker_source_files() -> list[Path]:
+    workers_dir = ROOT / "workers"
+    files = list(workers_dir.rglob("worker.py")) + list(workers_dir.rglob("main.py"))
+    return sorted(f for f in files if "node_modules" not in f.parts)
+
+
+def check_no_wildcard_cors() -> list[str]:
+    """MC-015 security.cors.standalone_workers: no worker should pass a
+    literal wildcard to allow_origins anymore."""
+    violations = []
+    for f in _iter_worker_source_files():
+        text = f.read_text(errors="ignore")
+        if WILDCARD_CORS_RE.search(text):
+            violations.append(f"{f.relative_to(ROOT)}: wildcard allow_origins=['*']")
+    return violations
+
+
+def check_no_dev_secret_default() -> list[str]:
+    """MC-014 encryption.secrets_and_signing.internal_secret_dev_fallback:
+    no worker should use "dev-secret" as an os.getenv default — the fixed
+    pattern always fails fast instead of defaulting to a known string."""
+    violations = []
+    for f in _iter_worker_source_files():
+        text = f.read_text(errors="ignore")
+        if DEV_SECRET_DEFAULT_RE.search(text):
+            violations.append(
+                f"{f.relative_to(ROOT)}: os.getenv(...) defaults INTERNAL_SECRET to 'dev-secret'"
+            )
+    return violations
+
+
+def check_websecure_tls_labels() -> list[str]:
+    """MC-014 encryption.in_transit: every router using entrypoints=websecure
+    must also carry a tls=true/certresolver label for the same router name.
+
+    Note: this does not check for a Host() matcher — Traefik's ACME resolver
+    needs a real domain to issue a cert against, which a PathPrefix-only rule
+    doesn't provide. That's a separate, per-service domain decision (see the
+    6 P0 services that already have Host(`api.trancendos.com`)) and is not
+    asserted here for the remaining PathPrefix-only routers this check covers."""
+    compose = ROOT / "docker-compose.production.yml"
+    if not compose.is_file():
+        return [f"{compose.relative_to(ROOT)} not found"]
+    text = compose.read_text(errors="ignore")
+
+    websecure_routers = set(
+        re.findall(r"traefik\.http\.routers\.([\w-]+)\.entrypoints=websecure", text)
+    )
+    tls_routers = set(
+        re.findall(r"traefik\.http\.routers\.([\w-]+)\.tls(?:\.certresolver)?=", text)
+    )
+
+    missing = sorted(websecure_routers - tls_routers)
+    return [
+        f"router '{r}' uses entrypoints=websecure with no tls=true/certresolver label"
+        for r in missing
+    ]
+
+
+def check_library_classification() -> list[str]:
+    """MC-018 knowledge.central_finding: The Library's Article dataclass
+    must carry a classification field, not just status/tags."""
+    kb = ROOT / "src" / "library" / "knowledge_base.py"
+    if not kb.is_file():
+        return [f"{kb.relative_to(ROOT)} not found"]
+    text = kb.read_text(errors="ignore")
+    violations = []
+    if "classification" not in text:
+        violations.append("Article dataclass has no classification field")
+    if "DataClassification" not in text:
+        violations.append("knowledge_base.py does not import/reuse DataClassification")
+    return violations
+
+
+CHECKS = {
+    "no_wildcard_cors": check_no_wildcard_cors,
+    "no_dev_secret_default": check_no_dev_secret_default,
+    "websecure_tls_labels": check_websecure_tls_labels,
+    "library_classification": check_library_classification,
+}
+
+
+def main() -> int:
+    results = {}
+    all_violations: list[str] = []
+    for name, check in CHECKS.items():
+        violations = check()
+        results[name] = {
+            "status": "PASS" if not violations else "FAIL",
+            "violations": violations,
+        }
+        all_violations.extend(violations)
+
+    report = {
+        "checks": results,
+        "total_violations": len(all_violations),
+        "status": "PASS" if not all_violations else "FAIL",
+    }
+    print(json.dumps(report, indent=2))
+    return 0 if not all_violations else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -259,3 +259,19 @@
 | R-008 | Complete AI Act conformity assessment | AI Governance Lead | Q4 2026 |
 | R-009 | Implement automated off-site SQLite backup | Infrastructure Lead | Q3 2026 |
 | All | Annual penetration test by accredited tester | ISMS Lead | Q4 2026 |
+
+---
+
+## Cross-reference to Magna Carta compliance register
+
+Where a risk's controls are directly evidenced by one of the `compliance/magna-carta` submodule's code-grounded `MC-###` matrices (Trancendos/Magna-Carta), the risk is cross-linked below rather than re-assessed independently — this keeps the two registers from silently drifting apart on the same underlying control. Risks with no matching row genuinely have no Magna-Carta equivalent yet (not omitted by oversight).
+
+| Risk | Magna-Carta Register | Matrix | Note |
+|---|---|---|---|
+| R-001 (Credential/Secret Exposure) | MC-014 | [ENCRYPTION-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/ENCRYPTION-MATRIX.md) §5 | Secrets/signing section covers the same `INTERNAL_SECRET`/JWT_SECRET fail-fast controls this risk's mitigation relies on |
+| R-002 (JWT Compromise), R-007 (Insider Threat / Privilege Abuse) | MC-015 | [SECURITY-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/SECURITY-MATRIX.md) §3 | Auth/authorization coverage table is the code-level evidence backing both risks' residual-risk claims |
+| R-004 (GDPR Compliance Failure) | MC-018 | [KNOWLEDGE-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/KNOWLEDGE-MATRIX.md) | Data classification/retention findings are directly relevant to this risk's "personal data" asset line |
+| R-006 (Supply Chain Compromise) | MC-021, MC-012 | [ZERO-COST-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/ZERO-COST-MATRIX.md), `LICENSE-COMPLIANCE-MATRIX.md` | The approved-provider registry (§4 of the Zero-Cost matrix) and license scanning double as this risk's vendor/dependency inventory |
+| R-003, R-005, R-008, R-009, R-010 | — | — | No Magna-Carta matrix currently covers injection testing, DDoS, AI-Act conformity, storage redundancy, or infra-misconfiguration specifically — these remain tracked only in this register, not duplicated in Magna-Carta |
+
+Full bridge from Magna-Carta's own side: `compliance/tranc3_register_bridge.yaml` and `docs/compliance/TRANC3-REGISTER-BRIDGE.md` in the Magna-Carta repo.
