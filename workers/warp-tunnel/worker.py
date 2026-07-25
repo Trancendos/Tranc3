@@ -32,7 +32,14 @@ QUARANTINE_DIR = Path(__file__).parent / "data" / "quarantine"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 QUARANTINE_DIR.mkdir(parents=True, exist_ok=True)
 
-INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if not _internal_secret_raw or _internal_secret_raw == "dev-secret":
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", str(50 * 1024 * 1024)))  # 50 MB default
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")

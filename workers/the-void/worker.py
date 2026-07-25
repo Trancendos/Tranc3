@@ -32,7 +32,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger(WORKER_NAME)
 
 MASTER_KEY_ENV = os.getenv("VAULT_MASTER_KEY", "dev-master-key-change-in-prod")
-INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if not _internal_secret_raw or _internal_secret_raw == "dev-secret":
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw
 
 _start_time = time.time()
 _req_count = 0
