@@ -1028,7 +1028,9 @@ def create_nexus_app() -> FastAPI:
 
     cors_origins = [
         o.strip()
-        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
         if o.strip()
     ]
     if "*" in cors_origins:

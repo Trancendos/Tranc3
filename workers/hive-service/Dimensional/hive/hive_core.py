@@ -938,7 +938,9 @@ def create_hive_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=[
             o.strip()
-            for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+            for o in os.getenv(
+                "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+            ).split(",")
             if o.strip()
         ],
         allow_methods=["*"],

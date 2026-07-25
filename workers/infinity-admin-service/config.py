@@ -24,7 +24,9 @@ _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 _cors_origins = [
     o.strip()
-    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    for o in os.environ.get(
+        "CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
+    ).split(",")
     if o.strip()
 ]
 
