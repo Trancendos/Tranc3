@@ -60,8 +60,8 @@ MODEL_VIEWER_CDN = os.environ.get(
 )
 
 # ── Internal auth ──────────────────────────────────────────────────────────────
-INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-if not INTERNAL_SECRET.strip() or INTERNAL_SECRET.strip() == "dev-secret":
+INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "").strip()
+if not INTERNAL_SECRET or INTERNAL_SECRET == "dev-secret":
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "This worker cannot start without a strong unique internal secret. "

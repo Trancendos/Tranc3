@@ -43,7 +43,7 @@ if (
         "This worker cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
-INTERNAL_SECRET: str = _internal_secret_raw
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 _start_time = time.time()
 _req_count = 0

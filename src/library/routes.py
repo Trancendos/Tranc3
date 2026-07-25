@@ -45,7 +45,7 @@ async def list_articles(
     # Overfetch to the full candidate pool before filtering by visibility, so
     # restricted articles the caller can't see don't crowd authorized ones
     # out of the truncated `limit` window.
-    total = lib.stats()["total_articles"]
+    total = lib.count()
     if tag:
         candidates = lib.by_tag(tag, limit=total)
     else:
@@ -62,7 +62,7 @@ async def search_articles(
     current_user: dict = Depends(get_current_user),
 ):
     lib = get_library()
-    total = lib.stats()["total_articles"]
+    total = lib.count()
     candidates = lib.search(q, limit=total)
     visible = [a for a in candidates if _can_read(a, current_user)]
     return [a.to_dict() for a in visible[:limit]]
@@ -119,9 +119,13 @@ async def delete_article(
     article_id: str = Path(...),
     current_user: dict = Depends(get_current_user),
 ):
-    if get_library().delete(article_id):
-        return {"deleted": article_id}
-    return JSONResponse({"error": "Not found"}, status_code=404)
+    art = get_library().get(article_id)
+    if not art:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if not _can_read(art, current_user):
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    get_library().delete(article_id)
+    return {"deleted": article_id}
 
 
 @router.post("/retention/apply")

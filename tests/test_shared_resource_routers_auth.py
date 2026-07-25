@@ -263,6 +263,33 @@ def test_library_restricted_article_hidden_from_other_users():
         _clear_override()
 
 
+def test_library_restricted_article_cannot_be_deleted_by_other_users():
+    app.dependency_overrides[get_current_user] = _override("owner")
+    try:
+        created = client.post(
+            "/library/articles",
+            json={"title": "Secret", "body": "Body", "classification": "restricted"},
+        )
+        article_id = created.json()["id"]
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("someone-else")
+    try:
+        resp = client.delete(f"/library/articles/{article_id}")
+        assert resp.status_code == 403
+    finally:
+        _clear_override()
+
+    app.dependency_overrides[get_current_user] = _override("owner")
+    try:
+        resp = client.get(f"/library/articles/{article_id}")
+        assert resp.status_code == 200
+        assert client.delete(f"/library/articles/{article_id}").status_code == 200
+    finally:
+        _clear_override()
+
+
 def test_library_restricted_article_visible_to_author():
     app.dependency_overrides[get_current_user] = _override("owner")
     try:
@@ -523,11 +550,15 @@ def test_vrar3d_end_session_not_found():
 
 def test_vrar3d_user_cannot_end_another_users_session():
     app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
-    scenes = client.get("/vrar3d/scenes").json()
-    scene_id = scenes[0]["id"]
-    started = client.post("/vrar3d/sessions", json={"user_id": "victim-user", "scene_id": scene_id})
-    session_id = started.json()["id"]
-    _clear_override()
+    try:
+        scenes = client.get("/vrar3d/scenes").json()
+        scene_id = scenes[0]["id"]
+        started = client.post(
+            "/vrar3d/sessions", json={"user_id": "victim-user", "scene_id": scene_id}
+        )
+        session_id = started.json()["id"]
+    finally:
+        _clear_override()
 
     app.dependency_overrides[get_current_user] = _override("attacker-user")
     try:
@@ -539,11 +570,13 @@ def test_vrar3d_user_cannot_end_another_users_session():
 
 def test_vrar3d_admin_can_end_any_users_session():
     app.dependency_overrides[get_current_user] = _override("u1")
-    scenes = client.get("/vrar3d/scenes").json()
-    scene_id = scenes[0]["id"]
-    started = client.post("/vrar3d/sessions", json={"user_id": "u1", "scene_id": scene_id})
-    session_id = started.json()["id"]
-    _clear_override()
+    try:
+        scenes = client.get("/vrar3d/scenes").json()
+        scene_id = scenes[0]["id"]
+        started = client.post("/vrar3d/sessions", json={"user_id": "u1", "scene_id": scene_id})
+        session_id = started.json()["id"]
+    finally:
+        _clear_override()
 
     app.dependency_overrides[get_current_user] = _override("admin-user", role="admin")
     try:

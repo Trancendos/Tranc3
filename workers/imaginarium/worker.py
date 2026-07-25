@@ -38,7 +38,7 @@ if (
         "This worker cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
-INTERNAL_SECRET: str = _internal_secret_raw
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 # Sub-service endpoints (all self-hosted, zero-cost)
 SERVICE_URLS = {

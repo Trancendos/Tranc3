@@ -43,7 +43,7 @@ if (
         "This worker cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
-INTERNAL_SECRET: str = _internal_secret_raw
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", str(50 * 1024 * 1024)))  # 50 MB default
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")

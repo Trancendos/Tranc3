@@ -42,7 +42,7 @@ if (
         "This worker cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
-INTERNAL_SECRET: str = _internal_secret_raw
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 POLLINATIONS_BASE = "https://image.pollinations.ai/prompt"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")

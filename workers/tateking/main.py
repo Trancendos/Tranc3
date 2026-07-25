@@ -48,7 +48,7 @@ if (
         "This worker cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
-INTERNAL_SECRET: str = _internal_secret_raw
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
 REMOTION_SERVE_URL = os.getenv("REMOTION_SERVE_URL", "")

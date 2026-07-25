@@ -164,6 +164,9 @@ class Library:
             articles = [a for a in articles if a.status == status]
         return sorted(articles, key=lambda a: a.updated_at, reverse=True)[:limit]
 
+    def count(self) -> int:
+        return len(self._articles)
+
     # ── Retention ─────────────────────────────────────────────────────────────
 
     def apply_retention(self) -> int:

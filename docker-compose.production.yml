@@ -411,7 +411,7 @@ services:
       - valkey
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tranc3-backend.rule=PathPrefix(`/api/backend`) || PathPrefix(`/mcp`)"
+      - "traefik.http.routers.tranc3-backend.rule=Host(`api.trancendos.com`) && (PathPrefix(`/api/backend`) || PathPrefix(`/mcp`))"
       - "traefik.http.routers.tranc3-backend.entrypoints=websecure"
       - "traefik.http.routers.tranc3-backend.tls=true"
       - "traefik.http.routers.tranc3-backend.tls.certresolver=letsencrypt"
@@ -436,7 +436,7 @@ services:
       - "8001:8001"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tranc3-ai.rule=PathPrefix(`/api/ai`)"
+      - "traefik.http.routers.tranc3-ai.rule=Host(`api.trancendos.com`) && PathPrefix(`/api/ai`)"
       - "traefik.http.routers.tranc3-ai.entrypoints=websecure"
       - "traefik.http.routers.tranc3-ai.tls=true"
       - "traefik.http.routers.tranc3-ai.tls.certresolver=letsencrypt"
@@ -465,7 +465,7 @@ services:
       - void-data:/data
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.infinity-void.rule=PathPrefix(`/api/void`)"
+      - "traefik.http.routers.infinity-void.rule=Host(`api.trancendos.com`) && PathPrefix(`/api/void`)"
       - "traefik.http.routers.infinity-void.entrypoints=websecure"
       - "traefik.http.routers.infinity-void.tls=true"
       - "traefik.http.routers.infinity-void.tls.certresolver=letsencrypt"
@@ -501,7 +501,7 @@ services:
       - payments-service
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api-gateway.rule=PathPrefix(`/api/`)"
+      - "traefik.http.routers.api-gateway.rule=Host(`api.trancendos.com`) && PathPrefix(`/api/`)"
       - "traefik.http.routers.api-gateway.entrypoints=websecure"
       - "traefik.http.routers.api-gateway.tls=true"
       - "traefik.http.routers.api-gateway.tls.certresolver=letsencrypt"
@@ -529,7 +529,7 @@ services:
       # no stripprefix middleware here: the old `/ws/` (trailing slash) rule required
       # a path segment past /ws that never existed, so it never matched. No
       # stripping is needed since the backend route already is /ws.
-      - "traefik.http.routers.infinity-ws.rule=PathPrefix(`/ws`)"
+      - "traefik.http.routers.infinity-ws.rule=Host(`api.trancendos.com`) && PathPrefix(`/ws`)"
       - "traefik.http.routers.infinity-ws.entrypoints=websecure"
       - "traefik.http.routers.infinity-ws.tls=true"
       - "traefik.http.routers.infinity-ws.tls.certresolver=letsencrypt"
@@ -555,7 +555,7 @@ services:
       - auth-data:/data
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.infinity-auth.rule=PathPrefix(`/auth/`)"
+      - "traefik.http.routers.infinity-auth.rule=Host(`api.trancendos.com`) && PathPrefix(`/auth/`)"
       - "traefik.http.routers.infinity-auth.entrypoints=websecure"
       - "traefik.http.routers.infinity-auth.tls=true"
       - "traefik.http.routers.infinity-auth.tls.certresolver=letsencrypt"

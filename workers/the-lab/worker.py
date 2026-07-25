@@ -40,7 +40,7 @@ if (
         "This worker cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
-INTERNAL_SECRET: str = _internal_secret_raw
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 EXEC_TIMEOUT = int(os.getenv("EXEC_TIMEOUT", "10"))
 
 ALLOWED_LANGS = {
