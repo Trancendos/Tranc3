@@ -166,8 +166,9 @@
 
 ## 10. Policy (POL)
 
-- No route-level auth on the deployed `main.py` — low risk given `/orchestrate` is an honest
-  no-op stub.
+- `/orchestrate` on the deployed `main.py` now requires the `X-Internal-Secret` header
+  (`_require_internal_auth`, fail-fast `INTERNAL_SECRET` at startup) — it is no longer
+  unauthenticated, even though it's still an honest no-op stub.
 - **If `worker.py` is ever promoted to deployed status, its `dev-secret` fallback MUST be fixed
   first** — otherwise every write route (`/create`, `/templates`) would accept the literal
   string `"dev-secret"` as valid auth, same as the already-documented pattern for The Academy,
