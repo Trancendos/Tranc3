@@ -102,7 +102,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
 | **DocUtari** | Fiddsy | Document management hub | ✅ In repo | `workers/files-service/`, `workers/storage-service/` (standalone workers); Paperless-ngx planned frontend |
 | **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | ✅ In repo | `src/basement/` (router registered in `api.py`) |
 | **The Studio** | Voxx | Central hub of the Creativity Center | ✅ In repo | `src/studio/` (router registered in `api.py`) |
-| **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | ✅ In repo | `workers/sashas-photo-studio/worker.py` (standalone worker); Stable Diffusion + ComfyUI planned backend |
+| **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | ✅ In repo | `workers/sashas-photo-studio/main.py` (standalone worker, actual Dockerfile `CMD` entrypoint — the sibling `worker.py` is a superseded Pollinations.ai-backed implementation no longer run in production); ComfyUI (primary) + AUTOMATIC1111 (fallback) backend now integrated via HTTP against self-hosted instances, offline placeholder as last resort |
 | **TranceFlow** | Junior Cesar | 3D modeling & games creation studio | ✅ In repo | `workers/tranceflow/worker.py` (standalone worker); Godot Engine integration planned |
 | **TateKing** | Benji Tate & Sam King | Video creation & editing platform | ✅ In repo | `workers/tateking/worker.py` (standalone worker); FFmpeg + custom UI planned |
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |
