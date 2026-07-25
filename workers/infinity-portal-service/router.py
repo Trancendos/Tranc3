@@ -518,8 +518,12 @@ async def get_session(request: Request):
 
 
 @router.get("/portal/sessions")
-async def list_sessions(limit: int = Query(20, ge=1, le=100)):
+async def list_sessions(request: Request, limit: int = Query(20, ge=1, le=100)):
     """List recent portal sessions (admin endpoint)."""
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
     rows = db.execute(
         "SELECT session_id, user_id, username, role, tier, infinity_role, routed_to, created_at, is_active FROM portal_sessions ORDER BY created_at DESC LIMIT ?",
         (limit,),
@@ -533,8 +537,12 @@ async def list_sessions(limit: int = Query(20, ge=1, le=100)):
 
 
 @router.get("/portal/events")
-async def list_portal_events(limit: int = Query(50, ge=1, le=500)):
+async def list_portal_events(request: Request, limit: int = Query(50, ge=1, le=500)):
     """List recent portal events."""
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
     rows = db.execute(
         "SELECT * FROM portal_events ORDER BY created_at DESC LIMIT ?",
         (limit,),
@@ -543,8 +551,12 @@ async def list_portal_events(limit: int = Query(50, ge=1, le=500)):
 
 
 @router.get("/portal/routing-history")
-async def routing_history(limit: int = Query(50, ge=1, le=500)):
+async def routing_history(request: Request, limit: int = Query(50, ge=1, le=500)):
     """List recent gate routing events."""
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
     rows = db.execute(
         "SELECT * FROM gate_routing_log ORDER BY routed_at DESC LIMIT ?",
         (limit,),

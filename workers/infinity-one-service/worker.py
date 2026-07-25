@@ -410,6 +410,10 @@ app.add_middleware(
         "/one/identities/{user_id}",
         "/one/identities/{user_id}/apps",
         "/one/identities/{user_id}/devices",
+        # /one/resolve/{identifier} looks up an identity by user_id, username,
+        # or email and returns the full record — an unauthenticated caller
+        # could otherwise enumerate/dump identities one guess at a time.
+        "/one/resolve",
     },
 )
 
