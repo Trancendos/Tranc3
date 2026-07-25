@@ -50,7 +50,19 @@ PAPERLESS_TOKEN = os.getenv("PAPERLESS_API_TOKEN", "")
 STIRLING_URL = os.getenv("STIRLING_PDF_URL", "http://stirling-pdf:8080")
 GOTENBERG_URL = os.getenv("GOTENBERG_URL", "http://gotenberg:3000")
 TIKA_URL = os.getenv("TIKA_URL", "http://tika:9998")
-INTERNAL_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "")
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET") or os.getenv("INTERNAL_SERVICE_TOKEN")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+_INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 # Zero-cost hard-stop thresholds (requests per minute per operation)
 THRESHOLD_PDF_OPS = int(os.getenv("DOCUTARI_PDF_THRESHOLD", "100"))
@@ -453,8 +465,10 @@ app.add_middleware(
 )
 
 
-async def _auth(x_internal_token: str = Header(default="")) -> None:
-    if INTERNAL_TOKEN and x_internal_token != INTERNAL_TOKEN:
+async def _auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if x_internal_secret != _INTERNAL_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
