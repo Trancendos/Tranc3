@@ -57,11 +57,10 @@ def check_websecure_tls_labels() -> list[str]:
     """MC-014 encryption.in_transit: every router using entrypoints=websecure
     must also carry a tls=true/certresolver label for the same router name.
 
-    Note: this does not check for a Host() matcher — Traefik's ACME resolver
-    needs a real domain to issue a cert against, which a PathPrefix-only rule
-    doesn't provide. That's a separate, per-service domain decision (see the
-    6 P0 services that already have Host(`api.trancendos.com`)) and is not
-    asserted here for the remaining PathPrefix-only routers this check covers."""
+    This check only covers the tls/certresolver label itself — the separate
+    Host() matcher requirement (needed for Traefik's ACME resolver to have a
+    real domain to issue a cert against) is asserted by
+    check_tls_routers_have_host_matcher()."""
     compose = ROOT / "docker-compose.production.yml"
     if not compose.is_file():
         return [f"{compose.relative_to(ROOT)} not found"]
@@ -79,6 +78,23 @@ def check_websecure_tls_labels() -> list[str]:
         f"router '{r}' uses entrypoints=websecure with no tls=true/certresolver label"
         for r in missing
     ]
+
+
+def check_tls_routers_have_host_matcher() -> list[str]:
+    """MC-014 encryption.in_transit: every router with a tls=true label must also
+    carry a Host() matcher in its rule, so Traefik's ACME resolver has a real
+    domain to request a certificate against. A PathPrefix-only rule gives ACME
+    nothing to issue a cert for."""
+    compose = ROOT / "docker-compose.production.yml"
+    if not compose.is_file():
+        return [f"{compose.relative_to(ROOT)} not found"]
+    text = compose.read_text(errors="ignore")
+
+    tls_routers = set(re.findall(r"traefik\.http\.routers\.([\w-]+)\.tls=true", text))
+    rules = dict(re.findall(r"traefik\.http\.routers\.([\w-]+)\.rule=(.+)", text))
+
+    missing = sorted(r for r in tls_routers if "Host(" not in rules.get(r, ""))
+    return [f"router '{r}' has tls=true but no Host() matcher in its rule" for r in missing]
 
 
 def check_library_classification() -> list[str]:
@@ -100,6 +116,7 @@ CHECKS = {
     "no_wildcard_cors": check_no_wildcard_cors,
     "no_dev_secret_default": check_no_dev_secret_default,
     "websecure_tls_labels": check_websecure_tls_labels,
+    "tls_routers_have_host_matcher": check_tls_routers_have_host_matcher,
     "library_classification": check_library_classification,
 }
 

@@ -985,7 +985,7 @@ services:
       <<: *healthcheck-default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tranceflow.rule=PathPrefix(`/tranceflow`)"
+      - "traefik.http.routers.tranceflow.rule=Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`)"
       - "traefik.http.routers.tranceflow.entrypoints=websecure"
       - "traefik.http.routers.tranceflow.tls=true"
       - "traefik.http.routers.tranceflow.tls.certresolver=letsencrypt"
@@ -1025,7 +1025,7 @@ services:
       <<: *healthcheck-default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.vrar3d.rule=PathPrefix(`/vrar3d`)"
+      - "traefik.http.routers.vrar3d.rule=Host(`vrar3d.trancendos.com`) && PathPrefix(`/vrar3d`)"
       - "traefik.http.routers.vrar3d.entrypoints=websecure"
       - "traefik.http.routers.vrar3d.tls=true"
       - "traefik.http.routers.vrar3d.tls.certresolver=letsencrypt"
@@ -1186,7 +1186,7 @@ services:
       <<: *healthcheck-default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.infinity-portal.rule=PathPrefix(`/portal`)"
+      - "traefik.http.routers.infinity-portal.rule=Host(`infinity-portal.trancendos.com`) && PathPrefix(`/portal`)"
       - "traefik.http.routers.infinity-portal.entrypoints=websecure"
       - "traefik.http.routers.infinity-portal.tls=true"
       - "traefik.http.routers.infinity-portal.tls.certresolver=letsencrypt"
@@ -1213,7 +1213,7 @@ services:
       <<: *healthcheck-default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.infinity-one.rule=PathPrefix(`/identity`)"
+      - "traefik.http.routers.infinity-one.rule=Host(`infinity-one.trancendos.com`) && PathPrefix(`/identity`)"
       - "traefik.http.routers.infinity-one.entrypoints=websecure"
       - "traefik.http.routers.infinity-one.tls=true"
       - "traefik.http.routers.infinity-one.tls.certresolver=letsencrypt"
@@ -2964,7 +2964,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8064/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.imaginarium.rule=PathPrefix(`/imaginarium`)"
+      - "traefik.http.routers.imaginarium.rule=Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`)"
       - "traefik.http.routers.imaginarium.entrypoints=websecure"
       - "traefik.http.routers.imaginarium.tls=true"
       - "traefik.http.routers.imaginarium.tls.certresolver=letsencrypt"
@@ -2996,7 +2996,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8061/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tateking.rule=PathPrefix(`/tateking`)"
+      - "traefik.http.routers.tateking.rule=Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`)"
       - "traefik.http.routers.tateking.entrypoints=websecure"
       - "traefik.http.routers.tateking.tls=true"
       - "traefik.http.routers.tateking.tls.certresolver=letsencrypt"
@@ -3046,7 +3046,7 @@ services:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:8092/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.bullmq-queue-service.rule=PathPrefix(`/bullmq-queue-service`)"
+      - "traefik.http.routers.bullmq-queue-service.rule=Host(`bullmq-queue-service.trancendos.com`) && PathPrefix(`/bullmq-queue-service`)"
       - "traefik.http.routers.bullmq-queue-service.entrypoints=websecure"
       - "traefik.http.routers.bullmq-queue-service.tls=true"
       - "traefik.http.routers.bullmq-queue-service.tls.certresolver=letsencrypt"
@@ -3075,7 +3075,7 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8094/health"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.vault-service-rs.rule=PathPrefix(`/vault-rs`)"
+      - "traefik.http.routers.vault-service-rs.rule=Host(`vault-service-rs.trancendos.com`) && PathPrefix(`/vault-rs`)"
       - "traefik.http.routers.vault-service-rs.entrypoints=websecure"
       - "traefik.http.routers.vault-service-rs.tls=true"
       - "traefik.http.routers.vault-service-rs.tls.certresolver=letsencrypt"
@@ -3097,7 +3097,7 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8099/health"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rate-limit-service-rs.rule=PathPrefix(`/rate-limit-rs`)"
+      - "traefik.http.routers.rate-limit-service-rs.rule=Host(`rate-limit-service-rs.trancendos.com`) && PathPrefix(`/rate-limit-rs`)"
       - "traefik.http.routers.rate-limit-service-rs.entrypoints=websecure"
       - "traefik.http.routers.rate-limit-service-rs.tls=true"
       - "traefik.http.routers.rate-limit-service-rs.tls.certresolver=letsencrypt"
@@ -3123,7 +3123,7 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8004/health"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.nexus-ws-rs.rule=PathPrefix(`/nexus-rs`)"
+      - "traefik.http.routers.nexus-ws-rs.rule=Host(`nexus-ws-rs.trancendos.com`) && PathPrefix(`/nexus-rs`)"
       - "traefik.http.routers.nexus-ws-rs.entrypoints=websecure"
       - "traefik.http.routers.nexus-ws-rs.tls=true"
       - "traefik.http.routers.nexus-ws-rs.tls.certresolver=letsencrypt"
@@ -3147,7 +3147,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8062/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.sashas-photo-studio.rule=PathPrefix(`/sashas-photo-studio`)"
+      - "traefik.http.routers.sashas-photo-studio.rule=Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`)"
       - "traefik.http.routers.sashas-photo-studio.entrypoints=websecure"
       - "traefik.http.routers.sashas-photo-studio.tls=true"
       - "traefik.http.routers.sashas-photo-studio.tls.certresolver=letsencrypt"
@@ -3174,7 +3174,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8055/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.the-lab.rule=PathPrefix(`/the-lab`)"
+      - "traefik.http.routers.the-lab.rule=Host(`the-lab.trancendos.com`) && PathPrefix(`/the-lab`)"
       - "traefik.http.routers.the-lab.entrypoints=websecure"
       - "traefik.http.routers.the-lab.tls=true"
       - "traefik.http.routers.the-lab.tls.certresolver=letsencrypt"
@@ -3198,7 +3198,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8037/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.deepagents-orchestrator-service.rule=PathPrefix(`/deepagents-orchestrator`)"
+      - "traefik.http.routers.deepagents-orchestrator-service.rule=Host(`deepagents-orchestrator-service.trancendos.com`) && PathPrefix(`/deepagents-orchestrator`)"
       - "traefik.http.routers.deepagents-orchestrator-service.entrypoints=websecure"
       - "traefik.http.routers.deepagents-orchestrator-service.tls=true"
       - "traefik.http.routers.deepagents-orchestrator-service.tls.certresolver=letsencrypt"
@@ -3224,7 +3224,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8074/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.taimra.rule=PathPrefix(`/taimra`)"
+      - "traefik.http.routers.taimra.rule=Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`)"
       - "traefik.http.routers.taimra.entrypoints=websecure"
       - "traefik.http.routers.taimra.tls=true"
       - "traefik.http.routers.taimra.tls.certresolver=letsencrypt"
@@ -3252,7 +3252,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8075/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.imind.rule=PathPrefix(`/imind`)"
+      - "traefik.http.routers.imind.rule=Host(`imind.trancendos.com`) && PathPrefix(`/imind`)"
       - "traefik.http.routers.imind.entrypoints=websecure"
       - "traefik.http.routers.imind.tls=true"
       - "traefik.http.routers.imind.tls.certresolver=letsencrypt"
@@ -3278,7 +3278,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8076/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.resonate.rule=PathPrefix(`/resonate`)"
+      - "traefik.http.routers.resonate.rule=Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`)"
       - "traefik.http.routers.resonate.entrypoints=websecure"
       - "traefik.http.routers.resonate.tls=true"
       - "traefik.http.routers.resonate.tls.certresolver=letsencrypt"
@@ -3304,7 +3304,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8077/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tranquility.rule=PathPrefix(`/tranquility`)"
+      - "traefik.http.routers.tranquility.rule=Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`)"
       - "traefik.http.routers.tranquility.entrypoints=websecure"
       - "traefik.http.routers.tranquility.tls=true"
       - "traefik.http.routers.tranquility.tls.certresolver=letsencrypt"
@@ -3332,7 +3332,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8069/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.the-studio.rule=PathPrefix(`/the-studio`)"
+      - "traefik.http.routers.the-studio.rule=Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`)"
       - "traefik.http.routers.the-studio.entrypoints=websecure"
       - "traefik.http.routers.the-studio.tls=true"
       - "traefik.http.routers.the-studio.tls.certresolver=letsencrypt"
@@ -3356,7 +3356,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8056/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.the-academy.rule=PathPrefix(`/the-academy`)"
+      - "traefik.http.routers.the-academy.rule=Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`)"
       - "traefik.http.routers.the-academy.entrypoints=websecure"
       - "traefik.http.routers.the-academy.tls=true"
       - "traefik.http.routers.the-academy.tls.certresolver=letsencrypt"
@@ -3382,7 +3382,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8058/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.turings-hub-service.rule=PathPrefix(`/turings-hub`)"
+      - "traefik.http.routers.turings-hub-service.rule=Host(`turings-hub-service.trancendos.com`) && PathPrefix(`/turings-hub`)"
       - "traefik.http.routers.turings-hub-service.entrypoints=websecure"
       - "traefik.http.routers.turings-hub-service.tls=true"
       - "traefik.http.routers.turings-hub-service.tls.certresolver=letsencrypt"
@@ -3406,7 +3406,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8072/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.warp-tunnel.rule=PathPrefix(`/warp-tunnel`)"
+      - "traefik.http.routers.warp-tunnel.rule=Host(`warp-tunnel.trancendos.com`) && PathPrefix(`/warp-tunnel`)"
       - "traefik.http.routers.warp-tunnel.entrypoints=websecure"
       - "traefik.http.routers.warp-tunnel.tls=true"
       - "traefik.http.routers.warp-tunnel.tls.certresolver=letsencrypt"
@@ -3432,7 +3432,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8073/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.warp-radio.rule=PathPrefix(`/warp-radio`)"
+      - "traefik.http.routers.warp-radio.rule=Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`)"
       - "traefik.http.routers.warp-radio.entrypoints=websecure"
       - "traefik.http.routers.warp-radio.tls=true"
       - "traefik.http.routers.warp-radio.tls.certresolver=letsencrypt"
@@ -3460,7 +3460,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8057/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.the-dutchy.rule=PathPrefix(`/the-dutchy`)"
+      - "traefik.http.routers.the-dutchy.rule=Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`)"
       - "traefik.http.routers.the-dutchy.entrypoints=websecure"
       - "traefik.http.routers.the-dutchy.tls=true"
       - "traefik.http.routers.the-dutchy.tls.certresolver=letsencrypt"
@@ -3486,7 +3486,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8110/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.devocity.rule=PathPrefix(`/devocity`)"
+      - "traefik.http.routers.devocity.rule=Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`)"
       - "traefik.http.routers.devocity.entrypoints=websecure"
       - "traefik.http.routers.devocity.tls=true"
       - "traefik.http.routers.devocity.tls.certresolver=letsencrypt"
@@ -3512,7 +3512,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8079/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.chaos-party.rule=PathPrefix(`/chaos-party`)"
+      - "traefik.http.routers.chaos-party.rule=Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)"
       - "traefik.http.routers.chaos-party.entrypoints=websecure"
       - "traefik.http.routers.chaos-party.tls=true"
       - "traefik.http.routers.chaos-party.tls.certresolver=letsencrypt"
@@ -3538,7 +3538,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8068/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.basement.rule=PathPrefix(`/basement`)"
+      - "traefik.http.routers.basement.rule=Host(`basement.trancendos.com`) && PathPrefix(`/basement`)"
       - "traefik.http.routers.basement.entrypoints=websecure"
       - "traefik.http.routers.basement.tls=true"
       - "traefik.http.routers.basement.tls.certresolver=letsencrypt"
@@ -3562,7 +3562,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8078/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backup-service.rule=PathPrefix(`/backup`)"
+      - "traefik.http.routers.backup-service.rule=Host(`backup-service.trancendos.com`) && PathPrefix(`/backup`)"
       - "traefik.http.routers.backup-service.entrypoints=websecure"
       - "traefik.http.routers.backup-service.tls=true"
       - "traefik.http.routers.backup-service.tls.certresolver=letsencrypt"
@@ -3586,7 +3586,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8036/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.langchain-integration-service.rule=PathPrefix(`/langchain-integration`)"
+      - "traefik.http.routers.langchain-integration-service.rule=Host(`langchain-integration-service.trancendos.com`) && PathPrefix(`/langchain-integration`)"
       - "traefik.http.routers.langchain-integration-service.entrypoints=websecure"
       - "traefik.http.routers.langchain-integration-service.tls=true"
       - "traefik.http.routers.langchain-integration-service.tls.certresolver=letsencrypt"
@@ -3610,7 +3610,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8039/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mlflow-service.rule=PathPrefix(`/mlflow`)"
+      - "traefik.http.routers.mlflow-service.rule=Host(`mlflow-service.trancendos.com`) && PathPrefix(`/mlflow`)"
       - "traefik.http.routers.mlflow-service.entrypoints=websecure"
       - "traefik.http.routers.mlflow-service.tls=true"
       - "traefik.http.routers.mlflow-service.tls.certresolver=letsencrypt"
@@ -3634,7 +3634,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8049/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.litellm-service.rule=PathPrefix(`/litellm`)"
+      - "traefik.http.routers.litellm-service.rule=Host(`litellm-service.trancendos.com`) && PathPrefix(`/litellm`)"
       - "traefik.http.routers.litellm-service.entrypoints=websecure"
       - "traefik.http.routers.litellm-service.tls=true"
       - "traefik.http.routers.litellm-service.tls.certresolver=letsencrypt"
@@ -3658,7 +3658,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8047/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.artifactory-service.rule=PathPrefix(`/artifactory`)"
+      - "traefik.http.routers.artifactory-service.rule=Host(`artifactory-service.trancendos.com`) && PathPrefix(`/artifactory`)"
       - "traefik.http.routers.artifactory-service.entrypoints=websecure"
       - "traefik.http.routers.artifactory-service.tls=true"
       - "traefik.http.routers.artifactory-service.tls.certresolver=letsencrypt"
@@ -3686,7 +3686,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8041/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.sentinel-station-service.rule=PathPrefix(`/sentinel-station`)"
+      - "traefik.http.routers.sentinel-station-service.rule=Host(`sentinel-station-service.trancendos.com`) && PathPrefix(`/sentinel-station`)"
       - "traefik.http.routers.sentinel-station-service.entrypoints=websecure"
       - "traefik.http.routers.sentinel-station-service.tls=true"
       - "traefik.http.routers.sentinel-station-service.tls.certresolver=letsencrypt"
@@ -3710,7 +3710,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8109/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.swarm-coordinator-service.rule=PathPrefix(`/swarm-coordinator`)"
+      - "traefik.http.routers.swarm-coordinator-service.rule=Host(`swarm-coordinator-service.trancendos.com`) && PathPrefix(`/swarm-coordinator`)"
       - "traefik.http.routers.swarm-coordinator-service.entrypoints=websecure"
       - "traefik.http.routers.swarm-coordinator-service.tls=true"
       - "traefik.http.routers.swarm-coordinator-service.tls.certresolver=letsencrypt"
@@ -3736,7 +3736,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.hive-service.rule=PathPrefix(`/hive`)"
+      - "traefik.http.routers.hive-service.rule=Host(`hive-service.trancendos.com`) && PathPrefix(`/hive`)"
       - "traefik.http.routers.hive-service.entrypoints=websecure"
       - "traefik.http.routers.hive-service.tls=true"
       - "traefik.http.routers.hive-service.tls.certresolver=letsencrypt"
@@ -3760,7 +3760,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8046/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.ice-box-service.rule=PathPrefix(`/ice-box`)"
+      - "traefik.http.routers.ice-box-service.rule=Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`)"
       - "traefik.http.routers.ice-box-service.entrypoints=websecure"
       - "traefik.http.routers.ice-box-service.tls=true"
       - "traefik.http.routers.ice-box-service.tls.certresolver=letsencrypt"
@@ -3786,7 +3786,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8048/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.fabulousa-service.rule=PathPrefix(`/fabulousa`)"
+      - "traefik.http.routers.fabulousa-service.rule=Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`)"
       - "traefik.http.routers.fabulousa-service.entrypoints=websecure"
       - "traefik.http.routers.fabulousa-service.tls=true"
       - "traefik.http.routers.fabulousa-service.tls.certresolver=letsencrypt"
@@ -3811,7 +3811,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8096/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.llamaindex.rule=PathPrefix(`/llamaindex`)"
+      - "traefik.http.routers.llamaindex.rule=Host(`llamaindex.trancendos.com`) && PathPrefix(`/llamaindex`)"
       - "traefik.http.routers.llamaindex.entrypoints=websecure"
       - "traefik.http.routers.llamaindex.tls=true"
       - "traefik.http.routers.llamaindex.tls.certresolver=letsencrypt"
@@ -3837,7 +3837,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8097/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.haystack.rule=PathPrefix(`/haystack`)"
+      - "traefik.http.routers.haystack.rule=Host(`haystack.trancendos.com`) && PathPrefix(`/haystack`)"
       - "traefik.http.routers.haystack.entrypoints=websecure"
       - "traefik.http.routers.haystack.tls=true"
       - "traefik.http.routers.haystack.tls.certresolver=letsencrypt"
@@ -3862,7 +3862,7 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8098/health')"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dspy.rule=PathPrefix(`/dspy`)"
+      - "traefik.http.routers.dspy.rule=Host(`dspy.trancendos.com`) && PathPrefix(`/dspy`)"
       - "traefik.http.routers.dspy.entrypoints=websecure"
       - "traefik.http.routers.dspy.tls=true"
       - "traefik.http.routers.dspy.tls.certresolver=letsencrypt"
