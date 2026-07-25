@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Path, Query
+from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 
+from auth import get_current_user
 from src.artifactory.registry import ArtifactType, get_artifactory
 
 router = APIRouter(prefix="/artifactory", tags=["the-artifactory"])
@@ -22,6 +23,7 @@ async def artifactory_status() -> Dict[str, Any]:
 async def list_artifacts(
     type: Optional[str] = Query(None),
     namespace: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
 ) -> list:
     atype = None
     if type:
@@ -37,7 +39,10 @@ async def list_artifacts(
 
 
 @router.post("/artifacts")
-async def create_artifact(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def create_artifact(
+    body: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     name = body.get("name")
     raw_type = body.get("type", "generic")
     if not name:
@@ -58,7 +63,10 @@ async def create_artifact(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.get("/artifacts/{artifact_id}")
-async def get_artifact(artifact_id: str = Path(...)) -> Dict[str, Any]:
+async def get_artifact(
+    artifact_id: str = Path(...),
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     artifact = get_artifactory().get_artifact(artifact_id)
     if not artifact:
         return JSONResponse({"error": "Artifact not found"}, status_code=404)
@@ -69,6 +77,7 @@ async def get_artifact(artifact_id: str = Path(...)) -> Dict[str, Any]:
 async def push_version(
     artifact_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
     version = body.get("version")
     if not version:
@@ -87,7 +96,10 @@ async def push_version(
 
 
 @router.delete("/artifacts/{artifact_id}")
-async def delete_artifact(artifact_id: str = Path(...)) -> Dict[str, Any]:
+async def delete_artifact(
+    artifact_id: str = Path(...),
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     ok = get_artifactory().delete_artifact(artifact_id)
     if not ok:
         return JSONResponse({"error": "Artifact not found"}, status_code=404)
@@ -95,6 +107,6 @@ async def delete_artifact(artifact_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.post("/retention/apply")
-async def apply_retention() -> Dict[str, Any]:
+async def apply_retention(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     removed = get_artifactory().apply_retention()
     return {"versions_removed": removed}

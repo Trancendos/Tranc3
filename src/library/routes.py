@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, Path, Query
+from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 
+from auth import get_current_user
 from src.library.knowledge_base import ArticleStatus, get_library
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -21,6 +22,7 @@ async def list_articles(
     limit: int = Query(20, ge=1, le=200),
     tag: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
 ):
     lib = get_library()
     if tag:
@@ -32,12 +34,19 @@ async def list_articles(
 
 
 @router.get("/articles/search")
-async def search_articles(q: str = Query(..., min_length=1), limit: int = Query(20, ge=1, le=100)):
+async def search_articles(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+):
     return [a.to_dict() for a in get_library().search(q, limit=limit)]
 
 
 @router.get("/articles/{article_id}")
-async def get_article(article_id: str = Path(...)):
+async def get_article(
+    article_id: str = Path(...),
+    current_user: dict = Depends(get_current_user),
+):
     art = get_library().get(article_id)
     if not art:
         return JSONResponse({"error": "Not found"}, status_code=404)
@@ -50,13 +59,17 @@ async def create_article(
     body: str = Body(...),
     tags: Optional[List[str]] = Body(None),
     author: str = Body("system"),
+    current_user: dict = Depends(get_current_user),
 ):
     art = get_library().create(title=title, body=body, tags=tags, author=author)
     return art.to_dict()
 
 
 @router.delete("/articles/{article_id}")
-async def delete_article(article_id: str = Path(...)):
+async def delete_article(
+    article_id: str = Path(...),
+    current_user: dict = Depends(get_current_user),
+):
     if get_library().delete(article_id):
         return {"deleted": article_id}
     return JSONResponse({"error": "Not found"}, status_code=404)
