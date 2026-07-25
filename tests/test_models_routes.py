@@ -235,6 +235,64 @@ class TestGovernanceRoutes:
         resp = client.get("/models/proposals", params={"stage": "not-a-real-stage"})
         assert resp.status_code == 422
 
+    def test_get_unknown_proposal_is_404(self, client):
+        resp = client.get("/models/proposals/999999")
+        assert resp.status_code == 404
+
+    def test_prime_review_wrong_stage_is_409(self, client):
+        self._record_two_scans(client)
+        _as_admin(client)
+        try:
+            submit_resp = client.post(
+                "/models/proposals", json={"model_name": "T2ance-CODE", "skill_domain": "Coder"}
+            )
+            proposal_id = submit_resp.json()["id"]
+            first = client.post(
+                f"/models/proposals/{proposal_id}/prime-review",
+                json={"reviewer": "Dorris Fontaine"},
+            )
+            assert first.status_code == 200
+            # Already past prime_review — a second attempt is the wrong stage.
+            second = client.post(
+                f"/models/proposals/{proposal_id}/prime-review",
+                json={"reviewer": "Dorris Fontaine"},
+            )
+            assert second.status_code == 409
+        finally:
+            _clear_auth(client)
+
+    def test_cornelius_review_unknown_proposal_is_404(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post("/models/proposals/999999/cornelius-review", json={})
+            assert resp.status_code == 404
+        finally:
+            _clear_auth(client)
+
+    def test_human_decision_unknown_proposal_is_404(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post("/models/proposals/999999/human-decision", json={"approved": True})
+            assert resp.status_code == 404
+        finally:
+            _clear_auth(client)
+
+    def test_human_decision_wrong_stage_is_409(self, client):
+        self._record_two_scans(client)
+        _as_admin(client)
+        try:
+            submit_resp = client.post(
+                "/models/proposals", json={"model_name": "T2ance-CODE", "skill_domain": "Coder"}
+            )
+            proposal_id = submit_resp.json()["id"]
+            # Still in prime_review — human-decision is the wrong stage.
+            resp = client.post(
+                f"/models/proposals/{proposal_id}/human-decision", json={"approved": True}
+            )
+            assert resp.status_code == 409
+        finally:
+            _clear_auth(client)
+
 
 class TestBoardVoteAndLibraryContextRoutes:
     def _submit_trance_one_proposal(self, client):
@@ -323,6 +381,54 @@ class TestBoardVoteAndLibraryContextRoutes:
         resp = client.get("/models/proposals/999999/library-context")
         assert resp.status_code == 404
 
+    def test_board_vote_unknown_proposal_is_404(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post(
+                "/models/proposals/999999/board-vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert resp.status_code == 404
+        finally:
+            _clear_auth(client)
+
+    def test_board_vote_duplicate_is_409(self, client):
+        proposal_id = self._submit_trance_one_proposal(client)
+        _as_admin(client)
+        try:
+            first = client.post(
+                f"/models/proposals/{proposal_id}/board-vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert first.status_code == 200
+            second = client.post(
+                f"/models/proposals/{proposal_id}/board-vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert second.status_code == 409
+        finally:
+            _clear_auth(client)
+
+    def test_board_vote_on_standard_pipeline_proposal_is_409(self, client):
+        _as_admin(client)
+        try:
+            for score in (60.0, 90.0):
+                client.post(
+                    "/models/benchmark",
+                    json={"model_name": "T2ance-CODE", "skill_domain": "Coder", "score": score},
+                )
+            submit_resp = client.post(
+                "/models/proposals", json={"model_name": "T2ance-CODE", "skill_domain": "Coder"}
+            )
+            proposal_id = submit_resp.json()["id"]
+            resp = client.post(
+                f"/models/proposals/{proposal_id}/board-vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert resp.status_code == 409
+        finally:
+            _clear_auth(client)
+
 
 class TestInterventionRoutes:
     def test_raise_requires_admin(self, client):
@@ -354,6 +460,22 @@ class TestInterventionRoutes:
                 },
             )
             assert resp.status_code == 422
+        finally:
+            _clear_auth(client)
+
+    def test_raise_rejects_non_board_member_raiser(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": CORNELIUS,
+                    "intervention_type": "repair_request",
+                    "reason": "unresponsive",
+                    "raised_by": "George Porter",
+                },
+            )
+            assert resp.status_code == 403
         finally:
             _clear_auth(client)
 
@@ -418,3 +540,88 @@ class TestInterventionRoutes:
     def test_invalid_status_filter_422s(self, client):
         resp = client.get("/models/interventions", params={"status": "not-a-real-status"})
         assert resp.status_code == 422
+
+    def test_vote_on_unknown_intervention_is_404(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post(
+                "/models/interventions/999999/vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert resp.status_code == 404
+        finally:
+            _clear_auth(client)
+
+    def test_vote_by_non_board_member_is_403(self, client):
+        _as_admin(client)
+        try:
+            raise_resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": CORNELIUS,
+                    "intervention_type": "repair_request",
+                    "reason": "x",
+                    "raised_by": DR,
+                },
+            )
+            intervention_id = raise_resp.json()["id"]
+            resp = client.post(
+                f"/models/interventions/{intervention_id}/vote",
+                json={"prime_name": "George Porter", "approved": True},
+            )
+            assert resp.status_code == 403
+        finally:
+            _clear_auth(client)
+
+    def test_duplicate_vote_is_409(self, client):
+        _as_admin(client)
+        try:
+            raise_resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": CORNELIUS,
+                    "intervention_type": "repair_request",
+                    "reason": "x",
+                    "raised_by": DR,
+                },
+            )
+            intervention_id = raise_resp.json()["id"]
+            first = client.post(
+                f"/models/interventions/{intervention_id}/vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert first.status_code == 200
+            second = client.post(
+                f"/models/interventions/{intervention_id}/vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert second.status_code == 409
+        finally:
+            _clear_auth(client)
+
+    def test_vote_on_resolved_intervention_is_409(self, client):
+        _as_admin(client)
+        try:
+            raise_resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": CORNELIUS,
+                    "intervention_type": "repair_request",
+                    "reason": "x",
+                    "raised_by": DR,
+                },
+            )
+            intervention_id = raise_resp.json()["id"]
+            reject = client.post(
+                f"/models/interventions/{intervention_id}/vote",
+                json={"prime_name": DR, "approved": False},
+            )
+            assert reject.status_code == 200
+            assert reject.json()["status"] == "withdrawn"
+            resp = client.post(
+                f"/models/interventions/{intervention_id}/vote",
+                json={"prime_name": "Voxx", "approved": True},
+            )
+            assert resp.status_code == 409
+        finally:
+            _clear_auth(client)
