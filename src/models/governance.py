@@ -1,14 +1,30 @@
 # src/models/governance.py
 """Trancendos Models Matrix — governed model-advancement pipeline.
 
-Real skill/feature advancement, benchmarked and gated through three
-review stages before it's baked into a named AI's model:
+Which review pipeline a proposal follows depends on the *tier of the model
+being advanced* (`entities.platform.get_orchestration_tier()`), not a
+one-size-fits-all chain — a Prime's own upgrade can't be pre-screened by a
+peer Prime, and a Sovereign-tier upgrade needs a different check-and-balance
+than a single reviewer:
 
-    Prime review      -> rejects proposals with minimal advancement
-    Cornelius review  -> assesses Skills & Features, calculates a %,
-                         only proceeds if it clears Cornelius's own
-                         (higher) bar
-    Human approval    -> final sign-off
+    Tranc3 (Tier 3) advancement  — "standard" pipeline:
+        Prime review     -> rejects minimal-advancement proposals outright
+        Cornelius review -> Skills & Features assessment, own (higher) bar
+        Human approval   -> final sign-off
+
+    T2ance (Tier 2, Prime) advancement — "cornelius_only" pipeline:
+        Cornelius review -> Cornelius is the final authority; no Prime
+                             pre-screen (there's no peer tier above a
+                             Prime except Cornelius) and no separate
+                             Human stage
+
+    Trance-One (Tier 1, Sovereign/Orchestrator) advancement —
+    "board_and_human" pipeline:
+        Governance Board -> every currently-registered T2ance Prime must
+                             individually approve (unanimous); any single
+                             rejection fails the proposal immediately
+        Human approval   -> final sign-off, informed by the Board's
+                             unanimous consent
 
 Each stage's decision, reviewer, notes, and % figures are recorded — this
 is what stops routine/minor updates from being silently baked into a
@@ -33,17 +49,44 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Optional
 
+from src.entities.platform import ORCHESTRATION_TIER, get_orchestration_tier
 from src.models.benchmark import BenchmarkRegistry, compute_advancement_pct, get_benchmark_registry
 
 DEFAULT_DB_PATH = Path("data/models_governance.db")
 
-# Below this % advancement, the Prime rejects outright — stops routine/minor
-# updates from ever reaching Cornelius or a Human.
+# Below this % advancement, the Prime (standard pipeline) rejects outright —
+# stops routine/minor updates from ever reaching Cornelius or a Human.
 PRIME_MIN_ADVANCEMENT_PCT = 3.0
 
 # Cornelius's own bar is higher than the Prime's — a real Skills & Features
-# assessment, not just the raw benchmark delta the Prime screens on.
+# assessment, not just the raw benchmark delta the Prime screens on. Also
+# used as the sole bar for the "cornelius_only" (T2ance) pipeline.
 CORNELIUS_MIN_ADVANCEMENT_PCT = 8.0
+
+
+class PipelineKind(str, Enum):
+    STANDARD = "standard"  # Tranc3 (Tier 3): Prime -> Cornelius -> Human
+    CORNELIUS_ONLY = "cornelius_only"  # T2ance (Tier 2): Cornelius is final
+    BOARD_AND_HUMAN = "board_and_human"  # Trance-One (Tier 1): Board -> Human
+
+
+def pipeline_for_model(model_name: str) -> PipelineKind:
+    """The tier of the model being advanced determines which governance
+    pipeline its proposal follows — see this module's docstring."""
+    tier = get_orchestration_tier(model_name)
+    if tier == "T2ance":
+        return PipelineKind.CORNELIUS_ONLY
+    if tier == "Trance-One":
+        return PipelineKind.BOARD_AND_HUMAN
+    return PipelineKind.STANDARD
+
+
+def governance_board_members() -> List[str]:
+    """Every currently-registered T2ance Prime — the Governance Board that
+    must unanimously approve any Trance-One (Sovereign) advancement.
+    Derived from ORCHESTRATION_TIER rather than a second hardcoded list,
+    so the Board can never silently drift from who is actually a Prime."""
+    return sorted(name for name, tier in ORCHESTRATION_TIER.items() if tier == "T2ance")
 
 
 class ProposalStage(str, Enum):
@@ -51,9 +94,19 @@ class ProposalStage(str, Enum):
     REJECTED_BY_PRIME = "rejected_by_prime"
     CORNELIUS_REVIEW = "cornelius_review"
     REJECTED_BY_CORNELIUS = "rejected_by_cornelius"
+    BOARD_REVIEW = "board_review"
+    REJECTED_BY_BOARD = "rejected_by_board"
     HUMAN_REVIEW = "human_review"
     APPROVED = "approved"
     REJECTED_BY_HUMAN = "rejected_by_human"
+
+
+# Stages that begin each pipeline kind.
+_INITIAL_STAGE: dict[PipelineKind, ProposalStage] = {
+    PipelineKind.STANDARD: ProposalStage.PRIME_REVIEW,
+    PipelineKind.CORNELIUS_ONLY: ProposalStage.CORNELIUS_REVIEW,
+    PipelineKind.BOARD_AND_HUMAN: ProposalStage.BOARD_REVIEW,
+}
 
 
 class InvalidStageTransitionError(ValueError):
@@ -67,6 +120,16 @@ class InsufficientBenchmarkHistoryError(ValueError):
     no prior baseline to measure an advancement % against."""
 
 
+class NotAGovernanceBoardMemberError(ValueError):
+    """Raised when a board_vote() is attempted by a name that isn't one of
+    the currently-registered T2ance Primes (see governance_board_members())."""
+
+
+class DuplicateBoardVoteError(ValueError):
+    """Raised when the same Prime tries to vote twice on the same
+    proposal while it's still awaiting Board resolution."""
+
+
 @dataclass
 class AdvancementProposal:
     id: int
@@ -76,6 +139,7 @@ class AdvancementProposal:
     new_score: float
     advancement_pct: float
     stage: ProposalStage
+    pipeline: PipelineKind
     submitted_by: str
     submitted_at: float
     prime_reviewer: Optional[str] = None
@@ -89,6 +153,15 @@ class AdvancementProposal:
     human_approved: Optional[bool] = None
     human_notes: str = ""
     human_decided_at: Optional[float] = None
+
+
+@dataclass
+class BoardVote:
+    proposal_id: int
+    prime_name: str
+    approved: bool
+    notes: str
+    voted_at: float
 
 
 def _emit_governance_event(event_type: str, proposal: AdvancementProposal, **extra) -> None:
@@ -114,6 +187,21 @@ def _emit_governance_event(event_type: str, proposal: AdvancementProposal, **ext
                 **extra,
             },
         )
+    except Exception:
+        pass
+
+
+def _publish_if_approved(proposal: AdvancementProposal) -> None:
+    """Best-effort: publish an APPROVED proposal into The Library so future
+    reviewers (and anyone browsing by skill domain or Job Description) can
+    learn from it — see src/models/knowledge.py. Never raises; a Library
+    outage must not affect the governance decision itself."""
+    if proposal.stage != ProposalStage.APPROVED:
+        return
+    try:
+        from src.models.knowledge import publish_advancement_article
+
+        publish_advancement_article(proposal)
     except Exception:
         pass
 
@@ -146,6 +234,7 @@ class ModelGovernanceRegistry:
                 new_score REAL NOT NULL,
                 advancement_pct REAL NOT NULL,
                 stage TEXT NOT NULL,
+                pipeline TEXT NOT NULL DEFAULT 'standard',
                 submitted_by TEXT NOT NULL,
                 submitted_at REAL NOT NULL,
                 prime_reviewer TEXT,
@@ -166,6 +255,19 @@ class ModelGovernanceRegistry:
             "CREATE INDEX IF NOT EXISTS idx_proposals_model_stage "
             "ON advancement_proposals(model_name, stage)"
         )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS board_votes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                proposal_id INTEGER NOT NULL,
+                prime_name TEXT NOT NULL,
+                approved INTEGER NOT NULL,
+                notes TEXT NOT NULL DEFAULT '',
+                voted_at REAL NOT NULL,
+                UNIQUE(proposal_id, prime_name)
+            )
+            """
+        )
         self._conn.commit()
 
     def _row_to_proposal(self, row: sqlite3.Row) -> AdvancementProposal:
@@ -177,6 +279,7 @@ class ModelGovernanceRegistry:
             new_score=row["new_score"],
             advancement_pct=row["advancement_pct"],
             stage=ProposalStage(row["stage"]),
+            pipeline=PipelineKind(row["pipeline"]),
             submitted_by=row["submitted_by"],
             submitted_at=row["submitted_at"],
             prime_reviewer=row["prime_reviewer"],
@@ -199,6 +302,15 @@ class ModelGovernanceRegistry:
         row = cur.fetchone()
         return self._row_to_proposal(row) if row else None
 
+    def _row_to_vote(self, row: sqlite3.Row) -> BoardVote:
+        return BoardVote(
+            proposal_id=row["proposal_id"],
+            prime_name=row["prime_name"],
+            approved=bool(row["approved"]),
+            notes=row["notes"],
+            voted_at=row["voted_at"],
+        )
+
     # ------------------------------------------------------------------
     # Submission — auto-computes advancement_pct from the benchmark registry
     # ------------------------------------------------------------------
@@ -207,7 +319,17 @@ class ModelGovernanceRegistry:
         self, model_name: str, skill_domain: str, submitted_by: str = "system"
     ) -> AdvancementProposal:
         """Open a new advancement proposal from the latest two benchmark
-        scans on record for (model_name, skill_domain)."""
+        scans on record for (model_name, skill_domain). Which pipeline it
+        follows — and therefore which stage it opens in — is derived from
+        the tier of `model_name` itself (see `pipeline_for_model()`).
+
+        `model_name` should be the AI's own canonical name (e.g. "The Dr.
+        (Nikolai O'denhime)", "George Porter", "Cornelius MacIntyre") —
+        the same key `get_orchestration_tier()` resolves — not its
+        specialized variant's *display* name ("T2ance-CODE",
+        "Tranc3-Crypto"), which `matrix.py` only uses for presentation and
+        which an unrelated string wouldn't resolve to a real tier at all
+        (falling back to the Tranc3/"standard" pipeline by default)."""
         latest, prior = self._benchmarks.latest_two(model_name, skill_domain)
         if latest is None or prior is None:
             raise InsufficientBenchmarkHistoryError(
@@ -216,26 +338,31 @@ class ModelGovernanceRegistry:
                 f"{0 if latest is None else 1}"
             )
         advancement_pct = compute_advancement_pct(prior.score, latest.score)
+        pipeline = pipeline_for_model(model_name)
+        initial_stage = _INITIAL_STAGE[pipeline]
         with self._lock:
             now = time.time()
             cur = self._conn.execute(
                 "INSERT INTO advancement_proposals "
                 "(model_name, skill_domain, prior_score, new_score, advancement_pct, "
-                "stage, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "stage, pipeline, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     model_name,
                     skill_domain,
                     prior.score,
                     latest.score,
                     advancement_pct,
-                    ProposalStage.PRIME_REVIEW.value,
+                    initial_stage.value,
+                    pipeline.value,
                     submitted_by,
                     now,
                 ),
             )
             self._conn.commit()
             proposal = self._get(cur.lastrowid)
-        _emit_governance_event("model.advancement.submitted", proposal, actor=submitted_by)
+        _emit_governance_event(
+            "model.advancement.submitted", proposal, actor=submitted_by, pipeline=pipeline.value
+        )
         return proposal
 
     # ------------------------------------------------------------------
@@ -291,8 +418,13 @@ class ModelGovernanceRegistry:
         """Cornelius assesses Skills & Features and calculates a %
         (defaults to the raw benchmark advancement_pct if a distinct
         qualitative assessment isn't supplied). Below
-        CORNELIUS_MIN_ADVANCEMENT_PCT, Cornelius rejects; otherwise the
-        proposal is presented to a Human for final approval."""
+        CORNELIUS_MIN_ADVANCEMENT_PCT, Cornelius rejects.
+
+        What happens on a pass depends on the proposal's pipeline: in the
+        "standard" (Tranc3) pipeline this is stage 2 of 3, so it proceeds
+        to Human review; in the "cornelius_only" (T2ance) pipeline Cornelius
+        *is* the final authority, so a pass goes straight to APPROVED with
+        no separate Human stage."""
         with self._lock:
             proposal = self._get(proposal_id)
             if proposal is None:
@@ -305,9 +437,12 @@ class ModelGovernanceRegistry:
             effective_pct = proposal.advancement_pct if assessed_pct is None else assessed_pct
             now = time.time()
             passed = effective_pct >= CORNELIUS_MIN_ADVANCEMENT_PCT
-            next_stage = (
-                ProposalStage.HUMAN_REVIEW if passed else ProposalStage.REJECTED_BY_CORNELIUS
-            )
+            if not passed:
+                next_stage = ProposalStage.REJECTED_BY_CORNELIUS
+            elif proposal.pipeline == PipelineKind.CORNELIUS_ONLY:
+                next_stage = ProposalStage.APPROVED
+            else:
+                next_stage = ProposalStage.HUMAN_REVIEW
             self._conn.execute(
                 "UPDATE advancement_proposals SET stage = ?, cornelius_reviewer = ?, "
                 "cornelius_assessed_pct = ?, cornelius_notes = ?, cornelius_decided_at = ? "
@@ -323,7 +458,89 @@ class ModelGovernanceRegistry:
             passed=passed,
             threshold_pct=CORNELIUS_MIN_ADVANCEMENT_PCT,
         )
+        _publish_if_approved(proposal)
         return proposal
+
+    # ------------------------------------------------------------------
+    # Governance Board review (Trance-One / Sovereign-tier advancement only)
+    # ------------------------------------------------------------------
+
+    def board_vote(
+        self, proposal_id: int, prime_name: str, approved: bool, notes: str = ""
+    ) -> AdvancementProposal:
+        """Record one Governance Board member's (T2ance Prime's) vote on a
+        Trance-One advancement proposal. The Board must be unanimous:
+
+        - Any single rejection immediately fails the proposal
+          (REJECTED_BY_BOARD) — no need to wait for the remaining votes.
+        - Only once *every* currently-registered Prime (governance_board_
+          members()) has voted approve does the proposal advance to
+          HUMAN_REVIEW.
+        - Otherwise the proposal stays in BOARD_REVIEW awaiting the rest.
+        """
+        if prime_name not in governance_board_members():
+            raise NotAGovernanceBoardMemberError(
+                f"{prime_name!r} is not a currently-registered T2ance Prime — "
+                f"only Governance Board members may vote"
+            )
+        with self._lock:
+            proposal = self._get(proposal_id)
+            if proposal is None:
+                raise KeyError(f"No advancement proposal with id={proposal_id}")
+            if proposal.stage != ProposalStage.BOARD_REVIEW:
+                raise InvalidStageTransitionError(
+                    f"Proposal {proposal_id} is in stage {proposal.stage.value!r}, "
+                    f"not awaiting Board review"
+                )
+            existing = self._conn.execute(
+                "SELECT 1 FROM board_votes WHERE proposal_id = ? AND prime_name = ?",
+                (proposal_id, prime_name),
+            ).fetchone()
+            if existing is not None:
+                raise DuplicateBoardVoteError(
+                    f"{prime_name!r} has already voted on proposal {proposal_id}"
+                )
+            now = time.time()
+            self._conn.execute(
+                "INSERT INTO board_votes (proposal_id, prime_name, approved, notes, voted_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (proposal_id, prime_name, int(approved), notes, now),
+            )
+
+            next_stage: Optional[ProposalStage] = None
+            if not approved:
+                next_stage = ProposalStage.REJECTED_BY_BOARD
+            else:
+                votes = self._conn.execute(
+                    "SELECT prime_name FROM board_votes WHERE proposal_id = ? AND approved = 1",
+                    (proposal_id,),
+                ).fetchall()
+                approved_names = {row["prime_name"] for row in votes}
+                if approved_names >= set(governance_board_members()):
+                    next_stage = ProposalStage.HUMAN_REVIEW
+
+            if next_stage is not None:
+                self._conn.execute(
+                    "UPDATE advancement_proposals SET stage = ? WHERE id = ?",
+                    (next_stage.value, proposal_id),
+                )
+            self._conn.commit()
+            proposal = self._get(proposal_id)
+        _emit_governance_event(
+            "model.advancement.board_voted",
+            proposal,
+            actor=prime_name,
+            approved=approved,
+            resolved=next_stage is not None,
+        )
+        return proposal
+
+    def get_board_votes(self, proposal_id: int) -> List[BoardVote]:
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT * FROM board_votes WHERE proposal_id = ? ORDER BY voted_at", (proposal_id,)
+            )
+            return [self._row_to_vote(row) for row in cur.fetchall()]
 
     # ------------------------------------------------------------------
     # Stage 3 — Human approval
@@ -355,6 +572,7 @@ class ModelGovernanceRegistry:
         _emit_governance_event(
             "model.advancement.human_decided", proposal, actor=decided_by, approved=approved
         )
+        _publish_if_approved(proposal)
         return proposal
 
     # ------------------------------------------------------------------

@@ -25,11 +25,23 @@ from auth import get_current_user
 from src.models.benchmark import BenchmarkResult, get_benchmark_registry
 from src.models.governance import (
     AdvancementProposal,
+    BoardVote,
+    DuplicateBoardVoteError,
     InsufficientBenchmarkHistoryError,
     InvalidStageTransitionError,
+    NotAGovernanceBoardMemberError,
     ProposalStage,
     get_governance_registry,
 )
+from src.models.intervention import (
+    Intervention,
+    InterventionStatus,
+    InterventionType,
+    InterventionVote,
+    NotASovereignTierModelError,
+    get_intervention_registry,
+)
+from src.models.knowledge import library_context_for
 from src.models.matrix import get_variant, list_variants, matrix_summary, resolve_effective_model
 
 router = APIRouter(prefix="/models", tags=["models"])
@@ -163,6 +175,7 @@ def _serialize_proposal(p: AdvancementProposal) -> Dict[str, Any]:
         "new_score": p.new_score,
         "advancement_pct": p.advancement_pct,
         "stage": p.stage.value,
+        "pipeline": p.pipeline.value,
         "submitted_by": p.submitted_by,
         "submitted_at": p.submitted_at,
         "prime_reviewer": p.prime_reviewer,
@@ -260,6 +273,68 @@ def cornelius_review(
     return _serialize_proposal(proposal)
 
 
+class BoardVoteRequest(BaseModel):
+    prime_name: str
+    approved: bool
+    notes: str = ""
+
+
+def _serialize_board_vote(v: BoardVote) -> Dict[str, Any]:
+    return {
+        "proposal_id": v.proposal_id,
+        "prime_name": v.prime_name,
+        "approved": v.approved,
+        "notes": v.notes,
+        "voted_at": v.voted_at,
+    }
+
+
+@router.post("/proposals/{proposal_id}/board-vote")
+def board_vote(
+    proposal_id: int,
+    body: BoardVoteRequest,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """One Governance Board member's (T2ance Prime's) vote on a Trance-One
+    advancement proposal — see governance.py's board_vote() docstring for
+    the unanimous-consent rule."""
+    _require_admin(current_user)
+    try:
+        proposal = get_governance_registry().board_vote(
+            proposal_id, prime_name=body.prime_name, approved=body.approved, notes=body.notes
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except NotAGovernanceBoardMemberError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DuplicateBoardVoteError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except InvalidStageTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _serialize_proposal(proposal)
+
+
+@router.get("/proposals/{proposal_id}/board-votes")
+def get_board_votes(proposal_id: int) -> List[Dict[str, Any]]:
+    return [
+        _serialize_board_vote(v) for v in get_governance_registry().get_board_votes(proposal_id)
+    ]
+
+
+@router.get("/proposals/{proposal_id}/library-context")
+def get_library_context(proposal_id: int) -> Dict[str, Any]:
+    """Existing Library articles tagged with this proposal's skill domain —
+    read-only context for a reviewer, per docs/governance/
+    TRANCENDOS-MODELS-MATRIX.md's "learn from The Library" principle."""
+    proposal = get_governance_registry().get(proposal_id)
+    if proposal is None:
+        raise HTTPException(status_code=404, detail=f"No proposal with id={proposal_id}")
+    return {
+        "skill_domain": proposal.skill_domain,
+        "articles": library_context_for(proposal.skill_domain),
+    }
+
+
 @router.post("/proposals/{proposal_id}/human-decision")
 def human_decision(
     proposal_id: int,
@@ -277,3 +352,128 @@ def human_decision(
     except InvalidStageTransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _serialize_proposal(proposal)
+
+
+# ---------------------------------------------------------------------------
+# Governance Board interventions — failover/repair/override authority over
+# a malfunctioning Trance-One (Sovereign) AI. See src/models/intervention.py.
+# ---------------------------------------------------------------------------
+
+
+class RaiseInterventionRequest(BaseModel):
+    target_model: str
+    intervention_type: str
+    reason: str
+    raised_by: str
+
+
+class InterventionVoteRequest(BaseModel):
+    prime_name: str
+    approved: bool
+    notes: str = ""
+
+
+def _serialize_intervention(iv: Intervention) -> Dict[str, Any]:
+    return {
+        "id": iv.id,
+        "target_model": iv.target_model,
+        "intervention_type": iv.intervention_type.value,
+        "status": iv.status.value,
+        "reason": iv.reason,
+        "raised_by": iv.raised_by,
+        "raised_at": iv.raised_at,
+        "resolved_at": iv.resolved_at,
+    }
+
+
+def _serialize_intervention_vote(v: InterventionVote) -> Dict[str, Any]:
+    return {
+        "intervention_id": v.intervention_id,
+        "prime_name": v.prime_name,
+        "approved": v.approved,
+        "notes": v.notes,
+        "voted_at": v.voted_at,
+    }
+
+
+@router.post("/interventions")
+def raise_intervention(
+    body: RaiseInterventionRequest, current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    _require_admin(current_user)
+    try:
+        intervention_type = InterventionType(body.intervention_type)
+    except ValueError as exc:
+        valid = ", ".join(t.value for t in InterventionType)
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid intervention_type {body.intervention_type!r} — valid values: {valid}",
+        ) from exc
+    try:
+        intervention = get_intervention_registry().raise_intervention(
+            body.target_model, intervention_type, body.reason, raised_by=body.raised_by
+        )
+    except NotAGovernanceBoardMemberError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except NotASovereignTierModelError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _serialize_intervention(intervention)
+
+
+@router.get("/interventions")
+def list_interventions(
+    status: Optional[str] = None, target_model: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    status_enum: Optional[InterventionStatus] = None
+    if status is not None:
+        try:
+            status_enum = InterventionStatus(status)
+        except ValueError as exc:
+            valid = ", ".join(s.value for s in InterventionStatus)
+            raise HTTPException(
+                status_code=422, detail=f"Invalid status {status!r} — valid values: {valid}"
+            ) from exc
+    return [
+        _serialize_intervention(iv)
+        for iv in get_intervention_registry().list_interventions(
+            status=status_enum, target_model=target_model
+        )
+    ]
+
+
+@router.get("/interventions/{intervention_id}")
+def get_intervention(intervention_id: int) -> Dict[str, Any]:
+    intervention = get_intervention_registry().get(intervention_id)
+    if intervention is None:
+        raise HTTPException(status_code=404, detail=f"No intervention with id={intervention_id}")
+    return _serialize_intervention(intervention)
+
+
+@router.post("/interventions/{intervention_id}/vote")
+def intervention_vote(
+    intervention_id: int,
+    body: InterventionVoteRequest,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    _require_admin(current_user)
+    try:
+        intervention = get_intervention_registry().intervention_vote(
+            intervention_id, prime_name=body.prime_name, approved=body.approved, notes=body.notes
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except NotAGovernanceBoardMemberError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DuplicateBoardVoteError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except InvalidStageTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _serialize_intervention(intervention)
+
+
+@router.get("/interventions/{intervention_id}/votes")
+def get_intervention_votes(intervention_id: int) -> List[Dict[str, Any]]:
+    return [
+        _serialize_intervention_vote(v)
+        for v in get_intervention_registry().get_intervention_votes(intervention_id)
+    ]

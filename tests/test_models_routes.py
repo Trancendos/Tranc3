@@ -10,9 +10,14 @@ from fastapi.testclient import TestClient
 from auth import get_current_user
 from src.models import benchmark as benchmark_module
 from src.models import governance as governance_module
+from src.models import intervention as intervention_module
 from src.models.benchmark import BenchmarkRegistry
-from src.models.governance import ModelGovernanceRegistry
+from src.models.governance import ModelGovernanceRegistry, governance_board_members
+from src.models.intervention import InterventionRegistry
 from src.models.routes import router as models_router
+
+DR = "The Dr. (Nikolai O'denhime)"  # T2ance Prime
+CORNELIUS = "Cornelius MacIntyre"  # Trance-One
 
 
 @pytest.fixture
@@ -21,8 +26,10 @@ def client(tmp_path, monkeypatch):
     test_governance = ModelGovernanceRegistry(
         db_path=tmp_path / "gov.db", benchmark_registry=test_benchmarks
     )
+    test_interventions = InterventionRegistry(db_path=tmp_path / "interv.db")
     monkeypatch.setattr(benchmark_module, "_registry", test_benchmarks)
     monkeypatch.setattr(governance_module, "_registry", test_governance)
+    monkeypatch.setattr(intervention_module, "_registry", test_interventions)
 
     app = FastAPI()
     app.include_router(models_router)
@@ -30,6 +37,7 @@ def client(tmp_path, monkeypatch):
         yield c
     test_benchmarks.close()
     test_governance.close()
+    test_interventions.close()
 
 
 def _override(user_id: str, role: str = "user"):
@@ -225,4 +233,188 @@ class TestGovernanceRoutes:
 
     def test_invalid_stage_filter_is_422(self, client):
         resp = client.get("/models/proposals", params={"stage": "not-a-real-stage"})
+        assert resp.status_code == 422
+
+
+class TestBoardVoteAndLibraryContextRoutes:
+    def _submit_trance_one_proposal(self, client):
+        _as_admin(client)
+        try:
+            for score in (60.0, 90.0):
+                client.post(
+                    "/models/benchmark",
+                    json={"model_name": CORNELIUS, "skill_domain": "Orchestration", "score": score},
+                )
+            resp = client.post(
+                "/models/proposals",
+                json={"model_name": CORNELIUS, "skill_domain": "Orchestration"},
+            )
+            assert resp.status_code == 200
+            assert resp.json()["pipeline"] == "board_and_human"
+            return resp.json()["id"]
+        finally:
+            _clear_auth(client)
+
+    def test_board_vote_requires_admin(self, client):
+        proposal_id = self._submit_trance_one_proposal(client)
+        _as_user(client)
+        try:
+            resp = client.post(
+                f"/models/proposals/{proposal_id}/board-vote",
+                json={"prime_name": DR, "approved": True},
+            )
+            assert resp.status_code == 403
+        finally:
+            _clear_auth(client)
+
+    def test_board_vote_rejects_non_board_member(self, client):
+        proposal_id = self._submit_trance_one_proposal(client)
+        _as_admin(client)
+        try:
+            resp = client.post(
+                f"/models/proposals/{proposal_id}/board-vote",
+                json={"prime_name": "George Porter", "approved": True},
+            )
+            assert resp.status_code == 403
+        finally:
+            _clear_auth(client)
+
+    def test_unanimous_board_then_human_full_pipeline(self, client):
+        proposal_id = self._submit_trance_one_proposal(client)
+        _as_admin(client)
+        try:
+            members = governance_board_members()
+            for m in members[:-1]:
+                resp = client.post(
+                    f"/models/proposals/{proposal_id}/board-vote",
+                    json={"prime_name": m, "approved": True},
+                )
+                assert resp.status_code == 200
+                assert resp.json()["stage"] == "board_review"
+            resp = client.post(
+                f"/models/proposals/{proposal_id}/board-vote",
+                json={"prime_name": members[-1], "approved": True},
+            )
+            assert resp.status_code == 200
+            assert resp.json()["stage"] == "human_review"
+
+            votes_resp = client.get(f"/models/proposals/{proposal_id}/board-votes")
+            assert votes_resp.status_code == 200
+            assert len(votes_resp.json()) == len(members)
+
+            final = client.post(
+                f"/models/proposals/{proposal_id}/human-decision",
+                json={"approved": True, "notes": "signed off by Human"},
+            )
+            assert final.status_code == 200
+            assert final.json()["stage"] == "approved"
+        finally:
+            _clear_auth(client)
+
+    def test_library_context_route(self, client):
+        proposal_id = self._submit_trance_one_proposal(client)
+        resp = client.get(f"/models/proposals/{proposal_id}/library-context")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["skill_domain"] == "Orchestration"
+        assert isinstance(body["articles"], list)
+
+    def test_library_context_unknown_proposal_404s(self, client):
+        resp = client.get("/models/proposals/999999/library-context")
+        assert resp.status_code == 404
+
+
+class TestInterventionRoutes:
+    def test_raise_requires_admin(self, client):
+        _as_user(client)
+        try:
+            resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": CORNELIUS,
+                    "intervention_type": "repair_request",
+                    "reason": "unresponsive",
+                    "raised_by": DR,
+                },
+            )
+            assert resp.status_code == 403
+        finally:
+            _clear_auth(client)
+
+    def test_raise_rejects_non_sovereign_target(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": "George Porter",
+                    "intervention_type": "repair_request",
+                    "reason": "seems off",
+                    "raised_by": DR,
+                },
+            )
+            assert resp.status_code == 422
+        finally:
+            _clear_auth(client)
+
+    def test_raise_rejects_invalid_intervention_type(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": CORNELIUS,
+                    "intervention_type": "not-a-real-type",
+                    "reason": "x",
+                    "raised_by": DR,
+                },
+            )
+            assert resp.status_code == 422
+        finally:
+            _clear_auth(client)
+
+    def test_full_intervention_pipeline_through_http(self, client):
+        _as_admin(client)
+        try:
+            raise_resp = client.post(
+                "/models/interventions",
+                json={
+                    "target_model": CORNELIUS,
+                    "intervention_type": "corruption_override",
+                    "reason": "anomalous output pattern",
+                    "raised_by": DR,
+                },
+            )
+            assert raise_resp.status_code == 200
+            intervention_id = raise_resp.json()["id"]
+            assert raise_resp.json()["status"] == "open"
+
+            for m in governance_board_members():
+                vote_resp = client.post(
+                    f"/models/interventions/{intervention_id}/vote",
+                    json={"prime_name": m, "approved": True, "notes": "concur"},
+                )
+                assert vote_resp.status_code == 200
+            assert vote_resp.json()["status"] == "executed"
+        finally:
+            _clear_auth(client)
+
+        get_resp = client.get(f"/models/interventions/{intervention_id}")
+        assert get_resp.status_code == 200
+        assert get_resp.json()["status"] == "executed"
+
+        votes_resp = client.get(f"/models/interventions/{intervention_id}/votes")
+        assert votes_resp.status_code == 200
+        assert len(votes_resp.json()) == len(governance_board_members())
+
+        list_resp = client.get("/models/interventions", params={"status": "executed"})
+        assert list_resp.status_code == 200
+        assert any(iv["id"] == intervention_id for iv in list_resp.json())
+
+    def test_get_unknown_intervention_404s(self, client):
+        resp = client.get("/models/interventions/999999")
+        assert resp.status_code == 404
+
+    def test_invalid_status_filter_422s(self, client):
+        resp = client.get("/models/interventions", params={"status": "not-a-real-status"})
         assert resp.status_code == 422
