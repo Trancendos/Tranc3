@@ -986,6 +986,11 @@ from src.monetisation.router import router as _billing_router  # noqa: F401
 
 app.include_router(_billing_router)
 
+# ── Trancendos Models Matrix (base tiers, benchmarking, advancement governance) ─
+from src.models.routes import router as _models_router  # noqa: F401
+
+app.include_router(_models_router)
+
 
 # ── Root endpoint (must be before catch-all frontend route) ───────────────────
 @app.get("/", tags=["system"], summary="Platform root")

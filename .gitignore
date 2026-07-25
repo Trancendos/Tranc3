@@ -38,7 +38,7 @@ venv/
 env/
 
 # Models & cache
-models/
+/models/
 cache/
 *.pt
 *.bin

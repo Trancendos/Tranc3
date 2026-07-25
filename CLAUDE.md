@@ -51,6 +51,18 @@ mutable at runtime via the Role Assignment Registry (`src/roles/registry.py`, SQ
 exposed at `/roles` — `src/roles/routes.py`, mounted in `api.py`), letting operators add, remove,
 or reassign AIs to a role without a code change; every change is recorded in an audit history.
 
+**Trancendos Models Matrix.** Every named AI's base model is one of the platform's existing
+orchestration tiers — **Trance-One** (Tier 1, Sovereign/Orchestrator, most capable), **T2ance**
+(Tier 2, Primes), or **Tranc3** (Tier 3, Lead AI/AI Base, the default) — via
+`get_orchestration_tier()` in `src/entities/platform.py`. An AI's base model can expand into a
+named specialized variant when associated with a distinguishing skill matrix (e.g. The Dr. →
+`T2ance-CODE`, George Porter → `Tranc3-Crypto`); see `docs/governance/TRANCENDOS-MODELS-MATRIX.md`
+for the full base-tier/variant table, the regular benchmarking mechanism, and the governed
+advancement pipeline (Prime → Cornelius → Human, each with its own % threshold) that gates a real
+skill/feature improvement into a model rather than baking in routine updates unchecked. Code:
+`src/models/` (`matrix.py`, `benchmark.py`, `governance.py`, `routes.py`, exposed at `/models`,
+mounted in `api.py`).
+
 **Naming rules:**
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
