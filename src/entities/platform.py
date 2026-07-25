@@ -1664,13 +1664,11 @@ def _wire_multi_agent_teams() -> None:
         "The Orb of Orisis": AgentPair(
             Agent(
                 "The Seer",
-                "Projects how current architectural decisions will scale or strain "
-                "months ahead.",
+                "Projects how current architectural decisions will scale or strain months ahead.",
             ),
             Agent(
                 "The Cartographer",
-                "Maps dependency and growth trends into a forward-looking "
-                "architecture roadmap.",
+                "Maps dependency and growth trends into a forward-looking architecture roadmap.",
             ),
         ),
     }
