@@ -51,6 +51,7 @@ from typing import List, Optional
 
 from src.entities.platform import ORCHESTRATION_TIER, get_orchestration_tier
 from src.models.benchmark import BenchmarkRegistry, compute_advancement_pct, get_benchmark_registry
+from src.models.compliance import OpenProvenanceRiskError, check_provenance
 
 DEFAULT_DB_PATH = Path("data/models_governance.db")
 
@@ -329,7 +330,20 @@ class ModelGovernanceRegistry:
         specialized variant's *display* name ("T2ance-CODE",
         "Tranc3-Crypto"), which `matrix.py` only uses for presentation and
         which an unrelated string wouldn't resolve to a real tier at all
-        (falling back to the Tranc3/"standard" pipeline by default)."""
+        (falling back to the Tranc3/"standard" pipeline by default).
+
+        Raises OpenProvenanceRiskError if `model_name` has an open (not yet
+        cleared) MC-013 training-data-provenance risk — see
+        src/models/compliance.py and docs/governance/
+        TRANCENDOS-MODELS-MATRIX.md §12."""
+        provenance = check_provenance(model_name)
+        if not provenance.cleared:
+            risk = provenance.risk
+            raise OpenProvenanceRiskError(
+                f"{model_name!r} has an open {risk.mc_reference} training-data-provenance "
+                f"risk on {risk.entity!r} — clear it via ProvenanceClearanceRegistry.clear() "
+                f"before submitting an advancement proposal. {risk.note}"
+            )
         latest, prior = self._benchmarks.latest_two(model_name, skill_domain)
         if latest is None or prior is None:
             raise InsufficientBenchmarkHistoryError(

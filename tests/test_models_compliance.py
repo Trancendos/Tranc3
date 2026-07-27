@@ -1,0 +1,84 @@
+# tests/test_models_compliance.py
+# Tests for src/models/compliance.py — the Models Matrix <-> Magna-Carta
+# MC-013 training-data-provenance gate.
+
+from __future__ import annotations
+
+import pytest
+
+from src.models.compliance import (
+    ProvenanceClearanceRegistry,
+    ProvenanceStatus,
+    check_provenance,
+    platform_wide_risks,
+)
+
+MADAM_KRYSTAL = "Madam Krystal"  # Sashas Photo Studio — seeded NOT_ASSESSED risk
+GEORGE_PORTER = "George Porter"  # no seed risk at all
+
+
+@pytest.fixture
+def registry(tmp_path):
+    reg = ProvenanceClearanceRegistry(db_path=tmp_path / "provenance.db")
+    yield reg
+    reg.close()
+
+
+class TestCheckProvenance:
+    def test_ai_with_no_seed_risk_is_always_cleared(self, registry):
+        result = check_provenance(GEORGE_PORTER, clearance_registry=registry)
+        assert result.cleared is True
+        assert result.risk is None
+
+    def test_ai_with_open_seed_risk_is_not_cleared(self, registry):
+        result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
+        assert result.cleared is False
+        assert result.risk is not None
+        assert result.risk.status == ProvenanceStatus.NOT_ASSESSED
+        assert result.risk.mc_reference == "MC-013"
+
+    def test_cleared_override_unblocks(self, registry):
+        registry.clear(MADAM_KRYSTAL, cleared_by="Andrew Porter", notes="review complete")
+        result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
+        assert result.cleared is True
+        assert result.risk.status == ProvenanceStatus.CLEARED
+        assert "Andrew Porter" in result.risk.note
+
+    def test_verified_caveat_override_also_unblocks(self, registry):
+        registry.clear(
+            MADAM_KRYSTAL,
+            cleared_by="Andrew Porter",
+            notes="caveat accepted",
+            status=ProvenanceStatus.VERIFIED_CAVEAT,
+        )
+        result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
+        assert result.cleared is True
+        assert result.risk.status == ProvenanceStatus.VERIFIED_CAVEAT
+
+    def test_override_is_idempotent_per_ai(self, registry):
+        registry.clear(MADAM_KRYSTAL, cleared_by="first", notes="a")
+        registry.clear(MADAM_KRYSTAL, cleared_by="second", notes="b")
+        result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
+        assert "second" in result.risk.note
+
+
+class TestPlatformWideRisks:
+    def test_returns_at_least_the_ai_gateway_entry(self):
+        risks = platform_wide_risks()
+        assert any("AI Gateway" in r.entity for r in risks)
+
+    def test_never_ties_to_a_named_ai(self):
+        for r in platform_wide_risks():
+            assert r.ai_name is None
+
+
+class TestPersistenceAcrossReconnect:
+    def test_clearance_survives_reopen(self, tmp_path):
+        db_path = tmp_path / "reopen.db"
+        reg1 = ProvenanceClearanceRegistry(db_path=db_path)
+        reg1.clear(MADAM_KRYSTAL, cleared_by="ops", notes="done")
+        reg1.close()
+        reg2 = ProvenanceClearanceRegistry(db_path=db_path)
+        result = check_provenance(MADAM_KRYSTAL, clearance_registry=reg2)
+        assert result.cleared is True
+        reg2.close()

@@ -9,15 +9,18 @@ from fastapi.testclient import TestClient
 
 from auth import get_current_user
 from src.models import benchmark as benchmark_module
+from src.models import compliance as compliance_module
 from src.models import governance as governance_module
 from src.models import intervention as intervention_module
 from src.models.benchmark import BenchmarkRegistry
+from src.models.compliance import ProvenanceClearanceRegistry
 from src.models.governance import ModelGovernanceRegistry, governance_board_members
 from src.models.intervention import InterventionRegistry
 from src.models.routes import router as models_router
 
 DR = "The Dr. (Nikolai O'denhime)"  # T2ance Prime
 CORNELIUS = "Cornelius MacIntyre"  # Trance-One
+MADAM_KRYSTAL = "Madam Krystal"  # Sashas Photo Studio — seeded open MC-013 risk
 
 
 @pytest.fixture
@@ -27,9 +30,11 @@ def client(tmp_path, monkeypatch):
         db_path=tmp_path / "gov.db", benchmark_registry=test_benchmarks
     )
     test_interventions = InterventionRegistry(db_path=tmp_path / "interv.db")
+    test_provenance = ProvenanceClearanceRegistry(db_path=tmp_path / "provenance.db")
     monkeypatch.setattr(benchmark_module, "_registry", test_benchmarks)
     monkeypatch.setattr(governance_module, "_registry", test_governance)
     monkeypatch.setattr(intervention_module, "_registry", test_interventions)
+    monkeypatch.setattr(compliance_module, "_registry", test_provenance)
 
     app = FastAPI()
     app.include_router(models_router)
@@ -38,6 +43,7 @@ def client(tmp_path, monkeypatch):
     test_benchmarks.close()
     test_governance.close()
     test_interventions.close()
+    test_provenance.close()
 
 
 def _override(user_id: str, role: str = "user"):
@@ -623,5 +629,78 @@ class TestInterventionRoutes:
                 json={"prime_name": "Voxx", "approved": True},
             )
             assert resp.status_code == 409
+        finally:
+            _clear_auth(client)
+
+
+class TestProvenanceRoutes:
+    def test_get_provenance_is_public_and_reports_open_risk(self, client):
+        resp = client.get(f"/models/provenance/{MADAM_KRYSTAL}")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["cleared"] is False
+        assert body["risk"]["mc_reference"] == "MC-013"
+
+    def test_get_provenance_for_unflagged_ai_is_cleared(self, client):
+        resp = client.get("/models/provenance/George Porter")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["cleared"] is True
+        assert body["risk"] is None
+
+    def test_platform_wide_risks_route_is_public(self, client):
+        resp = client.get("/models/provenance")
+        assert resp.status_code == 200
+        assert any("AI Gateway" in r["entity"] for r in resp.json())
+
+    def test_clear_requires_admin(self, client):
+        _as_user(client)
+        try:
+            resp = client.post(f"/models/provenance/{MADAM_KRYSTAL}/clear", json={})
+            assert resp.status_code == 403
+        finally:
+            _clear_auth(client)
+
+    def test_clear_unblocks_submission(self, client):
+        _as_admin(client)
+        try:
+            for score in (60.0, 90.0):
+                client.post(
+                    "/models/benchmark",
+                    json={
+                        "model_name": MADAM_KRYSTAL,
+                        "skill_domain": "Image Generation",
+                        "score": score,
+                    },
+                )
+            blocked = client.post(
+                "/models/proposals",
+                json={"model_name": MADAM_KRYSTAL, "skill_domain": "Image Generation"},
+            )
+            assert blocked.status_code == 422
+
+            clear_resp = client.post(
+                f"/models/provenance/{MADAM_KRYSTAL}/clear",
+                json={"notes": "training data reviewed"},
+            )
+            assert clear_resp.status_code == 200
+            assert clear_resp.json()["cleared"] is True
+
+            allowed = client.post(
+                "/models/proposals",
+                json={"model_name": MADAM_KRYSTAL, "skill_domain": "Image Generation"},
+            )
+            assert allowed.status_code == 200
+        finally:
+            _clear_auth(client)
+
+    def test_clear_rejects_invalid_status(self, client):
+        _as_admin(client)
+        try:
+            resp = client.post(
+                f"/models/provenance/{MADAM_KRYSTAL}/clear",
+                json={"status": "not-a-real-status"},
+            )
+            assert resp.status_code == 422
         finally:
             _clear_auth(client)

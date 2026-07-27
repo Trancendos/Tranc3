@@ -12,9 +12,10 @@
 (SQLite-backed benchmark history + % advancement calculation), `src/models/governance.py`
 (SQLite-backed, tier-aware advancement pipeline + Governance Board voting),
 `src/models/intervention.py` (SQLite-backed Board failover/repair/override authority),
-`src/models/knowledge.py` (The Library read/write integration), `src/models/routes.py` (HTTP API,
-mounted in `api.py` at `/models`).
-**Owner:** Platform Owner Trancendos · **Version:** 2.0.0 · **Last verified:** 2026-07-25
+`src/models/knowledge.py` (The Library read/write integration), `src/models/compliance.py`
+(MC-013 license/provenance gate), `src/models/routes.py` (HTTP API, mounted in `api.py` at
+`/models`).
+**Owner:** Platform Owner Trancendos · **Version:** 2.1.0 · **Last verified:** 2026-07-27
 
 ---
 
@@ -240,7 +241,38 @@ Observatory→Library forwarding of SECURITY/CRITICAL events
 a proposal's own audit trail, which lives durably in `governance.py`'s SQLite tables regardless of
 whether the Library article was published successfully.
 
-## 10. Live API
+## 10. Licensing / provenance gate — MC-013
+
+Before a benchmarked advancement even reaches §5's pipeline, `submit_proposal()` now runs one more
+check: does the target AI have an open, uncleared license/provenance risk? `src/models/
+compliance.py` mirrors (not live-couples to, since Magna-Carta is a separate repository) the
+relevant `training_data_provenance` entries from Magna-Carta's MC-013 (Intellectual Property
+Matrix) — see `compliance/estate_protection_matrices.yaml`'s `intellectual_property.
+non_infringement_risks`.
+
+MC-012 (License Compliance Matrix — a repo-wide `pip-licenses` dependency scan, already CI-enforced
+in `.forgejo/workflows/dependency-audit.yml`) is deliberately **not** wired in here: it has no
+natural per-AI-advancement scope, since "this AI's advancement violates a package license" isn't a
+meaningful statement. MC-013's training-data-provenance risk, by contrast, is genuinely scoped to
+specific AIs' generated output — which is exactly what an advancement proposal concerns.
+
+Two kinds of risk exist in the mirrored data:
+
+- **AI-specific** (blocks `submit_proposal()`): today, exactly one — Sashas Photo Studio's
+  **Madam Krystal**, whose ComfyUI/A1111 backend has an open, not-yet-assessed training-data-
+  provenance review. Submitting an advancement proposal for her raises `OpenProvenanceRiskError`
+  until the risk is cleared.
+- **Platform-wide** (advisory only, never blocks): the AI Gateway's shared HuggingFace/OpenRouter
+  free-tier model outputs — every AI depends on this shared substrate, so gating every single AI's
+  advancement on it would make the pipeline unusable. Surfaced read-only via `GET /models/
+  provenance` for awareness.
+
+Clearing an AI-specific risk is admin-gated and SQLite-backed
+(`ProvenanceClearanceRegistry.clear()`, `data/models_provenance.db`) rather than requiring a code
+change and redeploy every time a real-world provenance review actually completes — matching the
+same "decision record, not a code deploy" philosophy as §5's advancement approvals.
+
+## 11. Live API
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
@@ -249,7 +281,7 @@ whether the Library article was published successfully.
 | GET | `/models/variants` | Public | The full specialized-variant seed table (§3) |
 | POST | `/models/benchmark` | Admin | Record one benchmark scan result |
 | GET | `/models/benchmark/{model_name}` | Public | A model's benchmark history (optionally filtered by `skill_domain`) |
-| POST | `/models/proposals` | Admin | Open a new advancement proposal from the latest two benchmark scans; pipeline is auto-derived from the model's tier |
+| POST | `/models/proposals` | Admin | Open a new advancement proposal from the latest two benchmark scans; pipeline is auto-derived from the model's tier; blocked by §10's provenance gate |
 | GET | `/models/proposals` | Public | List proposals, optionally filtered by `stage` or `model_name` |
 | GET | `/models/proposals/{id}` | Public | One proposal's full review trail, including its `pipeline` |
 | POST | `/models/proposals/{id}/prime-review` | Admin | Standard-pipeline stage 1 |
@@ -263,8 +295,11 @@ whether the Library article was published successfully.
 | GET | `/models/interventions/{id}` | Public | One intervention's detail |
 | POST | `/models/interventions/{id}/vote` | Admin | One Governance Board member's vote on an intervention |
 | GET | `/models/interventions/{id}/votes` | Public | All recorded votes for an intervention, in order |
+| GET | `/models/provenance/{ai_name}` | Public | One AI's MC-013 provenance clearance status |
+| GET | `/models/provenance` | Public | Platform-wide advisory MC-013 risks (never blocks) |
+| POST | `/models/provenance/{ai_name}/clear` | Admin | Record that an AI's provenance risk has been reviewed |
 
-## 11. Cross-references
+## 12. Cross-references
 
 - `src/entities/templates/tranc3_base.py`, `t2ance_base.py`, `trance_one_base.py` — the runtime
   base classes for Tier 3/2/1 AIs (SWOT self-assessment, HIL-A approval gates, hub power-ups,
@@ -278,6 +313,11 @@ whether the Library article was published successfully.
   integration
 - `src/observability/library_pipeline.py` — the earlier Observatory→Library forwarding pattern
   that §8 and §9's best-effort logging both reuse
+- `compliance/estate_protection_matrices.yaml` (Magna-Carta) — the MC-013 source data §10 mirrors
+- `docs/governance/THRESHOLD-MATRIX.md`, `HARD-STOP-MATRIX.md`, `GPU-MATRIX.md`,
+  `ENVIRONMENTAL-MATRIX.md` — sibling matrices produced in the same pass as §10, each
+  cross-referencing this document
 - `tests/test_models_matrix.py`, `test_models_benchmark.py`, `test_models_governance.py`,
   `test_models_governance_tiers.py`, `test_models_intervention.py`, `test_models_knowledge.py`,
-  `test_models_routes.py` — full test coverage (112 tests) for every layer of this document
+  `test_models_routes.py`, `test_models_compliance.py`, `test_models_governance_provenance.py` —
+  full test coverage for every layer of this document

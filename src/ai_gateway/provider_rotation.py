@@ -30,6 +30,40 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger("tranc3.ai_gateway.rotation")
 
+# Maps this module's provider names to src/capacity/guard.py's CapacityService
+# enum, for the six providers that have a matching entry there. Best-effort
+# and observational only — see docs/governance/THRESHOLD-MATRIX.md §5.
+_CAPACITY_SERVICE_BY_PROVIDER: Dict[str, str] = {
+    "groq": "GROQ_REQUESTS",
+    "cerebras": "CEREBRAS_TOKENS",
+    "sambanova": "SAMBANOVA_REQUESTS",
+    "gemini": "GEMINI_REQUESTS",
+    "openrouter": "OPENROUTER_REQUESTS",
+    "huggingface": "HUGGINGFACE_REQUESTS",
+}
+
+
+def _feed_capacity_guard(provider_name: str, tokens_used: int) -> None:
+    """Mirror real provider usage into CapacityGuard so its 80/90/95/100%
+    Observatory escalation ladder actually fires against real traffic.
+
+    Additive only: this module's own `hard_stop_threshold`/`stop_threshold`
+    checks (is_available()/should_rotate()) remain fully authoritative for
+    routing decisions. A CapacityGuard threshold crossing — including its
+    own 100% CapacityExceededError — only produces an Observatory event
+    here; it never blocks or alters this module's behavior. Never raises."""
+    service_name = _CAPACITY_SERVICE_BY_PROVIDER.get(provider_name)
+    if service_name is None:
+        return
+    try:
+        from src.capacity.guard import CapacityService, get_capacity_guard
+
+        service = CapacityService[service_name]
+        amount = tokens_used if service == CapacityService.CEREBRAS_TOKENS else 1
+        get_capacity_guard().consume(service, amount)
+    except Exception:
+        logger.debug("_feed_capacity_guard(%r) failed", provider_name, exc_info=True)
+
 
 @dataclass
 class ProviderLimit:
@@ -95,6 +129,7 @@ class ProviderLimit:
         self._hourly_req += 1
         self._daily_tokens += tokens_used
         self._consecutive_errors = 0
+        _feed_capacity_guard(self.name, tokens_used)
 
     def record_error(self) -> None:
         self._consecutive_errors += 1

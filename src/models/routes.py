@@ -23,6 +23,13 @@ from pydantic import BaseModel
 
 from auth import get_current_user
 from src.models.benchmark import BenchmarkResult, get_benchmark_registry
+from src.models.compliance import (
+    OpenProvenanceRiskError,
+    ProvenanceStatus,
+    check_provenance,
+    get_clearance_registry,
+    platform_wide_risks,
+)
 from src.models.governance import (
     AdvancementProposal,
     BoardVote,
@@ -204,7 +211,76 @@ def submit_proposal(
         )
     except InsufficientBenchmarkHistoryError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OpenProvenanceRiskError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _serialize_proposal(proposal)
+
+
+# ---------------------------------------------------------------------------
+# Provenance — MC-013 training-data-provenance gate (src/models/compliance.py)
+# ---------------------------------------------------------------------------
+
+
+class ClearProvenanceRequest(BaseModel):
+    notes: str = ""
+    status: str = ProvenanceStatus.CLEARED.value
+
+
+@router.get("/provenance/{ai_name}")
+def get_provenance(ai_name: str) -> Dict[str, Any]:
+    result = check_provenance(ai_name)
+    return {
+        "ai_name": ai_name,
+        "cleared": result.cleared,
+        "risk": (
+            None
+            if result.risk is None
+            else {
+                "entity": result.risk.entity,
+                "risk": result.risk.risk,
+                "status": result.risk.status.value,
+                "note": result.risk.note,
+                "mc_reference": result.risk.mc_reference,
+            }
+        ),
+    }
+
+
+@router.get("/provenance")
+def get_platform_wide_provenance_risks() -> List[Dict[str, Any]]:
+    """Advisory-only MC-013 risks that apply platform-wide rather than to
+    one named AI — see src/models/compliance.py's module docstring."""
+    return [
+        {
+            "entity": r.entity,
+            "risk": r.risk,
+            "status": r.status.value,
+            "note": r.note,
+            "mc_reference": r.mc_reference,
+        }
+        for r in platform_wide_risks()
+    ]
+
+
+@router.post("/provenance/{ai_name}/clear")
+def clear_provenance(
+    ai_name: str,
+    body: ClearProvenanceRequest,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    _require_admin(current_user)
+    try:
+        status = ProvenanceStatus(body.status)
+    except ValueError as exc:
+        valid = ", ".join(s.value for s in ProvenanceStatus)
+        raise HTTPException(
+            status_code=422, detail=f"Invalid status {body.status!r} — valid values: {valid}"
+        ) from exc
+    cleared_by = current_user.get("sub") or current_user.get("id") or "operator"
+    get_clearance_registry().clear(
+        ai_name, cleared_by=str(cleared_by), notes=body.notes, status=status
+    )
+    return get_provenance(ai_name)
 
 
 @router.get("/proposals")
