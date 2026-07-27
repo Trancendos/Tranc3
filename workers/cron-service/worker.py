@@ -24,6 +24,7 @@ Zero-cost: FastAPI + SQLite + asyncio — no paid external deps.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -524,17 +525,37 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+_INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
 

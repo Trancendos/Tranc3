@@ -29,7 +29,18 @@ ASSETS_DIR = Path(__file__).parent / "data" / "assets"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
-INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
@@ -127,7 +138,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="TranceFlow — 3D & Game Studio", version="1.0.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 _router = APIRouter()
 
 

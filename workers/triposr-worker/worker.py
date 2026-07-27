@@ -13,6 +13,7 @@ Model is loaded lazily on the first /reconstruct request.
 from __future__ import annotations
 
 import base64
+import hmac
 import io
 import logging
 import os
@@ -23,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -35,6 +36,25 @@ OUTPUTS_DIR = Path(os.environ.get("OUTPUTS_DIR", "/app/outputs"))
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", "/app/models"))
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -162,7 +182,13 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -194,7 +220,7 @@ async def health():
     }
 
 
-@app.post("/reconstruct")
+@app.post("/reconstruct", dependencies=[Depends(_require_internal_auth)])
 async def reconstruct(req: ReconstructRequest):
     """Reconstruct a 3D mesh from a single base64-encoded image.
 

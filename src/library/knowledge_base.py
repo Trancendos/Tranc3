@@ -18,6 +18,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from Dimensional.sanitize import sanitize_for_log
+from src.nanoservices.daas_stream.daas_stream import DataClassification
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,12 @@ class Article:
     updated_at: float = field(default_factory=time.time)
     source: str = "internal"  # "internal" | "outline" | "observatory"
     outline_id: Optional[str] = None  # ID in external Outline instance
+    # Classification doubles as the article's sensitivity level — this is
+    # the same public/internal/confidential/restricted/top_secret taxonomy
+    # already enforced for data streams (src/nanoservices/daas_stream), not
+    # a second, separate axis.
+    classification: DataClassification = DataClassification.INTERNAL
+    retention_days: Optional[int] = None  # None = retain forever
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -53,7 +60,15 @@ class Article:
             "updated_at": self.updated_at,
             "source": self.source,
             "outline_id": self.outline_id,
+            "classification": self.classification.value,
+            "retention_days": self.retention_days,
         }
+
+    def retention_expired(self, now: Optional[float] = None) -> bool:
+        if self.retention_days is None:
+            return False
+        now = time.time() if now is None else now
+        return (now - self.created_at) >= (self.retention_days * 86400)
 
 
 class Library:
@@ -79,6 +94,8 @@ class Library:
         author: str = "system",
         source: str = "internal",
         outline_id: Optional[str] = None,
+        classification: DataClassification = DataClassification.INTERNAL,
+        retention_days: Optional[int] = None,
     ) -> Article:
         art = Article(
             title=title,
@@ -88,6 +105,8 @@ class Library:
             source=source,
             outline_id=outline_id,
             status=ArticleStatus.PUBLISHED,
+            classification=classification,
+            retention_days=retention_days,
         )
         self._articles[art.id] = art
         for tag in art.tags:
@@ -145,19 +164,38 @@ class Library:
             articles = [a for a in articles if a.status == status]
         return sorted(articles, key=lambda a: a.updated_at, reverse=True)[:limit]
 
+    def count(self) -> int:
+        return len(self._articles)
+
+    # ── Retention ─────────────────────────────────────────────────────────────
+
+    def apply_retention(self) -> int:
+        """Delete articles past their retention_days. Mirrors
+        src/artifactory/registry.py's apply_retention(). Returns count removed."""
+        now = time.time()
+        expired = [a.id for a in self._articles.values() if a.retention_expired(now)]
+        for article_id in expired:
+            self.delete(article_id)
+        return len(expired)
+
     # ── Stats ─────────────────────────────────────────────────────────────────
 
     def stats(self) -> Dict[str, Any]:
         total = len(self._articles)
         by_status = {}
         by_source = {}
+        by_classification = {}
         for art in self._articles.values():
             by_status[art.status.value] = by_status.get(art.status.value, 0) + 1
             by_source[art.source] = by_source.get(art.source, 0) + 1
+            by_classification[art.classification.value] = (
+                by_classification.get(art.classification.value, 0) + 1
+            )
         return {
             "total_articles": total,
             "by_status": by_status,
             "by_source": by_source,
+            "by_classification": by_classification,
             "tags": len(self._tag_index),
         }
 

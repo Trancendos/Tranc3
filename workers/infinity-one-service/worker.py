@@ -377,8 +377,10 @@ app = FastAPI(
 # CORS
 _cors_origins = [
     o.strip()
-    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
+    for o in os.environ.get(
+        "CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
+    ).split(",")
+    if o.strip() and o.strip() != "*"
 ]
 
 app.add_middleware(
@@ -408,6 +410,10 @@ app.add_middleware(
         "/one/identities/{user_id}",
         "/one/identities/{user_id}/apps",
         "/one/identities/{user_id}/devices",
+        # /one/resolve/{identifier} looks up an identity by user_id, username,
+        # or email and returns the full record — an unauthenticated caller
+        # could otherwise enumerate/dump identities one guess at a time.
+        "/one/resolve",
     },
 )
 

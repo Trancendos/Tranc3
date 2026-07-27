@@ -36,6 +36,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -47,7 +48,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -56,6 +57,25 @@ logger = logging.getLogger("turings-hub")
 
 SERVICE_NAME = "turings-hub"
 PORT = int(os.environ.get("PORT", "8058"))
+
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -402,7 +422,18 @@ app = FastAPI(
     version="1.0.0",
     lifespan=_lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Serve static VRM/GLB/portrait assets
 app.mount("/assets/vrm", StaticFiles(directory=str(VRM_DIR)), name="vrm_assets")
@@ -466,7 +497,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/entities")
+@app.get("/entities", dependencies=[Depends(_require_internal_auth)])
 async def list_entities():
     """List all entity embodiment manifests."""
     return {
@@ -484,7 +515,7 @@ async def list_entities():
     }
 
 
-@app.get("/entities/{entity_id}")
+@app.get("/entities/{entity_id}", dependencies=[Depends(_require_internal_auth)])
 async def get_entity(entity_id: str):
     """Full entity spec: personality soul + voice + avatar body."""
     embodiment = ENTITY_EMBODIMENT.get(entity_id)
@@ -544,7 +575,11 @@ async def get_entity(entity_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/entities/{entity_id}/speak", response_model=SpeakResponse)
+@app.post(
+    "/entities/{entity_id}/speak",
+    response_model=SpeakResponse,
+    dependencies=[Depends(_require_internal_auth)],
+)
 async def speak(entity_id: str, body: SpeakRequest):
     """
     Synthesise speech for an entity.
@@ -597,7 +632,7 @@ async def speak(entity_id: str, body: SpeakRequest):
     )
 
 
-@app.get("/audio/{filename}")
+@app.get("/audio/{filename}", dependencies=[Depends(_require_internal_auth)])
 async def serve_audio(filename: str):
     """Serve a cached TTS audio file."""
     session_id = filename.replace(".wav", "")
@@ -685,7 +720,7 @@ async def entity_stream(ws: WebSocket, entity_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/forge")
+@app.post("/forge", dependencies=[Depends(_require_internal_auth)])
 async def forge_entity(body: ForgeRequest):
     """
     Register a new entity embodiment config.
@@ -731,7 +766,7 @@ async def forge_entity(body: ForgeRequest):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/setup")
+@app.get("/setup", dependencies=[Depends(_require_internal_auth)])
 async def setup_guide():
     """Full setup instructions for the 3D AI entity stack."""
     return {

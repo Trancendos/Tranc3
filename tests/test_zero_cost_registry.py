@@ -99,3 +99,24 @@ def test_unknown_chain_raises() -> None:
 def test_assert_zero_cost_list_rejects_mixed() -> None:
     with pytest.raises(ValueError):
         assert_zero_cost(["ollama", "openai_paid"])
+
+
+def test_zero_cost_audit_script_exits_zero() -> None:
+    """scripts/zero_cost_audit.py's own process exit code is its real pass/fail
+    signal — the JSON body's "status" field only covers chain validation, not
+    the separate docs/ZERO_COST_VENDOR_MATRIX.md presence check (see the
+    script's own main()). Guards against that doc going missing again."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    result = subprocess.run(
+        [sys.executable, str(root / "scripts" / "zero_cost_audit.py")],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (root / "docs" / "ZERO_COST_VENDOR_MATRIX.md").is_file()

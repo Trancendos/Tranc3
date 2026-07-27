@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 
 from fastapi import FastAPI
@@ -25,7 +26,13 @@ def _build_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[
+            o.strip()
+            for o in os.getenv(
+                "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+            ).split(",")
+            if o.strip() and o.strip() != "*"
+        ],
         allow_methods=["*"],
         allow_headers=["*"],
     )

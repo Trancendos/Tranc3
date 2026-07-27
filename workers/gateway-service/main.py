@@ -29,7 +29,7 @@ from config import CORS_ORIGINS, JWT_SECRET, logger
 from database import init_db
 
 # Dimensional middleware
-from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.auth_gateway import DEFAULT_ENFORCED_PATHS, AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
 from Dimensional.infinity.sentinel_station import SentinelEvent, SharedSSEGenerator
@@ -177,9 +177,18 @@ def create_app() -> FastAPI:
     )
 
     # Auth Gateway — JWT/OAuth2 authentication, sets request.state.user
+    # /api/overview, /api/dimensionals*, /api/underverse*, and /dashboard*
+    # all route their RBAC check through the "/api/overview" permission key
+    # (READ_PLATFORM), which the RBACEngine's anonymous-user default already
+    # grants — so without adding them here, an unauthenticated caller reaches
+    # router.py's check_rbac() and is let straight through. Enforcing them at
+    # the middleware means a request needs *some* valid credential before RBAC
+    # is even consulted.
     app.add_middleware(
         AuthGatewayMiddleware,
         jwt_secret=JWT_SECRET,
+        enforced_paths=DEFAULT_ENFORCED_PATHS
+        | {"/api/overview", "/api/dimensionals", "/api/underverse", "/dashboard"},
     )
 
     # OWASP Hardening — outermost: security headers, input validation, CSRF

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import warnings
 
 WORKER_NAME = "tranceflow"
 WORKER_PORT = int(os.environ.get("PORT", os.environ.get("TRANCEFLOW_PORT", "8059")))
@@ -30,9 +29,13 @@ PROBE_TIMEOUT = float(os.environ.get("TRANCEFLOW_PROBE_TIMEOUT", "5.0"))
 PROCESS_TIMEOUT = float(os.environ.get("TRANCEFLOW_PROCESS_TIMEOUT", "120.0"))
 
 # ── Internal auth ──────────────────────────────────────────────────────────────
-INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-if not INTERNAL_SECRET:
-    warnings.warn("INTERNAL_SECRET is not set — inter-service auth disabled", stacklevel=1)
+INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "").strip()
+if not INTERNAL_SECRET or INTERNAL_SECRET == "dev-secret":
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
 
 TLS_VERIFY = os.environ.get("TRANCEFLOW_TLS_VERIFY", "0") != "0"
 OTEL_ENDPOINT = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")

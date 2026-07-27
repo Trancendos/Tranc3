@@ -1,4 +1,9 @@
-"""Observatory → Library pipeline — wires audit events to KB article triggers."""
+"""Observatory → Library pipeline — wires audit events to KB article triggers.
+
+Runs in-process alongside The Library (both live inside the tranc3-backend
+app), so triggers are handed straight to ``Library.create()`` rather than
+round-tripped over HTTP to a ``/kb/ingest`` endpoint that has never existed.
+"""
 
 from __future__ import annotations
 
@@ -6,26 +11,30 @@ import asyncio
 import logging
 import os
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger("tranc3.observability.library_pipeline")
 
-LIBRARY_URL = os.getenv("LIBRARY_URL", "http://localhost:8024")  # search-service / wiki
 PIPELINE_ENABLED = os.getenv("LIBRARY_PIPELINE_ENABLED", "true").lower() == "true"
 BATCH_SIZE = int(os.getenv("LIBRARY_PIPELINE_BATCH_SIZE", "20"))
 FLUSH_INTERVAL_SEC = float(os.getenv("LIBRARY_PIPELINE_FLUSH_INTERVAL", "30"))
 
+# Severities that warrant a KB article regardless of event_type.
+_TRIGGER_SEVERITIES = ("critical", "security")
+# event_type prefixes that warrant a KB article regardless of severity.
+_TRIGGER_EVENT_PREFIXES = ("secret.", "auth.", "vault.", "security.", "cve.")
+
 
 @dataclass
 class KBTrigger:
-    """Payload sent to The Library when an audit event warrants KB article creation."""
+    """A single Observatory audit event queued for Library ingestion."""
 
     event_type: str
     actor: str
     resource: str
     summary: str
-    severity: str  # info|warning|error|critical
+    severity: str  # matches src.observability.observatory.EventSeverity values
     timestamp: float
     tags: list[str]
     source_service: str = "observatory"
@@ -36,12 +45,15 @@ _lock = asyncio.Lock()
 
 
 def _should_trigger(event: dict[str, Any]) -> bool:
-    """Only forward events that are Library-worthy (errors, security, significant changes)."""
-    severity = event.get("severity", "info")
-    action = event.get("action", "")
-    return severity in ("error", "critical") or action.startswith(
-        ("secret.", "auth.", "vault.", "security.", "cve.")
-    )
+    """Only forward events that are Library-worthy (errors, security, significant changes).
+
+    ``event`` is expected to be an ``AuditEvent.to_dict()`` — keyed by
+    ``event_type``/``severity``/``target``/``metadata``, not the
+    ``action``/``resource`` names this once (incorrectly) checked for.
+    """
+    severity = str(event.get("severity", "info"))
+    event_type = str(event.get("event_type", ""))
+    return severity in _TRIGGER_SEVERITIES or event_type.startswith(_TRIGGER_EVENT_PREFIXES)
 
 
 async def ingest(event: dict[str, Any]) -> None:
@@ -49,14 +61,15 @@ async def ingest(event: dict[str, Any]) -> None:
     if not PIPELINE_ENABLED or not _should_trigger(event):
         return
 
+    metadata = event.get("metadata") or {}
     trigger = KBTrigger(
-        event_type=event.get("action", "unknown"),
-        actor=str(event.get("actor", "system")),
-        resource=str(event.get("resource", "")),
-        summary=str(event.get("message", event.get("action", ""))),
-        severity=event.get("severity", "info"),
+        event_type=str(event.get("event_type", "unknown")),
+        actor=str(event.get("actor") or "system"),
+        resource=str(event.get("target") or ""),
+        summary=str(metadata.get("message", event.get("event_type", ""))),
+        severity=str(event.get("severity", "info")),
         timestamp=event.get("timestamp", time.time()),
-        tags=event.get("tags", []),
+        tags=list(metadata.get("tags", [])),
     )
 
     batch: list[KBTrigger] = []
@@ -70,20 +83,35 @@ async def ingest(event: dict[str, Any]) -> None:
         await _send_batch(batch)
 
 
-async def _send_batch(batch: list[KBTrigger]) -> None:
-    """Send a pre-collected batch to The Library; called outside the lock."""
-    try:
-        import httpx  # type: ignore[import-not-found]
+def _format_article_body(batch: list[KBTrigger]) -> str:
+    lines = [f"Auto-generated from {len(batch)} Observatory audit event(s).", ""]
+    for t in batch:
+        lines.append(f"- [{t.severity}] {t.event_type} — actor={t.actor} resource={t.resource}")
+        if t.summary and t.summary != t.event_type:
+            lines.append(f"  {t.summary}")
+    return "\n".join(lines)
 
-        payload = {"triggers": [asdict(t) for t in batch]}
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(f"{LIBRARY_URL}/kb/ingest", json=payload)
-            if resp.status_code >= 400:
-                logger.warning("Library pipeline HTTP %s — %s", resp.status_code, resp.text[:200])
-            else:
-                logger.debug("Library pipeline flushed %d triggers", len(batch))
+
+async def _send_batch(batch: list[KBTrigger]) -> None:
+    """Create a Library article from a pre-collected batch; called outside the lock."""
+    try:
+        from src.library.knowledge_base import get_library
+
+        worst_severity = "critical" if any(t.severity == "critical" for t in batch) else "security"
+        tags = {"observatory", "auto-generated", worst_severity}
+        for t in batch:
+            tags.update(t.tags)
+
+        get_library().create(
+            title=f"Observatory alert batch — {len(batch)} {worst_severity} event(s)",
+            body=_format_article_body(batch),
+            tags=sorted(tags),
+            author="observatory",
+            source="observatory",
+        )
+        logger.debug("Library pipeline created article from %d triggers", len(batch))
     except Exception as exc:  # noqa: BLE001
-        logger.debug("Library pipeline unavailable: %s", exc)
+        logger.warning("Library pipeline failed to ingest batch: %s", exc)
 
 
 async def _flush() -> None:

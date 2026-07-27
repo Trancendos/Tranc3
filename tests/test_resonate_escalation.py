@@ -9,12 +9,18 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from auth import get_current_user
 from src.resonate import empathy as empathy_module
 from src.resonate.empathy import Resonate, get_resonate
 from src.resonate.routes import router as resonate_router
 
 _test_app = FastAPI()
 _test_app.include_router(resonate_router)
+_test_app.dependency_overrides[get_current_user] = lambda: {
+    "sub": "u1",
+    "tier": 0,
+    "role": "user",
+}
 client = TestClient(_test_app)
 
 

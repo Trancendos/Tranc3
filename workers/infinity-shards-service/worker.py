@@ -37,6 +37,7 @@ Zero-cost: FastAPI + SQLite. No external deps beyond core platform.
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import os
@@ -47,7 +48,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -57,6 +58,25 @@ logger = logging.getLogger(__name__)
 
 PORT = int(os.environ.get("INFINITY_SHARDS_PORT", "8045"))
 DB_PATH = os.environ.get("INFINITY_SHARDS_DB_PATH", "data/infinity_shards.db")
+
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 # ── Shard Catalogue ──────────────────────────────────────────────────────────
 
@@ -301,7 +321,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -346,7 +372,7 @@ async def health():
     }
 
 
-@app.get("/shards")
+@app.get("/shards", dependencies=[Depends(_require_internal_auth)])
 async def list_shards():
     """Return the full catalogue of available Shard types."""
     return {
@@ -355,7 +381,7 @@ async def list_shards():
     }
 
 
-@app.get("/shards/{shard_type}")
+@app.get("/shards/{shard_type}", dependencies=[Depends(_require_internal_auth)])
 async def get_shard_type(shard_type: str):
     """Return details for a specific Shard type."""
     shard = SHARD_CATALOGUE.get(shard_type)
@@ -364,7 +390,7 @@ async def get_shard_type(shard_type: str):
     return shard
 
 
-@app.get("/entities/{entity_id}/shards")
+@app.get("/entities/{entity_id}/shards", dependencies=[Depends(_require_internal_auth)])
 async def get_entity_shards(entity_id: str):
     """List all Shards attached to an entity."""
     with get_db() as conn:
@@ -380,7 +406,9 @@ async def get_entity_shards(entity_id: str):
     }
 
 
-@app.post("/entities/{entity_id}/shards", status_code=201)
+@app.post(
+    "/entities/{entity_id}/shards", status_code=201, dependencies=[Depends(_require_internal_auth)]
+)
 async def attach_shard(entity_id: str, req: AttachShardRequest):
     """Attach a Shard to an entity."""
     if req.shard_type not in SHARD_CATALOGUE:
@@ -420,7 +448,9 @@ async def attach_shard(entity_id: str, req: AttachShardRequest):
     }
 
 
-@app.delete("/entities/{entity_id}/shards/{shard_type}")
+@app.delete(
+    "/entities/{entity_id}/shards/{shard_type}", dependencies=[Depends(_require_internal_auth)]
+)
 async def detach_shard(entity_id: str, shard_type: str):
     """Detach a Shard from an entity."""
     with get_db() as conn:
@@ -442,7 +472,10 @@ async def detach_shard(entity_id: str, shard_type: str):
     }
 
 
-@app.get("/entities/{entity_id}/shards/{shard_type}/config")
+@app.get(
+    "/entities/{entity_id}/shards/{shard_type}/config",
+    dependencies=[Depends(_require_internal_auth)],
+)
 async def get_shard_config(entity_id: str, shard_type: str):
     """Get the configuration for a specific Shard on an entity."""
     with get_db() as conn:
@@ -455,7 +488,10 @@ async def get_shard_config(entity_id: str, shard_type: str):
     return {"entity_id": entity_id, "shard_type": shard_type, "config": json.loads(row["config"])}
 
 
-@app.put("/entities/{entity_id}/shards/{shard_type}/config")
+@app.put(
+    "/entities/{entity_id}/shards/{shard_type}/config",
+    dependencies=[Depends(_require_internal_auth)],
+)
 async def update_shard_config(entity_id: str, shard_type: str, req: UpdateShardConfigRequest):
     """Update the configuration for a Shard on an entity."""
     with get_db() as conn:
@@ -476,7 +512,7 @@ async def update_shard_config(entity_id: str, shard_type: str, req: UpdateShardC
     return {"entity_id": entity_id, "shard_type": shard_type, "config": existing}
 
 
-@app.get("/entities/{entity_id}/power")
+@app.get("/entities/{entity_id}/power", dependencies=[Depends(_require_internal_auth)])
 async def get_entity_power(entity_id: str) -> EntityPower:
     """Return the aggregate power score from all active Shards on an entity."""
     with get_db() as conn:
@@ -504,7 +540,7 @@ async def get_entity_power(entity_id: str) -> EntityPower:
     )
 
 
-@app.post("/shards/{shard_type}/invoke")
+@app.post("/shards/{shard_type}/invoke", dependencies=[Depends(_require_internal_auth)])
 async def invoke_shard(shard_type: str, req: InvokeShardRequest):
     """
     Invoke a Shard capability directly.
@@ -610,7 +646,10 @@ def _dispatch_capability(
     }
 
 
-@app.get("/entities/{entity_id}/shards/{shard_type}/invocations")
+@app.get(
+    "/entities/{entity_id}/shards/{shard_type}/invocations",
+    dependencies=[Depends(_require_internal_auth)],
+)
 async def get_shard_invocations(entity_id: str, shard_type: str, limit: int = 50):
     """Return recent invocations for a Shard on an entity."""
     with get_db() as conn:

@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -29,6 +29,19 @@ from pydantic import BaseModel, Field
 PORT = int(os.getenv("PORT", "8055"))
 WORKER_NAME = "the-lab"
 VERSION = "2.0.0"
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 TABBY_URL = os.getenv("TABBY_URL", "http://localhost:8080").rstrip("/")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
@@ -169,13 +182,29 @@ def _offline_stub(task: str, language: str, code_or_desc: str) -> str:
     return f"# [{task}] — Offline stub\n# Language: {language}\n# Input: {code_or_desc[:80]}...\n# All AI backends unavailable. Please check TabbyML/Ollama/LiteLLM.\n"
 
 
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="The Lab", description="AI code creation platform — TabbyML bridge", version=VERSION
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -207,7 +236,7 @@ async def status() -> dict[str, Any]:
     }
 
 
-@app.post("/lab/complete")
+@app.post("/lab/complete", dependencies=[Depends(_require_internal_auth)])
 async def lab_complete(req: CompleteRequest) -> dict[str, Any]:
     """Code completion via TabbyML -> Ollama -> LiteLLM -> offline."""
     result = await _tabby_complete(req.prompt, req.language, req.max_tokens)
@@ -231,7 +260,7 @@ async def lab_complete(req: CompleteRequest) -> dict[str, Any]:
     return {"completion": _offline_stub("complete", req.language, req.prompt), "source": "offline"}
 
 
-@app.post("/lab/chat")
+@app.post("/lab/chat", dependencies=[Depends(_require_internal_auth)])
 async def lab_chat(req: ChatRequest) -> dict[str, Any]:
     """Code chat via TabbyML -> Ollama -> LiteLLM -> offline."""
     result = await _tabby_chat(req.messages, req.max_tokens)
@@ -249,7 +278,7 @@ async def lab_chat(req: ChatRequest) -> dict[str, Any]:
     return {"response": _offline_stub("chat", req.language, str(req.messages)), "source": "offline"}
 
 
-@app.post("/lab/explain")
+@app.post("/lab/explain", dependencies=[Depends(_require_internal_auth)])
 async def lab_explain(req: ExplainRequest) -> dict[str, Any]:
     """Explain code via AI chain."""
     prompt = f"Explain this {req.language} code clearly and concisely:\n\n```{req.language}\n{req.code}\n```"
@@ -272,7 +301,7 @@ async def lab_explain(req: ExplainRequest) -> dict[str, Any]:
     return {"explanation": _offline_stub("explain", req.language, req.code), "source": "offline"}
 
 
-@app.post("/lab/review")
+@app.post("/lab/review", dependencies=[Depends(_require_internal_auth)])
 async def lab_review(req: ReviewRequest) -> dict[str, Any]:
     """Code review — security, quality, performance."""
     focus_str = ", ".join(req.focus)
@@ -307,7 +336,7 @@ async def lab_review(req: ReviewRequest) -> dict[str, Any]:
     }
 
 
-@app.post("/lab/generate")
+@app.post("/lab/generate", dependencies=[Depends(_require_internal_auth)])
 async def lab_generate(req: GenerateRequest) -> dict[str, Any]:
     """Generate code from description."""
     prompt = (
@@ -337,7 +366,7 @@ async def lab_generate(req: GenerateRequest) -> dict[str, Any]:
     }
 
 
-@app.get("/lab/models")
+@app.get("/lab/models", dependencies=[Depends(_require_internal_auth)])
 async def lab_models() -> dict[str, Any]:
     """List TabbyML models."""
     try:
@@ -404,7 +433,7 @@ def _validate_code(code: str) -> None:
                 )
 
 
-@app.post("/lab/run")
+@app.post("/lab/run", dependencies=[Depends(_require_internal_auth)])
 async def lab_run(req: RunRequest) -> dict[str, Any]:
     """Code execution endpoint — disabled pending proper container sandboxing.
 
@@ -418,12 +447,12 @@ async def lab_run(req: RunRequest) -> dict[str, Any]:
     )
 
 
-@app.get("/workspaces")
+@app.get("/workspaces", dependencies=[Depends(_require_internal_auth)])
 async def workspaces() -> dict[str, Any]:
     return {"workspaces": [], "total": 0, "message": "Workspace management coming soon."}
 
 
-@app.post("/execute")
+@app.post("/execute", dependencies=[Depends(_require_internal_auth)])
 async def execute_compat(req: RunRequest) -> dict[str, Any]:
     """Legacy /execute endpoint delegates to /lab/run."""
     return await lab_run(req)

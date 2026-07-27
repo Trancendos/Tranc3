@@ -151,6 +151,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -272,7 +273,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=[
+        o.strip()
+        for o in os.environ.get("CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -357,6 +362,7 @@ Zero-cost: FastAPI + SQLite pattern, no external dependencies.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict
 
@@ -384,7 +390,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=[
+        o.strip()
+        for o in os.environ.get("CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

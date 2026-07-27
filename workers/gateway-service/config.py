@@ -53,8 +53,10 @@ WS_IDLE_TIMEOUT = int(os.environ.get("WS_IDLE_TIMEOUT", "300"))
 
 CORS_ORIGINS: list[str] = [
     o.strip()
-    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
+    for o in os.environ.get(
+        "CORS_ORIGINS", os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
+    ).split(",")
+    if o.strip() and o.strip() != "*"
 ]
 
 # ---------------------------------------------------------------------------

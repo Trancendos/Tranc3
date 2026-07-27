@@ -6,6 +6,7 @@ skill-based routing, and execution logging. Zero-cost self-hosted design.
 """
 
 import asyncio
+import hmac
 import json
 import os
 import sqlite3
@@ -50,15 +51,24 @@ async def _lifespan(app):
 
 app = FastAPI(title=f"Tranc3 {SERVICE_NAME}", version="0.6.0", lifespan=_lifespan)
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+_internal_secret_raw = os.environ.get("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+_INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
 

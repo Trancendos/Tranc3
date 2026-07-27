@@ -13,6 +13,7 @@ Entity: The Lab (RAG subsystem)
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import sqlite3
@@ -21,7 +22,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -31,6 +32,25 @@ VERSION = "1.0.0"
 DB_PATH = os.getenv("LLAMAINDEX_DB_PATH", "data/llamaindex.db")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 STARTED_AT = datetime.now(timezone.utc)
 
@@ -127,7 +147,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="LlamaIndex Service", version=VERSION, lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +186,7 @@ async def status() -> dict[str, Any]:
     }
 
 
-@app.post("/llamaindex/indexes")
+@app.post("/llamaindex/indexes", dependencies=[Depends(_require_internal_auth)])
 async def create_index(body: IndexCreate) -> dict[str, Any]:
     idx_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -167,13 +198,13 @@ async def create_index(body: IndexCreate) -> dict[str, Any]:
     return {"id": idx_id, "name": body.name, "description": body.description, "created_at": now}
 
 
-@app.get("/llamaindex/indexes")
+@app.get("/llamaindex/indexes", dependencies=[Depends(_require_internal_auth)])
 async def list_indexes() -> dict[str, Any]:
     rows = db().execute("SELECT * FROM indexes ORDER BY created_at DESC").fetchall()
     return {"indexes": [dict(r) for r in rows], "total": len(rows)}
 
 
-@app.post("/llamaindex/ingest")
+@app.post("/llamaindex/ingest", dependencies=[Depends(_require_internal_auth)])
 async def ingest_document(body: DocumentIngest) -> dict[str, Any]:
     row = db().execute("SELECT id FROM indexes WHERE id=?", (body.index_id,)).fetchone()
     if not row:
@@ -207,7 +238,7 @@ async def ingest_document(body: DocumentIngest) -> dict[str, Any]:
     }
 
 
-@app.post("/llamaindex/query")
+@app.post("/llamaindex/query", dependencies=[Depends(_require_internal_auth)])
 async def query_index(body: QueryRequest) -> dict[str, Any]:
     row = db().execute("SELECT id FROM indexes WHERE id=?", (body.index_id,)).fetchone()
     if not row:
@@ -247,7 +278,7 @@ async def query_index(body: QueryRequest) -> dict[str, Any]:
     }
 
 
-@app.get("/llamaindex/queries")
+@app.get("/llamaindex/queries", dependencies=[Depends(_require_internal_auth)])
 async def list_queries(
     index_id: Optional[str] = Query(None), limit: int = Query(50, le=200)
 ) -> dict[str, Any]:

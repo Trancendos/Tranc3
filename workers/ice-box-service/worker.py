@@ -156,7 +156,7 @@ def scan(req: ScanRequest):
         )
 
 
-@app.get("/quarantine")
+@app.get("/quarantine", dependencies=[Depends(_require_internal_auth)])
 def list_quarantine(limit: int = 50):
     records = _quarantine.list_active(limit=limit)
     return {
@@ -175,7 +175,7 @@ def list_quarantine(limit: int = 50):
     }
 
 
-@app.get("/quarantine/{quarantine_id}")
+@app.get("/quarantine/{quarantine_id}", dependencies=[Depends(_require_internal_auth)])
 def get_quarantine(quarantine_id: str):
     record = _quarantine.get(quarantine_id)
     if not record:

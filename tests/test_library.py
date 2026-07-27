@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
+import time
+
 from src.library.knowledge_base import (
     Article,
     ArticleStatus,
+    DataClassification,
     Library,
     get_library,
 )
@@ -242,3 +245,65 @@ class TestArticleOutlineIntegration:
         art = Article(outline_id="outline-456")
         d = art.to_dict()
         assert d["outline_id"] == "outline-456"
+
+
+# ── Classification / retention tests ─────────────────────────────────────────
+
+
+class TestArticleClassificationAndRetention:
+    def test_default_classification_is_internal(self):
+        art = Article()
+        assert art.classification == DataClassification.INTERNAL
+
+    def test_default_retention_is_forever(self):
+        art = Article()
+        assert art.retention_days is None
+        assert art.retention_expired() is False
+
+    def test_to_dict_includes_classification_and_retention(self):
+        art = Article(classification=DataClassification.RESTRICTED, retention_days=30)
+        d = art.to_dict()
+        assert d["classification"] == "restricted"
+        assert d["retention_days"] == 30
+
+    def test_retention_not_expired_before_window(self):
+        art = Article(retention_days=30)
+        assert art.retention_expired(now=art.created_at + 10) is False
+
+    def test_retention_expired_after_window(self):
+        art = Article(retention_days=30)
+        assert art.retention_expired(now=art.created_at + 31 * 86400) is True
+
+    def test_create_with_classification_and_retention(self):
+        lib = Library()
+        art = lib.create(
+            title="Confidential doc",
+            body="Content",
+            classification=DataClassification.CONFIDENTIAL,
+            retention_days=90,
+        )
+        assert art.classification == DataClassification.CONFIDENTIAL
+        assert art.retention_days == 90
+
+    def test_apply_retention_removes_expired_articles(self):
+        lib = Library()
+        art = lib.create(title="Expiring", body="Content", retention_days=1)
+        art.created_at = time.time() - (2 * 86400)  # force it into the past
+        removed = lib.apply_retention()
+        assert removed == 1
+        assert lib.get(art.id) is None
+
+    def test_apply_retention_keeps_non_expired_articles(self):
+        lib = Library()
+        art = lib.create(title="Fresh", body="Content", retention_days=365)
+        removed = lib.apply_retention()
+        assert removed == 0
+        assert lib.get(art.id) is not None
+
+    def test_stats_reports_by_classification(self):
+        lib = Library()
+        lib.create(title="Public doc", body="Content", classification=DataClassification.PUBLIC)
+        stats = lib.stats()
+        assert stats["by_classification"].get("public", 0) >= 1
+        # seeded platform articles all default to INTERNAL
+        assert stats["by_classification"].get("internal", 0) >= 6

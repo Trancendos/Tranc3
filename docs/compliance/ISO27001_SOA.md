@@ -161,3 +161,21 @@
 | Internal audit | Q1 2027 |
 | Stage 1 (documentation review) | Q2 2027 |
 | Stage 2 (certification audit) | Q2 2027 |
+
+---
+
+## Cross-reference to Magna Carta compliance register
+
+This SOA is Tranc3's own ISO 27001 self-assessment; the `compliance/magna-carta` submodule (Trancendos/Magna-Carta) maintains a parallel, independently-numbered register (`MC-###`) of estate-wide compliance matrices with their own code-grounded evidence. Where a Magna-Carta matrix directly evidences or duplicates a clause's finding, the clause is cross-linked below rather than re-assessed — this avoids the two registers silently drifting apart on the same underlying fact.
+
+| SOA Clause(s) | Magna-Carta Register | Matrix |
+|---|---|---|
+| 5.14 (Information transfer), 8.20 (Networks security), 8.24 (Use of cryptography) | MC-014 | [ENCRYPTION-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/ENCRYPTION-MATRIX.md) |
+| 5.15–5.18 (Access control/Identity/Authentication/Access rights), 8.2–8.5 (Privileged access/Information access/Source code/Secure authentication) | MC-015 | [SECURITY-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/SECURITY-MATRIX.md) |
+| 5.9 (Inventory of assets), 5.12 (Classification of information), 5.34 (Privacy and protection of PII) | MC-018 | [KNOWLEDGE-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/KNOWLEDGE-MATRIX.md) |
+| 5.19–5.22 (Supplier relationships / ICT supply chain), 5.23 (Cloud services) | MC-021 | [ZERO-COST-MATRIX.md](https://github.com/Trancendos/Magna-Carta/blob/main/docs/compliance/ZERO-COST-MATRIX.md) — the zero-cost provider registry is this platform's de facto vendor list; see also `SUPPLIER-DPA-REGISTER.md` in the same submodule for the DPA-specific view |
+| 5.32 (Intellectual property rights) | MC-013 | `IP-MATRIX.md` (Magna-Carta) |
+| 5.31 (Legal, statutory, regulatory, and contractual requirements) | MC-016 | `LEGAL-MATRIX.md` (Magna-Carta) |
+| 8.7 (Protection against malware), 8.8 (Management of technical vulnerabilities) | MC-012 | `LICENSE-COMPLIANCE-MATRIX.md` (Magna-Carta) — license/dependency scanning tools (pip-audit, trivy, gitleaks) overlap with this clause's evidence |
+
+Full bridge from Magna-Carta's own side: `compliance/tranc3_register_bridge.yaml` and `docs/compliance/TRANC3-REGISTER-BRIDGE.md` in the Magna-Carta repo map every `MC-###` ID to this repo's `REQ-###` DEFSTAN IDs and runtime implementations.

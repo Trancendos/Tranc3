@@ -222,6 +222,9 @@ app.add_middleware(
     },
     enforced_paths={
         "/portal/session",
+        "/portal/sessions",
+        "/portal/events",
+        "/portal/routing-history",
         "/portal/route",
         "/portal/logout",
         "/gate/route",

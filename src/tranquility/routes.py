@@ -5,28 +5,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, Path
 from fastapi.responses import JSONResponse
 
 from auth import get_current_user
+from src.auth.ownership import require_self_or_admin as _require_self_or_admin
 from src.tranquility.wellbeing import get_tranquility
 
 router = APIRouter(prefix="/tranquility", tags=["tranquility"])
-
-
-def _require_self_or_admin(user_id: str, current_user: dict) -> None:
-    """Mirrors api.py's gdpr_erase() ownership check: users may act on their
-    own data; admins may act on any user's data.
-
-    Real JWT payloads (src/auth/tokens.py) carry the caller's identity under
-    the standard "sub" claim, not "id" — accept either so this doesn't 500
-    for genuine callers with real tokens. The "enterprise" override this
-    originally mirrored from gdpr_erase() checked `tier == "enterprise"`, but
-    real tokens carry `tier` as a numeric int (never that string) — checking
-    `role == "admin"` instead uses a claim real tokens actually carry."""
-    caller_id = current_user.get("id") or current_user.get("sub")
-    if caller_id != user_id and current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Can only access your own data")
 
 
 @router.get("/status")

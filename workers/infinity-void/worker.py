@@ -62,7 +62,7 @@ if not _internal_secret_raw or _internal_secret_raw == "internal-dev-secret":
         "The Void vault cannot start without a strong unique internal secret. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
-INTERNAL_SECRET: str = _internal_secret_raw
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
 INFINITY_ONE_URL = os.getenv("INFINITY_ONE_URL", "")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 DATA_DIR = Path(os.getenv("VOID_DATA_DIR", "/data/void"))

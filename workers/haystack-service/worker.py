@@ -12,6 +12,7 @@ Entity: The Lab (production RAG pipelines)
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import sqlite3
@@ -20,7 +21,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -30,6 +31,25 @@ VERSION = "1.0.0"
 DB_PATH = os.getenv("HAYSTACK_DB_PATH", "data/haystack.db")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 STARTED_AT = datetime.now(timezone.utc)
 
@@ -108,7 +128,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Haystack Service", version=VERSION, lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -133,7 +164,7 @@ async def status() -> dict[str, Any]:
     }
 
 
-@app.post("/haystack/pipelines")
+@app.post("/haystack/pipelines", dependencies=[Depends(_require_internal_auth)])
 async def create_pipeline(body: PipelineCreate) -> dict[str, Any]:
     import json
 
@@ -150,7 +181,7 @@ async def create_pipeline(body: PipelineCreate) -> dict[str, Any]:
     return {"id": pid, "name": body.name, "components": body.components, "created_at": now}
 
 
-@app.get("/haystack/pipelines")
+@app.get("/haystack/pipelines", dependencies=[Depends(_require_internal_auth)])
 async def list_pipelines() -> dict[str, Any]:
     import json
 
@@ -163,7 +194,7 @@ async def list_pipelines() -> dict[str, Any]:
     return {"pipelines": result, "total": len(result)}
 
 
-@app.post("/haystack/documents")
+@app.post("/haystack/documents", dependencies=[Depends(_require_internal_auth)])
 async def add_document(body: DocumentAdd) -> dict[str, Any]:
     import json
 
@@ -180,7 +211,7 @@ async def add_document(body: DocumentAdd) -> dict[str, Any]:
     return {"id": doc_id, "pipeline_id": body.pipeline_id, "created_at": now}
 
 
-@app.post("/haystack/run")
+@app.post("/haystack/run", dependencies=[Depends(_require_internal_auth)])
 async def run_pipeline(body: PipelineRun) -> dict[str, Any]:
     import json
 
@@ -228,7 +259,7 @@ async def run_pipeline(body: PipelineRun) -> dict[str, Any]:
     }
 
 
-@app.get("/haystack/runs")
+@app.get("/haystack/runs", dependencies=[Depends(_require_internal_auth)])
 async def list_runs(
     pipeline_id: Optional[str] = Query(None), limit: int = Query(50, ge=1, le=200)
 ) -> dict[str, Any]:

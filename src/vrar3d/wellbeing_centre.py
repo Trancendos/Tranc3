@@ -174,6 +174,9 @@ class VRAR3D:
         self._emit("vrar3d.session.started", {"user_id": user_id, "scene_id": scene_id})
         return session
 
+    def get_session(self, session_id: str) -> Optional[VRSession]:
+        return self._sessions.get(session_id)
+
     def end_session(self, session_id: str, mood_after: Optional[int] = None) -> Optional[VRSession]:
         session = self._sessions.get(session_id)
         if not session or session.ended_at:

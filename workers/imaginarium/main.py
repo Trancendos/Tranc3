@@ -8,13 +8,32 @@ from __future__ import annotations
 import os
 import time
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Imaginarium", version="1.0.0")
 
 PORT = int(os.getenv("PORT", "8064"))
 START_TIME = time.time()
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if (
+    not _internal_secret_raw
+    or not _internal_secret_raw.strip()
+    or _internal_secret_raw.strip() == "dev-secret"
+):
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "This worker cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw.strip()
+
+
+def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
+    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
 CAPABILITIES = [
     {"name": "The Studio", "slug": "the-studio", "port": 8050, "role": "Central creativity hub"},
@@ -49,7 +68,7 @@ async def status() -> JSONResponse:
     )
 
 
-@app.post("/orchestrate")
+@app.post("/orchestrate", dependencies=[Depends(_require_internal_auth)])
 async def orchestrate() -> JSONResponse:
     return JSONResponse(
         {"orchestrated": False, "message": "Orchestration not yet ready."}, status_code=202

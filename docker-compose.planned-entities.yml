@@ -32,6 +32,7 @@ services:
     environment:
       PORT: "8040"
       DB_PATH: "/data/academy.db"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - academy-data:/data
     healthcheck:
@@ -55,6 +56,7 @@ services:
     environment:
       PORT: "8041"
       BASEMENT_DIR: "/data/archive"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - basement-data:/data
     healthcheck:
@@ -81,6 +83,7 @@ services:
       SD_URL: "${SD_URL:-http://stable-diffusion:7860}"
       TATEKING_URL: "http://tateking:8053"
       TRANCEFLOW_URL: "http://tranceflow:8052"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
       <<: *default-hc
@@ -104,6 +107,7 @@ services:
       SD_URL: "${SD_URL:-http://localhost:7860}"
       HF_API_KEY: "${HF_API_KEY:-}"
       DAILY_LIMIT: "${PHOTO_DAILY_LIMIT:-200}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - photo-output:/data/output
     healthcheck:
@@ -127,6 +131,7 @@ services:
     environment:
       PORT: "8052"
       ASSET_DIR: "/data/assets"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - tranceflow-assets:/data/assets
     healthcheck:
@@ -151,6 +156,7 @@ services:
       PORT: "8053"
       DB_PATH: "/data/tateking.db"
       OUTPUT_DIR: "/data/output"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - tateking-data:/data
     healthcheck:
@@ -177,6 +183,7 @@ services:
       VIDEO_URL: "http://tateking:8053"
       THREED_URL: "http://tranceflow:8052"
       DESIGN_URL: "http://fabulousa-frontend:80"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8054/health')"]
       <<: *default-hc
@@ -199,6 +206,7 @@ services:
       PORT: "8055"
       MCP_URL: "${MCP_URL:-http://localhost:8000}"
       DB_PATH: "/data/lab.db"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - lab-data:/data
     healthcheck:
@@ -223,6 +231,7 @@ services:
       PORT: "8056"
       DB_PATH: "/data/warp_tunnel.db"
       QUARANTINE_DIR: "/data/quarantine"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - warp-tunnel-data:/data
     healthcheck:
@@ -247,6 +256,7 @@ services:
       PORT: "8057"
       NAVIDROME_URL: "${NAVIDROME_URL:-http://navidrome:4533}"
       MUSIC_DIR: "/music"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - "${MUSIC_DIR:-/tmp/music}:/music:ro"
     healthcheck:
@@ -292,6 +302,7 @@ services:
     environment:
       PORT: "8058"
       DB_PATH: "/data/dutchy.db"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - dutchy-data:/data
     healthcheck:
@@ -336,6 +347,7 @@ services:
     environment:
       PORT: "8060"
       DB_PATH: "/data/tranquility.db"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - tranquility-data:/data
     healthcheck:
@@ -359,6 +371,7 @@ services:
     environment:
       PORT: "8061"
       DB_PATH: "/data/imind.db"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - imind-data:/data
     healthcheck:
@@ -382,6 +395,7 @@ services:
     environment:
       PORT: "8062"
       DB_PATH: "/data/taimra.db"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - taimra-data:/data
     healthcheck:
@@ -405,6 +419,7 @@ services:
     environment:
       PORT: "8063"
       ASSET_DIR: "/data/scenes"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - vrar3d-scenes:/data/scenes
     healthcheck:
@@ -428,6 +443,7 @@ services:
     environment:
       PORT: "8076"
       DB_PATH: "/data/resonate.db"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - resonate-data:/data
     healthcheck:
@@ -452,6 +468,7 @@ services:
       PORT: "8065"
       DB_PATH: "/data/chaos.db"
       PLATFORM_BASE: "${PLATFORM_BASE:-http://localhost}"
+      INTERNAL_SECRET: "${INTERNAL_SECRET:?required}"
     volumes:
       - chaos-data:/data
       - ./tests:/app/tests:ro

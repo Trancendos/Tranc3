@@ -51,6 +51,18 @@ mutable at runtime via the Role Assignment Registry (`src/roles/registry.py`, SQ
 exposed at `/roles` — `src/roles/routes.py`, mounted in `api.py`), letting operators add, remove,
 or reassign AIs to a role without a code change; every change is recorded in an audit history.
 
+**Trancendos Models Matrix.** Every named AI's base model is one of the platform's existing
+orchestration tiers — **Trance-One** (Tier 1, Sovereign/Orchestrator, most capable), **T2ance**
+(Tier 2, Primes), or **Tranc3** (Tier 3, Lead AI/AI Base, the default) — via
+`get_orchestration_tier()` in `src/entities/platform.py`. An AI's base model can expand into a
+named specialized variant when associated with a distinguishing skill matrix (e.g. The Dr. →
+`T2ance-CODE`, George Porter → `Tranc3-Crypto`); see `docs/governance/TRANCENDOS-MODELS-MATRIX.md`
+for the full base-tier/variant table, the regular benchmarking mechanism, and the governed
+advancement pipeline (Prime → Cornelius → Human, each with its own % threshold) that gates a real
+skill/feature improvement into a model rather than baking in routine updates unchecked. Code:
+`src/models/` (`matrix.py`, `benchmark.py`, `governance.py`, `routes.py`, exposed at `/models`,
+mounted in `api.py`).
+
 **Naming rules:**
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
@@ -63,7 +75,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
   references, "Nexus-Prime" where a distinct AID is required (matching how "The Guardian" below
   gets a full title only in entity contexts).
 - Infinity's Lead AI is "The Guardian (Marcus Magnolia)" — Infinity has two distinct Tier-3 AIs (`lead_ais` in `src/entities/platform.py`): The Guardian (Marcus Magnolia) and The Orb of Orisis. As Prime (Tier 2) elsewhere (The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box), use "The Guardian (Marcus Magnolia)" without a qualifier — "(Anchor: Orb of Orisis)" is retired as a combined title.
-- TateKing's Lead AI is "Benji Tate" and Arcadian Exchange's is "Clarence Porter" — both have several distinct Tier-3 AIs (`lead_ais`) that, unlike Infinity/The Lab's shared team, each run their own dedicated Agent Alpha/Beta pair (`agent_teams` in `src/entities/platform.py`): TateKing's Sam King has The Director-S/The Editor-S; Arcadian Exchange's Ann, George, Edward, and James Porter each have their own Speculator-X/Trader-X pair.
+- TateKing's Lead AI is "Benji Tate" and Arcadian Exchange's is "Clarence Porter" — both have several distinct Tier-3 AIs (`lead_ais`) that each run their own dedicated Agent Alpha/Beta pair (`agent_teams` in `src/entities/platform.py`): TateKing's Sam King has The Director-S/The Editor-S; Arcadian Exchange's Ann, George, Edward, and James Porter each have their own Speculator-X/Trader-X pair. Infinity (The Guardian (Marcus Magnolia) vs. The Orb of Orisis) and The Lab (The Dr. (Nikolai O'denhime) vs. Slime) also each have their own dedicated `agent_teams` pair per Lead AI — all four multi-AI Locations follow this same per-name pairing, none share a single team across their Lead AIs.
 - `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
 - "Section 7" — internal placeholder name, NOT in the canonical entity hierarchy; closest entity is **The Dutchy** (Intelligence & Market Analysis, Lead AI: Predictive lore)
 - **AeonMind** (`aeonmind/` — Rust/Go/Python/WASM) — a separate, generic polyglot agent-framework
@@ -102,7 +114,7 @@ or reassign AIs to a role without a code change; every change is recorded in an 
 | **DocUtari** | Fiddsy | Document management hub | ✅ In repo | `workers/files-service/`, `workers/storage-service/` (standalone workers); Paperless-ngx planned frontend |
 | **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | ✅ In repo | `src/basement/` (router registered in `api.py`) |
 | **The Studio** | Voxx | Central hub of the Creativity Center | ✅ In repo | `src/studio/` (router registered in `api.py`) |
-| **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | ✅ In repo | `workers/sashas-photo-studio/worker.py` (standalone worker); Stable Diffusion + ComfyUI planned backend |
+| **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | ✅ In repo | `workers/sashas-photo-studio/main.py` (standalone worker, actual Dockerfile `CMD` entrypoint — the sibling `worker.py` is a superseded Pollinations.ai-backed implementation no longer run in production); ComfyUI (primary) + AUTOMATIC1111 (fallback) backend now integrated via HTTP against self-hosted instances, offline placeholder as last resort |
 | **TranceFlow** | Junior Cesar | 3D modeling & games creation studio | ✅ In repo | `workers/tranceflow/worker.py` (standalone worker); Godot Engine integration planned |
 | **TateKing** | Benji Tate & Sam King | Video creation & editing platform | ✅ In repo | `workers/tateking/worker.py` (standalone worker); FFmpeg + custom UI planned |
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |

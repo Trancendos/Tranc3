@@ -124,7 +124,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip() and o.strip() != "*"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -177,7 +183,7 @@ async def fabulousa_status() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/fabulousa/projects")
+@app.get("/fabulousa/projects", dependencies=[Depends(_require_internal_auth)])
 async def list_projects() -> dict[str, Any]:
     """List Penpot projects. Degrades gracefully when Penpot is unavailable."""
     degraded = False
@@ -254,7 +260,7 @@ async def create_project(body: ProjectCreate) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/fabulousa/assets")
+@app.get("/fabulousa/assets", dependencies=[Depends(_require_internal_auth)])
 async def list_assets() -> dict[str, Any]:
     """List design assets from Penpot."""
     try:

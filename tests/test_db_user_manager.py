@@ -258,6 +258,80 @@ class TestUpdateTierRoleSync:
 
 
 # ---------------------------------------------------------------------------
+# Password hashing consolidation (real pwd_context — argon2id/PBKDF2 via
+# src.auth.passwords, with legacy bcrypt hashes still verifying and upgrading
+# on next successful login). No mocking here: these tests exercise the real
+# hash()/verify() implementation, not the fake used by the fixtures above.
+# ---------------------------------------------------------------------------
+
+
+class TestPasswordHashingConsolidation:
+    def test_new_hash_is_not_bcrypt(self):
+        from src.auth.db_user_manager import pwd_context
+
+        hashed = pwd_context.hash("T3st-pw-only!")
+        assert not hashed.startswith(("$2a$", "$2b$", "$2y$"))
+
+    def test_new_hash_verifies_via_real_context(self):
+        from src.auth.db_user_manager import pwd_context
+
+        hashed = pwd_context.hash("T3st-pw-only!")
+        assert pwd_context.verify("T3st-pw-only!", hashed) is True
+        assert pwd_context.verify("WrongPass9", hashed) is False
+
+    def test_legacy_bcrypt_hash_still_verifies(self):
+        import bcrypt
+
+        from src.auth.db_user_manager import pwd_context
+
+        legacy_hash = bcrypt.hashpw(b"T3st-pw-only!", bcrypt.gensalt()).decode()
+        assert pwd_context.verify("T3st-pw-only!", legacy_hash) is True
+        assert pwd_context.verify("WrongPass9", legacy_hash) is False
+
+    def test_authenticate_upgrades_legacy_bcrypt_hash_on_login(self):
+        import bcrypt
+
+        from src.auth.db_user_manager import DBUserManager
+
+        mgr = DBUserManager(db_session_factory=None)
+        legacy_hash = bcrypt.hashpw(b"T3st-pw-only!", bcrypt.gensalt()).decode()
+        mgr._fallback["tara"] = {
+            "id": "z",
+            "username": "tara",
+            "hashed_password": legacy_hash,
+            "tier": "free",
+            "is_active": True,
+        }
+
+        result = mgr.authenticate_user("tara", "T3st-pw-only!")
+        assert result is not None
+        assert result["username"] == "tara"
+
+        stored = mgr._fallback["tara"]["hashed_password"]
+        assert stored != legacy_hash
+        assert not stored.startswith(("$2a$", "$2b$", "$2y$"))
+
+    def test_authenticate_with_wrong_password_does_not_upgrade_legacy_hash(self):
+        import bcrypt
+
+        from src.auth.db_user_manager import DBUserManager
+
+        mgr = DBUserManager(db_session_factory=None)
+        legacy_hash = bcrypt.hashpw(b"T3st-pw-only!", bcrypt.gensalt()).decode()
+        mgr._fallback["uma"] = {
+            "id": "w",
+            "username": "uma",
+            "hashed_password": legacy_hash,
+            "tier": "free",
+            "is_active": True,
+        }
+
+        result = mgr.authenticate_user("uma", "WrongPass9")
+        assert result is None
+        assert mgr._fallback["uma"]["hashed_password"] == legacy_hash
+
+
+# ---------------------------------------------------------------------------
 # Password validation (tests the _validate_password logic — NOT bcrypt hashing)
 # ---------------------------------------------------------------------------
 

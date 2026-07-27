@@ -702,7 +702,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=[
+        o.strip()
+        for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+        if o.strip()
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -981,6 +985,11 @@ app.include_router(_tranc3ts_router)
 from src.monetisation.router import router as _billing_router  # noqa: F401
 
 app.include_router(_billing_router)
+
+# ── Trancendos Models Matrix (base tiers, benchmarking, advancement governance) ─
+from src.models.routes import router as _models_router  # noqa: F401
+
+app.include_router(_models_router)
 
 
 # ── Root endpoint (must be before catch-all frontend route) ───────────────────

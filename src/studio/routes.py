@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Path, Query
+from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 
+from auth import get_current_user
 from src.studio.hub import StudioServiceType, get_studio
 
 router = APIRouter(prefix="/studio", tags=["the-studio"])
@@ -19,12 +20,15 @@ async def studio_status() -> Dict[str, Any]:
 
 
 @router.get("/capabilities")
-async def capabilities() -> Dict[str, Any]:
+async def capabilities(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     return get_studio().capabilities()
 
 
 @router.post("/jobs")
-async def submit_job(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def submit_job(
+    body: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     raw_service = body.get("service", "imaginarium")
     try:
         service = StudioServiceType(raw_service)
@@ -38,6 +42,7 @@ async def submit_job(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 @router.get("/jobs")
 async def list_jobs(
     service: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
 ) -> list:
     svc = None
     if service:
@@ -49,7 +54,10 @@ async def list_jobs(
 
 
 @router.get("/jobs/{job_id}")
-async def get_job(job_id: str = Path(...)) -> Dict[str, Any]:
+async def get_job(
+    job_id: str = Path(...),
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
     job = get_studio().get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
