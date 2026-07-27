@@ -3771,7 +3771,7 @@ services:
   # Replaces GitHub. Forgejo Actions CI/CD runs inside this container.
   # Access: https://trancendos.com/the-workshop  (via Traefik PathPrefix)
   forgejo:
-    image: codeberg.org/forgejo/forgejo:7
+    image: codeberg.org/forgejo/forgejo:7@sha256:d1044fe10757f7cd7725fa470d9e27814d2c5426a114098c24da425d3f25eb49
     container_name: trancendos-forgejo
     restart: unless-stopped
     environment:

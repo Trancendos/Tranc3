@@ -277,7 +277,7 @@ services:
   # Profile: workshop
   # ──────────────────────────────────────────────────────────────
   forgejo:
-    image: codeberg.org/forgejo/forgejo:7
+    image: codeberg.org/forgejo/forgejo:7@sha256:d1044fe10757f7cd7725fa470d9e27814d2c5426a114098c24da425d3f25eb49
     container_name: the-workshop
     <<: *default-restart
     profiles: ["workshop", "all"]
