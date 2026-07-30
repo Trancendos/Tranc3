@@ -529,12 +529,12 @@ WORKER_DATABASE_REGISTRY: List[WorkerDB] = [
         tier=BackupTier.STANDARD,
         description="The Basement — archived info store",
     ),
-    # Note: no separate "the-void" entry — workers/the-void/ is not deployed in
-    # docker-compose.production.yml (only infinity-void and vault-service are;
-    # see docs/architecture/decisions/ for The Void's multi-implementation
-    # status) and its code hardcodes its own path via Path(__file__).parent
-    # rather than reading any env var, so a registry entry for it would target
-    # a database that either doesn't exist or silently aliases vault-service's.
+    # Note: no separate "the-void" entry — workers/the-void/ was an abandoned
+    # parallel implementation (never wired into docker-compose.production.yml)
+    # and has been deleted (2026-07-30). infinity-void (below) is the canonical
+    # deployed Void; vault-service (above, CRITICAL tier) remains deployed but
+    # deprecated pending a real secrets migration — see
+    # workers/vault-service/DEPRECATED.md and scripts/migrate_vault_secrets.py.
     # ── LOW ─────────────────────────────────────────────────────────────────────
     WorkerDB(
         worker="analytics-service",
