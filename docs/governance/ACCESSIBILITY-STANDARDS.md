@@ -58,9 +58,6 @@ state.
 - **No manual audit has been performed** against real assistive technology (NVDA/JAWS/VoiceOver)
   on any page. The mechanisms in §1 are correctly implemented by inspection, not verified by a
   screen-reader pass.
-- **No manual audit has been performed** against real assistive technology (NVDA/JAWS/VoiceOver)
-  on any page. The mechanisms in §1 are correctly implemented by inspection, not verified by a
-  screen-reader pass.
 - **No colour-contrast audit** has been run against `web/src/trancendos/tokens.ts`'s palette.
 
 ## 4. Process going forward

@@ -226,16 +226,13 @@ class ClearProvenanceRequest(BaseModel):
     status: str = ProvenanceStatus.CLEARED.value
 
 
-def _public_provenance_note(note: str) -> str:
-    """Strip the admin `cleared_by`/notes suffix check_provenance() appends
-    for an override (`f"{note} [cleared by {who}: {notes}]"`) before it
-    reaches the unauthenticated GET route — that suffix is audit metadata,
-    not something any caller should be able to read."""
-    return note.split(" [cleared by ", 1)[0]
-
-
 @router.get("/provenance/{ai_name}")
 def get_provenance(ai_name: str) -> Dict[str, Any]:
+    """Public, unauthenticated read. `cleared_by`/`admin_notes` are
+    deliberately omitted here — see ProvenanceRisk's docstring in
+    src/models/compliance.py: they're kept as separate fields (not
+    concatenated into `note`) precisely so this route can drop them by
+    field name rather than string-parsing `note` to redact them."""
     result = check_provenance(ai_name)
     return {
         "ai_name": ai_name,
@@ -247,7 +244,7 @@ def get_provenance(ai_name: str) -> Dict[str, Any]:
                 "entity": result.risk.entity,
                 "risk": result.risk.risk,
                 "status": result.risk.status.value,
-                "note": _public_provenance_note(result.risk.note),
+                "note": result.risk.note,
                 "mc_reference": result.risk.mc_reference,
             }
         ),

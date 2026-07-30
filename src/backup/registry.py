@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import List
 
 
@@ -59,10 +60,21 @@ class WorkerDB:
     tier: BackupTier
     description: str = ""
     extra_paths: List[str] = field(default_factory=list)  # additional DB files
+    # True when `env_var` holds a data *directory* (e.g. VOID_DATA_DIR,
+    # MLFLOW_DATA_DIR) rather than a direct file path — the worker itself
+    # appends the same filename as default_path's basename onto that
+    # directory. Without this, resolved_path would point at a directory
+    # instead of the actual .db file whenever the env var is set.
+    env_var_is_dir: bool = False
 
     @property
     def resolved_path(self) -> str:
-        return os.environ.get(self.env_var, self.default_path)
+        override = os.environ.get(self.env_var)
+        if override is None:
+            return self.default_path
+        if self.env_var_is_dir:
+            return str(Path(override) / Path(self.default_path).name)
+        return override
 
     @property
     def backup_interval_minutes(self) -> int:
@@ -120,6 +132,7 @@ WORKER_DATABASE_REGISTRY: List[WorkerDB] = [
         default_path="/data/void/void.db",
         tier=BackupTier.CRITICAL,
         description="The Void — self-hosted AES-GCM secrets vault (standalone worker)",
+        env_var_is_dir=True,
     ),
     # ── HIGH ────────────────────────────────────────────────────────────────────
     WorkerDB(
@@ -360,6 +373,7 @@ WORKER_DATABASE_REGISTRY: List[WorkerDB] = [
         default_path="/data/mlflow-service/mlflow.db",
         tier=BackupTier.STANDARD,
         description="MLflow experiment tracking store",
+        env_var_is_dir=True,
     ),
     WorkerDB(
         worker="litellm-service",
@@ -515,13 +529,12 @@ WORKER_DATABASE_REGISTRY: List[WorkerDB] = [
         tier=BackupTier.STANDARD,
         description="The Basement — archived info store",
     ),
-    WorkerDB(
-        worker="the-void",
-        env_var="THE_VOID_DB_PATH",
-        default_path="data/vault.db",
-        tier=BackupTier.STANDARD,
-        description="The Void (standalone worker variant of vault-service)",
-    ),
+    # Note: no separate "the-void" entry — workers/the-void/ is not deployed in
+    # docker-compose.production.yml (only infinity-void and vault-service are;
+    # see docs/architecture/decisions/ for The Void's multi-implementation
+    # status) and its code hardcodes its own path via Path(__file__).parent
+    # rather than reading any env var, so a registry entry for it would target
+    # a database that either doesn't exist or silently aliases vault-service's.
     # ── LOW ─────────────────────────────────────────────────────────────────────
     WorkerDB(
         worker="analytics-service",

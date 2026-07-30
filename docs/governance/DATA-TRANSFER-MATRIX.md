@@ -20,10 +20,15 @@
 | Self-hosted workers (`docker-compose.production.yml`) | Wherever The Citadel/OCI host physically is | Single-host deployment; no cross-region replication exists |
 | SQLite files (see `docs/governance` — Database Registry, `src/backup/registry.py`) | Local disk on whichever host runs that worker | No managed multi-region database service is in use |
 
-**Practical read:** this platform does not currently transfer personal data across jurisdictions
-in the sense SCC/adequacy assessments exist for — there is one primary compute location (or
-Cloudflare edge caching, which doesn't persist PII), not a multi-region architecture moving user
-data between jurisdictions.
+**Practical read:** storage is documented as single-host (one primary compute location, no
+multi-region database replication), but that is a narrower claim than "no cross-border transfer."
+The 26 legacy Cloudflare Workers (row 2 above) execute at whichever global edge node is nearest the
+request, and request processing/transit through them and other provider endpoints is not inventoried
+here. Because `src/storage/data_residency.py`'s enforcement is unwired (§2), nothing currently
+prevents or even tracks a request from being processed outside the documented primary region.
+Cross-jurisdiction transfer status should be read as **unverified**, not as absent — an
+SCC/adequacy-style assessment would need a real provider-and-request-flow inventory this document
+does not attempt.
 
 ## 2. Finding: `src/storage/data_residency.py` exists, is well-built, and is unwired
 

@@ -38,7 +38,7 @@ matrix's last-verified date, not a placeholder pending future entries.
 Per CLAUDE.md's 5-tier AI Gateway summary and the fuller 12-provider rotation in
 `src/ai_gateway/provider_rotation.py`:
 
-```
+```text
 Ollama (local, zero-cost) → llama.cpp (local, GGUF, CPU) → Groq → Cerebras → SambaNova
   → Gemini Flash → OpenRouter :free → Mistral → DeepSeek → HuggingFace → Together AI
   → Cloudflare AI → Offline stub
@@ -47,6 +47,17 @@ Ollama (local, zero-cost) → llama.cpp (local, GGUF, CPU) → Groq → Cerebras
 vLLM sits at "Tier 0" alongside llama.cpp/Ollama in `.env.example`'s own tier comments, but unlike
 those two it requires the `gpu` Compose profile — so in practice, on hardware without a GPU, the
 chain above (all CPU/API) is what actually serves every request.
+
+**This chain is `provider_rotation.py`'s own order — not the only one in the codebase.** At least
+three other, independently-configured provider orderings exist and do not match it or each other:
+`src/core/config.py`'s default (`"ollama,openrouter,huggingface,stub"`),
+`src/core/ml_pipeline.py`'s hardcoded `["tranc3", "ollama", "openrouter", "huggingface", "groq"]`,
+and `workers/infinity-ai/service.py`'s own documented chain (`ollama → groq → cerebras →
+openrouter → huggingface → together → deepseek → offline`). This is the same category of
+duplication as the circuit breakers (`docs/architecture/decisions/TASD-001-circuit-breaker-consolidation.md`)
+— multiple independent implementations of "the" fallback order that have drifted apart — flagged
+here honestly rather than picking one and presenting it as canonical when the code doesn't agree.
+Consolidating them is a real future pass, not attempted in this document.
 
 ## 4. VRAM / cost budgets — not yet meaningful to set
 

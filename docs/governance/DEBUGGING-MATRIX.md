@@ -38,6 +38,14 @@ proposed-only, then verified as genuinely deployed). Structured JSON logs carry 
 `user_id`, and `service_name` bindings (per `CLAUDE.md`'s Observability Stack section), so a Loki
 query filtered on a trace ID from §2 pulls every log line across every worker for that one request.
 
+**Privacy caveat, not yet resolved:** `user_id` in those log bindings is a stable per-user
+identifier, and Loki's `/search`/`/export` surfaces make it broadly queryable and exportable. This
+document does not establish whether `user_id` is pseudonymous by construction, what retention
+period applies, or who has access to search/export — those are real open questions for whoever owns
+the platform's data-protection posture, not settled facts. Treat centralized `user_id` logging as a
+disclosure surface requiring an explicit retention/access policy, not as a debugging convenience
+with no privacy cost.
+
 ## 4. Self-healing — what already happens without you
 
 `self_healer.py`'s "cell regeneration" pattern (each service is a cell; an unhealthy cell signals

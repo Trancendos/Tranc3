@@ -44,7 +44,8 @@ class TestCheckProvenance:
         result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
         assert result.cleared is True
         assert result.risk.status == ProvenanceStatus.CLEARED
-        assert "Andrew Porter" in result.risk.note
+        assert result.risk.cleared_by == "Andrew Porter"
+        assert result.risk.admin_notes == "review complete"
 
     def test_verified_caveat_override_also_unblocks(self, registry):
         registry.clear(
@@ -61,7 +62,7 @@ class TestCheckProvenance:
         registry.clear(MADAM_KRYSTAL, cleared_by="first", notes="a")
         registry.clear(MADAM_KRYSTAL, cleared_by="second", notes="b")
         result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
-        assert "second" in result.risk.note
+        assert result.risk.cleared_by == "second"
 
     def test_invalid_persisted_status_fails_closed(self, registry):
         # Simulates a corrupted/legacy row bypassing clear()'s enum-typed

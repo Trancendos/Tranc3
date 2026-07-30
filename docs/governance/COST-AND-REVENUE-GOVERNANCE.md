@@ -208,11 +208,10 @@ spending or investment authority.**
 - **Financial posture, honestly stated.** This platform has no live revenue, no external investors,
   and no financial reporting obligations beyond what §4's tax/fee flagging already covers. Per
   `CLAUDE.md`'s own architecture section, the one real, named financial constraint driving actual
-  decisions today is that **the founder's local server needs repair/replacement money that isn't
-  currently available** — this is why Cloud Only is the default deployment mode for every Location
-  and Hybrid/Local remain gated on funding rather than a technical blocker. That is the entirety of
-  this platform's current "financial matrix": one real constraint, already documented, not a set of
-  projections.
+  decisions today is that **self-hosted local hardware remains unfunded** — this is why Cloud Only
+  is the default deployment mode for every Location and Hybrid/Local remain gated on funding rather
+  than a technical blocker. That is the entirety of this platform's current "financial matrix": one
+  real constraint, already documented, not a set of projections.
 - **Investment.** The only investment question with any real substance today is the funding gap
   above (self-hosted hardware). There is no other investment activity — no cap table, no funding
   round, no speculative return-on-investment case to document. If that changes (e.g. a real funding

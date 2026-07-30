@@ -3,7 +3,7 @@
 > **What this is.** A single map of every mechanism on the platform that can outright halt
 > something — an AI, a request, a provider, a spend — rather than merely rate-limit or degrade it.
 > Before this document these were five unrelated concepts that happened to share the word "stop":
-> a Sovereign-tier kill switch, two independent circuit breakers, a quota-based request refusal,
+> a Sovereign-tier kill switch, four independent circuit breakers, a quota-based request refusal,
 > and a regex endpoint blocklist. Nothing here was broken; nothing was cross-referenced either.
 
 **Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-07-27
@@ -15,17 +15,23 @@
 | # | Mechanism | Scope | What actually stops | Trigger |
 |---|---|---|---|---|
 | 1 | `emergency_stop()` | Trance-One → a Prime + its managed AIs | A T2ance Prime and everything it manages, cascaded | Manual call, `initiated_by` an orchestrator |
-| 2 | Circuit breakers (×2 implementations) | Per-service-name or per-named-breaker | Calls to that one service/breaker only | Consecutive-failure count (see Threshold Matrix §6) |
+| 2 | Circuit breakers (×4 implementations) | Per-service-name or per-named-breaker | Calls to that one service/breaker only | Consecutive-failure count (see Threshold Matrix §6) |
 | 3 | AI Gateway provider hard-stop | One AI provider (Groq, Gemini, …) | Routing to that provider only — rotates to the next | 95% of that provider's own quota (`hard_stop_threshold`) |
 | 4 | CapacityGuard hard stop | One `CapacityService` resource | Raises `CapacityExceededError` on further `consume()` calls for that resource | 100% utilisation (see Threshold Matrix §4–5) |
 | 5 | Zero-Cost Enforcer blocklist | Any outbound HTTP call matching a pattern | That specific call, before it's made | Endpoint URL matches a `BLOCKED_SERVICES` regex |
 
-None of these five currently call each other. A Trance-One emergency stop doesn't touch AI Gateway
-providers; a provider hard-stop doesn't touch circuit breakers; the Zero-Cost blocklist is a
-pattern match, not a threshold. That's not necessarily wrong — they operate at genuinely different
-layers — but it means there is no single place that answers "has anything been hard-stopped right
-now," which is the gap this document closes by enumeration, and the gap §6's recommendation closes
-structurally.
+None of these five currently trigger each other's stop *decisions*. A Trance-One emergency stop
+doesn't touch AI Gateway providers; a provider hard-stop doesn't touch circuit breakers; the
+Zero-Cost blocklist is a pattern match, not a threshold. That's not necessarily wrong — they
+operate at genuinely different layers — but it means there is no single place that answers "has
+anything been hard-stopped right now," which is the gap this document closes by enumeration, and
+the gap §6's recommendation closes structurally.
+
+**One accounting-only exception:** `ProviderLimit.record_request()` (row 3's mechanism) now also
+mirrors usage into row 4's `CapacityGuard.consume()` (`docs/governance/THRESHOLD-MATRIX.md` §5) —
+that's a one-way data feed so CapacityGuard's Observatory escalation events fire against real
+provider traffic, not a control-flow connection. Row 3's own 95% hard-stop decision remains fully
+independent of row 4 and is unaffected by whatever CapacityGuard does with the mirrored numbers.
 
 ## 2. Sovereign-tier emergency stop — `src/entities/templates/trance_one_base.py`
 

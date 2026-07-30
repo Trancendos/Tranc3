@@ -72,14 +72,22 @@ implemented, until `src/cryptex/` actually subscribes to `capacity.threshold_cro
 
 Before this pass, `CapacityGuard` (§4) was fully built, self-consistent, and had **zero call sites
 anywhere in the codebase outside its own module** and **zero test coverage** — a real 4-band
-escalation ladder that never actually ran. It's now wired additively into
-`ProviderLimit.record_request()` (`src/ai_gateway/provider_rotation.py`) for the six providers that
-have a matching `CapacityService` entry (Groq, Cerebras, SambaNova, Gemini, OpenRouter,
-HuggingFace) — see `_feed_capacity_guard()`. This is intentionally **observational only**: it never
-raises, never blocks a request, and never changes `provider_rotation.py`'s own rotation/hard-stop
-decisions, which remain fully authoritative. It exists purely so the 80/90/95/100% Observatory
-events actually fire against real traffic instead of sitting unreachable. Covered by
-`tests/test_capacity_guard.py` (new) and `tests/test_provider_rotation_capacity_feed.py` (new).
+escalation ladder that never actually ran. It's now wired additively from two independent feeds:
+
+- `ProviderLimit.record_request()` (`src/ai_gateway/provider_rotation.py`) for the six providers
+  that have a matching `CapacityService` entry (Groq, Cerebras, SambaNova, Gemini, OpenRouter,
+  HuggingFace) — see `_feed_capacity_guard()` in that module.
+- `AIGateway.route()` (`src/ai_gateway/gateway.py`) feeds every request's token usage into
+  `CapacityService.AI_TOKENS_DAILY` — see that module's own `_feed_capacity_guard()` (same name,
+  different module, both additive). This one is a **platform-wide aggregate**, not per-tenant:
+  `consume()` has no tenant dimension, so all tenants land in one shared counter — see
+  `docs/governance/TOKEN-EFFICIENCY-MATRIX.md` §4 for the honest gap this leaves.
+
+Both feeds are intentionally **observational only**: neither raises, blocks a request, or changes
+`provider_rotation.py`'s/`gateway.py`'s own rotation/hard-stop/budget decisions, which remain fully
+authoritative. They exist purely so the 80/90/95/100% Observatory events actually fire against real
+traffic instead of sitting unreachable. Covered by `tests/test_capacity_guard.py`,
+`tests/test_provider_rotation_capacity_feed.py`, and `tests/test_ai_gateway_capacity_feed.py`.
 
 ## 6. Circuit breakers — four independent implementations (Phase 1 + 2 complete)
 

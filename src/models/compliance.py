@@ -78,6 +78,11 @@ class ProvenanceRisk:
     status: ProvenanceStatus
     note: str
     mc_reference: str = "MC-013"
+    # Admin clearance metadata — kept as separate fields (not concatenated into
+    # `note`) so a public route can omit them without string-parsing `note` to
+    # redact them. None unless an override has been recorded.
+    cleared_by: Optional[str] = None
+    admin_notes: Optional[str] = None
 
 
 @dataclass
@@ -253,8 +258,10 @@ def check_provenance(
             entity=seed_risk.entity,
             risk=seed_risk.risk,
             status=effective_status,
-            note=f"{seed_risk.note} [cleared by {override['cleared_by']}: {override['notes']}]",
+            note=seed_risk.note,
             mc_reference=seed_risk.mc_reference,
+            cleared_by=override["cleared_by"],
+            admin_notes=override["notes"],
         )
         return ProvenanceCheckResult(
             cleared=effective_status != ProvenanceStatus.NOT_ASSESSED, risk=effective_risk

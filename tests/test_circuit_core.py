@@ -45,3 +45,28 @@ class TestLogCircuitTransition:
         record = caplog.records[0]
         assert record.from_state == "closed"
         assert record.to_state == "open"
+
+
+class TestLoopValidatorBreakerRecoveryPath:
+    """loop_validator.CircuitBreaker's OPEN -> HALF_OPEN -> CLOSED path — not
+    exercised by tests/test_full_suite.py's existing coverage, which
+    deliberately uses recovery_timeout=999 to stay in OPEN."""
+
+    def test_recovers_through_half_open_to_closed(self):
+        from src.validation.loop_validator import CircuitBreaker, CircuitState
+
+        cb = CircuitBreaker(
+            "recovery-test", failure_threshold=1, recovery_timeout=0.0, success_threshold=1
+        )
+        try:
+            cb.call(lambda: (_ for _ in ()).throw(ValueError("fail")))
+        except ValueError:
+            pass
+
+        # recovery_timeout=0.0 means the circuit opened and immediately became
+        # eligible to recover — the next `.state` read observes HALF_OPEN.
+        assert cb.state == CircuitState.HALF_OPEN
+
+        result = cb.call(lambda: "recovered")
+        assert result == "recovered"
+        assert cb.state == CircuitState.CLOSED

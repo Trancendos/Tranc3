@@ -5,7 +5,7 @@ Provider chain (priority order — rotate at 80%, hard-stop at 95%):
  0. LiteLLM proxy   (local aggregator — delegates to all below)
  1. Ollama          (local, truly zero-cost, no limits)
  2. Groq            (free: 14,400 req/day, 6,000 tokens/min)
- 3. Cerebras        (free: 30 req/min, fast inference)
+ 3. Cerebras        (free: 30 req/hour, fast inference)
  4. SambaNova       (free: 50K tokens/req, generous limits)
  5. Gemini Flash    (free: 1,500 req/day, 1M tokens/min)
  6. OpenRouter :free (free: 200 req/day per model, 50+ models)

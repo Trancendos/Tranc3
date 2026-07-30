@@ -1,7 +1,7 @@
 # Token Efficiency Matrix
 
 > **What this is.** `docs/governance/THRESHOLD-MATRIX.md` §3 already documents per-provider rate
-> *ceilings* (Groq 14,400 req/day, Cerebras 30 req/min, etc.) — this document is the different,
+> *ceilings* (Groq 14,400 req/day, Cerebras 30 req/hour, etc.) — this document is the different,
 > narrower angle: the mechanisms that make token *usage itself* efficient, so those ceilings are
 > reached slower. It deliberately doesn't repeat THRESHOLD-MATRIX's tables.
 
@@ -45,11 +45,15 @@ document here.
   it's actually effective (high hit rate) or mostly cache-misses in practice hasn't been measured
   (`GatewayMetrics.cache_hits` exists but no dashboard/report currently surfaces a hit-rate
   percentage).
-- **No token-cost-per-request budget alerting** — `TOKEN_BUDGET_EXCEEDED` is a hard stop at the
-  daily ceiling, but there's no 80%/90% warning band analogous to CapacityGuard's 4-band escalation
-  (`docs/governance/THRESHOLD-MATRIX.md` §4) for token budgets specifically. Worth considering as a
-  future CapacityGuard `CapacityService` entry, following the same wiring pattern already used for
-  provider request/hour limits.
+- **Token-budget escalation is wired, but as a platform-wide aggregate, not per-tenant.**
+  `src/ai_gateway/gateway.py`'s `_feed_capacity_guard()` (added alongside
+  `provider_rotation.py`'s per-provider feed — `docs/governance/THRESHOLD-MATRIX.md` §5) mirrors
+  every request's token usage into `CapacityService.AI_TOKENS_DAILY`, so CapacityGuard's 80/90/95/100%
+  escalation ladder does fire against real traffic. `TOKEN_BUDGET_EXCEEDED` (the per-tenant hard
+  stop above) remains fully authoritative and unaffected. The gap: `CapacityGuard.consume()` has no
+  tenant dimension, so all tenants' usage lands in one shared counter — a genuinely per-tenant
+  80%/90% warning band would need tenant-keyed state added to CapacityGuard itself, not attempted
+  here.
 
 ## 5. Cross-references
 

@@ -12,11 +12,11 @@
 
 ## 1. The four layers, narrowest to broadest
 
-```
+```text
 Layer 0: Local pre-commit (.pre-commit-config.yaml)     — runs before a commit exists
 Layer 1: CI gates (.github/workflows/, .forgejo/workflows/) — runs on push/PR
-Layer 2: DEFSTAN framework (docs/defstan/)                — quality benchmark, 7 mapped standards
-Layer 3: Magna Carta (compliance/register.yaml)           — 9 runtime rules, submodule-governed
+Layer 2: DEFSTAN framework (docs/defstan/, compliance/register.yaml) — quality benchmark, 7 mapped standards
+Layer 3: Magna Carta (compliance/magna-carta/compliance/magna_carta_register.yaml) — 9 runtime rules, submodule-governed
 ```
 
 This mirrors `docs/compliance/COMPLIANCE-BLUEPRINT.md`'s own 4-layer model for regulatory
@@ -72,11 +72,14 @@ to a public civilian platform. Seven standards mapped: 00-700 (Information Assur
 00-055 (Safety-Related Software, adapted for AI safety/fail-safe design), 00-056 (Software
 Development, full), 00-600 (Supportability/ILS, adapted for observability), 00-044 (Configuration
 Management, full), 05-086 (Quality Assurance, full — this is where Layers 0-1 above are the actual
-QA evidence), 05-057 (Technical Documentation, adapted). `scripts/run_compliance_mc.py` (see
-`Makefile`'s `compliance-mc` target) generates the live DEFSTAN Compliance Report against
-`compliance/register.yaml`.
+QA evidence), 05-057 (Technical Documentation, adapted). `compliance/register.yaml`
+(`src/compliance/checker.py`'s `REGISTER_PATH`) is this layer's own DEFSTAN register — distinct
+from Layer 3's Magna Carta register below. `scripts/run_compliance_mc.py` (see `Makefile`'s
+`compliance-mc` target) generates a **merged** report: `load_and_check_merged()` checks the DEFSTAN
+register above and, optionally, the Magna Carta register (`mc_register_path`) together — it is not
+a DEFSTAN-only report despite the script's name.
 
-## 5. Layer 3 — Magna Carta (`compliance/register.yaml`, `compliance/magna-carta/` submodule)
+## 5. Layer 3 — Magna Carta (`compliance/magna-carta/compliance/magna_carta_register.yaml`, `compliance/magna-carta/` submodule)
 
 9 runtime rules enforced via `src/compliance/middleware.py` — see
 `docs/governance/TRANCENDOS-MODELS-MATRIX.md` §10 for how MC-013 specifically gates model
