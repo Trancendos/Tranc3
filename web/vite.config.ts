@@ -329,7 +329,11 @@ export default defineConfig({
         browser: {
           enabled: true,
           headless: true,
-          provider: playwright({}),
+          provider: playwright({
+            launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
+              ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+              : undefined
+          }),
           instances: [{
             browser: 'chromium'
           }]

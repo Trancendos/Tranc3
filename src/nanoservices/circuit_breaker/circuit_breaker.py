@@ -12,6 +12,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
+# Shared transition primitives (TASD-001 Phase 2).
+from src.resilience.circuit_core import log_circuit_transition, should_recover
+
 # Canonical CircuitState (TASD-001 Phase 1) — re-exported for backward compatibility.
 from src.resilience.circuit_state import CircuitState
 
@@ -69,7 +72,7 @@ class CircuitBreaker:
     def state(self) -> CircuitState:
         # Auto-transition from OPEN to HALF_OPEN after timeout
         if self._state == CircuitState.OPEN:
-            if time.time() - self._state_changed_at >= self._config.timeout_seconds:
+            if should_recover(time.time() - self._state_changed_at, self._config.timeout_seconds):
                 self._transition(CircuitState.HALF_OPEN)
         return self._state
 
@@ -159,6 +162,7 @@ class CircuitBreaker:
         logger.info(
             "Circuit %s: %s → %s", self._config.service_name, old_state.value, new_state.value
         )
+        log_circuit_transition(self._config.service_name, old_state, new_state)
         for listener in self._listeners:
             try:
                 listener(old_state, new_state)

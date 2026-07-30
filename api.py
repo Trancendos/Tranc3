@@ -739,6 +739,18 @@ if os.getenv("CAB_GATE_ENABLED", "false").lower() == "true":
     app.add_middleware(CABMiddleware)
 app.add_middleware(RBACMiddleware)
 
+# DataResidencyMiddleware: staged, opt-in rollout. Disabled by default
+# (DATA_RESIDENCY_MIDDLEWARE_ENABLED unset/false) — src/storage/data_residency.py is
+# fully built and tested but was never wired into the app. When enabled, defaults to
+# warn-only (logs + Observatory audit event, does not block writes) unless the operator
+# explicitly sets DATA_RESIDENCY_ENFORCE=true, so the first deployment surfaces any
+# false-positive region mismatches before anything starts returning 403s.
+if os.getenv("DATA_RESIDENCY_MIDDLEWARE_ENABLED", "false").lower() == "true":
+    os.environ.setdefault("DATA_RESIDENCY_ENFORCE", "false")
+    from src.storage.data_residency import DataResidencyMiddleware  # noqa: PLC0415
+
+    app.add_middleware(DataResidencyMiddleware)
+
 # ── Additional middleware: GZip, TrustedHost, Idempotency, ContentNegotiation ─
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware

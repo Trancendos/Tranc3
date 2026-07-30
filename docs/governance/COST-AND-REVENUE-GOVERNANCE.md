@@ -9,7 +9,8 @@
 
 **Code:** `src/master_worker/zero_cost_enforcer.py` (`ZeroCostEnforcer`, `BLOCKED_SERVICES`),
 `config/zero_cost/providers.yaml` (`src/zero_cost/registry.py`), `scripts/zero_cost_audit.py`.
-**Owner:** Royal Bank of Arcadia (Dorris Fontaine) · **Version:** 1.0.0 · **Created:** 2026-07-17
+**Owner:** Royal Bank of Arcadia (Dorris Fontaine) · **Version:** 1.1.0 · **Created:** 2026-07-17
+· **Last verified:** 2026-07-30
 
 ---
 
@@ -62,12 +63,34 @@ this fix, even though every one of them is a genuinely approved zero-cost provid
 file. Fixed to extract `.id` from each dict; added regression tests
 (`tests/test_zero_cost_registry.py`) covering both the dict-extraction fix and the crash fix.
 
-**Known remaining gap, not fully closed:** the registry itself has an internal ID-naming
-inconsistency — `capabilities.ai_inference` lists `openrouter_free` (underscore) while
-`conditional_cloud` separately lists `openrouter-free` (hyphen), and `workers/infinity-ai` uses bare
-`openrouter`. The wiring above maps `openrouter` → `openrouter_free` at the call site rather than
-editing `providers.yaml`'s data, since normalizing the registry's own provider-ID taxonomy across
-every consumer is a larger, deliberate change this pass didn't make unilaterally.
+**Re-investigated 2026-07-30 — not a bug, closing as by-design.** This was flagged as an "ID-naming
+inconsistency" needing a source-level fix. Deeper investigation found three separate things that
+look similar but aren't the same issue:
+
+1. `capabilities.ai_inference` lists `openrouter_free` (and, consistently, `groq_free`,
+   `cerebras_free`, `sambanova_free`, `mistral_free`, `github_models_free` — every entry in that
+   capability carries a `_free` suffix). This is deliberate: it distinguishes each provider's free
+   tier from a hypothetical paid tier of the *same* provider, which matters because
+   `is_approved()`/`approved_ids()` (`src/zero_cost/registry.py`) only ever consult
+   `capabilities.*.providers` — this is the one naming domain those functions actually check.
+2. `conditional_cloud`'s `openrouter-free` (hyphen) is a **completely separate list** — confirmed
+   by reading `src/zero_cost/registry.py`: `conditional_cloud` is never read by `is_approved()` or
+   `approved_ids()` at all (only kept for legacy audit-script backward compatibility, per
+   `load_registry()`'s `result.setdefault("conditional_cloud", [])`). Every entry in that list uses
+   hyphens (`aws-always-free`, `gcp-always-free`, `huggingface-inference`, `together-ai`, ...) —
+   its own internally-consistent convention, documenting card/billing-required providers with a
+   `risk:` field, unrelated to the zero-cost-approved list. It reusing the word "openrouter" is a
+   coincidence of subject matter, not a taxonomy collision.
+3. `workers/infinity-ai`'s bare `ProviderName.openrouter` is correctly named for what *it's* used
+   for: the public API's `"owned_by"` field and the real `OPENROUTER_API_KEY` env var name (matching
+   OpenRouter's own branding) — renaming it to match the registry's `_free` suffix would break both
+   of those, for no benefit.
+
+`_REGISTRY_ID_OVERRIDES` (`workers/infinity-ai/service.py:502`) is therefore the correct, permanent
+adapter between two legitimately-differently-named domains, not a workaround for a bug — there is
+no single name that serves both the public-facing API/env-var identity and the free/paid-tier
+distinction the registry needs. No code change made this pass; the fix was determined to be net-
+negative once actually investigated; the original "known gap" framing above was too pessimistic.
 
 ## 3. Escalation chain for any potential cost
 
@@ -136,15 +159,17 @@ verify-before-document convention (`docs/architecture/ea-workbook/README.md`).
 
 ## 6. Open items
 
-- The registry's own `openrouter_free` / `openrouter-free` / `openrouter` ID-naming inconsistency
-  (§2) is worked around at the `workers/infinity-ai` call site, not fixed at the source — a
-  deliberate, larger `providers.yaml` cleanup this pass didn't make unilaterally.
-- `src/cloud/cost_optimizer.py` (`MultiCloudCostOptimizer`) was found during this review: dead code,
-  never imported anywhere, defaulting `AWS_ENABLED`/`AZURE_ENABLED`/`GCP_ENABLED` to `"true"` and
-  estimating ~£2,600/month of paid multi-cloud spend — directly contradicting this platform's
-  zero-cost architecture. It predates the self-hosted pivot (referenced only in `wiki-content/
-  Historical-*` docs). Recommend removal; not deleted in this pass pending confirmation it isn't
-  wanted for some future multi-cloud evaluation path.
+- ~~The registry's `openrouter_free` / `openrouter-free` / `openrouter` naming~~ — **closed
+  2026-07-30, no change made.** Re-investigated per §2's update above: these are three genuinely
+  separate naming domains (the approved-capability list's `_free`-suffixed IDs, the unrelated
+  `conditional_cloud` documentation-only list, and the public-API-facing provider name), not one
+  inconsistency. `_REGISTRY_ID_OVERRIDES` is the correct permanent adapter, not a workaround.
+- ~~`src/cloud/cost_optimizer.py` (`MultiCloudCostOptimizer`)~~ — **removed 2026-07-30.** Was dead
+  code, never imported anywhere, defaulting `AWS_ENABLED`/`AZURE_ENABLED`/`GCP_ENABLED` to `"true"`
+  and estimating ~£2,600/month of paid multi-cloud spend, directly contradicting this platform's
+  zero-cost architecture. Predated the self-hosted pivot (still referenced only in `wiki-content/
+  Historical-*` docs, left as-is since those are archival). Confirmed unwanted and deleted; no
+  other code referenced it.
 - `workers/vrar3d`'s optional `SKETCHFAB_API_KEY` integration is not listed in
   `config/zero_cost/providers.yaml` or `ZeroCostEnforcer.BLOCKED_SERVICES` — same class of gap as
   the infinity-ai item above, found later in the same audit pass (`18_cost_and_revenue_review.csv`
@@ -167,3 +192,39 @@ verify-before-document convention (`docs/architecture/ea-workbook/README.md`).
   sidecars in `docker-compose.production.yml` (Traefik, Prometheus, Grafana, MISP, Wazuh, and
   similar third-party self-hosted stacks) remain outside this workbook's scope and would need their
   own review pass if this process is extended to them.
+
+## 7. Financial posture, investment, and passive income — consolidated
+
+This section exists because five separate documents were requested — a Passive Income Matrix, a
+Financial Matrix, a Monetization Matrix, a Revenue Generation Matrix, and an Investment Matrix —
+and building all five separately would have fragmented this file's existing §5/§6 rather than
+added anything. Everything real that any of those five would have contained lives here instead,
+under the same disclaimers as §1: **not tax advice, not a real revenue projection, no autonomous
+spending or investment authority.**
+
+- **Passive income / monetization / revenue generation** — already §5's job. Nothing new to add;
+  see §5's Arcadian Exchange review process and the 78-service CSV it produces. A separate matrix
+  for these three would just restate §5 under different headings.
+- **Financial posture, honestly stated.** This platform has no live revenue, no external investors,
+  and no financial reporting obligations beyond what §4's tax/fee flagging already covers. Per
+  `CLAUDE.md`'s own architecture section, the one real, named financial constraint driving actual
+  decisions today is that **self-hosted local hardware remains unfunded** — this is why Cloud Only
+  is the default deployment mode for every Location and Hybrid/Local remain gated on funding rather
+  than a technical blocker. That is the entirety of this platform's current "financial matrix": one
+  real constraint, already documented, not a set of projections.
+- **Investment.** The only investment question with any real substance today is the funding gap
+  above (self-hosted hardware). There is no other investment activity — no cap table, no funding
+  round, no speculative return-on-investment case to document. If that changes (e.g. a real funding
+  decision needs evaluating), it belongs in this section as a dated, factual addendum — not as a
+  projected-returns document, which this platform has no basis to produce honestly.
+
+**Recommendation:** the next time any of Passive Income / Financial / Monetization / Revenue
+Generation / Investment comes up as a request, point back to this section (or §5 for the
+monetization-idea process specifically) rather than starting a new document — that's the whole
+reason this consolidation exists.
+
+## 8. Cross-references
+
+- `docs/governance/TOKEN-EFFICIENCY-MATRIX.md` — token-consumption efficiency directly supports
+  §2's zero-cost enforcement (slower budget consumption reduces pressure to ever reach a paid tier)
+- `docs/governance/THRESHOLD-MATRIX.md` — the numeric ceilings §2/§3's mechanisms enforce

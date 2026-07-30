@@ -37,6 +37,31 @@ from src.ai_gateway.types import (
 logger = logging.getLogger("tranc3.ai_gateway")
 
 
+def _feed_capacity_guard(tenant_id: str, tokens_used: int) -> None:
+    """Feed token usage into CapacityGuard's CapacityService.AI_TOKENS_DAILY
+    so its 80/90/95/100% Observatory escalation ladder fires against real
+    traffic — see docs/governance/TOKEN-EFFICIENCY-MATRIX.md §4.
+
+    This is a platform-wide aggregate, not a per-tenant one:
+    CapacityGuard.consume() has a single shared bucket per CapacityService,
+    with no tenant dimension, so usage from every tenant accumulates into
+    one AI_TOKENS_DAILY counter. `tenant_id` is accepted only for the debug
+    log below, not used to scope consumption. Per-tenant escalation would
+    require adding tenant-keyed state to CapacityGuard itself — a separate,
+    larger change, not attempted here.
+
+    Additive only: this module's own daily_token_budget/tokens_used_today
+    check (above) remains fully authoritative for TOKEN_BUDGET_EXCEEDED; a
+    CapacityGuard threshold crossing here only produces an Observatory
+    event. Never raises."""
+    try:
+        from src.capacity.guard import CapacityService, get_capacity_guard
+
+        get_capacity_guard().consume(CapacityService.AI_TOKENS_DAILY, tokens_used)
+    except Exception:
+        logger.debug("_feed_capacity_guard(%r) failed", tenant_id, exc_info=True)
+
+
 class AIGatewayError(Exception):
     """AI gateway specific errors."""
 
@@ -258,6 +283,7 @@ class AIGateway:
 
                 # Update token usage
                 config.tokens_used_today += response.tokens_total
+                _feed_capacity_guard(config.tenant_id, response.tokens_total)
 
                 # Wire zero-cost tracker
                 try:

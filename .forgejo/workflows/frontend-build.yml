@@ -36,6 +36,12 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
 
+      - name: Install Playwright browser (Storybook a11y tests)
+        run: npx playwright install --with-deps chromium
+
+      - name: Storybook component + a11y tests
+        run: npm run test
+
       - name: Build production bundle
         run: npm run build
         env:

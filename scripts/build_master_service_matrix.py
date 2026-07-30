@@ -1325,12 +1325,11 @@ road_rows = [
     ],
     [
         "Architecture",
-        "Resolve the duplicate 'Void' implementation",
-        "workers/the-void/ (289 lines, includes a Rust crypto extension, last touched in commit 634962c) implements the same AES-GCM vault concept as workers/vault-service/ (803 lines, the one actually wired into docker-compose.production.yml and documented throughout this workbook) — but the-void/ is not registered in compose at all and is not deployed anywhere",
-        "A human needs to decide: is the-void/ an abandoned earlier attempt safe to remove, or a newer implementation meant to eventually replace vault-service/? Do not delete either without that decision",
-        "Prometheus",
+        "Resolved (2026-07-30): duplicate 'Void' implementation",
+        "workers/the-void/ (289 lines, Rust crypto extension, never registered in docker-compose.production.yml) was an abandoned parallel attempt, confirmed via a human decision and deleted. workers/infinity-void/ (port 8002, pure Python stdlib + SQLite AES-GCM) is the canonical, deployed successor — see CLAUDE.md's Self-Hosted Worker Map. workers/vault-service/ remains deployed but deprecated (see its own DEPRECATED.md, corrected to point at infinity-void); scripts/migrate_vault_secrets.py already implements the real secrets migration path and must be run against production before vault-service's docker-compose entry is removed — that is a live-data action, not a code cleanup, and intentionally not done here",
+        "Andrew Porter",
         "P2",
-        "Not started",
+        "Resolved",
     ],
     [
         "Governance",
