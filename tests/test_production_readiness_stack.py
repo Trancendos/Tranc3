@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,6 +7,7 @@ import pytest
 import yaml
 
 from tests._repo_io import read_repo_text
+from tests._worker_import_utils import import_worker
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -88,12 +88,8 @@ def test_api_gateway_refuses_production_startup_with_missing_upstream(monkeypatc
     monkeypatch.delenv("ORDERS_SERVICE_URL", raising=False)
     monkeypatch.delenv("PAYMENTS_SERVICE_URL", raising=False)
 
-    spec = importlib.util.spec_from_file_location(
-        f"api_gateway_worker_{uuid4().hex}",
-        ROOT / "workers" / "api-gateway" / "worker.py",
-    )
-    module = importlib.util.module_from_spec(spec)
-
     with pytest.raises(RuntimeError, match="production startup requires upstream"):
-        assert spec.loader is not None
-        spec.loader.exec_module(module)
+        import_worker(
+            f"api_gateway_worker_{uuid4().hex}",
+            ROOT / "workers" / "api-gateway" / "worker.py",
+        )
