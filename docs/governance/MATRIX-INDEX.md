@@ -56,7 +56,7 @@
 | Solutions Matrix | **Genuine gap** | No dedicated "solutions" tracking system found distinct from Remediation | Recorded here as a gap |
 | Testing Matrix | Exists + documented | The Chaos Party (`tests/test_chaos.py`, `workers/chaos-party/`) + `src/nanoservices/chaos_engineering/` are already the named entity/system for this | `CLAUDE.md` entity table |
 | AI to Agent Matrix | Exists, newly documented | `src/agents/orchestrator.py` — real SQLite-backed multi-agent task queue (`AgentConfig`, `AgentTask`, priority scheduling) | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §2 |
-| AI to Bot Matrix | Exists + documented | `src/workers/bot_registry.py`'s `BotRegistry` — 12 bot types, already documented in `CLAUDE.md`'s BotRegistry section | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §3 |
+| AI to Bot Matrix | Exists + documented | `tranc3-bots/bots/registry.py`'s `BotRegistry` — 12 bot types, already documented in `CLAUDE.md`'s BotRegistry section. `src/workers/bot_registry.py` is a separate, narrower 7-type inference-only implementation — see §3 | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §3 |
 | Orchestrator AI to Prime AI Matrix | Exists, newly documented | `trance_one/tier_bridge.py` (`TierCommand`/`TierCommandType`) — real Tier-1→Tier-2 command dispatch, live at `/sovereign/dispatch/{command_type}` | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §4 |
 | Prime AI to AI Matrix | Exists, newly documented | `t2ance/prime_registry.py`/`domain_authority.py` — `prime_for_entity()` maps every Tier-3 entity to its governing Domain Prime | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §5 |
 | Location (Application) Matrix | Exists + documented | `PLATFORM_ENTITIES` itself | `CLAUDE.md` entity table, `PLATFORM_ENTITIES.md` |
@@ -73,7 +73,7 @@ Four new docs, each grounded in real, already-running code found during this inv
 1. **[ERROR-REMEDIATION-MATRIX.md](ERROR-REMEDIATION-MATRIX.md)** — Error Code Registry, CVE/Vulnerability tracking, Remediation, Self-Healing, and Diagnosis/Resolution, which all turned out to be genuinely interconnected (an error surfaces → gets classified against a CVE/pattern → triggers remediation → self-healing closes the loop) rather than five separate systems.
 2. **[PERMISSIONS-ACCESS-MATRIX.md](PERMISSIONS-ACCESS-MATRIX.md)** — the Role Registry (who holds a Job Description), the Access Registry (who's consented into which Location), and Zero Trust IAM (device/MFA/geo risk scoring), consolidated.
 3. **[PRIVACY-MATRIX.md](PRIVACY-MATRIX.md)** — the GDPR DSR workflow, which was fully built and REQ-PRI-001-tagged but had no governance doc pointing to it.
-4. **[AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md)** — AI-to-Agent, AI-to-Bot, Orchestrator-to-Prime, and Prime-to-AI, since these four are really one hierarchy (Trance-One Sovereign → T2ance Primes → Tranc3 Lead AIs → Agents → Bots) split across `trance_one/`, `t2ance/`, `src/agents/`, and `src/workers/bot_registry.py`.
+4. **[AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md)** — AI-to-Agent, AI-to-Bot, Orchestrator-to-Prime, and Prime-to-AI, since these four are really one hierarchy (Trance-One Sovereign → T2ance Primes → Tranc3 Lead AIs → Agents → Bots) split across `trance_one/`, `t2ance/`, `src/agents/`, and `tranc3-bots/bots/registry.py`.
 
 ## 4. Genuine gaps recorded (not built)
 

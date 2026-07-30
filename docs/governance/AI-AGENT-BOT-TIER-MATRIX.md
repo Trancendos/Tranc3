@@ -4,7 +4,7 @@
 > and Prime-AI-to-AI — are really one 5-tier hierarchy split across four modules that don't
 > currently cross-reference each other: `trance_one/` (Tier 1), `t2ance/` (Tier 2), the named
 > Lead AIs (Tier 3, already covered by `PLATFORM_ENTITIES`), `src/agents/` (Tier 4), and
-> `src/workers/bot_registry.py` (Tier 5). This doc is the connective map.
+> `tranc3-bots/bots/registry.py` (Tier 5). This doc is the connective map.
 
 **Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-07-30
 
@@ -18,7 +18,7 @@
 | 2 | Prime | `t2ance/` | Yes — `/primes` HTTP surface |
 | 3 | Lead AI | `PLATFORM_ENTITIES` (`src/entities/platform.py`) | Yes — the 43-entity table itself |
 | 4 | Agent | `src/agents/` | Yes — SQLite-backed, no HTTP surface yet (see §2) |
-| 5 | Bot | `src/workers/bot_registry.py` | Yes — `BotRegistry`, already in `CLAUDE.md` |
+| 5 | Bot | `tranc3-bots/bots/registry.py` | Yes — `BotRegistry`, already in `CLAUDE.md` |
 
 This matches `CLAUDE.md`'s own Tier 1–5 vocabulary (Sovereign/Primes/Lead AI/Agents/Bots) — nothing
 new is being introduced, just connected.
@@ -47,11 +47,20 @@ exposed.
 
 ## 3. AI to Bot
 
-`src/workers/bot_registry.py`'s `BotRegistry` — already documented in `CLAUDE.md`'s BotRegistry
-section. 12 bot types split into **inference bots** (`InferenceBot`, `EmbeddingBot`, `EmotionBot`,
-`TokenizeBot`, `ConsciousnessBot`, `PersonalityBot`, `PredictBot` — all proxy to Tranc3Engine) and
-**utility bots** (`CODE`, `MEMORY`, `MONITOR`, `SEARCH`, `SUMMARISE` — standalone). This is the most
-mature of the four relationships in this doc — already live in `tranc3-bots` (port 8080).
+**Correction:** an earlier version of this doc pointed to the wrong module. The real 12-type
+`BotRegistry` already documented in `CLAUDE.md`'s BotRegistry section is
+`tranc3-bots/bots/registry.py`, whose `BotType` enum (`tranc3-bots/bots/types.py`) defines all 12:
+**inference bots** (`generate`, `embed`, `emotion`, `tokenize`, `consciousness`, `personality`,
+`predict` — proxy to `TRANC3_ENGINE_URL`, per `tranc3-bots/bots/handlers.py`'s own header comment)
+and **utility bots** (`code`, `memory`, `monitor`, `search`, `summarise` — standalone). This is the
+most mature of the four relationships in this doc — already live in `tranc3-bots` (port 8080).
+
+`src/workers/bot_registry.py` is a **separate, narrower implementation** — 7 classes
+(`InferenceBot`, `EmbeddingBot`, `EmotionBot`, `TokenizeBot`, `ConsciousnessBot`, `PersonalityBot`,
+`PredictBot`), inference-only, no utility bots at all. Whether this is a second, parallel
+BotRegistry (the same kind of duplication `TASD-001` found for circuit breakers) or a deliberately
+separate in-process convenience wrapper wasn't resolved during this pass — worth a closer look
+before assuming either file is dead code.
 
 ## 4. Orchestrator AI to Prime AI
 
@@ -84,7 +93,7 @@ is live at `/primes/intelligence`.
 ## 6. What this doc adds that didn't exist before
 
 Nothing new was built. The value here is that `trance_one/`, `t2ance/`, `src/agents/`, and
-`src/workers/bot_registry.py` had zero cross-references to each other before this pass — each is a
+`tranc3-bots/bots/registry.py` had zero cross-references to each other before this pass — each is a
 real, independently-documented-or-undocumented system, and this doc is the first place that states
 plainly they form one 5-tier command/delegation hierarchy.
 

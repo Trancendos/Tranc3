@@ -31,13 +31,18 @@ likely caused it, rather than just logging the symptom.
 
 - `src/platform/intelligent_scanner.py` and `zero_cost_service_map.py` — platform-side vulnerability
   surface tracking.
-- `.forgejo/workflows/security-scan.yml` (pip-audit, bandit, safety, npm audit, Semgrep, gitleaks)
-  and `dependency-audit.yml` (weekly + on-PR dependency scanning) — the actual CI-enforced CVE
-  detection layer, already documented in `CLAUDE.md`'s CI/CD section.
+- `.forgejo/workflows/security-scan.yml` (pip-audit, bandit, ruff, npm audit, Semgrep, gitleaks —
+  **not** Safety, deliberately removed per the workflow's own comment: "no longer free for
+  commercial use") and `dependency-audit.yml` (weekly + on-PR dependency scanning) — the actual
+  CI-enforced CVE detection layer, already documented in `CLAUDE.md`'s CI/CD section.
 
-No SBOM is generated anywhere in this pipeline today — see the BOM/supply-chain research from this
-same session's chat history for the recommended next step (`syft` + self-hosted Dependency-Track),
-not yet built.
+**Correction:** an earlier version of this doc claimed no SBOM is generated anywhere in this
+pipeline — wrong. `security-scan.yml` already runs a real SBOM pipeline more complete than the
+BOM/supply-chain research this session separately produced: `cyclonedx-py` for Python and `npm sbom`
+for JS/TS per-language, plus a dedicated `sbom-generation` job running **syft** (CycloneDX JSON +
+SPDX JSON) and **grype** (vulnerability matching against that SBOM), with results optionally
+uploaded to a self-hosted **Dependency-Track** instance (`DTRACK_API_KEY`). The self-hosted-BOM
+recommendation from this session's chat history is already built, not a future step.
 
 ## 4. Remediation
 
@@ -60,9 +65,19 @@ right now); the Automated Auditor repairs *compliance drift* (a posture check fa
 
 `src/observability/self_healer.py`'s `SelfHealer` — explicitly framed as the platform's "immune
 system": polls configured services as `CellState`s (name, url, healthy, consecutive_failures),
-classifies each as `degraded` (≥2 consecutive failures) or `critical` (≥5), and triggers corrective
-actions (log escalation, cooldown reset, alert emission) without human intervention. Zero external
-dependencies — stdlib + httpx only, matching the platform's zero-cost posture.
+classifies each as `degraded` (≥2 consecutive failures) or `critical` (≥5), and calls any registered
+`on_recovery_needed` hooks when a cell degrades. Zero external dependencies — stdlib + httpx only,
+matching the platform's zero-cost posture.
+
+**Correction:** an earlier version of this doc overstated what this actually does — the module
+itself only logs (WARNING on degraded, CRITICAL on critical) and invokes whatever hooks are
+registered; it does not itself perform a cooldown reset or emit an alert. `api.py`'s startup
+(`get_healer()` → `run_forever()`) wires the monitor into the running app and it does poll P0/P1
+cells for real, but **no `on_recovery_needed` hook is registered anywhere in this repo** — grepping
+the whole tree finds zero calls to `on_recovery_needed`. Today this is a real, live degradation
+*monitor* (logging + a `recovery_actions_taken` counter), not yet a self-*healer* in the sense of
+taking automated corrective action — registering a real hook (e.g., triggering a worker restart) is
+the natural next step, not built today.
 
 `src/adaptive/cell_automaton.py` extends the same "cell" metaphor with adaptive, rule-based
 regeneration logic — worth a closer look together with `self_healer.py` if this system is extended
