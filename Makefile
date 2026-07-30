@@ -272,14 +272,7 @@ compliance-merged:
 
 compliance-mc:
 	@echo "Running Magna Carta compliance check only..."
-	python -c "
-from pathlib import Path
-from src.compliance.checker import load_and_check_merged, REGISTER_PATH
-from src.compliance.report_generator import generate_markdown
-mc = Path('compliance/magna-carta/compliance/magna_carta_register.yaml')
-report = load_and_check_merged(REGISTER_PATH, mc)
-print(generate_markdown(report))
-"
+	python -c "from pathlib import Path; from src.compliance.checker import load_and_check_merged, REGISTER_PATH; from src.compliance.report_generator import generate_markdown; mc = Path('compliance/magna-carta/compliance/magna_carta_register.yaml'); report = load_and_check_merged(REGISTER_PATH, mc); print(generate_markdown(report))"
 
 gate-check:
 	@echo "Running 13-Gate lifecycle compliance check..."
