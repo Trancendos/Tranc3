@@ -9,7 +9,8 @@
 
 **Code:** `src/master_worker/zero_cost_enforcer.py` (`ZeroCostEnforcer`, `BLOCKED_SERVICES`),
 `config/zero_cost/providers.yaml` (`src/zero_cost/registry.py`), `scripts/zero_cost_audit.py`.
-**Owner:** Royal Bank of Arcadia (Dorris Fontaine) · **Version:** 1.0.0 · **Created:** 2026-07-17
+**Owner:** Royal Bank of Arcadia (Dorris Fontaine) · **Version:** 1.1.0 · **Created:** 2026-07-17
+· **Last verified:** 2026-07-30
 
 ---
 
@@ -167,3 +168,34 @@ verify-before-document convention (`docs/architecture/ea-workbook/README.md`).
   sidecars in `docker-compose.production.yml` (Traefik, Prometheus, Grafana, MISP, Wazuh, and
   similar third-party self-hosted stacks) remain outside this workbook's scope and would need their
   own review pass if this process is extended to them.
+
+## 7. Financial posture, investment, and passive income — consolidated
+
+This section exists because five separate documents were requested — a Passive Income Matrix, a
+Financial Matrix, a Monetization Matrix, a Revenue Generation Matrix, and an Investment Matrix —
+and building all five separately would have fragmented this file's existing §5/§6 rather than
+added anything. Everything real that any of those five would have contained lives here instead,
+under the same disclaimers as §1: **not tax advice, not a real revenue projection, no autonomous
+spending or investment authority.**
+
+- **Passive income / monetization / revenue generation** — already §5's job. Nothing new to add;
+  see §5's Arcadian Exchange review process and the 78-service CSV it produces. A separate matrix
+  for these three would just restate §5 under different headings.
+- **Financial posture, honestly stated.** This platform has no live revenue, no external investors,
+  and no financial reporting obligations beyond what §4's tax/fee flagging already covers. Per
+  `CLAUDE.md`'s own architecture section, the one real, named financial constraint driving actual
+  decisions today is that **the founder's local server needs repair/replacement money that isn't
+  currently available** — this is why Cloud Only is the default deployment mode for every Location
+  and Hybrid/Local remain gated on funding rather than a technical blocker. That is the entirety of
+  this platform's current "financial matrix": one real constraint, already documented, not a set of
+  projections.
+- **Investment.** The only investment question with any real substance today is the funding gap
+  above (self-hosted hardware). There is no other investment activity — no cap table, no funding
+  round, no speculative return-on-investment case to document. If that changes (e.g. a real funding
+  decision needs evaluating), it belongs in this section as a dated, factual addendum — not as a
+  projected-returns document, which this platform has no basis to produce honestly.
+
+**Recommendation:** the next time any of Passive Income / Financial / Monetization / Revenue
+Generation / Investment comes up as a request, point back to this section (or §5 for the
+monetization-idea process specifically) rather than starting a new document — that's the whole
+reason this consolidation exists.
