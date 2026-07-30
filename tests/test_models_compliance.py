@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import pytest
 
+import src.models.compliance as compliance_module
 from src.models.compliance import (
     ProvenanceClearanceRegistry,
     ProvenanceStatus,
     check_provenance,
+    get_clearance_registry,
     platform_wide_risks,
 )
 
@@ -95,3 +97,29 @@ class TestPersistenceAcrossReconnect:
         result = check_provenance(MADAM_KRYSTAL, clearance_registry=reg2)
         assert result.cleared is True
         reg2.close()
+
+
+class TestClearanceRegistrySingleton:
+    def test_get_clearance_registry_lazily_creates_and_reuses_singleton(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(compliance_module, "_registry", None)
+        monkeypatch.setattr(compliance_module, "DEFAULT_DB_PATH", tmp_path / "singleton.db")
+        try:
+            first = get_clearance_registry()
+            assert isinstance(first, ProvenanceClearanceRegistry)
+            assert get_clearance_registry() is first
+        finally:
+            compliance_module._registry.close()
+            monkeypatch.setattr(compliance_module, "_registry", None)
+
+
+class TestEmitProvenanceEventNeverRaises:
+    def test_clear_swallows_observatory_failure(self, registry, monkeypatch):
+        def _boom(*args, **kwargs):
+            raise RuntimeError("Observatory unreachable")
+
+        monkeypatch.setattr("src.observability.observatory.observe", _boom, raising=False)
+        registry.clear(MADAM_KRYSTAL, cleared_by="ops", notes="done")
+        result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
+        assert result.cleared is True
