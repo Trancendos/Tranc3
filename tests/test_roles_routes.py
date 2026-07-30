@@ -106,6 +106,17 @@ class TestAssignRoute:
         finally:
             client.app.dependency_overrides.pop(get_current_user, None)
 
+    def test_assign_unsafe_ai_name_rejected(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
+        try:
+            resp = client.post(
+                "/roles/The Nexus/assign",
+                json={"ai_name": "<script>alert(1)</script>"},
+            )
+            assert resp.status_code == 400
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
     def test_assign_records_history(self, client):
         client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:

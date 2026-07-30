@@ -129,6 +129,31 @@ class TestDBUserManagerFallbackCreate:
         assert "roles" in user
         assert user["roles"] == ["user"]  # free tier → user role
 
+    def test_create_user_rejects_short_username(self, mgr):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            mgr.create_user("ab", "T3st-pw-only!")
+        assert exc_info.value.status_code == 400
+
+    def test_create_user_rejects_invalid_username_characters(self, mgr):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            mgr.create_user("bad user!", "T3st-pw-only!")
+        assert exc_info.value.status_code == 400
+
+    def test_create_user_rejects_invalid_email(self, mgr):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            mgr.create_user("gina", "T3st-pw-only!", email="not-an-email")
+        assert exc_info.value.status_code == 400
+
+    def test_create_user_accepts_valid_email(self, mgr):
+        result = mgr.create_user("hank", "T3st-pw-only!", email="Hank@Example.com")
+        assert result["username"] == "hank"
+
 
 class TestDBUserManagerFallbackAuthenticate:
     def test_authenticate_valid(self, mgr):
