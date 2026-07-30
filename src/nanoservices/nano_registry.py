@@ -1,22 +1,31 @@
 # src/nanoservices/nano_registry.py
 # TRANC3 Nanoservice Registry — service discovery and routing
 
+import ast
 import logging
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
+_NANOSERVICES_ROOT = Path(__file__).resolve().parent
+
 
 @dataclass
 class NanoService:
     name: str
-    endpoint: str
-    capabilities: List[str]
-    health_url: str
+    # "http": exposed via nano_server.py's /nano/* FastAPI routes (port 8001).
+    # "library": an importable src/nanoservices/<name>/ package with no HTTP
+    # surface — discoverable metadata only, populated by
+    # discover_library_modules().
+    kind: str = "http"
+    endpoint: Optional[str] = None
+    capabilities: List[str] = field(default_factory=list)
+    health_url: Optional[str] = None
     version: str = "1.0.0"
     is_healthy: bool = True
     last_seen: float = field(default_factory=time.time)
@@ -85,10 +94,12 @@ class NanoServiceRegistry:
         },
     }
 
-    def __init__(self):
+    def __init__(self, discover_library_modules: bool = True):
         self._registry: Dict[str, NanoService] = {}
         self._capability_index: Dict[str, List[str]] = {}
         self._load_defaults()
+        if discover_library_modules:
+            discover_library_nanoservices(self)
 
     def _load_defaults(self):
         for name, config in self.SERVICES.items():
@@ -121,6 +132,7 @@ class NanoServiceRegistry:
         return [
             {
                 "name": s.name,
+                "kind": s.kind,
                 "endpoint": s.endpoint,
                 "capabilities": s.capabilities,
                 "healthy": s.is_healthy,
@@ -138,6 +150,65 @@ class NanoServiceRegistry:
         if name in self._registry:
             self._registry[name].is_healthy = True
             self._registry[name].last_seen = time.time()
+
+
+def _parse_package_metadata(init_path: Path) -> tuple[str, List[str]]:
+    """AST-parse a nanoservice package's __init__.py for its module
+    docstring and __all__ list, without importing it — these packages can
+    carry heavy or optional dependencies (qiskit, ROS2 bindings, etc.) not
+    installed in every environment, so importing 48 of them just to build
+    a discovery registry would be unsafe."""
+    try:
+        tree = ast.parse(init_path.read_text())
+    except (SyntaxError, OSError, UnicodeDecodeError):
+        return "", []
+    docstring = ast.get_docstring(tree) or ""
+    exported: List[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
+        ):
+            if isinstance(node.value, (ast.List, ast.Tuple)):
+                exported = [
+                    elt.value
+                    for elt in node.value.elts
+                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                ]
+    return docstring, exported
+
+
+def discover_library_nanoservices(registry: "NanoServiceRegistry") -> int:
+    """Register every src/nanoservices/<name>/ package not already covered
+    by SERVICES (i.e. not exposed over HTTP by nano_server.py's /nano/*
+    routes) as a `kind="library"` entry — discoverable metadata (module
+    path, docstring, exported symbols) rather than a live, health-checked
+    endpoint. Closes the gap where only 13/61 module directories under
+    src/nanoservices/ were previously registered at all. Returns the count
+    of newly-registered packages."""
+    nanoservices_root = Path(__file__).resolve().parent
+    registered = 0
+    for child in sorted(nanoservices_root.iterdir()):
+        if not child.is_dir() or child.name.startswith("_") or child.name == "rust":
+            continue
+        if registry.get(child.name) is not None:
+            continue
+        init_path = child / "__init__.py"
+        if not init_path.is_file():
+            continue
+        docstring, exported = _parse_package_metadata(init_path)
+        registry.register(
+            NanoService(
+                name=child.name,
+                kind="library",
+                capabilities=exported,
+                metadata={
+                    "module_path": f"src.nanoservices.{child.name}",
+                    "docstring": docstring,
+                },
+            )
+        )
+        registered += 1
+    return registered
 
 
 # Singleton

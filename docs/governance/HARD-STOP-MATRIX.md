@@ -49,13 +49,15 @@ wiring `EmergencyStopRecord`s into `src/models/intervention.py`'s audit trail in
 pattern of repeated stops on the same Prime is visible to the Board, not just to the one Trance-One
 that issued them.
 
-## 3. Circuit breakers — two unrelated classes, see Threshold Matrix §6
+## 3. Circuit breakers — three unrelated classes, see Threshold Matrix §6
 
 - `src/mesh/circuit_breaker.py`'s `CircuitBreaker` — generic, config-driven (5 failures / 30s
   reset / 3 half-open successes to close).
 - `src/validation/loop_validator.py`'s `CircuitBreaker` — a different class, pre-instantiated with
   7 named breakers (`model_inference`, `quantum_attention`, `consciousness_phi`, `database_write`,
   `redis_ops`, `stripe_api`, `evolution_cycle`), each with its own threshold/timeout.
+- `src/nanoservices/circuit_breaker/circuit_breaker.py`'s `CircuitBreaker` — a third, independent
+  class found while extending the Nano Service Registry (see Threshold Matrix §6).
 
 A breaker opening stops calls to exactly the one service/name it guards — the narrowest-scoped
 "stop" on this list. See Threshold Matrix §6 for the full threshold table and the flagged

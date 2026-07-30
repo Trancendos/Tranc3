@@ -81,7 +81,7 @@ decisions, which remain fully authoritative. It exists purely so the 80/90/95/10
 events actually fire against real traffic instead of sitting unreachable. Covered by
 `tests/test_capacity_guard.py` (new) and `tests/test_provider_rotation_capacity_feed.py` (new).
 
-## 6. Circuit breakers — two independent implementations
+## 6. Circuit breakers — three independent implementations
 
 - `src/mesh/circuit_breaker.py`'s `CircuitBreaker` — generic per-service-name breaker, config via
   `CircuitBreakerConfig` (`src/mesh/types.py:48`): `failure_threshold=5`, `reset_timeout_ms=30000`,
@@ -99,9 +99,16 @@ events actually fire against real traffic instead of sitting unreachable. Covere
 | `stripe_api` | 3 | 120s |
 | `evolution_cycle` | 10 | 60s |
 
-**Consolidation opportunity (flagged, not actioned this pass):** these are two unrelated classes
-with the same name and overlapping purpose. Unifying them is a real refactor (call-site migration
-across whichever modules import each) and is out of scope here — recorded so it isn't lost.
+- `src/nanoservices/circuit_breaker/circuit_breaker.py`'s `CircuitBreaker` — a **third, independent
+  class** (with its own `CircuitBreakerMesh`, `CircuitConfig`, `CircuitMetrics`), found while
+  extending the Nano Service Registry's discovery to cover this module — see
+  `discover_library_nanoservices()` in `src/nanoservices/nano_registry.py`. Registered there as a
+  `kind="library"` entry (no HTTP surface), not yet inspected for its own threshold defaults.
+
+**Consolidation opportunity (flagged, not actioned this pass):** three unrelated classes with the
+same name and overlapping purpose is one more than previously documented here. Unifying them is a
+real refactor (call-site migration across whichever modules import each) and is out of scope here —
+recorded so it isn't lost.
 
 ## 7. Model-governance advancement thresholds — `src/models/governance.py`
 
