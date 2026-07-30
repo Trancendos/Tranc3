@@ -15,9 +15,7 @@ from src.compliance.report_generator import generate_markdown  # noqa: E402
 
 
 def main() -> None:
-    magna_carta_register = Path(
-        "compliance/magna-carta/compliance/magna_carta_register.yaml"
-    )
+    magna_carta_register = Path("compliance/magna-carta/compliance/magna_carta_register.yaml")
     report = load_and_check_merged(REGISTER_PATH, magna_carta_register)
     print(generate_markdown(report))
 
