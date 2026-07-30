@@ -24,7 +24,7 @@
 | Keyboard focus trap | `hooks/useFocusTrap.ts` | Traps Tab/Shift+Tab inside a modal/dialog container, restores focus to the triggering element on close, wired to Escape |
 | Keyboard shortcuts help | `components/KeyboardHelpModal.tsx` | `?`-triggered modal documenting every keyboard shortcut in the app, itself using `useFocusTrap` |
 | Component primitives | 15 `@radix-ui/*` packages (`web/package.json`) | Radix's accessible-by-default dialog/dropdown/tabs/etc. primitives underlie `components/shadcn/` and `components/ui/` |
-| Visual regression + a11y checks (dev-time) | `@storybook/addon-a11y` (Storybook 10.4.6, `web/src/stories/`) | Runs axe-core checks against stories in the Storybook UI — **not currently wired into a CI gate** (§3) |
+| Visual regression + a11y checks (dev-time + CI) | `@storybook/addon-a11y` + `@storybook/addon-vitest` (Storybook 10.4.6, `web/src/stories/`) | Runs axe-core checks against all 8 stories, both in the Storybook UI and headlessly via `npm run test` (Vitest browser mode, Playwright/Chromium) — wired into `.forgejo/workflows/frontend-build.yml` as a real CI step (§3) |
 
 Grep confirms 61 files under `web/src/` use `aria-*`/`role=` attributes directly, on top of what
 Radix supplies internally.
@@ -42,11 +42,22 @@ state.
 
 ## 3. Honest gap: target vs. verified state
 
-- **No CI-enforced automated check exists yet.** `@storybook/addon-a11y` runs axe-core against
-  individual component stories when a developer opens Storybook locally, but neither
-  `.forgejo/workflows/` nor `.github/workflows/` runs it (or any axe-core/pa11y pass) as a gate.
-  Closing this is the single highest-value next step — wiring `addon-a11y`'s check into
-  `.forgejo/workflows/ci.yml`'s existing frontend job.
+- **The CI check runs, but only reports — it does not yet fail the build.**
+  `web/.storybook/preview.tsx`'s `parameters.a11y.test` is set to `"todo"`, so
+  `.forgejo/workflows/frontend-build.yml`'s `npm run test` step (added this pass, via
+  `@storybook/addon-vitest` + `@storybook/addon-a11y` running headless Chromium through
+  `@vitest/browser-playwright`) runs axe-core against all 8 stories and surfaces violations in the
+  test output, but a violation does not turn the build red. Flipping `test` to `"error"` was tried
+  during this same pass and immediately failed 23 of 46 assertions — real, pre-existing
+  color-contrast failures (several `text-muted-foreground`/`text-destructive` combinations at low
+  opacity fall below the WCAG AA 4.5:1 ratio) baked into the design tokens across most components,
+  not anything introduced by wiring the check in. Remediating those tokens is a real design-system
+  pass in its own right (color choices, not test config) and is the next honest step — flip `test`
+  to `"error"` only once that contrast pass lands, otherwise every future PR breaks on pre-existing
+  debt it didn't create.
+- **No manual audit has been performed** against real assistive technology (NVDA/JAWS/VoiceOver)
+  on any page. The mechanisms in §1 are correctly implemented by inspection, not verified by a
+  screen-reader pass.
 - **No manual audit has been performed** against real assistive technology (NVDA/JAWS/VoiceOver)
   on any page. The mechanisms in §1 are correctly implemented by inspection, not verified by a
   screen-reader pass.
@@ -61,8 +72,9 @@ state.
    ideal.
 3. Any `components/shadcn/` or `components/ui/` addition should prefer the underlying Radix
    primitive over a bespoke implementation, to inherit its ARIA semantics.
-4. Before this doc's next revision, wire `addon-a11y` into CI (§3) and run one real
-   assistive-technology pass on the top 5 pages by traffic, once that data exists.
+4. Before this doc's next revision, remediate the color-contrast failures identified in §3 and
+   flip `web/.storybook/preview.tsx`'s `a11y.test` to `"error"` so CI actually gates on them, then
+   run one real assistive-technology pass on the top 5 pages by traffic, once that data exists.
 
 ## 5. Cross-references
 
