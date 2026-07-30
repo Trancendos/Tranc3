@@ -81,7 +81,7 @@ decisions, which remain fully authoritative. It exists purely so the 80/90/95/10
 events actually fire against real traffic instead of sitting unreachable. Covered by
 `tests/test_capacity_guard.py` (new) and `tests/test_provider_rotation_capacity_feed.py` (new).
 
-## 6. Circuit breakers — three independent implementations
+## 6. Circuit breakers — four independent implementations (Phase 1 + 2 complete)
 
 - `src/mesh/circuit_breaker.py`'s `CircuitBreaker` — generic per-service-name breaker, config via
   `CircuitBreakerConfig` (`src/mesh/types.py:48`): `failure_threshold=5`, `reset_timeout_ms=30000`,
@@ -104,11 +104,18 @@ events actually fire against real traffic instead of sitting unreachable. Covere
   extending the Nano Service Registry's discovery to cover this module — see
   `discover_library_nanoservices()` in `src/nanoservices/nano_registry.py`. Registered there as a
   `kind="library"` entry (no HTTP surface), not yet inspected for its own threshold defaults.
+- `src/resilience/circuit_breaker.py`'s `CircuitBreaker` — a **fourth, independent class** (with
+  its own `Bulkhead` + `ResilienceManager` companions, feeding `src/gateway/adaptive_proxy.py`),
+  missed in an earlier pass of this table even though it was already covered by TASD-001.
 
-**Consolidation opportunity (flagged, not actioned this pass):** three unrelated classes with the
-same name and overlapping purpose is one more than previously documented here. Unifying them is a
-real refactor (call-site migration across whichever modules import each) and is out of scope here —
-recorded so it isn't lost.
+**Consolidation status:** `docs/architecture/decisions/TASD-001-circuit-breaker-consolidation.md`
+tracks this. Phase 1 (unify the `CircuitState` enum all four re-export, including harmonising
+mesh's `"half-open"` → `"half_open"`) and Phase 2 (extract the one piece of logic genuinely
+identical across all four — the OPEN→HALF_OPEN recovery-timeout check and a canonical structured
+transition log, via `src/resilience/circuit_core.py`) are both done. Each breaker's
+success/failure-counting semantics, half-open admission strategy, and config schema remain
+deliberately distinct (see the ADR §2/§3.2) — full unification into one class (Phase 3) is
+future work, not attempted here.
 
 ## 7. Model-governance advancement thresholds — `src/models/governance.py`
 

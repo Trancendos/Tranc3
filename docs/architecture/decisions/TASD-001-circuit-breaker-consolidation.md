@@ -1,8 +1,8 @@
 # TASD-001 — Circuit Breaker Consolidation
 
 **Type:** Technical Architecture Solutions Design (TASD) / ADR
-**Status:** PROPOSED (awaiting Platform Owner + The Town Hall sign-off)
-**Version:** 1.0.0 | **Owner:** Platform Engineering | **Date:** 2026-07-02
+**Status:** Phase 1 + Phase 2 MERGED (Platform Owner sign-off via direct approval, 2026-07-30) — Phase 3 remains PROPOSED
+**Version:** 1.1.0 | **Owner:** Platform Engineering | **Date:** 2026-07-02 (Phase 2 addendum: 2026-07-30)
 **Governed by:** `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md` (introduced in PR #185, pending
 merge to `main`; until then the operative change gate is
 `docs/procedures/PROC-CHG-001-Change-Request.md`)
@@ -10,6 +10,14 @@ merge to `main`; until then the operative change gate is
 ---
 
 ## 1. Context & Problem
+
+> **Correction (2026-07-30):** the original audit undercounted by one. There are **four**
+> independent `CircuitBreaker` classes, not three — §2's table below only listed
+> `src/mesh/`, `src/nanoservices/`, and `src/resilience/circuit_breaker.py` as breaker
+> implementations, but `src/validation/loop_validator.py`'s `CircuitBreaker` dataclass is a
+> fourth, genuinely independent one (it was discussed extensively in the `CircuitState` enum
+> table below, but never added as its own row in the implementation table). All four are
+> covered by Phase 1 and Phase 2 (see addendum, §3.2).
 
 A repo-wide duplication audit found **three independent `circuit_breaker.py` implementations**,
 plus **four separate `CircuitState` enum definitions**. This is real logic duplication of a
@@ -30,6 +38,7 @@ implementation is bundled with subsystem-specific companions that are **not** du
 | `src/mesh/circuit_breaker.py` | 151 | `CircuitBreaker` (`record_success`, `record_failure`, `state` property with auto half-open) | imports state/config from `src/mesh/types.py` (`CircuitState`, `CircuitBreakerConfig`, `CircuitBreakerState`) | `src/mesh/service_mesh.py`, `src/mesh/__init__.py` |
 | `src/nanoservices/circuit_breaker/circuit_breaker.py` | 246 | `CircuitBreaker` (`record_success(duration)`, `record_failure(failure_type)`, `execute()`) | `CircuitState`, `FailureType`, `CircuitConfig`, `CircuitMetrics`, **`CircuitBreakerMesh`** | internal to nanoservices |
 | `src/resilience/circuit_breaker.py` | 225 | `CircuitBreaker` (`record_success`, `record_failure`, **async `call()`**) | `CircuitState`, `CircuitBreakerConfig`, **`Bulkhead`**, **`ResilienceManager`**, `resilience` singleton | `src/gateway/adaptive_proxy.py` |
+| `src/validation/loop_validator.py` (added to this table 2026-07-30 — see correction above) | 271 (whole module) | `CircuitBreaker` (dataclass, sync `call()`/async `async_call()`, `record_success`/`record_failure` internal via `_on_success`/`_on_failure`) | `LoopValidator`, `SelfHealer`, `with_retry`, module-level `CIRCUITS` dict of 7 pre-configured breakers | `api.py`, evolution/consciousness/swarm subsystems |
 
 **`CircuitState` is defined in four places, and they do NOT all agree** — the
 definitions differ in both base type and one value (verified against `main`):
@@ -133,10 +142,51 @@ To avoid a circular import, the canonical enum lives in its own tiny module
 (`circuit_state.py`), imported by `src/resilience/circuit_breaker.py` rather than defined in
 it — so mesh/nanoservices re-exporting it never pull in the full resilience breaker.
 
-## 4. Decision (proposed)
+### 3.2 Phase 2 addendum (2026-07-30) — what was actually extracted
 
-Adopt **Option C**. Proceed with **Phase 1 only** under this PR's approval; Phases 2–3 are
-separate change requests once Phase 1 is merged and soak-tested.
+Phase 2 was scoped, on inspection, more narrowly than §3's illustrative `_CircuitCore`
+mixin implied. Reading all four implementations end-to-end (not just their public
+surface) showed their half-open **admission** strategies are genuinely different —
+mesh admits a random percentage of requests, nanoservices and resilience/loop_validator
+gate on a fixed half-open call count, and nanoservices additionally trips on a
+sliding-window slow-call rate the other three don't have at all. Forcing those into one
+shared state object would either require touching the config schemas (explicitly
+deferred, see §2) or silently changing behaviour — exactly what §3 Option B was
+rejected for.
+
+What genuinely is identical across all four, byte-for-byte, once read carefully:
+
+1. **The "has an OPEN circuit waited long enough to probe recovery" comparison** —
+   every implementation does `elapsed >= timeout` (loop_validator alone used strict
+   `>`; harmonised to `>=` to match the majority, a bounded behavioural change of the
+   same kind Phase 1 made for mesh's `"half-open"` value).
+2. **The structured "state transition occurred" log line** — mesh's version
+   (`logger.info("circuit_breaker_state_transition", extra={...})`) was already the
+   most Observatory-friendly shape; the other three had their own richer per-transition
+   messages (failure counts, etc.), so the shared log call was added **additively**
+   alongside each subsystem's existing message rather than replacing it.
+
+Implemented as `src/resilience/circuit_core.py` (`should_recover()`,
+`log_circuit_transition()`) — a tiny module, not a class, kept separate from
+`circuit_breaker.py` for the same circular-import reason `circuit_state.py` is. All
+four breakers (`src/mesh/circuit_breaker.py`, `src/resilience/circuit_breaker.py`,
+`src/nanoservices/circuit_breaker/circuit_breaker.py`,
+`src/validation/loop_validator.py`) now call it. Success/failure counting semantics,
+half-open admission strategy, config schema, and public call surface are **unchanged**
+in all four — verified by the full existing test suites for each
+(`tests/test_mesh.py`, `tests/test_service_mesh_advanced.py`, `tests/test_resilience.py`,
+`tests/test_worker_mesh_integration.py`, `tests/test_chaos.py`, `tests/test_full_suite.py`)
+passing unmodified, plus new coverage in `tests/test_circuit_core.py`.
+
+A genuine `_CircuitCore` mixin holding shared *state* (not just shared *functions*)
+remains out of scope pending a decision on whether to unify the config schemas first —
+that would be Phase 3, and is not attempted here.
+
+## 4. Decision
+
+Adopted **Option C**, Phases 1 and 2. Phase 3 (consumer migration — deleting the
+duplicate classes entirely behind a unified config) remains a separate, future change
+request per the original plan below.
 
 Rationale: unifies the `CircuitState` concept (4× → 1×), establishes the canonical home, and
 preserves the subsystem-specific companions and config classes that are legitimately distinct.
@@ -163,7 +213,13 @@ behavioural change rather than being a pure no-op.
 - **Phase 1 acceptance:** all four `CircuitState` usages resolve to the canonical enum
   (`loop_validator`'s plain class replaced by a re-export); `import` graph shows no remaining
   independent enum definitions; a repo-wide grep confirms no lingering `"half-open"` (hyphen)
-  string usage after the mesh value migration; existing tests green.
+  string usage after the mesh value migration; existing tests green. **Done** (verified
+  present in `src/resilience/circuit_state.py` and all four re-exports, 2026-07-30).
+- **Phase 2 acceptance:** all four breakers call `should_recover()` for their OPEN→HALF_OPEN
+  timeout check and `log_circuit_transition()` on every state change; no change to any
+  breaker's public method signatures, config schema, or half-open admission strategy; full
+  existing test suites for all four subsystems pass unmodified; new
+  `tests/test_circuit_core.py` covers the shared module directly. **Done** (2026-07-30).
 - **Automation (future):** a lint check asserting no duplicate `CircuitState` definition
   exists **within the circuit-breaker consolidation surface** — scoped to
   `src/mesh/`, `src/resilience/`, `src/nanoservices/`, `src/validation/` (or keyed off the
@@ -180,6 +236,8 @@ behavioural change rather than being a pure no-op.
 - `src/nanoservices/circuit_breaker/circuit_breaker.py`
 - `src/resilience/circuit_breaker.py`, `src/gateway/adaptive_proxy.py`
 - `src/validation/loop_validator.py`
+- `src/resilience/circuit_state.py` (Phase 1), `src/resilience/circuit_core.py` (Phase 2)
+- `tests/test_circuit_core.py`
 - `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`
 
 ## 8. Review History
@@ -189,3 +247,4 @@ behavioural change rather than being a pure no-op.
 | 2026-07-02 | Platform Engineering | Initial TASD — 3-implementation audit, options, phased recommendation (Option C, Phase 1) |
 | 2026-07-02 | Platform Engineering (review response) | Corrected the CircuitState claim: the four definitions differ in base type and in `HALF_OPEN` value (mesh `"half-open"`); documented config-schema incompatibility (Pydantic/ms vs dataclass/s); narrowed Phase 1 to enum-only with an explicit value-migration decision (not a pure no-op); added §3.1 canonical-home justification + concrete shim pattern. |
 | 2026-07-02 | Platform Engineering (review response) | Canonical name "The Town Hall"; scoped the proposed lint to the circuit-breaker surface (unrelated `CircuitState` types exist in `Dimensional/*`); noted the governance framework is introduced in PR #185 (pending merge), with `PROC-CHG-001` as the interim change gate. |
+| 2026-07-30 | Platform Engineering | Corrected the implementation count to 4 (§1); executed Phase 2 per direct Platform Owner approval — added §3.2 addendum documenting the narrower-than-planned safe extraction (`should_recover()` + `log_circuit_transition()` in `src/resilience/circuit_core.py`), wired into all four breakers, verified against full existing test suites plus new `tests/test_circuit_core.py`. Phase 3 (config unification + duplicate deletion) remains future work. |

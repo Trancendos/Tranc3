@@ -13,7 +13,6 @@ Zero-cost: Pure Python, no external dependencies.
 
 from __future__ import annotations
 
-import logging
 import random
 from datetime import datetime, timezone
 
@@ -23,8 +22,7 @@ from src.mesh.types import (
     CircuitBreakerState,
     CircuitState,
 )
-
-logger = logging.getLogger("tranc3.mesh.circuit_breaker")
+from src.resilience.circuit_core import log_circuit_transition, should_recover
 
 
 class CircuitBreaker:
@@ -124,7 +122,7 @@ class CircuitBreaker:
             return False
         now = datetime.now(timezone.utc)
         elapsed_ms = (now - self._state.opened_at).total_seconds() * 1000
-        return elapsed_ms >= self.config.reset_timeout_ms
+        return should_recover(elapsed_ms, self.config.reset_timeout_ms)
 
     def _transition(self, new_state: CircuitState) -> None:
         """Transition to a new circuit state."""
@@ -141,11 +139,4 @@ class CircuitBreaker:
         elif new_state == CircuitState.HALF_OPEN:
             self._state.half_open_attempts = 0
 
-        logger.info(
-            "circuit_breaker_state_transition",
-            extra={
-                "service": self.service_name,
-                "from_state": old_state.value,
-                "to_state": new_state.value,
-            },
-        )
+        log_circuit_transition(self.service_name, old_state, new_state)

@@ -12,6 +12,9 @@ from typing import Any, Callable, Dict
 
 from Dimensional.sanitize import sanitize_for_log
 
+# Shared transition primitives (TASD-001 Phase 2).
+from src.resilience.circuit_core import log_circuit_transition, should_recover
+
 # Canonical CircuitState (TASD-001 Phase 1) — was a plain constants class here;
 # now re-exports the shared str-Enum. Member/string comparisons are preserved.
 from src.resilience.circuit_state import CircuitState
@@ -42,11 +45,12 @@ class CircuitBreaker:
     @property
     def state(self) -> str:
         if self._state == CircuitState.OPEN:
-            if time.time() - self._last_failure > self.recovery_timeout:
+            if should_recover(time.time() - self._last_failure, self.recovery_timeout):
                 self._state = CircuitState.HALF_OPEN
                 logger.info(
                     "Circuit %s: OPEN → HALF_OPEN (testing recovery)", sanitize_for_log(self.name)
                 )
+                log_circuit_transition(self.name, CircuitState.OPEN, CircuitState.HALF_OPEN)
         return self._state
 
     def call(self, func: Callable, *args, fallback=None, **kwargs):
@@ -95,6 +99,7 @@ class CircuitBreaker:
                 logger.info(
                     "Circuit %s: HALF_OPEN → CLOSED (recovered)", sanitize_for_log(self.name)
                 )
+                log_circuit_transition(self.name, CircuitState.HALF_OPEN, CircuitState.CLOSED)
         else:
             self._failure_count = 0
 
@@ -109,6 +114,7 @@ class CircuitBreaker:
             logger.error(
                 "Circuit %s: CLOSED → OPEN (too many failures)", sanitize_for_log(self.name)
             )
+            log_circuit_transition(self.name, CircuitState.CLOSED, CircuitState.OPEN)
 
     def get_status(self) -> Dict:
         return {

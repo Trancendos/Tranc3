@@ -9,6 +9,9 @@ from typing import Any, Callable, Dict, Optional
 
 from Dimensional.sanitize import sanitize_for_log
 
+# Shared transition primitives (TASD-001 Phase 2).
+from src.resilience.circuit_core import log_circuit_transition, should_recover
+
 # Canonical CircuitState (TASD-001 Phase 1) — re-exported for backward compatibility.
 from src.resilience.circuit_state import CircuitState
 
@@ -54,12 +57,13 @@ class CircuitBreaker:
 
         if self.state == CircuitState.OPEN:
             # Check if recovery timeout has elapsed
-            if self._last_failure_time and (
-                time.time() - self._last_failure_time >= self.config.recovery_timeout
+            if self._last_failure_time and should_recover(
+                time.time() - self._last_failure_time, self.config.recovery_timeout
             ):
                 self.state = CircuitState.HALF_OPEN
                 self._half_open_calls = 0
                 logger.info("Circuit %s: OPEN → HALF_OPEN", sanitize_for_log(self.name))
+                log_circuit_transition(self.name, CircuitState.OPEN, CircuitState.HALF_OPEN)
                 return True
             return False
 
@@ -82,6 +86,7 @@ class CircuitBreaker:
                 self._failure_count = 0
                 self._success_count = 0
                 logger.info("Circuit %s: HALF_OPEN → CLOSED", sanitize_for_log(self.name))
+                log_circuit_transition(self.name, CircuitState.HALF_OPEN, CircuitState.CLOSED)
         else:
             self._failure_count = max(0, self._failure_count - 1)
 
@@ -97,6 +102,7 @@ class CircuitBreaker:
             logger.warning(
                 "Circuit %s: HALF_OPEN → OPEN (failed during test)", sanitize_for_log(self.name)
             )
+            log_circuit_transition(self.name, CircuitState.HALF_OPEN, CircuitState.OPEN)
         elif self._failure_count >= self.config.failure_threshold:
             self.state = CircuitState.OPEN
             logger.warning(
@@ -105,6 +111,7 @@ class CircuitBreaker:
                 sanitize_for_log(self._failure_count),
                 sanitize_for_log(self.config.failure_threshold),
             )
+            log_circuit_transition(self.name, CircuitState.CLOSED, CircuitState.OPEN)
 
     async def call(self, fn: Callable, *args, **kwargs) -> Any:
         """Execute a function with circuit breaker protection"""
