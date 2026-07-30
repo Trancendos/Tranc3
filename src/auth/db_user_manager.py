@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from Dimensional.sanitize import sanitize_for_log
 from src.auth.passwords import hash_password as _hash_password
 from src.auth.passwords import verify_password as _verify_password
+from src.validation.validators import validate_email, validate_username
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,13 @@ class DBUserManager:
         return None
 
     def create_user(self, username: str, password: str, email: str = "") -> dict:
+        try:
+            username = validate_username(username)
+            if email:
+                email = validate_email(email)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
         # Password strength check (SCAMPER-S action)
         self._validate_password(password)
 

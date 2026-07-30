@@ -348,7 +348,7 @@ class TestPasswordValidation:
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
             with pytest.raises(HTTPException) as exc_info:
-                mgr.create_user("u1", "Abc1")
+                mgr.create_user("usr1", "Abc1")
         assert exc_info.value.status_code == 400
         assert "8 characters" in exc_info.value.detail
 
@@ -361,7 +361,7 @@ class TestPasswordValidation:
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
             with pytest.raises(HTTPException) as exc_info:
-                mgr.create_user("u2", "password1")
+                mgr.create_user("usr2", "password1")
         assert exc_info.value.status_code == 400
 
     def test_no_digit_rejected(self):
@@ -373,7 +373,7 @@ class TestPasswordValidation:
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
             with pytest.raises(HTTPException) as exc_info:
-                mgr.create_user("u3", "Passwordonly")
+                mgr.create_user("usr3", "Passwordonly")
         assert exc_info.value.status_code == 400
 
     def test_valid_password_accepted(self):
@@ -382,5 +382,5 @@ class TestPasswordValidation:
         fake_ctx = _make_fake_pwd_context()
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
-            result = mgr.create_user("u4", "T3st-pw-only!")
-        assert result["username"] == "u4"
+            result = mgr.create_user("usr4", "T3st-pw-only!")
+        assert result["username"] == "usr4"

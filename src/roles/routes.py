@@ -102,6 +102,8 @@ def assign_role(
         )
     except UnknownLocationError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _serialize(role)
 
 
