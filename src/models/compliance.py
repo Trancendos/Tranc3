@@ -51,6 +51,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from Dimensional.sanitize import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_DB_PATH = Path("data/models_provenance.db")
@@ -242,8 +244,8 @@ def check_provenance(
             logger.warning(
                 "Invalid persisted provenance status %r for %s — treating as NOT_ASSESSED "
                 "(fail closed)",
-                override["status"],
-                ai_name,
+                sanitize_for_log(override["status"]),
+                sanitize_for_log(ai_name),
             )
             effective_status = ProvenanceStatus.NOT_ASSESSED
         effective_risk = ProvenanceRisk(
