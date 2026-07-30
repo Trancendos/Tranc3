@@ -185,9 +185,8 @@ def discover_library_nanoservices(registry: "NanoServiceRegistry") -> int:
     endpoint. Closes the gap where only 13/61 module directories under
     src/nanoservices/ were previously registered at all. Returns the count
     of newly-registered packages."""
-    nanoservices_root = Path(__file__).resolve().parent
     registered = 0
-    for child in sorted(nanoservices_root.iterdir()):
+    for child in sorted(_NANOSERVICES_ROOT.iterdir()):
         if not child.is_dir() or child.name.startswith("_") or child.name == "rust":
             continue
         if registry.get(child.name) is not None:

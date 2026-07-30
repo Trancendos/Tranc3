@@ -704,3 +704,20 @@ class TestProvenanceRoutes:
             assert resp.status_code == 422
         finally:
             _clear_auth(client)
+
+    def test_public_get_does_not_leak_admin_clearance_identity(self, client):
+        _as_admin(client)
+        try:
+            client.post(
+                f"/models/provenance/{MADAM_KRYSTAL}/clear",
+                json={"notes": "internal review notes — do not expose"},
+            )
+        finally:
+            _clear_auth(client)
+
+        # No auth on this call — matches the route's public GET contract.
+        resp = client.get(f"/models/provenance/{MADAM_KRYSTAL}")
+        assert resp.status_code == 200
+        note = resp.json()["risk"]["note"]
+        assert "cleared by" not in note
+        assert "internal review notes" not in note

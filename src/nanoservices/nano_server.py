@@ -25,7 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.nanoservices.nano_registry import NanoServiceRegistry
+from src.nanoservices.nano_registry import registry as nano_registry
 from src.workers.bot_registry import BotRegistry, get_registry
 
 logger = logging.getLogger(__name__)
@@ -157,8 +157,11 @@ async def health():
 
 @nano_app.get("/services")
 async def list_services():
-    reg = NanoServiceRegistry()
-    return {"services": reg.list_all()}
+    # Reuses the module-level singleton (nano_registry.registry) instead of
+    # constructing a new NanoServiceRegistry() per request — that now also
+    # runs discover_library_nanoservices()'s filesystem scan + ast.parse()
+    # over ~48 packages by default, which shouldn't repeat on every call.
+    return {"services": nano_registry.list_all()}
 
 
 # ─── /nano/generate ───────────────────────────────────────────────────────────

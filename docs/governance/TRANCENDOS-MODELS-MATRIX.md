@@ -247,8 +247,8 @@ Before a benchmarked advancement even reaches §5's pipeline, `submit_proposal()
 check: does the target AI have an open, uncleared license/provenance risk? `src/models/
 compliance.py` mirrors (not live-couples to, since Magna-Carta is a separate repository) the
 relevant `training_data_provenance` entries from Magna-Carta's MC-013 (Intellectual Property
-Matrix) — see `compliance/estate_protection_matrices.yaml`'s `intellectual_property.
-non_infringement_risks`.
+Matrix) — see `compliance/estate_protection_matrices.yaml`'s
+`intellectual_property.non_infringement_risks`.
 
 MC-012 (License Compliance Matrix — a repo-wide `pip-licenses` dependency scan, already CI-enforced
 in `.forgejo/workflows/dependency-audit.yml`) is deliberately **not** wired in here: it has no

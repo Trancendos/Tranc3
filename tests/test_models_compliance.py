@@ -61,6 +61,19 @@ class TestCheckProvenance:
         result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
         assert "second" in result.risk.note
 
+    def test_invalid_persisted_status_fails_closed(self, registry):
+        # Simulates a corrupted/legacy row bypassing clear()'s enum-typed
+        # `status` param — check_provenance() must not raise ValueError.
+        registry._conn.execute(
+            "INSERT INTO provenance_clearances "
+            "(ai_name, status, cleared_by, notes, cleared_at) VALUES (?, ?, ?, ?, ?)",
+            (MADAM_KRYSTAL, "not-a-real-status", "someone", "", 0.0),
+        )
+        registry._conn.commit()
+        result = check_provenance(MADAM_KRYSTAL, clearance_registry=registry)
+        assert result.cleared is False
+        assert result.risk.status == ProvenanceStatus.NOT_ASSESSED
+
 
 class TestPlatformWideRisks:
     def test_returns_at_least_the_ai_gateway_entry(self):

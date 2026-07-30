@@ -42,6 +42,7 @@ redeploy every time a real-world provenance review actually completes.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 import threading
 import time
@@ -49,6 +50,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_DB_PATH = Path("data/models_provenance.db")
 
@@ -233,7 +236,16 @@ def check_provenance(
     registry = clearance_registry or get_clearance_registry()
     override = registry.get_override(ai_name)
     if override is not None:
-        effective_status = ProvenanceStatus(override["status"])
+        try:
+            effective_status = ProvenanceStatus(override["status"])
+        except ValueError:
+            logger.warning(
+                "Invalid persisted provenance status %r for %s — treating as NOT_ASSESSED "
+                "(fail closed)",
+                override["status"],
+                ai_name,
+            )
+            effective_status = ProvenanceStatus.NOT_ASSESSED
         effective_risk = ProvenanceRisk(
             ai_name=seed_risk.ai_name,
             entity=seed_risk.entity,
