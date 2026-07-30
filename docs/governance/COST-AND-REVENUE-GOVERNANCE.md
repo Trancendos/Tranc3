@@ -199,3 +199,9 @@ spending or investment authority.**
 Generation / Investment comes up as a request, point back to this section (or §5 for the
 monetization-idea process specifically) rather than starting a new document — that's the whole
 reason this consolidation exists.
+
+## 8. Cross-references
+
+- `docs/governance/TOKEN-EFFICIENCY-MATRIX.md` — token-consumption efficiency directly supports
+  §2's zero-cost enforcement (slower budget consumption reduces pressure to ever reach a paid tier)
+- `docs/governance/THRESHOLD-MATRIX.md` — the numeric ceilings §2/§3's mechanisms enforce

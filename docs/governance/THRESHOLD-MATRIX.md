@@ -144,4 +144,7 @@ exists as a filename but was empty/non-substantive at time of writing.
   actually halts something, unified across tiers
 - `docs/governance/COST-AND-REVENUE-GOVERNANCE.md` — the cost/revenue side of §8
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — §7's advancement thresholds in full context
+- `docs/governance/TOKEN-EFFICIENCY-MATRIX.md` — the token-consumption-efficiency side of §3's
+  provider ceilings (cache hit rate, per-tenant budgets, route ordering) — a different angle on the
+  same providers, deliberately not duplicated here
 - `tests/test_capacity_guard.py`, `tests/test_provider_rotation_capacity_feed.py` — coverage for §5
