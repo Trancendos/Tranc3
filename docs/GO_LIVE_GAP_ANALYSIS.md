@@ -131,6 +131,25 @@ Per `CLAUDE.md`, The Citadel host is blocked on hardware funding, not on enginee
 This is the largest single gap to "LIVE" and it is **not a code problem**. Everything
 needed is already scripted (`scripts/citadel_deploy_all.sh`, `deploy/LIVE_DEPLOY.md`).
 
+**The cloud path is blocked too, and on nothing more than missing secrets.** Confirmed
+against the workflow runs on `main` after this branch merged:
+
+| Path | Workflow | Result | Cause |
+|---|---|---|---|
+| Backend → Fly.io | `deploy-fly.yml` | ❌ hard fail | `FLY_API_TOKEN` not set as a repo secret |
+| Frontend → CF Pages | `frontend-build.yml` | ⚠️ **silently skipped** | `CF_API_TOKEN` / `CF_ACCOUNT_ID` not set |
+
+The Fly job fails loudly, which is correct. The Pages job did not: its credential guard
+skipped the deploy and the job still reported **green**, so `trancendos.com` was never
+updated while CI looked healthy. That is the same defect this document criticises in the
+readiness scorecard — a signal that reports success while doing no work — and it was
+introduced by the guard added in this very branch. Fixed: both copies of the workflow now
+write an unmissable "Frontend was NOT deployed" block to the run summary, while staying
+non-blocking so a repo without secrets is not red on every push.
+
+Setting those three secrets under **Settings → Secrets and variables → Actions** is the
+entire remaining gap for a cloud-only go-live. No code change is required.
+
 ---
 
 ## 3. The readiness scorecard overstates confidence
