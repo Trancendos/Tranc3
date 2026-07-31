@@ -12,8 +12,9 @@ document disagrees with observed behaviour, the observed behaviour is recorded.
 
 ## 1. Headline
 
-The **code** is close to ready. The **deployment** has not happened, and three
-hard blockers would stop a fresh clone from deploying at all today.
+The **code** is close to ready. The **deployment** has not happened, one defect stops a
+fresh clone from producing a buildable tree at all, and a second would make a successful
+deployment unsafe.
 
 | Repo | Verified state |
 |---|---|
@@ -27,9 +28,12 @@ measurement.** See §3.
 
 ---
 
-## 2. Hard blockers — a fresh clone cannot deploy
+## 2. Blockers to a safe go-live
 
-These are ordered by the sequence in which they break a clean `git clone` → deploy run.
+Three distinct things are wrong, and they fail in different ways. §2.1 stops a clean
+`git clone` from producing a buildable tree at all. §2.2 does not block deployment — it
+makes a successful deployment unsafe. §2.3 is neither: it is the current state of the
+estate, which is that nothing has been deployed yet.
 
 ### 2.1 The Magna-Carta submodule pin references a commit that does not exist
 
@@ -39,31 +43,50 @@ as a tree entry in this repository, not in `.gitmodules` (which carries only the
 URL). That object is not reachable in the Magna-Carta repository — verified with
 `git cat-file -t` after `git fetch --all` (all 9 remote branches fetched):
 
-```
+```text
 fatal: git cat-file: could not get object info
 ```
 
-`git submodule update --init` therefore fails outright. `src/compliance/magna_carta.py:19`
-reads `./compliance/magna-carta/config/magna_carta_config.json`, so the compliance
-middleware loses its configuration source.
+Reproduced end to end on a fresh clone of this branch. `git submodule update --init`
+registers both submodules, clones both, then dies on the checkout:
+
+```text
+fatal: remote error: upload-pack: not our ref 966c237cbcc9b1020091366f81e38254167a8766
+fatal: Fetched in submodule path 'compliance/magna-carta', but it did not contain
+966c237cbcc9b1020091366f81e38254167a8766. Direct fetching of that commit failed.
+```
+
+**This one failure takes both submodules down with it.** After the aborted run, both
+`compliance/magna-carta/` and `workers/cranbania/` contain only a `.git` entry and no
+working tree. `docker-compose.production.yml:1277` builds The Town Hall with
+`context: workers/cranbania`, so `docker compose build cranbania` then fails for want of a
+Dockerfile — even though nothing is wrong with CranBania itself.
+
+The collateral damage is confirmed by initialising CranBania on its own, which succeeds:
+
+```text
+Submodule path 'workers/cranbania': checked out 'da5d03460e317064b593e2c0d283fcfa19bc04d2'
+```
+
+`src/compliance/magna_carta.py:19` reads
+`./compliance/magna-carta/config/magna_carta_config.json`, so the compliance middleware
+also loses its configuration source.
 
 **Action:** re-pin the submodule to a commit that exists on Magna-Carta `main`
-(currently `cc7d70e`), then commit the updated gitlink.
+(currently `cc7d70e`), then commit the updated gitlink. That single fix restores both
+submodules.
 
-### 2.2 The CranBania submodule pin is one commit stale, and both submodule directories are empty
+**Not a blocker, but fix it in the same pass — the CranBania pin is stale.**
+`workers/cranbania` is pinned to `da5d034`, the parent of `a960ce1` ("Close auth gap…").
+That commit is perfectly reachable and checks out cleanly, so this is a pin-freshness
+issue rather than a deployment failure. It still matters: the pinned revision predates
+`middleware.test.ts` and the method-scoped cron exemption, so a build from the pin ships
+The Town Hall without the tests that guard its auth behaviour. Note that
+`scripts/setup_external_repos.sh` uses `git submodule update --remote`, which tracks the
+upstream branch and bypasses the recorded pin entirely — so what you get depends on which
+path you initialise with. Advance the pin to `a960ce1` so both paths agree.
 
-`workers/cranbania` is pinned to `da5d034`, which is exactly the parent of `a960ce1`
-("Close auth gap…"). Both `compliance/magna-carta/` and `workers/cranbania/` are
-empty on disk — the submodules have never been initialised.
-
-`docker-compose.production.yml:1277` builds The Town Hall with
-`context: workers/cranbania`. With that directory empty, `docker compose build cranbania`
-fails — there is no Dockerfile to read.
-
-**Action:** initialise submodules and advance the CranBania pin to `a960ce1`, which
-also brings in `middleware.test.ts` and the method-scoped cron exemption.
-
-### 2.3 The Town Hall deploys unauthenticated by default
+### 2.2 The Town Hall deploys unauthenticated by default
 
 Three facts compound:
 
@@ -91,7 +114,7 @@ CranBania (Traefik forward-auth / IP allowlist / private network), or complete t
 Infinity-One SSO integration already identified as the long-term direction. Also make
 compose fail loudly on an empty `CRANBANIA_API_KEY` rather than defaulting it blank.
 
-### 2.4 Nothing is deployed
+### 2.3 Nothing is deployed
 
 `Ops executed on Citadel (live)` scores **12%**. `citadel_preflight.py` fails on exactly
 one item — `.env.production missing` — which is expected, since secrets are generated on
@@ -189,11 +212,17 @@ confusing red builds.
 
 - **11 npm vulnerabilities (2 low, 2 moderate, 7 high)**, including Next.js
   *Unauthenticated disclosure of internal Server Function endpoints*, PostCSS path
-  traversal / arbitrary file read, and sharp/libvips CVEs. `npm audit fix` is available.
-  This matters more than usual given §2.3 — the service is intended to be publicly routed.
+  traversal / arbitrary file read, and sharp/libvips CVEs. `npm audit fix` is available,
+  but run it deliberately: it rewrites `package-lock.json` and can move the dependency
+  graph, so record the lockfile revision beforehand, review the resulting diff, then
+  re-run the build, the test suite and the audit before calling it done. This matters
+  more than usual given §2.2 — the service is intended to be publicly routed.
 - **No `.env.example`**, despite 13 required environment variables including three
-  secrets (`CRANBANIA_API_KEY`, `CRANBANIA_CRON_SECRET`, `FORGEJO_TOKEN`). Nothing tells
-  an operator what to set, which is how §2.3's empty-key default gets shipped.
+  secrets (`CRANBANIA_API_KEY`, `CRANBANIA_CRON_SECRET`, `FORGEJO_TOKEN`). This is not
+  what causes §2.2's blank key — the `${CRANBANIA_API_KEY:-}` fallback in
+  `docker-compose.production.yml` does that on its own. The missing example file is a
+  compounding documentation gap: it leaves an operator no way to discover the variable
+  exists before the silent default has already taken effect.
 - CI is Forgejo-only (`.forgejo/workflows/`, 4 workflows) — correct per platform policy.
 - Dockerfile is sound: multi-stage, non-root, healthcheck, and `next.config.ts` correctly
   sets `output: "standalone"` as the build requires.
@@ -216,15 +245,19 @@ confusing red builds.
   | ACT-001 / CERT-002 | Signed DPA with authorised PSP (SUP-003) | 2026-08-31 |
   | ACT-007 | Policy attestation cycle for privileged roles | 2026-08-31 |
   | ACT-002 / CERT-003 | Countersign health connector BAA/DPA (SUP-005) | 2026-09-30 |
-  | ACT-004 | First PROC-AI-002 fairness/bias measurement run | 2026-09-30 |
   | ACT-009 | Validate `magna_carta.py` request-boundary enforcement in staging | 2026-09-30 |
+  | ACT-016 | Appoint named individuals to the 13 defined roles in HRIS | 2026-09-30 |
+  | ACT-019 / CERT-009 | Name H&S officer, execute RIDDOR reporting drill | 2026-09-30 |
   | ACT-008 / CERT-005 | SOC 2 Type II observation period evidence | 2026-10-01 |
   | ACT-010 | Resolve US AI fallback DPA (SUP-004) or keep disabled | 2026-10-31 |
   | ACT-017 / CERT-007 | Premises fire risk assessment | 2026-10-31 |
-  | ACT-005 / CERT-004 | Annual external penetration test | 2026-12-31 |
-  | ACT-011 | First internal audit per INTERNAL-AUDIT-PROGRAMME | 2026-12-31 |
-  | ACT-013 | PROC-AI-003 threat assessment per registered model | 2026-12-31 |
+  | ACT-005 / CERT-004 | Commission external penetration test (annual programme) | 2026-12-31 |
   | ACT-018 / CERT-008 | Payroll provider + live HMRC RTI reporting | 2026-12-31 |
+  | ACT-012 | Expand BCP restore tests to all P0 databases | 2027-06-07 |
+
+  All eight pending certificates appear above. The register holds nine slots in total —
+  the ninth, CERT-006 (ISO 27001), is `not_applicable`, a reserved placeholder for a
+  future certification with no owner action attached, so it is not counted as pending.
 
   Several of these gate lawful operation rather than technical function — ICO
   registration and the PSP DPA in particular. They cannot be closed by engineering and
@@ -266,14 +299,15 @@ confusing red builds.
 
 **Can be done now, no funding, no external party:**
 
-1. Re-pin `compliance/magna-carta` to an existing commit; advance `workers/cranbania`
-   to `a960ce1`; initialise both submodules. *(§2.1, §2.2 — unblocks building at all)*
+1. Re-pin `compliance/magna-carta` to an existing commit — this alone unblocks building.
+   In the same pass, advance `workers/cranbania` to `a960ce1` and initialise both
+   submodules. *(§2.1)*
 2. Fix the `timesteps` bug in `src/bio_neural/neuromorphic.py`. *(§4.1)*
 3. Update the stale gateway auth test to assert 401 and rename it. *(§4.2)*
 4. Isolate the `test_capacity_guard` shared state. *(§4.3)*
 5. `ruff check --fix .` *(§4.4)*
 6. `npm audit fix` in CranBania; add `.env.example` covering all 13 variables. *(§5)*
-7. Make compose reject an empty `CRANBANIA_API_KEY` instead of defaulting it blank. *(§2.3)*
+7. Make compose reject an empty `CRANBANIA_API_KEY` instead of defaulting it blank. *(§2.2)*
 8. Create `SECURITY_ALERT_REGISTER.md` with genuine dispositions — this needs real
    security judgement, not a placeholder file to satisfy the grep. *(§6)*
 9. Add CI to Magna-Carta running its two existing check scripts. *(§5)*
@@ -286,13 +320,13 @@ confusing red builds.
 **Requires an owner decision:**
 
 12. How The Town Hall's read routes get protected — network boundary now, or
-    Infinity-One SSO. This blocks go-live independently of everything else. *(§2.3)*
+    Infinity-One SSO. This blocks go-live independently of everything else. *(§2.2)*
 
 **Requires money or an external party — start immediately, long lead times:**
 
 13. ICO fee (**due today**), PSP DPA, health-connector BAA, pentest, SOC 2 observation
     period, fire risk assessment, payroll/RTI. *(§5)*
-14. The Citadel host hardware, then `./scripts/citadel_deploy_all.sh` and DNS cutover. *(§2.4)*
+14. The Citadel host hardware, then `./scripts/citadel_deploy_all.sh` and DNS cutover. *(§2.3)*
 
 ---
 
@@ -302,8 +336,9 @@ Treating "100% LIVE" as the target, the estate is roughly:
 
 - **Code readiness: high.** ~5,000 tests with 4 failures, of which 2 are genuine and both
   are small. Compose validates. 81 workers are really implemented.
-- **Deployability from a clean clone: currently broken.** Two submodule defects stop the
-  build before it starts. Both are quick fixes.
+- **Deployability from a clean clone: currently broken.** A single invalid submodule
+  gitlink stops the build before it starts, and takes the healthy CranBania submodule
+  down with it. It is a quick fix.
 - **Security posture: one unresolved design decision** (Town Hall read routes) plus a
   fail-open default that turns a missing environment variable into an open service.
 - **Compliance: the automatable half is complete; the human half has barely started,**
