@@ -61,11 +61,25 @@ jobs:
           pip install -r requirements.txt -q
           # Test-runner extras, in case the requirements install is partial.
           pip install pytest-asyncio psycopg2-binary -q 2>/dev/null || true
-          # bandit is required by the pre-deploy quality gate below. Without it
-          # that gate reports "0 medium+ issue(s) (exit 1)" — a blocked result
-          # with an empty finding list, which reads as a mystery failure rather
-          # than a missing tool.
-          pip install bandit -q
+          # The exact tool set scripts/pre_deploy_quality_gate.py declares in its
+          # own `gate_tools` string — keep the two in step. Every one of these is
+          # a hard requirement of that gate, and a missing one fails it in a way
+          # that reads as a code problem rather than a setup problem: absent
+          # bandit reports "0 medium+ issue(s) (exit 1)" (a block with an empty
+          # finding list), and absent ruff blocks before a single check runs.
+          #
+          # Versions are pinned, not latest. A merge gate whose linter floats can
+          # go red on a new upstream release with no change in this repo, which
+          # makes the signal untrustworthy exactly when it matters. bandit and
+          # pip-audit come from requirements-security.txt (the repo's declared
+          # versions); ruff matches the 0.15.8 already pinned in ci.yml,
+          # python.yml and test.yml, so the gate and the lint checks cannot
+          # disagree about what passes.
+          #
+          # Not `|| true` — if the gate's own tooling cannot be installed, the
+          # gate is not running, and that should fail loudly here.
+          pip install pytest pytest-asyncio "ruff==0.15.8" -q
+          pip install -r requirements-security.txt -q
 
       - name: Merge gate tests
         run: |
