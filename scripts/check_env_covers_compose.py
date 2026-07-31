@@ -68,8 +68,7 @@ def main() -> int:
         return 1
 
     print(
-        f"check_env_covers_compose OK "
-        f"({len(required)} compose-required variables, all generated)"
+        f"check_env_covers_compose OK ({len(required)} compose-required variables, all generated)"
     )
     return 0
 

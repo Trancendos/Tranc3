@@ -182,7 +182,9 @@ def check_frontend(res: Result) -> None:
         res.fail("web/package.json missing — the frontend cannot be built for Pages")
     else:
         built = "built" if source.is_dir() else "not yet built"
-        res.ok(f"Frontend — web/ present, Pages output {out_dir} ({built}; `npm run build` in web/)")
+        res.ok(
+            f"Frontend — web/ present, Pages output {out_dir} ({built}; `npm run build` in web/)"
+        )
 
 
 def main() -> int:
@@ -231,7 +233,9 @@ def main() -> int:
     if failed:
         print("BLOCKED — the cloud surface is not deployable as it stands.")
         return 1
-    print(f"PASS — cloud surface is deployable ({len(res.checks)} checks, {len(res.warnings)} warnings).")
+    print(
+        f"PASS — cloud surface is deployable ({len(res.checks)} checks, {len(res.warnings)} warnings)."
+    )
     print("Next: python scripts/deploy_cloud.py --gate-only, then deploy_cloud.py")
     return 0
 

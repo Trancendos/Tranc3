@@ -306,9 +306,7 @@ def build_dimensions() -> list[Dimension]:
             name="Cloud-only go-live readiness",
             weight=0.05,
             percent=cloud_pct,
-            status=(
-                "green" if cloud_pct >= 80 else "amber" if cloud_pct >= 50 else "red"
-            ),
+            status=("green" if cloud_pct >= 80 else "amber" if cloud_pct >= 50 else "red"),
             blockers=cloud_blockers,
             next_actions=cloud_actions,
         ),
@@ -361,8 +359,7 @@ def main() -> int:
     # went wrong the moment that weight changed.
     code_weight = sum(d.weight for d in dimensions if d is not live_dim)
     p0_code = round(
-        sum(d.percent * d.weight for d in dimensions if d is not live_dim)
-        / max(0.01, code_weight),
+        sum(d.percent * d.weight for d in dimensions if d is not live_dim) / max(0.01, code_weight),
         1,
     )
     # B score = live verification dimension (not blended with repo artifacts).
