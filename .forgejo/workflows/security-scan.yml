@@ -443,6 +443,7 @@ jobs:
 
       - name: Run grype against SBOM (vulnerability matching)
         run: |
+          set -o pipefail
           if [ -f logs/sbom-cyclonedx.json ]; then
             grype sbom:logs/sbom-cyclonedx.json \
               --config .grype.yaml \
