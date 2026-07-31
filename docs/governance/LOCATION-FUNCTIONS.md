@@ -67,7 +67,7 @@ actually holds it right now."
 | **Cryptex** | Security | Cyber Defense (Threat Intelligence, DDoS, CVE Scanning) | Chief Information Security Officer | Renik |
 | **The Ice Box** | Security | Inception-Layered Sandbox Threat Isolation & Quarantine Centre | Head of Sandbox Threat Isolation | Neonach |
 | **Warp Radio** | Commercial / Financial | Music & Audio Streaming Integration | Head of Audio & Streaming | Rocking Ricki |
-| **The Dutchy** | DevOps | Intelligence (Predictive lore, market intelligence) | Chief Intelligence Officer | Predictive lore |
+| **Section 7** | DevOps | Intelligence (Predictive lore, market intelligence) | Chief Intelligence Officer | The Dutchy |
 | **The Citadel** | DevOps | Strategic Ops (Main fortress for Think Tank/R&D/Temporal nodes) | Chief Operations Officer | Trancendos |
 | **Think Tank** | DevOps | R&D Centre | Head of Research & Development | Trancendos |
 | **Turing's Hub** | DevOps | Central Creation Forge (3D Avatar & AI Entity Generation) | Head of AI Entity Creation | Samantha Turing |

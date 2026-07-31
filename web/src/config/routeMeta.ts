@@ -21,7 +21,7 @@ const ROUTE_META: Record<string, RouteMeta> = {
   '/admin': { title: 'Admin', label: 'Admin page' },
   '/workers': { title: 'Workers', label: 'Workers page' },
   '/the-lab': { title: 'The Lab', label: 'The Lab page' },
-  '/the-dutchy': { title: 'The Dutchy', label: 'The Dutchy page' },
+  '/the-dutchy': { title: 'Section 7', label: 'Section 7 page' },
   '/turings-hub': { title: "Turing's Hub", label: "Turing's Hub page" },
   '/deep-agents': { title: 'Deep Agents', label: 'Deep Agents page' },
   '/audit': { title: 'Audit Log', label: 'Audit Log page' },

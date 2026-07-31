@@ -505,7 +505,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 
 | Tier | Role | Name | ID | Description |
 |------|------|------|----|-------------|
-| 3 | Lead AI | **Predictive lore** | `AID-DUT-01` | Intelligence (Predictive lore, market intelligence) |
+| 3 | Lead AI | **The Dutchy** | `AID-DUT-01` | Intelligence (Predictive lore, market intelligence) |
 | 4 | Agent α | The Spy | `SID-DUT-01` | Gathers sentiment data from public channels to gauge market trends. |
 | 4 | Agent β | The Oracle | `SID-DUT-02` | Converts intelligence records into structured development blueprints. |
 | 5 | Bot 01 | Scraper-Bot | `NID-DUT-01` | Pulls text data from developer channels, social spaces, and trackers. |
@@ -900,7 +900,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | NID-WRA-02 | 5 | Pause-Bot | Warp Radio |
 | NID-WRA-03 | 5 | Skip-Bot | Warp Radio |
 | NID-WRA-04 | 5 | Volume-Bot | Warp Radio |
-| AID-DUT-01 | 3 | Predictive lore | The Dutchy |
+| AID-DUT-01 | 3 | The Dutchy | Section 7 |
 | SID-DUT-01 | 4 | The Spy | The Dutchy |
 | SID-DUT-02 | 4 | The Oracle | The Dutchy |
 | NID-DUT-01 | 5 | Scraper-Bot | The Dutchy |

@@ -180,7 +180,7 @@ def generate_platform_entities_md():
         (8024, "config-service", "The Void", "Prometheus", "PID-VOI", "Primary worker"),
         (8025, "audit-service", "The Observatory", "Norman Hawkins", "PID-OBS", "Supporting layer"),
         (8026, "rate-limit-service", "Cryptex", "Renik", "PID-CRX", "Primary worker"),
-        (8027, "geo-service", "The Dutchy", "Predictive lore", "PID-DUT", "Primary worker"),
+        (8027, "geo-service", "Section 7", "The Dutchy", "PID-DUT", "Primary worker"),
         (8028, "cdn-service", "The Studio", "Voxx", "PID-STD", "Supporting layer"),
         (8029, "health-aggregator", "DevOcity", "Kitty", "PID-DEV", "Primary worker"),
     ]

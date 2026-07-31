@@ -1,5 +1,5 @@
 /**
- * PredictiveAI — Lead AI for The Dutchy Hub
+ * PredictiveAI — Lead AI (The Dutchy) for the Section 7 Hub
  *
  * Identity:  AID-DUTCHY-PREDICTIVE
  * Pillar:    Predictive Lore

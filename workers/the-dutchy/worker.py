@@ -4,7 +4,7 @@ Trancendos the-dutchy — Intelligence & Market Analysis
 RSS/news ingestion, trend scoring, market intelligence reports.
 Zero-cost: feedparser for RSS, no paid news APIs.
 
-Port: 8061  Entity: The Dutchy  Lead AI: Predictive lore
+Port: 8061  Entity: Section 7  Lead AI: The Dutchy
 """
 
 from __future__ import annotations
@@ -225,7 +225,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="The Dutchy — Market Intelligence", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Section 7 — Market Intelligence", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -272,7 +272,7 @@ async def health():
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
-        "entity": {"name": "The Dutchy", "lead_ai": "Predictive lore"},
+        "entity": {"name": "Section 7", "lead_ai": "The Dutchy"},
         "active_feeds": feeds,
         "total_articles": articles,
     }

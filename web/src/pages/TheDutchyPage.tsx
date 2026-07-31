@@ -1,6 +1,6 @@
 /**
- * TheDutchyPage — Intelligence & Market Analysis (The Dutchy · Port 8061)
- * Lead AI: Predictive lore
+ * TheDutchyPage — Intelligence & Market Analysis (Section 7 · Port 8061)
+ * Lead AI: The Dutchy
  *
  * Displays RSS feeds, trending articles, and market intelligence reports.
  */
@@ -115,10 +115,10 @@ export default function TheDutchyPage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <BarChart3 size={22} aria-hidden="true" className="text-emerald-400" />
-            The Dutchy
+            Section 7
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Intelligence &amp; Market Analysis · Lead AI: Predictive lore · Port 8061
+            Intelligence &amp; Market Analysis · Lead AI: The Dutchy · Port 8061
             {totalArt > 0 && ` · ${totalArt} articles indexed`}
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function TheDutchyPage() {
       {/* Health banner */}
       {healthOk === false && (
         <div role="alert" className="mb-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg text-yellow-300 text-sm">
-          The Dutchy worker (port 8061) is unreachable. Start with{' '}
+          The Section 7 worker (port 8061) is unreachable. Start with{' '}
           <code className="font-mono bg-gray-800 px-1 rounded">make dev-api</code>.
         </div>
       )}

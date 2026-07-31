@@ -394,7 +394,7 @@ WORKER_DATABASE_REGISTRY: List[WorkerDB] = [
         env_var="DUTCHY_DB_PATH",
         default_path="data/dutchy.db",
         tier=BackupTier.STANDARD,
-        description="The Dutchy — intelligence & market analysis data",
+        description="Section 7 — intelligence & market analysis data",
     ),
     WorkerDB(
         worker="the-academy",

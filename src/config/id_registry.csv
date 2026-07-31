@@ -7,7 +7,7 @@ AID-DRN-01,2,Prime,The Doctor (Nikolai O'denhim),,,"Governs: The Digital Grid, T
 AID-VOX-01,2,Prime,Voxx,,,"Governs: Sashas Photo Studio, TranceFlow, TateKing, Fabulousa, Imaginarium"
 AID-NOR-01,2,Prime,Norman Hawkins,,,"Governs: The Library, The Academy, DocUtari, The Basement, The Spark"
 AID-SAV-01,2,Prime,Savania,,,"Governs: I-Mind, tAimra, VRAR3D, Resonate"
-AID-TRN-01,2,Prime,Trancendos,,,"Governs: The Dutchy, Turing's Hub, ChronosSphere / ArcStream, DevOcity"
+AID-TRN-01,2,Prime,Trancendos,,,"Governs: Section 7, Turing's Hub, ChronosSphere / ArcStream, DevOcity"
 AID-NXS-01,3,Lead AI,Nexus-Prime,The Nexus,Architectural,"AI Communication Gateway & AI, Agent, and Bot / Worker Transfer Hub"
 SID-NXS-01,4,Agent Alpha,Pathfinder,The Nexus,Architectural,Maps fast system data communication routes.
 SID-NXS-02,4,Agent Beta,Omni-Router,The Nexus,Architectural,Routes user prompts to the correct AI/Bot.
@@ -64,9 +64,9 @@ NID-TFL-01,5,Bot 01,Voxel-1-Bot,TranceFlow,Creativity,Generates grid-based block
 NID-TFL-02,5,Bot 02,Collider-Bot,TranceFlow,Creativity,Monitors boundary boxes for collision scripts.
 NID-TFL-03,5,Bot 03,Ray-Tracer-Bot,TranceFlow,Creativity,"Handles lighting paths, reflections, and shadows."
 NID-TFL-04,5,Bot 04,Sprite-Bot,TranceFlow,Creativity,Renders fast 2D graphics and UIs over 3D spaces.
-AID-TKG-01,3,Lead AI,Benji Tate & Sam King,TateKing,Creativity,Video Creation & Editing Platform
-SID-TKG-01,4,Agent Alpha,The Director,TateKing,Creativity,Coordinates timeline-as-code scripting from video data.
-SID-TKG-02,4,Agent Beta,The Editor,TateKing,Creativity,"Suggests cuts, music shifts, and scene transitions."
+AID-TKG-01,3,Lead AI,Benji Tate,TateKing,Creativity,Video Creation & Editing Platform
+SID-TKG-01,4,Agent Alpha,The Director-B,TateKing,Creativity,Coordinates timeline-as-code scripting from video data.
+SID-TKG-02,4,Agent Beta,The Editor-B,TateKing,Creativity,"Suggests cuts, music shifts, and scene transitions."
 NID-TKG-01,5,Bot 01,Cutter-Bot,TateKing,Creativity,Slices video and audio tracks at precise timestamps.
 NID-TKG-02,5,Bot 02,Splicer-Bot,TateKing,Creativity,Joins video clips and audio tracks into unified tracks.
 NID-TKG-03,5,Bot 03,Renderer-Bot,TateKing,Creativity,Compresses/outputs video files into target formats.
@@ -92,7 +92,7 @@ NID-DGR-01,5,Bot 01,Trigger-Bot,The Digital Grid,Development (Code),Detects even
 NID-DGR-02,5,Bot 02,Action-Bot,The Digital Grid,Development (Code),"Runs data changes, logs updates, or makes API calls."
 NID-DGR-03,5,Bot 03,Condition-Bot,The Digital Grid,Development (Code),"Evaluates true/false logic, directing workflow paths."
 NID-DGR-04,5,Bot 04,Loop-Bot,The Digital Grid,Development (Code),Runs batch processing tasks over lists to prevent freezes.
-AID-LAB-01,3,Lead AI,The Dr. & Slime,The Lab,Development (Code),Code Creation Platform
+AID-LAB-01,3,Lead AI,The Dr. (Nikolai O'denhime),The Lab,Development (Code),Code Creation Platform
 SID-LAB-01,4,Agent Alpha,The Hounds,The Lab,Development (Code),Searches sandbox code for syntax errors and memory leaks.
 SID-LAB-02,4,Agent Beta,Syntax-Sage,The Lab,Development (Code),"Reads active scripts, suggesting code optimization patterns."
 NID-LAB-01,5,Bot 01,Lint-Bot,The Lab,Development (Code),Formats and styles code to match company guidelines.
@@ -134,9 +134,9 @@ NID-RBA-01,5,Bot 01,Ledger-Bot,Royal Bank of Arcadia,Commercial / Financial,"Log
 NID-RBA-02,5,Bot 02,Coin-Bot,Royal Bank of Arcadia,Commercial / Financial,Manages system credits and tracks processing priority tokens.
 NID-RBA-03,5,Bot 03,Ticker-Bot,Royal Bank of Arcadia,Commercial / Financial,Tracks cloud rates to buy server space during off-peak hours.
 NID-RBA-04,5,Bot 04,Receipt-Bot,Royal Bank of Arcadia,Commercial / Financial,"Generates transaction recaps, usage invoices, and expense charts."
-AID-AEX-01,3,Lead AI,The Porter Family,Arcadian Exchange,Commercial / Financial,Procurement & Resource Trading
-SID-AEX-01,4,Agent Alpha,The Speculator,Arcadian Exchange,Commercial / Financial,Assesses server cost trends to buy bulk compute resources.
-SID-AEX-02,4,Agent Beta,The Trader,Arcadian Exchange,Commercial / Financial,Automates bidding on open compute marketplaces for affordability.
+AID-AEX-01,3,Lead AI,Clarence Porter,Arcadian Exchange,Commercial / Financial,Procurement & Resource Trading
+SID-AEX-01,4,Agent Alpha,The Speculator-C,Arcadian Exchange,Commercial / Financial,Assesses server cost trends to buy bulk compute resources.
+SID-AEX-02,4,Agent Beta,The Trader-C,Arcadian Exchange,Commercial / Financial,Automates bidding on open compute marketplaces for affordability.
 NID-AEX-01,5,Bot 01,Bidder-Bot,Arcadian Exchange,Commercial / Financial,Submits buy requests on real-time server auctions for processes.
 NID-AEX-02,5,Bot 02,Asker-Bot,Arcadian Exchange,Commercial / Financial,Sets pricing rules for when external platforms buy Arcadian power.
 NID-AEX-03,5,Bot 03,Miner-Bot,Arcadian Exchange,Commercial / Financial,Utilizes idle GPU capacity to run calculations or generate assets.
@@ -162,7 +162,7 @@ NID-ACA-01,5,Bot 01,Chalk-Bot,The Academy,Knowledge,Projects visual charts and i
 NID-ACA-02,5,Bot 02,Board-Bot,The Academy,Knowledge,"Manages course paths, student lists, and syllabus structures."
 NID-ACA-03,5,Bot 03,Eraser-Bot,The Academy,Knowledge,"Resets coding sandboxes, removing trial code for the next lesson."
 NID-ACA-04,5,Bot 04,Bell-Bot,The Academy,Knowledge,"Sends notifications for class dates, live sessions, or deadlines."
-AID-DOC-01,3,Lead AI,To be Defined,DocUtari,Knowledge,Document Management Hub
+AID-DOC-01,3,Lead AI,Fiddsy,DocUtari,Knowledge,Document Management Hub
 SID-DOC-01,4,Agent Alpha,The Filer,DocUtari,Knowledge,"Places files in structured folders, ensuring quick retrieval."
 SID-DOC-02,4,Agent Beta,The Tagger,DocUtari,Knowledge,"Scans text documents to add descriptive, searchable tags."
 NID-DOC-01,5,Bot 01,Scanner-Bot,DocUtari,Knowledge,Performs OCR on image uploads to extract readable text.
@@ -183,7 +183,7 @@ NID-SPK-01,5,Bot 01,Spark-1-Bot,The Spark,Knowledge,Emits active status signals 
 NID-SPK-02,5,Bot 02,Spark-2-Bot,The Spark,Knowledge,Collects processing load updates to support routing decisions.
 NID-SPK-03,5,Bot 03,Linker-Bot,The Spark,Knowledge,Establishes secure channels between seeking and assisting nodes.
 NID-SPK-04,5,Bot 04,Pinger-Bot,The Spark,Knowledge,"Evaluates responsiveness of specific skills, flagging missing capabilities."
-AID-INF-01,3,Lead AI,The Guardian (Anchor: Orb of Orisis),Infinity,Security,"Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer"
+AID-INF-01,3,Lead AI,The Guardian (Marcus Magnolia),Infinity,Security,"Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer"
 SID-INF-01,4,Agent Alpha,The Gatekeeper,Infinity,Security,"Checks incoming user logins, issuing secure, temporary keys."
 SID-INF-02,4,Agent Beta,The Bouncer,Infinity,Security,"Monitors login origins and activities, blocking suspicious IPs."
 NID-INF-01,5,Bot 01,Token-Minter-Bot,Infinity,Security,"Generates secure, time-limited tokens for node-crossing users."
@@ -232,13 +232,13 @@ NID-WRA-01,5,Bot 01,Play-Bot,Warp Radio,Commercial / Financial,"Connects/streams
 NID-WRA-02,5,Bot 02,Pause-Bot,Warp Radio,Commercial / Financial,Holds audio states and syncs current track metrics across devices.
 NID-WRA-03,5,Bot 03,Skip-Bot,Warp Radio,Commercial / Financial,"Fetches adjacent track metadata, pre-buffering streams to stop latency."
 NID-WRA-04,5,Bot 04,Volume-Bot,Warp Radio,Commercial / Financial,"Adjusts volume properties, executing smooth fades across node transitions."
-AID-DUT-01,3,Lead AI,Predictive lore,The Dutchy,DevOps,"Intelligence (Predictive lore, market intelligence)"
-SID-DUT-01,4,Agent Alpha,The Spy,The Dutchy,DevOps,Gathers sentiment data from public channels to gauge market trends.
-SID-DUT-02,4,Agent Beta,The Oracle,The Dutchy,DevOps,Converts intelligence records into structured development blueprints.
-NID-DUT-01,5,Bot 01,Scraper-Bot,The Dutchy,DevOps,"Pulls text data from developer channels, social spaces, and trackers."
-NID-DUT-02,5,Bot 02,Parser-Bot,The Dutchy,DevOps,"Sanitizes and categorizes scraped data, cleaning up format issues."
-NID-DUT-03,5,Bot 03,Crawler-Bot,The Dutchy,DevOps,Dispatches web agents to identify relevant API and tech changes.
-NID-DUT-04,5,Bot 04,Whisper-Bot,The Dutchy,DevOps,Delivers summarized threat and trend alerts directly to strategic hubs.
+AID-DUT-01,3,Lead AI,The Dutchy,Section 7,DevOps,"Intelligence (Predictive lore, market intelligence)"
+SID-DUT-01,4,Agent Alpha,The Spy,Section 7,DevOps,Gathers sentiment data from public channels to gauge market trends.
+SID-DUT-02,4,Agent Beta,The Oracle,Section 7,DevOps,Converts intelligence records into structured development blueprints.
+NID-DUT-01,5,Bot 01,Scraper-Bot,Section 7,DevOps,"Pulls text data from developer channels, social spaces, and trackers."
+NID-DUT-02,5,Bot 02,Parser-Bot,Section 7,DevOps,"Sanitizes and categorizes scraped data, cleaning up format issues."
+NID-DUT-03,5,Bot 03,Crawler-Bot,Section 7,DevOps,Dispatches web agents to identify relevant API and tech changes.
+NID-DUT-04,5,Bot 04,Whisper-Bot,Section 7,DevOps,Delivers summarized threat and trend alerts directly to strategic hubs.
 AID-CTL-01,3,Lead AI,Trancendos,The Citadel,DevOps,Strategic Ops (Main fortress for Think Tank/R&D/Temporal nodes)
 SID-CTL-01,4,Agent Alpha,The General,The Citadel,DevOps,"Directs high-level development priorities, adjusting assignments."
 SID-CTL-02,4,Agent Beta,The Tactician,The Citadel,DevOps,Re-allocates team structures to meet immediate design objectives.
