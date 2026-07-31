@@ -7,6 +7,8 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = ROOT / "docker-compose.production.yml"
 DEPLOY_SCRIPT = ROOT / "scripts" / "deploy_live.sh"
@@ -39,8 +41,44 @@ def _compose_service_names() -> set[str]:
     return names
 
 
+def _undeclared_volume_refs() -> list[str]:
+    """Named volumes a service mounts that the top-level `volumes:` never declares.
+
+    Compose rejects the whole project on the first one of these ("refers to
+    undefined volume ..."), so a single missed declaration means the stack cannot
+    start at all. Five had accumulated (`shards-data`, four `stirling-pdf-*`)
+    without anything noticing: `docker compose config` is the only check that
+    catches it, that step is skipped when docker is absent, and on a hosted runner
+    it aborted earlier still on an unset required variable. This makes the failure
+    visible from a plain YAML parse, with no docker and no secrets needed.
+
+    Bind mounts and paths built from variables are skipped — only named volumes
+    have to be declared.
+    """
+    doc = yaml.safe_load(COMPOSE.read_text()) or {}
+    declared = set((doc.get("volumes") or {}).keys())
+    problems: list[str] = []
+    for svc, cfg in (doc.get("services") or {}).items():
+        for mount in (cfg or {}).get("volumes") or []:
+            if isinstance(mount, str):
+                source = mount.split(":")[0]
+            elif isinstance(mount, dict) and mount.get("type") == "volume":
+                source = mount.get("source")
+            else:
+                continue
+            if not source or source.startswith((".", "/", "$", "~")):
+                continue
+            if source not in declared:
+                problems.append(
+                    f"service '{svc}' mounts named volume '{source}', "
+                    f"which is not declared under the top-level `volumes:`"
+                )
+    return problems
+
+
 def main() -> int:
     errors: list[str] = []
+    errors.extend(_undeclared_volume_refs())
     core = _core_services_from_deploy()
     compose_names = _compose_service_names()
     for svc in core:

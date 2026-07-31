@@ -1,0 +1,68 @@
+name: Submodule Pin Validation
+
+# Guards against a submodule gitlink pointing at a commit that no longer exists
+# upstream — a condition git itself never checks, and which stays invisible until
+# someone clones fresh and runs `git submodule update --init`.
+#
+# That failure is worse than it looks: the aborted run leaves EVERY submodule
+# with a bare .git and no working tree, so a build whose context is a *healthy*
+# submodule path fails too. Catching it on the PR that introduces it is far
+# cheaper than diagnosing it at deploy time.
+#
+# Runs on GitHub-hosted runners so it stays green during the cloud-only phase,
+# when The Workshop's self-hosted runner is unavailable.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.gitmodules'
+      - 'scripts/validate_submodule_pins.py'
+      - '.github/workflows/submodule-pins.yml'
+  pull_request:
+    # No paths filter: a gitlink change is a tree-entry change, which does not
+    # necessarily touch .gitmodules. Any PR can move a pin, so check them all.
+  schedule:
+    # Upstream can invalidate a pin long after the commit that set it — a force
+    # push or a deleted branch breaks it with no event in this repo at all.
+    # A daily sweep catches that drift rather than waiting for the next clone.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: submodule-pins-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate submodule pins are reachable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Do NOT init submodules — that is the very operation under test, and
+          # letting it run here would fail the job with a confusing checkout
+          # error instead of this script's actionable report.
+          submodules: false
+          # No step here needs GITHUB_TOKEN: the validator reads the local tree
+          # and fetches public URLs. Leaving the token in .git/config would widen
+          # its exposure for no benefit.
+          persist-credentials: false
+
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate pins
+        run: python scripts/validate_submodule_pins.py
+
+      - name: Explain failure
+        if: failure()
+        run: |
+          echo "::error::A submodule pin is unreachable upstream. A fresh clone cannot"
+          echo "::error::run 'git submodule update --init', and any build using a submodule"
+          echo "::error::path as its context will fail. See the step above for the fix."

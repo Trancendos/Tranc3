@@ -1,5 +1,19 @@
 name: Frontend Build & Deploy
 
+# GitHub Actions copy of .forgejo/workflows/frontend-build.yml.
+#
+# Added as a deliberate, interim, cloud-only-phase measure, on the same
+# reasoning as .github/workflows/deploy-cloudflare.yml (see cloudflare/DEPLOY.md):
+# The Workshop's runner lives on the self-hosted Citadel host, which the
+# cloud-only phase explicitly defers standing back up. Without a second trigger
+# path the frontend — the surface users actually land on at trancendos.com —
+# has no way to deploy at all while the platform runs cloud-only.
+#
+# This diverges from the "prefer Forgejo" principle by explicit operator
+# decision. Retire this copy once The Workshop is back and hybrid/local is
+# reactivated, rather than maintaining both indefinitely. Until then, keep it in
+# sync with the Forgejo original — they should differ only in this header.
+
 on:
   push:
     branches: [main]
@@ -8,21 +22,40 @@ on:
       - 'cloudflare/pages/**'
       - 'docker/Dockerfile.web'
       - 'docker/nginx.conf'
+      - '.github/workflows/frontend-build.yml'
   pull_request:
     paths:
       - 'web/**'
       - 'docker/Dockerfile.web'
       - 'docker/nginx.conf'
+      - '.github/workflows/frontend-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize deploys to main so two pushes can't race the same Pages project —
+# an older run finishing after a newer one could leave trancendos.com on stale
+# assets.
+concurrency:
+  group: frontend-deploy-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: web
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # npm ci, the production build and the Storybook/Playwright run all
+          # execute third-party code; none of them need to push, so don't leave
+          # GITHUB_TOKEN readable in .git/config while they run.
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -65,8 +98,12 @@ jobs:
 
   deploy-pages:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
-    if: github.ref == 'refs/heads/main'
+    # push is already main-only via the trigger's `branches` filter, but
+    # workflow_dispatch lets an operator pick any branch, and the deploy step
+    # would otherwise publish that branch's bundle to the live Pages project.
+    if: ${{ github.ref == 'refs/heads/main' }}
 
     steps:
       - name: Download build artifact
@@ -75,10 +112,31 @@ jobs:
           name: tranc3-web-dist
           path: web/dist
 
+      # Mirrors the credential guard in deploy-cloudflare.yml: a repo without
+      # the Cloudflare secrets set skips the deploy with a warning rather than
+      # red-X'ing every push to main.
+      - name: Check Cloudflare credentials
+        id: creds
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
+            echo "::warning::CF_API_TOKEN / CF_ACCOUNT_ID not set — skipping Pages deploy."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Wrangler
-        run: npm install -g wrangler
+        if: steps.creds.outputs.present == 'true'
+        # Pinned to the fleet-wide version in cloudflare/DEPLOY.md — an
+        # unpinned global install lets a new major change deploy behaviour
+        # with no corresponding change in this repo.
+        run: npm install -g wrangler@4.102.0
 
       - name: Deploy to Cloudflare Pages
+        if: steps.creds.outputs.present == 'true'
         run: wrangler pages deploy web/dist --project-name=trancendos-frontend --commit-dirty=true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -86,34 +144,39 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
     # Deliberately NOT main-only. The pull_request trigger above includes
     # docker/Dockerfile.web and docker/nginx.conf, and this is the only job that
     # builds and smoke-tests the image — gating it on main meant a PR touching
     # those exact files never validated them, and the first real build happened
-    # after merge. This job has no external side effect, so it is safe on PRs.
-    # Matches the sibling .github/workflows/frontend-build.yml.
+    # after merge, alongside a Pages deploy that had already shipped. Unlike
+    # deploy-pages this job has no external side effect, so it is safe on PRs.
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Build Docker image
         run: docker build -t tranc3-web:${{ github.sha }} -f docker/Dockerfile.web .
 
       - name: Smoke test container
         run: |
-          # Clear any container left behind by an earlier run. This runner is
-          # self-hosted and keeps Docker state between jobs, so a leftover
-          # tranc3-web-test would fail the next run on a name conflict before a
-          # single assertion executed.
+          # Clear any container left behind by an earlier run, and remove this
+          # one on every exit path. ubuntu-latest runners are ephemeral per job
+          # so this is not load-bearing here, but the Forgejo copy runs on a
+          # self-hosted runner that keeps Docker state between jobs — where a
+          # leftover container fails the next run on a name conflict. Kept
+          # identical so the two copies stay in sync, as the header requires.
+          #
+          # A trap rather than `docker run --rm`: --rm deletes a container the
+          # instant it dies, so `docker logs` would come back empty for one that
+          # crashed at startup — exactly the failure this test exists to catch
+          # (it is how the /var/cache/nginx permission bug was found). The trap
+          # runs after the logs have been read.
           docker rm -f tranc3-web-test >/dev/null 2>&1 || true
           docker run -d --name tranc3-web-test -p 3000:80 tranc3-web:${{ github.sha }}
-          # Remove on every exit path, including the failure branches below.
-          # Deliberately a trap rather than `docker run --rm`: --rm deletes a
-          # container the instant it dies, so `docker logs` would come back empty
-          # for a container that crashed at startup — which is exactly the failure
-          # this test exists to catch (it is how the /var/cache/nginx permission
-          # bug was found). The trap runs after the logs have been read.
           trap 'docker rm -f tranc3-web-test >/dev/null 2>&1 || true' EXIT
           sleep 3
           # /health, not /healthz — nginx.conf defines `location /health`, while
