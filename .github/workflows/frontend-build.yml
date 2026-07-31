@@ -1,0 +1,153 @@
+name: Frontend Build & Deploy
+
+# GitHub Actions copy of .forgejo/workflows/frontend-build.yml.
+#
+# Added as a deliberate, interim, cloud-only-phase measure, on the same
+# reasoning as .github/workflows/deploy-cloudflare.yml (see cloudflare/DEPLOY.md):
+# The Workshop's runner lives on the self-hosted Citadel host, which the
+# cloud-only phase explicitly defers standing back up. Without a second trigger
+# path the frontend — the surface users actually land on at trancendos.com —
+# has no way to deploy at all while the platform runs cloud-only.
+#
+# This diverges from the "prefer Forgejo" principle by explicit operator
+# decision. Retire this copy once The Workshop is back and hybrid/local is
+# reactivated, rather than maintaining both indefinitely. Until then, keep it in
+# sync with the Forgejo original — they should differ only in this header.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'cloudflare/pages/**'
+      - 'docker/Dockerfile.web'
+      - 'docker/nginx.conf'
+      - '.github/workflows/frontend-build.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'docker/Dockerfile.web'
+      - 'docker/nginx.conf'
+      - '.github/workflows/frontend-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize deploys to main so two pushes can't race the same Pages project —
+# an older run finishing after a newer one could leave trancendos.com on stale
+# assets.
+concurrency:
+  group: frontend-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Install Playwright browser (Storybook a11y tests)
+        run: npx playwright install --with-deps chromium
+
+      - name: Storybook component + a11y tests
+        run: npm run test
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          VITE_API_URL: 'https://api.trancendos.com'
+          VITE_ECOSYSTEM_API_URL: 'https://api.trancendos.com'
+
+      - name: Verify dist output
+        run: |
+          test -f dist/index.html || (echo "✗ dist/index.html missing" && exit 1)
+          test -d dist/assets   || (echo "✗ dist/assets missing" && exit 1)
+          echo "✓ dist/index.html present"
+          du -sh dist/
+          ls -lh dist/assets/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: tranc3-web-dist
+          path: web/dist/
+          retention-days: 7
+
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: build
+    # push is already main-only via the trigger's `branches` filter, but
+    # workflow_dispatch lets an operator pick any branch, and the deploy step
+    # would otherwise publish that branch's bundle to the live Pages project.
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: tranc3-web-dist
+          path: web/dist
+
+      # Mirrors the credential guard in deploy-cloudflare.yml: a repo without
+      # the Cloudflare secrets set skips the deploy with a warning rather than
+      # red-X'ing every push to main.
+      - name: Check Cloudflare credentials
+        id: creds
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
+            echo "::warning::CF_API_TOKEN / CF_ACCOUNT_ID not set — skipping Pages deploy."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Wrangler
+        if: steps.creds.outputs.present == 'true'
+        run: npm install -g wrangler
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.creds.outputs.present == 'true'
+        run: wrangler pages deploy web/dist --project-name=trancendos-frontend --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Build Docker image
+        run: docker build -t tranc3-web:${{ github.sha }} -f docker/Dockerfile.web .
+
+      - name: Smoke test container
+        run: |
+          docker run -d --name tranc3-web-test -p 3000:80 tranc3-web:${{ github.sha }}
+          sleep 3
+          curl -sf http://localhost:3000/healthz || (docker logs tranc3-web-test && exit 1)
+          curl -sf http://localhost:3000/ | grep -q "<!DOCTYPE html>" || exit 1
+          docker stop tranc3-web-test
+          echo "✓ Container smoke test passed"
