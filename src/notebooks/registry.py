@@ -127,6 +127,12 @@ class NotebookRegistry:
         owner = validate_safe_string(owner, "owner", max_length=256)
         content = validate_non_empty(content, "content")
         content = validate_safe_string(content, "content", max_length=10_000)
+        if linked_card_id is not None:
+            linked_card_id = validate_safe_string(linked_card_id, "linked_card_id", max_length=256)
+        if linked_location is not None:
+            linked_location = validate_safe_string(
+                linked_location, "linked_location", max_length=512
+            )
         visibility = validate_visibility(visibility)
         now = time.time()
         with self._lock:

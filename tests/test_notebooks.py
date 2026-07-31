@@ -71,6 +71,22 @@ class TestCreateEntry:
         with pytest.raises(ValueError):
             registry.create_entry(owner="The Nexus", content="<script>alert(1)</script>")
 
+    def test_unsafe_linked_card_id_rejected(self, registry):
+        with pytest.raises(ValueError):
+            registry.create_entry(
+                owner="The Nexus",
+                content="Note",
+                linked_card_id="<script>alert(1)</script>",
+            )
+
+    def test_unsafe_linked_location_rejected(self, registry):
+        with pytest.raises(ValueError):
+            registry.create_entry(
+                owner="The Nexus",
+                content="Note",
+                linked_location="<script>alert(1)</script>",
+            )
+
     def test_invalid_visibility_rejected(self, registry):
         with pytest.raises(ValueError):
             registry.create_entry(owner="The Nexus", content="Note", visibility="private")
