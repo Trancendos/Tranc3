@@ -12,8 +12,16 @@ FROM nginx:alpine@sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Security: run as non-root user
-RUN chown -R nginx:nginx /usr/share/nginx/html /etc/nginx/conf.d \
+# Security: run as non-root user.
+#
+# /var/cache/nginx must be included. nginx creates its temp directories
+# (client_temp, proxy_temp, fastcgi_temp, uwsgi_temp, scgi_temp) under it at
+# startup, and in the base image it is owned by root — so without this the
+# worker cannot mkdir client_temp and the container dies immediately with
+# `[emerg] mkdir() "/var/cache/nginx/client_temp" failed (13: Permission
+# denied)`. The image still builds cleanly, which is why this survived: nothing
+# caught it until the container was actually started.
+RUN chown -R nginx:nginx /usr/share/nginx/html /etc/nginx/conf.d /var/cache/nginx \
     && touch /var/run/nginx.pid \
     && chown nginx:nginx /var/run/nginx.pid
 

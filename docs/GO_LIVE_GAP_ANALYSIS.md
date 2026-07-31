@@ -300,6 +300,20 @@ confusing red builds.
   security dimension sits at 88.6% against a 90% target. Every other security check passes.
 - `.env.production` must be generated on The Citadel host
   (`scripts/generate_production_env.sh`) — expected, not a defect.
+- **The frontend container could not start.** `docker/Dockerfile.web` switched to
+  `USER nginx` but chowned only `/usr/share/nginx/html`, `/etc/nginx/conf.d` and the pid
+  file — not `/var/cache/nginx`, which nginx needs for its temp directories. The image
+  built cleanly and then died on startup with
+  `[emerg] mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)`. Found
+  by making the `docker` job run on pull requests; it had been gated to `main`, so the
+  only job that starts the container never ran against a change under review. Fixed.
+- **The container smoke test was not testing health.** It probed `/healthz`, but
+  `docker/nginx.conf` defines `location /health`, and `location /` does
+  `try_files $uri $uri/ /index.html` — so `/healthz` fell through to the SPA and returned
+  200. The probe passed without ever reaching the health endpoint, and disagreed with the
+  Dockerfile's own `HEALTHCHECK`, which uses `/health`. Now probes `/health` and asserts
+  the body is exactly `ok`, so an index.html fallback cannot satisfy it. Fixed in both
+  workflow copies.
 - `AUDIT_SIGNING_KEY` is not yet set for production.
 - P0 `/health` endpoints are not yet scraped by Prometheus.
 - **Two GitHub checks are red on every commit for reasons unrelated to the code**, which

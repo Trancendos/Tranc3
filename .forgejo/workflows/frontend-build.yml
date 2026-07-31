@@ -99,7 +99,15 @@ jobs:
         run: |
           docker run -d --name tranc3-web-test -p 3000:80 tranc3-web:${{ github.sha }}
           sleep 3
-          curl -sf http://localhost:3000/healthz || (docker logs tranc3-web-test && exit 1)
+          # /health, not /healthz — nginx.conf defines `location /health`, while
+          # `location /` does try_files ... /index.html. A request to /healthz
+          # therefore falls through to the SPA and returns 200, so the old probe
+          # passed without ever reaching the health endpoint. Assert the body is
+          # exactly "ok" so an index.html fallback cannot satisfy it either.
+          body=$(curl -sf http://localhost:3000/health) \
+            || (docker logs tranc3-web-test && exit 1)
+          [ "$body" = "ok" ] \
+            || (echo "✗ /health returned '$body', expected 'ok'" && docker logs tranc3-web-test && exit 1)
           curl -sf http://localhost:3000/ | grep -q "<!DOCTYPE html>" || exit 1
           docker stop tranc3-web-test
           echo "✓ Container smoke test passed"
