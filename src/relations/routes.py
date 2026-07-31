@@ -101,15 +101,18 @@ def record_event(
     current_user: dict = Depends(get_current_user),
 ) -> Dict[str, Any]:
     _require_admin(current_user)
-    event = get_relations_registry().record_event(
-        actor_ai=body.actor_ai,
-        event_type=body.event_type,
-        location=body.location,
-        target_ai=body.target_ai,
-        sentiment=body.sentiment,
-        summary=body.summary,
-        details=body.details,
-    )
+    try:
+        event = get_relations_registry().record_event(
+            actor_ai=body.actor_ai,
+            event_type=body.event_type,
+            location=body.location,
+            target_ai=body.target_ai,
+            sentiment=body.sentiment,
+            summary=body.summary,
+            details=body.details,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _serialize_event(event)
 
 

@@ -916,6 +916,13 @@ from src.deployment_modes.routes import (
 
 app.include_router(_deployment_modes_router)
 
+# ── Notebook Registry (personal, freeform notes for AIs and Agents) ──────────
+from src.notebooks.routes import (
+    router as _notebooks_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_notebooks_router)
+
 # ── AI-to-AI Relationship Matrix + Activity Feed + Location Brochure ─────────
 from src.relations.routes import (
     router as _relations_router,  # noqa: F401  # intentional top-level import

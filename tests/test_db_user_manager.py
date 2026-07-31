@@ -129,6 +129,32 @@ class TestDBUserManagerFallbackCreate:
         assert "roles" in user
         assert user["roles"] == ["user"]  # free tier → user role
 
+    def test_create_user_rejects_short_username(self, mgr):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            mgr.create_user("ab", "T3st-pw-only!")
+        assert exc_info.value.status_code == 400
+
+    def test_create_user_rejects_invalid_username_characters(self, mgr):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            mgr.create_user("bad user!", "T3st-pw-only!")
+        assert exc_info.value.status_code == 400
+
+    def test_create_user_rejects_invalid_email(self, mgr):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            mgr.create_user("gina", "T3st-pw-only!", email="not-an-email")
+        assert exc_info.value.status_code == 400
+
+    def test_create_user_accepts_valid_email(self, mgr):
+        result = mgr.create_user("hank", "T3st-pw-only!", email="Hank@Example.com")
+        assert result["username"] == "hank"
+        assert mgr._fallback["hank"]["email"] == "hank@example.com"
+
 
 class TestDBUserManagerFallbackAuthenticate:
     def test_authenticate_valid(self, mgr):
@@ -348,7 +374,7 @@ class TestPasswordValidation:
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
             with pytest.raises(HTTPException) as exc_info:
-                mgr.create_user("u1", "Abc1")
+                mgr.create_user("usr1", "Abc1")
         assert exc_info.value.status_code == 400
         assert "8 characters" in exc_info.value.detail
 
@@ -361,7 +387,7 @@ class TestPasswordValidation:
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
             with pytest.raises(HTTPException) as exc_info:
-                mgr.create_user("u2", "password1")
+                mgr.create_user("usr2", "password1")
         assert exc_info.value.status_code == 400
 
     def test_no_digit_rejected(self):
@@ -373,7 +399,7 @@ class TestPasswordValidation:
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
             with pytest.raises(HTTPException) as exc_info:
-                mgr.create_user("u3", "Passwordonly")
+                mgr.create_user("usr3", "Passwordonly")
         assert exc_info.value.status_code == 400
 
     def test_valid_password_accepted(self):
@@ -382,5 +408,5 @@ class TestPasswordValidation:
         fake_ctx = _make_fake_pwd_context()
         with patch("src.auth.db_user_manager.pwd_context", fake_ctx):
             mgr = DBUserManager(db_session_factory=None)
-            result = mgr.create_user("u4", "T3st-pw-only!")
-        assert result["username"] == "u4"
+            result = mgr.create_user("usr4", "T3st-pw-only!")
+        assert result["username"] == "usr4"

@@ -39,6 +39,7 @@ from typing import Any, Dict, List, Optional
 
 from src.entities.platform import PLATFORM_ENTITIES, get_job_description
 from src.relations.personality import get_quirks
+from src.validation.validators import validate_safe_string
 
 logger = logging.getLogger(__name__)
 
@@ -301,6 +302,8 @@ class RelationsRegistry:
         `target_ai`, also nudges that pair's relationship score."""
         if sentiment not in ("positive", "neutral", "negative"):
             raise ValueError(f"invalid sentiment: {sentiment!r}")
+        if summary:
+            summary = validate_safe_string(summary, "summary")
         ts = time.time()
         details = details or {}
         # Serialize before mutating anything — if `details` isn't

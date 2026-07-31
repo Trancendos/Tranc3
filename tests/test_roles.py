@@ -73,6 +73,12 @@ class TestAssignAi:
         with pytest.raises(UnknownLocationError):
             registry.assign_ai("Nonexistent Place", "Someone")
 
+    def test_blank_ai_name_rejected(self, registry):
+        with pytest.raises(ValueError):
+            registry.assign_ai("The Nexus", "")
+        with pytest.raises(ValueError):
+            registry.assign_ai("The Nexus", "   ")
+
     def test_reassign_records_history(self, registry):
         registry.assign_ai("The Nexus", "Replacement AI", changed_by="admin:bob", reason="test")
         history = registry.get_history("The Nexus")

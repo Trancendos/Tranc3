@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES
+from src.validation.validators import validate_non_empty, validate_safe_string
 
 DEFAULT_DB_PATH = Path("data/role_registry.db")
 
@@ -260,6 +261,8 @@ class RoleRegistry:
         """Assign (or reassign) an AI to a location's Job Description."""
         if location not in PLATFORM_ENTITIES:
             raise UnknownLocationError(location)
+        ai_name = validate_non_empty(ai_name, "ai_name")
+        ai_name = validate_safe_string(ai_name, "ai_name", max_length=256)
         with self._lock:
             current = self.get_role(location)
             previous_ai = current.assigned_ai if current else None

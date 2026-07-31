@@ -23,7 +23,8 @@
     "undici": "7.28.0",
     "vite": "7.3.5",
     "ws": "8.21.0",
-    "esbuild": "0.28.1"
+    "esbuild": "0.28.1",
+    "postcss": "8.5.18"
   },
   "devDependencies": {},
   "engines": {
