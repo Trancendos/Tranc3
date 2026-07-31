@@ -292,6 +292,17 @@ confusing red builds.
   (`scripts/generate_production_env.sh`) — expected, not a defect.
 - `AUDIT_SIGNING_KEY` is not yet set for production.
 - P0 `/health` endpoints are not yet scraped by Prometheus.
+- **Two GitHub checks are red on every commit for reasons unrelated to the code**, which
+  is worth fixing because it destroys the value of the signal. The commit status for this
+  branch reads `failure`, and the cause is `CircleCI Pipeline`: *"No configuration was
+  found in your project."* There is no `.circleci/` directory anywhere in the repository —
+  the app is installed but the repo uses Forgejo and GitHub Actions, so it errors
+  unconditionally. `Kilo Code Review` likewise returns `action_required` with *"your
+  account is out of credits."* Neither is caused by the change under review, and neither
+  can go green through anything a contributor writes. While they stay installed, "CI is
+  red" carries no information on this repository and a genuine regression is easy to miss
+  in the noise. Either uninstall both apps or satisfy them (add a `.circleci/config.yml`,
+  add Kilo credits or switch it to a free model).
 
 ---
 
