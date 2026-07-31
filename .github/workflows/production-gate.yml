@@ -111,16 +111,25 @@ jobs:
       - name: Port registry validate (CLAUDE.md vs compose)
         run: python3 scripts/port_registry_validate.py
 
+      # The compose-config step below proves the *schema* is valid using synthesised
+      # placeholder values. It deliberately says nothing about whether the real
+      # generator can produce those values — and it could not: 47 of 53 required
+      # variables were never generated, so a genuine `deploy_live.sh` run on the
+      # Citadel host would have died before starting a container. This step closes
+      # that gap without needing docker or secrets.
+      - name: Generated env covers every compose-required variable
+        run: python3 scripts/check_env_covers_compose.py
+
       - name: Docker compose config (production)
         run: |
           if ! command -v docker >/dev/null 2>&1; then
             echo "SKIP: docker not available (compose YAML validated via citadel_compose_validate.py)"
             exit 0
           fi
-          # docker-compose.production.yml uses ${VAR:?required} for all 51 of its
-          # secrets. That fail-fast is correct for a real deploy and wrong for a
-          # syntax check: this step validates the compose *schema*, not whether an
-          # operator has populated a .env. On the Citadel host a real .env exists,
+          # docker-compose.production.yml uses ${VAR:?required} for all of its
+          # secrets (53 at last count). That fail-fast is correct for a real deploy
+          # and wrong for a syntax check: this step validates the compose *schema*,
+          # not whether an operator has populated a .env. On the Citadel host a real .env exists,
           # so the Forgejo original never hit this — on a hosted runner it aborts on
           # the first missing variable and every later check in the file goes
           # unvalidated.

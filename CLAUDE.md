@@ -451,7 +451,7 @@ deployment/build automation; GitHub Actions stays in play for checks GitHub itse
 (PR status checks, CodeQL, Pages/Wiki) rather than being phased out.
 
 Workflow files in `.forgejo/workflows/`:
-- `deploy-fly.yml` — tranc3-backend + tranc3-bots to Fly.io
+- `deploy-fly.yml` — tranc3-backend + trancendos-bots to Fly.io
 - `deploy-cloudflare.yml` — tranc3-ai + infinity-void + trancendos-api-gateway CF Workers (legacy, being phased out)
 - `security-scan.yml` — Python security (pip-audit, bandit, safety, ruff), Node security (npm audit), Semgrep SAST, Secret detection (gitleaks)
 - `dependency-audit.yml` — Weekly + on-PR dependency vulnerability scanning (pip-audit, Safety, npm audit, worker requirements scan)
@@ -487,8 +487,8 @@ fly secrets set \
 fly deploy --remote-only --app tranc3-backend
 
 # 3. Deploy bots
-fly secrets set REDIS_URL="..." TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" --app tranc3-bots
-fly deploy --remote-only --app tranc3-bots
+fly secrets set REDIS_URL="..." TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" --app trancendos-bots
+fly deploy --remote-only --app trancendos-bots
 
 # 4. Redeploy CF workers (after wrangler.toml changes)
 cd cloudflare/trancendos-api-gateway && npm ci && wrangler deploy
@@ -517,7 +517,7 @@ All Trancendos services are **subdirectories** of `trancendos.com`, not subdomai
 
 Fly.io apps (region `lhr`) — legacy, evaluating for migration:
 - `tranc3-backend` — 256MB RAM, 1GB encrypted volume at `/app/models`
-- `tranc3-bots` — 256MB RAM
+- `trancendos-bots` — 256MB RAM (the Fly app name; the source directory is `tranc3-bots/`)
 
 Cloudflare account ID: `e0214028cb64d31232f5662548a55e4e`
 Workers subdomain: `luminous-aimastermind.workers.dev`

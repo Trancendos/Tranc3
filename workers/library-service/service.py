@@ -9,6 +9,9 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import httpx
+
+import config
+from database import LibraryDatabase
 from models import (
     BackendStatus,
     DocumentCreate,
@@ -19,9 +22,6 @@ from models import (
     SearchResponse,
     SearchResult,
 )
-
-import config
-from database import LibraryDatabase
 
 logger = logging.getLogger(config.WORKER_NAME)
 

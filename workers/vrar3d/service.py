@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import httpx
+
+import config
+from database import VRARDatabase
 from models import (
     AssetProcessRequest,
     AssetProcessResponse,
@@ -21,9 +24,6 @@ from models import (
     SceneResponse,
     VRARStatus,
 )
-
-import config
-from database import VRARDatabase
 
 
 class ThresholdGuard:

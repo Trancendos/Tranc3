@@ -10,6 +10,12 @@ COMPOSE_FILE="docker-compose.production.yml"
 SKIP_BUILD=false
 PROFILE="${DEPLOY_PROFILE:-core}"
 
+# Compose interpolates `${VAR:?required}` from --env-file (default `.env`), NOT from
+# the `env_file:` service directive — that one only injects variables into containers.
+# generate_production_env.sh writes .env.production, so without this every compose
+# invocation below dies on the first required variable before starting a container.
+COMPOSE=(docker compose --env-file .env.production -f "$COMPOSE_FILE")
+
 for arg in "$@"; do
   case "$arg" in
     --skip-build) SKIP_BUILD=true ;;
@@ -54,22 +60,22 @@ fi
 
 if [[ "$SKIP_BUILD" != true ]]; then
   echo "==> Build images"
-  docker compose -f "$COMPOSE_FILE" build "${SERVICES[@]}"
+  "${COMPOSE[@]}" build "${SERVICES[@]}"
 fi
 
 echo "==> Start infrastructure first"
-docker compose -f "$COMPOSE_FILE" up -d valkey vault traefik ollama
+"${COMPOSE[@]}" up -d valkey vault traefik ollama
 
 echo "==> Vault init (if sealed)"
-if docker compose -f "$COMPOSE_FILE" ps vault 2>/dev/null | grep -q Up; then
+if "${COMPOSE[@]}" ps vault 2>/dev/null | grep -q Up; then
   sleep 5
-  if docker compose -f "$COMPOSE_FILE" exec -T vault vault status 2>&1 | grep -q "Initialized.*false"; then
+  if "${COMPOSE[@]}" exec -T vault vault status 2>&1 | grep -q "Initialized.*false"; then
     echo "Run ./deploy/vault/init-citadel.sh manually if Vault is not initialized."
   fi
 fi
 
 echo "==> Start platform workers"
-docker compose -f "$COMPOSE_FILE" up -d "${SERVICES[@]}"
+"${COMPOSE[@]}" up -d "${SERVICES[@]}"
 
 echo "==> Wait for health (up to 10 min)"
 python3 scripts/wait_for_healthy.py --timeout 600 || {

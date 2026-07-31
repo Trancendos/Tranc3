@@ -1284,8 +1284,13 @@ services:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
       CRANBANIA_DATA_DIR: /app/data
-      CRANBANIA_API_KEY: ${CRANBANIA_API_KEY:-}
-      CRANBANIA_CRON_SECRET: ${CRANBANIA_CRON_SECRET:-}
+      # Required, not defaulted: CranBania's middleware treats an unset key as "auth
+      # disabled". Traefik publishes this service at trancendos.com/townhall, so a blank
+      # default would silently expose every mutating route. `:?required` makes compose
+      # refuse to start instead — matching JWT_SECRET/INTERNAL_SECRET elsewhere in this
+      # file. CranBania also fails closed on its own side as defence in depth.
+      CRANBANIA_API_KEY: ${CRANBANIA_API_KEY:?required}
+      CRANBANIA_CRON_SECRET: ${CRANBANIA_CRON_SECRET:?required}
       CRANBANIA_FORGEJO_URL: ${CRANBANIA_FORGEJO_URL:-http://forgejo:3000}
       CRANBANIA_WEBHOOK_SECRET: ${CRANBANIA_WEBHOOK_SECRET:-}
       CRANBANIA_OBSERVATORY_URL: http://monitoring-worker:8007

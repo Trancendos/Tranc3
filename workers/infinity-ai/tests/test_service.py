@@ -53,8 +53,9 @@ def test_lru_cache_clear():
 
 @pytest.mark.asyncio
 async def test_offline_client_default():
-    from models import ChatMessage
     from service import OfflineClient
+
+    from models import ChatMessage
 
     client = OfflineClient()
     result = await client.complete(
@@ -65,8 +66,9 @@ async def test_offline_client_default():
 
 @pytest.mark.asyncio
 async def test_offline_client_greeting():
-    from models import ChatMessage
     from service import OfflineClient
+
+    from models import ChatMessage
 
     client = OfflineClient()
     result = await client.complete(
@@ -82,8 +84,9 @@ async def test_offline_client_greeting():
 
 @pytest.mark.asyncio
 async def test_router_uses_lru_cache(tmp_db):
-    from models import ChatCompletionChoice, ChatCompletionResponse, ChatMessage
     from service import AIGatewayRouter
+
+    from models import ChatCompletionChoice, ChatCompletionResponse, ChatMessage
 
     router = AIGatewayRouter(tmp_db)
 

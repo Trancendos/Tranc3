@@ -217,7 +217,16 @@ class SemanticKnowledgeGraph:
         # --- LRU order (oldest first) ---
         self._lru_order: deque = deque()
 
-        self._lock = asyncio.Lock() if asyncio.get_event_loop().is_running() else None
+        # Same reasoning as Observatory.__init__: `asyncio.get_event_loop()` raises
+        # RuntimeError when the calling thread has no current loop, so this
+        # constructor would fail for any synchronous caller. `get_running_loop()`
+        # asks the question directly.
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._lock = None
+        else:
+            self._lock = asyncio.Lock()
         logger.info(
             "SemanticKnowledgeGraph initialised (max_nodes=%d, max_paths=%d)",
             self.max_nodes,

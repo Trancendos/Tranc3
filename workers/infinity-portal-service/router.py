@@ -9,13 +9,6 @@ from __future__ import annotations
 import time
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from models import (
-    GateRoutingResponse,
-    PortalLogin,
-    PortalRegister,
-    PortalSessionResponse,
-    PortalStatusResponse,
-)
 from service import (
     InfinityGate,
     _create_portal_session,
@@ -35,6 +28,13 @@ from Dimensional.infinity.nomenclature import (
 )
 from Dimensional.infinity.sentinel_station import SentinelEvent
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from models import (
+    GateRoutingResponse,
+    PortalLogin,
+    PortalRegister,
+    PortalSessionResponse,
+    PortalStatusResponse,
+)
 
 # Shared singletons — imported from main at app startup; populated via dependency
 # injection pattern: router functions call get_sentinel_station() / worker_kit

@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from models import ScanRequest, ThreatIndicator
 from service import SecurityEngineRouter
 
 import config
 from database import CryptexDatabase
+from models import ScanRequest, ThreatIndicator
 
 
 def _make_cryptex_router(db: CryptexDatabase, engine_router: SecurityEngineRouter) -> APIRouter:

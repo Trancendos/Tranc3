@@ -28,6 +28,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
+
+import config
+from database import GridDatabase
 from models import (
     EngineStatus,
     EngineType,
@@ -36,9 +39,6 @@ from models import (
     WorkflowStatus,
     WorkflowStep,
 )
-
-import config
-from database import GridDatabase
 
 logger = logging.getLogger("the-grid.service")
 

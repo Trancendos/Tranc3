@@ -13,13 +13,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
-from models import (
-    ConfigUpdate,
-    EntityNameUpdate,
-    EntityTierUpdate,
-    FeatureFlagUpdate,
-    OrchestratorRename,
-)
 from service import (
     _PLATFORM_ENTITIES_AVAILABLE,
     PLATFORM_ENTITIES,
@@ -49,6 +42,13 @@ from Dimensional.infinity.nomenclature import (
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
+)
+from models import (
+    ConfigUpdate,
+    EntityNameUpdate,
+    EntityTierUpdate,
+    FeatureFlagUpdate,
+    OrchestratorRename,
 )
 
 # ---------------------------------------------------------------------------
