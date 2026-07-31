@@ -29,10 +29,11 @@ This is already equivalent to (and in the dual-format sense, slightly ahead of) 
 Syft+Grype+Dependency-Track pipeline researched in this brainstorm. No pipeline rebuild is needed
 for core SBOM.
 
-## 2. A real bug found while checking this: the Grype gate doesn't gate
+## 2. The Grype gate now actually gates (fixed)
 
 `security-scan.yml`'s `Run grype against SBOM` step passes `--fail-on high` — which should make the
-job fail when Grype finds a HIGH or CRITICAL vulnerability — but the step wraps that command in:
+job fail when Grype finds a HIGH or CRITICAL vulnerability — but the step used to wrap that command
+in:
 
 ```bash
 grype sbom:logs/sbom-cyclonedx.json ... --fail-on high 2>&1 | tee logs/grype-console.txt || {
@@ -41,28 +42,43 @@ grype sbom:logs/sbom-cyclonedx.json ... --fail-on high 2>&1 | tee logs/grype-con
 }
 ```
 
-The `|| { ...; exit 0; }` catches Grype's non-zero exit (which `--fail-on high` is supposed to
-produce) and explicitly replaces it with success, and the step also carries `continue-on-error:
-true` on top of that. The net effect: **Grype's findings are recorded in the uploaded artifact, but
-can never fail the pipeline, regardless of severity.** This is the same class of bug as the
+The `|| { ...; exit 0; }` caught Grype's non-zero exit (which `--fail-on high` is supposed to
+produce) and explicitly replaced it with success, and the step also carried `continue-on-error:
+true` on top of that. The net effect: **Grype's findings were recorded in the uploaded artifact,
+but could never fail the pipeline, regardless of severity.** This was the same class of bug as the
 `|| true` CI bypass fixed earlier in this platform's history (5 Whys #4) — a real gate that reads
 as enforcing but silently doesn't.
 
-**Deliberately not flipped in this pass.** Removing the swallow and hard-failing on any existing
-HIGH/CRITICAL finding would immediately start failing every PR across this repo the moment it's
-enabled, with no visibility into how many pre-existing findings would trip it — that's a
-blast-radius change affecting every contributor's CI, not a docs fix, and shouldn't be flipped
-blind. The concrete next step, if this is prioritized: run Grype against a current SBOM once,
-triage what it finds (fix, suppress via a VEX-style justification, or accept), *then* remove the
-swallow in a dedicated follow-up PR once the backlog is known to be clean. Recorded here so that
-work doesn't have to be rediscovered.
+**Backlog triaged, then the gate flipped for real.** Rather than flip the swallow blind, a real
+`pip-audit` + a from-source `grype dir:.` scan were run against this repo to find out what was
+actually in the backlog before touching the gate:
+
+- **react-router-dom** 7.17.0 → 7.18.2 (fixed a real DoS CVE) — also fixed the `web/package-lock.json`
+  drift that meant this dependency tree wasn't even the one real CI's `npm ci` installed.
+- **brace-expansion**, **postcss**, **dompurify**, **valibot** — bumped to patched versions via
+  `overrides` in both `web/package.json` (npm, the tree CI's `frontend-build.yml` actually installs)
+  and the `pnpm` block (local dev).
+- Root `package.json`'s `overrides` block gained a `postcss` pin for the same HIGH finding in the
+  separate root Node project.
+- Three findings remain and are **suppressed via `.grype.yaml`**, each with an inline justification
+  (not just silenced — a per-finding VEX-style record, matching the ask in §3's VEX row below):
+  - `GHSA-qwww-vcr4-c8h2` (react-router RSC-mode CSRF bypass) — fix needs a major-version bump to
+    8.3.0; not exploitable here since `web/` has zero React Server Components usage.
+  - `CVE-2024-23342` (ecdsa Minerva timing attack) — no upstream fix exists; not exploitable here
+    since JWT signing is hardcoded to HS256 (`src/auth/facade.py`), never touching ecdsa's ECDSA path.
+  - `GHSA-w8v5-vhqr-4h9v` (diskcache unsafe pickle deserialization) — no upstream fix exists;
+    already mitigated in code (`_NoPickleJSONDisk`) and tracked in `.trivyignore`.
+
+With the backlog clean, the workflow step now runs `grype ... --config .grype.yaml --fail-on high`
+with **no swallow and no `continue-on-error`** — a genuinely new HIGH/CRITICAL finding fails the
+job, and a missing SBOM is now also a hard failure instead of silently skipping the check.
 
 ## 3. BOM taxonomy triage against this platform
 
 | BOM type | Status here | Reasoning |
 |---|---|---|
 | **SBOM** | Exists + documented | §1 above — syft (CycloneDX+SPDX) + grype + cyclonedx-py + Dependency-Track |
-| **VEX** | Genuine gap, but cheap to add later | No VEX documents are emitted today; Grype's raw output is noisy the same way any SBOM-scanner output is. Natural companion to the grype-gate fix in §2 — once real findings are triaged, a VEX doc per suppressed finding is the correct way to record "not exploitable here" rather than just ignoring the warning |
+| **VEX** | Exists, minimal form | `.grype.yaml` (repo root) now carries a per-finding VEX-style record for each suppressed vulnerability — id, affected package, and a "not exploitable here / no fix exists" justification — rather than a full standalone VEX document format. See §2 |
 | **CBOM** (cryptography) | Exists, differently named | Magna Carta's `ENCRYPTION-MATRIX.md` (MC-014) already catalogs the platform's real cryptographic assets (AES-GCM vault, argon2id/bcrypt password hashing, JWT signing) — the substance of a CBOM already exists as a compliance doc, not worth duplicating under a new acronym |
 | **SaaSBOM** (external service dependencies) | Exists, differently named | `docs/ZERO_COST_VENDOR_MATRIX.md` already documents the AI Gateway's external dependency chain (Ollama, HuggingFace Inference, OpenRouter free tier, Fly.io) with the same intent a SaaSBOM would serve — again, don't duplicate under a new name |
 | **OBOM** (operational/runtime) | Exists, differently named | `CLAUDE.md`'s Production Infrastructure Stack table + `docker-compose.production.yml` already function as this platform's OBOM |

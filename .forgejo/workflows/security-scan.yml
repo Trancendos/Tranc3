@@ -445,15 +445,19 @@ jobs:
         run: |
           if [ -f logs/sbom-cyclonedx.json ]; then
             grype sbom:logs/sbom-cyclonedx.json \
+              --config .grype.yaml \
               --output json \
               --file logs/grype-results.json \
               --fail-on high \
-              2>&1 | tee logs/grype-console.txt || {
-                echo "::warning::Grype found HIGH/CRITICAL vulnerabilities — review logs/grype-results.json"
-                exit 0
-              }
+              2>&1 | tee logs/grype-console.txt
+          else
+            echo "::error::SBOM missing — cannot run grype vulnerability matching"
+            exit 1
           fi
-        continue-on-error: true
+        # No continue-on-error here: an unignored HIGH/CRITICAL finding (or a
+        # missing SBOM) must fail the job. Pre-triaged, non-exploitable
+        # findings are suppressed via .grype.yaml, not swallowed here — see
+        # docs/governance/BOM-MATRIX.md for the triage record.
 
       - name: Upload SBOM and grype reports
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -1,0 +1,41 @@
+# .grype.yaml — Grype vulnerability-scan ignore rules
+#
+# Each entry suppresses one specific, already-triaged finding that is
+# confirmed non-exploitable (or unfixable-by-design) in this codebase's
+# actual usage — see docs/governance/BOM-MATRIX.md for the full triage.
+# Do NOT add broad/wildcard ignores here; every entry must name the exact
+# vulnerability + package so a genuinely new finding still fails the build.
+#
+# Review quarterly: drop an entry once a real fix ships upstream.
+ignore:
+  # CVE-2024-23342 (Minerva timing attack) — ecdsa
+  # Affects: python-ecdsa, no fix released (upstream declines to fix; see
+  # PYSEC-2026-1325). NOT EXPLOITABLE here: this platform's JWT signing is
+  # hardcoded to HS256 (src/auth/facade.py: _ALGORITHM = "HS256"), which
+  # never touches ecdsa's ECDSA signing/verification path.
+  - vulnerability: CVE-2024-23342
+    package:
+      name: ecdsa
+
+  # GHSA-qwww-vcr4-c8h2 — react-router RSC-mode CSRF bypass
+  # Fix requires a major-version bump to react-router(-dom) 8.3.0. NOT
+  # EXPLOITABLE here: web/ is a plain Vite + React SPA with zero React
+  # Server Components usage (verified: no Next.js/RSC packages, no RSC
+  # entry points in web/package.json or src/).
+  - vulnerability: GHSA-qwww-vcr4-c8h2
+    package:
+      name: react-router
+  - vulnerability: GHSA-qwww-vcr4-c8h2
+    package:
+      name: react-router-dom
+
+  # GHSA-w8v5-vhqr-4h9v (CVE-2025-69872) — diskcache unsafe pickle deserialization
+  # Affects: diskcache <= 5.6.3 (workers/cache-service), the latest release;
+  # no fixed version exists. MITIGATED IN CODE: worker.py opens the cache
+  # with a hardened _NoPickleJSONDisk that hard-rejects pickle read paths —
+  # see workers/cache-service/requirements-worker.txt and .trivyignore.
+  # Grype matches this by its GHSA id, not the CVE alias — both are listed
+  # here for readability but the GHSA id below is what actually matches.
+  - vulnerability: GHSA-w8v5-vhqr-4h9v
+    package:
+      name: diskcache
