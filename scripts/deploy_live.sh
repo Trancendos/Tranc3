@@ -14,7 +14,12 @@ PROFILE="${DEPLOY_PROFILE:-core}"
 # the `env_file:` service directive — that one only injects variables into containers.
 # generate_production_env.sh writes .env.production, so without this every compose
 # invocation below dies on the first required variable before starting a container.
-COMPOSE=(docker compose --env-file .env.production -f "$COMPOSE_FILE")
+#
+# Honour ENV_OUT, which is what the generator itself keys off: hardcoding
+# .env.production here would let an operator with ENV_OUT set generate secrets into one
+# file and then interpolate from another.
+ENV_FILE="${ENV_OUT:-.env.production}"
+COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 
 for arg in "$@"; do
   case "$arg" in
@@ -41,10 +46,10 @@ FULL_EXTRA=(
 )
 
 echo "==> Generate production environment (if missing)"
-if [[ ! -f .env.production ]]; then
-  ./scripts/generate_production_env.sh
+if [[ ! -f "$ENV_FILE" ]]; then
+  ENV_OUT="$ENV_FILE" ./scripts/generate_production_env.sh
 else
-  echo "Using existing .env.production"
+  echo "Using existing $ENV_FILE"
 fi
 
 echo "==> Preflight"
