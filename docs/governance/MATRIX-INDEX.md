@@ -38,7 +38,8 @@
 | Permissions Matrix | Exists, newly documented | `src/roles/registry.py` (Job Description assignment) + `src/access/registry.py` (per-user Location subscription/consent) + Zero Trust IAM (`src/auth/zero_trust.py`) | [PERMISSIONS-ACCESS-MATRIX.md](PERMISSIONS-ACCESS-MATRIX.md) |
 | Privacy Matrix | Exists, newly documented | `src/privacy/dsr_workflow.py` — real GDPR DSR automation (access/erasure/rectification/portability/restriction/objection, 30-day SLA tracking) | [PRIVACY-MATRIX.md](PRIVACY-MATRIX.md) |
 | Data Registry | **Genuine gap** | No dataset/data-asset registry found. `src/access/registry.py` is a *user-consent* registry, not a data-asset one; `src/training/dataset.py`/`src/core/dataset.py` are ML data loaders, not a governance registry | Recorded here as a gap |
-| Validation Matrix | Exists, thin | `src/validation/validators.py` — basic input validators (email, username, port, safe-string). Real, but utility-level, not a governance system | Noted here; not inflated into a doc |
+| Validation Matrix | Exists, thin | `src/validation/validators.py` — basic input validators (email, username, port, safe-string), now wired into `DBUserManager.create_user`, `RoleRegistry.assign_ai`, and `RelationsRegistry.record_event` (previously unused dead code). Still utility-level, not a governance system | Noted here; not inflated into a doc |
+| BOM Matrix (SBOM/CBOM/AI-BOM/HBOM/SaaSBOM/…) | Exists, newly documented | `.forgejo/workflows/security-scan.yml`'s real syft+grype+Dependency-Track SBOM pipeline, triaged against ~15 other BOM acronyms from a follow-up brainstorm | [BOM-MATRIX.md](BOM-MATRIX.md) |
 | Routing Matrix | Exists, thin | `src/routers/`, `workers/model-router-service/`, per-tier `t2ance/router.py` / `trance_one/router.py` FastAPI routers. These are literal HTTP routers, not a routing-policy governance matrix | Noted here |
 | Worker Matrix | Exists + documented | The Self-Hosted Worker Map is already the platform's Worker Matrix | `CLAUDE.md` Self-Hosted Worker Map table (90+ workers, ports, priorities) |
 | API Matrix | Exists + documented | `src/apimarket/marketplace.py` (external), FastAPI routers (internal) | `CLAUDE.md` API Marketplace entity; internal APIs undocumented as a single surface (see gap note below) |
@@ -83,8 +84,9 @@ Four items had no real code behind them anywhere in the repo:
 - **Data Share Framework** — a formal cross-Location data-sharing contract/audit layer.
 - **Solutions Matrix** — a dedicated "proposed solutions" tracker distinct from Remediation.
 - Two items exist only as **thin utility code**, not governance systems: **Validation Matrix**
-  (`src/validation/validators.py` is a handful of input validators) and **Association Matrix**
-  (`src/cmdb/models.py` is infrastructure CMDB, not entity association).
+  (`src/validation/validators.py` — a handful of input validators, now wired into three real call
+  sites rather than sitting unused) and **Association Matrix** (`src/cmdb/models.py` is
+  infrastructure CMDB, not entity association).
 
 None of these are built as part of this pass — inventing a "Matrix" doc for code that doesn't exist
 would misrepresent the platform's actual state, the same reasoning applied to
@@ -99,3 +101,6 @@ that's a build task, not a documentation one.
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — the tier/governance system
   `AI-AGENT-BOT-TIER-MATRIX.md` cross-references rather than re-describes for the advancement-
   pipeline side of Trance-One/T2ance.
+- [BOM-MATRIX.md](BOM-MATRIX.md) — a later follow-up pass triaging the SBOM/CBOM/AI-BOM/HBOM/
+  SaaSBOM/etc. taxonomy against this platform's real SBOM pipeline and existing docs, added after
+  this index's original four-doc pass.
