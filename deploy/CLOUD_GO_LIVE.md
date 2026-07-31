@@ -51,7 +51,7 @@ Set these once. **Never paste tokens into a chat, a commit, or a PR.**
 | Name | Where it goes | Notes |
 |---|---|---|
 | `FLY_API_TOKEN` | shell env, `.env.production` (gitignored), or `flyctl auth login` | https://fly.io/user/personal_access_tokens |
-| `CF_API_TOKEN` | GitHub repo secret **and** Forgejo org secret | Workers edit scope |
+| `CF_API_TOKEN` | GitHub repo secret **and** Forgejo org secret | API token with the **Account → Workers Scripts → Edit** permission |
 | `CF_ACCOUNT_ID` | GitHub repo secret **and** Forgejo org secret | `e0214028cb64d31232f5662548a55e4e` |
 
 The two CI systems do not share a secret store — set Cloudflare secrets in both, or the

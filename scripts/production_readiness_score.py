@@ -149,7 +149,10 @@ def _cloud_only_readiness() -> tuple[float, list[str], list[str]]:
         return 0.0, ["scripts/cloud_preflight.py missing"], ["Add the cloud preflight"]
 
     try:
-        proc = subprocess.run(
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        proc = subprocess.run(  # nosec B603 — list args, no shell=True; every element is
+            # a constant or derived from ROOT (this file's own location), so there is no
+            # externally controllable input to inject through.
             [sys.executable, str(preflight), "--json"],
             capture_output=True,
             text=True,
@@ -160,9 +163,24 @@ def _cloud_only_readiness() -> tuple[float, list[str], list[str]]:
     except (subprocess.SubprocessError, json.JSONDecodeError, OSError) as exc:
         return 0.0, [f"cloud_preflight.py did not produce a report: {exc}"], []
 
+    # cloud_preflight.py exits 1 when it finds failures and always reports `ok`. Trusting
+    # the parsed JSON alone would score a run that crashed after emitting partial output,
+    # or one whose schema drifted, as if it had passed.
+    if "ok" not in report:
+        return (
+            0.0,
+            [f"cloud_preflight.py returned an unrecognised report (exit {proc.returncode})"],
+            ["Run: python scripts/cloud_preflight.py --json"],
+        )
+
     failures = report.get("failures") or []
     warnings = report.get("warnings") or []
     checks = report.get("checks") or []
+
+    if not report["ok"] and not failures:
+        # Exited non-ok without naming a failure — --strict promoting warnings, most
+        # likely. Do not silently award the clean-run score.
+        failures = [f"cloud_preflight.py reported not-ok (exit {proc.returncode})"]
 
     if failures:
         # Artifacts are broken — the deploy cannot start regardless of credentials.

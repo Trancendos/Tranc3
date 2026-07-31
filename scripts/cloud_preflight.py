@@ -26,6 +26,7 @@ import argparse
 import json
 import re
 import sys
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -69,10 +70,21 @@ class Result:
         self.warnings.append(msg)
 
 
-def _toml_value(text: str, key: str) -> str | None:
-    """Minimal TOML scalar lookup — avoids a dependency for three keys."""
-    m = re.search(rf'^\s*{re.escape(key)}\s*=\s*"([^"]*)"', text, re.MULTILINE)
-    return m.group(1) if m else None
+def _toml_value(path: Path, key: str) -> str | None:
+    """Top-level TOML string value, or None if absent or unparseable.
+
+    Uses stdlib tomllib (3.11+) rather than a regex so reformatting — single quotes,
+    multi-line strings, a key moved under a table header — cannot silently change the
+    answer. A malformed file returns None, which the callers surface as a missing key
+    rather than crashing the whole preflight on one bad worker.
+    """
+    try:
+        with path.open("rb") as fh:
+            data = tomllib.load(fh)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    value = data.get(key)
+    return value if isinstance(value, str) else None
 
 
 def check_fly(res: Result) -> None:
@@ -81,7 +93,7 @@ def check_fly(res: Result) -> None:
         if not toml_path.is_file():
             res.fail(f"Fly app '{app}': {rel} is missing — `fly deploy` has nothing to read")
             continue
-        declared = _toml_value(toml_path.read_text(encoding="utf-8"), "app")
+        declared = _toml_value(toml_path, "app")
         if declared != app:
             res.fail(
                 f"Fly app name mismatch: {rel} declares app = '{declared}', "
@@ -147,14 +159,13 @@ def check_cloudflare_workers(res: Result) -> None:
 
         wrangler = directory / "wrangler.toml"
         if wrangler.is_file():
-            text = wrangler.read_text(encoding="utf-8")
-            declared = _toml_value(text, "name")
+            declared = _toml_value(wrangler, "name")
             if declared != name:
                 res.fail(
                     f"CF worker '{name}': wrangler.toml declares name = '{declared}'. "
                     f"`wrangler deploy` would publish to the wrong worker."
                 )
-            elif not _toml_value(text, "account_id"):
+            elif not _toml_value(wrangler, "account_id"):
                 res.warn(f"CF worker '{name}': wrangler.toml has no account_id")
             else:
                 res.ok(f"CF worker '{name}' — wrangler.toml, package.json and lockfile present")
@@ -166,8 +177,7 @@ def check_frontend(res: Result) -> None:
         res.warn("cloudflare/pages/wrangler.toml missing — no Pages config for the frontend")
         return
 
-    text = pages.read_text(encoding="utf-8")
-    out_dir = _toml_value(text, "pages_build_output_dir")
+    out_dir = _toml_value(pages, "pages_build_output_dir")
     if not out_dir:
         res.warn("cloudflare/pages/wrangler.toml declares no pages_build_output_dir")
         return

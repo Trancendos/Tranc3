@@ -29,21 +29,33 @@ REQUIRED_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*):\?")
 # Assignment inside the generator's heredoc body: `VAR=${VAR}` or `VAR=literal`.
 EMITTED_RE = re.compile(r"^([A-Z_][A-Z0-9_]*)=", re.MULTILINE)
 
+# The heredoc the generator redirects into $OUT — i.e. the literal body of
+# .env.production. Only assignments in here actually reach the file.
+HEREDOC_RE = re.compile(r'cat > "\$OUT" <<EOF\n(.*?)\nEOF', re.DOTALL)
+
 
 def required_variables() -> set[str]:
     return set(REQUIRED_RE.findall(COMPOSE.read_text(encoding="utf-8")))
 
 
 def emitted_variables() -> set[str]:
-    """Variables the generator writes into .env.production.
+    """Variables the generator actually writes into .env.production.
 
-    Both the shell assignments above the heredoc and the `VAR=${VAR}` lines inside it
-    match the same pattern, which is fine: a name has to appear in the heredoc to reach
-    the file, and anything only assigned in shell scope is a superset we'd rather not
-    flag. The end-to-end check is `docker compose config`, which CI runs when docker is
-    available; this is the cheap always-on guard.
+    Scoped to the heredoc body rather than the whole script. The generator assigns
+    each secret twice — once as a shell variable, then again inside the heredoc — and
+    matching the whole file would count a variable that was generated in shell scope
+    but never interpolated into the output. That is precisely the bug this check
+    exists to catch, so it must not be able to pass on one.
     """
-    return set(EMITTED_RE.findall(GENERATOR.read_text(encoding="utf-8")))
+    text = GENERATOR.read_text(encoding="utf-8")
+    match = HEREDOC_RE.search(text)
+    if not match:
+        raise ValueError(
+            f'Could not locate the `cat > "$OUT" <<EOF` heredoc in '
+            f"{GENERATOR.name}. If the generator's output mechanism changed, update "
+            f"HEREDOC_RE — silently matching nothing would make this check vacuous."
+        )
+    return set(EMITTED_RE.findall(match.group(1)))
 
 
 def main() -> int:
