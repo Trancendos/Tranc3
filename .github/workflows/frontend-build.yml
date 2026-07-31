@@ -115,6 +115,12 @@ jobs:
       # Mirrors the credential guard in deploy-cloudflare.yml: a repo without
       # the Cloudflare secrets set skips the deploy with a warning rather than
       # red-X'ing every push to main.
+      #
+      # The skip must be LOUD. A green check on a job that deployed nothing is
+      # the same defect this repo's readiness scorecard already suffers from —
+      # a signal that reports success while doing no work. The job stays
+      # non-blocking (failing every push on a repo without secrets is noise),
+      # but the run summary says plainly whether anything actually shipped.
       - name: Check Cloudflare credentials
         id: creds
         env:
@@ -122,8 +128,18 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
           if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
-            echo "::warning::CF_API_TOKEN / CF_ACCOUNT_ID not set — skipping Pages deploy."
+            echo "::warning::CF_API_TOKEN / CF_ACCOUNT_ID not set — NOT deploying to Pages."
             echo "present=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## ⚠️ Frontend was NOT deployed"
+              echo
+              echo "The bundle built and was uploaded as an artifact, but **no deploy happened**."
+              echo
+              echo "\`CF_API_TOKEN\` and/or \`CF_ACCOUNT_ID\` are not set as repository secrets,"
+              echo "so the Cloudflare Pages step was skipped. trancendos.com is unchanged."
+              echo
+              echo "Set them under **Settings → Secrets and variables → Actions**, then re-run."
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
@@ -137,7 +153,13 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         if: steps.creds.outputs.present == 'true'
-        run: wrangler pages deploy web/dist --project-name=trancendos-frontend --commit-dirty=true
+        run: |
+          wrangler pages deploy web/dist --project-name=trancendos-frontend --commit-dirty=true
+          {
+            echo "## ✅ Frontend deployed to Cloudflare Pages"
+            echo
+            echo "Project: \`trancendos-frontend\` — commit \`${GITHUB_SHA:0:8}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

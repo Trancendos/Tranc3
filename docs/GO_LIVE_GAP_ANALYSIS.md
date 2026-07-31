@@ -131,6 +131,40 @@ Per `CLAUDE.md`, The Citadel host is blocked on hardware funding, not on enginee
 This is the largest single gap to "LIVE" and it is **not a code problem**. Everything
 needed is already scripted (`scripts/citadel_deploy_all.sh`, `deploy/LIVE_DEPLOY.md`).
 
+**The cloud path is blocked too, and on nothing more than missing secrets.** Confirmed
+against the workflow runs on `main` after this branch merged:
+
+| Path | Workflow | Result | Cause |
+|---|---|---|---|
+| Backend → Fly.io | `.github/workflows/deploy-fly.yml` | ❌ hard fail | `FLY_API_TOKEN` not set as a **GitHub** repo secret |
+| Frontend → CF Pages | `.github/workflows/frontend-build.yml` | ⚠️ **silently skipped** | `CF_API_TOKEN` / `CF_ACCOUNT_ID` not set as **GitHub** repo secrets |
+
+The Fly job fails loudly, which is correct. The Pages job did not: its credential guard
+skipped the deploy and the job still reported **green**, so `trancendos.com` was never
+updated while CI looked healthy. That is the same defect this document criticises in the
+readiness scorecard — a signal that reports success while doing no work — and it was
+introduced by the guard added in this very branch. Fixed: both copies of the workflow now
+write an unmissable "Frontend was NOT deployed" block to the run summary, while staying
+non-blocking so a repo without secrets is not red on every push.
+
+Setting those three secrets is the entire remaining gap for a cloud-only go-live. No code
+change is required — but **set them in the right place**, because the two CI systems do
+*not* share a secret store (`cloudflare/DEPLOY.md`):
+
+| CI system | Where | Applies to |
+|---|---|---|
+| **GitHub Actions** | Repo → Settings → Secrets and variables → Actions | `.github/workflows/*` — the copies that run today |
+| **Forgejo** (The Workshop) | Org/repo → Settings → Actions → Secrets, via `deploy/forgejo/set-org-secrets.sh` | `.forgejo/workflows/*` — once the Citadel runner is back |
+
+The cloud-only phase runs the **GitHub** copies, so those are the ones that unblock a
+go-live now. Configuring only the Forgejo side would leave the live path still skipping.
+
+Two things to know when the Forgejo side is configured later: per
+`deploy/forgejo/RUNBOOK.md`, a workflow that should have fired while the runner was down
+does **not** replay retroactively — trigger it manually from the Actions tab — and the
+same guard means a missing secret there skips rather than fails, so check the run summary
+rather than the tick.
+
 ---
 
 ## 3. The readiness scorecard overstates confidence
