@@ -69,7 +69,7 @@ LOCATION_ABBREVS = {
     "Cryptex": "CRX",
     "The Ice Box": "ICB",
     # DevOps Pillar
-    "The Dutchy": "DUT",
+    "Section 7": "DUT",
     "The Citadel": "CTL",
     "Think Tank": "TNK",
     "Turing's Hub": "THB",
@@ -265,7 +265,7 @@ BOT_SUFFIX_REPAIRS = {
     "Pause": "Pause-Bot",
     "Skip": "Skip-Bot",
     "Volume": "Volume-Bot",
-    # The Dutchy
+    # Section 7
     "Scraper": "Scraper-Bot",
     "Parser": "Parser-Bot",
     "Crawler": "Crawler-Bot",
@@ -475,7 +475,7 @@ def generate_id_registry():
             "name": "Trancendos",
             "aid": "AID-TRN-01",
             "tier": 2,
-            "governs": ["The Dutchy", "Turing's Hub", "ChronosSphere / ArcStream", "DevOcity"],
+            "governs": ["Section 7", "Turing's Hub", "ChronosSphere / ArcStream", "DevOcity"],
         },
     ]
     registry["primes"] = prime_data

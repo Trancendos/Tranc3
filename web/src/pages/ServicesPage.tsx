@@ -219,8 +219,8 @@ const PLANNED_SERVICES: ServiceDef[] = [
   },
   {
     id: 'dutchy',
-    name: 'The Dutchy',
-    leadAI: 'Predictive lore',
+    name: 'Section 7',
+    leadAI: 'The Dutchy',
     description: 'Intelligence & market analysis — RSS signals, keyword extraction, daily reports.',
     path: '/dutchy',
     port: 8058,

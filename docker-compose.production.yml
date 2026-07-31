@@ -3443,7 +3443,7 @@ services:
       - "traefik.http.middlewares.strip-warp-radio.stripprefix.prefixes=/warp-radio"
       - "traefik.http.services.warp-radio.loadbalancer.server.port=8073"
 
-  # ── The Dutchy — intelligence / market analysis (Port 8061) ──────────────────────────────────────────────
+  # ── Section 7 — intelligence / market analysis (Port 8061) ──────────────────────────────────────────────
   the-dutchy:
     build:
       context: ./workers/the-dutchy

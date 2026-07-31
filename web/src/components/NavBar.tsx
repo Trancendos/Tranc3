@@ -40,7 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/storage',       label: 'Storage',       icon: <Database size={18} aria-hidden="true" />, group: 'data' },
   { path: '/search',        label: 'Search',        icon: <Search size={18} aria-hidden="true" />, group: 'data' },
   { path: '/the-lab',       label: 'The Lab',       icon: <FlaskConical size={18} aria-hidden="true" />, group: 'data' },
-  { path: '/the-dutchy',   label: 'The Dutchy',    icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
+  { path: '/the-dutchy',   label: 'Section 7',    icon: <BarChart3 size={18} aria-hidden="true" />, group: 'data' },
   // AI
   { path: '/turings-hub',  label: "Turing's Hub",  icon: <Cpu size={18} aria-hidden="true" />, group: 'ai' },
   { path: '/deep-agents',  label: 'Deep Agents',   icon: <Network size={18} aria-hidden="true" />, group: 'ai' },

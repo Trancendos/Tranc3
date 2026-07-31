@@ -78,7 +78,7 @@ AI_NAME_TO_PROFILE_ID: dict[str, Optional[str]] = {
     "Rocking Ricki": "rocking-ricki",
     "Renik": "renik",
     "Neonach": "neonach",
-    "Predictive lore": "predictive-lore",
+    "The Dutchy": "predictive-lore",
     "Trancendos": "trancendos",
     "Samantha Turing": "samantha-turing",
     "Chronos": "chronos",

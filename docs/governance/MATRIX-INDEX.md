@@ -53,7 +53,7 @@
 | Development Matrix | Exists + documented | DevOcity (`src/devocity/`) is already the named platform entity for this | `CLAUDE.md` entity table |
 | Defensive / Protective Matrix | Exists + documented | Cryptex (`src/cryptex/`), The Ice Box (`workers/ice-box-service/`), The Warp Tunnel (`src/security/warp_tunnel/`) are already named platform entities covering this | `CLAUDE.md` entity table; `docs/governance/ESTATE-PROTECTION-MATRICES.md` |
 | Vulnerability Matrix | Exists, newly documented | Same as CVE Matrix above | [ERROR-REMEDIATION-MATRIX.md](ERROR-REMEDIATION-MATRIX.md) §3 |
-| Research Matrix | Exists + documented | The Dutchy (`src/research/`) is already the named entity for Intelligence & Market Analysis | `CLAUDE.md` entity table |
+| Research Matrix | Exists + documented | Section 7 (`src/research/`, Lead AI: The Dutchy) is already the named entity for Intelligence & Market Analysis | `CLAUDE.md` entity table |
 | Solutions Matrix | **Genuine gap** | No dedicated "solutions" tracking system found distinct from Remediation | Recorded here as a gap |
 | Testing Matrix | Exists + documented | The Chaos Party (`tests/test_chaos.py`, `workers/chaos-party/`) + `src/nanoservices/chaos_engineering/` are already the named entity/system for this | `CLAUDE.md` entity table |
 | AI to Agent Matrix | Exists, newly documented | `src/agents/orchestrator.py` — real SQLite-backed multi-agent task queue (`AgentConfig`, `AgentTask`, priority scheduling) | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §2 |

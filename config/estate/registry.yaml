@@ -1257,9 +1257,9 @@ components:
     entity_type: platform
 
   - ref: TRC-P3-047
-    name: "The Dutchy"
+    name: "Section 7"
     short_id: dutchy
-    lead_ai: "Predictive lore"
+    lead_ai: "The Dutchy"
     role: "Intelligence & market analysis"
     status: planned
     version: "0.0.0"

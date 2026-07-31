@@ -290,7 +290,7 @@ services:
       - "traefik.http.routers.navidrome.entrypoints=web"
       - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
 
-  # ── The Dutchy — Predictive lore — Port 8058 ─────────────────
+  # ── Section 7 — The Dutchy — Port 8058 ─────────────────
   the-dutchy:
     build:
       context: ./workers/the-dutchy

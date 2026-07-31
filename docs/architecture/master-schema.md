@@ -137,7 +137,7 @@ The 11 Pillars define the architectural domains of the Trancendos ecosystem. Eac
 | the-studio | The Studio | Creativity | #F59E0B | Palette |
 | imaginarium | Imaginarium | Creativity | #FBBF24 | Sparkles |
 | fablousa | Fablousa | Creativity | #EC4899 | Feather |
-| the-dutchy | The Dutchy | Commercial | #F97316 | Crown |
+| the-dutchy | Section 7 | Commercial | #F97316 | Crown |
 | royal-bank | Royal Bank | Commercial | #F97316 | Landmark |
 | arcadian-exchange | Arcadian Exchange | Commercial | #FB923C | TrendingUp |
 | the-artifactory | The Artifactory | Commercial | #10B981 | Package |

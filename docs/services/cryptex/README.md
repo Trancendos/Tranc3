@@ -20,7 +20,7 @@
 > and `ml_detector.py` (232 lines) — total ~1,940 lines (≈69% of the module) and are never
 > imported by `routes.py`, `threat_detector.py`, `bounty_hunter.py`, or `api.py`.** `cve_scanner.py`
 > is imported only by `tests/test_section7.py` (as "Section 7" — see `CLAUDE.md`'s naming note
-> that "Section 7" maps to The Dutchy, not Cryptex — a further cross-entity naming ambiguity, not
+> that "Section 7" is the Intelligence & Market Analysis Location (Lead AI: The Dutchy), not Cryptex — a further cross-entity naming ambiguity, not
 > resolved in this pass). This is real, substantial code — not stubs — but it is dead weight from
 > the live platform's perspective: none of it runs unless something outside this repo imports it
 > directly, which nothing currently does.
@@ -200,7 +200,7 @@ live application (verified via `grep -rl` against `src/`, `api.py`, and `workers
 
 - Naming: canonical entity name "Cryptex" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`. Note
   `cve_scanner.py` is imported by a test file named `test_section7.py` — "Section 7" is a
-  documented internal placeholder name (`CLAUDE.md`) mapped to The Dutchy, not Cryptex; this
+  documented Location name (`CLAUDE.md`) belonging to the Intelligence entity (Lead AI: The Dutchy), not Cryptex; this
   cross-reference is flagged as a naming ambiguity, not resolved in this pass.
 - Any module added to `src/cryptex/` MUST be imported from a live code path (route, rule
   registration, or scheduled task) before being described as "implemented" in future doc-pack

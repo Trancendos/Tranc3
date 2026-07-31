@@ -91,7 +91,7 @@ mirrors `PLATFORM_ENTITIES.md` — update together.
 | **The Ice Box** | ✅ In repo | Neonach | ✅ **Complete** | `docs/services/the-ice-box/` |
 | **The Warp Tunnel** | ✅ In repo | Rocking Ricki | ✅ **Complete** | `docs/services/the-warp-tunnel/` |
 | **Warp Radio** | ✅ In repo | Rocking Ricki | ✅ **Complete** | `docs/services/warp-radio/` |
-| **The Dutchy** | ✅ In repo | Predictive lore | ✅ **Complete** | `docs/services/the-dutchy/` |
+| **Section 7** | ✅ In repo | The Dutchy | ✅ **Complete** | `docs/services/the-dutchy/` |
 | **Think Tank** | ✅ In repo | Trancendos | ✅ **Complete** | `docs/services/think-tank/` |
 | **ChronosSphere / ArcStream** | ✅ In repo | Chronos | ✅ **Complete** | `docs/services/chronosphere-arcstream/` |
 | **DevOcity** | ✅ In repo | Kitty | ✅ **Complete** | `docs/services/devocity/` |

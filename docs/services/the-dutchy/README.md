@@ -4,7 +4,7 @@
 |---|---|
 | **ServiceID (CMDB)** | `SRV-DUTCHY-001` |
 | **Entity** | The Dutchy |
-| **Lead AI** | Predictive lore |
+| **Lead AI** | The Dutchy |
 | **Status** | ✅ In repo (per `CLAUDE.md` service table) — Live tier |
 | **Code** | `src/research/section7.py`, `src/research/routes.py`; router registered in `api.py` (`app.include_router(_section7_router)`, line 804) — **plus a separate standalone worker**, `workers/the-dutchy/worker.py` (port unverified in this pass) |
 
@@ -31,7 +31,7 @@
 - **Mission:** intelligence & market analysis — aggregates live cross-platform signals
   (Observatory, The Town Hall, Cryptex, The Basement, The Nexus) into structured reports, and
   auto-publishes findings to The Library as KB articles.
-- **Owner (RACI-A):** Predictive lore; Platform Owner Trancendos.
+- **Owner (RACI-A):** The Dutchy; Platform Owner Trancendos.
 - **Scope:** `src/research/section7.py`'s `Section7` class — report generation and storage only.
   `bci_interface.py` (brain-computer-interface signal processing) is a co-located, self-declared
   stub in the same `src/research/` directory but is not part of The Dutchy's HTTP surface and not
@@ -90,7 +90,7 @@ This is one of the more substantively wired entities audited in this series:
 
 ## 4. RACI Matrix
 
-| Activity | Predictive lore (Lead) | Platform Owner | The Library | Platform Engineering |
+| Activity | The Dutchy (Lead) | Platform Owner | The Library | Platform Engineering |
 |---|---|---|---|---|
 | Report generation logic changes | **R** | A | I | C |
 | Library auto-publish wiring | C | A | **R** | C |

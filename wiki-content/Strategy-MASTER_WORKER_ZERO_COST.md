@@ -64,7 +64,7 @@ tasks:
 | Sentinel events | `Dimensional/infinity/sentinel_station.py` | Wired in Admin |
 | Health probe script | `scripts/health_check.py` | Added PR #84 |
 
-**Master scraper** = Tier 5 bot at The Dutchy (`Scraper-Bot`, `Crawler-Bot`) — already in `PLATFORM_ENTITIES.md`. Manifest-driven runs avoid a monolithic scraper.
+**Master scraper** = Tier 5 bot at Section 7 (`Scraper-Bot`, `Crawler-Bot`) — already in `PLATFORM_ENTITIES.md`. Manifest-driven runs avoid a monolithic scraper.
 
 ---
 

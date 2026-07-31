@@ -1,4 +1,4 @@
-"""The Dutchy — Port 8058.
+"""Section 7 — Port 8058.
 
 Intelligence & market analysis.
 """
@@ -11,7 +11,7 @@ import time
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="The Dutchy", version="1.0.0")
+app = FastAPI(title="Section 7", version="1.0.0")
 
 PORT = int(os.getenv("PORT", "8058"))
 START_TIME = time.time()
@@ -28,8 +28,8 @@ async def health() -> JSONResponse:
 async def status() -> JSONResponse:
     return JSONResponse(
         {
-            "entity": "The Dutchy",
-            "lead_ai": "Predictive lore",
+            "entity": "Section 7",
+            "lead_ai": "The Dutchy",
             "status": "initialising",
             "uptime": time.time() - START_TIME,
         }

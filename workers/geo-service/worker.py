@@ -309,9 +309,9 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "cached_ips": cached,
         "entity": {
-            "location": "The Dutchy",
+            "location": "Section 7",
             "pillar": "DevOps",
-            "lead_ai": "Predictive lore",
+            "lead_ai": "The Dutchy",
             "primes": ["Trancendos"],
             "primary_function": "Intelligence & Market Analysis",
         },

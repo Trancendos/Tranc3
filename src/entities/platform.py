@@ -1000,10 +1000,10 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         worker_port=None,
         worker_path="src/warp_radio/",
     ),
-    "The Dutchy": LocationEntity(
-        location="The Dutchy",
+    "Section 7": LocationEntity(
+        location="Section 7",
         pillar=Pillar.DEVOPS,
-        lead_ai="Predictive lore",
+        lead_ai="The Dutchy",
         abilities=[
             "Quantum Sentiment Scraping: Analyzes data for market shifts.",
             "Structural Blueprint Generation: Converts intel into JSON.",
@@ -1472,7 +1472,7 @@ LOCATION_ABBREVS: Dict[str, str] = {
     "Cryptex": "CRX",
     "The Ice Box": "ICB",
     # DevOps
-    "The Dutchy": "DUT",
+    "Section 7": "DUT",
     "The Citadel": "CTL",
     "Think Tank": "TNK",
     "Turing's Hub": "THB",
@@ -1759,7 +1759,7 @@ JOB_DESCRIPTIONS: Dict[str, str] = {
     "Cryptex": "Chief Information Security Officer",
     "The Ice Box": "Head of Sandbox Threat Isolation",
     "Warp Radio": "Head of Audio & Streaming",
-    "The Dutchy": "Chief Intelligence Officer",
+    "Section 7": "Chief Intelligence Officer",
     "The Citadel": "Chief Operations Officer",
     "Think Tank": "Head of Research & Development",
     "Turing's Hub": "Head of AI Entity Creation",

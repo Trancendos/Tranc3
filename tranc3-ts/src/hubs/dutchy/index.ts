@@ -1,5 +1,5 @@
 /**
- * The Dutchy — Barrel Exports
+ * Section 7 (Lead AI: The Dutchy) — Barrel Exports
  */
 
 export { PredictiveAI } from './PredictiveAI';

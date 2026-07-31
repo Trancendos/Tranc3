@@ -83,7 +83,7 @@ mounted in `api.py`).
 - Infinity's Lead AI is "The Guardian (Marcus Magnolia)" — Infinity has two distinct Tier-3 AIs (`lead_ais` in `src/entities/platform.py`): The Guardian (Marcus Magnolia) and The Orb of Orisis. As Prime (Tier 2) elsewhere (The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box), use "The Guardian (Marcus Magnolia)" without a qualifier — "(Anchor: Orb of Orisis)" is retired as a combined title.
 - TateKing's Lead AI is "Benji Tate" and Arcadian Exchange's is "Clarence Porter" — both have several distinct Tier-3 AIs (`lead_ais`) that each run their own dedicated Agent Alpha/Beta pair (`agent_teams` in `src/entities/platform.py`): TateKing's Sam King has The Director-S/The Editor-S; Arcadian Exchange's Ann, George, Edward, and James Porter each have their own Speculator-X/Trader-X pair. Infinity (The Guardian (Marcus Magnolia) vs. The Orb of Orisis) and The Lab (The Dr. (Nikolai O'denhime) vs. Slime) also each have their own dedicated `agent_teams` pair per Lead AI — all four multi-AI Locations follow this same per-name pairing, none share a single team across their Lead AIs.
 - `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
-- "Section 7" — internal placeholder name, NOT in the canonical entity hierarchy; closest entity is **The Dutchy** (Intelligence & Market Analysis, Lead AI: Predictive lore)
+- "Section 7" is the **Location** (PID-DUT) and "The Dutchy" is its **Lead AI** (AID-DUT-01) — corrected 2026-07-31 by the owner; the entity table previously inverted this ("The Dutchy" as location, "Predictive lore" as Lead AI). "Predictive lore" survives only inside the primary-function descriptor and as the persona profile file `src/personality/profiles/predictive-lore.json` (which "The Dutchy" resolves to). Code paths `src/section7/`, `src/research/section7.py` and worker dir `workers/the-dutchy/` are unchanged.
 - **AeonMind** (`aeonmind/` — Rust/Go/Python/WASM) — a separate, generic polyglot agent-framework
   specification, NOT one of the 43 platform entities and not a competing description of them. Its
   own canonical taxonomy lives in `aeonmind/docs/AI_DEFINITIONS_DICTIONARY.md` (a 6-tier
@@ -133,7 +133,7 @@ mounted in `api.py`).
 | **The Ice Box** | Neonach | Sandbox threat isolation & quarantine | ✅ In repo | `workers/ice-box-service/` (standalone worker, port 8046); Cuckoo sandbox planned integration |
 | **The Warp Tunnel** | Rocking Ricki | Cryptographic scanner & quarantine transport | ✅ In repo | `src/security/warp_tunnel/tunnel.py`; `workers/warp-tunnel/worker.py` (standalone worker, port 8072) |
 | **Warp Radio** | Rocking Ricki | Music & audio streaming integration | ✅ In repo | `src/warp_radio/station.py`; `workers/warp-radio/worker.py` (standalone worker) |
-| **The Dutchy** | Predictive lore | Intelligence & market analysis | ✅ In repo | `src/research/` |
+| **Section 7** | The Dutchy | Intelligence & market analysis | ✅ In repo | `src/research/` |
 | **The Citadel** | Trancendos | Strategic ops & DevOps fortress | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
 | **Think Tank** | Trancendos | R&D centre — solutions & forefront technologies | ✅ In repo | `src/quantum/` (router registered in `api.py`), `src/deepmind/` |
 | **ChronosSphere / ArcStream** | Chronos | Task, time & scheduling management | ✅ In repo | `workers/cron-service/` (standalone worker, port 8021); Cal.com planned integration |

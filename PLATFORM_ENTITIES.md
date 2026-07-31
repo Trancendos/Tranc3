@@ -80,7 +80,7 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | 8024 | `config-service` | The Void | Prometheus | PID-VOI | Primary worker |
 | 8025 | `audit-service` | The Observatory | Norman Hawkins | PID-OBS | Supporting layer |
 | 8026 | `rate-limit-service` | Cryptex | Renik | PID-CRX | Primary worker |
-| 8027 | `geo-service` | The Dutchy | Predictive lore | PID-DUT | Primary worker |
+| 8027 | `geo-service` | Section 7 | The Dutchy | PID-DUT | Primary worker |
 | 8028 | `cdn-service` | The Studio | Voxx | PID-STD | Supporting layer |
 | 8029 | `health-aggregator` | DevOcity | Kitty | PID-DEV | Primary worker |
 
@@ -144,7 +144,7 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **PID-WTP** | **The Warp Tunnel** | Security | Rocking Ricki (AID-WTP-01) | The Guardian (Marcus Magnolia) | The Warden (SID-WTP-01) | The Inspector (SID-WTP-02) | Scan-Bot (NID-WTP-01) | Sniffer-Bot (NID-WTP-02) | Beam-Bot (NID-WTP-03) | Portal-Bot (NID-WTP-04) |
 | **PID-CRX** | **Cryptex** | Security | Renik (AID-CRX-01) | The Guardian (Marcus Magnolia) | The Shield (SID-CRX-01) | The Spear (SID-CRX-02) | Blocker-Bot (NID-CRX-01) | Trace-Bot (NID-CRX-02) | Patcher-Bot (NID-CRX-03) | Honeypot-Bot (NID-CRX-04) |
 | **PID-ICB** | **The Ice Box** | Security | Neonach (AID-ICB-01) | The Guardian (Marcus Magnolia) | The Jailer (SID-ICB-01) | The Interrogator (SID-ICB-02) | Frostbite-Bot (NID-ICB-01) | Icicle-Bot (NID-ICB-02) | Glacier-Bot (NID-ICB-03) | Permafrost-Bot (NID-ICB-04) |
-| **PID-DUT** | **The Dutchy** | DevOps | Predictive lore (AID-DUT-01) | Trancendos | The Spy (SID-DUT-01) | The Oracle (SID-DUT-02) | Scraper-Bot (NID-DUT-01) | Parser-Bot (NID-DUT-02) | Crawler-Bot (NID-DUT-03) | Whisper-Bot (NID-DUT-04) |
+| **PID-DUT** | **Section 7** | DevOps | The Dutchy (AID-DUT-01) | Trancendos | The Spy (SID-DUT-01) | The Oracle (SID-DUT-02) | Scraper-Bot (NID-DUT-01) | Parser-Bot (NID-DUT-02) | Crawler-Bot (NID-DUT-03) | Whisper-Bot (NID-DUT-04) |
 | **PID-CTL** | **The Citadel** | DevOps | Trancendos (AID-CTL-01) | Cornelius MacIntyre | The General (SID-CTL-01) | The Tactician (SID-CTL-02) | Map-Bot (NID-CTL-01) | Compass-Bot (NID-CTL-02) | Clock-Bot (NID-CTL-03) | Radio-Bot (NID-CTL-04) |
 | **PID-TNK** | **Think Tank** | DevOps | Trancendos (AID-TNK-01) | Cornelius MacIntyre | The Professor (SID-TNK-01) | The Visionary (SID-TNK-02) | Beaker-Bot (NID-TNK-01) | Bunsen-Bot (NID-TNK-02) | Pipette-Bot (NID-TNK-03) | Petri-Bot (NID-TNK-04) |
 | **PID-THB** | **Turing's Hub** | DevOps | Samantha Turing (AID-THB-01) | Trancendos | The Sculptor (SID-THB-01) | The Geneticist (SID-THB-02) | Wireframe-Bot (NID-THB-01) | Texture-Bot (NID-THB-02) | Vocoder-Bot (NID-THB-03) | Optic-Bot (NID-THB-04) |
@@ -176,7 +176,7 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **AID-DRN-01** | **The Doctor (Nikolai O'denhime)** | The Digital Grid, The Workshop, The Chaos Party |
 | **AID-NOR-01** | **Norman Hawkins** | The Library, The Academy, DocUtari, The Basement, The Spark |
 | **AID-GRD-01** | **The Guardian (Marcus Magnolia)** | The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box |
-| **AID-TRN-01** | **Trancendos** | The Dutchy, Turing's Hub, ChronosSphere / ArcStream, DevOcity |
+| **AID-TRN-01** | **Trancendos** | Section 7, Turing's Hub, ChronosSphere / ArcStream, DevOcity |
 | **AID-SAV-01** | **Savania** | I-Mind, tAimra, VRAR3D, Resonate |
 
 ---
@@ -217,7 +217,7 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | PID-CRX | Cryptex | Active Countermeasures | Automated Pen-Testing |
 | PID-ICB | The Ice Box | Inception-Layered Sandboxing | Cryo-Quarantine Extraction |
 | PID-WRA | Warp Radio | Omni-Stream Integration | Ecosystem Audio Broadcasting |
-| PID-DUT | The Dutchy | Quantum Sentiment Scraping | Structural Blueprint Generation |
+| PID-DUT | Section 7 | Quantum Sentiment Scraping | Structural Blueprint Generation |
 | PID-CTL | The Citadel | Temporal Synchronization | Master Command Override |
 | PID-TNK | Think Tank | Concept Incubator | Cross-Disciplinary Synthesis |
 | PID-THB | Turing's Hub | Holistic Entity Genesis | Somatic Rendering |
