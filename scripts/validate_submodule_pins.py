@@ -51,7 +51,39 @@ class PinResult:
 
 
 def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout)
+    # List form with the default shell=False: the OS receives argv directly, so
+    # there is no shell to interpret metacharacters and no command injection to
+    # escape. The real exposure here is *argument* injection — see _url_is_safe.
+    return subprocess.run(  # noqa: S603 — argv list, shell=False, inputs validated below
+        cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout
+    )
+
+
+def _url_is_safe(url: str) -> tuple[bool, str]:
+    """Reject submodule URLs that git would treat as something other than a URL.
+
+    `.gitmodules` is repository content, so on a pull request — especially from a
+    fork — its contents are attacker-controlled. Passing such a value straight to
+    `git fetch` is unsafe even with shell=False, because git parses leading
+    dashes as options: a URL of `--upload-pack=<cmd>` becomes a flag that runs
+    `<cmd>`. The `ext::` transport is worse still — it executes its argument by
+    design. This is the shape of CVE-2018-17456, and it is exactly the risk a
+    generic "subprocess without a static string" warning is pointing at.
+
+    Validating the value is the fix; quoting it is not, since no shell is
+    involved. Returns (ok, reason-when-not-ok).
+    """
+    if not url:
+        return False, "empty url"
+    if url.startswith("-"):
+        return False, f"refusing url parsed as a git option: {url!r}"
+    # ext:: runs an arbitrary command; the others are the transports git itself
+    # restricts via protocol.allow for the same reason.
+    lowered = url.lower()
+    for scheme in ("ext::", "ext:", "file://", "sftp://"):
+        if lowered.startswith(scheme):
+            return False, f"refusing unsafe transport {scheme!r} in url: {url!r}"
+    return True, ""
 
 
 def _submodule_urls() -> dict[str, str]:
@@ -97,8 +129,15 @@ def _is_reachable(url: str, sha: str) -> tuple[bool, str]:
     commit that is real but not itself a branch tip. Ask the remote to serve the
     object directly instead — that is exactly what `git submodule update` does,
     so it fails in the same cases and no others.
+
+    `url` is validated by _url_is_safe before it reaches git, and `sha` is a
+    40-hex string matched out of `git ls-tree` output, so neither can be read as
+    an option. `--` closes the option list regardless.
     """
-    proc = _run(["git", "fetch", "--dry-run", "--depth", "1", url, sha])
+    ok, reason = _url_is_safe(url)
+    if not ok:
+        return False, reason
+    proc = _run(["git", "fetch", "--dry-run", "--depth", "1", "--", url, sha])
     if proc.returncode == 0:
         return True, "reachable"
     stderr = (proc.stderr or "").strip().splitlines()
@@ -132,7 +171,9 @@ def main() -> int:
     broken = [r for r in results if not r.reachable]
 
     if args.json:
-        print(json.dumps({"results": [asdict(r) for r in results], "broken": len(broken)}, indent=2))
+        print(
+            json.dumps({"results": [asdict(r) for r in results], "broken": len(broken)}, indent=2)
+        )
     else:
         for r in results:
             mark = "✓" if r.reachable else "✗"
