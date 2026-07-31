@@ -64,6 +64,12 @@ skill/feature improvement into a model rather than baking in routine updates unc
 mounted in `api.py`).
 
 **Naming rules:**
+- **The platform is "Trancendos", not "Tranc3".** Trancendos is the org, domain
+  (trancendos.com) and product identity; Tranc3 is the Tier-3 *model base* (with
+  Trance-One and T2ance) per the Models Matrix. The repo name "Tranc3" is historical.
+  `tranc3-*` service names stay only where they genuinely serve the Tier-3 engine
+  (Tranc3Engine, tranc3-backend, tranc3-ai); new platform-level names use
+  "trancendos-*". See `config/estate/naming_conventions.md` §0.
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
 - "tAimra" = location name; "tAImra" = its Lead AI name (different capitalisation — both correct)

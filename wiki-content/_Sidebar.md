@@ -30,7 +30,7 @@
 - [Research & advancement digest (May 2026)](Strategy-RESEARCH_ADVANCEMENT_2026)
 - [Zero-Cost Cloud Providers - Tranc3 Ecosystem](Strategy-ZERO_COST_CLOUD_PROVIDERS)
 - [Zero-Cost Vendor & Tool Matrix (Trancendos Fortiere)](Strategy-ZERO_COST_VENDOR_MATRIX)
-- [Tranc3 Repaired Entity Matrix — by Pillar](Strategy-matrix)
+- [Trancendos Entity Matrix — by Pillar](Strategy-matrix)
 
 ### 🔒 Security
 - [TRANC3 — CVE Vulnerability Remediation Report](Security-CVE_REMEDIATION_REPORT)
