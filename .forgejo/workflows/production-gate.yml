@@ -69,11 +69,31 @@ jobs:
 
       - name: Docker compose config (production)
         run: |
-          if command -v docker >/dev/null 2>&1; then
-            docker compose -f docker-compose.production.yml config --quiet
-          else
+          if ! command -v docker >/dev/null 2>&1; then
             echo "SKIP: docker not available on runner (compose YAML validated via citadel_compose_validate.py)"
+            exit 0
           fi
+          # Validate the compose *schema*, independently of whether this host has
+          # a populated .env — that is what `citadel_preflight.py` and the deploy
+          # itself are for. Secrets come from throwaway placeholders derived from
+          # the compose file, so new required variables are covered automatically,
+          # and the operator's real .env.production is left untouched (a stub is
+          # only created when the file is genuinely absent).
+          env_file="$(mktemp)"
+          stub_env=""
+          cleanup() {
+            rm -f "$env_file"
+            if [ -n "$stub_env" ]; then rm -f .env.production; fi
+          }
+          trap cleanup EXIT
+          grep -o '\${[A-Za-z0-9_]*:?[^}]*}' docker-compose.production.yml \
+            | sed 's/^\${//; s/:?.*//' | sort -u \
+            | sed 's/$/=ci-validation-placeholder/' > "$env_file"
+          if [ ! -f .env.production ]; then
+            stub_env=1
+            : > .env.production
+          fi
+          docker compose --env-file "$env_file" -f docker-compose.production.yml config --quiet
 
       - name: Citadel preflight (compose contracts)
         run: python3 scripts/citadel_preflight.py

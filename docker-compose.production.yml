@@ -4073,6 +4073,11 @@ volumes:
     driver: local
   admin-data:
     driver: local
+  # infinity-shards mounts this at /app/data but it was never declared here, so
+  # `docker compose up` rejected the whole project. Masked until now because the
+  # gate's `config` step aborted earlier on a missing required variable.
+  shards-data:
+    driver: local
   auth-data:
     driver: local
   users-data:
@@ -4228,6 +4233,16 @@ volumes:
   paperless-consume:
     driver: local
   paperless-db-data:
+    driver: local
+  # stirling-pdf mounts all four of these; none were declared. Same cause as
+  # shards-data above — the stack could not come up at all.
+  stirling-pdf-trainingdata:
+    driver: local
+  stirling-pdf-extraconfigs:
+    driver: local
+  stirling-pdf-logs:
+    driver: local
+  stirling-pdf-pipeline:
     driver: local
   openbas-data:
     driver: local
