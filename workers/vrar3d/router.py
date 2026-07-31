@@ -6,6 +6,10 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import FileResponse
+from service import VRARRouter
+
+import config
+from database import VRARDatabase
 from models import (
     AssetProcessRequest,
     AssetProcessResponse,
@@ -13,10 +17,6 @@ from models import (
     SceneResponse,
     VRARStatus,
 )
-from service import VRARRouter
-
-import config
-from database import VRARDatabase
 
 
 def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:

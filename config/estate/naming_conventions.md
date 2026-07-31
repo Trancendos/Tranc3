@@ -1,7 +1,37 @@
 # Trancendos Platform — Naming Conventions
 
-Version: 1.0.0  
+Version: 1.1.0  
 Applies to: all services, workers, containers, modules, and CF Workers in this repository.
+
+---
+
+## 0. Platform vs model-base naming (the "Trancendos ≠ Tranc3" rule)
+
+The **platform** is **Trancendos** — the GitHub org, the domain (`trancendos.com`), and the
+product identity. **Tranc3** is one of the three AI **model bases** defined by the
+Trancendos Models Matrix (`docs/governance/TRANCENDOS-MODELS-MATRIX.md`):
+
+| Model base | Tier | Role |
+|---|---|---|
+| Trance-One | 1 | Sovereign / Orchestrator |
+| T2ance | 2 | Primes |
+| Tranc3 | 3 | Lead AI / AI base (default) |
+
+Consequences:
+
+- **New platform-level names use "Trancendos"**, never "Tranc3" (the Fly bots app is
+  already `trancendos-bots` for this reason; the frontend Pages project is
+  `trancendos-frontend`).
+- **`tranc3-*` names are correct only where the thing genuinely serves the Tier-3
+  engine**: `Tranc3Engine`, `tranc3-backend` (hosts the engine), `tranc3-ai` (edge proxy
+  to it). These are model-scoped, not platform-scoped, and do not need renaming.
+- The main repository being named `Tranc3` is **historical**: it predates the models
+  matrix. A rename to a platform-scoped name (e.g. `Trancendos/trancendos-platform`) is
+  an owner decision — GitHub redirects old clone/submodule URLs after a rename, so the
+  blast radius is the ~51 files that self-reference `Trancendos/Tranc3` plus external
+  integrations (Codecov, CodeQL, Mergify, Cloudflare Pages Git hook), which re-bind on
+  first use or need a one-time re-link. Until that decision, docs must not describe the
+  *platform* as "Tranc3".
 
 ---
 

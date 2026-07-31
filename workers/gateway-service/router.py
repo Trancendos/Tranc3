@@ -17,7 +17,6 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
-from models import AgentCreate, EventCreate, TopologySwitch, WorkflowCreate
 from service import (
     abac_engine,
     broadcast_event,
@@ -45,6 +44,7 @@ from database import fetch_access_audit, fetch_events, insert_event
 from Dimensional.infinity.abac import ThreatLevel
 from Dimensional.infinity.nomenclature import Pillar
 from Dimensional.infinity.sentinel_station import SharedSSEGenerator
+from models import AgentCreate, EventCreate, TopologySwitch, WorkflowCreate
 
 logger = logging.getLogger("gateway-service")
 

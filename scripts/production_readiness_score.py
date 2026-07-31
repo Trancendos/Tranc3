@@ -129,6 +129,80 @@ def _compose_checks() -> tuple[float, list[str], list[str]]:
     return min(score, 100.0), blockers, actions
 
 
+def _cloud_only_readiness() -> tuple[float, list[str], list[str]]:
+    """Measured readiness of the cloud-only surface — Fly + Cloudflare + Pages.
+
+    Every other dimension here scores the Citadel path, which is blocked on hardware
+    funding. That made "are we ready to go live?" unanswerable for the path the
+    platform can actually take today: a cloud-only deploy needs no owned hardware and
+    is the mode CLAUDE.md names as the current default for every Location.
+
+    This is a real measurement, not a constant: it shells out to cloud_preflight.py,
+    which validates Fly app-name agreement, per-worker wrangler/lockfile presence and
+    the frontend source, and scores from that result plus the runbook's existence.
+    """
+    blockers: list[str] = []
+    actions: list[str] = []
+
+    preflight = ROOT / "scripts" / "cloud_preflight.py"
+    if not preflight.is_file():
+        return 0.0, ["scripts/cloud_preflight.py missing"], ["Add the cloud preflight"]
+
+    try:
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        proc = subprocess.run(  # nosec B603 — list args, no shell=True; every element is
+            # a constant or derived from ROOT (this file's own location), so there is no
+            # externally controllable input to inject through.
+            [sys.executable, str(preflight), "--json"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=ROOT,
+        )
+        report = json.loads(proc.stdout or "{}")
+    except (subprocess.SubprocessError, json.JSONDecodeError, OSError) as exc:
+        return 0.0, [f"cloud_preflight.py did not produce a report: {exc}"], []
+
+    # cloud_preflight.py exits 1 when it finds failures and always reports `ok`. Trusting
+    # the parsed JSON alone would score a run that crashed after emitting partial output,
+    # or one whose schema drifted, as if it had passed.
+    if "ok" not in report:
+        return (
+            0.0,
+            [f"cloud_preflight.py returned an unrecognised report (exit {proc.returncode})"],
+            ["Run: python scripts/cloud_preflight.py --json"],
+        )
+
+    failures = report.get("failures") or []
+    warnings = report.get("warnings") or []
+    checks = report.get("checks") or []
+
+    if not report["ok"] and not failures:
+        # Exited non-ok without naming a failure — --strict promoting warnings, most
+        # likely. Do not silently award the clean-run score.
+        failures = [f"cloud_preflight.py reported not-ok (exit {proc.returncode})"]
+
+    if failures:
+        # Artifacts are broken — the deploy cannot start regardless of credentials.
+        pct = max(20.0, 60.0 - 10.0 * len(failures))
+        blockers.extend(failures)
+    else:
+        # Deployable. Withhold the last 15 points because nothing here proves a deploy
+        # has actually been executed — same honesty the Citadel dimension applies.
+        pct = 85.0 - 2.0 * len(warnings)
+        actions.extend(warnings)
+
+    if not (ROOT / "deploy" / "CLOUD_GO_LIVE.md").is_file():
+        pct -= 10.0
+        actions.append("Add deploy/CLOUD_GO_LIVE.md — the cloud-only runbook")
+
+    if not checks:
+        blockers.append("cloud_preflight.py reported no passing checks")
+
+    actions.append("Execute the deploy: see deploy/CLOUD_GO_LIVE.md")
+    return round(max(0.0, min(pct, 100.0)), 1), blockers, actions
+
+
 def build_dimensions() -> list[Dimension]:
     implemented, total_workers = _count_worker_implementations()
     # Cap: P3 stubs in compose are not production-complete even if worker.py exists
@@ -146,6 +220,7 @@ def build_dimensions() -> list[Dimension]:
     tests_ok = _pytest_gate_passed()
     compose_pct, compose_blockers, compose_actions = _compose_checks()
     security_pct, security_blockers, security_actions = _security_score_percent()
+    cloud_pct, cloud_blockers, cloud_actions = _cloud_only_readiness()
 
     env_prod = (ROOT / ".env.production").exists()
     # Honest live ops: scripts alone ≠ deployed stack (see forensic assessment).
@@ -175,7 +250,7 @@ def build_dimensions() -> list[Dimension]:
         ),
         Dimension(
             name="P0 core platform (API, Spark, auth, gateway)",
-            weight=0.20,
+            weight=0.18,
             percent=95.0 if live_scripts else 82.0,
             status="green" if live_scripts else "amber",
             blockers=[],
@@ -187,7 +262,7 @@ def build_dimensions() -> list[Dimension]:
         ),
         Dimension(
             name="Worker fleet (self-hosted)",
-            weight=0.15,
+            weight=0.13,
             percent=worker_pct,
             status="green" if worker_pct >= 70 else "amber",
             blockers=[f"{stub_count} worker.py files marked stub/TODO"] if stub_count > 0 else [],
@@ -195,7 +270,7 @@ def build_dimensions() -> list[Dimension]:
         ),
         Dimension(
             name="Production infrastructure (Citadel)",
-            weight=0.15,
+            weight=0.13,
             percent=compose_pct,
             status="green" if compose_pct >= 80 else "amber",
             blockers=compose_blockers,
@@ -221,33 +296,55 @@ def build_dimensions() -> list[Dimension]:
                 "Set AUDIT_SIGNING_KEY in production",
             ],
         ),
+        # SELF-ASSESSED, not measured. The number below is a standing judgement, not
+        # evidence — no E2E run feeds it. Named as such so the headline percentage is
+        # not read as a measurement it isn't. Replace with the Playwright pass rate
+        # (.forgejo/workflows/e2e-playwright.yml) to make it real.
         Dimension(
-            name="UX / Infinity Admin OS",
-            weight=0.07,
+            name="UX / Infinity Admin OS (self-assessed)",
+            weight=0.06,
             percent=78.0,
             status="amber",
             blockers=[],
             next_actions=["E2E browser pass on dashboard + Admin OS", "Arcadia web app parity"],
         ),
+        # SELF-ASSESSED, not measured — see the note above. scripts/zero_cost_audit.py
+        # exists and could supply a real figure here.
         Dimension(
-            name="Zero-cost policy & vendor lock-in",
-            weight=0.05,
+            name="Zero-cost policy & vendor lock-in (self-assessed)",
+            weight=0.04,
             percent=90.0,
             status="green",
             blockers=[],
             next_actions=["Keep optional cloud AI keys off until caps accepted"],
         ),
+        # Measured, and the only dimension that scores the surface the platform can
+        # actually deploy to today. See _cloud_only_readiness().
         Dimension(
-            name="Legacy decommission (Cloudflare)",
+            name="Cloud-only go-live readiness",
             weight=0.05,
+            percent=cloud_pct,
+            status=("green" if cloud_pct >= 80 else "amber" if cloud_pct >= 50 else "red"),
+            blockers=cloud_blockers,
+            next_actions=cloud_actions,
+        ),
+        # Weight reduced from 5% to 2%: during the cloud-only phase the Cloudflare
+        # workers *are* the production platform, so scoring their continued existence
+        # as a liability misreports the current architecture. This measures progress
+        # toward the hybrid/local end state, which is deliberately deferred.
+        Dimension(
+            name="Legacy decommission (Cloudflare) — hybrid/local phase only",
+            weight=0.01,
             percent=55.0 if live_scripts else 35.0,
             status="amber" if live_scripts else "red",
             blockers=[] if live_scripts else ["api.trancendos.com still may route to CF workers"],
             next_actions=["Point DNS to Citadel Traefik — see deploy/LIVE_DEPLOY.md"],
         ),
+        # Weight reduced from 5% to 3% for the same reason: this is gated on hardware
+        # funding, not engineering, and it is not on the cloud-only critical path.
         Dimension(
             name="Ops executed on Citadel (live)",
-            weight=0.05,
+            weight=0.02,
             percent=ops_pct,
             status=ops_status,
             blockers=ops_blockers,
@@ -259,6 +356,14 @@ def build_dimensions() -> list[Dimension]:
 
 
 def overall_percent(dimensions: list[Dimension]) -> float:
+    # A weight table that no longer sums to 1 silently rescales the headline number,
+    # which is the one figure people quote. Catch it here rather than in a meeting.
+    total_weight = sum(d.weight for d in dimensions)
+    if abs(total_weight - 1.0) > 0.001:
+        raise ValueError(
+            f"Dimension weights must sum to 1.0, got {total_weight:.3f}. "
+            "Adjust the table in build_dimensions()."
+        )
     return round(sum(d.percent * d.weight for d in dimensions), 1)
 
 
@@ -266,12 +371,15 @@ def main() -> int:
     LOGS.mkdir(parents=True, exist_ok=True)
     dimensions = build_dimensions()
     overall = overall_percent(dimensions)
+    live_dim = next(d for d in dimensions if "Ops executed" in d.name)
+    # Re-normalise over the weight that remains once the live dimension is excluded,
+    # read from the table rather than hardcoded — the previous `1.0 - 0.05` silently
+    # went wrong the moment that weight changed.
+    code_weight = sum(d.weight for d in dimensions if d is not live_dim)
     p0_code = round(
-        sum(d.percent * d.weight for d in dimensions if d.name != "Ops executed on Citadel (live)")
-        / max(0.01, 1.0 - 0.05),
+        sum(d.percent * d.weight for d in dimensions if d is not live_dim) / max(0.01, code_weight),
         1,
     )
-    live_dim = next(d for d in dimensions if "Ops executed" in d.name)
     # B score = live verification dimension (not blended with repo artifacts).
     honest_p0_live = live_dim.percent
     payload = {
@@ -279,7 +387,11 @@ def main() -> int:
         "honest_p0_code_percent": p0_code,
         "honest_p0_live_percent": honest_p0_live,
         "honest_full_platform_percent": 52.0,
-        "note": "See docs/PRODUCTION_FORENSIC_ASSESSMENT.md — overall_percent is repo-weighted; live requires deploy-live on Citadel.",
+        "note": (
+            "See docs/GO_LIVE_GAP_ANALYSIS.md — overall_percent is repo-weighted and "
+            "optimistic; Citadel live requires deploy-live on owned hardware, while "
+            "cloud-only go-live does not (deploy/CLOUD_GO_LIVE.md)."
+        ),
         "target_for_p0_go_live": 85.0,
         "target_for_full_platform": 95.0,
         "dimensions": [asdict(d) for d in dimensions],
@@ -295,7 +407,7 @@ def main() -> int:
         f"**Honest P0 code: {p0_code}%** | **Honest P0 live: {honest_p0_live}%** (until deploy-live succeeds)",
         "**Honest full platform: ~52%**",
         "",
-        "Forensic detail: `docs/PRODUCTION_FORENSIC_ASSESSMENT.md`",
+        "Gap detail: `docs/GO_LIVE_GAP_ANALYSIS.md` | Cloud-only runbook: `deploy/CLOUD_GO_LIVE.md`",
         "",
         "- P0 go-live target: **85%**",
         "- Full 43-entity platform: **95%**",

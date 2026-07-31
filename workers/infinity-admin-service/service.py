@@ -11,9 +11,8 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from models import AgentDetail, BotDetail, EntityDetail
-
 from database import db
+from models import AgentDetail, BotDetail, EntityDetail
 
 # Phase 25: Platform Entity Registry (entity name management)
 try:

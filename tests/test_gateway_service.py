@@ -203,10 +203,19 @@ class TestGatewayOverview:
         assert isinstance(services, dict)
         assert services["total"] == 8
 
-    def test_overview_optional_auth_without_key(self, client):
-        """Overview is an optional-auth endpoint — should still work without auth."""
+    def test_overview_requires_auth(self, client):
+        """Overview is an enforced path — should 401 without auth.
+
+        This endpoint used to be optional-auth, and this test used to assert 200.
+        That was the bug, not the fix: `/api/overview` routes its RBAC check through
+        the READ_PLATFORM permission key, which RBACEngine grants to its anonymous-user
+        default — so an unauthenticated caller passed straight through `check_rbac()`.
+        main.py now lists it in `enforced_paths` so a request needs some valid
+        credential before RBAC is consulted at all. Asserting 200 here would re-assert
+        a security property the platform has deliberately abandoned.
+        """
         res = client.get("/api/overview")
-        assert res.status_code == 200
+        assert res.status_code == 401
 
 
 class TestGatewayAgents:

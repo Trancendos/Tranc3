@@ -16,6 +16,12 @@ extend-exclude = [
     ".forgejo",
     "docs/reference",
     "**/*.sh",
+    # Git submodules — separate repositories with their own lint configuration and
+    # their own CI. Without these, `ruff check .` reports a different error count
+    # depending on whether submodules happen to be checked out (26 vs 46), and
+    # `--fix` writes into another repository's working tree.
+    "compliance/magna-carta",
+    "workers/cranbania",
 ]
 
 [tool.ruff.lint]

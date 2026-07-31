@@ -14,7 +14,6 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import HTTPException
-from models import GateRoutingResponse
 
 from config import AUTH_SERVICE_URL
 from database import db
@@ -26,6 +25,7 @@ from Dimensional.infinity.nomenclature import (
     Tier,
     TransferSystem,
 )
+from models import GateRoutingResponse
 
 # ---------------------------------------------------------------------------
 # Infinity Gate

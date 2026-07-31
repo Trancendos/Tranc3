@@ -1,7 +1,9 @@
-# Trancendos / Tranc3 — Wiki Home
+# Trancendos — Wiki Home
 
-Welcome to the Trancendos platform wiki — the living knowledge base for the Tranc3 project: architecture decisions, strategic analysis, security tracking, governance, and historical phase reports.
+Welcome to the **Trancendos** platform wiki — the living knowledge base for the platform whose main repository is `Tranc3`: architecture decisions, strategic analysis, security tracking, governance, and historical phase reports.
 
+> **Naming rule:** the *platform* is **Trancendos** (org, domain trancendos.com). **Tranc3** is the Tier-3 AI model base (alongside Trance-One and T2ance) and, historically, the name of this main repository — see `docs/governance/TRANCENDOS-MODELS-MATRIX.md`.
+>
 > **Code-adjacent docs** (API reference, design system, deployment scripts, compliance controls) live in the **[repo](https://github.com/Trancendos/Tranc3)** under `docs/`. Everything conceptual or historical lives here.
 >
 > _Pages are flat (GitHub-Wiki-native) and named `Section-Name`; the sidebar mirrors this grouping. Every link below resolves to a real page._

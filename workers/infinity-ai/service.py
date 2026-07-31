@@ -23,14 +23,6 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 from fastapi import HTTPException
-from models import (
-    ChatCompletionChoice,
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-    ChatCompletionUsage,
-    ChatMessage,
-    ProviderName,
-)
 from sanitize import sanitize_for_log
 from zero_cost_registry import is_approved
 
@@ -54,6 +46,14 @@ from config import (
     WORKER_NAME,
 )
 from database import AIDatabase
+from models import (
+    ChatCompletionChoice,
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChatCompletionUsage,
+    ChatMessage,
+    ProviderName,
+)
 
 logger = logging.getLogger(WORKER_NAME)
 

@@ -16,6 +16,9 @@ commands continue to work without any change.
 """
 
 from main import _INTERNAL_SECRET, app, db  # noqa: F401  re-export for `uvicorn worker:app`
+from service import LRUCache  # noqa: F401
+
+from database import AIDatabase  # noqa: F401
 from models import (  # noqa: F401
     ChatCompletionChoice,
     ChatCompletionRequest,
@@ -23,9 +26,6 @@ from models import (  # noqa: F401
     ChatMessage,
     TokenBudget,
 )
-from service import LRUCache  # noqa: F401
-
-from database import AIDatabase  # noqa: F401
 
 __all__ = [
     "app",

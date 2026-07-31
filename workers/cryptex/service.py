@@ -30,6 +30,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
+
+import config
+from database import CryptexDatabase
 from models import (
     EngineStatus,
     ScanEngine,
@@ -38,9 +41,6 @@ from models import (
     ScanStatus,
     ThreatSeverity,
 )
-
-import config
-from database import CryptexDatabase
 
 logger = logging.getLogger("cryptex.service")
 

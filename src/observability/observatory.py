@@ -87,7 +87,20 @@ class Observatory:
     def __init__(self, buffer_size: int = _RING_BUFFER_SIZE):
         self._buffer: deque[AuditEvent] = deque(maxlen=buffer_size)
         self._subscribers: List[asyncio.Queue] = []
-        self._lock = asyncio.Lock() if asyncio.get_event_loop().is_running() else None
+        # `asyncio.get_event_loop()` is deprecated and raises RuntimeError when the
+        # thread has no current loop — which is the normal case for a synchronous
+        # caller, a worker thread, or any code running after the loop has been
+        # closed. Constructing The Observatory would then blow up at the point it is
+        # most needed: recording what went wrong. `get_running_loop()` answers the
+        # actual question (is a loop running *right now*?) and raises only that one
+        # RuntimeError, which is exactly the "no loop" case we want to treat as
+        # "no async lock needed".
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._lock = None
+        else:
+            self._lock = asyncio.Lock()
         self._write_queue: Optional[asyncio.Queue] = None
         self._writer_task: Optional[asyncio.Task] = None
 

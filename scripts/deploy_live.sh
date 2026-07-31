@@ -10,6 +10,17 @@ COMPOSE_FILE="docker-compose.production.yml"
 SKIP_BUILD=false
 PROFILE="${DEPLOY_PROFILE:-core}"
 
+# Compose interpolates `${VAR:?required}` from --env-file (default `.env`), NOT from
+# the `env_file:` service directive — that one only injects variables into containers.
+# generate_production_env.sh writes .env.production, so without this every compose
+# invocation below dies on the first required variable before starting a container.
+#
+# Honour ENV_OUT, which is what the generator itself keys off: hardcoding
+# .env.production here would let an operator with ENV_OUT set generate secrets into one
+# file and then interpolate from another.
+ENV_FILE="${ENV_OUT:-.env.production}"
+COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+
 for arg in "$@"; do
   case "$arg" in
     --skip-build) SKIP_BUILD=true ;;
@@ -35,10 +46,10 @@ FULL_EXTRA=(
 )
 
 echo "==> Generate production environment (if missing)"
-if [[ ! -f .env.production ]]; then
-  ./scripts/generate_production_env.sh
+if [[ ! -f "$ENV_FILE" ]]; then
+  ENV_OUT="$ENV_FILE" ./scripts/generate_production_env.sh
 else
-  echo "Using existing .env.production"
+  echo "Using existing $ENV_FILE"
 fi
 
 echo "==> Preflight"
@@ -54,22 +65,22 @@ fi
 
 if [[ "$SKIP_BUILD" != true ]]; then
   echo "==> Build images"
-  docker compose -f "$COMPOSE_FILE" build "${SERVICES[@]}"
+  "${COMPOSE[@]}" build "${SERVICES[@]}"
 fi
 
 echo "==> Start infrastructure first"
-docker compose -f "$COMPOSE_FILE" up -d valkey vault traefik ollama
+"${COMPOSE[@]}" up -d valkey vault traefik ollama
 
 echo "==> Vault init (if sealed)"
-if docker compose -f "$COMPOSE_FILE" ps vault 2>/dev/null | grep -q Up; then
+if "${COMPOSE[@]}" ps vault 2>/dev/null | grep -q Up; then
   sleep 5
-  if docker compose -f "$COMPOSE_FILE" exec -T vault vault status 2>&1 | grep -q "Initialized.*false"; then
+  if "${COMPOSE[@]}" exec -T vault vault status 2>&1 | grep -q "Initialized.*false"; then
     echo "Run ./deploy/vault/init-citadel.sh manually if Vault is not initialized."
   fi
 fi
 
 echo "==> Start platform workers"
-docker compose -f "$COMPOSE_FILE" up -d "${SERVICES[@]}"
+"${COMPOSE[@]}" up -d "${SERVICES[@]}"
 
 echo "==> Wait for health (up to 10 min)"
 python3 scripts/wait_for_healthy.py --timeout 600 || {

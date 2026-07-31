@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from service import LibraryRouter
+
+import config
+from database import LibraryDatabase
 from models import (
     DocumentCreate,
     DocumentResponse,
@@ -12,10 +16,6 @@ from models import (
     SearchRequest,
     SearchResponse,
 )
-from service import LibraryRouter
-
-import config
-from database import LibraryDatabase
 
 
 def _auth(x_internal_secret: Optional[str] = Header(None)) -> None:

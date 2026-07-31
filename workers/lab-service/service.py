@@ -9,6 +9,8 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import httpx
+
+import config
 from models import (
     BackendStatus,
     CodeBackend,
@@ -17,8 +19,6 @@ from models import (
     LabStatus,
     TaskType,
 )
-
-import config
 
 logger = logging.getLogger(config.WORKER_NAME)
 

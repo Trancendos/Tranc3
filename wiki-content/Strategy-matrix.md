@@ -1,4 +1,4 @@
-# Tranc3 Repaired Entity Matrix — by Pillar
+# Trancendos Entity Matrix — by Pillar
 
 Auto-generated from `src/entities/platform.py` with all naming convention repairs applied.
 

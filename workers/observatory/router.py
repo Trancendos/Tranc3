@@ -7,9 +7,9 @@ from typing import Optional
 
 import service
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from models import SignalType
 
 import config
+from models import SignalType
 
 
 def _make_observatory_router() -> APIRouter:
