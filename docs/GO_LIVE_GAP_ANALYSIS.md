@@ -33,8 +33,10 @@ These are ordered by the sequence in which they break a clean `git clone` → de
 
 ### 2.1 The Magna-Carta submodule pin references a commit that does not exist
 
-`.gitmodules` pins `compliance/magna-carta` to `966c237cbcc9b1020091366f81e38254167a8766`.
-That object is not reachable in the Magna-Carta repository — verified with
+The superproject's gitlink for `compliance/magna-carta` records
+`966c237cbcc9b1020091366f81e38254167a8766` — reported by `git submodule status`, and stored
+as a tree entry in this repository, not in `.gitmodules` (which carries only the path and
+URL). That object is not reachable in the Magna-Carta repository — verified with
 `git cat-file -t` after `git fetch --all` (all 9 remote branches fetched):
 
 ```
@@ -95,7 +97,7 @@ compose fail loudly on an empty `CRANBANIA_API_KEY` rather than defaulting it bl
 one item — `.env.production missing` — which is expected, since secrets are generated on
 the host. `citadel_compose_validate.py` passes cleanly (21 core services).
 
-Per `CLAUDE.md`, the Citadel host is blocked on hardware funding, not on engineering.
+Per `CLAUDE.md`, The Citadel host is blocked on hardware funding, not on engineering.
 This is the largest single gap to "LIVE" and it is **not a code problem**. Everything
 needed is already scripted (`scripts/citadel_deploy_all.sh`, `deploy/LIVE_DEPLOY.md`).
 
@@ -226,7 +228,8 @@ confusing red builds.
 
   Several of these gate lawful operation rather than technical function — ICO
   registration and the PSP DPA in particular. They cannot be closed by engineering and
-  have long external lead times, so they should start now regardless of Citadel funding.
+  have long external lead times, so they should start now regardless of The Citadel's
+  hardware funding.
 
 ### InfinityStyles
 
@@ -252,7 +255,7 @@ confusing red builds.
   expects it and awards 12 of 100 security points for its presence with `FIX`/`FP`/`ACCEPT`/`SUPPRESS`
   dispositions and a `hostIPC` entry. This single missing file is the entire reason the
   security dimension sits at 88.6% against a 90% target. Every other security check passes.
-- `.env.production` must be generated on the Citadel host
+- `.env.production` must be generated on The Citadel host
   (`scripts/generate_production_env.sh`) — expected, not a defect.
 - `AUDIT_SIGNING_KEY` is not yet set for production.
 - P0 `/health` endpoints are not yet scraped by Prometheus.
@@ -289,7 +292,7 @@ confusing red builds.
 
 13. ICO fee (**due today**), PSP DPA, health-connector BAA, pentest, SOC 2 observation
     period, fire risk assessment, payroll/RTI. *(§5)*
-14. Citadel host hardware, then `./scripts/citadel_deploy_all.sh` and DNS cutover. *(§2.4)*
+14. The Citadel host hardware, then `./scripts/citadel_deploy_all.sh` and DNS cutover. *(§2.4)*
 
 ---
 
