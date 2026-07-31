@@ -163,7 +163,21 @@ jobs:
 
       - name: Smoke test container
         run: |
+          # Clear any container left behind by an earlier run, and remove this
+          # one on every exit path. ubuntu-latest runners are ephemeral per job
+          # so this is not load-bearing here, but the Forgejo copy runs on a
+          # self-hosted runner that keeps Docker state between jobs — where a
+          # leftover container fails the next run on a name conflict. Kept
+          # identical so the two copies stay in sync, as the header requires.
+          #
+          # A trap rather than `docker run --rm`: --rm deletes a container the
+          # instant it dies, so `docker logs` would come back empty for one that
+          # crashed at startup — exactly the failure this test exists to catch
+          # (it is how the /var/cache/nginx permission bug was found). The trap
+          # runs after the logs have been read.
+          docker rm -f tranc3-web-test >/dev/null 2>&1 || true
           docker run -d --name tranc3-web-test -p 3000:80 tranc3-web:${{ github.sha }}
+          trap 'docker rm -f tranc3-web-test >/dev/null 2>&1 || true' EXIT
           sleep 3
           # /health, not /healthz — nginx.conf defines `location /health`, while
           # `location /` does try_files ... /index.html. A request to /healthz
@@ -175,5 +189,4 @@ jobs:
           [ "$body" = "ok" ] \
             || (echo "✗ /health returned '$body', expected 'ok'" && docker logs tranc3-web-test && exit 1)
           curl -sf http://localhost:3000/ | grep -q "<!DOCTYPE html>" || exit 1
-          docker stop tranc3-web-test
           echo "✓ Container smoke test passed"

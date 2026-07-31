@@ -119,8 +119,17 @@ release ships.
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
-`FP` and `SUPPRESS`, that means the scanner no longer reports it; for `ACCEPT`,
-that the underlying requirement has gone away.
+`FP` and `SUPPRESS`, that means the upstream scanner no longer reports it *with
+every local suppression removed*; for `ACCEPT`, that the underlying requirement
+has gone away.
+
+The distinction matters because most entries here carry a local ignore
+(`# nosec B608` for SEC-002, `.trivyignore` for SEC-001 and SEC-004). A local
+ignore silences the scanner without changing the underlying condition, so a
+green scan taken *with* those ignores in place is not evidence of anything. To
+close an entry, drop its suppression and confirm the scanner is quiet on its
+own — for a `SUPPRESS` that normally means a patched release shipped and the
+pin moved; for an `FP`, that the scanner's rule stopped matching.
 
 ---
 

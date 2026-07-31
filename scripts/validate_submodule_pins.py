@@ -51,6 +51,11 @@ class PinResult:
 
 
 def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess:
+    """Run a git command from the repo root, capturing output and never raising.
+
+    Callers inspect `returncode` themselves; a non-zero exit is an expected
+    outcome here (an unreachable pin), not an error condition.
+    """
     # List form with the default shell=False: the OS receives argv directly, so
     # there is no shell to interpret metacharacters and no command injection to
     # escape. The real exposure here is *argument* injection — see _url_is_safe.
@@ -163,6 +168,11 @@ def _is_reachable(url: str, sha: str) -> tuple[bool, str]:
 
 
 def main() -> int:
+    """Check every recorded submodule gitlink is still reachable upstream.
+
+    Returns 0 when all pins resolve (or none exist), 1 when any pin is
+    unreachable or its URL fails the safety check.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="emit JSON")
     args = parser.parse_args()

@@ -87,7 +87,12 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main'
+    # Deliberately NOT main-only. The pull_request trigger above includes
+    # docker/Dockerfile.web and docker/nginx.conf, and this is the only job that
+    # builds and smoke-tests the image — gating it on main meant a PR touching
+    # those exact files never validated them, and the first real build happened
+    # after merge. This job has no external side effect, so it is safe on PRs.
+    # Matches the sibling .github/workflows/frontend-build.yml.
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -97,7 +102,19 @@ jobs:
 
       - name: Smoke test container
         run: |
+          # Clear any container left behind by an earlier run. This runner is
+          # self-hosted and keeps Docker state between jobs, so a leftover
+          # tranc3-web-test would fail the next run on a name conflict before a
+          # single assertion executed.
+          docker rm -f tranc3-web-test >/dev/null 2>&1 || true
           docker run -d --name tranc3-web-test -p 3000:80 tranc3-web:${{ github.sha }}
+          # Remove on every exit path, including the failure branches below.
+          # Deliberately a trap rather than `docker run --rm`: --rm deletes a
+          # container the instant it dies, so `docker logs` would come back empty
+          # for a container that crashed at startup — which is exactly the failure
+          # this test exists to catch (it is how the /var/cache/nginx permission
+          # bug was found). The trap runs after the logs have been read.
+          trap 'docker rm -f tranc3-web-test >/dev/null 2>&1 || true' EXIT
           sleep 3
           # /health, not /healthz — nginx.conf defines `location /health`, while
           # `location /` does try_files ... /index.html. A request to /healthz
@@ -109,5 +126,4 @@ jobs:
           [ "$body" = "ok" ] \
             || (echo "✗ /health returned '$body', expected 'ok'" && docker logs tranc3-web-test && exit 1)
           curl -sf http://localhost:3000/ | grep -q "<!DOCTYPE html>" || exit 1
-          docker stop tranc3-web-test
           echo "✓ Container smoke test passed"
