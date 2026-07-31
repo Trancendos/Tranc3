@@ -40,6 +40,7 @@ jobs:
   validate:
     name: Validate submodule pins are reachable
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -47,6 +48,10 @@ jobs:
           # letting it run here would fail the job with a confusing checkout
           # error instead of this script's actionable report.
           submodules: false
+          # No step here needs GITHUB_TOKEN: the validator reads the local tree
+          # and fetches public URLs. Leaving the token in .git/config would widen
+          # its exposure for no benefit.
+          persist-credentials: false
 
       - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
         with:

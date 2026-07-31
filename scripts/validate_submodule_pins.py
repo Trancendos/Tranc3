@@ -87,20 +87,32 @@ def _url_is_safe(url: str) -> tuple[bool, str]:
 
 
 def _submodule_urls() -> dict[str, str]:
-    """Map submodule path -> remote URL, read from .gitmodules."""
-    gitmodules = ROOT / ".gitmodules"
-    if not gitmodules.is_file():
+    """Map submodule path -> remote URL, read from .gitmodules.
+
+    Delegates the parse to `git config --file`, which is the only thing that
+    reads the format correctly. Hand-rolling it looks simple and is not:
+    `.gitmodules` holds git-config keys, so `URL =` is as valid as `url =`, the
+    keys may appear in any order within a section, and values can be quoted. A
+    naive line scan mismatches all three and reports "no url for this gitlink",
+    which this script would then surface as a broken pin on a healthy repo.
+    """
+    if not (ROOT / ".gitmodules").is_file():
         return {}
-    urls: dict[str, str] = {}
-    path = None
-    for raw in gitmodules.read_text(errors="ignore").splitlines():
-        line = raw.strip()
-        if line.startswith("path"):
-            path = line.split("=", 1)[1].strip()
-        elif line.startswith("url") and path:
-            urls[path] = line.split("=", 1)[1].strip()
-            path = None
-    return urls
+    proc = _run(["git", "config", "--file", ".gitmodules", "--list"])
+    if proc.returncode != 0:
+        return {}
+    paths: dict[str, str] = {}
+    remotes: dict[str, str] = {}
+    for line in proc.stdout.splitlines():
+        key, sep, value = line.partition("=")
+        if not sep:
+            continue
+        name, _, field = key.removeprefix("submodule.").rpartition(".")
+        if field == "path":
+            paths[name] = value
+        elif field == "url":
+            remotes[name] = value
+    return {paths[name]: url for name, url in remotes.items() if name in paths}
 
 
 def _recorded_pins() -> dict[str, str]:
@@ -137,7 +149,12 @@ def _is_reachable(url: str, sha: str) -> tuple[bool, str]:
     ok, reason = _url_is_safe(url)
     if not ok:
         return False, reason
-    proc = _run(["git", "fetch", "--dry-run", "--depth", "1", "--", url, sha])
+    try:
+        proc = _run(["git", "fetch", "--dry-run", "--depth", "1", "--", url, sha])
+    except subprocess.TimeoutExpired:
+        # An unresponsive remote must not abort the run — the other pins still
+        # need checking, and a traceback would replace the actionable report.
+        return False, "git fetch timed out — pin not verifiable"
     if proc.returncode == 0:
         return True, "reachable"
     stderr = (proc.stderr or "").strip().splitlines()
@@ -184,9 +201,12 @@ def main() -> int:
             print("A fresh `git submodule update --init` will fail, and will leave")
             print("ALL submodules without a working tree — not only the broken one.")
             print()
-            print("Fix: re-pin to a commit that exists on the submodule's default branch:")
+            print("Fix: re-pin to a commit that exists on the submodule's default branch.")
+            print("Run from the superproject — the broken path has no working tree to cd into,")
+            print("and --remote follows the submodule's own default branch rather than assuming")
+            print("it is called 'main':")
             for r in broken:
-                print(f"    git -C {r.path} fetch origin && git -C {r.path} checkout origin/main")
+                print(f"    git submodule update --init --remote -- {r.path}")
             print("    git add <paths> && git commit   # records the corrected gitlink")
 
     return 1 if broken else 0

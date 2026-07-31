@@ -44,12 +44,18 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: web
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # npm ci, the production build and the Storybook/Playwright run all
+          # execute third-party code; none of them need to push, so don't leave
+          # GITHUB_TOKEN readable in .git/config while they run.
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -92,6 +98,7 @@ jobs:
 
   deploy-pages:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
     # push is already main-only via the trigger's `branches` filter, but
     # workflow_dispatch lets an operator pick any branch, and the deploy step
@@ -123,7 +130,10 @@ jobs:
 
       - name: Install Wrangler
         if: steps.creds.outputs.present == 'true'
-        run: npm install -g wrangler
+        # Pinned to the fleet-wide version in cloudflare/DEPLOY.md — an
+        # unpinned global install lets a new major change deploy behaviour
+        # with no corresponding change in this repo.
+        run: npm install -g wrangler@4.102.0
 
       - name: Deploy to Cloudflare Pages
         if: steps.creds.outputs.present == 'true'
@@ -134,11 +144,19 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # Deliberately NOT main-only. The pull_request trigger above includes
+    # docker/Dockerfile.web and docker/nginx.conf, and this is the only job that
+    # builds and smoke-tests the image — gating it on main meant a PR touching
+    # those exact files never validated them, and the first real build happened
+    # after merge, alongside a Pages deploy that had already shipped. Unlike
+    # deploy-pages this job has no external side effect, so it is safe on PRs.
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Build Docker image
         run: docker build -t tranc3-web:${{ github.sha }} -f docker/Dockerfile.web .

@@ -51,10 +51,16 @@ async def test_neuromorphic_process_ignores_caller_timesteps():
     and the value that comes back is the processor's own.
     """
     res = await neuromorphic_process({"input": [0.1, 0.2, 0.3, 0.4], "timesteps": 5})
-    # 200 dict on success; a 500/503 JSONResponse is acceptable (dim mismatch or
-    # missing torch) — the point is process(x) is called without the bad kwarg.
+    # Only 503 is tolerated, and only because this module deliberately runs
+    # without importing the full app: routes.py maps ImportError to 503, so that
+    # is the honest "torch isn't installed" signal. 500 is NOT accepted — it is
+    # the catch-all for every other exception, so allowing it would let this
+    # test pass if the route regressed into forwarding timesteps as a kwarg and
+    # raising TypeError, which is the exact bug it exists to catch.
     if isinstance(res, dict):
         assert res["timesteps"] != 5, "caller-supplied timesteps must not be honoured"
         assert res["timesteps"] == 20, "SpikingNeuralNetwork's fixed step count"
     else:
-        assert getattr(res, "status_code", None) in {500, 503}
+        assert getattr(res, "status_code", None) == 503, (
+            f"expected a result dict or a 503 (torch absent), got {res!r}"
+        )

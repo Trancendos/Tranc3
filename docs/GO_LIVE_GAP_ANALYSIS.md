@@ -73,18 +73,25 @@ Submodule path 'workers/cranbania': checked out 'da5d03460e317064b593e2c0d283fcf
 also loses its configuration source.
 
 **Action:** re-pin the submodule to a commit that exists on Magna-Carta `main`
-(currently `cc7d70e`), then commit the updated gitlink. That single fix restores both
-submodules.
+(currently `cc7d70e151de7ef0f95be0fb094b133a20e7f9fc`), then commit the updated
+gitlink. That single fix restores both submodules.
 
 **Not a blocker, but fix it in the same pass — the CranBania pin is stale.**
 `workers/cranbania` is pinned to `da5d034`, the parent of `a960ce1` ("Close auth gap…").
 That commit is perfectly reachable and checks out cleanly, so this is a pin-freshness
-issue rather than a deployment failure. It still matters: the pinned revision predates
-`middleware.test.ts` and the method-scoped cron exemption, so a build from the pin ships
-The Town Hall without the tests that guard its auth behaviour. Note that
-`scripts/setup_external_repos.sh` uses `git submodule update --remote`, which tracks the
-upstream branch and bypasses the recorded pin entirely — so what you get depends on which
-path you initialise with. Advance the pin to `a960ce1` so both paths agree.
+issue rather than a deployment failure. It still matters, and for a runtime reason rather
+than a coverage one: `a960ce1` changed `middleware.ts` itself, scoping the cron-secret
+exemption to POST instead of the whole path, so a build from the older pin ships The Town
+Hall with the broader exemption still in place. It also predates `middleware.test.ts`,
+which is a coverage gap on top of that — but the deployable difference is the middleware,
+not the test.
+
+Note that `scripts/setup_external_repos.sh` uses `git submodule update --remote`, which
+tracks the upstream branch and bypasses the recorded pin entirely — so what you get
+depends on which path you initialise with, and the two can disagree silently. Advance the
+pin to `a960ce1df9fb478c373c0c0f20e2683aca154867` so both paths agree, and consider making
+that script honour the recorded gitlink (or verify the checked-out SHA against it and fail
+on mismatch) so deployment is deterministic rather than branch-tip dependent.
 
 ### 2.2 The Town Hall deploys unauthenticated by default
 
@@ -240,7 +247,7 @@ confusing red builds.
 
   | Ref | Item | Due |
   |---|---|---|
-  | ACT-003 / CERT-001 | Pay ICO data protection fee, record registration number | **2026-07-31 (today)** |
+  | ACT-003 / CERT-001 | Pay ICO data protection fee, record registration number | **2026-07-31** |
   | ACT-006 | Tranc3 HIPAA Tier A product copy remediation | 2026-07-15 (**overdue**) |
   | ACT-001 / CERT-002 | Signed DPA with authorised PSP (SUP-003) | 2026-08-31 |
   | ACT-007 | Policy attestation cycle for privileged roles | 2026-08-31 |
@@ -269,7 +276,10 @@ confusing red builds.
 - `next.config.mjs` sets **`typescript: { ignoreBuildErrors: true }`**, masking **15+ real
   type errors** in `components/ui/` (`chart.tsx`, `resizable.tsx`, `calendar.tsx`).
   `pnpm build` succeeds and prints "Skipping validation of types"; `npx tsc --noEmit`
-  shows the failures. `react-resizable-panels` v4 no longer exports `PanelGroup` /
+  shows the failures — verified by running `npx tsc --noEmit` inside the InfinityStyles
+  working tree, not this one, so they are not reproducible from a Tranc3 checkout.
+  The installed `react-resizable-panels` (v4.12.2 per its pnpm lockfile) no longer
+  exports `PanelGroup` /
   `PanelResizeHandle`, so `resizable.tsx` references APIs that do not exist at runtime.
 - Still named **`my-v0-project`** in `package.json` — an un-renamed v0.dev scaffold.
 - **No test script and no tests.** CI runs `codeql.yml` and `node.js.yml` only.
@@ -311,7 +321,8 @@ confusing red builds.
 **Can be done now, no funding, no external party:**
 
 1. Re-pin `compliance/magna-carta` to an existing commit — this alone unblocks building.
-   In the same pass, advance `workers/cranbania` to `a960ce1` and initialise both
+   In the same pass, advance `workers/cranbania` to
+   `a960ce1df9fb478c373c0c0f20e2683aca154867` and initialise both
    submodules. *(§2.1)*
 2. Fix the `timesteps` bug in `src/bio_neural/neuromorphic.py`. *(§4.1)*
 3. Update the stale gateway auth test to assert 401 and rename it. *(§4.2)*
@@ -335,7 +346,7 @@ confusing red builds.
 
 **Requires money or an external party — start immediately, long lead times:**
 
-13. ICO fee (**due today**), PSP DPA, health-connector BAA, pentest, SOC 2 observation
+13. ICO fee (**due 2026-07-31**), PSP DPA, health-connector BAA, pentest, SOC 2 observation
     period, fire risk assessment, payroll/RTI. *(§5)*
 14. The Citadel host hardware, then `./scripts/citadel_deploy_all.sh` and DNS cutover. *(§2.3)*
 
