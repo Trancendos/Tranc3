@@ -294,10 +294,25 @@ confusing red builds.
 
 ## 6. Smaller Tranc3 items
 
-- **`SECURITY_ALERT_REGISTER.md` does not exist** at the repo root. `scripts/security_score.py:22`
-  expects it and awards 12 of 100 security points for its presence with `FIX`/`FP`/`ACCEPT`/`SUPPRESS`
-  dispositions and a `hostIPC` entry. This single missing file is the entire reason the
-  security dimension sits at 88.6% against a 90% target. Every other security check passes.
+- **`SECURITY_ALERT_REGISTER.md` was missing** — now created, taking the Security dimension
+  from 88.6% to **100%**. It records four dispositions, all built from material already
+  verifiable in the repo rather than invented: sentencepiece CVE-2026-1260 as `FIX`
+  (remediated by the pinned 0.2.1; only Trivy's database is stale), bandit B608 in
+  `src/relations/registry.py` as `FP`, `hostIPC` on the three nanoservices as `ACCEPT`
+  per `docs/HOSTIPC_RISK_ACCEPTANCE.md`, and diskcache CVE-2025-69872 as `SUPPRESS`
+  (no patched release exists; not exploitable behind the hardened `_NoPickleJSONDisk`).
+- **The production merge gate has never run, and it was failing.** `production-gate.yml`
+  is pinned to `runs-on: self-hosted`, so it needs the host the cloud-only phase defers —
+  a gate that never executes reports nothing, which is why this stayed invisible. Ported
+  to GitHub runners and run locally first: two steps blocked. `security_score.py
+  --min-percent 90` failed on the missing register above, and `pre_deploy_quality_gate.py`
+  was blocked by a medium-severity bandit B608 in `RelationsRegistry.get_feed()`.
+  That B608 is a genuine false positive — `clauses` holds only three hardcoded literals
+  and every caller value is bound through a `?` placeholder, with `limit` bounds-checked —
+  so it is marked `# nosec B608` with the reasoning inline and recorded as SEC-002. With
+  both resolved the full gate now passes: 16 test files, the API import, compose validate,
+  port registry, preflight, quality gate, security score, scorecard, entity registry and
+  zero-cost audit.
 - `.env.production` must be generated on The Citadel host
   (`scripts/generate_production_env.sh`) — expected, not a defect.
 - **The frontend container could not start.** `docker/Dockerfile.web` switched to

@@ -402,11 +402,18 @@ class RelationsRegistry:
         if since_ts is not None:
             clauses.append("ts >= ?")
             params.append(since_ts)
+        # `clauses` only ever holds the three literal fragments appended above —
+        # no caller value reaches the SQL text. Every user-supplied value (ai,
+        # location, since_ts, limit) is bound through a `?` placeholder in
+        # `params`, and `limit` is additionally bounds-checked at the top of this
+        # method. Bandit's B608 fires on the f-string itself, not on what is
+        # interpolated into it, so this is a false positive rather than an
+        # injection path. Recorded as SEC-002 in SECURITY_ALERT_REGISTER.md.
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         params.append(limit)
         with self._lock:
             cur = self._conn.execute(
-                f"SELECT * FROM activity_events {where} ORDER BY ts DESC, id DESC LIMIT ?",
+                f"SELECT * FROM activity_events {where} ORDER BY ts DESC, id DESC LIMIT ?",  # nosec B608
                 params,
             )
             rows = cur.fetchall()

@@ -1,0 +1,136 @@
+name: Production Gate
+
+# GitHub Actions copy of .forgejo/workflows/production-gate.yml.
+#
+# Added as a deliberate, interim, cloud-only-phase measure, on the same
+# reasoning as .github/workflows/deploy-cloudflare.yml and frontend-build.yml
+# (see cloudflare/DEPLOY.md). The Forgejo original is pinned to
+# `runs-on: self-hosted`, so it needs The Workshop's runner on the Citadel host
+# that this phase explicitly defers standing back up — meaning the platform's
+# own merge gate has not been running at all while it operates cloud-only.
+#
+# That is worth stating plainly: without this copy, the gate that is supposed to
+# block a bad merge is simply absent, and its absence is invisible because a
+# workflow that never runs reports nothing.
+#
+# Retire this copy once The Workshop is back and hybrid/local is reactivated,
+# rather than maintaining both indefinitely. Until then, keep it in sync with
+# the Forgejo original — they should differ only in this header, the runner, and
+# the hardening (persist-credentials, timeout) added below.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
+  JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
+  DATABASE_URL: sqlite:///./test.db
+  REDIS_URL: redis://localhost:6379/0
+  ENVIRONMENT: test
+
+jobs:
+  production-gate:
+    name: Production merge gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Nothing here pushes; the gate only reads the tree and runs checks.
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -q
+          # Test-runner extras, in case the requirements install is partial.
+          pip install pytest-asyncio psycopg2-binary -q 2>/dev/null || true
+          # bandit is required by the pre-deploy quality gate below. Without it
+          # that gate reports "0 medium+ issue(s) (exit 1)" — a blocked result
+          # with an empty finding list, which reads as a mystery failure rather
+          # than a missing tool.
+          pip install bandit -q
+
+      - name: Merge gate tests
+        run: |
+          python -m pytest \
+            tests/test_smoke.py \
+            tests/test_knowledge_brain.py \
+            tests/test_gbrain_worker.py \
+            tests/test_canonical_routes.py \
+            tests/test_compatibility.py \
+            tests/test_entity_effective.py \
+            tests/test_health_metadata.py \
+            tests/test_orchestrator_effective.py \
+            tests/test_zero_cost_registry.py \
+            tests/test_url_validation.py \
+            tests/test_adaptive_rotator.py \
+            tests/test_api_startup_readiness.py \
+            tests/test_production_readiness_stack.py \
+            tests/test_live_deploy_contract.py \
+            tests/test_p0_health_syntax.py \
+            tests/test_p0_metrics_mount.py \
+            -q --tb=short
+
+      - name: API import gate
+        run: python -c "import api; print('api OK')"
+
+      - name: Citadel compose validate
+        run: python3 scripts/citadel_compose_validate.py
+
+      - name: Port registry validate (CLAUDE.md vs compose)
+        run: python3 scripts/port_registry_validate.py
+
+      - name: Docker compose config (production)
+        run: |
+          if command -v docker >/dev/null 2>&1; then
+            docker compose -f docker-compose.production.yml config --quiet
+          else
+            echo "SKIP: docker not available (compose YAML validated via citadel_compose_validate.py)"
+          fi
+
+      - name: Citadel preflight (compose contracts)
+        run: python3 scripts/citadel_preflight.py
+
+      - name: Pre-deploy quality gate (critical only)
+        run: python3 scripts/pre_deploy_quality_gate.py
+
+      - name: Security dimension score
+        run: python3 scripts/security_score.py --min-percent 90
+
+      - name: Production readiness scorecard
+        run: python3 scripts/production_readiness_score.py
+
+      - name: Dependency audit (pip-audit if installed)
+        run: |
+          pip install pip-audit -q 2>/dev/null || true
+          python3 scripts/dependency_audit.py || true
+
+      - name: Entity registry import gate
+        run: |
+          python -c "
+          from src.entities.health_metadata import health_entity_block
+          e = health_entity_block(8004, 'infinity-ws')
+          assert e['lead_ai'], e
+          assert e['pid'] == 'PID-NXS', e
+          print('health_entity_block OK:', e['lead_ai'])
+          "
+
+      - name: Zero-cost registry audit
+        run: python scripts/zero_cost_audit.py
