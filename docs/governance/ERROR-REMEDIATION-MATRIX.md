@@ -1,11 +1,14 @@
 # Error, Vulnerability, Remediation & Self-Healing Matrix
 
 > **What this is.** Five items from the matrix brainstorm — Error Code Registry, CVE Matrix,
-> Remediation Matrix, Self-Healing Matrix, and Diagnosis/Resolution Matrix — turned out to be one
-> real pipeline once traced through the codebase, not five separate systems: an error surfaces with
-> a canonical code → gets scanned/classified against known vulnerability patterns → triggers an
-> automated remediation bot or auditor fix → self-healing closes the loop by regenerating the
-> failed component. This doc maps that pipeline to the real, already-running code behind it.
+> Remediation Matrix, Self-Healing Matrix, and Diagnosis/Resolution Matrix — turned out to describe
+> one conceptual pipeline once traced through the codebase, not five unrelated systems: an error
+> surfaces with a canonical code, gets scanned/classified against known vulnerability patterns,
+> triggers an automated remediation bot or auditor fix, and self-healing regenerates the failed
+> component. Each stage is real, independently-running code — but as §6 makes explicit, nothing
+> currently connects the stages into one traceable, end-to-end flow. This doc maps the shared
+> pipeline concept to the real code behind each independent stage, not a built, wired-together
+> pipeline.
 
 **Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-07-30
 

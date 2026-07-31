@@ -153,6 +153,7 @@ class TestDBUserManagerFallbackCreate:
     def test_create_user_accepts_valid_email(self, mgr):
         result = mgr.create_user("hank", "T3st-pw-only!", email="Hank@Example.com")
         assert result["username"] == "hank"
+        assert mgr._fallback["hank"]["email"] == "hank@example.com"
 
 
 class TestDBUserManagerFallbackAuthenticate:

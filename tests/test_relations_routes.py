@@ -165,6 +165,8 @@ class TestRecordEventRoute:
             assert resp.status_code == 400
         finally:
             client.app.dependency_overrides.pop(get_current_user, None)
+        feed = client.get("/relations/feed").json()
+        assert all(event["summary"] != "<script>alert(1)</script>" for event in feed)
 
     def test_recorded_event_appears_in_feed(self, client):
         client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")

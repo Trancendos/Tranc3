@@ -134,6 +134,7 @@ class DBUserManager:
         self._fallback[username] = {
             "id": user_id,
             "username": username,
+            "email": email or f"{username}@tranc3.local",
             "hashed_password": pwd_context.hash(password),
             "tier": "free",
             "is_active": True,

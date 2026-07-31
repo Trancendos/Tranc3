@@ -45,13 +45,16 @@ per-card log.
 A `NotebookEntry`, structurally similar to CranBania's `JournalEntry` but author-initiated rather
 than system-generated:
 
-```
+```text
 NotebookEntry:
   id
   owner            # the AI or Agent's identity string (same namespacing caveat as §2)
   created_at
   content          # free text — the AI's own note
-  visibility       # private | location | platform (see §4, open question)
+  visibility       # ai_private | operator | public (see §4, open question — audience,
+                   # not just a scope: ai_private = only the owning AI; operator = human
+                   # staff, matching the Role Registry's admin-only mutation convention;
+                   # public = anyone, same audience as the Relations Activity Feed)
   linked_card_id?  # optional CranBania Card.id — the interconnection point
   linked_location? # optional — for notes not tied to a specific task
 ```
@@ -79,17 +82,20 @@ Two directions, both cheap given the data model above:
    resolving each to its Card's title/status via CranBania's MCP tools — "everything this AI has
    noted, organized by the task it relates to."
 
-Neither direction requires new infrastructure beyond the `NotebookEntry` table itself and the
-already-existing CranBania MCP bridge.
+Neither direction requires new *transport* — both reuse the already-existing CranBania MCP bridge
+rather than inventing a new one. That doesn't mean there's no remaining work: real Notebook read/
+write API endpoints, authorization checks per `visibility` value (§4), CranBania UI panels to
+actually render the linkage, bounded/paginated queries (an AI's Notebook could grow unbounded), and
+MCP-call error handling all still need building on top of that transport.
 
 ## 4. Open questions — need a decision before building
 
 - **Where does it live** — Tranc3 or CranBania (§3.2)? This determines the tech stack (Python/
   SQLite vs. TypeScript/CranBania's own persistence) and who owns the migration if it's wrong.
-- **Visibility** — are Notebook entries private to the AI (an actual personal notebook), visible to
-  humans/operators only, or fully public like the Relations Activity Feed? This is a governance
-  decision, not a technical one — a "private" notebook raises the question of who can audit it if
-  something goes wrong, versus a "public" one being no different from the existing Activity Feed.
+- **Visibility** — which of the three `visibility` values in §3.1 (`ai_private`, `operator`,
+  `public`) is the right default, and is more than one ever allowed per entry? This is a governance
+  decision, not a technical one — `ai_private` raises the question of who can audit it if something
+  goes wrong, versus `public` being no different from the existing Activity Feed.
 - **Does this replace or extend the Activity Feed** — should Notebook entries also emit into
   `src/relations/registry.py`'s feed (matching the Role Registry's existing best-effort integration
   pattern), or stay a separate, unintegrated system? Emitting into both risks duplication; staying

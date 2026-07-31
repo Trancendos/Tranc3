@@ -58,19 +58,21 @@ be allowed, denied, or challenged?"*
 
 ```text
 Zero Trust IAM   — per-request trust decision (every request, stateless)
-       ↓ (if allowed)
 Access Registry  — per-user, per-Location consent gate (checked once per Location activation)
-       ↓ (if subscribed)
-Role Registry    — per-Location, who currently holds the functional role (read by anyone once in)
+Role Registry    — per-Location, who currently holds the functional role
 ```
 
-They compose rather than overlap: Zero Trust decides whether a request is trustworthy at all;
-Access Registry decides whether *this user* has actually opted into *this Location*; Role Registry
-answers who's currently responsible for that Location once someone's inside it. No single request
-touches all three checks in the same code path today — each is invoked independently where
-relevant, not as one unified middleware chain. Wiring them into one composed check (Zero Trust →
-Access → Role, in that order, on every mutating Location request) is the natural next step if a
-single "permission decision" API is ever wanted; not built today.
+This is a conceptual funnel, not today's actual enforcement: the three systems are independent and
+composable, not a literal three-step gate a request passes through. **Role Registry's own read
+routes (`GET /roles/...`) are unauthenticated today** — anyone can query who holds a given Job
+Description with no Access Registry subscription or Zero Trust check involved at all; only the
+mutating `assign`/`unassign` routes require an authenticated admin (`src/roles/routes.py`). Being
+"subscribed" via the Access Registry is not what grants read access to the Role Registry — the two
+systems don't currently interact. No single request touches all three checks in the same code path
+today — each is invoked independently where relevant, not as one unified middleware chain. Wiring
+them into one composed check (Zero Trust → Access → Role, in that order, on every mutating Location
+request) is the natural next step if a single "permission decision" API is ever wanted; not built
+today.
 
 ## 5. Cross-references
 

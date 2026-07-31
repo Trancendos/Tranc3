@@ -42,7 +42,7 @@
 | BOM Matrix (SBOM/CBOM/AI-BOM/HBOM/SaaSBOM/…) | Exists, newly documented | `.forgejo/workflows/security-scan.yml`'s real syft+grype+Dependency-Track SBOM pipeline, triaged against ~15 other BOM acronyms from a follow-up brainstorm | [BOM-MATRIX.md](BOM-MATRIX.md) |
 | Routing Matrix | Exists, thin | `src/routers/`, `workers/model-router-service/`, per-tier `t2ance/router.py` / `trance_one/router.py` FastAPI routers. These are literal HTTP routers, not a routing-policy governance matrix | Noted here |
 | Worker Matrix | Exists + documented | The Self-Hosted Worker Map is already the platform's Worker Matrix | `CLAUDE.md` Self-Hosted Worker Map table (90+ workers, ports, priorities) |
-| API Matrix | Exists + documented | `src/apimarket/marketplace.py` (external), FastAPI routers (internal) | `CLAUDE.md` API Marketplace entity; internal APIs undocumented as a single surface (see gap note below) |
+| API Matrix | Exists + documented | `src/apimarket/marketplace.py` (external), FastAPI routers (internal) | `CLAUDE.md` API Marketplace entity; internal APIs (the per-worker FastAPI routers) have no single consolidated surface doc — noted here, not a genuine gap since each router is real and independently documented |
 | Marketplace Matrix | Exists + documented | `src/apimarket/marketplace.py` — API Marketplace, already a named platform entity | `CLAUDE.md` entity table |
 | Data Share Framework | **Genuine gap** | No cross-Location data-sharing framework found beyond ad hoc HTTP calls between workers | Recorded here as a gap |
 | Federated Learning Framework / Matrix | Exists, thin | `src/nanoservices/fmd_distiller/` (federated model distillation) — real but narrow, one nanoservice, not a platform-wide framework | Noted here |
@@ -78,19 +78,20 @@ Four new docs, each grounded in real, already-running code found during this inv
 
 ## 4. Genuine gaps recorded (not built)
 
-Four items had no real code behind them anywhere in the repo:
+Three items had no real code behind them anywhere in the repo:
 
 - **Data Registry** — a dataset/data-asset governance registry (distinct from the Access Registry's user-consent tracking).
 - **Data Share Framework** — a formal cross-Location data-sharing contract/audit layer.
 - **Solutions Matrix** — a dedicated "proposed solutions" tracker distinct from Remediation.
-- Two items exist only as **thin utility code**, not governance systems: **Validation Matrix**
-  (`src/validation/validators.py` — a handful of input validators, now wired into three real call
-  sites rather than sitting unused) and **Association Matrix** (`src/cmdb/models.py` is
-  infrastructure CMDB, not entity association).
 
-None of these are built as part of this pass — inventing a "Matrix" doc for code that doesn't exist
-would misrepresent the platform's actual state, the same reasoning applied to
-`LOCATION-TRAFFIC-MATRIX.md` earlier. If any of these four is wanted as real functionality later,
+Separately, two more items exist only as **thin utility code**, not governance systems — real, but
+not genuine gaps: **Validation Matrix** (`src/validation/validators.py` — a handful of input
+validators, now wired into three real call sites rather than sitting unused) and **Association
+Matrix** (`src/cmdb/models.py` is infrastructure CMDB, not entity association).
+
+None of the three genuine gaps are built as part of this pass — inventing a "Matrix" doc for code
+that doesn't exist would misrepresent the platform's actual state, the same reasoning applied to
+`LOCATION-TRAFFIC-MATRIX.md` earlier. If any of these three is wanted as real functionality later,
 that's a build task, not a documentation one.
 
 ## 5. Cross-references

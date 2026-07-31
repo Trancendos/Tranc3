@@ -20,10 +20,17 @@ Each `DSRRequest` tracks:
 
 - `status` — `received` → `identity_verified` → `in_progress` → `completed` / `rejected` /
   `escalated`.
-- `due_at` — the GDPR Art. 12 **30-day** response deadline (`SLA_DAYS = 30`), computed from
-  creation.
+- `due_at` — computed from creation using `SLA_DAYS = 30`, tracked as this workflow's **internal**
+  response-time target. **Correction:** GDPR Art. 12(3) itself requires a response within **one
+  calendar month** of receipt (not a fixed 30-day count — a month can be 28–31 days), with a
+  possible extension of up to two further months for complex/numerous requests, conditional on
+  notifying the data subject of the delay and the reason within the original one-month window.
+  `SLA_DAYS = 30` is a reasonable internal proxy for "one month," but the code has no representation
+  of the extension path or the required subject notification — both real legal states that this
+  workflow doesn't model today.
 - `sla_risk` — a real computed property: `BREACH` (overdue), `HIGH` (≤7 days left), `MEDIUM` (≤14
-  days), `LOW` (otherwise) — not just a stored field, derived live from `days_remaining`.
+  days), `LOW` (otherwise) — not just a stored field, derived live from `days_remaining` against the
+  internal 30-day target above, not the GDPR deadline directly.
 - A full `audit_log` per request.
 
 Backed by SQLite (`./data/dsr_workflow.db`), matching the platform's zero-cost self-hosted
