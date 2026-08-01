@@ -30,9 +30,13 @@ The Foundation      ← parent: governance & ownership umbrella
   └── ...(all 43 named entities, unchanged — see PLATFORM_ENTITIES.md)
 ```
 
-No entity, Location, code path, or naming rule elsewhere in this repo changes as a
-result of this document. This is purely additive: a place for cross-cutting
-governance to live that isn't tied to the Trancendos brand specifically.
+No entity, Location, or code path anywhere in this repo changes as a result of this
+document. The one exception is naming: this document adds a single new naming rule
+(§4) — a one-line pointer in `CLAUDE.md` saying "The Foundation" is the parent
+entity — which is Stage 1 of the rollout below, landed alongside this document in
+the same change. It does not alter any of the 43 existing entities' own names.
+Otherwise this is purely additive: a place for cross-cutting governance to live
+that isn't tied to the Trancendos brand specifically.
 
 ## 2. Why introduce a parent above Trancendos
 
@@ -60,7 +64,7 @@ governance to live that isn't tied to the Trancendos brand specifically.
 
 ## 4. Naming rule
 
-Added to `CLAUDE.md`'s naming rules (§0): **"The Foundation" is the parent
+Added to `CLAUDE.md`'s "Naming rules" list: **"The Foundation" is the parent
 governance/ownership entity above Trancendos** — introduced 2026-08-01, described
 fully in this document. Use "Trancendos" for the platform/product/domain exactly as
 before; use "The Foundation" only when specifically referring to the parent entity

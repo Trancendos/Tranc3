@@ -150,8 +150,12 @@ def _matrix_list(suite: Dict[str, Any]) -> List[Any]:
 
 
 def _find_suite(suites: List[Dict[str, Any]], suite_id: str) -> Dict[str, Any]:
+    # str()-coerced on both sides, matching list_suite_health()'s coercion —
+    # otherwise a registry entry with a non-string suite_id (e.g. an unquoted
+    # YAML int) would be listed by GET /compliance/suites as "123" but
+    # unreachable by GET/POST /compliance/suites/123/... here.
     for suite in suites:
-        if isinstance(suite, dict) and suite.get("suite_id") == suite_id:
+        if isinstance(suite, dict) and str(suite.get("suite_id", "")) == suite_id:
             return suite
     raise MatrixSuitesError(f"Unknown suite_id: {suite_id!r}")
 
@@ -358,13 +362,26 @@ def record_matrix_changed(
     change (CI-detected, per docs/governance/MATRIX-SUITES.md §4)."""
     suites = load_suites(path)
     suite = _find_suite(suites, suite_id)
-    matrix_ids = {m.get("id") for m in _matrix_list(suite) if isinstance(m, dict)}
+    # Checked before the membership test (not after) so a suite with a
+    # misconfigured registry entry always classifies as MatrixSuitesRegistryError
+    # (404 invalid_registry), regardless of whether matrix_id also happens to
+    # be invalid — the caller's request can't fix a registry-side problem, so
+    # that classification shouldn't depend on request contents.
+    prefix = _require_prefix(suite, suite_id)
+    # Restricted to str: a malformed registry entry's `id` could be any
+    # YAML-parsed type (list, dict, ...), and an unhashable value would raise
+    # TypeError while building this set rather than the intended
+    # MatrixSuitesValidationError below.
+    matrix_ids = {
+        m.get("id")
+        for m in _matrix_list(suite)
+        if isinstance(m, dict) and isinstance(m.get("id"), str)
+    }
     if matrix_id not in matrix_ids:
         raise MatrixSuitesValidationError(
             f"Matrix {matrix_id!r} is not a member of suite {suite_id!r}"
         )
 
-    prefix = _require_prefix(suite, suite_id)
     obs = observatory or get_observatory()
     return obs.record(
         f"{prefix}.matrix.changed",
@@ -393,6 +410,11 @@ def record_escalated(
     structurally legitimate, not an arbitrary reassignment."""
     suites = load_suites(path)
     suite = _find_suite(suites, suite_id)
+    # Checked before the chain/direction validation (not after) — same
+    # reasoning as record_matrix_changed(): registry misconfiguration must
+    # always classify as MatrixSuitesRegistryError regardless of whether the
+    # request also happens to be invalid.
+    prefix = _require_prefix(suite, suite_id)
     escalation = suite.get("escalation")
     escalation = escalation if isinstance(escalation, list) else []
     chain = [suite.get("steward_ai", "")] + escalation
@@ -409,7 +431,6 @@ def record_escalated(
             f"to_role {to_role!r} is not further up the chain than from_role {from_role!r}"
         )
 
-    prefix = _require_prefix(suite, suite_id)
     obs = observatory or get_observatory()
     return obs.record(
         f"{prefix}.escalated",

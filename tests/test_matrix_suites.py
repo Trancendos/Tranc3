@@ -312,6 +312,21 @@ def test_record_review_completed_unknown_suite_raises(registry_path, observatory
         )
 
 
+def test_record_review_completed_reaches_suite_with_non_string_suite_id(tmp_path, observatory):
+    """A registry entry with a non-string suite_id (e.g. an unquoted YAML int)
+    is listed by list_suite_health() as its str()-coerced form ("12345"). The
+    action endpoints must resolve that same coerced string back to the suite —
+    otherwise a suite visible in GET /compliance/suites would be permanently
+    unreachable via POST /compliance/suites/12345/review."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["suite_id"] = 12345  # SUITE-FIN, deliberately non-string
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    event = record_review_completed("12345", "Someone", observatory=observatory, path=str(p))
+    assert event.event_type == "governance.suite.financial.review.completed"
+
+
 def test_record_review_completed_missing_prefix_raises(no_prefix_registry_path, observatory):
     with pytest.raises(MatrixSuitesRegistryError):
         record_review_completed(
@@ -374,6 +389,39 @@ def test_record_matrix_changed_missing_prefix_raises(no_prefix_registry_path, ob
         )
 
 
+def test_record_matrix_changed_missing_prefix_wins_over_invalid_matrix_id(
+    no_prefix_registry_path, observatory
+):
+    """Registry misconfiguration (missing observatory_events) must classify as
+    MatrixSuitesRegistryError even when matrix_id is ALSO invalid (not a
+    member) — the registry check runs before the membership check, so the
+    400-vs-404 outcome doesn't depend on whether the request happens to be
+    invalid too."""
+    with pytest.raises(MatrixSuitesRegistryError):
+        record_matrix_changed(
+            "SUITE-NOPFX", "NOT-A-MEMBER", observatory=observatory, path=no_prefix_registry_path
+        )
+
+
+def test_record_matrix_changed_tolerates_unhashable_matrix_id(tmp_path, observatory):
+    """A malformed registry entry whose `id` is itself a list/dict (invalid
+    YAML drift) must not raise TypeError while building the membership set —
+    it should be excluded like any other malformed entry, so a genuinely
+    non-member matrix_id still raises the normal MatrixSuitesValidationError."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["matrices"].append({"id": ["not", "hashable"]})  # SUITE-FIN
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    event = record_matrix_changed(
+        "SUITE-FIN", "FINANCIAL-MATRIX", observatory=observatory, path=str(p)
+    )
+    assert event.event_type == "governance.suite.financial.matrix.changed"
+
+    with pytest.raises(MatrixSuitesValidationError):
+        record_matrix_changed("SUITE-FIN", "NOT-A-MEMBER", observatory=observatory, path=str(p))
+
+
 def test_record_escalated_emits_event(registry_path, observatory):
     event = record_escalated(
         "SUITE-KNO",
@@ -430,6 +478,23 @@ def test_record_escalated_tolerates_non_list_escalation(tmp_path, observatory):
             "reason",
             observatory=observatory,
             path=str(p),
+        )
+
+
+def test_record_escalated_missing_prefix_wins_over_invalid_roles(
+    no_prefix_registry_path, observatory
+):
+    """Same ordering guarantee as matrix-changed: a suite with a misconfigured
+    registry entry classifies as MatrixSuitesRegistryError even when
+    from_role/to_role are ALSO not in the escalation chain."""
+    with pytest.raises(MatrixSuitesRegistryError):
+        record_escalated(
+            "SUITE-NOPFX",
+            "Nobody",
+            "Also Nobody",
+            "reason",
+            observatory=observatory,
+            path=no_prefix_registry_path,
         )
 
 
