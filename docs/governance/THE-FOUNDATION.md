@@ -3,8 +3,9 @@
 **Version:** 1.0.0
 **Date:** 2026-08-01
 **Owner:** Platform Owner (Andrew Porter)
-**Status:** Framing introduced this document; estate-wide propagation into existing
-governance docs is staged (§5) — nothing outside this file changes yet.
+**Status:** Framing introduced this document plus a one-line naming-rule pointer in
+`CLAUDE.md` (§4); estate-wide propagation into existing governance docs is staged (§5)
+— no entity, Location, code path, or other doc changes yet.
 
 ---
 
