@@ -44,11 +44,12 @@ actor_for_each_role_id:
       - "James Porter"
     detail: >
       Arcadian Exchange's five Lead AIs (src/entities/platform.py,
-      LOCATIONS["Arcadian Exchange"].lead_ais — the list above matches that
-      field exactly), each running its own Speculator-X/Trader-X agent pair
-      (agent_teams). Collectively the automated actor that proposes and
-      executes capital actions under this register; every Porter pair is
-      subject to the same tier limits and constraints.
+      PLATFORM_ENTITIES["Arcadian Exchange"].lead_ais — the list above matches
+      that field exactly), each running its own Speculator-X/Trader-X agent
+      pair (agent_teams). Collectively the automated actor that proposes and
+      executes capital actions under this register; every one of Clarence,
+      Ann, George, Edward & James Porter is subject to the same tier limits
+      and constraints.
   risk_authority:
     location: "Royal Bank of Arcadia"
     location_abbrev: "RBA"
@@ -60,8 +61,9 @@ actor_for_each_role_id:
       role's own description in the generic register ("between operator
       and execution, never beside it"). Same actor as presiding_authority
       below; role_disjointness only requires risk_authority differ from
-      capital_operator, which holds here (Dorris Fontaine is not a Porter,
-      i.e. not in capital_operator.lead_ais above).
+      capital_operator, which holds here (Dorris Fontaine is not one of
+      Clarence, Ann, George, Edward & James Porter, i.e. not in
+      capital_operator.lead_ais above).
   presiding_authority:
     location: "Royal Bank of Arcadia"
     location_abbrev: "RBA"
@@ -72,7 +74,8 @@ actor_for_each_role_id:
       `primes` field (src/entities/platform.py) independently of this
       binding, so this assignment matches an existing cross-Location
       relationship rather than inventing a new one. Differs from
-      capital_operator (Porter family), satisfying role_disjointness.
+      capital_operator (Clarence, Ann, George, Edward & James Porter),
+      satisfying role_disjointness.
   human_owner:
     human_name: "Andrew Porter"
     is_automated_actor: false
@@ -106,8 +109,9 @@ ledger_identifier_per_function_type:
 # The generic register states two binding constraints now, with structural
 # validation staged to 7.2 (see the file-level comment above):
 #   - role_disjointness: presiding_authority (Dorris Fontaine / RBA) differs
-#     from capital_operator (Porter family / AEX); risk_authority
-#     (Dorris Fontaine / RBA) differs from capital_operator; human_owner
-#     (Andrew Porter) has is_automated_actor: false.
+#     from capital_operator (Clarence, Ann, George, Edward & James Porter /
+#     AEX); risk_authority (Dorris Fontaine / RBA) differs from
+#     capital_operator; human_owner (Andrew Porter) has
+#     is_automated_actor: false.
 #   - distinct_ledgers: INTERNAL and EXTERNAL identifier values above are
 #     distinct strings, checkable by direct string comparison.
