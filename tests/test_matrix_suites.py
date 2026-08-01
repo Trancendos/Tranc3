@@ -217,6 +217,66 @@ def test_list_suite_health_skips_entries_with_missing_or_blank_suite_id(tmp_path
     assert events == []
 
 
+def test_list_suite_health_skips_duplicate_suite_id(tmp_path, observatory):
+    """Two distinct registry entries sharing one suite_id would collide on
+    the same overdue throttle key, and _find_suite() would always resolve to
+    whichever came first -- list_suite_health() excludes both duplicates
+    entirely rather than silently picking a winner."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["suite_id"] = "SUITE-FIN"  # collide with suites[0]
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = list_suite_health(path=str(p))
+    assert health == []
+
+
+def test_list_suite_health_skips_whitespace_padded_duplicate_suite_id(tmp_path, observatory):
+    """Duplicate detection compares the coerced (stripped) id, so " SUITE-FIN "
+    counts as the same identifier as "SUITE-FIN"."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["suite_id"] = " SUITE-FIN "  # collide with suites[0]
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = list_suite_health(path=str(p))
+    assert health == []
+
+
+def test_list_suite_health_strips_suite_id_for_lookup_consistency(tmp_path, observatory):
+    """A registry suite_id with surrounding whitespace (e.g. " fin ") is
+    listed under its stripped form, matching what _find_suite() and the
+    overdue throttle key use -- otherwise the suite would appear in
+    list_suite_health() but be unreachable via the action endpoints."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["suite_id"] = "  SUITE-FIN  "
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = {h.suite_id: h for h in list_suite_health(path=str(p))}
+    assert "SUITE-FIN" in health
+    assert "  SUITE-FIN  " not in health
+
+    event = record_review_completed("SUITE-FIN", "Dorris", observatory=observatory, path=str(p))
+    assert event.event_type == "governance.suite.financial.review.completed"
+
+
+def test_emit_overdue_events_metadata_flags_invalid_next_review(tmp_path, observatory):
+    """The overdue event's days_overdue is always 0 for the missing/
+    unparseable-date fail-safe case (there's no real date to compute a count
+    from) -- next_review_valid in the metadata lets a consumer distinguish
+    that from a suite genuinely only 0-1 days overdue."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["next_review"] = "not-a-date"  # SUITE-FIN
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    events = emit_overdue_events(observatory=observatory, path=str(p))
+    fin_event = next(e for e in events if e.target == "SUITE-FIN")
+    assert fin_event.metadata["next_review_valid"] is False
+    assert fin_event.metadata["days_overdue"] == 0
+
+
 def test_list_suite_health_skips_explicit_null_suite_id(tmp_path, observatory):
     """suite_id: null is present-but-None in the registry, not missing --
     suite.get(key, default) only supplies the default for a truly absent

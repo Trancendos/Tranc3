@@ -156,12 +156,13 @@ def _matrix_list(suite: Dict[str, Any]) -> List[Any]:
 
 
 def _find_suite(suites: List[Dict[str, Any]], suite_id: str) -> Dict[str, Any]:
-    # str()-coerced on both sides, matching list_suite_health()'s coercion —
-    # otherwise a registry entry with a non-string suite_id (e.g. an unquoted
-    # YAML int) would be listed by GET /compliance/suites as "123" but
-    # unreachable by GET/POST /compliance/suites/123/... here.
+    # str()-coerced and stripped on both sides, matching list_suite_health()'s
+    # coercion — otherwise a registry entry with a non-string suite_id (e.g.
+    # an unquoted YAML int) or surrounding whitespace (e.g. " fin ") would be
+    # listed by GET /compliance/suites as "123"/"fin" but unreachable by
+    # GET/POST /compliance/suites/123|fin/... here.
     for suite in suites:
-        if isinstance(suite, dict) and str(suite.get("suite_id", "")) == suite_id:
+        if isinstance(suite, dict) and str(suite.get("suite_id", "")).strip() == suite_id:
             return suite
     raise MatrixSuitesError(f"Unknown suite_id: {suite_id!r}")
 
@@ -203,7 +204,22 @@ def list_suite_health(
     """Compute per-suite health (overdue reviews) from the registry."""
     today = today or datetime.now(timezone.utc).date()
     results: List[SuiteHealth] = []
-    for suite in load_suites(path):
+    suites = load_suites(path)
+    # Two registry entries sharing one suite_id would collide on the same
+    # overdue throttle key, and _find_suite() would always resolve to
+    # whichever came first — a caller acting on "the suite" could silently
+    # be acting on the wrong one. Pre-count occurrences so duplicates are
+    # excluded entirely below rather than the first one winning by accident.
+    id_counts: Dict[str, int] = {}
+    for suite in suites:
+        if not isinstance(suite, dict):
+            continue
+        raw = suite.get("suite_id")
+        cid = "" if raw is None else str(raw).strip()
+        if cid:
+            id_counts[cid] = id_counts.get(cid, 0) + 1
+
+    for suite in suites:
         if not isinstance(suite, dict):
             logger.warning("Skipping malformed suite entry (not a mapping): %r", suite)
             continue
@@ -224,6 +240,9 @@ def list_suite_health(
             # both coerce to "" and silently share (and suppress) each
             # other's overdue-event throttle state.
             logger.warning("Skipping suite entry with missing/blank suite_id: %r", suite)
+            continue
+        if id_counts.get(coerced_suite_id, 0) > 1:
+            logger.warning("Skipping suite entry with duplicate suite_id: %r", suite)
             continue
         next_review_raw = suite.get("next_review")
         next_review_date = _parse_next_review(next_review_raw)
@@ -254,11 +273,13 @@ def list_suite_health(
         )
         results.append(
             SuiteHealth(
-                # str()-coerced: a registry entry with a non-string suite_id
-                # (e.g. an unquoted YAML int, or a list/dict from drift) would
-                # otherwise be unhashable or inconsistent when later used as
-                # an emit-throttle dict key or compared against a URL param.
-                suite_id=str(suite.get("suite_id", "")),
+                # Reuse the already str()-coerced-and-stripped id computed
+                # above (not a fresh str(suite.get(...)) here) so the listed
+                # identifier exactly matches what _find_suite() and the
+                # overdue throttle key use — otherwise a registry id with
+                # surrounding whitespace (e.g. " fin ") would be listed as
+                # " fin " but unreachable via /compliance/suites/fin/....
+                suite_id=coerced_suite_id,
                 name=suite.get("name", ""),
                 pillar=suite.get("pillar", ""),
                 steward_ai=suite.get("steward_ai", ""),
@@ -337,6 +358,12 @@ def emit_overdue_events(
                 "steward_ai": health.steward_ai,
                 "next_review": health.next_review,
                 "days_overdue": health.days_overdue,
+                # days_overdue is always 0 for the missing/unparseable-date
+                # fail-safe case (there's no real date to compute a count
+                # from) — without this flag that reads identically to "1 day
+                # overdue" to anything consuming the event, when it actually
+                # means "registry value unusable, needs a steward to fix it".
+                "next_review_valid": health.next_review_valid,
             },
         )
         emitted.append(event)
