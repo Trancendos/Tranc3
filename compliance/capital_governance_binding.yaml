@@ -1,0 +1,85 @@
+# Trancendos Capital Governance Binding
+#
+# The binding file Magna Carta's generic capital-governance layer requires
+# every adopter to supply (compliance/magna-carta/compliance/capital_governance.yaml,
+# `binding` section). Maps each generic role_id to a real Trancendos actor,
+# names the real currency unit, and names the real ledger per function type.
+#
+# This file does not relax any control — ledger_separation, demotion,
+# kill_switches, and evidence stay exactly as the generic register defines
+# them (binding.must_not_override). It only fills in who/what plays each
+# role and what the tier bands' "units" mean in real money.
+#
+# Structural validation of this file (role_disjointness, distinct_ledgers)
+# is staged to Magna Carta's Stage 7.2 binding validator, which doesn't
+# exist yet — the generic register's own binding.constraints section says
+# so explicitly for both constraints. This is the first binding file for
+# that validator to check once it lands; until then, the reasoning below
+# is stated but not machine-enforced.
+
+meta:
+  version: "1.0.0"
+  created: "2026-08-01"
+  owner: "Andrew Porter"
+  adopting_platform: "Trancendos"
+  source_register: "compliance/magna-carta/compliance/capital_governance.yaml"
+
+unit_currency: "GBP"
+
+actor_for_each_role_id:
+  capital_operator:
+    actor: "Arcadian Exchange (Porter family)"
+    detail: >
+      Clarence, Ann, George, Edward and James Porter — Arcadian Exchange's
+      five Lead AIs (src/entities/platform.py, LOCATIONS["Arcadian
+      Exchange"].lead_ais), each running its own Speculator-X/Trader-X
+      agent pair (agent_teams). Collectively the automated actor that
+      proposes and executes capital actions under this register; every
+      Porter pair is subject to the same tier limits and constraints.
+  risk_authority:
+    actor: "Dorris Fontaine (Royal Bank of Arcadia)"
+    detail: >
+      Royal Bank of Arcadia's Lead AI — the platform's financial hub for
+      billing and payments. Evaluates a proposed capital action against
+      tier limits and exposure caps before it reaches a venue, per this
+      role's own description in the generic register ("between operator
+      and execution, never beside it"). Same actor as presiding_authority
+      below; role_disjointness only requires risk_authority differ from
+      capital_operator, which holds here (Dorris Fontaine is not a Porter).
+  presiding_authority:
+    actor: "Dorris Fontaine (Royal Bank of Arcadia)"
+    detail: >
+      Already Arcadian Exchange's own escalation authority in the platform
+      entity table — Royal Bank of Arcadia is named in Arcadian Exchange's
+      `primes` field (src/entities/platform.py) independently of this
+      binding, so this assignment matches an existing cross-Location
+      relationship rather than inventing a new one. Differs from
+      capital_operator (Porter family), satisfying role_disjointness.
+  human_owner:
+    actor: "Andrew Porter"
+    detail: >
+      The platform's actual human founder/owner. Terminal authority: sole
+      releaser of any hard kill switch, sole approver of the
+      simulated-to-live transition. An actual human, not an automated
+      actor — the other role_disjointness requirement.
+
+ledger_identifier_per_function_type:
+  INTERNAL: "royal-bank-arcadia.operating-ledger"
+  EXTERNAL: "arcadian-exchange.trading-ledger"
+  # Distinct identifiers, per distinct_ledgers: INTERNAL routes through
+  # Royal Bank of Arcadia's existing ledger-service (workers/ledger-service/,
+  # port 8032, "Royal Bank ledger" per CLAUDE.md); EXTERNAL is Arcadian
+  # Exchange's own trading ledger. Both are backed by the same
+  # ledger-service worker today (no separate service exists yet for
+  # Arcadian Exchange specifically), but named as two genuinely distinct
+  # ledger records, not one shared identifier — satisfying the letter of
+  # ledger_separation now, with true infrastructure separation a Stage 7.x
+  # concern once real money moves through this.
+
+# The generic register states two binding constraints now, with structural
+# validation staged to 7.2 (see the file-level comment above):
+#   - role_disjointness: presiding_authority (Dorris Fontaine) differs from
+#     capital_operator (Porter family); risk_authority (Dorris Fontaine)
+#     differs from capital_operator (Porter family); human_owner
+#     (Andrew Porter) is an actual human, not an automated actor.
+#   - distinct_ledgers: INTERNAL and EXTERNAL above are named distinctly.
