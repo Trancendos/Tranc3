@@ -70,12 +70,12 @@ actor_for_each_role_id:
     lead_ai: "Dorris Fontaine"
     detail: >
       Already Arcadian Exchange's own escalation authority in the platform
-      entity table — Royal Bank of Arcadia is named in Arcadian Exchange's
-      `primes` field (src/entities/platform.py) independently of this
-      binding, so this assignment matches an existing cross-Location
-      relationship rather than inventing a new one. Differs from
-      capital_operator (Clarence, Ann, George, Edward & James Porter),
-      satisfying role_disjointness.
+      entity table — Dorris Fontaine is the actor named in Arcadian
+      Exchange's `primes` field (src/entities/platform.py, a list of Lead
+      AI names, not location names) independently of this binding, so this
+      assignment matches an existing cross-Location relationship rather
+      than inventing a new one. Differs from capital_operator (Clarence,
+      Ann, George, Edward & James Porter), satisfying role_disjointness.
   human_owner:
     human_name: "Andrew Porter"
     is_automated_actor: false
@@ -99,12 +99,16 @@ ledger_identifier_per_function_type:
   # requirement); backing_worker/backing_worker_port are equal today —
   # both route through the one ledger-service worker that exists
   # (port 8032, "Royal Bank ledger" per CLAUDE.md), since no separate
-  # service exists yet for Arcadian Exchange specifically. That shared
-  # backing is stated as an explicit field, not left implicit in prose,
-  # so a future validator (or a human auditor) can see the real
-  # infrastructure gap at a glance: distinct ledger *records* today,
-  # not yet distinct ledger *infrastructure* — true separation is a
-  # Stage 7.x concern once real money moves through this.
+  # service exists yet for Arcadian Exchange specifically. That worker
+  # writes every entry to one shared `ledger_entries` table in a single
+  # data/ledger.db (workers/ledger-service/worker.py) — it does not read
+  # or key on either identifier above, so INTERNAL and EXTERNAL entries
+  # today share the same physical records, not just the same worker.
+  # That gap is stated as an explicit field, not left implicit in prose,
+  # so a future validator (or a human auditor) can see it at a glance:
+  # distinct ledger *identifiers* today, not yet distinct ledger
+  # *records* or *infrastructure* — true separation is a Stage 7.x
+  # concern once real money moves through this.
 
 # The generic register states two binding constraints now, with structural
 # validation staged to 7.2 (see the file-level comment above):
