@@ -90,6 +90,9 @@ def load_suites(path: Optional[str] = None) -> List[Dict[str, Any]]:
     with p.open(encoding="utf-8") as f:
         doc = yaml.safe_load(f) or {}
 
+    if not isinstance(doc, dict):
+        raise MatrixSuitesError("matrix_suites.yaml: document root must be a mapping")
+
     suites = doc.get("suites", [])
     if not isinstance(suites, list):
         raise MatrixSuitesError("matrix_suites.yaml: 'suites' must be a list")
@@ -101,6 +104,16 @@ def _find_suite(suites: List[Dict[str, Any]], suite_id: str) -> Dict[str, Any]:
         if suite.get("suite_id") == suite_id:
             return suite
     raise MatrixSuitesError(f"Unknown suite_id: {suite_id!r}")
+
+
+def _require_prefix(suite: Dict[str, Any], suite_id: str) -> str:
+    """Resolve the suite's event prefix, refusing to emit a malformed event
+    name (e.g. a leading-dot '.review.completed') when observatory_events is
+    missing or empty in the registry."""
+    prefix = _event_prefix(suite)
+    if not prefix:
+        raise MatrixSuitesError(f"Suite {suite_id!r} has no observatory_events prefix configured")
+    return prefix
 
 
 def list_suite_health(
@@ -200,7 +213,7 @@ def record_review_completed(
     records that a steward closed this cadence's review."""
     suites = load_suites(path)
     suite = _find_suite(suites, suite_id)
-    prefix = _event_prefix(suite)
+    prefix = _require_prefix(suite, suite_id)
     obs = observatory or get_observatory()
     return obs.record(
         f"{prefix}.review.completed",
@@ -235,7 +248,7 @@ def record_matrix_changed(
     if matrix_id not in matrix_ids:
         raise MatrixSuitesError(f"Matrix {matrix_id!r} is not a member of suite {suite_id!r}")
 
-    prefix = _event_prefix(suite)
+    prefix = _require_prefix(suite, suite_id)
     obs = observatory or get_observatory()
     return obs.record(
         f"{prefix}.matrix.changed",
@@ -278,7 +291,7 @@ def record_escalated(
             f"to_role {to_role!r} is not further up the chain than from_role {from_role!r}"
         )
 
-    prefix = _event_prefix(suite)
+    prefix = _require_prefix(suite, suite_id)
     obs = observatory or get_observatory()
     return obs.record(
         f"{prefix}.escalated",

@@ -95,6 +95,42 @@ def registry_path(tmp_path):
     return str(p)
 
 
+NO_PREFIX_FIXTURE = {
+    "meta": {"observatory_event_prefix": "governance.suite"},
+    "suites": [
+        {
+            "suite_id": "SUITE-NOPFX",
+            "name": "No Prefix Suite",
+            "pillar": "Knowledge",
+            "steward_ai": "Solo Steward",
+            "steward_location": "The Library",
+            "presiding_prime": "Norman Hawkins",
+            "escalation": ["Human owner"],
+            "review_cadence": "quarterly",
+            "next_review": "2099-01-01",
+            # deliberately missing observatory_events, to exercise the
+            # "refuse to emit a malformed event name" guard
+            "kpi": "n/a",
+            "matrices": [
+                {
+                    "id": "NOPFX-MATRIX",
+                    "repo": "magna-carta",
+                    "path": "docs/compliance/NOPFX-MATRIX.md",
+                    "register": None,
+                },
+            ],
+        },
+    ],
+}
+
+
+@pytest.fixture()
+def no_prefix_registry_path(tmp_path):
+    p = tmp_path / "matrix_suites_no_prefix.yaml"
+    p.write_text(yaml.safe_dump(NO_PREFIX_FIXTURE), encoding="utf-8")
+    return str(p)
+
+
 @pytest.fixture()
 def observatory():
     return Observatory()
@@ -107,6 +143,20 @@ def test_load_suites_missing_file_returns_empty(tmp_path):
 def test_load_suites_reads_fixture(registry_path):
     suites = load_suites(registry_path)
     assert {s["suite_id"] for s in suites} == {"SUITE-FIN", "SUITE-KNO"}
+
+
+def test_load_suites_non_list_suites_raises(tmp_path):
+    p = tmp_path / "bad.yaml"
+    p.write_text(yaml.safe_dump({"suites": {"not": "a list"}}), encoding="utf-8")
+    with pytest.raises(MatrixSuitesError):
+        load_suites(str(p))
+
+
+def test_load_suites_non_dict_root_raises(tmp_path):
+    p = tmp_path / "bad.yaml"
+    p.write_text(yaml.safe_dump(["not", "a", "mapping"]), encoding="utf-8")
+    with pytest.raises(MatrixSuitesError):
+        load_suites(str(p))
 
 
 def test_list_suite_health_flags_overdue(registry_path):
@@ -163,6 +213,13 @@ def test_record_review_completed_unknown_suite_raises(registry_path, observatory
         )
 
 
+def test_record_review_completed_missing_prefix_raises(no_prefix_registry_path, observatory):
+    with pytest.raises(MatrixSuitesError):
+        record_review_completed(
+            "SUITE-NOPFX", "Someone", observatory=observatory, path=no_prefix_registry_path
+        )
+
+
 def test_record_matrix_changed_emits_event(registry_path, observatory):
     event = record_matrix_changed(
         "SUITE-FIN", "FINANCIAL-MATRIX", observatory=observatory, path=registry_path
@@ -175,6 +232,13 @@ def test_record_matrix_changed_rejects_non_member_matrix(registry_path, observat
     with pytest.raises(MatrixSuitesError):
         record_matrix_changed(
             "SUITE-FIN", "KNOWLEDGE-MATRIX", observatory=observatory, path=registry_path
+        )
+
+
+def test_record_matrix_changed_missing_prefix_raises(no_prefix_registry_path, observatory):
+    with pytest.raises(MatrixSuitesError):
+        record_matrix_changed(
+            "SUITE-NOPFX", "NOPFX-MATRIX", observatory=observatory, path=no_prefix_registry_path
         )
 
 
@@ -213,6 +277,18 @@ def test_record_escalated_rejects_backwards_move(registry_path, observatory):
             "reason",
             observatory=observatory,
             path=registry_path,
+        )
+
+
+def test_record_escalated_missing_prefix_raises(no_prefix_registry_path, observatory):
+    with pytest.raises(MatrixSuitesError):
+        record_escalated(
+            "SUITE-NOPFX",
+            "Solo Steward",
+            "Human owner",
+            "reason",
+            observatory=observatory,
+            path=no_prefix_registry_path,
         )
 
 
