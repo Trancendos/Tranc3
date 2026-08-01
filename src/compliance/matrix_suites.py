@@ -106,7 +106,10 @@ def load_suites(path: Optional[str] = None) -> List[Dict[str, Any]]:
         return []
 
     with p.open(encoding="utf-8") as f:
-        doc = yaml.safe_load(f) or {}
+        try:
+            doc = yaml.safe_load(f) or {}
+        except yaml.YAMLError as exc:
+            raise MatrixSuitesError(f"matrix_suites.yaml: invalid YAML: {exc}") from exc
 
     if not isinstance(doc, dict):
         raise MatrixSuitesError("matrix_suites.yaml: document root must be a mapping")
@@ -136,6 +139,25 @@ def _require_prefix(suite: Dict[str, Any], suite_id: str) -> str:
     return prefix
 
 
+def _parse_next_review(raw: Any) -> Optional[date]:
+    """Parse a suite's `next_review` value into a date, or None if it can't be.
+    A real matrix_suites.yaml quotes next_review as a string, but an unquoted
+    YAML date literal (e.g. `next_review: 2026-08-31`) is auto-parsed by
+    PyYAML into a `datetime.date` (or `datetime.datetime` for a date+time
+    literal) rather than a string — that's a genuine, valid date and must be
+    accepted as such, not treated as corrupt merely for not being a str."""
+    if isinstance(raw, datetime):
+        return raw.date()
+    if isinstance(raw, date):
+        return raw
+    if isinstance(raw, str) and raw:
+        try:
+            return datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+    return None
+
+
 def list_suite_health(
     path: Optional[str] = None, today: Optional[date] = None
 ) -> List[SuiteHealth]:
@@ -146,29 +168,33 @@ def list_suite_health(
         if not isinstance(suite, dict):
             logger.warning("Skipping malformed suite entry (not a mapping): %r", suite)
             continue
-        next_review_str = suite.get("next_review") or ""
+        next_review_raw = suite.get("next_review")
+        next_review_date = _parse_next_review(next_review_raw)
         overdue = False
         days_overdue = 0
-        next_review_valid = True
-        try:
-            next_review_date = datetime.strptime(next_review_str, "%Y-%m-%d").date()
+        next_review_valid = next_review_date is not None
+        if next_review_valid:
             if next_review_date < today:
                 overdue = True
                 days_overdue = (today - next_review_date).days
-        except (ValueError, TypeError):
+        else:
             # Fail-safe, not fail-silent: a suite whose next_review is missing
             # or corrupt is a governance gap in its own right (per this
             # module's whole purpose — surfacing overdue reviews), so it must
             # show up as needing attention rather than quietly read as
             # healthy. next_review_valid=False distinguishes this from a
             # real, computed day count.
-            next_review_valid = False
             overdue = True
             logger.warning(
                 "Suite %s has an unparseable next_review value: %r",
                 suite.get("suite_id"),
-                next_review_str,
+                next_review_raw,
             )
+        next_review_display = (
+            next_review_date.isoformat()
+            if next_review_date is not None
+            else ("" if next_review_raw is None else str(next_review_raw))
+        )
         results.append(
             SuiteHealth(
                 suite_id=suite.get("suite_id", ""),
@@ -177,7 +203,7 @@ def list_suite_health(
                 steward_ai=suite.get("steward_ai", ""),
                 steward_location=suite.get("steward_location", ""),
                 review_cadence=suite.get("review_cadence", ""),
-                next_review=next_review_str,
+                next_review=next_review_display,
                 overdue=overdue,
                 days_overdue=days_overdue,
                 event_prefix=_event_prefix(suite),
@@ -216,7 +242,20 @@ def emit_overdue_events(
     emitted: List[AuditEvent] = []
 
     for health in list_suite_health(path=path, today=today):
-        if not health.overdue or not health.event_prefix:
+        if not health.overdue:
+            continue
+        if not health.event_prefix:
+            # Don't let the single most important governance signal here
+            # (a suite genuinely overdue) vanish silently just because the
+            # registry entry is missing observatory_events — surface it as
+            # a warning so registry drift is visible, matching the explicit
+            # MatrixSuitesValidationError the other three emit functions
+            # raise via _require_prefix for the same underlying condition.
+            logger.warning(
+                "Suite %s is overdue but has no observatory_events prefix configured; "
+                "skipping event emission",
+                health.suite_id,
+            )
             continue
         with _last_overdue_emit_lock:
             if _last_overdue_emit.get(health.suite_id) == today:
@@ -286,7 +325,7 @@ def record_matrix_changed(
     change (CI-detected, per docs/governance/MATRIX-SUITES.md §4)."""
     suites = load_suites(path)
     suite = _find_suite(suites, suite_id)
-    matrix_ids = {m.get("id") for m in (suite.get("matrices") or [])}
+    matrix_ids = {m.get("id") for m in (suite.get("matrices") or []) if isinstance(m, dict)}
     if matrix_id not in matrix_ids:
         raise MatrixSuitesValidationError(
             f"Matrix {matrix_id!r} is not a member of suite {suite_id!r}"

@@ -162,6 +162,13 @@ def test_load_suites_non_dict_root_raises(tmp_path):
         load_suites(str(p))
 
 
+def test_load_suites_malformed_yaml_raises_matrix_suites_error(tmp_path):
+    p = tmp_path / "bad.yaml"
+    p.write_text("suites: [\n  - this is not: valid: yaml: at all", encoding="utf-8")
+    with pytest.raises(MatrixSuitesError):
+        load_suites(str(p))
+
+
 def test_list_suite_health_flags_overdue(registry_path):
     health = {h.suite_id: h for h in list_suite_health(path=registry_path)}
     assert health["SUITE-FIN"].overdue is True
@@ -183,12 +190,39 @@ def test_list_suite_health_missing_next_review_is_failsafe_overdue(tmp_path):
     assert health["SUITE-KNO"].next_review_valid is False
 
 
-def test_list_suite_health_non_string_next_review_is_failsafe_overdue(tmp_path):
+def test_list_suite_health_date_object_next_review_is_parsed_not_failsafe(tmp_path):
     """A real matrix_suites.yaml quotes next_review as a string, but an
     unquoted YAML date (e.g. `next_review: 2026-08-31`) is auto-parsed by
-    PyYAML into a datetime.date object — this must not crash strptime()."""
+    PyYAML into a datetime.date object. That's a genuine, valid future date
+    and must be read as such (not overdue) rather than lumped into the
+    fail-safe "corrupt value" bucket, which would falsely report a healthy
+    suite as overdue and spam a daily review.overdue event."""
     fixture = copy.deepcopy(FIXTURE)
     fixture["suites"][1]["next_review"] = date(2099, 1, 1)  # SUITE-KNO
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = {h.suite_id: h for h in list_suite_health(path=str(p))}
+    assert health["SUITE-KNO"].overdue is False
+    assert health["SUITE-KNO"].next_review_valid is True
+    assert health["SUITE-KNO"].next_review == "2099-01-01"
+
+
+def test_list_suite_health_past_date_object_next_review_is_overdue(tmp_path):
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["next_review"] = date(2020, 1, 1)  # SUITE-KNO
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = {h.suite_id: h for h in list_suite_health(path=str(p))}
+    assert health["SUITE-KNO"].overdue is True
+    assert health["SUITE-KNO"].next_review_valid is True
+    assert health["SUITE-KNO"].days_overdue > 0
+
+
+def test_list_suite_health_garbage_next_review_is_failsafe_overdue(tmp_path):
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["next_review"] = "not-a-date"  # SUITE-KNO
     p = tmp_path / "matrix_suites.yaml"
     p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
 
@@ -227,6 +261,21 @@ def test_emit_overdue_events_fires_again_next_day(registry_path, observatory):
     assert len(next_day) == 1
 
 
+def test_emit_overdue_events_logs_warning_when_overdue_suite_has_no_prefix(
+    tmp_path, observatory, caplog
+):
+    fixture = copy.deepcopy(NO_PREFIX_FIXTURE)
+    fixture["suites"][0]["next_review"] = "2020-01-01"  # SUITE-NOPFX, overdue
+    p = tmp_path / "matrix_suites_no_prefix.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    with caplog.at_level("WARNING"):
+        events = emit_overdue_events(observatory=observatory, path=str(p))
+
+    assert events == []
+    assert any("SUITE-NOPFX" in record.message for record in caplog.records)
+
+
 def test_record_review_completed_emits_event(registry_path, observatory):
     event = record_review_completed(
         "SUITE-KNO", "Zimik", "monthly check complete", observatory=observatory, path=registry_path
@@ -263,6 +312,25 @@ def test_record_matrix_changed_rejects_non_member_matrix(registry_path, observat
         record_matrix_changed(
             "SUITE-FIN", "KNOWLEDGE-MATRIX", observatory=observatory, path=registry_path
         )
+
+
+def test_record_matrix_changed_tolerates_malformed_matrix_entry(tmp_path, observatory):
+    """A non-dict entry in a suite's `matrices` list (registry drift/corruption)
+    must not crash the comprehension with AttributeError — it should just be
+    excluded from matrix_ids, so a genuinely non-member matrix_id still raises
+    the normal MatrixSuitesValidationError instead of an unhandled 500."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["matrices"].append("not-a-mapping")  # SUITE-FIN
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    event = record_matrix_changed(
+        "SUITE-FIN", "FINANCIAL-MATRIX", observatory=observatory, path=str(p)
+    )
+    assert event.event_type == "governance.suite.financial.matrix.changed"
+
+    with pytest.raises(MatrixSuitesError):
+        record_matrix_changed("SUITE-FIN", "NOT-A-MEMBER", observatory=observatory, path=str(p))
 
 
 def test_record_matrix_changed_missing_prefix_raises(no_prefix_registry_path, observatory):
