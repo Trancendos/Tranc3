@@ -17,7 +17,7 @@ anything beyond 3.11:
 | `rust_extensions/tranc3_crypto/pyproject.toml` | `requires-python = ">=3.10"` — **lower floor than root** |
 | `tranc3-bots/pyproject.toml` | `requires-python = ">=3.11"` |
 | GitHub Actions (`.github/workflows/`) | Before Stage 1, 8 of 15 workflow files hardcoded `python-version: "3.11"` (14 total references — some files reference it more than once, e.g. `python.yml` four times, `test.yml` three, `ci.yml` twice), and the sole exception (`python.yml`'s `test` job) ran only a `['3.10', '3.11', '3.12']` matrix, scoped to `aeonmind/python/`, not the main backend. Stage 1 (below) adds `3.14` to that same job as a `continue-on-error` entry — configured now, its first actual run still pending the next PR that touches `aeonmind/python/**`. |
-| Forgejo (`.forgejo/workflows/`, the primary CI/CD system per this repo's own CLAUDE.md) | Every one of 16 workflow files hardcodes `"3.11"`. No Python-version matrix exists anywhere in Forgejo (`registry-push.yml` does use a `strategy.matrix`, but for multi-image builds, not Python versions). |
+| Forgejo (`.forgejo/workflows/`, the primary CI/CD system per this repo's own CLAUDE.md) | 13 of 30 workflow files hardcode `"3.11"`. No Python-version matrix exists anywhere in Forgejo (`registry-push.yml` does use a `strategy.matrix`, but for multi-image builds, not Python versions). |
 | Magna Carta submodule CI | `layer-b-ci.yml` hardcodes `"3.11"` |
 | Docker base images | ~80 worker Dockerfiles on `python:3.11-slim` (one shared pinned SHA256 digest), 9 workers on `python:3.12-slim`, `ffmpeg-worker` on `python:3.12-slim-bookworm`. Root `Dockerfile`, `docker/Dockerfile*`, and `tranc3-bots/Dockerfile` all on `python:3.11-slim`. All Python base images are pinned by digest, not just tag — an upgrade requires resolving new digests, not just editing a tag string. |
 | `.python-version` / `runtime.txt` | Neither exists anywhere in the repo. Fly.io apps (`fly.toml`, `tranc3-bots/fly.toml`) build via Dockerfile, so the Docker base image is the actual source of truth for their Python version — there's no separate Fly buildpack version to track. |
@@ -82,13 +82,16 @@ version work, since it's existing drift.
 **Stage 1** — `.github/workflows/python.yml`'s `test` job matrix now includes `'3.14'`
 (`continue-on-error: true` on the added entry only, so a 3.14 failure surfaces as a visible
 warning without blocking the `3.10`/`3.11`/`3.12` results or gating any PR). This is genuinely
-non-blocking: existing version coverage and PR gating remain unchanged. `strategy.fail-fast: false`
-was added alongside it — without it, GitHub Actions cancels sibling matrix jobs the moment any one
-job fails, and `continue-on-error` does not exempt a job from that cancellation trigger, so a 3.14
-failure could have cancelled the 3.10/3.11/3.12 jobs mid-run before this change. The one
-behavioural side effect: a genuine failure on 3.10, 3.11, or 3.12 itself no longer cancels its
-siblings early either — all four legs now always run to completion, at the cost of some CI time in
-that scenario.
+non-blocking: existing version coverage and PR gating remain unchanged. A `continue-on-error: true`
+job's own failure already never triggers `fail-fast` cancellation of its siblings — that exemption
+is per-job and applies regardless of the `fail-fast` setting — so the 3.14 leg was never going to
+cancel the 3.10/3.11/3.12 legs either way. `strategy.fail-fast: false` was added for the opposite
+direction: without it, a genuine failure on 3.10, 3.11, or 3.12 (each `continue-on-error: false`,
+the default) would cancel any in-progress/queued sibling job — including a still-running 3.14 job —
+before it finishes, cutting short the exact empirical 3.14 signal this stage exists to collect. The
+side effect: a failure on one stable leg (3.10/3.11/3.12) no longer cancels the *other* stable legs
+early either, since `fail-fast: false` makes every matrix entry independent — all four legs now
+always run to completion, at the cost of some CI time in that scenario.
 
 ## 6. Explicitly out of scope here
 
