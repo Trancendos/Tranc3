@@ -10,6 +10,7 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from Dimensional.sanitize import sanitize_for_log
 from src.compliance.matrix_suites import (
     MatrixSuitesError,
     MatrixSuitesValidationError,
@@ -66,7 +67,7 @@ def suites():
     try:
         return [asdict(h) for h in list_suite_health()]
     except MatrixSuitesError as exc:
-        logger.warning("suites() rejected: %s", exc)
+        logger.warning("suites() rejected: %s", sanitize_for_log(exc))
         return JSONResponse({"error": "invalid_registry"}, status_code=404)
 
 
@@ -75,7 +76,11 @@ def suite_detail(suite_id: str):
     try:
         health_list = list_suite_health()
     except MatrixSuitesError as exc:
-        logger.warning("suite_detail() rejected for suite_id=%s: %s", suite_id, exc)
+        logger.warning(
+            "suite_detail() rejected for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
+        )
         return JSONResponse({"error": "invalid_registry"}, status_code=404)
     for health in health_list:
         if health.suite_id == suite_id:
@@ -92,7 +97,7 @@ def check_overdue(x_internal_secret: Optional[str] = Header(None)):
     try:
         events = emit_overdue_events()
     except MatrixSuitesError as exc:
-        logger.warning("check_overdue() rejected: %s", exc)
+        logger.warning("check_overdue() rejected: %s", sanitize_for_log(exc))
         return JSONResponse({"error": "invalid_registry"}, status_code=404)
     return {"emitted": len(events), "suite_ids": [e.target for e in events]}
 
@@ -108,12 +113,16 @@ def complete_review(
         event = record_review_completed(suite_id, body.reviewer, body.notes)
     except MatrixSuitesValidationError as exc:
         logger.warning(
-            "complete_review rejected (invalid request) for suite_id=%s: %s", suite_id, exc
+            "complete_review rejected (invalid request) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
         )
         return JSONResponse({"error": "invalid_suite_request"}, status_code=400)
     except MatrixSuitesError as exc:
         logger.warning(
-            "complete_review rejected (unknown suite) for suite_id=%s: %s", suite_id, exc
+            "complete_review rejected (unknown suite) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
         )
         return JSONResponse({"error": "unknown_suite"}, status_code=404)
     return event.to_dict()
@@ -130,11 +139,17 @@ def matrix_changed(
         event = record_matrix_changed(suite_id, body.matrix_id)
     except MatrixSuitesValidationError as exc:
         logger.warning(
-            "matrix_changed rejected (invalid request) for suite_id=%s: %s", suite_id, exc
+            "matrix_changed rejected (invalid request) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
         )
         return JSONResponse({"error": "invalid_suite_request"}, status_code=400)
     except MatrixSuitesError as exc:
-        logger.warning("matrix_changed rejected (unknown suite) for suite_id=%s: %s", suite_id, exc)
+        logger.warning(
+            "matrix_changed rejected (unknown suite) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
+        )
         return JSONResponse({"error": "unknown_suite"}, status_code=404)
     return event.to_dict()
 
@@ -149,9 +164,17 @@ def escalate(
     try:
         event = record_escalated(suite_id, body.from_role, body.to_role, body.reason)
     except MatrixSuitesValidationError as exc:
-        logger.warning("escalate rejected (invalid request) for suite_id=%s: %s", suite_id, exc)
+        logger.warning(
+            "escalate rejected (invalid request) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
+        )
         return JSONResponse({"error": "invalid_suite_request"}, status_code=400)
     except MatrixSuitesError as exc:
-        logger.warning("escalate rejected (unknown suite) for suite_id=%s: %s", suite_id, exc)
+        logger.warning(
+            "escalate rejected (unknown suite) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
+        )
         return JSONResponse({"error": "unknown_suite"}, status_code=404)
     return event.to_dict()
