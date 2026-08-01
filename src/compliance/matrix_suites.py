@@ -207,7 +207,12 @@ def list_suite_health(
         if not isinstance(suite, dict):
             logger.warning("Skipping malformed suite entry (not a mapping): %r", suite)
             continue
-        coerced_suite_id = str(suite.get("suite_id", "")).strip()
+        raw_suite_id = suite.get("suite_id")
+        # An explicit `suite_id: null` in the registry is present-but-None,
+        # not missing -- suite.get(..., "") only supplies the default for a
+        # truly absent key, so without this check str(None) would coerce to
+        # the literal string "None" instead of being treated as blank.
+        coerced_suite_id = "" if raw_suite_id is None else str(raw_suite_id).strip()
         if not coerced_suite_id:
             # A missing/blank suite_id str()-coerces to "" — a non-string but
             # otherwise present id (e.g. an unquoted YAML int) is fine and

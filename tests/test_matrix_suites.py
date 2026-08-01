@@ -217,6 +217,25 @@ def test_list_suite_health_skips_entries_with_missing_or_blank_suite_id(tmp_path
     assert events == []
 
 
+def test_list_suite_health_skips_explicit_null_suite_id(tmp_path, observatory):
+    """suite_id: null is present-but-None in the registry, not missing --
+    suite.get(key, default) only supplies the default for a truly absent
+    key, so a naive str(suite.get("suite_id", "")) would coerce None to the
+    literal string "None" and list/emit it as a bogus suite instead of
+    skipping the malformed entry."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["suite_id"] = None  # was SUITE-FIN
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = list_suite_health(path=str(p))
+    assert all(h.suite_id != "None" for h in health)
+    assert len(health) == 1  # only SUITE-KNO survives
+
+    events = emit_overdue_events(observatory=observatory, path=str(p))
+    assert all(e.target != "None" for e in events)
+
+
 def test_list_suite_health_flags_overdue(registry_path):
     health = {h.suite_id: h for h in list_suite_health(path=registry_path)}
     assert health["SUITE-FIN"].overdue is True
