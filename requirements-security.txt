@@ -5,7 +5,7 @@
 # === Dependency Vulnerability Scanning ===
 safety==3.8.0         # Scan Python dependencies for known CVEs (3.8.0 accepts filelock>=3.16.1)
 pip-audit==2.10.0     # Audit pip packages against OSV/NVD databases (2.10.0 accepts cyclonedx-python-lib<12)
-bandit==1.8.3         # Security linter — finds common Python security issues
+bandit==1.9.4         # Security linter — finds common Python security issues
 
 # === Supply Chain Verification ===
 pip-tools==7.4.0      # Pin and hash dependencies for reproducibility
