@@ -94,7 +94,15 @@ class TestNoRouteMisusesRequirePermission:
     recurrence by inspecting the real app's registered parameters.
     """
 
-    def test_no_registered_route_exposes_a_perm_query_parameter(self):
+    def test_no_registered_route_takes_a_callable_as_a_query_parameter(self):
+        """Detect the bug by its shape, not by the parameter's name.
+
+        Matching only ``_perm`` would miss a route that called the parameter
+        anything else and reintroduced the identical defect. The real signature
+        is a *query parameter whose default is a callable* — no legitimate query
+        parameter defaults to a function, so that catches the guard regardless of
+        what it is named.
+        """
         import os
         from unittest.mock import MagicMock, patch
 
@@ -105,15 +113,19 @@ class TestNoRouteMisusesRequirePermission:
         try:
             with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
                 from api import app
-        except (ImportError, ModuleNotFoundError) as e:
+        except ModuleNotFoundError as e:
             pytest.skip(f"missing production dependency: {e}")
 
         offenders = []
         for route in app.routes:
             dependant = getattr(route, "dependant", None)
-            if dependant and any(p.name == "_perm" for p in dependant.query_params):
-                offenders.append(f"{sorted(route.methods)} {route.path}")
+            if not dependant:
+                continue
+            for param in dependant.query_params:
+                if callable(getattr(param.field_info, "default", None)):
+                    offenders.append(f"{sorted(route.methods)} {route.path} ({param.name})")
         assert not offenders, (
-            "these routes pass require_permission() without Depends(...), so FastAPI "
-            f"treats _perm as a query parameter and 422s every request: {offenders}"
+            "these routes pass a dependency callable as a plain default, so FastAPI "
+            "registers it as a query parameter and 422s every request before the "
+            f"guard runs — wrap it in Depends(...): {offenders}"
         )

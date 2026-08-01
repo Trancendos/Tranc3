@@ -87,7 +87,9 @@ def main() -> int:
     ap.add_argument("--backend-url", default=DEFAULT_BACKEND)
     ap.add_argument("--gateway-url", default=None, help="optional, e.g. https://api.trancendos.com")
     ap.add_argument("--frontend-url", default=None)
-    ap.add_argument("--expect-stage", choices=sorted(KNOWN_STAGES), default=None)
+    # Required: the gate probe is the point of this script. Making it optional let a
+    # run exit 0 having verified nothing but /health.
+    ap.add_argument("--expect-stage", choices=sorted(KNOWN_STAGES), required=True)
     ap.add_argument(
         "--allow-unverified-stage",
         action="store_true",
@@ -117,9 +119,14 @@ def main() -> int:
     else:
         record("backend_health", False, f"HTTP {status}: {body[:200]}")
 
-    # 2. /ready — informational: 503 during model bootstrap is expected
+    # 2. /ready — 503 during model bootstrap is expected and non-fatal; anything
+    # else (404, 5xx, or HTTP 0 for a connection failure) means there is no working
+    # readiness endpoint, which a deploy must not pass with only a warning.
     status, _ = _request(f"{backend}/ready")
-    record("backend_ready", status in (200, 503), f"HTTP {status}", fatal=False)
+    if status == 503:
+        record("backend_ready", False, "HTTP 503 — still booting", fatal=False)
+    else:
+        record("backend_ready", status == 200, f"HTTP {status} (want 200, or 503 while booting)")
 
     # 3. Rollout gate probe
     if args.expect_stage:
@@ -160,11 +167,17 @@ def main() -> int:
             # password validation (400/422). Accepting "anything but 403" would
             # pass on a 404 or a 500 — i.e. report the gate healthy precisely
             # when registration is broken.
+            # 400/422 proves the gate let the probe reach validation, i.e.
+            # registration is open. It does NOT prove the stage is literally
+            # "public": a capped stage with spare capacity and no invite code
+            # behaves identically. Say what was actually established.
             record(
                 "rollout_gate",
                 status in (400, 422),
-                f"HTTP {status} (want 400/422: gate open, probe rejected on "
-                f"validation): {body[:200]}",
+                f"HTTP {status} — registration is open (gate did not refuse). "
+                "Note: indistinguishable from a capped stage with spare capacity "
+                f"and no invite code; check GET /auth/rollout to confirm the "
+                f"stage itself. Body: {body[:160]}",
             )
 
     # 4. Optional surfaces — reachability only

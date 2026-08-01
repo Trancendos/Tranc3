@@ -143,21 +143,18 @@ def needs_user_count() -> bool:
     return STAGE_CAPS[current_stage()] is not None
 
 
-def check_registration(
-    invite_code: Optional[str],
-    user_count: Optional[int],
-) -> GateDecision:
-    """Decide whether a registration attempt may proceed at the current stage.
+def check_invite(invite_code: Optional[str]) -> Optional[GateDecision]:
+    """Validate the invite code alone; None means "no objection".
 
-    ``user_count`` is the number of existing accounts (None = unknown). An
-    unknown count in a capped stage denies — the cap cannot be enforced, so
-    the gate must not wave people through.
+    Split out from the capacity check so a caller can reject a bad invite
+    *before* querying the database. Otherwise an unauthenticated stranger
+    guessing codes costs a COUNT per attempt and queues behind the
+    registration lock — the invite gate paying for the thing it exists to
+    keep out.
     """
     stage = current_stage()
-    cap = STAGE_CAPS[stage]
-
     if stage == "public":
-        return GateDecision(True, stage, "public stage — open registration")
+        return None
 
     configured_code = os.getenv("ROLLOUT_INVITE_CODE", "")
     if configured_code:
@@ -194,18 +191,48 @@ def check_registration(
                 "a valid invite_code is required",
             )
 
+    return None
+
+
+def check_capacity(user_count: Optional[int]) -> GateDecision:
+    """Decide on stage capacity alone, assuming the invite already passed.
+
+    ``user_count`` is the number of existing accounts (None = unknown). An
+    unknown count in a capped stage denies — the cap cannot be enforced, so
+    the gate must not wave people through.
+    """
+    stage = current_stage()
+    cap = STAGE_CAPS[stage]
+
+    if cap is None:
+        return GateDecision(True, stage, f"{stage} stage — uncapped")
     if user_count is None:
         return GateDecision(
             False,
             stage,
             f"cannot verify the {stage} stage capacity — registration is temporarily unavailable",
         )
-    if cap is not None and user_count >= cap:
+    if user_count >= cap:
         return GateDecision(
             False,
             stage,
             f"the {stage} stage is at capacity ({cap} accounts) — "
             "registration reopens at the next rollout stage",
         )
-
     return GateDecision(True, stage, f"{stage} stage — {user_count}/{cap} accounts used")
+
+
+def check_registration(
+    invite_code: Optional[str],
+    user_count: Optional[int],
+) -> GateDecision:
+    """Invite then capacity, in one call.
+
+    Convenience wrapper. `/auth/register` calls the two halves separately so the
+    invite can be rejected without touching the database — see `check_invite`.
+    """
+    stage = current_stage()
+    if stage == "public":
+        return GateDecision(True, stage, "public stage — open registration")
+    denial = check_invite(invite_code)
+    return denial if denial else check_capacity(user_count)

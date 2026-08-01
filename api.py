@@ -1203,8 +1203,22 @@ async def register(req: RegisterRequest):
     # In the public stage the gate allows regardless, so skip both the DB COUNT
     # and the lock — this endpoint is unauthenticated and that would be free load.
     if not rollout_gate.needs_user_count():
-        rollout_gate.check_registration(req.invite_code, None)
         return db_user_manager.create_user(req.username, req.password)
+
+    # Invite first, before any DB work. A stranger guessing codes would otherwise
+    # cost a COUNT per attempt and queue behind the lock below — the invite gate
+    # paying for exactly what it exists to keep out.
+    invite_denial = rollout_gate.check_invite(req.invite_code)
+    if invite_denial:
+        logger.info(
+            "Registration denied at rollout stage %s: %s",
+            invite_denial.stage,
+            invite_denial.reason,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"stage": invite_denial.stage, "reason": invite_denial.reason},
+        )
 
     # Capped stage: count and create under one lock. Without it the check and the
     # insert are separate steps, so simultaneous requests can all read the same
@@ -1212,7 +1226,7 @@ async def register(req: RegisterRequest):
     # this process; across multiple instances the cap is still best-effort, which
     # is acceptable because the invite code — not the cap — is the access control.
     async with _registration_lock():
-        decision = rollout_gate.check_registration(req.invite_code, db_user_manager.count_users())
+        decision = rollout_gate.check_capacity(db_user_manager.count_users())
         if not decision.allowed:
             logger.info(
                 "Registration denied at rollout stage %s: %s",

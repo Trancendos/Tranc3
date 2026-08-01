@@ -68,7 +68,6 @@ fly secrets set \
   REDIS_URL="rediss://..." \
   ENVIRONMENT=production \
   ROLLOUT_STAGE=owner \
-  ROLLOUT_INVITE_CODE="$(python -c 'import secrets; print(secrets.token_urlsafe(12))')" \
   --app tranc3-backend
 
 fly secrets set \
@@ -76,6 +75,11 @@ fly secrets set \
   TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" \
   --app trancendos-bots
 ```
+
+> No `ROLLOUT_INVITE_CODE` here on purpose. The `owner` stage caps at 2 accounts and
+> only you are registering, so a code adds nothing — and a value piped straight into
+> `fly secrets set` can never be read back, so you would lock yourself out of your own
+> first accounts. §6 sets and *prints* one per tester wave.
 
 > The bots Fly app is **`trancendos-bots`**, not `tranc3-bots` — that is the source
 > directory. `cloud_preflight.py` checks this, because setting secrets on the wrong app

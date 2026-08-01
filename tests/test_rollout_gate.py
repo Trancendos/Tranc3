@@ -122,9 +122,10 @@ class TestRolloutStatusEndpoint:
             with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
                 from api import app
             return TestClient(app, raise_server_exceptions=False)
-        except (ImportError, ModuleNotFoundError) as e:
-            # Only a genuinely absent dependency is a skip. Catching everything
-            # would turn a broken /auth/rollout route into a silent pass.
+        except ModuleNotFoundError as e:
+            # ModuleNotFoundError only — a missing third-party dependency. A bare
+            # ImportError ("cannot import name X") is a real bug in api.py and must
+            # fail loudly rather than silently skipping this route's coverage.
             pytest.skip(f"missing production dependency: {e}")
 
     def test_requires_authentication(self):
@@ -324,7 +325,7 @@ class TestSpaFallbackDoesNotShadowApiRoutes:
         try:
             with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
                 from api import app
-        except (ImportError, ModuleNotFoundError) as e:
+        except ModuleNotFoundError as e:
             pytest.skip(f"missing production dependency: {e}")
 
         paths = [r.path for r in app.router.routes if isinstance(r, APIRoute)]
@@ -336,3 +337,43 @@ class TestSpaFallbackDoesNotShadowApiRoutes:
             "these API routes are registered after the SPA catch-all and would "
             f"return index.html instead of JSON: {shadowed}"
         )
+
+
+class TestInviteCheckedBeforeDatabase:
+    """A bad invite must be rejected without touching the database.
+
+    /auth/register is unauthenticated. If the capacity COUNT ran first, anyone
+    guessing codes would cost a query per attempt and queue behind the
+    registration lock — the invite gate paying for what it exists to keep out.
+    """
+
+    def test_check_invite_denies_without_a_user_count(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "correct-horse-battery")
+        denial = rollout_gate.check_invite("wrong")
+        assert denial is not None and not denial.allowed
+
+    def test_check_invite_passes_a_good_code(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "correct-horse-battery")
+        assert rollout_gate.check_invite("correct-horse-battery") is None
+
+    def test_check_invite_is_a_no_op_in_public_stage(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "public")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "anything")
+        assert rollout_gate.check_invite(None) is None
+
+    def test_check_capacity_is_independent_of_the_invite(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "correct-horse-battery")
+        assert rollout_gate.check_capacity(9).allowed
+        assert not rollout_gate.check_capacity(10).allowed
+        assert not rollout_gate.check_capacity(None).allowed
+
+    def test_combined_wrapper_still_matches_the_two_halves(self, monkeypatch):
+        """check_registration stays the single-call equivalent."""
+        monkeypatch.setenv("ROLLOUT_STAGE", "extended_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "correct-horse-battery")
+        assert rollout_gate.check_registration("correct-horse-battery", 0).allowed
+        assert not rollout_gate.check_registration("wrong", 0).allowed
+        assert not rollout_gate.check_registration("correct-horse-battery", 25).allowed
