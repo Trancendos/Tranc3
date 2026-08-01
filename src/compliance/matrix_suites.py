@@ -219,7 +219,11 @@ def list_suite_health(
         )
         results.append(
             SuiteHealth(
-                suite_id=suite.get("suite_id", ""),
+                # str()-coerced: a registry entry with a non-string suite_id
+                # (e.g. an unquoted YAML int, or a list/dict from drift) would
+                # otherwise be unhashable or inconsistent when later used as
+                # an emit-throttle dict key or compared against a URL param.
+                suite_id=str(suite.get("suite_id", "")),
                 name=suite.get("name", ""),
                 pillar=suite.get("pillar", ""),
                 steward_ai=suite.get("steward_ai", ""),

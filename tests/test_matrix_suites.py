@@ -171,6 +171,24 @@ def test_load_suites_malformed_yaml_raises_matrix_suites_error(tmp_path):
         load_suites(str(p))
 
 
+def test_list_suite_health_non_string_suite_id_is_coerced(tmp_path, observatory):
+    """A registry entry with a non-string suite_id (e.g. an unquoted YAML int)
+    must not crash emit_overdue_events()'s throttle-map dict key lookup —
+    str()-coercing suite_id up front keeps it hashable and comparable no
+    matter what the raw registry value's type is."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["suite_id"] = 12345  # SUITE-FIN, deliberately non-string
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = {h.suite_id: h for h in list_suite_health(path=str(p))}
+    assert "12345" in health
+    assert health["12345"].overdue is True
+
+    events = emit_overdue_events(observatory=observatory, path=str(p))
+    assert any(e.target == "12345" for e in events)
+
+
 def test_list_suite_health_flags_overdue(registry_path):
     health = {h.suite_id: h for h in list_suite_health(path=registry_path)}
     assert health["SUITE-FIN"].overdue is True
