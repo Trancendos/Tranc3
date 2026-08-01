@@ -137,6 +137,15 @@ def no_prefix_registry_path(tmp_path):
 
 
 @pytest.fixture()
+def duplicate_registry_path(tmp_path):
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["suite_id"] = fixture["suites"][0]["suite_id"]
+    p = tmp_path / "matrix_suites_duplicate.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+    return str(p)
+
+
+@pytest.fixture()
 def observatory():
     return Observatory()
 
@@ -474,13 +483,18 @@ def test_record_review_completed_rejects_ambiguous_duplicate_suite_id(tmp_path, 
     """Two registry entries sharing one suite_id are already excluded from
     list_suite_health() entirely -- _find_suite() must reject the same
     ambiguity rather than silently resolving to whichever came first, which
-    could record an event against the wrong suite's configuration."""
+    could record an event against the wrong suite's configuration.
+
+    Specifically MatrixSuitesRegistryError (not just any MatrixSuitesError):
+    the suite_id genuinely exists in the registry, so the route should
+    classify this as invalid_registry rather than the misleading
+    unknown_suite it would get by falling through the base exception."""
     fixture = copy.deepcopy(FIXTURE)
     fixture["suites"][1]["suite_id"] = "SUITE-FIN"  # collide with suites[0]
     p = tmp_path / "matrix_suites.yaml"
     p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
 
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         record_review_completed("SUITE-FIN", "Someone", observatory=observatory, path=str(p))
 
 
@@ -736,6 +750,14 @@ def no_prefix_client(no_prefix_registry_path, monkeypatch):
     return TestClient(app, headers={"X-Internal-Secret": _TEST_INTERNAL_SECRET})
 
 
+@pytest.fixture()
+def duplicate_client(duplicate_registry_path, monkeypatch):
+    monkeypatch.setenv("MATRIX_SUITES_PATH", duplicate_registry_path)
+    app = FastAPI()
+    app.include_router(router)
+    return TestClient(app, headers={"X-Internal-Secret": _TEST_INTERNAL_SECRET})
+
+
 def test_route_list_suites(client):
     resp = client.get("/compliance/suites")
     assert resp.status_code == 200
@@ -807,6 +829,19 @@ def test_route_complete_review_unknown_suite(client):
         json={"reviewer": "Zimik"},
     )
     assert resp.status_code == 404
+
+
+def test_route_complete_review_duplicate_suite_id_reports_invalid_registry(duplicate_client):
+    """A suite_id that genuinely exists but is duplicated in the registry
+    must surface as invalid_registry, not unknown_suite -- the caller's
+    suite_id is correct, it's the registry that needs fixing, and
+    unknown_suite would wrongly invite them to double-check or retry it."""
+    resp = duplicate_client.post(
+        "/compliance/suites/SUITE-FIN/review",
+        json={"reviewer": "Zimik"},
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "invalid_registry"}
 
 
 def test_route_complete_review_unknown_suite_does_not_leak_exception_text(client):

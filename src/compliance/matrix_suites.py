@@ -180,8 +180,13 @@ def _find_suite(suites: List[Dict[str, Any]], suite_id: str) -> Dict[str, Any]:
         # from list_suite_health() entirely (see its duplicate check) —
         # resolving to "whichever came first" here would let an action
         # silently apply to the wrong suite's configuration instead of
-        # matching that same ambiguity-is-unusable rule.
-        raise MatrixSuitesError(f"Ambiguous suite_id (registry has duplicates): {suite_id!r}")
+        # matching that same ambiguity-is-unusable rule. MatrixSuitesRegistryError
+        # (not the base MatrixSuitesError), since the suite_id genuinely exists —
+        # it's the registry itself that's broken, not an absent suite; routes map
+        # this to invalid_registry rather than the misleading unknown_suite.
+        raise MatrixSuitesRegistryError(
+            f"Ambiguous suite_id (registry has duplicates): {suite_id!r}"
+        )
     return matches[0]
 
 
