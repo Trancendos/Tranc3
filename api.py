@@ -74,6 +74,7 @@ if not _REDIS_URL:
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
 from auth import create_token, get_current_user  # codeql[py/cyclic-import]
+from src.auth import rollout_gate
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
 from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
 from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
@@ -1072,6 +1073,9 @@ class TokenRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    # Required during invite-only rollout stages when ROLLOUT_INVITE_CODE is set;
+    # ignored once ROLLOUT_STAGE=public. See src/auth/rollout_gate.py.
+    invite_code: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -1172,12 +1176,56 @@ class ErrorDocResponse(BaseModel):
     summary="Register a new user account",
     description=(
         "Create a new user account with a username and password. "
-        "Returns the created user record. Usernames must be unique."
+        "Returns the created user record. Usernames must be unique. "
+        "During pre-public rollout stages (ROLLOUT_STAGE) registration is "
+        "capped per stage and may require an invite_code — a 403 carries the "
+        "stage and reason."
     ),
     status_code=201,
 )
 async def register(req: RegisterRequest):
+    decision = rollout_gate.check_registration(req.invite_code, db_user_manager.count_users())
+    if not decision.allowed:
+        logger.info(
+            "Registration denied at rollout stage %s: %s",
+            decision.stage,
+            decision.reason,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"stage": decision.stage, "reason": decision.reason},
+        )
     return db_user_manager.create_user(req.username, req.password)
+
+
+@app.get(
+    "/auth/rollout",
+    tags=["auth"],
+    summary="Current rollout stage and remaining capacity (admin only)",
+    description=(
+        "Reports the active ROLLOUT_STAGE, its account cap, how many accounts exist, "
+        "and how many registration slots remain — so a tester wave can be managed "
+        "without probing the registration endpoint. Admin only: the stage and "
+        "remaining capacity are operational detail, not public information."
+    ),
+)
+async def rollout_status(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="admin_required")
+    stage = rollout_gate.current_stage()
+    cap = rollout_gate.STAGE_CAPS[stage]
+    count = db_user_manager.count_users()
+    remaining: Optional[int] = None
+    if cap is not None and count is not None:
+        remaining = max(0, cap - count)
+    return {
+        "stage": stage,
+        "cap": cap,
+        "user_count": count,
+        "remaining": remaining,
+        "invite_code_required": bool(os.getenv("ROLLOUT_INVITE_CODE")) and stage != "public",
+        "stages": list(rollout_gate.STAGE_CAPS),
+    }
 
 
 @app.post(

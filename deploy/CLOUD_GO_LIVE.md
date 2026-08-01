@@ -63,9 +63,12 @@ Fly app secrets, set once per app:
 fly secrets set \
   SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
   JWT_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
+  AUDIT_SIGNING_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
   DATABASE_URL="postgresql://..." \
   REDIS_URL="rediss://..." \
   ENVIRONMENT=production \
+  ROLLOUT_STAGE=owner \
+  ROLLOUT_INVITE_CODE="$(python -c 'import secrets; print(secrets.token_urlsafe(12))')" \
   --app tranc3-backend
 
 fly secrets set \
@@ -143,7 +146,50 @@ curl -fsS https://api.trancendos.com/health
 
 `post_deploy_verify.py` targets localhost ports and is for the Citadel stack — it does
 **not** verify the cloud surface. Use the health URLs in `cloudflare/deploy-manifest.json`
-and the two Fly endpoints above.
+and the two Fly endpoints above, or run the automated version:
+
+```bash
+python scripts/cloud_smoke_check.py \
+  --gateway-url https://api.trancendos.com \
+  --expect-stage owner
+```
+
+It checks `/health`, `/ready`, that the registration gate is enforcing the stage you
+think it is, and optional gateway/frontend reachability — using a probe that can never
+create an account. Run it after **every** deploy and every stage change.
+
+---
+
+## 6. Staged rollout
+
+Registration is gated by `ROLLOUT_STAGE` (`src/auth/rollout_gate.py`). The gate is
+**fail-closed**: a production deploy with no stage set behaves as `owner`.
+
+| Stage | Cap | Who |
+|---|---|---|
+| `owner` | 2 accounts | Your own testing |
+| `private_beta` | 10 | First tester wave |
+| `extended_beta` | 25 | ~20 testers with headroom |
+| `public` | none | Open registration; invite code ignored |
+
+`ROLLOUT_INVITE_CODE` (optional but recommended pre-public) makes every non-public
+registration require the shared code — give it to testers alongside the URL, rotate it
+between waves. Testers pass it as `invite_code` in the register payload. The code does
+**not** bypass the cap.
+
+Advancing a stage is one command — `fly secrets set` restarts the app with the new
+stage automatically, no code deploy involved:
+
+```bash
+fly secrets set ROLLOUT_STAGE=private_beta \
+  ROLLOUT_INVITE_CODE="$(python -c 'import secrets; print(secrets.token_urlsafe(12))')" \
+  --app tranc3-backend
+python scripts/cloud_smoke_check.py --expect-stage private_beta
+```
+
+When a wave's cap is hit, further registrations get a 403 naming the stage — that is the
+expected signal, not an error. Before flipping to `public`, run through the compliance
+gates below (ICO registration at minimum).
 
 ---
 
