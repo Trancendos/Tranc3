@@ -171,6 +171,16 @@ def test_load_suites_malformed_yaml_raises_matrix_suites_error(tmp_path):
         load_suites(str(p))
 
 
+def test_load_suites_non_utf8_file_raises_matrix_suites_error(tmp_path):
+    """A registry file that isn't valid UTF-8 (encoding drift, a bad merge, a
+    stray binary write) must classify as MatrixSuitesError, not surface an
+    unhandled UnicodeDecodeError as a raw 500."""
+    p = tmp_path / "bad_encoding.yaml"
+    p.write_bytes(b"suites:\n  - suite_id: \xff\xfe not valid utf-8\n")
+    with pytest.raises(MatrixSuitesError):
+        load_suites(str(p))
+
+
 def test_list_suite_health_non_string_suite_id_is_coerced(tmp_path, observatory):
     """A registry entry with a non-string suite_id (e.g. an unquoted YAML int)
     must not crash emit_overdue_events()'s throttle-map dict key lookup —
@@ -595,6 +605,16 @@ def test_route_complete_review_rejects_blank_reviewer(client):
     resp = client.post(
         "/compliance/suites/SUITE-KNO/review",
         json={"reviewer": "   ", "notes": "done"},
+    )
+    assert resp.status_code == 422
+
+
+def test_route_complete_review_rejects_oversized_notes(client):
+    """notes is bounded via Field(max_length=...) so a caller can't grow the
+    in-memory Observatory event buffer with an unbounded free-text payload."""
+    resp = client.post(
+        "/compliance/suites/SUITE-KNO/review",
+        json={"reviewer": "Zimik", "notes": "x" * 5000},
     )
     assert resp.status_code == 422
 

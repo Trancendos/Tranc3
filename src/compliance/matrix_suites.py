@@ -125,6 +125,12 @@ def load_suites(path: Optional[str] = None) -> List[Dict[str, Any]]:
             doc = yaml.safe_load(f) or {}
     except yaml.YAMLError as exc:
         raise MatrixSuitesError(f"matrix_suites.yaml: invalid YAML: {exc}") from exc
+    except UnicodeDecodeError as exc:
+        # A registry file that isn't valid UTF-8 (encoding drift, a bad merge,
+        # a stray binary write) must classify the same as any other malformed
+        # registry, not surface as an unhandled 500 — UnicodeDecodeError is a
+        # ValueError subclass, not a yaml.YAMLError, so it needs its own catch.
+        raise MatrixSuitesError(f"matrix_suites.yaml: not valid UTF-8: {exc}") from exc
     except OSError as exc:
         # The is_file() check above is inherently racy: the submodule file
         # can be removed/become unreadable between that check and this open()

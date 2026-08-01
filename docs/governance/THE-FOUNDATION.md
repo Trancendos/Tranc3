@@ -3,7 +3,7 @@
 **Version:** 1.0.0
 **Date:** 2026-08-01
 **Owner:** Platform Owner (Andrew Porter)
-**Status:** Framing introduced this document plus a one-line naming-rule pointer in
+**Status:** Framing introduced this document plus a naming-rule entry in
 `CLAUDE.md` (§4); estate-wide propagation into existing governance docs is staged (§5)
 — no entity, Location, code path, or other doc changes yet.
 
@@ -32,7 +32,7 @@ The Foundation      ← parent: governance & ownership umbrella
 
 No entity, Location, or code path anywhere in this repo changes as a result of this
 document. The one exception is naming: this document adds a single new naming rule
-(§4) — a one-line pointer in `CLAUDE.md` saying "The Foundation" is the parent
+(§4) — an entry in `CLAUDE.md` saying "The Foundation" is the parent
 entity — which is Stage 1 of the rollout below, landed alongside this document in
 the same change. It does not alter any of the 43 existing entities' own names.
 Otherwise this is purely additive: a place for cross-cutting governance to live
@@ -75,7 +75,7 @@ itself (e.g. in governance or ownership contexts), not as a substitute for
 
 | Stage | Deliverable | Status |
 |---|---|---|
-| 1 | This document + a one-line pointer in `CLAUDE.md` | ✅ this change |
+| 1 | This document + a naming-rule entry in `CLAUDE.md` | ✅ this change |
 | 2 | Reference The Foundation in Magna Carta's top-level governance framing where "the estate" is discussed today | staged |
 | 3 | Propagate into wiki / architecture docs that describe estate-wide ownership | staged |
 

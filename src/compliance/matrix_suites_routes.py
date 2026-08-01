@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from Dimensional.sanitize import sanitize_for_log
 from Dimensional.security import constant_time_compare
@@ -41,8 +41,8 @@ def _require_internal_secret(x_internal_secret: Optional[str]) -> None:
 
 
 class ReviewCompletedRequest(BaseModel):
-    reviewer: str
-    notes: str = ""
+    reviewer: str = Field(..., max_length=256)
+    notes: str = Field("", max_length=4096)
 
     @field_validator("reviewer")
     @classmethod
@@ -54,13 +54,13 @@ class ReviewCompletedRequest(BaseModel):
 
 
 class MatrixChangedRequest(BaseModel):
-    matrix_id: str
+    matrix_id: str = Field(..., max_length=256)
 
 
 class EscalateRequest(BaseModel):
-    from_role: str
-    to_role: str
-    reason: str = ""
+    from_role: str = Field(..., max_length=256)
+    to_role: str = Field(..., max_length=256)
+    reason: str = Field("", max_length=4096)
 
 
 # Plain `def` (not `async def`) throughout this router, matching
