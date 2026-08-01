@@ -351,36 +351,41 @@ def emit_overdue_events(
                 health.suite_id,
             )
             continue
+        # Check, record(), and mark all happen inside one critical section:
+        # splitting the mark into a second `with` block (checked-then-record,
+        # mark afterward) would let two concurrent scans both pass the check
+        # before either marks, both call obs.record(), and both emit — the
+        # exact per-day duplicate this lock exists to prevent. The mark is
+        # still the last statement in the block, so if obs.record() raises,
+        # the suite is left unmarked for retry rather than falsely throttled
+        # for the rest of the day.
         with _last_overdue_emit_lock:
             if _last_overdue_emit.get(health.suite_id) == today:
                 continue
-        event = obs.record(
-            f"{health.event_prefix}.review.overdue",
-            actor="system",
-            target=health.suite_id,
-            category=EventCategory.GOVERNANCE,
-            severity=EventSeverity.WARNING,
-            service="trancendos-matrix-suites",
-            location=health.steward_location,
-            outcome="warning",
-            metadata={
-                "suite_id": health.suite_id,
-                "suite_name": health.name,
-                "steward_ai": health.steward_ai,
-                "next_review": health.next_review,
-                "days_overdue": health.days_overdue,
-                # days_overdue is always 0 for the missing/unparseable-date
-                # fail-safe case (there's no real date to compute a count
-                # from) — without this flag that reads identically to "1 day
-                # overdue" to anything consuming the event, when it actually
-                # means "registry value unusable, needs a steward to fix it".
-                "next_review_valid": health.next_review_valid,
-            },
-        )
-        # Marked only after obs.record() succeeds — if it raised, marking the
-        # suite emitted here would suppress the signal for the rest of the
-        # day even though no event actually reached the Observatory.
-        with _last_overdue_emit_lock:
+            event = obs.record(
+                f"{health.event_prefix}.review.overdue",
+                actor="system",
+                target=health.suite_id,
+                category=EventCategory.GOVERNANCE,
+                severity=EventSeverity.WARNING,
+                service="trancendos-matrix-suites",
+                location=health.steward_location,
+                outcome="warning",
+                metadata={
+                    "suite_id": health.suite_id,
+                    "suite_name": health.name,
+                    "steward_ai": health.steward_ai,
+                    "next_review": health.next_review,
+                    "days_overdue": health.days_overdue,
+                    # days_overdue is always 0 for the missing/unparseable-date
+                    # fail-safe case (there's no real date to compute a count
+                    # from) — without this flag that reads identically to "1
+                    # day overdue" to anything consuming the event, when it
+                    # actually means "registry value unusable, needs a
+                    # steward to fix it".
+                    "next_review_valid": health.next_review_valid,
+                },
+            )
             _last_overdue_emit[health.suite_id] = today
         emitted.append(event)
     return emitted
