@@ -19,6 +19,16 @@ The Foundation is a new concept introduced *above* Trancendos: a parent
 governance/ownership entity, the way a holding company sits above an operating
 brand.
 
+**Not to be confused with** two existing, unrelated uses of "Foundation" elsewhere
+in this repo: the **Magna Carta Foundation** (`docs/01-MAGNACARTA-FOUNDATION.md`) is
+the zero-cost sovereignty *principle* governing platform infrastructure choices, and
+the **Foundation Framework** (`config/townhall/templates/foundation_framework.md`,
+referenced by `src/townhall/documents.py` and `src/compliance/cab_gate.py`) is a
+*charter* for base platform services shared across Locations. Neither is an entity —
+they're a principle and a charter, respectively. The Foundation introduced by this
+document is the only one of the three that is an actual parent entity above
+Trancendos.
+
 ```text
 The Foundation      ← parent: governance & ownership umbrella
       │
