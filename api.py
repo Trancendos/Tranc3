@@ -790,6 +790,13 @@ from src.nexus.routes import router as _nexus_router  # noqa: F401  # intentiona
 
 app.include_router(_nexus_router)
 
+# ── Matrix Suites (Magna Carta Stage 7.2 — governance suite health + events) ──
+from src.compliance.matrix_suites_routes import (
+    router as _matrix_suites_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_matrix_suites_router)
+
 # ── The Town Hall (governance + compliance) ───────────────────────────────────
 from src.townhall.routes import (
     router as _townhall_router,  # noqa: F401  # intentional top-level import
