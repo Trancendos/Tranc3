@@ -16,8 +16,10 @@ from src.compliance.matrix_suites import (
     MatrixSuitesError,
     MatrixSuitesRegistryError,
     MatrixSuitesValidationError,
+    _find_suite,
     emit_overdue_events,
     list_suite_health,
+    load_suites,
     record_escalated,
     record_matrix_changed,
     record_review_completed,
@@ -155,7 +157,21 @@ def suite_detail(suite_id: str):
     for health in health_list:
         if health.suite_id == suite_id:
             return asdict(health)
-    return JSONResponse({"error": f"Unknown suite_id: {suite_id}"}, status_code=404)
+    # Not in the health list -- either genuinely unknown, or a duplicate/
+    # malformed entry that list_suite_health() silently excludes (its own
+    # dedicated check, distinct from raising). Reuse _find_suite()'s
+    # classification, same as the POST routes via _handle_suite_error(), so
+    # a broken registry reads as invalid_registry here too instead of the
+    # misleading "suite not found" this endpoint used to return verbatim.
+    try:
+        _find_suite(load_suites(), suite_id)
+    except MatrixSuitesError as exc:
+        return _handle_suite_error("suite_detail", suite_id, exc)
+    # _find_suite() found exactly one match yet list_suite_health() excluded
+    # it for some other reason -- the two apply the same filters, so this
+    # shouldn't be reachable, but fall back to the canonical shape rather
+    # than assume it can't happen.
+    return JSONResponse({"error": "unknown_suite"}, status_code=404)
 
 
 @router.post("/check-overdue", summary="Scan for overdue suite reviews (internal)")

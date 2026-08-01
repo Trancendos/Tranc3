@@ -204,7 +204,11 @@ def _require_prefix(suite: Dict[str, Any], suite_id: str) -> str:
     name (e.g. a leading-dot '.review.completed') when observatory_events is
     missing or empty in the registry."""
     prefix = _event_prefix(suite)
-    if not prefix:
+    # startswith(".") too, not just falsy: _event_prefix() only strips a
+    # trailing ".*"/".", so a registry value with a leading dot (e.g.
+    # ".governance.suite.foo") survives as a non-empty, truthy string and
+    # would otherwise produce a malformed ".foo.review.completed" event.
+    if not prefix or prefix.startswith("."):
         raise MatrixSuitesRegistryError(
             f"Suite {suite_id!r} has no observatory_events prefix configured"
         )
@@ -352,13 +356,14 @@ def emit_overdue_events(
     for health in list_suite_health(path=path, today=today):
         if not health.overdue:
             continue
-        if not health.event_prefix:
+        if not health.event_prefix or health.event_prefix.startswith("."):
             # Don't let the single most important governance signal here
             # (a suite genuinely overdue) vanish silently just because the
             # registry entry is missing observatory_events — surface it as
             # a warning so registry drift is visible, matching the explicit
             # MatrixSuitesRegistryError the other three emit functions raise
-            # via _require_prefix for the same underlying condition.
+            # via _require_prefix for the same underlying condition (which
+            # also treats a leading-dot prefix as unusable, not just empty).
             logger.warning(
                 "Suite %s is overdue but has no observatory_events prefix configured; "
                 "skipping event emission",

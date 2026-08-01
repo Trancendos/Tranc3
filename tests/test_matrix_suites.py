@@ -538,6 +538,35 @@ def test_record_review_completed_missing_prefix_raises(no_prefix_registry_path, 
         )
 
 
+def test_record_review_completed_leading_dot_prefix_raises(tmp_path, observatory):
+    """observatory_events: '.governance.suite.financial.*' would otherwise
+    survive _event_prefix()'s trailing-dot strip as a non-empty, truthy
+    string and produce a malformed '.governance.suite.financial.review.
+    completed' event type -- _require_prefix() must reject a leading dot
+    the same way it rejects an empty prefix."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["observatory_events"] = ".governance.suite.financial.*"
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    with pytest.raises(MatrixSuitesRegistryError):
+        record_review_completed("SUITE-FIN", "Someone", observatory=observatory, path=str(p))
+
+
+def test_emit_overdue_events_skips_leading_dot_prefix(tmp_path, observatory):
+    """The same leading-dot guard applies on the overdue-emission path,
+    which reads SuiteHealth.event_prefix directly rather than going through
+    _require_prefix() -- must skip (with a warning), not emit a malformed
+    event."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["observatory_events"] = ".governance.suite.financial.*"
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    events = emit_overdue_events(observatory=observatory, path=str(p))
+    assert not any(e.target == "SUITE-FIN" for e in events)
+
+
 def test_record_matrix_changed_emits_event(registry_path, observatory):
     event = record_matrix_changed(
         "SUITE-FIN", "FINANCIAL-MATRIX", observatory=observatory, path=registry_path
@@ -815,6 +844,17 @@ def test_route_suite_detail_found(client):
 def test_route_suite_detail_not_found(client):
     resp = client.get("/compliance/suites/SUITE-NOPE")
     assert resp.status_code == 404
+    assert resp.json() == {"error": "unknown_suite"}
+
+
+def test_route_suite_detail_duplicate_suite_id_reports_invalid_registry(duplicate_client):
+    """A suite_id that exists but is duplicated is silently excluded from
+    list_suite_health()'s results, same as the POST routes' registry -- GET
+    must classify that the same way (invalid_registry), not echo back the
+    misleading "suite not found" the routes returned before this fix."""
+    resp = duplicate_client.get("/compliance/suites/SUITE-FIN")
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "invalid_registry"}
 
 
 def test_route_check_overdue(client):
@@ -834,7 +874,7 @@ def test_route_check_overdue_get_falls_through_to_suite_lookup(client):
     code with no security or data impact."""
     resp = client.get("/compliance/suites/check-overdue")
     assert resp.status_code == 404
-    assert resp.json() == {"error": "Unknown suite_id: check-overdue"}
+    assert resp.json() == {"error": "unknown_suite"}
 
 
 def test_route_complete_review(client):
