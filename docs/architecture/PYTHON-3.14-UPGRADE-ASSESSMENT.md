@@ -39,7 +39,8 @@ all have active maintenance and manylinux/abi3 wheel pipelines that have histori
 with new CPython releases within weeks of GA.
 
 **Genuine risk — verify explicitly before relying on it:**
-- **`qiskit-aer`** (`requirements.txt`, `requirements-ai.txt`, used by Think Tank /
+- **`qiskit-aer`** (`requirements.txt` only — `requirements-ai.txt` pins the pure-Python
+  `qiskit==2.4.1` but not `qiskit-aer`; used by Think Tank /
   `src/quantum/`) — a C++ extension with a *historically* slower cadence for new-Python-version
   wheel releases than the pure-Python `qiskit` package it pairs with. This is the one dependency
   in the estate most likely to still be missing a 3.14 wheel or to require a source build.
