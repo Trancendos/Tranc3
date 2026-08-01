@@ -74,12 +74,14 @@ class MatrixSuitesValidationError(MatrixSuitesError):
 
 
 class MatrixSuitesRegistryError(MatrixSuitesError):
-    """Raised when a suite_id resolves fine but the suite's *own registry
-    entry* is misconfigured (e.g. missing observatory_events) — unlike
-    MatrixSuitesValidationError, this isn't something the caller's request
-    can fix by being different; it's a Magna Carta-side data problem. Routes
-    map this the same way as a malformed registry (404 invalid_registry),
-    not as a 400 client error."""
+    """Raised for a Magna Carta-side registry data problem — either a whole
+    registry document that failed to load (invalid YAML, non-UTF-8, wrong
+    root/field shape; see load_suites()) or a single suite_id that resolves
+    fine but whose own registry entry is misconfigured (e.g. missing
+    observatory_events, or a duplicate suite_id) — unlike
+    MatrixSuitesValidationError, neither is something the caller's request
+    can fix by being different. Routes map both cases the same way (404
+    invalid_registry), not as a 400 client error."""
 
 
 @dataclass
@@ -125,27 +127,33 @@ def load_suites(path: Optional[str] = None) -> List[Dict[str, Any]]:
         with p.open(encoding="utf-8") as f:
             doc = yaml.safe_load(f) or {}
     except yaml.YAMLError as exc:
-        raise MatrixSuitesError(f"matrix_suites.yaml: invalid YAML: {exc}") from exc
+        # MatrixSuitesRegistryError (not the base MatrixSuitesError): a
+        # present-but-broken registry document is a Magna Carta-side data
+        # problem, not "the caller asked for something that doesn't exist" —
+        # routes must report invalid_registry, not unknown_suite, for every
+        # load_suites() failure below (see _find_suite()'s duplicate-id case
+        # for the same reasoning applied to a single suite entry).
+        raise MatrixSuitesRegistryError(f"matrix_suites.yaml: invalid YAML: {exc}") from exc
     except UnicodeDecodeError as exc:
         # A registry file that isn't valid UTF-8 (encoding drift, a bad merge,
         # a stray binary write) must classify the same as any other malformed
         # registry, not surface as an unhandled 500 — UnicodeDecodeError is a
         # ValueError subclass, not a yaml.YAMLError, so it needs its own catch.
-        raise MatrixSuitesError(f"matrix_suites.yaml: not valid UTF-8: {exc}") from exc
+        raise MatrixSuitesRegistryError(f"matrix_suites.yaml: not valid UTF-8: {exc}") from exc
     except OSError as exc:
         # The is_file() check above is inherently racy: the submodule file
         # can be removed/become unreadable between that check and this open()
         # (concurrent submodule update, permission change). Wrap it the same
         # way as a YAML parse failure rather than letting a raw OSError
         # surface as an unhandled 500.
-        raise MatrixSuitesError(f"matrix_suites.yaml: unreadable: {exc}") from exc
+        raise MatrixSuitesRegistryError(f"matrix_suites.yaml: unreadable: {exc}") from exc
 
     if not isinstance(doc, dict):
-        raise MatrixSuitesError("matrix_suites.yaml: document root must be a mapping")
+        raise MatrixSuitesRegistryError("matrix_suites.yaml: document root must be a mapping")
 
     suites = doc.get("suites", [])
     if not isinstance(suites, list):
-        raise MatrixSuitesError("matrix_suites.yaml: 'suites' must be a list")
+        raise MatrixSuitesRegistryError("matrix_suites.yaml: 'suites' must be a list")
     return suites
 
 

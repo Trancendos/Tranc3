@@ -146,6 +146,13 @@ def duplicate_registry_path(tmp_path):
 
 
 @pytest.fixture()
+def corrupt_registry_path(tmp_path):
+    p = tmp_path / "matrix_suites_corrupt.yaml"
+    p.write_text("suites: [\n  - this is not: valid: yaml: at all", encoding="utf-8")
+    return str(p)
+
+
+@pytest.fixture()
 def observatory():
     return Observatory()
 
@@ -162,21 +169,21 @@ def test_load_suites_reads_fixture(registry_path):
 def test_load_suites_non_list_suites_raises(tmp_path):
     p = tmp_path / "bad.yaml"
     p.write_text(yaml.safe_dump({"suites": {"not": "a list"}}), encoding="utf-8")
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         load_suites(str(p))
 
 
 def test_load_suites_non_dict_root_raises(tmp_path):
     p = tmp_path / "bad.yaml"
     p.write_text(yaml.safe_dump(["not", "a", "mapping"]), encoding="utf-8")
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         load_suites(str(p))
 
 
 def test_load_suites_malformed_yaml_raises_matrix_suites_error(tmp_path):
     p = tmp_path / "bad.yaml"
     p.write_text("suites: [\n  - this is not: valid: yaml: at all", encoding="utf-8")
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         load_suites(str(p))
 
 
@@ -186,7 +193,7 @@ def test_load_suites_non_utf8_file_raises_matrix_suites_error(tmp_path):
     unhandled UnicodeDecodeError as a raw 500."""
     p = tmp_path / "bad_encoding.yaml"
     p.write_bytes(b"suites:\n  - suite_id: \xff\xfe not valid utf-8\n")
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         load_suites(str(p))
 
 
@@ -784,6 +791,14 @@ def duplicate_client(duplicate_registry_path, monkeypatch):
     return TestClient(app, headers={"X-Internal-Secret": _TEST_INTERNAL_SECRET})
 
 
+@pytest.fixture()
+def corrupt_client(corrupt_registry_path, monkeypatch):
+    monkeypatch.setenv("MATRIX_SUITES_PATH", corrupt_registry_path)
+    app = FastAPI()
+    app.include_router(router)
+    return TestClient(app, headers={"X-Internal-Secret": _TEST_INTERNAL_SECRET})
+
+
 def test_route_list_suites(client):
     resp = client.get("/compliance/suites")
     assert resp.status_code == 200
@@ -863,6 +878,20 @@ def test_route_complete_review_duplicate_suite_id_reports_invalid_registry(dupli
     suite_id is correct, it's the registry that needs fixing, and
     unknown_suite would wrongly invite them to double-check or retry it."""
     resp = duplicate_client.post(
+        "/compliance/suites/SUITE-FIN/review",
+        json={"reviewer": "Zimik"},
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "invalid_registry"}
+
+
+def test_route_complete_review_corrupt_registry_reports_invalid_registry(corrupt_client):
+    """A registry file that fails to load entirely (invalid YAML here) must
+    surface as invalid_registry through the POST routes too, matching the
+    GET routes' existing behavior -- not unknown_suite, which would wrongly
+    suggest the requested suite_id itself is the problem rather than the
+    registry being unreadable."""
+    resp = corrupt_client.post(
         "/compliance/suites/SUITE-FIN/review",
         json={"reviewer": "Zimik"},
     )
