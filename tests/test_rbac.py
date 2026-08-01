@@ -80,3 +80,52 @@ class TestRequirePermissionDependency:
         )
         assert response.status_code == 200
         assert response.json() == {"ok": True}
+
+
+class TestNoRouteMisusesRequirePermission:
+    """No route may pass the bare guard as a default value.
+
+    ``require_permission()`` returns a guard that must be wrapped in
+    ``Depends(...)``. Written bare -- ``_perm: None = require_permission(...)``
+    -- FastAPI reads the ``None`` annotation and registers ``_perm`` as a *query
+    parameter*, so every request 422s during validation and the guard never runs.
+    The route then looks protected while actually being unreachable and
+    unenforced. Seven routes in api.py shipped that way; this catches a
+    recurrence by inspecting the real app's registered parameters.
+    """
+
+    def test_no_registered_route_takes_a_callable_as_a_query_parameter(self):
+        """Detect the bug by its shape, not by the parameter's name.
+
+        Matching only ``_perm`` would miss a route that called the parameter
+        anything else and reintroduced the identical defect. The real signature
+        is a *query parameter whose default is a callable* — no legitimate query
+        parameter defaults to a function, so that catches the guard regardless of
+        what it is named.
+        """
+        import os
+        from unittest.mock import MagicMock, patch
+
+        import pytest
+
+        if not os.getenv("SECRET_KEY"):
+            pytest.skip("SECRET_KEY env var not set")
+        try:
+            with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
+                from api import app
+        except ModuleNotFoundError as e:
+            pytest.skip(f"missing production dependency: {e}")
+
+        offenders = []
+        for route in app.routes:
+            dependant = getattr(route, "dependant", None)
+            if not dependant:
+                continue
+            for param in dependant.query_params:
+                if callable(getattr(param.field_info, "default", None)):
+                    offenders.append(f"{sorted(route.methods)} {route.path} ({param.name})")
+        assert not offenders, (
+            "these routes pass a dependency callable as a plain default, so FastAPI "
+            "registers it as a query parameter and 422s every request before the "
+            f"guard runs — wrap it in Depends(...): {offenders}"
+        )

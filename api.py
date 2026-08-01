@@ -74,8 +74,12 @@ if not _REDIS_URL:
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
 from auth import create_token, get_current_user  # codeql[py/cyclic-import]
+from src.auth import rollout_gate
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
-from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
+from src.auth.rbac import (  # noqa: F401  # RBAC guards for protected routes
+    require_permission,
+    user_has_permission,
+)
 from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
 from src.compliance.cab_gate import CABMiddleware  # noqa: F401
 from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
@@ -1072,6 +1076,9 @@ class TokenRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    # Required during invite-only rollout stages when ROLLOUT_INVITE_CODE is set;
+    # ignored once ROLLOUT_STAGE=public. See src/auth/rollout_gate.py.
+    invite_code: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -1165,6 +1172,19 @@ class ErrorDocResponse(BaseModel):
     remediation: Optional[str] = None
 
 
+# Serialises the count-then-create window in capped rollout stages. Created on
+# first use rather than at import: asyncio.Lock() at module scope binds to
+# whatever loop happens to be current then, which is not the one serving requests.
+_REGISTRATION_LOCK: Optional[asyncio.Lock] = None
+
+
+def _registration_lock() -> asyncio.Lock:
+    global _REGISTRATION_LOCK
+    if _REGISTRATION_LOCK is None:
+        _REGISTRATION_LOCK = asyncio.Lock()
+    return _REGISTRATION_LOCK
+
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 @app.post(
     "/auth/register",
@@ -1172,12 +1192,89 @@ class ErrorDocResponse(BaseModel):
     summary="Register a new user account",
     description=(
         "Create a new user account with a username and password. "
-        "Returns the created user record. Usernames must be unique."
+        "Returns the created user record. Usernames must be unique. "
+        "During pre-public rollout stages (ROLLOUT_STAGE) registration is "
+        "capped per stage and may require an invite_code — a 403 carries the "
+        "stage and reason."
     ),
     status_code=201,
 )
 async def register(req: RegisterRequest):
-    return db_user_manager.create_user(req.username, req.password)
+    # In the public stage the gate allows regardless, so skip both the DB COUNT
+    # and the lock — this endpoint is unauthenticated and that would be free load.
+    if not rollout_gate.needs_user_count():
+        return db_user_manager.create_user(req.username, req.password)
+
+    # Invite first, before any DB work. A stranger guessing codes would otherwise
+    # cost a COUNT per attempt and queue behind the lock below — the invite gate
+    # paying for exactly what it exists to keep out.
+    invite_denial = rollout_gate.check_invite(req.invite_code)
+    if invite_denial:
+        logger.info(
+            "Registration denied at rollout stage %s: %s",
+            invite_denial.stage,
+            invite_denial.reason,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={"stage": invite_denial.stage, "reason": invite_denial.reason},
+        )
+
+    # Capped stage: count and create under one lock. Without it the check and the
+    # insert are separate steps, so simultaneous requests can all read the same
+    # under-cap count and every one of them succeeds. The lock closes that within
+    # this process; across multiple instances the cap is still best-effort, which
+    # is acceptable because the invite code — not the cap — is the access control.
+    async with _registration_lock():
+        decision = rollout_gate.check_capacity(db_user_manager.count_users())
+        if not decision.allowed:
+            logger.info(
+                "Registration denied at rollout stage %s: %s",
+                decision.stage,
+                decision.reason,
+            )
+            raise HTTPException(
+                status_code=403,
+                detail={"stage": decision.stage, "reason": decision.reason},
+            )
+        return db_user_manager.create_user(req.username, req.password)
+
+
+@app.get(
+    "/auth/rollout",
+    tags=["auth"],
+    summary="Current rollout stage and remaining capacity",
+    description=(
+        "Reports the active ROLLOUT_STAGE, its account cap, how many accounts exist, "
+        "and how many registration slots remain — so a tester wave can be managed "
+        "without probing the registration endpoint. Requires the `admin:config` "
+        "permission: the stage and remaining capacity are operational detail, not "
+        "public information."
+    ),
+)
+async def rollout_status(current_user: dict = Depends(get_current_user)):
+    # Authorise through the shared RBAC table rather than a local role comparison,
+    # so this endpoint cannot drift from the platform's permission model. The pure
+    # helper is used instead of the require_permission() dependency because that
+    # one reads request.state.user, which RBACMiddleware only populates when the
+    # token's user also resolves to a DB record — an ops endpoint should not go
+    # dark on a DB hiccup.
+    if not user_has_permission(current_user, "admin:config"):
+        raise HTTPException(status_code=403, detail="Missing permission: admin:config")
+    stage = rollout_gate.current_stage()
+    cap = rollout_gate.STAGE_CAPS[stage]
+    count = db_user_manager.count_users()
+    remaining: Optional[int] = None
+    if cap is not None and count is not None:
+        remaining = max(0, cap - count)
+    return {
+        "stage": stage,
+        "cap": cap,
+        "user_count": count,
+        "remaining": remaining,
+        "invite_code_required": bool(os.getenv("ROLLOUT_INVITE_CODE")) and stage != "public",
+        "stages": list(rollout_gate.STAGE_CAPS),
+    }
 
 
 @app.post(
@@ -2246,7 +2343,7 @@ if __name__ == "__main__":
 )
 async def admin_registry(
     current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:audit"),
+    _perm: None = Depends(require_permission("admin:audit")),
 ):
     """File registry — lists all files with FID, version, and integrity status."""
     return file_registry.verify_all()
@@ -2261,7 +2358,7 @@ async def admin_registry(
 async def admin_registry_file(
     fid: str,
     current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:audit"),
+    _perm: None = Depends(require_permission("admin:audit")),
 ):
     """Get integrity status for a specific file by FID."""
     return file_registry.verify(fid)
@@ -2278,7 +2375,7 @@ async def admin_registry_file(
 )
 async def admin_circuits(
     current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:config"),
+    _perm: None = Depends(require_permission("admin:config")),
 ):
     """Circuit breaker status for all subsystems."""
     return {name: cb.get_status() for name, cb in CIRCUITS.items()}
@@ -2295,7 +2392,7 @@ async def admin_circuits(
 )
 async def admin_loops(
     current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:config"),
+    _perm: None = Depends(require_permission("admin:config")),
 ):
     """Loop validator statistics."""
     return loop_validator.get_stats()
@@ -2312,7 +2409,7 @@ async def admin_loops(
 )
 async def admin_abuse(
     current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:audit"),
+    _perm: None = Depends(require_permission("admin:audit")),
 ):
     """IP abuse detection statistics."""
     return abuse_detector.get_stats()
@@ -2329,7 +2426,7 @@ async def admin_abuse(
 )
 async def admin_healing(
     current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("admin:config"),
+    _perm: None = Depends(require_permission("admin:config")),
 ):
     """Self-healing action history."""
     return {"history": self_healer.get_history()}
@@ -2407,7 +2504,7 @@ class _EvalScoreResponse(BaseModel):
 )
 async def eval_score(
     body: _EvalRequest,
-    _perm: None = require_permission("eval:score"),
+    _perm: None = Depends(require_permission("eval:score")),
 ) -> _EvalScoreResponse:
     """Score a hypothesis against a reference string."""
     from src.evaluation.model_eval import (
@@ -2535,3 +2632,26 @@ async def api_version() -> dict:
         "providers": 8,
         "entities": 43,
     }
+
+
+# ── SPA fallback must be matched last ─────────────────────────────────────────
+# The catch-all `GET /{full_path:path}` that serves the built frontend is declared
+# early in this file, and FastAPI matches routes in registration order. Every API
+# route declared below it — which is nearly all of them, including /health — was
+# therefore shadowed whenever web/dist/ existed, returning index.html instead of
+# JSON. The Dockerfile builds no frontend today, so this is latent rather than
+# live, but it would silently disable the entire API the moment one is built in.
+#
+# Moving the route to the end of the table here keeps the declaration where it
+# reads naturally while guaranteeing it only matches what nothing else claimed.
+def _move_spa_fallback_last() -> None:
+    from fastapi.routing import APIRoute
+
+    routes = app.router.routes
+    fallback = [r for r in routes if isinstance(r, APIRoute) and r.path == "/{full_path:path}"]
+    for route in fallback:
+        routes.remove(route)
+        routes.append(route)
+
+
+_move_spa_fallback_last()
