@@ -30,6 +30,7 @@ try:
 except ImportError:  # pragma: no cover - PyYAML is a standard project dependency
     yaml = None  # type: ignore[assignment]
 
+from Dimensional.sanitize import sanitize_for_log
 from src.observability.observatory import (
     AuditEvent,
     EventCategory,
@@ -280,7 +281,7 @@ def list_suite_health(
             overdue = True
             logger.warning(
                 "Suite %s has an unparseable next_review value: %r",
-                suite.get("suite_id"),
+                sanitize_for_log(suite.get("suite_id")),  # codeql[py/log-injection]
                 next_review_raw,
             )
         next_review_display = (
@@ -353,7 +354,7 @@ def emit_overdue_events(
             logger.warning(
                 "Suite %s is overdue but has no observatory_events prefix configured; "
                 "skipping event emission",
-                health.suite_id,
+                sanitize_for_log(health.suite_id),  # codeql[py/log-injection]
             )
             continue
         # Check, record(), and mark all happen inside one critical section:
@@ -364,8 +365,20 @@ def emit_overdue_events(
         # still the last statement in the block, so if obs.record() raises,
         # the suite is left unmarked for retry rather than falsely throttled
         # for the rest of the day.
+        #
+        # >= today, not == today: `today` is snapshotted once per
+        # emit_overdue_events() call, so a scan that started just before UTC
+        # midnight can still be running just after it, holding yesterday's
+        # date. If a same-day scan already marked the suite for `today`
+        # before that delayed scan reaches this lock, an == check would miss
+        # (stored == today, delayed scan's own today == today - 1), letting
+        # it both emit a duplicate AND regress the stored date backward by a
+        # day -- unlocking further duplicates from every later scan that day.
+        # >= keeps the stored date monotonically non-decreasing: this branch
+        # is only reached when stored < today, so the value we're about to
+        # write is always an advance, never a regression.
         with _last_overdue_emit_lock:
-            if _last_overdue_emit.get(health.suite_id) == today:
+            if _last_overdue_emit.get(health.suite_id, date.min) >= today:
                 continue
             event = obs.record(
                 f"{health.event_prefix}.review.overdue",

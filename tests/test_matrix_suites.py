@@ -420,6 +420,32 @@ def test_emit_overdue_events_does_not_throttle_on_record_failure(registry_path):
     assert len(retried) == 1  # not throttled -- the failed attempt didn't count
 
 
+def test_emit_overdue_events_stale_today_does_not_regress_throttle(registry_path, observatory):
+    """`today` is snapshotted once per emit_overdue_events() call, so a scan
+    that started just before UTC midnight can still be running just after --
+    reaching the throttle lock holding yesterday's date while a same-day scan
+    already marked the suite for today. An == check would miss that (stored
+    == today, delayed scan's today == today - 1), letting the delayed scan
+    both double-emit and regress the stored date backward, unlocking further
+    duplicates for the rest of the day. Simulates that ordering directly by
+    calling with today=day-N first, then today=day-(N-1) second."""
+    first = emit_overdue_events(observatory=observatory, path=registry_path, today=date(2026, 6, 2))
+    assert len(first) == 1
+    assert matrix_suites_module._last_overdue_emit["SUITE-FIN"] == date(2026, 6, 2)
+
+    stale = emit_overdue_events(observatory=observatory, path=registry_path, today=date(2026, 6, 1))
+    assert stale == []  # the delayed scan must not double-emit
+    # and must not regress the throttle date backward
+    assert matrix_suites_module._last_overdue_emit["SUITE-FIN"] == date(2026, 6, 2)
+
+    # a later same-day (day N) scan must still be throttled, not re-emit
+    # because of a regressed date
+    later_same_day = emit_overdue_events(
+        observatory=observatory, path=registry_path, today=date(2026, 6, 2)
+    )
+    assert later_same_day == []
+
+
 def test_emit_overdue_events_logs_warning_when_overdue_suite_has_no_prefix(
     tmp_path, observatory, caplog
 ):

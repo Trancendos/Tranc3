@@ -14,7 +14,7 @@ hashin==1.0.5         # Add package hashes to requirements for integrity
 # === OWASP Compliance ===
 # These support OWASP Top 10 validation in CI/CD
 # 1.164.0 -> 1.172.0: transitively fixes CVE-2026-7246 (click command injection,
-# PYSEC-2026-2132) and 4 PyJWT CVEs (PYSEC-2026-175/176/177/178/179) by pulling in
+# PYSEC-2026-2132) and 5 PyJWT CVEs (PYSEC-2026-175/176/177/178/179) by pulling in
 # click~=8.4.2 and pyjwt~=2.13.0 instead of semgrep 1.164.0's click~=8.1.8/pyjwt~=2.12.0.
 # semgrep still hard-pins mcp==1.23.3 exactly (verified: still true as of 1.172.0,
 # the latest release) -- see the mcp accepted-risk note below, this bump doesn't

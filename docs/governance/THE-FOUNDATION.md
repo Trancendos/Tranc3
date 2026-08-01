@@ -23,7 +23,7 @@ brand.
 in this repo: the **Magna Carta Foundation** (`docs/01-MAGNACARTA-FOUNDATION.md`) is
 the zero-cost sovereignty *principle* governing platform infrastructure choices, and
 the **Foundation Framework** (`config/townhall/templates/foundation_framework.md`,
-referenced by `src/townhall/documents.py` and `src/compliance/cab_gate.py`) is a
+referenced by `src/townhall/documents.py`) is a
 *charter* for base platform services shared across Locations. Neither is an entity —
 they're a principle and a charter, respectively. The Foundation introduced by this
 document is the only one of the three that is an actual parent entity above
@@ -91,4 +91,6 @@ itself (e.g. in governance or ownership contexts), not as a substitute for
 
 Stages 2–3 are not required for anything currently in flight (Matrix Suites,
 go-live) and should be picked up opportunistically, not as a blocking rewrite of
-150+ existing governance docs.
+Magna Carta's 150+ governance docs (see `CLAUDE.md`'s Magna Carta entry) —
+this is the estate-wide corpus stages 2-3 would touch, not just this repo's
+own `docs/governance/`.
