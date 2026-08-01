@@ -155,16 +155,34 @@ def _matrix_list(suite: Dict[str, Any]) -> List[Any]:
     return matrices if isinstance(matrices, list) else []
 
 
+def _coerce_suite_id(raw: Any) -> str:
+    """str()-coerce-and-strip a raw registry suite_id value, treating an
+    explicit `null` the same as a missing key (both -> "") rather than the
+    literal string "None" -- shared by list_suite_health() and
+    _find_suite() so both apply the exact same missing/blank rule."""
+    return "" if raw is None else str(raw).strip()
+
+
 def _find_suite(suites: List[Dict[str, Any]], suite_id: str) -> Dict[str, Any]:
-    # str()-coerced and stripped on both sides, matching list_suite_health()'s
-    # coercion — otherwise a registry entry with a non-string suite_id (e.g.
-    # an unquoted YAML int) or surrounding whitespace (e.g. " fin ") would be
-    # listed by GET /compliance/suites as "123"/"fin" but unreachable by
-    # GET/POST /compliance/suites/123|fin/... here.
-    for suite in suites:
-        if isinstance(suite, dict) and str(suite.get("suite_id", "")).strip() == suite_id:
-            return suite
-    raise MatrixSuitesError(f"Unknown suite_id: {suite_id!r}")
+    # Coerced the same way as list_suite_health(): a registry entry whose
+    # suite_id coerces to "" (missing, null, or blank) is unusable there and
+    # must be equally unreachable here — otherwise a null id could still be
+    # addressed literally as /compliance/suites/None/... and emit events.
+    matches = [
+        suite
+        for suite in suites
+        if isinstance(suite, dict) and _coerce_suite_id(suite.get("suite_id")) == suite_id
+    ]
+    if not matches:
+        raise MatrixSuitesError(f"Unknown suite_id: {suite_id!r}")
+    if len(matches) > 1:
+        # Two registry entries sharing one suite_id are already excluded
+        # from list_suite_health() entirely (see its duplicate check) —
+        # resolving to "whichever came first" here would let an action
+        # silently apply to the wrong suite's configuration instead of
+        # matching that same ambiguity-is-unusable rule.
+        raise MatrixSuitesError(f"Ambiguous suite_id (registry has duplicates): {suite_id!r}")
+    return matches[0]
 
 
 def _require_prefix(suite: Dict[str, Any], suite_id: str) -> str:
@@ -214,8 +232,7 @@ def list_suite_health(
     for suite in suites:
         if not isinstance(suite, dict):
             continue
-        raw = suite.get("suite_id")
-        cid = "" if raw is None else str(raw).strip()
+        cid = _coerce_suite_id(suite.get("suite_id"))
         if cid:
             id_counts[cid] = id_counts.get(cid, 0) + 1
 
@@ -223,12 +240,7 @@ def list_suite_health(
         if not isinstance(suite, dict):
             logger.warning("Skipping malformed suite entry (not a mapping): %r", suite)
             continue
-        raw_suite_id = suite.get("suite_id")
-        # An explicit `suite_id: null` in the registry is present-but-None,
-        # not missing -- suite.get(..., "") only supplies the default for a
-        # truly absent key, so without this check str(None) would coerce to
-        # the literal string "None" instead of being treated as blank.
-        coerced_suite_id = "" if raw_suite_id is None else str(raw_suite_id).strip()
+        coerced_suite_id = _coerce_suite_id(suite.get("suite_id"))
         if not coerced_suite_id:
             # A missing/blank suite_id str()-coerces to "" — a non-string but
             # otherwise present id (e.g. an unquoted YAML int) is fine and

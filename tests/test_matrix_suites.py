@@ -457,6 +457,33 @@ def test_record_review_completed_reaches_suite_with_non_string_suite_id(tmp_path
     assert event.event_type == "governance.suite.financial.review.completed"
 
 
+def test_record_review_completed_rejects_null_suite_id(tmp_path, observatory):
+    """A registry entry with suite_id: null must not be addressable as the
+    literal string "None" -- _find_suite() applies the same missing/blank
+    rule as list_suite_health(), which already excludes it from GET results."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["suite_id"] = None  # was SUITE-FIN
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    with pytest.raises(MatrixSuitesError):
+        record_review_completed("None", "Someone", observatory=observatory, path=str(p))
+
+
+def test_record_review_completed_rejects_ambiguous_duplicate_suite_id(tmp_path, observatory):
+    """Two registry entries sharing one suite_id are already excluded from
+    list_suite_health() entirely -- _find_suite() must reject the same
+    ambiguity rather than silently resolving to whichever came first, which
+    could record an event against the wrong suite's configuration."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["suite_id"] = "SUITE-FIN"  # collide with suites[0]
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    with pytest.raises(MatrixSuitesError):
+        record_review_completed("SUITE-FIN", "Someone", observatory=observatory, path=str(p))
+
+
 def test_record_review_completed_missing_prefix_raises(no_prefix_registry_path, observatory):
     with pytest.raises(MatrixSuitesRegistryError):
         record_review_completed(
