@@ -91,6 +91,43 @@ class EscalateRequest(BaseModel):
 # threadpool automatically.
 
 
+def _handle_suite_error(action: str, suite_id: str, exc: MatrixSuitesError) -> JSONResponse:
+    """Map a MatrixSuitesError raised by the compliance layer to the route's
+    JSON error response, logging a sanitized warning first. Shared by
+    complete_review/matrix_changed/escalate so the registry-vs-request-vs-
+    unknown-suite classification lives in one place instead of being
+    repeated (and having to be kept in lockstep) per handler.
+
+    isinstance checks, not a dict lookup, because MatrixSuitesRegistryError
+    and MatrixSuitesValidationError are both subclasses of MatrixSuitesError
+    — order matters, matching the original except-clause ordering (registry
+    misconfiguration takes precedence over a request being also invalid;
+    see the reasoning on _require_prefix() callers in matrix_suites.py)."""
+    if isinstance(exc, MatrixSuitesRegistryError):
+        logger.warning(
+            "%s rejected (registry misconfigured) for suite_id=%s: %s",
+            action,
+            sanitize_for_log(suite_id),  # codeql[py/log-injection]
+            sanitize_for_log(exc),  # codeql[py/log-injection]
+        )
+        return JSONResponse({"error": "invalid_registry"}, status_code=404)
+    if isinstance(exc, MatrixSuitesValidationError):
+        logger.warning(
+            "%s rejected (invalid request) for suite_id=%s: %s",
+            action,
+            sanitize_for_log(suite_id),  # codeql[py/log-injection]
+            sanitize_for_log(exc),  # codeql[py/log-injection]
+        )
+        return JSONResponse({"error": "invalid_suite_request"}, status_code=400)
+    logger.warning(
+        "%s rejected (unknown suite) for suite_id=%s: %s",
+        action,
+        sanitize_for_log(suite_id),  # codeql[py/log-injection]
+        sanitize_for_log(exc),  # codeql[py/log-injection]
+    )
+    return JSONResponse({"error": "unknown_suite"}, status_code=404)
+
+
 @router.get("")
 def suites():
     """Health of all 8 Matrix Suites (overdue reviews) from the registry."""
@@ -147,24 +184,12 @@ def complete_review(
     _require_internal_secret(x_internal_secret)
     try:
         event = record_review_completed(suite_id, body.reviewer, body.notes)
-    except MatrixSuitesRegistryError as exc:
-        logger.warning(
-            "complete_review rejected (registry misconfigured) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "invalid_registry"}, status_code=404)
     except MatrixSuitesError as exc:
         # record_review_completed() only ever raises MatrixSuitesError (unknown
-        # suite) or MatrixSuitesRegistryError (handled above) — it never raises
-        # MatrixSuitesValidationError, unlike matrix_changed/escalate below, so
-        # there is no separate 400 branch here.
-        logger.warning(
-            "complete_review rejected (unknown suite) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "unknown_suite"}, status_code=404)
+        # suite) or MatrixSuitesRegistryError — it never raises
+        # MatrixSuitesValidationError, unlike matrix_changed/escalate below, but
+        # _handle_suite_error() covers that branch too since it's a no-op here.
+        return _handle_suite_error("complete_review", suite_id, exc)
     return event.to_dict()
 
 
@@ -177,27 +202,8 @@ def matrix_changed(
     _require_internal_secret(x_internal_secret)
     try:
         event = record_matrix_changed(suite_id, body.matrix_id)
-    except MatrixSuitesRegistryError as exc:
-        logger.warning(
-            "matrix_changed rejected (registry misconfigured) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "invalid_registry"}, status_code=404)
-    except MatrixSuitesValidationError as exc:
-        logger.warning(
-            "matrix_changed rejected (invalid request) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "invalid_suite_request"}, status_code=400)
     except MatrixSuitesError as exc:
-        logger.warning(
-            "matrix_changed rejected (unknown suite) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "unknown_suite"}, status_code=404)
+        return _handle_suite_error("matrix_changed", suite_id, exc)
     return event.to_dict()
 
 
@@ -210,25 +216,6 @@ def escalate(
     _require_internal_secret(x_internal_secret)
     try:
         event = record_escalated(suite_id, body.from_role, body.to_role, body.reason)
-    except MatrixSuitesRegistryError as exc:
-        logger.warning(
-            "escalate rejected (registry misconfigured) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "invalid_registry"}, status_code=404)
-    except MatrixSuitesValidationError as exc:
-        logger.warning(
-            "escalate rejected (invalid request) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "invalid_suite_request"}, status_code=400)
     except MatrixSuitesError as exc:
-        logger.warning(
-            "escalate rejected (unknown suite) for suite_id=%s: %s",
-            sanitize_for_log(suite_id),  # codeql[py/log-injection]
-            sanitize_for_log(exc),  # codeql[py/log-injection]
-        )
-        return JSONResponse({"error": "unknown_suite"}, status_code=404)
+        return _handle_suite_error("escalate", suite_id, exc)
     return event.to_dict()
