@@ -21,7 +21,7 @@ import logging
 import os
 import threading
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -51,7 +51,19 @@ def _default_path() -> str:
 
 
 class MatrixSuitesError(ValueError):
-    """Raised for unknown suite/matrix/role identifiers or a malformed registry."""
+    """Raised for an unknown suite_id or a malformed registry — the caller's
+    identifier doesn't resolve to anything, or the registry itself is broken.
+    Routes map this to 404."""
+
+
+class MatrixSuitesValidationError(MatrixSuitesError):
+    """Raised when a suite_id resolves fine but the rest of the request is
+    invalid — a matrix that isn't a member, a role outside the escalation
+    chain, a backwards escalation move, or a suite missing its
+    observatory_events prefix. This is still a MatrixSuitesError (existing
+    `except MatrixSuitesError` callers keep working) but routes distinguish
+    it to return 400/422 instead of 404 — the suite exists, the request
+    doesn't."""
 
 
 @dataclass
@@ -67,11 +79,17 @@ class SuiteHealth:
     days_overdue: int
     event_prefix: str
     matrix_count: int
+    next_review_valid: bool
 
 
 def _event_prefix(suite: Dict[str, Any]) -> str:
-    """observatory_events is stored as e.g. 'governance.suite.financial.*'."""
-    raw = suite.get("observatory_events", "")
+    """observatory_events is stored as e.g. 'governance.suite.financial.*'.
+    A missing key, an explicit `null`, or a non-string value all resolve to
+    "" here — callers treat "" as "no usable prefix" (see _require_prefix)
+    rather than crashing on .endswith()/.rstrip()."""
+    raw = suite.get("observatory_events") or ""
+    if not isinstance(raw, str):
+        return ""
     return raw[:-2] if raw.endswith(".*") else raw.rstrip(".")
 
 
@@ -101,7 +119,7 @@ def load_suites(path: Optional[str] = None) -> List[Dict[str, Any]]:
 
 def _find_suite(suites: List[Dict[str, Any]], suite_id: str) -> Dict[str, Any]:
     for suite in suites:
-        if suite.get("suite_id") == suite_id:
+        if isinstance(suite, dict) and suite.get("suite_id") == suite_id:
             return suite
     raise MatrixSuitesError(f"Unknown suite_id: {suite_id!r}")
 
@@ -112,7 +130,9 @@ def _require_prefix(suite: Dict[str, Any], suite_id: str) -> str:
     missing or empty in the registry."""
     prefix = _event_prefix(suite)
     if not prefix:
-        raise MatrixSuitesError(f"Suite {suite_id!r} has no observatory_events prefix configured")
+        raise MatrixSuitesValidationError(
+            f"Suite {suite_id!r} has no observatory_events prefix configured"
+        )
     return prefix
 
 
@@ -120,18 +140,30 @@ def list_suite_health(
     path: Optional[str] = None, today: Optional[date] = None
 ) -> List[SuiteHealth]:
     """Compute per-suite health (overdue reviews) from the registry."""
-    today = today or datetime.utcnow().date()
+    today = today or datetime.now(timezone.utc).date()
     results: List[SuiteHealth] = []
     for suite in load_suites(path):
-        next_review_str = suite.get("next_review", "")
+        if not isinstance(suite, dict):
+            logger.warning("Skipping malformed suite entry (not a mapping): %r", suite)
+            continue
+        next_review_str = suite.get("next_review") or ""
         overdue = False
         days_overdue = 0
+        next_review_valid = True
         try:
             next_review_date = datetime.strptime(next_review_str, "%Y-%m-%d").date()
             if next_review_date < today:
                 overdue = True
                 days_overdue = (today - next_review_date).days
-        except ValueError:
+        except (ValueError, TypeError):
+            # Fail-safe, not fail-silent: a suite whose next_review is missing
+            # or corrupt is a governance gap in its own right (per this
+            # module's whole purpose — surfacing overdue reviews), so it must
+            # show up as needing attention rather than quietly read as
+            # healthy. next_review_valid=False distinguishes this from a
+            # real, computed day count.
+            next_review_valid = False
+            overdue = True
             logger.warning(
                 "Suite %s has an unparseable next_review value: %r",
                 suite.get("suite_id"),
@@ -150,6 +182,7 @@ def list_suite_health(
                 days_overdue=days_overdue,
                 event_prefix=_event_prefix(suite),
                 matrix_count=len(suite.get("matrices", []) or []),
+                next_review_valid=next_review_valid,
             )
         )
     return results
@@ -158,6 +191,15 @@ def list_suite_health(
 # Per-suite date of the last emitted overdue event, so a repeatedly-polled
 # check (e.g. a ChronosSphere cron hitting /compliance/suites/check-overdue)
 # doesn't flood the Observatory with a duplicate event every tick.
+#
+# In-process only — per CLAUDE.md's architecture principles ("In-memory rate
+# limiting over Cloudflare KV — Token-bucket algorithm per-worker", "SQLite
+# over Cloudflare D1 — no shared state"), this repo's convention for exactly
+# this kind of per-worker dedup is process-local memory, not a shared store.
+# The bound this accepts: under multiple uvicorn workers, each worker throttles
+# independently, so a genuinely overdue suite can emit review.overdue once per
+# worker per day rather than once globally — a duplicate signal, not a missed
+# one, and consistent with the platform's existing zero-shared-state posture.
 _last_overdue_emit: Dict[str, date] = {}
 _last_overdue_emit_lock = threading.Lock()
 
@@ -170,7 +212,7 @@ def emit_overdue_events(
     """Emit governance.suite.<name>.review.overdue for every suite whose
     next_review has passed, at most once per suite per calendar day."""
     obs = observatory or get_observatory()
-    today = today or datetime.utcnow().date()
+    today = today or datetime.now(timezone.utc).date()
     emitted: List[AuditEvent] = []
 
     for health in list_suite_health(path=path, today=today):
@@ -186,7 +228,7 @@ def emit_overdue_events(
             target=health.suite_id,
             category=EventCategory.GOVERNANCE,
             severity=EventSeverity.WARNING,
-            service="tranc3-matrix-suites",
+            service="trancendos-matrix-suites",
             location=health.steward_location,
             outcome="warning",
             metadata={
@@ -221,7 +263,7 @@ def record_review_completed(
         target=suite_id,
         category=EventCategory.GOVERNANCE,
         severity=EventSeverity.INFO,
-        service="tranc3-matrix-suites",
+        service="trancendos-matrix-suites",
         location=suite.get("steward_location"),
         outcome="success",
         metadata={
@@ -246,7 +288,9 @@ def record_matrix_changed(
     suite = _find_suite(suites, suite_id)
     matrix_ids = {m.get("id") for m in (suite.get("matrices") or [])}
     if matrix_id not in matrix_ids:
-        raise MatrixSuitesError(f"Matrix {matrix_id!r} is not a member of suite {suite_id!r}")
+        raise MatrixSuitesValidationError(
+            f"Matrix {matrix_id!r} is not a member of suite {suite_id!r}"
+        )
 
     prefix = _require_prefix(suite, suite_id)
     obs = observatory or get_observatory()
@@ -256,7 +300,7 @@ def record_matrix_changed(
         target=matrix_id,
         category=EventCategory.GOVERNANCE,
         severity=EventSeverity.INFO,
-        service="tranc3-matrix-suites",
+        service="trancendos-matrix-suites",
         location=suite.get("steward_location"),
         outcome="success",
         metadata={"suite_id": suite_id, "matrix_id": matrix_id},
@@ -279,15 +323,15 @@ def record_escalated(
     suite = _find_suite(suites, suite_id)
     chain = [suite.get("steward_ai", "")] + list(suite.get("escalation") or [])
     if from_role not in chain:
-        raise MatrixSuitesError(
+        raise MatrixSuitesValidationError(
             f"from_role {from_role!r} is not in suite {suite_id!r}'s escalation chain: {chain}"
         )
     if to_role not in chain:
-        raise MatrixSuitesError(
+        raise MatrixSuitesValidationError(
             f"to_role {to_role!r} is not in suite {suite_id!r}'s escalation chain: {chain}"
         )
     if chain.index(to_role) <= chain.index(from_role):
-        raise MatrixSuitesError(
+        raise MatrixSuitesValidationError(
             f"to_role {to_role!r} is not further up the chain than from_role {from_role!r}"
         )
 
@@ -299,7 +343,7 @@ def record_escalated(
         target=to_role,
         category=EventCategory.GOVERNANCE,
         severity=EventSeverity.WARNING,
-        service="tranc3-matrix-suites",
+        service="trancendos-matrix-suites",
         location=suite.get("steward_location"),
         outcome="success",
         metadata={

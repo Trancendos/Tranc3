@@ -9,6 +9,8 @@ dates fall.
 
 from __future__ import annotations
 
+import copy
+import os
 from datetime import date
 
 import pytest
@@ -17,6 +19,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import src.compliance.matrix_suites as matrix_suites_module
+import src.compliance.matrix_suites_routes as matrix_suites_routes_module
 from src.compliance.matrix_suites import (
     MatrixSuitesError,
     emit_overdue_events,
@@ -163,8 +166,35 @@ def test_list_suite_health_flags_overdue(registry_path):
     health = {h.suite_id: h for h in list_suite_health(path=registry_path)}
     assert health["SUITE-FIN"].overdue is True
     assert health["SUITE-FIN"].days_overdue > 0
+    assert health["SUITE-FIN"].next_review_valid is True
     assert health["SUITE-KNO"].overdue is False
     assert health["SUITE-KNO"].days_overdue == 0
+    assert health["SUITE-KNO"].next_review_valid is True
+
+
+def test_list_suite_health_missing_next_review_is_failsafe_overdue(tmp_path):
+    fixture = copy.deepcopy(FIXTURE)
+    del fixture["suites"][1]["next_review"]  # SUITE-KNO
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = {h.suite_id: h for h in list_suite_health(path=str(p))}
+    assert health["SUITE-KNO"].overdue is True
+    assert health["SUITE-KNO"].next_review_valid is False
+
+
+def test_list_suite_health_non_string_next_review_is_failsafe_overdue(tmp_path):
+    """A real matrix_suites.yaml quotes next_review as a string, but an
+    unquoted YAML date (e.g. `next_review: 2026-08-31`) is auto-parsed by
+    PyYAML into a datetime.date object — this must not crash strptime()."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["next_review"] = date(2099, 1, 1)  # SUITE-KNO
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = {h.suite_id: h for h in list_suite_health(path=str(p))}
+    assert health["SUITE-KNO"].overdue is True
+    assert health["SUITE-KNO"].next_review_valid is False
 
 
 def test_list_suite_health_event_prefix_strips_wildcard(registry_path):
@@ -293,10 +323,25 @@ def test_record_escalated_missing_prefix_raises(no_prefix_registry_path, observa
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+#
+# tests/conftest.py always sets INTERNAL_SECRET (falling back to a fixed test
+# value if the env doesn't already have one), so matrix_suites_routes'
+# _INTERNAL_SECRET is never "" in this suite — every POST call below needs
+# the matching X-Internal-Secret header, same as it would against a real
+# deployment with INTERNAL_SECRET configured.
+_TEST_INTERNAL_SECRET = os.environ["INTERNAL_SECRET"]
 
 
 @pytest.fixture()
 def client(registry_path, monkeypatch):
+    monkeypatch.setenv("MATRIX_SUITES_PATH", registry_path)
+    app = FastAPI()
+    app.include_router(router)
+    return TestClient(app, headers={"X-Internal-Secret": _TEST_INTERNAL_SECRET})
+
+
+@pytest.fixture()
+def unauthenticated_client(registry_path, monkeypatch):
     monkeypatch.setenv("MATRIX_SUITES_PATH", registry_path)
     app = FastAPI()
     app.include_router(router)
@@ -344,6 +389,45 @@ def test_route_complete_review_unknown_suite(client):
     assert resp.status_code == 404
 
 
+def test_route_complete_review_unknown_suite_does_not_leak_exception_text(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-NOPE/review",
+        json={"reviewer": "Zimik"},
+    )
+    assert resp.json() == {"error": "unknown_suite"}
+    assert "SUITE-NOPE" not in resp.text
+
+
+def test_route_post_rejects_missing_internal_secret(unauthenticated_client):
+    resp = unauthenticated_client.post(
+        "/compliance/suites/SUITE-KNO/review",
+        json={"reviewer": "Zimik"},
+    )
+    assert resp.status_code == 403
+
+
+def test_route_post_rejects_wrong_internal_secret(unauthenticated_client):
+    resp = unauthenticated_client.post(
+        "/compliance/suites/SUITE-KNO/review",
+        json={"reviewer": "Zimik"},
+        headers={"X-Internal-Secret": "wrong-secret"},
+    )
+    assert resp.status_code == 403
+
+
+def test_route_post_accepts_no_secret_when_none_configured(registry_path, monkeypatch):
+    monkeypatch.setenv("MATRIX_SUITES_PATH", registry_path)
+    monkeypatch.setattr(matrix_suites_routes_module, "_INTERNAL_SECRET", "")
+    app = FastAPI()
+    app.include_router(router)
+    open_client = TestClient(app)
+    resp = open_client.post(
+        "/compliance/suites/SUITE-KNO/review",
+        json={"reviewer": "Zimik"},
+    )
+    assert resp.status_code == 200
+
+
 def test_route_matrix_changed(client):
     resp = client.post(
         "/compliance/suites/SUITE-FIN/matrix-changed",
@@ -353,6 +437,26 @@ def test_route_matrix_changed(client):
     assert resp.json()["event_type"] == "governance.suite.financial.matrix.changed"
 
 
+def test_route_matrix_changed_non_member_returns_400_not_404(client):
+    """The suite_id is real — only the matrix_id is invalid — so this is a
+    client validation error (400), not a missing resource (404)."""
+    resp = client.post(
+        "/compliance/suites/SUITE-FIN/matrix-changed",
+        json={"matrix_id": "KNOWLEDGE-MATRIX"},
+    )
+    assert resp.status_code == 400
+    assert resp.json() == {"error": "invalid_suite_request"}
+
+
+def test_route_matrix_changed_unknown_suite_returns_404(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-NOPE/matrix-changed",
+        json={"matrix_id": "FINANCIAL-MATRIX"},
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "unknown_suite"}
+
+
 def test_route_escalate(client):
     resp = client.post(
         "/compliance/suites/SUITE-KNO/escalate",
@@ -360,3 +464,21 @@ def test_route_escalate(client):
     )
     assert resp.status_code == 200
     assert resp.json()["event_type"] == "governance.suite.knowledge.escalated"
+
+
+def test_route_escalate_invalid_role_returns_400_not_404(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-KNO/escalate",
+        json={"from_role": "Zimik", "to_role": "Someone Else", "reason": "overdue"},
+    )
+    assert resp.status_code == 400
+    assert resp.json() == {"error": "invalid_suite_request"}
+
+
+def test_route_escalate_unknown_suite_returns_404(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-NOPE/escalate",
+        json={"from_role": "Zimik", "to_role": "Norman Hawkins", "reason": "overdue"},
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "unknown_suite"}
