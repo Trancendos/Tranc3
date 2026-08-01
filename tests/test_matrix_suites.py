@@ -38,6 +38,7 @@ def _reset_overdue_throttle():
     yield
     matrix_suites_module._last_overdue_emit.clear()
 
+
 FIXTURE = {
     "meta": {"observatory_event_prefix": "governance.suite"},
     "suites": [
@@ -131,14 +132,18 @@ def test_emit_overdue_events_emits_only_for_overdue_suites(registry_path, observ
 
 def test_emit_overdue_events_throttled_same_day(registry_path, observatory):
     first = emit_overdue_events(observatory=observatory, path=registry_path, today=date(2026, 6, 1))
-    second = emit_overdue_events(observatory=observatory, path=registry_path, today=date(2026, 6, 1))
+    second = emit_overdue_events(
+        observatory=observatory, path=registry_path, today=date(2026, 6, 1)
+    )
     assert len(first) == 1
     assert len(second) == 0  # same day -> throttled
 
 
 def test_emit_overdue_events_fires_again_next_day(registry_path, observatory):
     emit_overdue_events(observatory=observatory, path=registry_path, today=date(2026, 6, 1))
-    next_day = emit_overdue_events(observatory=observatory, path=registry_path, today=date(2026, 6, 2))
+    next_day = emit_overdue_events(
+        observatory=observatory, path=registry_path, today=date(2026, 6, 2)
+    )
     assert len(next_day) == 1
 
 
@@ -153,7 +158,9 @@ def test_record_review_completed_emits_event(registry_path, observatory):
 
 def test_record_review_completed_unknown_suite_raises(registry_path, observatory):
     with pytest.raises(MatrixSuitesError):
-        record_review_completed("SUITE-NOPE", "Someone", observatory=observatory, path=registry_path)
+        record_review_completed(
+            "SUITE-NOPE", "Someone", observatory=observatory, path=registry_path
+        )
 
 
 def test_record_matrix_changed_emits_event(registry_path, observatory):
