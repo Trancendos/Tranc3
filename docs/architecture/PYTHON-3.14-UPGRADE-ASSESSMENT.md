@@ -1,6 +1,6 @@
 # Python 3.11 → 3.14 Upgrade Assessment
 
-**Status:** Assessment complete, Stage 0 (non-blocking CI signal) in progress. Not a merge — a
+**Status:** Assessment complete, Stage 1 (non-blocking CI signal) landed. Not a merge — a
 staged project, tracked here rather than in a single PR.
 
 **Date:** 2026-08-01
@@ -16,14 +16,15 @@ anything beyond 3.11:
 | `aeonmind/python/pyproject.toml` | `requires-python = ">=3.10"` — **lower floor than root** |
 | `rust_extensions/tranc3_crypto/pyproject.toml` | `requires-python = ">=3.10"` — **lower floor than root** |
 | `tranc3-bots/pyproject.toml` | `requires-python = ">=3.11"` |
-| GitHub Actions (`.github/workflows/`) | 14 workflow files hardcode `python-version: "3.11"`. The sole exception is `python.yml`'s `test` job, which runs a `['3.10', '3.11', '3.12']` matrix — but that job only tests `aeonmind/python/`, not the main backend. |
+| GitHub Actions (`.github/workflows/`) | Before Stage 1, 14 workflow files hardcode `python-version: "3.11"`, and the sole exception (`python.yml`'s `test` job) ran only a `['3.10', '3.11', '3.12']` matrix, scoped to `aeonmind/python/`, not the main backend. Stage 1 (below) adds `3.14` to that same job as a `continue-on-error` entry — configured now, its first actual run still pending the next PR that touches `aeonmind/python/**`. |
 | Forgejo (`.forgejo/workflows/`, the primary CI/CD system per this repo's own CLAUDE.md) | Every one of 16 workflow files hardcodes `"3.11"`. No matrix exists anywhere in Forgejo. |
 | Magna Carta submodule CI | `layer-b-ci.yml` hardcodes `"3.11"` |
 | Docker base images | ~80 worker Dockerfiles on `python:3.11-slim` (one shared pinned SHA256 digest), 9 workers on `python:3.12-slim`, `ffmpeg-worker` on `python:3.12-slim-bookworm`. Root `Dockerfile`, `docker/Dockerfile*`, and `tranc3-bots/Dockerfile` all on `python:3.11-slim`. All Python base images are pinned by digest, not just tag — an upgrade requires resolving new digests, not just editing a tag string. |
 | `.python-version` / `runtime.txt` | Neither exists anywhere in the repo. Fly.io apps (`fly.toml`, `tranc3-bots/fly.toml`) build via Dockerfile, so the Docker base image is the actual source of truth for their Python version — there's no separate Fly buildpack version to track. |
 
-**Nothing in CI today exercises 3.13 or 3.14 at all.** The widest matrix in the repo tops out at
-3.12, and only for one sub-project.
+**Before Stage 1, nothing in CI had ever exercised 3.13 or 3.14.** The widest matrix in the repo
+topped out at 3.12, and only for one sub-project. Python 3.14 is now configured (Section 5) but
+awaits its first actual run.
 
 ## 2. Dependency risk (packages sensitive to interpreter version)
 
@@ -73,7 +74,7 @@ version work, since it's existing drift.
 | **2** | Once Stage 1 is green (or its failures are understood), explicitly verify `qiskit-aer` and `opentelemetry-exporter-otlp-proto-grpc` against 3.14 — `pip install` in a 3.14 venv and confirm a wheel resolves, not a source build. This is the one step that can't be reasoned about from release history alone. | Investigation only | Blocked on Stage 1 signal |
 | **3** | Pick one low-traffic P3 worker as a pilot (e.g. `analytics-service` — no genuinely risky deps per Section 2), bump its Dockerfile to `python:3.14-slim` + resolve the new digest, run its test suite. | Low — single worker, independently revertible | Blocked on Stage 2 |
 | **4** | Roll the same Dockerfile bump to the rest of the P3 workers in small batches, watching each for build/test failures before continuing. | Low per-batch | Blocked on Stage 3 |
-| **5** | P0–P2 workers, root `Dockerfile`/`docker/Dockerfile*`/`tranc3-bots/Dockerfile`, then retarget every hardcoded `"3.11"` CI pin (GitHub Actions and Forgejo) to `"3.14"`. Update `pyproject.toml` `requires-python`, `ruff target-version`, `mypy python_version` to match. | Moderate — this is the stage that actually changes what ships | Blocked on Stage 4 |
+| **5** | P0–P2 workers, root `Dockerfile`/`docker/Dockerfile*`/`tranc3-bots/Dockerfile`, then retarget every hardcoded `"3.11"` CI pin (GitHub Actions and Forgejo) to `"3.14"`. This stage ships what 3.14 *runs on* — it does not touch `requires-python`, `ruff target-version`, or `mypy python_version`; per Section 6, those describe the *minimum* supported version and stay at 3.11 unless a separate, explicitly approved decision drops 3.11 support. | Moderate — this is the stage that actually changes what ships | Blocked on Stage 4 |
 | **6** | Pin the three currently-unpinned workers (`triposr-worker`, `blender-worker`, `ffmpeg-worker`) to the versions confirmed working in Stage 3–5, and reconcile the `pydantic==2.8.2` drift in `haystack-service`/`dspy-service`/`llamaindex-service` to match the rest of the estate. Bundled here since it's the same "pin things properly before/while touching the interpreter" work. | Low | Blocked on Stage 5 |
 
 ## 5. What's landed so far
@@ -81,7 +82,13 @@ version work, since it's existing drift.
 **Stage 1** — `.github/workflows/python.yml`'s `test` job matrix now includes `'3.14'`
 (`continue-on-error: true` on the added entry only, so a 3.14 failure surfaces as a visible
 warning without blocking the `3.10`/`3.11`/`3.12` results or gating any PR). This is genuinely
-non-blocking: existing behaviour for the three already-tested versions is unchanged.
+non-blocking: existing version coverage and PR gating remain unchanged. `strategy.fail-fast: false`
+was added alongside it — without it, GitHub Actions cancels sibling matrix jobs the moment any one
+job fails, and `continue-on-error` does not exempt a job from that cancellation trigger, so a 3.14
+failure could have cancelled the 3.10/3.11/3.12 jobs mid-run before this change. The one
+behavioural side effect: a genuine failure on 3.10, 3.11, or 3.12 itself no longer cancels its
+siblings early either — all four legs now always run to completion, at the cost of some CI time in
+that scenario.
 
 ## 6. Explicitly out of scope here
 
