@@ -256,3 +256,83 @@ class TestInviteThrottle:
         for n in range(25):
             assert rollout_gate.check_registration("correct-horse-battery", n).allowed
         assert not rollout_gate._invite_attempts_exhausted()
+
+
+class TestCountUsersDatabasePath:
+    """The DB branch of count_users — the one that actually runs in production.
+
+    The fallback branch is what tests hit by default, so without these the
+    production path of the function every cap decision depends on is unexercised.
+    """
+
+    def _manager_with_session(self, session):
+        from src.auth.db_user_manager import DBUserManager
+
+        return DBUserManager(lambda: session)
+
+    def test_returns_the_database_count(self):
+        from unittest.mock import MagicMock
+
+        session = MagicMock()
+        session.query.return_value.count.return_value = 7
+        assert self._manager_with_session(session).count_users() == 7
+        session.close.assert_called_once()
+
+    def test_query_failure_returns_none_not_a_fallback_count(self):
+        """A DB error must deny in capped stages, never silently under-count."""
+        from unittest.mock import MagicMock
+
+        session = MagicMock()
+        session.query.side_effect = RuntimeError("connection reset")
+        assert self._manager_with_session(session).count_users() is None
+        session.close.assert_called_once()
+
+    def test_session_is_closed_even_on_success(self):
+        from unittest.mock import MagicMock
+
+        session = MagicMock()
+        session.query.return_value.count.return_value = 0
+        self._manager_with_session(session).count_users()
+        session.close.assert_called_once()
+
+    def test_a_none_returning_factory_is_treated_as_unknown(self):
+        from src.auth.db_user_manager import DBUserManager
+
+        mgr = DBUserManager(lambda: None)
+        assert mgr.count_users() is None
+
+
+class TestSpaFallbackDoesNotShadowApiRoutes:
+    """The frontend catch-all must be matched last.
+
+    `GET /{full_path:path}` is declared early in api.py and FastAPI matches in
+    registration order, so with web/dist/ present it swallowed every route
+    declared below it — /health included, returning index.html instead of JSON.
+    api.py reorders it to the end; this asserts the ordering directly, since the
+    behaviour only manifests when a frontend build exists at import time.
+    """
+
+    def test_no_concrete_route_is_registered_after_the_catch_all(self):
+        import os
+        from unittest.mock import MagicMock, patch
+
+        import pytest
+        from fastapi.routing import APIRoute
+
+        if not os.getenv("SECRET_KEY"):
+            pytest.skip("SECRET_KEY env var not set")
+        try:
+            with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
+                from api import app
+        except (ImportError, ModuleNotFoundError) as e:
+            pytest.skip(f"missing production dependency: {e}")
+
+        paths = [r.path for r in app.router.routes if isinstance(r, APIRoute)]
+        if "/{full_path:path}" not in paths:
+            pytest.skip("no frontend build present, so the catch-all is not registered")
+
+        shadowed = paths[paths.index("/{full_path:path}") + 1 :]
+        assert not shadowed, (
+            "these API routes are registered after the SPA catch-all and would "
+            f"return index.html instead of JSON: {shadowed}"
+        )

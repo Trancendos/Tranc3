@@ -162,20 +162,31 @@ def check_registration(
     configured_code = os.getenv("ROLLOUT_INVITE_CODE", "")
     if configured_code:
         _warn_on_weak_code(configured_code)
-        if _invite_attempts_exhausted():
-            return GateDecision(
-                False,
-                stage,
-                "too many invalid invite codes — registration is paused briefly, "
-                "please retry shortly",
-            )
+        # Compare BEFORE consulting the throttle. Checking exhaustion first would
+        # let anyone who can burn 20 guesses a minute lock out every legitimately
+        # invited tester — turning a brute-force defence into a denial of service
+        # against the beta itself. A correct code is always honoured.
+        #
         # Compare as bytes: compare_digest() on str raises TypeError for any
         # non-ASCII character, and invite_code arrives straight from JSON. A
         # tester pasting a smart quote would get a 500, not a clean refusal.
-        if not invite_code or not secrets.compare_digest(
+        code_matches = bool(invite_code) and secrets.compare_digest(
             invite_code.encode("utf-8"), configured_code.encode("utf-8")
-        ):
-            _record_failed_invite()
+        )
+        if not code_matches:
+            if invite_code:
+                # Only a *wrong* code counts as a guess. A missing one is someone
+                # who simply wasn't invited (or an unauthenticated probe), and
+                # charging those against the budget would let ordinary traffic
+                # exhaust it.
+                _record_failed_invite()
+            if _invite_attempts_exhausted():
+                return GateDecision(
+                    False,
+                    stage,
+                    "too many invalid invite codes — registration is paused "
+                    "briefly, please retry shortly",
+                )
             return GateDecision(
                 False,
                 stage,

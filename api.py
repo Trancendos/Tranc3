@@ -2618,3 +2618,26 @@ async def api_version() -> dict:
         "providers": 8,
         "entities": 43,
     }
+
+
+# ── SPA fallback must be matched last ─────────────────────────────────────────
+# The catch-all `GET /{full_path:path}` that serves the built frontend is declared
+# early in this file, and FastAPI matches routes in registration order. Every API
+# route declared below it — which is nearly all of them, including /health — was
+# therefore shadowed whenever web/dist/ existed, returning index.html instead of
+# JSON. The Dockerfile builds no frontend today, so this is latent rather than
+# live, but it would silently disable the entire API the moment one is built in.
+#
+# Moving the route to the end of the table here keeps the declaration where it
+# reads naturally while guaranteeing it only matches what nothing else claimed.
+def _move_spa_fallback_last() -> None:
+    from fastapi.routing import APIRoute
+
+    routes = app.router.routes
+    fallback = [r for r in routes if isinstance(r, APIRoute) and r.path == "/{full_path:path}"]
+    for route in fallback:
+        routes.remove(route)
+        routes.append(route)
+
+
+_move_spa_fallback_last()

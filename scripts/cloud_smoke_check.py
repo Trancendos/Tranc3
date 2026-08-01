@@ -42,7 +42,12 @@ TIMEOUT = 15
 # The probe deliberately uses a password that fails the backend's strength
 # validation: in public stage the request dies with 400 *after* the rollout
 # gate, proving the gate is open without ever creating an account.
-PROBE_BODY = {"username": "", "password": "x", "invite_code": "smoke-probe-invalid"}
+#
+# It sends NO invite_code. A wrong one would be charged against the gate's
+# failed-invite budget, so repeated smoke runs would eat the allowance meant to
+# stop brute-forcing and could pause registration for real testers. Omitting it
+# is refused identically, without consuming anything.
+PROBE_BODY = {"username": "", "password": "x"}
 
 
 def _request(url: str, method: str = "GET", body: dict | None = None) -> tuple[int, str]:
@@ -83,6 +88,15 @@ def main() -> int:
     ap.add_argument("--gateway-url", default=None, help="optional, e.g. https://api.trancendos.com")
     ap.add_argument("--frontend-url", default=None)
     ap.add_argument("--expect-stage", choices=sorted(KNOWN_STAGES), default=None)
+    ap.add_argument(
+        "--allow-unverified-stage",
+        action="store_true",
+        help=(
+            "downgrade the gated-stage check to a warning when no ROLLOUT_INVITE_CODE "
+            "is set. Without a code the gate cannot be confirmed from outside, so the "
+            "default is to fail rather than imply a verification that did not happen."
+        ),
+    )
     ap.add_argument("--json", action="store_true", dest="as_json")
     args = ap.parse_args()
 
@@ -117,16 +131,20 @@ def main() -> int:
                 record("rollout_gate", True, f"403 reporting stage '{args.expect_stage}'")
             elif status == 400:
                 # The probe cleared the gate (spare capacity, no invite code
-                # configured) and died on password validation. Registration is
-                # genuinely possible, so the stage cannot be confirmed from
-                # outside — set ROLLOUT_INVITE_CODE for a verifiable gate.
+                # configured) and died on password validation. An invite code is
+                # optional by design, so this is a legitimate deployment — but it
+                # is also indistinguishable from a mistakenly-public production,
+                # so it fails by default rather than implying a verification that
+                # did not happen. --allow-unverified-stage accepts it knowingly.
                 record(
                     "rollout_gate",
                     False,
                     f"cannot confirm stage '{args.expect_stage}': the gate let the "
                     "probe through (spare capacity, no invite code set), so a "
                     "mistakenly-public production would look identical. Set "
-                    "ROLLOUT_INVITE_CODE to make the stage verifiable.",
+                    "ROLLOUT_INVITE_CODE to make the stage verifiable, or pass "
+                    "--allow-unverified-stage to accept this.",
+                    fatal=not args.allow_unverified_stage,
                 )
             else:
                 reported = _reported_stage(body)
