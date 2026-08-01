@@ -16,7 +16,7 @@ anything beyond 3.11:
 | `aeonmind/python/pyproject.toml` | `requires-python = ">=3.10"` — **lower floor than root** |
 | `rust_extensions/tranc3_crypto/pyproject.toml` | `requires-python = ">=3.10"` — **lower floor than root** |
 | `tranc3-bots/pyproject.toml` | `requires-python = ">=3.11"` |
-| GitHub Actions (`.github/workflows/`) | Before Stage 1, 8 of 15 workflow files hardcoded `python-version: "3.11"` (12 total references — some files reference it more than once, e.g. `python.yml` three times, `test.yml` twice, `ci.yml` twice), and the sole exception (`python.yml`'s `test` job) ran only a `['3.10', '3.11', '3.12']` matrix, scoped to `aeonmind/python/`, not the main backend. Stage 1 (below) adds `3.14` to that same job as a `continue-on-error` entry — configured now, its first actual run still pending the next PR that touches `aeonmind/python/**`. |
+| GitHub Actions (`.github/workflows/`) | Before Stage 1, 8 of 15 workflow files hardcoded `python-version: "3.11"` (12 total references — some files reference it more than once, e.g. `python.yml` three times, `test.yml` twice, `ci.yml` twice), and the sole exception (`python.yml`'s `test` job) ran only a `['3.10', '3.11', '3.12']` matrix, scoped to `aeonmind/python/`, not the main backend. Stage 1 (below) adds `3.14` to that same job as a `continue-on-error` entry — configured now, its first actual run is still pending the next PR that touches `aeonmind/python/**`. |
 | Forgejo (`.forgejo/workflows/`, the primary CI/CD system per this repo's own CLAUDE.md) | 16 of 30 workflow files hardcode `python-version: '3.11'`. No Python-version matrix exists anywhere in Forgejo (`registry-push.yml` does use a `strategy.matrix`, but for multi-image builds, not Python versions). |
 | Magna Carta submodule CI | `layer-b-ci.yml` hardcodes `"3.11"` |
 | Docker base images | ~80 worker Dockerfiles on `python:3.11-slim` (one shared pinned SHA256 digest), 9 workers on `python:3.12-slim`, `ffmpeg-worker` on `python:3.12-slim-bookworm`. Root `Dockerfile`, `docker/Dockerfile*`, and `tranc3-bots/Dockerfile` all on `python:3.11-slim`. All Python base images are pinned by digest, not just tag — an upgrade requires resolving new digests, not just editing a tag string. |
@@ -60,7 +60,7 @@ version work, since it's existing drift.
 
 - ~90 Dockerfiles pinned by digest, ~30 CI workflow files hardcoding `"3.11"`, and a
   `requires-python` floor that's already inconsistent before touching 3.14. A single PR touching
-  all of it is unreviewable and, if something in the qiskit-aer/grpc tail breaks, unrevertable
+  all of it is unreviewable and, if something in the qiskit-aer/grpc tail breaks, hard to revert
   without reverting everything else with it.
 - The workers are independently deployable (own Dockerfile, own `requirements-worker.txt`, own
   Fly/compose entry) — that independence is exactly what makes a staged rollout cheap: each stage
