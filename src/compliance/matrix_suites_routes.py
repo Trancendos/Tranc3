@@ -14,6 +14,7 @@ from Dimensional.sanitize import sanitize_for_log
 from Dimensional.security import constant_time_compare
 from src.compliance.matrix_suites import (
     MatrixSuitesError,
+    MatrixSuitesRegistryError,
     MatrixSuitesValidationError,
     emit_overdue_events,
     list_suite_health,
@@ -124,6 +125,13 @@ def complete_review(
     _require_internal_secret(x_internal_secret)
     try:
         event = record_review_completed(suite_id, body.reviewer, body.notes)
+    except MatrixSuitesRegistryError as exc:
+        logger.warning(  # codeql[py/log-injection] -- values are sanitize_for_log()'d
+            "complete_review rejected (registry misconfigured) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
+        )
+        return JSONResponse({"error": "invalid_registry"}, status_code=404)
     except MatrixSuitesValidationError as exc:
         logger.warning(  # codeql[py/log-injection] -- values are sanitize_for_log()'d
             "complete_review rejected (invalid request) for suite_id=%s: %s",
@@ -150,6 +158,13 @@ def matrix_changed(
     _require_internal_secret(x_internal_secret)
     try:
         event = record_matrix_changed(suite_id, body.matrix_id)
+    except MatrixSuitesRegistryError as exc:
+        logger.warning(  # codeql[py/log-injection] -- values are sanitize_for_log()'d
+            "matrix_changed rejected (registry misconfigured) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
+        )
+        return JSONResponse({"error": "invalid_registry"}, status_code=404)
     except MatrixSuitesValidationError as exc:
         logger.warning(  # codeql[py/log-injection] -- values are sanitize_for_log()'d
             "matrix_changed rejected (invalid request) for suite_id=%s: %s",
@@ -176,6 +191,13 @@ def escalate(
     _require_internal_secret(x_internal_secret)
     try:
         event = record_escalated(suite_id, body.from_role, body.to_role, body.reason)
+    except MatrixSuitesRegistryError as exc:
+        logger.warning(  # codeql[py/log-injection] -- values are sanitize_for_log()'d
+            "escalate rejected (registry misconfigured) for suite_id=%s: %s",
+            sanitize_for_log(suite_id),
+            sanitize_for_log(exc),
+        )
+        return JSONResponse({"error": "invalid_registry"}, status_code=404)
     except MatrixSuitesValidationError as exc:
         logger.warning(  # codeql[py/log-injection] -- values are sanitize_for_log()'d
             "escalate rejected (invalid request) for suite_id=%s: %s",

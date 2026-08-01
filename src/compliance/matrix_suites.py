@@ -40,7 +40,14 @@ from src.observability.observatory import (
 
 logger = logging.getLogger("tranc3.compliance.matrix_suites")
 
-_DEFAULT_MATRIX_SUITES_PATH = "./compliance/magna-carta/compliance/matrix_suites.yaml"
+# Resolved from this module's own location (src/compliance/ -> repo root is
+# two parents up), not the process CWD — a relative path here would silently
+# return an empty suite list if a worker/cron is launched from a different
+# working directory than the repo root.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_MATRIX_SUITES_PATH = str(
+    _REPO_ROOT / "compliance" / "magna-carta" / "compliance" / "matrix_suites.yaml"
+)
 
 
 def _default_path() -> str:
@@ -59,11 +66,19 @@ class MatrixSuitesError(ValueError):
 class MatrixSuitesValidationError(MatrixSuitesError):
     """Raised when a suite_id resolves fine but the rest of the request is
     invalid — a matrix that isn't a member, a role outside the escalation
-    chain, a backwards escalation move, or a suite missing its
-    observatory_events prefix. This is still a MatrixSuitesError (existing
-    `except MatrixSuitesError` callers keep working) but routes distinguish
-    it to return 400/422 instead of 404 — the suite exists, the request
-    doesn't."""
+    chain, or a backwards escalation move. This is still a MatrixSuitesError
+    (existing `except MatrixSuitesError` callers keep working) but routes
+    distinguish it to return 400/422 instead of 404 — the suite exists, the
+    request doesn't."""
+
+
+class MatrixSuitesRegistryError(MatrixSuitesError):
+    """Raised when a suite_id resolves fine but the suite's *own registry
+    entry* is misconfigured (e.g. missing observatory_events) — unlike
+    MatrixSuitesValidationError, this isn't something the caller's request
+    can fix by being different; it's a Magna Carta-side data problem. Routes
+    map this the same way as a malformed registry (404 invalid_registry),
+    not as a 400 client error."""
 
 
 @dataclass
@@ -120,6 +135,13 @@ def load_suites(path: Optional[str] = None) -> List[Dict[str, Any]]:
     return suites
 
 
+def _matrix_list(suite: Dict[str, Any]) -> List[Any]:
+    """suite["matrices"] should be a list of matrix mappings; normalize any
+    other type (missing, null, or wrong-typed registry drift) to []."""
+    matrices = suite.get("matrices")
+    return matrices if isinstance(matrices, list) else []
+
+
 def _find_suite(suites: List[Dict[str, Any]], suite_id: str) -> Dict[str, Any]:
     for suite in suites:
         if isinstance(suite, dict) and suite.get("suite_id") == suite_id:
@@ -133,7 +155,7 @@ def _require_prefix(suite: Dict[str, Any], suite_id: str) -> str:
     missing or empty in the registry."""
     prefix = _event_prefix(suite)
     if not prefix:
-        raise MatrixSuitesValidationError(
+        raise MatrixSuitesRegistryError(
             f"Suite {suite_id!r} has no observatory_events prefix configured"
         )
     return prefix
@@ -207,7 +229,7 @@ def list_suite_health(
                 overdue=overdue,
                 days_overdue=days_overdue,
                 event_prefix=_event_prefix(suite),
-                matrix_count=len(suite.get("matrices", []) or []),
+                matrix_count=len(_matrix_list(suite)),
                 next_review_valid=next_review_valid,
             )
         )
@@ -249,8 +271,8 @@ def emit_overdue_events(
             # (a suite genuinely overdue) vanish silently just because the
             # registry entry is missing observatory_events — surface it as
             # a warning so registry drift is visible, matching the explicit
-            # MatrixSuitesValidationError the other three emit functions
-            # raise via _require_prefix for the same underlying condition.
+            # MatrixSuitesRegistryError the other three emit functions raise
+            # via _require_prefix for the same underlying condition.
             logger.warning(
                 "Suite %s is overdue but has no observatory_events prefix configured; "
                 "skipping event emission",
@@ -325,9 +347,7 @@ def record_matrix_changed(
     change (CI-detected, per docs/governance/MATRIX-SUITES.md §4)."""
     suites = load_suites(path)
     suite = _find_suite(suites, suite_id)
-    matrices = suite.get("matrices")
-    matrices = matrices if isinstance(matrices, list) else []
-    matrix_ids = {m.get("id") for m in matrices if isinstance(m, dict)}
+    matrix_ids = {m.get("id") for m in _matrix_list(suite) if isinstance(m, dict)}
     if matrix_id not in matrix_ids:
         raise MatrixSuitesValidationError(
             f"Matrix {matrix_id!r} is not a member of suite {suite_id!r}"

@@ -22,6 +22,7 @@ import src.compliance.matrix_suites as matrix_suites_module
 import src.compliance.matrix_suites_routes as matrix_suites_routes_module
 from src.compliance.matrix_suites import (
     MatrixSuitesError,
+    MatrixSuitesRegistryError,
     MatrixSuitesValidationError,
     emit_overdue_events,
     list_suite_health,
@@ -294,7 +295,7 @@ def test_record_review_completed_unknown_suite_raises(registry_path, observatory
 
 
 def test_record_review_completed_missing_prefix_raises(no_prefix_registry_path, observatory):
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         record_review_completed(
             "SUITE-NOPFX", "Someone", observatory=observatory, path=no_prefix_registry_path
         )
@@ -349,7 +350,7 @@ def test_record_matrix_changed_tolerates_non_list_matrices(tmp_path, observatory
 
 
 def test_record_matrix_changed_missing_prefix_raises(no_prefix_registry_path, observatory):
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         record_matrix_changed(
             "SUITE-NOPFX", "NOPFX-MATRIX", observatory=observatory, path=no_prefix_registry_path
         )
@@ -415,7 +416,7 @@ def test_record_escalated_tolerates_non_list_escalation(tmp_path, observatory):
 
 
 def test_record_escalated_missing_prefix_raises(no_prefix_registry_path, observatory):
-    with pytest.raises(MatrixSuitesError):
+    with pytest.raises(MatrixSuitesRegistryError):
         record_escalated(
             "SUITE-NOPFX",
             "Solo Steward",
@@ -450,6 +451,14 @@ def unauthenticated_client(registry_path, monkeypatch):
     app = FastAPI()
     app.include_router(router)
     return TestClient(app)
+
+
+@pytest.fixture()
+def no_prefix_client(no_prefix_registry_path, monkeypatch):
+    monkeypatch.setenv("MATRIX_SUITES_PATH", no_prefix_registry_path)
+    app = FastAPI()
+    app.include_router(router)
+    return TestClient(app, headers={"X-Internal-Secret": _TEST_INTERNAL_SECRET})
 
 
 def test_route_list_suites(client):
@@ -508,6 +517,40 @@ def test_route_complete_review_unknown_suite_does_not_leak_exception_text(client
     )
     assert resp.json() == {"error": "unknown_suite"}
     assert "SUITE-NOPE" not in resp.text
+
+
+def test_route_complete_review_missing_prefix_returns_invalid_registry_not_400(
+    no_prefix_client,
+):
+    """A suite that exists but has no observatory_events configured is a
+    registry problem, not something the caller's request can fix — must not
+    be reported as invalid_suite_request (400)."""
+    resp = no_prefix_client.post(
+        "/compliance/suites/SUITE-NOPFX/review",
+        json={"reviewer": "Solo Steward"},
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "invalid_registry"}
+
+
+def test_route_matrix_changed_missing_prefix_returns_invalid_registry_not_400(
+    no_prefix_client,
+):
+    resp = no_prefix_client.post(
+        "/compliance/suites/SUITE-NOPFX/matrix-changed",
+        json={"matrix_id": "NOPFX-MATRIX"},
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "invalid_registry"}
+
+
+def test_route_escalate_missing_prefix_returns_invalid_registry_not_400(no_prefix_client):
+    resp = no_prefix_client.post(
+        "/compliance/suites/SUITE-NOPFX/escalate",
+        json={"from_role": "Solo Steward", "to_role": "Human owner", "reason": "x"},
+    )
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "invalid_registry"}
 
 
 def test_route_post_rejects_missing_internal_secret(unauthenticated_client):
