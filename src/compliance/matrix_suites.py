@@ -342,7 +342,6 @@ def emit_overdue_events(
         with _last_overdue_emit_lock:
             if _last_overdue_emit.get(health.suite_id) == today:
                 continue
-            _last_overdue_emit[health.suite_id] = today
         event = obs.record(
             f"{health.event_prefix}.review.overdue",
             actor="system",
@@ -366,6 +365,11 @@ def emit_overdue_events(
                 "next_review_valid": health.next_review_valid,
             },
         )
+        # Marked only after obs.record() succeeds — if it raised, marking the
+        # suite emitted here would suppress the signal for the rest of the
+        # day even though no event actually reached the Observatory.
+        with _last_overdue_emit_lock:
+            _last_overdue_emit[health.suite_id] = today
         emitted.append(event)
     return emitted
 
@@ -468,7 +472,16 @@ def record_escalated(
     prefix = _require_prefix(suite, suite_id)
     escalation = suite.get("escalation")
     escalation = escalation if isinstance(escalation, list) else []
-    chain = [suite.get("steward_ai", "")] + escalation
+    # Coerced to stripped strings, blanks dropped, de-duplicated preserving
+    # first-seen order: escalation is raw registry data and can repeat
+    # steward_ai or contain non-string/blank entries — chain.index() would
+    # otherwise return the first occurrence, letting a legitimate forward
+    # move be rejected or a backward one accepted.
+    chain: List[str] = []
+    for link in [suite.get("steward_ai", "")] + escalation:
+        text = "" if link is None else str(link).strip()
+        if text and text not in chain:
+            chain.append(text)
     if from_role not in chain:
         raise MatrixSuitesValidationError(
             f"from_role {from_role!r} is not in suite {suite_id!r}'s escalation chain: {chain}"

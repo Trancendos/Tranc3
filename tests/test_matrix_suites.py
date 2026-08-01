@@ -388,6 +388,29 @@ def test_emit_overdue_events_fires_again_next_day(registry_path, observatory):
     assert len(next_day) == 1
 
 
+def test_emit_overdue_events_does_not_throttle_on_record_failure(registry_path):
+    """The suite must not be marked emitted for the day until obs.record()
+    actually succeeds — otherwise a transient Observatory failure would
+    silently suppress the overdue signal until the next calendar day even
+    though no event ever reached the Observatory."""
+
+    class _FailingObservatory:
+        def record(self, *args, **kwargs):
+            raise RuntimeError("observatory unavailable")
+
+    with pytest.raises(RuntimeError):
+        emit_overdue_events(
+            observatory=_FailingObservatory(), path=registry_path, today=date(2026, 6, 1)
+        )
+    assert "SUITE-FIN" not in matrix_suites_module._last_overdue_emit
+
+    real_observatory = Observatory()
+    retried = emit_overdue_events(
+        observatory=real_observatory, path=registry_path, today=date(2026, 6, 1)
+    )
+    assert len(retried) == 1  # not throttled -- the failed attempt didn't count
+
+
 def test_emit_overdue_events_logs_warning_when_overdue_suite_has_no_prefix(
     tmp_path, observatory, caplog
 ):
@@ -564,6 +587,41 @@ def test_record_escalated_rejects_backwards_move(registry_path, observatory):
             "reason",
             observatory=observatory,
             path=registry_path,
+        )
+
+
+def test_record_escalated_deduplicates_chain_with_repeated_steward(tmp_path, observatory):
+    """escalation is raw registry data and can repeat steward_ai or contain
+    blank/non-string entries. chain.index() must use each name's first
+    occurrence consistently, or a duplicate could let a backward move be
+    accepted (or a legitimate forward move be rejected)."""
+    fixture = copy.deepcopy(FIXTURE)
+    # SUITE-KNO: steward_ai "Zimik" also duplicated inside escalation, plus a
+    # blank entry -- chain should still resolve to
+    # ["Zimik", "Norman Hawkins", "Cornelius MacIntyre", "Human owner"].
+    fixture["suites"][1]["escalation"] = [
+        "Zimik",
+        "",
+        "Norman Hawkins",
+        "Cornelius MacIntyre",
+        "Human owner",
+    ]
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    event = record_escalated(
+        "SUITE-KNO", "Zimik", "Cornelius MacIntyre", "reason", observatory=observatory, path=str(p)
+    )
+    assert event.event_type == "governance.suite.knowledge.escalated"
+
+    with pytest.raises(MatrixSuitesValidationError):
+        record_escalated(
+            "SUITE-KNO",
+            "Cornelius MacIntyre",
+            "Zimik",
+            "reason",
+            observatory=observatory,
+            path=str(p),
         )
 
 
@@ -826,6 +884,14 @@ def test_route_matrix_changed_unknown_suite_returns_404(client):
     assert resp.json() == {"error": "unknown_suite"}
 
 
+def test_route_matrix_changed_rejects_blank_matrix_id(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-FIN/matrix-changed",
+        json={"matrix_id": "   "},
+    )
+    assert resp.status_code == 422
+
+
 def test_route_escalate(client):
     resp = client.post(
         "/compliance/suites/SUITE-KNO/escalate",
@@ -842,6 +908,22 @@ def test_route_escalate_invalid_role_returns_400_not_404(client):
     )
     assert resp.status_code == 400
     assert resp.json() == {"error": "invalid_suite_request"}
+
+
+def test_route_escalate_rejects_blank_from_role(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-KNO/escalate",
+        json={"from_role": "   ", "to_role": "Norman Hawkins", "reason": "overdue"},
+    )
+    assert resp.status_code == 422
+
+
+def test_route_escalate_rejects_blank_to_role(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-KNO/escalate",
+        json={"from_role": "Zimik", "to_role": "   ", "reason": "overdue"},
+    )
+    assert resp.status_code == 422
 
 
 def test_route_escalate_unknown_suite_returns_404(client):

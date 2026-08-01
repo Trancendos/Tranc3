@@ -19,7 +19,7 @@ The Foundation is a new concept introduced *above* Trancendos: a parent
 governance/ownership entity, the way a holding company sits above an operating
 brand.
 
-```
+```text
 The Foundation      ← parent: governance & ownership umbrella
       │
   Trancendos        ← the platform/product, exactly as documented elsewhere in this repo

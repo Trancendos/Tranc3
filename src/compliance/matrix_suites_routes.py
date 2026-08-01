@@ -56,11 +56,31 @@ class ReviewCompletedRequest(BaseModel):
 class MatrixChangedRequest(BaseModel):
     matrix_id: str = Field(..., max_length=256)
 
+    @field_validator("matrix_id")
+    @classmethod
+    def _matrix_id_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("matrix_id must not be blank")
+        return v
+
 
 class EscalateRequest(BaseModel):
     from_role: str = Field(..., max_length=256)
     to_role: str = Field(..., max_length=256)
     reason: str = Field("", max_length=4096)
+
+    @field_validator("from_role", "to_role")
+    @classmethod
+    def _role_not_blank(cls, v: str) -> str:
+        # A blank from_role matters beyond input hygiene: a registry entry
+        # with no steward_ai builds chain = [""] + escalation, so "" would
+        # otherwise pass the membership check in record_escalated() and the
+        # event would record an empty actor.
+        v = v.strip()
+        if not v:
+            raise ValueError("role must not be blank")
+        return v
 
 
 # Plain `def` (not `async def`) throughout this router, matching
