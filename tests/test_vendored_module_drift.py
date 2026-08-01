@@ -34,33 +34,54 @@ VENDORED_TREES: dict[str, tuple[str, ...]] = {
 }
 
 
-def _is_namespace_shim(path: Path) -> bool:
-    """An empty vendored ``__init__.py`` is a deliberate namespace shim, not drift.
-
-    The root package inits eagerly import the whole tree (``Dimensional/__init__.py``
-    pulls in EventBus, models, registry, security, ...), none of which the vendored
-    subset contains. Emptying them is what makes a partial copy importable at all.
-
-    Emptiness is the test rather than a hardcoded path list, so a *non*-empty
-    ``__init__.py`` — ``Dimensional/hive/__init__.py`` and
-    ``Dimensional/nexus/__init__.py``, which export real API — is still compared.
-    """
-    return path.name == "__init__.py" and path.stat().st_size == 0
+# Package inits deliberately emptied in the vendored copies. The root versions
+# eagerly import the whole tree (`Dimensional/__init__.py` pulls in EventBus,
+# models, registry, security, ...), none of which the partial copy contains, so
+# emptying them is what makes it importable at all.
+#
+# Declared explicitly rather than inferred from "the vendored file is empty".
+# That inference would also swallow a *real* init that got accidentally emptied
+# — blanking `Dimensional/hive/__init__.py` breaks `from Dimensional.hive import
+# Hive` in the container, and the check would have called it a shim and stayed
+# green. Anything not named here is compared, including files that happen to be
+# empty on both sides (`src/errors/__init__.py`), which simply compare equal.
+NAMESPACE_SHIMS = frozenset(
+    {
+        "Dimensional/__init__.py",
+        "Dimensional/infinity/__init__.py",
+        "src/__init__.py",
+    }
+)
 
 
 def _vendored_files() -> list[tuple[str, Path, Path]]:
-    """Every vendored .py paired with its repo-root counterpart."""
+    """Every vendored .py paired with its repo-root counterpart.
+
+    Missing trees are a hard error, not a skip. Silently dropping a renamed tree
+    would quietly narrow coverage while the suite stayed green — the same class
+    of failure this module exists to catch. It also anchors ``REPO_ROOT``: if the
+    tests directory ever moves, the paths stop resolving and this raises instead
+    of discovering nothing.
+    """
     pairs: list[tuple[str, Path, Path]] = []
     for worker, trees in VENDORED_TREES.items():
         worker_dir = REPO_ROOT / worker
+        assert worker_dir.is_dir(), (
+            f"VENDORED_TREES lists '{worker}', which does not exist at {worker_dir}. "
+            "Update the mapping if the worker moved, or remove the entry if the "
+            "vendoring is gone — do not let it silently drop out of coverage."
+        )
         for tree in trees:
             base = worker_dir / tree
-            if not base.is_dir():
-                continue
+            assert base.is_dir(), (
+                f"'{worker}' is declared as vendoring '{tree}', but {base} does not "
+                "exist. Update VENDORED_TREES rather than leaving this package root "
+                "unchecked."
+            )
             for copy in sorted(base.rglob("*.py")):
-                if _is_namespace_shim(copy):
-                    continue
                 rel = copy.relative_to(worker_dir).as_posix()
+                if rel in NAMESPACE_SHIMS:
+                    continue
                 pairs.append((f"{worker}::{rel}", copy, REPO_ROOT / rel))
     return pairs
 
@@ -77,6 +98,69 @@ def test_vendored_file_list_is_not_empty():
         "context moved to repo root), delete this test with it rather than "
         "leaving it passing vacuously"
     )
+
+
+# The files whose drift would be a security regression rather than an
+# inconvenience: the two app factories that install CORSMiddleware, and the
+# module they now resolve their allow-list from.
+SECURITY_CRITICAL = {
+    "workers/hive-service::Dimensional/cors.py",
+    "workers/hive-service::Dimensional/hive/hive_core.py",
+    "workers/dimensional-nexus-service::Dimensional/cors.py",
+    "workers/dimensional-nexus-service::Dimensional/nexus/nexus_core.py",
+}
+
+
+def test_security_critical_copies_are_covered():
+    """Anchor coverage to named files, not just "the list is non-empty".
+
+    Discovery is `rglob`, so a deleted vendored module simply stops appearing in
+    the parametrization and everything still passes — losing drift protection for
+    precisely the file this guard exists to protect, with no failure anywhere.
+    `test_vendored_file_list_is_not_empty` does not help: the other copies keep
+    the list non-empty.
+    """
+    covered = {name for name, _, _ in VENDORED}
+    missing = sorted(SECURITY_CRITICAL - covered)
+    assert not missing, (
+        f"these vendored files are no longer being drift-checked: {missing}. They "
+        "install or configure CORS in a deployed worker, so an unnoticed "
+        "divergence reopens a security hole. If the vendoring genuinely moved, "
+        "update SECURITY_CRITICAL to match — do not let the entry just vanish."
+    )
+
+
+def test_every_declared_shim_is_actually_a_shim():
+    """Keep NAMESPACE_SHIMS honest — a stale entry silently excludes a real file.
+
+    Two ways an entry stops being legitimate, both of which quietly drop a file
+    from the drift check if nobody notices:
+
+    * the vendored copy grew real content, so it is no longer a stub and should
+      be compared like anything else;
+    * the root counterpart became empty, so there was nothing to stub out and the
+      exclusion buys nothing.
+    """
+    problems: list[str] = []
+    for worker in VENDORED_TREES:
+        worker_dir = REPO_ROOT / worker
+        for rel in sorted(NAMESPACE_SHIMS):
+            copy = worker_dir / rel
+            if not copy.exists():
+                continue  # this worker does not vendor that package
+            if copy.stat().st_size != 0:
+                problems.append(
+                    f"{worker}::{rel} is declared a namespace shim but is not empty "
+                    "— remove it from NAMESPACE_SHIMS so it gets compared"
+                )
+            source = REPO_ROOT / rel
+            if source.exists() and source.stat().st_size == 0:
+                problems.append(
+                    f"{worker}::{rel} is declared a namespace shim, but {rel} is empty "
+                    "at root too — there is nothing to stub out, so remove it from "
+                    "NAMESPACE_SHIMS and let the byte comparison cover it"
+                )
+    assert not problems, "\n".join(problems)
 
 
 @pytest.mark.parametrize("name,copy,source", VENDORED, ids=[p[0] for p in VENDORED])
