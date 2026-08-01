@@ -1026,9 +1026,22 @@ def create_nexus_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    cors_origins = [
+        o.strip()
+        for o in os.getenv(
+            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+        ).split(",")
+        if o.strip()
+    ]
+    if "*" in cors_origins:
+        raise RuntimeError(
+            "CORS_ORIGINS cannot contain '*' — this service sets allow_credentials=True, "
+            "and browsers reject wildcard origins on credentialed responses."
+        )
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
