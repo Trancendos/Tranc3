@@ -4,5 +4,12 @@ starlette==1.3.1
 uvicorn==0.34.3
 pydantic==2.11.5
 python-jose[cryptography]==3.5.0
+# Accepted risk (upstream-blocked, do not re-flag as unfixed): python-jose hard-requires
+# ecdsa (Requires-Dist: ecdsa!=0.15, no compatible-range override possible without
+# dropping python-jose). CVE-2024-23342 (PYSEC-2026-1325) is a Minerva timing side-channel
+# in ecdsa.SigningKey.sign_digest() / ECDH; the ecdsa maintainers have stated side-channel
+# attacks are out of scope and there is no planned fix (fix_versions: [] in the advisory).
+# This worker never signs/verifies ES256/ES384/ES512 JWTs (grep confirms no ES2xx usage),
+# so the vulnerable ECDSA sign/ECDH code paths are never invoked. See SECURITY.md.
 pyasn1==0.6.4
 email-validator==2.2.0
