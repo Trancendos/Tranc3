@@ -22,6 +22,7 @@ import src.compliance.matrix_suites as matrix_suites_module
 import src.compliance.matrix_suites_routes as matrix_suites_routes_module
 from src.compliance.matrix_suites import (
     MatrixSuitesError,
+    MatrixSuitesValidationError,
     emit_overdue_events,
     list_suite_health,
     load_suites,
@@ -333,6 +334,20 @@ def test_record_matrix_changed_tolerates_malformed_matrix_entry(tmp_path, observ
         record_matrix_changed("SUITE-FIN", "NOT-A-MEMBER", observatory=observatory, path=str(p))
 
 
+def test_record_matrix_changed_tolerates_non_list_matrices(tmp_path, observatory):
+    """If `matrices` itself is the wrong type (e.g. a string or mapping,
+    rather than an element inside it), the comprehension must not raise —
+    it should degrade to an empty matrix set, matching the non-dict-entry
+    guard above."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][0]["matrices"] = "not-a-list"  # SUITE-FIN
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    with pytest.raises(MatrixSuitesValidationError):
+        record_matrix_changed("SUITE-FIN", "FINANCIAL-MATRIX", observatory=observatory, path=str(p))
+
+
 def test_record_matrix_changed_missing_prefix_raises(no_prefix_registry_path, observatory):
     with pytest.raises(MatrixSuitesError):
         record_matrix_changed(
@@ -375,6 +390,27 @@ def test_record_escalated_rejects_backwards_move(registry_path, observatory):
             "reason",
             observatory=observatory,
             path=registry_path,
+        )
+
+
+def test_record_escalated_tolerates_non_list_escalation(tmp_path, observatory):
+    """If `escalation` is stored as e.g. a single string rather than a list,
+    `list(...)` would iterate its characters and silently corrupt the chain.
+    It must instead be normalized to an empty list, so the steward is the
+    only valid chain link rather than a garbage set of single characters."""
+    fixture = copy.deepcopy(FIXTURE)
+    fixture["suites"][1]["escalation"] = "Norman Hawkins"  # SUITE-KNO
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    with pytest.raises(MatrixSuitesValidationError):
+        record_escalated(
+            "SUITE-KNO",
+            "Zimik",
+            "Norman Hawkins",
+            "reason",
+            observatory=observatory,
+            path=str(p),
         )
 
 
@@ -447,6 +483,14 @@ def test_route_complete_review(client):
     )
     assert resp.status_code == 200
     assert resp.json()["event_type"] == "governance.suite.knowledge.review.completed"
+
+
+def test_route_complete_review_rejects_blank_reviewer(client):
+    resp = client.post(
+        "/compliance/suites/SUITE-KNO/review",
+        json={"reviewer": "   ", "notes": "done"},
+    )
+    assert resp.status_code == 422
 
 
 def test_route_complete_review_unknown_suite(client):

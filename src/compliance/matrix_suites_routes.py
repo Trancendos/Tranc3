@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from Dimensional.sanitize import sanitize_for_log
 from Dimensional.security import constant_time_compare
@@ -42,6 +42,14 @@ def _require_internal_secret(x_internal_secret: Optional[str]) -> None:
 class ReviewCompletedRequest(BaseModel):
     reviewer: str
     notes: str = ""
+
+    @field_validator("reviewer")
+    @classmethod
+    def _reviewer_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("reviewer must not be blank")
+        return v
 
 
 class MatrixChangedRequest(BaseModel):

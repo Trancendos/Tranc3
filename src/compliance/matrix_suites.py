@@ -325,7 +325,9 @@ def record_matrix_changed(
     change (CI-detected, per docs/governance/MATRIX-SUITES.md §4)."""
     suites = load_suites(path)
     suite = _find_suite(suites, suite_id)
-    matrix_ids = {m.get("id") for m in (suite.get("matrices") or []) if isinstance(m, dict)}
+    matrices = suite.get("matrices")
+    matrices = matrices if isinstance(matrices, list) else []
+    matrix_ids = {m.get("id") for m in matrices if isinstance(m, dict)}
     if matrix_id not in matrix_ids:
         raise MatrixSuitesValidationError(
             f"Matrix {matrix_id!r} is not a member of suite {suite_id!r}"
@@ -360,7 +362,9 @@ def record_escalated(
     structurally legitimate, not an arbitrary reassignment."""
     suites = load_suites(path)
     suite = _find_suite(suites, suite_id)
-    chain = [suite.get("steward_ai", "")] + list(suite.get("escalation") or [])
+    escalation = suite.get("escalation")
+    escalation = escalation if isinstance(escalation, list) else []
+    chain = [suite.get("steward_ai", "")] + escalation
     if from_role not in chain:
         raise MatrixSuitesValidationError(
             f"from_role {from_role!r} is not in suite {suite_id!r}'s escalation chain: {chain}"
