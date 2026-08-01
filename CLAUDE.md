@@ -64,6 +64,10 @@ skill/feature improvement into a model rather than baking in routine updates unc
 mounted in `api.py`).
 
 **Naming rules:**
+- **"The Foundation"** is the parent governance/ownership entity above Trancendos —
+  introduced 2026-08-01, described fully in `docs/governance/THE-FOUNDATION.md`.
+  Trancendos remains the platform/product/domain name for all ordinary references;
+  use "The Foundation" only when specifically referring to the parent entity itself.
 - **The platform is "Trancendos", not "Tranc3".** Trancendos is the org, domain
   (trancendos.com) and product identity; Tranc3 is the Tier-3 *model base* (with
   Trance-One and T2ance) per the Models Matrix. The repo name "Tranc3" is historical.
