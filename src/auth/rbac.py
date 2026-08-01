@@ -5,9 +5,16 @@ Usage:
     @app.get("/admin/audit")
     async def audit(
         current_user: dict = Depends(get_current_user),
-        _perm: None = require_permission("admin:audit"),
+        _perm: None = Depends(require_permission("admin:audit")),
     ):
         ...
+
+The ``Depends(...)`` wrapper is required. Passing the bare guard as a default
+value does not register a dependency — FastAPI reads the ``None`` annotation and
+treats ``_perm`` as a *query parameter*, so every request fails validation with
+422 before the guard runs. The permission is then never checked and the route is
+unreachable rather than protected: it looks like enforcement and is the opposite.
+``tests/test_rbac.py::TestNoRouteMisusesRequirePermission`` guards against it.
 """
 
 from __future__ import annotations
@@ -70,6 +77,9 @@ def require_permission(permission: str):
 
     Reads user from request.state.user (set by auth middleware).
     Raises 401 if no user present, 403 if permission denied.
+
+    Returns the guard itself — wrap it at the call site with ``Depends(...)``.
+    See the module docstring for why the wrapper is not optional.
     """
 
     async def _guard(request: Request) -> None:

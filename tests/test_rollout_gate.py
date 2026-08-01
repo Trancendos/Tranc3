@@ -122,8 +122,10 @@ class TestRolloutStatusEndpoint:
             with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
                 from api import app
             return TestClient(app, raise_server_exceptions=False)
-        except Exception as e:  # missing production deps in a lean env
-            pytest.skip(f"api.py unavailable: {e}")
+        except (ImportError, ModuleNotFoundError) as e:
+            # Only a genuinely absent dependency is a skip. Catching everything
+            # would turn a broken /auth/rollout route into a silent pass.
+            pytest.skip(f"missing production dependency: {e}")
 
     def test_requires_authentication(self):
         r = self._client().get("/auth/rollout")
@@ -149,3 +151,108 @@ class TestRolloutStatusEndpoint:
         assert body["stage"] == "private_beta"
         assert body["cap"] == 10
         assert "remaining" in body
+
+
+class TestSmokeCheckStageParsing:
+    """cloud_smoke_check parses the stage the API actually emits.
+
+    The script lives outside the app, so nothing else keeps its expectation of
+    the refusal shape aligned with what /auth/register returns. These tests pin
+    them together.
+    """
+
+    def _parser(self):
+        import importlib.util
+        import pathlib
+
+        path = pathlib.Path(__file__).resolve().parent.parent / "scripts" / "cloud_smoke_check.py"
+        spec = importlib.util.spec_from_file_location("cloud_smoke_check", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module._reported_stage
+
+    def test_parses_stage_from_a_real_gate_refusal(self, monkeypatch):
+        """Build the body from the gate itself, not a hand-written fixture."""
+        import json
+
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        decision = rollout_gate.check_registration(None, 10)
+        assert not decision.allowed
+        body = json.dumps({"detail": {"stage": decision.stage, "reason": decision.reason}})
+        assert self._parser()(body) == "private_beta"
+
+    def test_returns_none_on_unparseable_or_shapeless_bodies(self):
+        parse = self._parser()
+        assert parse("not json at all") is None
+        assert parse('{"detail": "a plain string detail"}') is None
+        assert parse("{}") is None
+
+    def test_does_not_match_a_stage_merely_mentioned_in_prose(self):
+        """The regression the substring check would have had."""
+        import json
+
+        body = json.dumps({"detail": "registration reopens at the private_beta stage"})
+        assert self._parser()(body) is None
+
+
+class TestNeedsUserCount:
+    def test_public_stage_does_not_need_a_count(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "public")
+        assert rollout_gate.needs_user_count() is False
+
+    def test_capped_stages_need_a_count(self, monkeypatch):
+        for stage in ("owner", "private_beta", "extended_beta"):
+            monkeypatch.setenv("ROLLOUT_STAGE", stage)
+            assert rollout_gate.needs_user_count() is True
+
+    def test_production_default_needs_a_count(self, monkeypatch):
+        """Fail-closed resolves to owner, which is capped."""
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        assert rollout_gate.needs_user_count() is True
+
+
+class TestInviteCodeRobustness:
+    def test_non_ascii_invite_code_denies_rather_than_raising(self, monkeypatch):
+        """compare_digest() on str raises TypeError for non-ASCII — a tester
+        pasting a smart quote must get a clean refusal, not a 500."""
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "beta-wave-1")
+        decision = rollout_gate.check_registration("béta-wave-1—", 0)
+        assert not decision.allowed
+
+    def test_non_ascii_configured_code_still_matches_itself(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "café-wave-één")
+        assert rollout_gate.check_registration("café-wave-één", 0).allowed
+
+
+class TestInviteThrottle:
+    @pytest.fixture(autouse=True)
+    def _reset_throttle(self):
+        rollout_gate._failed_invites.clear()
+        yield
+        rollout_gate._failed_invites.clear()
+
+    def test_repeated_wrong_codes_eventually_throttle(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "correct-horse-battery")
+        for _ in range(rollout_gate._MAX_FAILED_INVITES_PER_WINDOW):
+            assert not rollout_gate.check_registration("wrong", 0).allowed
+        throttled = rollout_gate.check_registration("wrong", 0)
+        assert not throttled.allowed
+        assert "too many" in throttled.reason
+
+    def test_correct_code_is_unaffected_by_a_clean_window(self, monkeypatch):
+        monkeypatch.setenv("ROLLOUT_STAGE", "private_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "correct-horse-battery")
+        for _ in range(rollout_gate._MAX_FAILED_INVITES_PER_WINDOW - 1):
+            rollout_gate.check_registration("wrong", 0)
+        assert rollout_gate.check_registration("correct-horse-battery", 0).allowed
+
+    def test_successful_registrations_never_consume_the_budget(self, monkeypatch):
+        """A full tester wave must not throttle itself."""
+        monkeypatch.setenv("ROLLOUT_STAGE", "extended_beta")
+        monkeypatch.setenv("ROLLOUT_INVITE_CODE", "correct-horse-battery")
+        for n in range(25):
+            assert rollout_gate.check_registration("correct-horse-battery", n).allowed
+        assert not rollout_gate._invite_attempts_exhausted()

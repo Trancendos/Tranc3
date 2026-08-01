@@ -62,6 +62,21 @@ def _request(url: str, method: str = "GET", body: dict | None = None) -> tuple[i
         return 0, f"{type(e).__name__}: {e}"
 
 
+def _reported_stage(body: str) -> str | None:
+    """Pull the stage out of a gate refusal: {"detail": {"stage": ..., "reason": ...}}.
+
+    Read the structured field rather than substring-matching the body — the reason
+    text mentions the stage too, so a substring check would also pass on a body
+    that merely *talks about* the stage, and would silently start failing if the
+    wording changed.
+    """
+    try:
+        detail = json.loads(body).get("detail")
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    return detail.get("stage") if isinstance(detail, dict) else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--backend-url", default=DEFAULT_BACKEND)
@@ -98,8 +113,8 @@ def main() -> int:
         body_probe["username"] = f"smoke-probe-{int(time.time())}"
         status, body = _request(f"{backend}/auth/register", "POST", body_probe)
         if args.expect_stage in GATED_STAGES:
-            if status == 403 and args.expect_stage in body:
-                record("rollout_gate", True, f"403 naming stage '{args.expect_stage}'")
+            if status == 403 and _reported_stage(body) == args.expect_stage:
+                record("rollout_gate", True, f"403 reporting stage '{args.expect_stage}'")
             elif status == 400:
                 # The probe cleared the gate (spare capacity, no invite code
                 # configured) and died on password validation. Registration is
@@ -108,21 +123,30 @@ def main() -> int:
                 record(
                     "rollout_gate",
                     False,
-                    "gate open with capacity remaining — set ROLLOUT_INVITE_CODE "
-                    "to make the stage externally verifiable",
-                    fatal=False,
+                    f"cannot confirm stage '{args.expect_stage}': the gate let the "
+                    "probe through (spare capacity, no invite code set), so a "
+                    "mistakenly-public production would look identical. Set "
+                    "ROLLOUT_INVITE_CODE to make the stage verifiable.",
                 )
             else:
+                reported = _reported_stage(body)
+                got = f"stage '{reported}'" if reported else "no stage field"
                 record(
                     "rollout_gate",
                     False,
-                    f"HTTP {status} (want 403 naming '{args.expect_stage}', or 400): {body[:200]}",
+                    f"HTTP {status}, {got} (want 403 reporting "
+                    f"'{args.expect_stage}', or 400): {body[:200]}",
                 )
-        else:  # public: gate must NOT refuse; probe then fails password strength
+        else:
+            # Public: the gate must not refuse, and the probe must then die on
+            # password validation (400/422). Accepting "anything but 403" would
+            # pass on a 404 or a 500 — i.e. report the gate healthy precisely
+            # when registration is broken.
             record(
                 "rollout_gate",
-                status != 403,
-                f"HTTP {status} (any non-403 means the gate is open): {body[:200]}",
+                status in (400, 422),
+                f"HTTP {status} (want 400/422: gate open, probe rejected on "
+                f"validation): {body[:200]}",
             )
 
     # 4. Optional surfaces — reachability only

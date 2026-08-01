@@ -30,6 +30,13 @@ Advancing a stage is one command, no deploy:
 
 `scripts/cloud_smoke_check.py --expect-stage <stage>` verifies the live gate
 after each change.
+
+Scope — this gates the `/auth/register` in `api.py` (the `tranc3-backend` Fly
+app), which is the only registration surface the cloud-only deployment exposes.
+`workers/infinity-auth/router.py` has its own ungated `/auth/register`; it is a
+compose service and is **not** deployed in cloud-only mode, so it is unreachable
+today. Bringing the Citadel stack up would expose an ungated registration path —
+apply this gate there (or route `/auth/*` to the gated app) before doing so.
 """
 
 from __future__ import annotations
@@ -37,6 +44,7 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -78,6 +86,63 @@ class GateDecision:
     reason: str
 
 
+# Failed invite attempts are throttled because /auth/register is unauthenticated
+# and this app registers no rate-limiting middleware — without this, the invite
+# code can be guessed as fast as the network allows.
+#
+# The window is deliberately generous: a wave of at most 25 invited testers
+# should never approach it, while it caps a guesser at a rate that makes even a
+# weak code impractical to brute-force. The trade-off is that a determined
+# attacker can burn the budget and briefly block legitimate registrations; for a
+# closed beta that is the better failure (nobody registers) than the alternative
+# (anybody registers). It is per-process, so it weakens as instances scale — the
+# code's entropy is the real defence, which is why _warn_on_weak_code exists.
+_FAILED_INVITE_WINDOW_SECONDS = 60
+_MAX_FAILED_INVITES_PER_WINDOW = 20
+_failed_invites: list[float] = []
+
+
+def _record_failed_invite() -> None:
+    now = time.monotonic()
+    cutoff = now - _FAILED_INVITE_WINDOW_SECONDS
+    _failed_invites[:] = [t for t in _failed_invites if t > cutoff]
+    _failed_invites.append(now)
+
+
+def _invite_attempts_exhausted() -> bool:
+    cutoff = time.monotonic() - _FAILED_INVITE_WINDOW_SECONDS
+    _failed_invites[:] = [t for t in _failed_invites if t > cutoff]
+    return len(_failed_invites) >= _MAX_FAILED_INVITES_PER_WINDOW
+
+
+_MIN_INVITE_CODE_LENGTH = 12
+_warned_weak_code = False
+
+
+def _warn_on_weak_code(code: str) -> None:
+    """Log once if the configured invite code is short enough to guess."""
+    global _warned_weak_code
+    if not _warned_weak_code and len(code) < _MIN_INVITE_CODE_LENGTH:
+        _warned_weak_code = True
+        logger.warning(
+            "ROLLOUT_INVITE_CODE is %d characters; use at least %d "
+            "(secrets.token_urlsafe(12)). Throttling slows guessing but entropy "
+            "is what prevents it.",
+            len(code),
+            _MIN_INVITE_CODE_LENGTH,
+        )
+
+
+def needs_user_count() -> bool:
+    """True when the active stage is capped and therefore needs a user count.
+
+    Lets the caller skip a per-request DB COUNT in the public stage, where the
+    gate allows unconditionally — /auth/register is unauthenticated, so that
+    query would otherwise be free load for anyone who finds the endpoint.
+    """
+    return STAGE_CAPS[current_stage()] is not None
+
+
 def check_registration(
     invite_code: Optional[str],
     user_count: Optional[int],
@@ -96,7 +161,21 @@ def check_registration(
 
     configured_code = os.getenv("ROLLOUT_INVITE_CODE", "")
     if configured_code:
-        if not invite_code or not secrets.compare_digest(invite_code, configured_code):
+        _warn_on_weak_code(configured_code)
+        if _invite_attempts_exhausted():
+            return GateDecision(
+                False,
+                stage,
+                "too many invalid invite codes — registration is paused briefly, "
+                "please retry shortly",
+            )
+        # Compare as bytes: compare_digest() on str raises TypeError for any
+        # non-ASCII character, and invite_code arrives straight from JSON. A
+        # tester pasting a smart quote would get a 500, not a clean refusal.
+        if not invite_code or not secrets.compare_digest(
+            invite_code.encode("utf-8"), configured_code.encode("utf-8")
+        ):
+            _record_failed_invite()
             return GateDecision(
                 False,
                 stage,

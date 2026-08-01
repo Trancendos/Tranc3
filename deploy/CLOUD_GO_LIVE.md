@@ -181,11 +181,21 @@ Advancing a stage is one command — `fly secrets set` restarts the app with the
 stage automatically, no code deploy involved:
 
 ```bash
-fly secrets set ROLLOUT_STAGE=private_beta \
-  ROLLOUT_INVITE_CODE="$(python -c 'import secrets; print(secrets.token_urlsafe(12))')" \
+# Generate into a shell variable and PRINT it — Fly secrets are write-only, so
+# a value piped straight into `fly secrets set` can never be read back, and you
+# need it to give to testers.
+INVITE=$(python -c 'import secrets; print(secrets.token_urlsafe(12))')
+echo "Invite code for this wave: $INVITE"      # record this before moving on
+
+fly secrets set ROLLOUT_STAGE=private_beta ROLLOUT_INVITE_CODE="$INVITE" \
   --app tranc3-backend
 python scripts/cloud_smoke_check.py --expect-stage private_beta
 ```
+
+Keep the code at least 12 characters. Failed invite attempts are throttled
+(20/minute per instance) so a weak code cannot be guessed quickly, but the
+entropy is the real defence — the app registers no general rate-limiting
+middleware, so `/auth/register` is otherwise unthrottled.
 
 When a wave's cap is hit, further registrations get a 403 naming the stage — that is the
 expected signal, not an error. Before flipping to `public`, run through the compliance

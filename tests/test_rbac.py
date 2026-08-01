@@ -80,3 +80,40 @@ class TestRequirePermissionDependency:
         )
         assert response.status_code == 200
         assert response.json() == {"ok": True}
+
+
+class TestNoRouteMisusesRequirePermission:
+    """No route may pass the bare guard as a default value.
+
+    ``require_permission()`` returns a guard that must be wrapped in
+    ``Depends(...)``. Written bare -- ``_perm: None = require_permission(...)``
+    -- FastAPI reads the ``None`` annotation and registers ``_perm`` as a *query
+    parameter*, so every request 422s during validation and the guard never runs.
+    The route then looks protected while actually being unreachable and
+    unenforced. Seven routes in api.py shipped that way; this catches a
+    recurrence by inspecting the real app's registered parameters.
+    """
+
+    def test_no_registered_route_exposes_a_perm_query_parameter(self):
+        import os
+        from unittest.mock import MagicMock, patch
+
+        import pytest
+
+        if not os.getenv("SECRET_KEY"):
+            pytest.skip("SECRET_KEY env var not set")
+        try:
+            with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
+                from api import app
+        except (ImportError, ModuleNotFoundError) as e:
+            pytest.skip(f"missing production dependency: {e}")
+
+        offenders = []
+        for route in app.routes:
+            dependant = getattr(route, "dependant", None)
+            if dependant and any(p.name == "_perm" for p in dependant.query_params):
+                offenders.append(f"{sorted(route.methods)} {route.path}")
+        assert not offenders, (
+            "these routes pass require_permission() without Depends(...), so FastAPI "
+            f"treats _perm as a query parameter and 422s every request: {offenders}"
+        )
