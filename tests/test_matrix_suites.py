@@ -503,6 +503,20 @@ def test_route_check_overdue(client):
     assert resp.json()["emitted"] >= 1
 
 
+def test_route_check_overdue_get_falls_through_to_suite_lookup(client):
+    """A GET to the POST-only /check-overdue path resolves as a suite lookup
+    (404 unknown suite) rather than 405 method-not-allowed. This is accepted,
+    not fixed: Starlette's router scans all routes for a full match before
+    falling back to any partial (method-mismatch) match, regardless of
+    registration order, so a static route can never take priority over a
+    catch-all GET /{suite_id} for a GET on that exact path without adding a
+    path-pattern exclusion — not worth the complexity for a cosmetic status
+    code with no security or data impact."""
+    resp = client.get("/compliance/suites/check-overdue")
+    assert resp.status_code == 404
+    assert resp.json() == {"error": "Unknown suite_id: check-overdue"}
+
+
 def test_route_complete_review(client):
     resp = client.post(
         "/compliance/suites/SUITE-KNO/review",

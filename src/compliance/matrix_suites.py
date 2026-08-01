@@ -120,11 +120,18 @@ def load_suites(path: Optional[str] = None) -> List[Dict[str, Any]]:
         logger.warning("Matrix Suites registry not found at %s", p)
         return []
 
-    with p.open(encoding="utf-8") as f:
-        try:
+    try:
+        with p.open(encoding="utf-8") as f:
             doc = yaml.safe_load(f) or {}
-        except yaml.YAMLError as exc:
-            raise MatrixSuitesError(f"matrix_suites.yaml: invalid YAML: {exc}") from exc
+    except yaml.YAMLError as exc:
+        raise MatrixSuitesError(f"matrix_suites.yaml: invalid YAML: {exc}") from exc
+    except OSError as exc:
+        # The is_file() check above is inherently racy: the submodule file
+        # can be removed/become unreadable between that check and this open()
+        # (concurrent submodule update, permission change). Wrap it the same
+        # way as a YAML parse failure rather than letting a raw OSError
+        # surface as an unhandled 500.
+        raise MatrixSuitesError(f"matrix_suites.yaml: unreadable: {exc}") from exc
 
     if not isinstance(doc, dict):
         raise MatrixSuitesError("matrix_suites.yaml: document root must be a mapping")
