@@ -207,6 +207,19 @@ def list_suite_health(
         if not isinstance(suite, dict):
             logger.warning("Skipping malformed suite entry (not a mapping): %r", suite)
             continue
+        coerced_suite_id = str(suite.get("suite_id", "")).strip()
+        if not coerced_suite_id:
+            # A missing/blank suite_id str()-coerces to "" — a non-string but
+            # otherwise present id (e.g. an unquoted YAML int) is fine and
+            # still coerced below, matching _find_suite()'s own coercion, but
+            # an EMPTY id can't be a usable identifier. Every consumer of
+            # SuiteHealth.suite_id (the GET routes, the action endpoints, and
+            # emit_overdue_events()'s per-suite throttle dict) needs a real,
+            # distinct key — two different malformed entries would otherwise
+            # both coerce to "" and silently share (and suppress) each
+            # other's overdue-event throttle state.
+            logger.warning("Skipping suite entry with missing/blank suite_id: %r", suite)
+            continue
         next_review_raw = suite.get("next_review")
         next_review_date = _parse_next_review(next_review_raw)
         overdue = False

@@ -199,6 +199,24 @@ def test_list_suite_health_non_string_suite_id_is_coerced(tmp_path, observatory)
     assert any(e.target == "12345" for e in events)
 
 
+def test_list_suite_health_skips_entries_with_missing_or_blank_suite_id(tmp_path, observatory):
+    """Two distinct suite entries that both lack a usable suite_id (one
+    missing the key entirely, one blank) must not both coerce to "" and
+    collapse into a single, shared throttle-map key — list_suite_health()
+    excludes them instead of listing them under a collided "" identifier."""
+    fixture = copy.deepcopy(FIXTURE)
+    del fixture["suites"][0]["suite_id"]  # was SUITE-FIN
+    fixture["suites"][1]["suite_id"] = "   "  # was SUITE-KNO, blank after strip
+    p = tmp_path / "matrix_suites.yaml"
+    p.write_text(yaml.safe_dump(fixture), encoding="utf-8")
+
+    health = list_suite_health(path=str(p))
+    assert health == []
+
+    events = emit_overdue_events(observatory=observatory, path=str(p))
+    assert events == []
+
+
 def test_list_suite_health_flags_overdue(registry_path):
     health = {h.suite_id: h for h in list_suite_health(path=registry_path)}
     assert health["SUITE-FIN"].overdue is True
