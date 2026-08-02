@@ -15,6 +15,22 @@ CVE-2026-1260
 # running in this cluster. Suppress on all pod spec templates.
 KSV118
 
+# CVE-2024-23342 (PYSEC-2026-1325) — python-ecdsa Minerva timing attack on P-256
+# Affects: ecdsa (transitive via python-jose, hard-required — Requires-Dist: ecdsa!=0.15).
+# Now explicit-pinned to ecdsa==0.19.2 in requirements.txt and 7 workers/* services
+# (gateway-service, gbrain-bridge, infinity-admin-service, infinity-auth,
+# infinity-one-service, infinity-portal-service, sentinel-station-service) — the pin
+# itself fixes the separate PYSEC-2026-2467 DoS CVE, but made this manifest-visible
+# to Trivy for the first time (previously unpinned/transitive, so not scanned as a
+# direct dependency). No fixed version exists for this CVE specifically
+# (fix_versions: [] in the advisory) — the ecdsa maintainers have stated
+# side-channel attacks are out of scope. Every listed service's JWT usage is
+# HS256/RS256-only (grep-confirmed no ES256/384/512 usage), so the vulnerable
+# ECDSA sign/ECDH code paths are never invoked. Full context: SECURITY.md
+# "Accepted Risks" table. Re-check trigger: ES256/ES384/ES512 JWT support added,
+# or a patched ecdsa release ships for this CVE specifically.
+CVE-2024-23342
+
 # CVE-2025-69872 (GHSA-w8v5-vhqr-4h9v) — diskcache unsafe pickle deserialization
 # Affects: diskcache <= 5.6.3 (workers/cache-service). 5.6.3 is the LATEST release
 # and the advisory has NO fixed version, so there is no version to upgrade to.
