@@ -159,7 +159,10 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install semgrep
-        run: python3 -m pip install semgrep --quiet
+        # Pinned to match requirements-security.txt / Makefile's security-install --
+        # that pin's accepted-risk notes (mcp==1.23.3, SECURITY.md) are only
+        # authoritative if every semgrep invocation actually uses the same version.
+        run: python3 -m pip install semgrep==1.172.0 --quiet
 
       - name: Run semgrep (Python security + OWASP + FastAPI + JWT + SQL injection)
         run: |

@@ -82,10 +82,11 @@ uvicorn==0.48.0
 structlog==26.1.0
 python-jose[cryptography]==3.5.0
 # Accepted risk (upstream-blocked, do not re-flag as unfixed): python-jose hard-requires
-# ecdsa (Requires-Dist: ecdsa!=0.15, no compatible-range override possible without
-# dropping python-jose). CVE-2024-23342 (PYSEC-2026-1325) is a Minerva timing side-channel
-# in ecdsa.SigningKey.sign_digest() / ECDH; the ecdsa maintainers have stated side-channel
-# attacks are out of scope and there is no planned fix (fix_versions: [] in the advisory).
+# ecdsa (Requires-Dist: ecdsa!=0.15 -- not a resolver-range blocker; !=0.15 would accept a
+# patched release). CVE-2024-23342 (PYSEC-2026-1325) is a Minerva timing side-channel in
+# ecdsa.SigningKey.sign_digest() / ECDH; the real blocker is that no patched release exists
+# at all (fix_versions: [] in the advisory) -- the maintainers have stated side-channel
+# attacks are out of scope and there is no planned fix.
 # This app's JWT usage (src/auth/tokens.py, src/auth/facade.py) is HS256-only -- the
 # vulnerable ECDSA sign/ECDH code paths are never invoked. Re-check if ES256/ES384/ES512
 # support is ever added.
