@@ -1430,7 +1430,7 @@ services:
       start_period: 60s
 
   dependency-track-frontend:
-    image: dependencytrack/frontend:latest@sha256:00560b57a6cfdec3c02a6e02be80fce97029241a9c653e8b83c0b670dff1f3ca
+    image: dependencytrack/frontend:latest@sha256:8854a8320475b9992cd5b30c42b937b48f19c9b914ec6b9a22ffd079c4247279
     container_name: trancendos-dtrack-frontend
     restart: unless-stopped
     environment:
