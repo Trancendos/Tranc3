@@ -2684,7 +2684,7 @@ services:
   # ── MISP — Malware Information Sharing Platform (Cryptex tier 2)
   # Free, self-hosted, open-source. No paid licence required.
   misp:
-    image: ghcr.io/misp/misp-docker/misp-core:latest@sha256:087e853d0c33eca3405e8e3427d86d404ed646f1f36ed1b9800ad2517beaaa77
+    image: ghcr.io/misp/misp-docker/misp-core:latest@sha256:0eaa4e423d5cd965b7b76aa5665e81d5c05a35bc46a4ffec2ca52e0cfe627e86
     container_name: trancendos-misp
     restart: unless-stopped
     depends_on:
