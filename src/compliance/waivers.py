@@ -83,11 +83,24 @@ def _init_db(conn: sqlite3.Connection) -> None:
             revoked_at             REAL,
             revoked_by             TEXT,
             revoke_reason          TEXT,
-            expiry_notified        INTEGER NOT NULL DEFAULT 0,
-            expiry_claim_expires_at REAL
+            expiry_notified        INTEGER NOT NULL DEFAULT 0
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_waivers_expires_on ON waivers (expires_on)")
+
+    # cubic P1: CREATE TABLE IF NOT EXISTS is a no-op against a waivers.db that
+    # already exists from an earlier commit on this same branch (before the
+    # claim-lease redesign added this column) — anyone testing across commits
+    # locally would hit "no such column: expiry_claim_expires_at" on
+    # emit_expiry_events() otherwise. Same idempotent-ALTER-with-race-tolerance
+    # pattern as cab_gate.py's decided_at migration.
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(waivers)").fetchall()}
+    if "expiry_claim_expires_at" not in existing_cols:
+        try:
+            conn.execute("ALTER TABLE waivers ADD COLUMN expiry_claim_expires_at REAL")
+        except sqlite3.OperationalError as exc:
+            if "duplicate column name: expiry_claim_expires_at" not in str(exc):
+                raise
     conn.commit()
 
 
@@ -330,30 +343,26 @@ _EXPIRY_CLAIM_LEASE_SECONDS = 60.0
 
 def emit_expiry_events() -> List[AuditEvent]:
     """Scan for waivers that have crossed expires_on and haven't been notified
-    yet, emit one governance.waiver.expired event per waiver, and mark them
-    notified — a waiver only expires once, so unlike Matrix Suites' per-calendar-
-    day overdue throttle this is a one-shot latch, not a recurring window.
-    Intended to be called on a cadence (e.g. by ChronosSphere), same pattern as
+    yet, and emit one governance.waiver.expired event per waiver. Intended to be
+    called on a cadence (e.g. by ChronosSphere), same pattern as
     matrix_suites.emit_overdue_events().
 
-    cubic P1/P2/P1: three rounds on this function's atomicity —
-    1. The original version SELECTed candidates, bulk-UPDATEd them all notified,
-       then emitted: two concurrent callers could both SELECT the same row
-       before either UPDATE committed (duplicate emission).
-    2. Claiming each row individually via `UPDATE ... WHERE expiry_notified = 0`
-       (rowcount proving sole ownership) fixed the duplicate-emission race, and
-       rolling the claim back in a `except Exception` handler recovered from a
-       *Python* exception during _emit() — but not from the *process* exiting
-       between the claim commit and the _emit() call (a crash, not a raise):
-       expiry_notified=1 would survive in SQLite with no event ever recorded,
-       permanently.
-    3. The claim is now a time-boxed lease (expiry_claim_expires_at), not a
-       one-way flag: a row is only truly done once expiry_notified is set,
-       which only happens *after* _emit() returns successfully. A crash between
-       claiming and emitting leaves expiry_notified=0 with a lease that expires
-       within _EXPIRY_CLAIM_LEASE_SECONDS, so the next scan reclaims it instead
-       of leaking it forever — closing the gap a plain exception handler can't
-       reach, without reintroducing the original concurrent-duplicate race.
+    Delivery guarantee: **at-least-once**, not exactly-once. cubic P1/P2/P1/P2
+    tracked this function's atomicity across four rounds, converging on a
+    time-boxed claim lease (expiry_claim_expires_at) rather than a one-way flag
+    — a row is only truly done once expiry_notified is set, which only happens
+    *after* _emit() returns successfully, so a crash between claiming and
+    emitting leaves the row reclaimable once the lease expires instead of
+    leaked forever. That still leaves two narrow windows where a duplicate
+    (not a loss) can occur: _emit() itself running longer than
+    _EXPIRY_CLAIM_LEASE_SECONDS, or the process exiting after _emit() succeeds
+    but before the final `expiry_notified = 1` commits. Closing those exactly
+    requires a durable outbox or an idempotency key the event consumer itself
+    dedupes on — a bigger architectural commitment than this module takes on.
+    Given the consequence of a duplicate here is an extra audit-log entry
+    (not a missed one, and not a state mutation with its own side effects),
+    at-least-once is the accepted tradeoff; loss was the one failure mode
+    worth eliminating outright.
     """
     now = time.time()
     with _get_conn() as conn:

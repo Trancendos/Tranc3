@@ -129,11 +129,16 @@ class Observatory:
         legal_hold: bool = False,
     ) -> AuditEvent:
         """Record an audit event, persist it to the ring buffer, and notify subscribers."""
-        # cubic P2: normalize here so every downstream consumer (the forwarding
-        # check below, Basement's own retained-flag computation) sees a real tag
-        # or None — never a blank/whitespace string that would otherwise be
-        # treated as "tagged" and forwarded for permanent archival forever.
-        if retention_class is not None:
+        # cubic P2/P3: normalize here so every downstream consumer (the
+        # forwarding check below, Basement's own retained-flag computation)
+        # sees a real tag or None — never a blank/whitespace string that would
+        # otherwise be treated as "tagged" and forwarded for permanent
+        # archival forever, and never a non-string value (this type hint says
+        # Optional[str], but an HTTP caller's raw, unvalidated JSON body could
+        # send anything) that would crash .strip() with AttributeError.
+        if not isinstance(retention_class, str):
+            retention_class = None
+        else:
             retention_class = retention_class.strip() or None
 
         event = AuditEvent(
