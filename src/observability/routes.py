@@ -355,6 +355,8 @@ async def observatory_ingest(
         metadata=body.get("metadata", {}),
         actor_ip=body.get("actor_ip"),
         session_id=body.get("session_id"),
+        retention_class=body.get("retention_class"),
+        legal_hold=bool(body.get("legal_hold", False)),
     )
     logger.debug(
         "observatory.ingest via HTTP: %s",

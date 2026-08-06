@@ -281,7 +281,15 @@ def revoke_waiver(waiver_id: str, revoked_by: str, reason: str) -> Waiver:
     """Explicitly end a waiver before its natural expiry. Only a currently
     'active' or 'pending' waiver can be revoked — revoking an already-expired
     or already-revoked one would misrepresent the audit trail (the waiver ended
-    for a different reason than the one being recorded now)."""
+    for a different reason than the one being recorded now).
+
+    cubic P1: the original check-then-write (get_waiver() status check, then an
+    unconditional UPDATE) was a TOCTOU race — a waiver could cross expires_on, or
+    a second concurrent revoke() call could land, between the read and the write.
+    The UPDATE's WHERE clause now re-asserts both conditions atomically, and a
+    zero-row result (meaning either race actually happened) raises instead of
+    silently 'succeeding' over a decision that was no longer valid to make.
+    """
     if not revoked_by or not revoked_by.strip():
         raise WaiverValidationError("revoked_by must not be blank")
 
@@ -293,12 +301,16 @@ def revoke_waiver(waiver_id: str, revoked_by: str, reason: str) -> Waiver:
 
     now = time.time()
     with _get_conn() as conn:
-        conn.execute(
+        cur = conn.execute(
             "UPDATE waivers SET revoked_at = ?, revoked_by = ?, revoke_reason = ? "
-            "WHERE waiver_id = ?",
-            (now, revoked_by.strip(), reason, waiver_id),
+            "WHERE waiver_id = ? AND revoked_at IS NULL AND expires_on > ?",
+            (now, revoked_by.strip(), reason, waiver_id, now),
         )
         conn.commit()
+        if cur.rowcount != 1:
+            raise WaiverValidationError(
+                f"Waiver {waiver_id!r} was already revoked or has since expired"
+            )
 
     waiver.revoked_at = now
     waiver.revoked_by = revoked_by.strip()
@@ -319,6 +331,15 @@ def emit_expiry_events() -> List[AuditEvent]:
     day overdue throttle this is a one-shot latch, not a recurring window.
     Intended to be called on a cadence (e.g. by ChronosSphere), same pattern as
     matrix_suites.emit_overdue_events().
+
+    cubic P1/P2: the original version SELECTed candidates, bulk-UPDATEd them all
+    notified, then emitted — two concurrent callers could both SELECT the same
+    row before either UPDATE committed (duplicate emission), and a mid-loop
+    Observatory failure left already-notified rows with no event ever recorded
+    (permanent loss). Each row is now claimed individually via a conditional
+    UPDATE ... WHERE expiry_notified = 0 whose rowcount proves this call is the
+    sole winner for that row, and a failed _emit() rolls the claim back so the
+    row stays eligible for the next scan instead of being silently dropped.
     """
     now = time.time()
     with _get_conn() as conn:
@@ -327,15 +348,32 @@ def emit_expiry_events() -> List[AuditEvent]:
             "AND expiry_notified = 0",
             (now,),
         ).fetchall()
-        expiring = [_row_to_waiver(r) for r in rows]
-        if expiring:
-            conn.executemany(
-                "UPDATE waivers SET expiry_notified = 1 WHERE waiver_id = ?",
-                [(w.waiver_id,) for w in expiring],
-            )
-            conn.commit()
+    candidates = [_row_to_waiver(r) for r in rows]
 
     events = []
-    for waiver in expiring:
-        events.append(_emit("governance.waiver.expired", waiver, EventSeverity.CRITICAL))
+    for waiver in candidates:
+        with _get_conn() as conn:
+            cur = conn.execute(
+                "UPDATE waivers SET expiry_notified = 1 "
+                "WHERE waiver_id = ? AND expiry_notified = 0",
+                (waiver.waiver_id,),
+            )
+            conn.commit()
+            if cur.rowcount != 1:
+                continue  # another concurrent caller already claimed this one
+
+        try:
+            events.append(_emit("governance.waiver.expired", waiver, EventSeverity.CRITICAL))
+        except Exception:
+            with _get_conn() as conn:
+                conn.execute(
+                    "UPDATE waivers SET expiry_notified = 0 WHERE waiver_id = ?",
+                    (waiver.waiver_id,),
+                )
+                conn.commit()
+            logger.warning(
+                "Waiver expiry event emission failed for waiver_id=%s — left "
+                "retryable on the next scan",
+                sanitize_for_log(waiver.waiver_id),  # codeql[py/log-injection]
+            )
     return events

@@ -234,6 +234,34 @@ def test_revoke_expired_waiver_raises():
         revoke_waiver(waiver.waiver_id, revoked_by="human-2", reason="too late")
 
 
+def test_revoke_waiver_race_expiry_between_check_and_update_raises(monkeypatch):
+    """cubic P1: the status check in get_waiver() and the UPDATE in revoke_waiver()
+    are two separate operations — a waiver can cross expires_on in between. Feeds
+    revoke_waiver() a stale 'active' Waiver snapshot while the DB row has already
+    genuinely expired, proving the UPDATE's own WHERE clause (not just the earlier
+    Python-level status check) is what actually blocks this."""
+    waiver = register_waiver(
+        subject="test",
+        justification="test",
+        requestor="agent-1",
+        approver="human-1",
+        expires_on=time.time() + 3600,
+    )
+    stale_snapshot = get_waiver(waiver.waiver_id)
+    assert stale_snapshot.status == "active"
+
+    with waivers_module._get_conn() as conn:
+        conn.execute(
+            "UPDATE waivers SET expires_on = ? WHERE waiver_id = ?",
+            (time.time() - 1, waiver.waiver_id),
+        )
+        conn.commit()
+
+    monkeypatch.setattr(waivers_module, "get_waiver", lambda _wid: stale_snapshot)
+    with pytest.raises(WaiverValidationError):
+        revoke_waiver(waiver.waiver_id, revoked_by="human-2", reason="race")
+
+
 # ── emit_expiry_events ──────────────────────────────────────────────────────
 
 
@@ -280,6 +308,74 @@ def test_emit_expiry_events_skips_active_and_revoked():
         )
         conn.commit()
 
+    events = emit_expiry_events()
+    assert events == []
+
+
+def test_emit_expiry_events_rolls_back_claim_on_emit_failure(monkeypatch):
+    """cubic P2: the original version committed expiry_notified=1 before calling
+    _emit() — an Observatory failure mid-scan permanently lost that waiver's
+    audit event with no way to retry. The claim must roll back on failure so a
+    later scan picks it up again."""
+    waiver = register_waiver(
+        subject="test",
+        justification="test",
+        requestor="agent-1",
+        approver="human-1",
+        effective_from=time.time() - 7200,
+        expires_on=time.time() - 3600,
+    )
+
+    original_emit = waivers_module._emit
+
+    def _failing_emit(*_args, **_kwargs):
+        raise RuntimeError("observatory unavailable")
+
+    monkeypatch.setattr(waivers_module, "_emit", _failing_emit)
+    first = emit_expiry_events()
+    assert first == []
+    assert get_waiver(waiver.waiver_id).expiry_notified is False
+
+    # cubic: undo() would also revert the autouse _isolated_db fixture's
+    # _DB_PATH patch (same monkeypatch instance, function-scoped) — restore
+    # only _emit specifically, not the whole monkeypatch session.
+    monkeypatch.setattr(waivers_module, "_emit", original_emit)
+    second = emit_expiry_events()
+    assert len(second) == 1
+    assert get_waiver(waiver.waiver_id).expiry_notified is True
+
+
+def test_emit_expiry_events_claim_prevents_concurrent_duplicate(monkeypatch):
+    """cubic P1: simulates a second concurrent caller claiming the row first —
+    a waiver whose expiry_notified is already 1 by the time this call's UPDATE
+    runs must be skipped, not double-emitted."""
+    waiver = register_waiver(
+        subject="test",
+        justification="test",
+        requestor="agent-1",
+        approver="human-1",
+        effective_from=time.time() - 7200,
+        expires_on=time.time() - 3600,
+    )
+
+    real_get_conn = waivers_module._get_conn
+    call_count = {"n": 0}
+
+    def _racing_get_conn():
+        call_count["n"] += 1
+        # 1st call = the initial SELECT of candidates; 2nd call = this waiver's
+        # own per-row claim UPDATE — inject the "other worker" race right before
+        # that claim executes, so this call's UPDATE genuinely loses the race.
+        if call_count["n"] == 2:
+            other = real_get_conn()
+            other.execute(
+                "UPDATE waivers SET expiry_notified = 1 WHERE waiver_id = ?",
+                (waiver.waiver_id,),
+            )
+            other.commit()
+        return real_get_conn()
+
+    monkeypatch.setattr(waivers_module, "_get_conn", _racing_get_conn)
     events = emit_expiry_events()
     assert events == []
 

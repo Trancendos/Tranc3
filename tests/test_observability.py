@@ -227,6 +227,33 @@ class TestObservatory:
             self.obs.record("routine.action", severity=EventSeverity.INFO)
         mock_get_basement.assert_not_called()
 
+    def test_retention_tagged_info_event_forwarded_to_basement(self):
+        """cubic P1: the original forwarding condition only checked severity and
+        legal_hold, so an event tagged retention_class="forensic" without
+        legal_hold=True was silently excluded from Basement archival — the same
+        eviction problem legal_hold was added to solve."""
+        with patch("src.basement.archive.get_basement") as mock_get_basement:
+            mock_basement = MagicMock()
+            mock_get_basement.return_value = mock_basement
+            self.obs.record(
+                "incident.evidence_captured",
+                severity=EventSeverity.INFO,
+                retention_class="forensic",
+            )
+        mock_basement.ingest_observatory_event.assert_called_once()
+
+    def test_legal_hold_info_event_not_forwarded_to_library(self):
+        """The Library/KB pipeline forward stays scoped to SECURITY/CRITICAL only
+        — widening the Basement archival condition for legal_hold/retention_class
+        must not also start generating KB articles for routine events."""
+        with (
+            patch("src.basement.archive.get_basement") as mock_get_basement,
+            patch("src.observability.library_pipeline.ingest") as mock_library_ingest,
+        ):
+            mock_get_basement.return_value = MagicMock()
+            self.obs.record("routine.action", severity=EventSeverity.INFO, legal_hold=True)
+        mock_library_ingest.assert_not_called()
+
 
 # ── Module-level function tests ─────────────────────────────────────────────
 

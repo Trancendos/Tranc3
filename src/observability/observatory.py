@@ -154,11 +154,14 @@ class Observatory:
         )
         self._notify_subscribers(event)
 
-        # Forward SECURITY and CRITICAL events to The Basement for permanent archival —
-        # also forward anything explicitly flagged legal_hold regardless of severity,
-        # since this ring buffer silently evicts its oldest entries at buffer_size and
-        # a legal hold's whole point is that the record must survive that eviction.
-        if severity in (EventSeverity.SECURITY, EventSeverity.CRITICAL) or legal_hold:
+        is_security_critical = severity in (EventSeverity.SECURITY, EventSeverity.CRITICAL)
+
+        # Forward SECURITY/CRITICAL events, anything tagged with a retention_class,
+        # and anything explicitly flagged legal_hold to The Basement for permanent
+        # archival — this ring buffer silently evicts its oldest entries at
+        # buffer_size, and both a named retention tier and a legal hold exist
+        # specifically so a record survives that eviction.
+        if is_security_critical or retention_class is not None or legal_hold:
             try:
                 from src.basement.archive import get_basement
 
@@ -166,8 +169,11 @@ class Observatory:
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
-            # Forward the same events to The Library for KB article generation.
-            # ingest() is async; schedule it rather than block record()'s caller.
+        # Forward SECURITY/CRITICAL events to The Library for KB article generation
+        # — unrelated to retention/legal-hold, so kept on its own original
+        # condition rather than widened along with the Basement forward above.
+        # ingest() is async; schedule it rather than block record()'s caller.
+        if is_security_critical:
             try:
                 from src.observability.library_pipeline import ingest as _library_ingest
 

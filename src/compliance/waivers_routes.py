@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 from typing import List, Optional
 
@@ -25,6 +26,8 @@ from src.compliance.waivers import (
 logger = logging.getLogger("tranc3.compliance.waivers_routes")
 
 router = APIRouter(prefix="/compliance/waivers", tags=["waivers"])
+
+_VALID_STATUSES = frozenset({"pending", "active", "expired", "revoked"})
 
 # Same internal-service-auth model as POST /compliance/suites/* (see
 # matrix_suites_routes.py) and POST /observatory/events: these routes grant,
@@ -53,6 +56,18 @@ class RegisterWaiverRequest(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("must not be blank")
+        return v
+
+    @field_validator("expires_on", "effective_from")
+    @classmethod
+    def _finite(cls, v: Optional[float]) -> Optional[float]:
+        # cubic P1: Python's json.loads() accepts NaN/Infinity/-Infinity as an
+        # extension of the JSON spec (and so does FastAPI's default decoder), so
+        # a client can submit a timestamp that parses without error but defeats
+        # the whole time-boxing guarantee this module exists for — NaN makes
+        # every comparison against it false, and +inf never arrives.
+        if v is not None and not math.isfinite(v):
+            raise ValueError("must be a finite number")
         return v
 
 
@@ -93,6 +108,13 @@ def _handle_waiver_error(exc: WaiverError) -> JSONResponse:
 def waivers(status: Optional[str] = None):
     """List waivers, optionally filtered by computed status
     ('pending' | 'active' | 'expired' | 'revoked')."""
+    if status is not None and status not in _VALID_STATUSES:
+        # cubic P2: an unrecognized status (e.g. a typo) previously matched
+        # nothing and looked identical to a genuinely empty result set.
+        return JSONResponse(
+            {"error": "invalid_status", "valid_statuses": sorted(_VALID_STATUSES)},
+            status_code=400,
+        )
     return [w.to_dict() for w in list_waivers(status=status)]
 
 

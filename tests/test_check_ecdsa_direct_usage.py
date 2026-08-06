@@ -32,6 +32,28 @@ def _scan_source(tmp_path, source: str) -> list[str]:
         check_ecdsa.REPO_ROOT = monkeypatched_root
 
 
+# ── Fail-closed on unparseable files ────────────────────────────────────────
+
+
+def test_unparseable_file_reports_error_not_silently_skipped(tmp_path):
+    """cubic P3: every other test asserts errors == [] via _scan_source() — add
+    direct coverage of the fail-closed contract itself (module docstring: 'a
+    file that fails to parse is treated as a violation, not skipped'), so a
+    regression that silently ignored unparseable files couldn't slip through
+    unnoticed by this suite."""
+    f = tmp_path / "broken.py"
+    f.write_text("def f(:\n", encoding="utf-8")  # syntax error
+    monkeypatched_root = check_ecdsa.REPO_ROOT
+    try:
+        check_ecdsa.REPO_ROOT = tmp_path
+        violations, errors = check_ecdsa._scan_file(f)
+    finally:
+        check_ecdsa.REPO_ROOT = monkeypatched_root
+    assert violations == []
+    assert len(errors) == 1
+    assert "could not parse" in errors[0]
+
+
 # ── Direct ecdsa imports ─────────────────────────────────────────────────────
 
 
