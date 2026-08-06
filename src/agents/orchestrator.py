@@ -421,6 +421,13 @@ class AgentOrchestrator:
             try:
                 record = get_escalation_fsm().get(task.escalation_record_id)
             except RecordNotFoundError:
+                # Escalation record vanished from under an already-queued task —
+                # leaving status='pending' here would let a caller believe the
+                # task is still queued when it will never be dispatched again.
+                # Match _reenqueue_if_still_approved()'s "record missing" handling.
+                task.status = "blocked_governance"
+                task.error = "Blocked by governance (unknown): escalation record no longer found"
+                self._persist_task(task)
                 continue
 
             if record.state != "approved":

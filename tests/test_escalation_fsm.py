@@ -781,32 +781,138 @@ def test_approve_change_sets_both_approved_at_and_decided_at(fsm):
     assert row["decided_at"] is not None
 
 
+def test_init_db_backfills_decided_at_for_legacy_rejected_rows_too(fsm):
+    """cubic P2: an earlier revision of reject_change() (before decided_at existed)
+    stored the rejection timestamp in approved_at despite the misleading name — see
+    git history of reject_change(). The decided_at backfill in _init_db() originally
+    only covered status='approved' rows, so upgrading a DB containing legacy rejected
+    changes left them with decided_at=NULL, making decision-time reports misclassify
+    already-resolved rejections as unresolved.
+
+    Reproduces the actual legacy precondition (a table that predates the decided_at
+    column at all — the backfill only ever runs the one time _init_db() adds that
+    column, so re-running it against an already-migrated DB is a no-op and would
+    prove nothing) with a hand-built rejected row whose rejection timestamp sits in
+    approved_at, then runs _init_db() to confirm the backfill now recovers it.
+    """
+    with cab_gate_module._get_conn() as conn:
+        conn.execute("DROP TABLE IF EXISTS cab_changes")
+        conn.execute(
+            """
+            CREATE TABLE cab_changes (
+                change_id    TEXT PRIMARY KEY,
+                change_type  TEXT NOT NULL,
+                description  TEXT NOT NULL,
+                requestor    TEXT NOT NULL,
+                risk         TEXT NOT NULL DEFAULT 'low',
+                status       TEXT NOT NULL DEFAULT 'pending',
+                approver     TEXT,
+                created_at   REAL NOT NULL,
+                approved_at  REAL
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO cab_changes "
+            "(change_id, change_type, description, requestor, status, approver, "
+            "created_at, approved_at) VALUES (?, 'test', 'test', 'agent-1', "
+            "'rejected', 'human-1', ?, ?)",
+            ("legacy-rejected-1", 1700000000.0, 1700000000.0),
+        )
+        conn.commit()
+
+        cab_gate_module._init_db(conn)  # adds decided_at + runs the backfill
+
+        row = conn.execute(
+            "SELECT status, approved_at, decided_at FROM cab_changes WHERE change_id = ?",
+            ("legacy-rejected-1",),
+        ).fetchone()
+    assert row["status"] == "rejected"
+    assert row["decided_at"] == row["approved_at"] == 1700000000.0
+
+
 def test_cab_gate_init_db_tolerates_concurrent_duplicate_column_race(fsm):
     """cubic P1: multiple Uvicorn workers can each observe 'decided_at' missing on a
     pre-migration DB and race through the ALTER TABLE — the loser must not crash API
-    startup with 'duplicate column name: decided_at', it just lost the race."""
+    startup with 'duplicate column name: decided_at', it just lost the race.
+
+    cubic P3 follow-up: the original version of this test called _init_db() twice on
+    a connection whose very first CREATE TABLE IF NOT EXISTS already declares
+    decided_at, so neither call ever reached the ALTER branch at all — it only proved
+    _init_db() is safely re-runnable, not that a genuine PRAGMA-read-then-ALTER race
+    is swallowed. This version starts from a table that's missing the column, then
+    makes a *second* connection win the ALTER in the narrow window between _init_db()'s
+    own PRAGMA read and its ALTER call — reproducing exactly what two racing workers
+    would do to the same on-disk DB file — so _init_db() must hit and swallow the
+    real 'duplicate column name' error, not just skip an ALTER it never attempted.
+    """
     with cab_gate_module._get_conn() as conn:
-        # Simulate a second worker's _init_db() call landing after the first worker
-        # already added the column — this must not raise.
-        cab_gate_module._init_db(conn)
-        cab_gate_module._init_db(conn)
+        conn.execute("DROP TABLE IF EXISTS cab_changes")
+        conn.execute(
+            """
+            CREATE TABLE cab_changes (
+                change_id    TEXT PRIMARY KEY,
+                change_type  TEXT NOT NULL,
+                description  TEXT NOT NULL,
+                requestor    TEXT NOT NULL,
+                risk         TEXT NOT NULL DEFAULT 'low',
+                status       TEXT NOT NULL DEFAULT 'pending',
+                approver     TEXT,
+                created_at   REAL NOT NULL,
+                approved_at  REAL
+            )
+            """
+        )
+        conn.commit()
+
+        class _RacingConn:
+            """Wraps the real connection so the ALTER _init_db() is about to run
+            loses a race to a 'second worker' — a fresh connection to the same
+            on-disk DB file — that adds the column first."""
+
+            def __init__(self, real):
+                self._real = real
+
+            def execute(self, sql, *args, **kwargs):
+                if "ALTER TABLE cab_changes ADD COLUMN decided_at" in sql:
+                    other_worker = cab_gate_module._get_conn()
+                    try:
+                        other_worker.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
+                        other_worker.commit()
+                    finally:
+                        other_worker.close()
+                return self._real.execute(sql, *args, **kwargs)
+
+            def commit(self):
+                self._real.commit()
+
+        cab_gate_module._init_db(_RacingConn(conn))  # must not raise
+
         existing_cols = {
             row[1] for row in conn.execute("PRAGMA table_info(cab_changes)").fetchall()
         }
     assert "decided_at" in existing_cols
 
 
-def test_cab_gate_alter_table_race_error_is_specifically_swallowed(fsm):
-    """Exercises the exact except-branch a real two-worker TOCTOU race would hit — the
-    existing_cols precheck can't reproduce genuine concurrent interleaving in a
-    single-threaded test, but the error-handling path it falls back on can be proven
-    directly: a second ALTER TABLE ADD COLUMN decided_at (as if 'won' by another worker
-    between our PRAGMA read and our ALTER) must be swallowed, not raised."""
+def test_cab_gate_alter_table_duplicate_column_error_message(fsm):
+    """cubic P3: the previous name/docstring here claimed to prove the duplicate-
+    column ALTER 'must be swallowed, not raised', but the assertion was
+    pytest.raises(...) — i.e. it proved the opposite, that raw SQLite raises. It also
+    never called _init_db(), so it exercised no production code at all.
+
+    What this test actually documents: sqlite3's exact wording for a duplicate-column
+    ALTER, which is what _init_db()'s except-clause substring-matches against
+    ("duplicate column name" not in str(exc)) to decide whether to swallow an
+    OperationalError or let it propagate. If a future sqlite3 version changed that
+    wording, _init_db()'s match would silently stop working — this pins the string so
+    that change fails loudly here instead. The actual swallow-and-continue behavior is
+    exercised end-to-end by
+    test_cab_gate_init_db_tolerates_concurrent_duplicate_column_race above.
+    """
     import sqlite3
 
     with cab_gate_module._get_conn() as conn:
-        # decided_at already exists via the fsm fixture's _init_db() call — this second
-        # raw ALTER reproduces exactly what a racing worker's ALTER would hit.
+        # decided_at already exists via the fsm fixture's _init_db() call.
         with pytest.raises(sqlite3.OperationalError, match="duplicate column name: decided_at"):
             conn.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
 
@@ -854,14 +960,21 @@ def test_resolve_cab_retry_after_partial_failure_reconciles_instead_of_wedging(f
         )
         conn.commit()
 
-    retried = fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
+    # cubic P2: retried by a *different* approver than the one who actually made the
+    # persisted decision (human-1) — a reconciliation retry recognizing the
+    # already-applied cab_changes row must not credit human-2 with a decision they
+    # didn't make in the durable transition-history audit trail.
+    retried = fsm.resolve_cab(record.record_id, approver="human-2", approved=True)
     assert retried.state == "approved"
+    assert "human-2" not in retried.reason
+    assert "Reconciled" in retried.reason
 
     with cab_gate_module._get_conn() as conn:
         row = conn.execute(
-            "SELECT status FROM cab_changes WHERE change_id = ?", (change_id,)
+            "SELECT status, approver FROM cab_changes WHERE change_id = ?", (change_id,)
         ).fetchone()
     assert row["status"] == "approved"
+    assert row["approver"] == "human-1"
 
 
 def test_resolve_cab_conflicting_decision_raises(fsm):

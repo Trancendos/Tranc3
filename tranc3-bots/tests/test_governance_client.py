@@ -177,6 +177,22 @@ async def test_non_dict_json_response_fails_closed_not_crash(monkeypatch, body):
         await governance_client.check_action("generate", requestor="test")
 
 
+@pytest.mark.parametrize("body", [{"state": "not-a-real-state"}, {"reason": "no state key"}])
+async def test_unknown_or_missing_state_fails_closed_not_authorized(monkeypatch, body):
+    """cubic P1: a reachable, 200, valid-JSON-object response with a missing or
+    unrecognized 'state' previously fell through to `return record` (authorizing
+    dispatch) because only _BLOCKED_STATES was checked, not the full state set —
+    malformed-but-technically-valid responses must fail closed like every other
+    'backend is reachable but something's wrong' case, not silently pass through."""
+    monkeypatch.setattr(governance_client, "_GATE_ENABLED", True)
+    monkeypatch.setattr(governance_client, "_BACKEND_URL", "http://backend:8000")
+    _FakeAsyncClient.response = _FakeResponse(body)
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+
+    with pytest.raises(governance_client.GovernanceBlockedError):
+        await governance_client.check_action("generate", requestor="test")
+
+
 async def test_non_200_status_fails_closed_not_open(monkeypatch):
     """cubic P1: a 5xx (or any other non-2xx) from a *reachable* backend previously
     fell into the same fail-open branch as a genuine network failure — a struggling
@@ -209,6 +225,35 @@ async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeyp
         "_TIMEOUT": governance_client._TIMEOUT,
     }
     monkeypatch.setenv("GOVERNANCE_GATE_TIMEOUT", "not-a-number")
+    try:
+        reloaded = importlib.reload(governance_client)
+        assert reloaded._TIMEOUT == 5.0
+    finally:
+        monkeypatch.delenv("GOVERNANCE_GATE_TIMEOUT", raising=False)
+        importlib.reload(governance_client)
+        for name, value in saved.items():
+            monkeypatch.setattr(governance_client, name, value)
+
+
+@pytest.mark.parametrize("bad_timeout", ["0", "-1", "-5.5", "inf", "nan"])
+async def test_non_positive_or_non_finite_governance_gate_timeout_falls_back_to_default(
+    monkeypatch, bad_timeout
+):
+    """cubic P1: httpx treats a timeout<=0 as 'time out immediately', which
+    check_action()'s own network-error handler then reads as an unreachable backend
+    and fails OPEN — so a non-positive GOVERNANCE_GATE_TIMEOUT override would turn
+    every governed action into a silent bypass, not just a slow one. An infinite or
+    NaN override is equally invalid (float('inf')/float('nan') both parse without
+    raising ValueError). All must fall back to the 5.0s default, same as a typo."""
+    import importlib
+
+    saved = {
+        "_GATE_ENABLED": governance_client._GATE_ENABLED,
+        "_BACKEND_URL": governance_client._BACKEND_URL,
+        "_INTERNAL_SECRET": governance_client._INTERNAL_SECRET,
+        "_TIMEOUT": governance_client._TIMEOUT,
+    }
+    monkeypatch.setenv("GOVERNANCE_GATE_TIMEOUT", bad_timeout)
     try:
         reloaded = importlib.reload(governance_client)
         assert reloaded._TIMEOUT == 5.0

@@ -70,12 +70,15 @@ def _init_db(conn: sqlite3.Connection) -> None:
         try:
             conn.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
             # Backfill the new neutral decision-time column for rows that predate it —
-            # otherwise every historical approved change reads as decided_at=NULL,
-            # which audit/reporting queries keyed on decided_at would misread as
-            # still-unresolved.
+            # otherwise every historical decided change reads as decided_at=NULL, which
+            # audit/reporting queries keyed on decided_at would misread as
+            # still-unresolved. Covers 'rejected' rows too: an earlier revision of
+            # reject_change() (before decided_at existed) stored the rejection
+            # timestamp in approved_at despite the misleading name — that's still the
+            # only record of when those legacy rejections happened.
             conn.execute(
                 "UPDATE cab_changes SET decided_at = approved_at "
-                "WHERE status = 'approved' AND decided_at IS NULL"
+                "WHERE status IN ('approved', 'rejected') AND decided_at IS NULL"
             )
         except sqlite3.OperationalError as exc:
             # Multiple Uvicorn workers can each observe the missing column and race

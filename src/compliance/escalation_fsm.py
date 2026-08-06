@@ -756,9 +756,17 @@ class EscalationFSM:
                 "(not found, or already resolved) — FSM state left unchanged"
             )
 
-        record = self._update_state(
-            record_id, expected_status, reason=f"CAB decision by {approver}"
+        # cubic P2: the reconciliation branch above didn't apply a new decision — the
+        # CAB row already carried `expected_status` before this call, most likely
+        # decided by a different approver on the original (crashed) attempt. Crediting
+        # the retry caller here would misattribute that decision in the durable
+        # transition-history audit trail.
+        reason = (
+            "Reconciled existing CAB decision"
+            if current_status == expected_status
+            else f"CAB decision by {approver}"
         )
+        record = self._update_state(record_id, expected_status, reason=reason)
         self._emit(f"governance.action.{expected_status}", record, EventSeverity.INFO)
         return record
 

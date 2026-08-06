@@ -263,6 +263,28 @@ def test_dequeue_task_skips_and_blocks_task_halted_after_enqueue(orch, fsm):
     assert "halted" in stored.error
 
 
+def test_dequeue_task_blocks_task_whose_escalation_record_vanished(orch, fsm):
+    """cubic P2: if the escalation record backing an already-queued task disappears
+    (RecordNotFoundError), dequeue_task() previously just `continue`d past it without
+    updating task.status — leaving it stuck at 'pending' forever while silently never
+    dispatching it again. A caller polling get_task() would see 'pending' and
+    reasonably believe the task is still queued and will eventually run."""
+    orch.register_agent(AgentConfig(id="agent-dq4", name="DQ4", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq4", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+    assert any(t[2] == task_id for t in orch._queue)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    with fsm_module._get_conn() as conn:
+        conn.execute("DELETE FROM escalation_records WHERE record_id = ?", (record_id,))
+        conn.commit()
+
+    assert orch.dequeue_task() is None
+    stored = orch.get_task(task_id)
+    assert stored.status == "blocked_governance"
+    assert "no longer found" in stored.error
+
+
 def test_reload_does_not_reenqueue_task_halted_before_restart(orch, fsm, tmp_path, monkeypatch):
     """cubic P1: restarting the orchestrator must not resurrect hard-stopped work —
     _load_tasks_from_db() must re-check the live FSM state, not just the stored

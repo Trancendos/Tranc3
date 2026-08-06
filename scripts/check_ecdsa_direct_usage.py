@@ -103,21 +103,44 @@ def _docstring_node_ids(tree: ast.Module) -> set[int]:
 
 
 def _joined_str_child_ids(tree: ast.Module) -> set[int]:
-    """id() of every Constant that's a literal part of an f-string (JoinedStr.values).
+    """id() of every Constant that's a literal part of an f-string, at any nesting
+    depth — not just JoinedStr.values' immediate Constant entries, but also a
+    Constant sitting inside a FormattedValue's .value (e.g. f"{'ES256'}", where the
+    interpolated expression is itself just a string literal, not a name/attribute).
 
     A literal-only f-string like f"ES256" is still walked as both the JoinedStr node
     and its child Constant('ES256') node — without this, the plain-Constant check
     below and the JoinedStr fold-check would each independently flag the same source
-    occurrence, reporting it twice in CI output. The fold-check already covers these
-    nodes (and reports the more informative "constant-folded" message), so the plain
-    Constant check skips anything in this set.
+    occurrence, reporting it twice in CI output. cubic P3: the original version only
+    recorded *direct* JoinedStr.values Constants, so a nested one like f"{'ES256'}"
+    was still double-reported — _fold_str_const() folds into FormattedValue.value
+    recursively, so this collector must mirror that same recursion to stay in sync.
+    The fold-check already covers everything gathered here (and reports the more
+    informative "constant-folded" message), so the plain Constant check skips
+    anything in this set.
     """
     ids: set[int] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.JoinedStr):
+
+    def _collect(node: ast.AST) -> None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            ids.add(id(node))
+        elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            _collect(node.left)
+            _collect(node.right)
+        elif isinstance(node, ast.JoinedStr):
             for value in node.values:
                 if isinstance(value, ast.Constant):
                     ids.add(id(value))
+                elif (
+                    isinstance(value, ast.FormattedValue)
+                    and value.format_spec is None
+                    and value.conversion in (-1, None)
+                ):
+                    _collect(value.value)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.JoinedStr):
+            _collect(node)
     return ids
 
 

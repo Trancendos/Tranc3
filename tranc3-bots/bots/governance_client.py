@@ -35,14 +35,42 @@ _INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
 
 try:
     _TIMEOUT = float(os.getenv("GOVERNANCE_GATE_TIMEOUT", "5.0"))
+    if not (0 < _TIMEOUT < float("inf")):
+        raise ValueError(f"timeout must be positive and finite, got {_TIMEOUT}")
 except (TypeError, ValueError):
-    # A typo'd or empty override must not prevent the whole package from
-    # importing, even when the gate is disabled — fall back to the default.
+    # A typo'd, empty, zero, negative, or infinite override must not prevent
+    # the whole package from importing (even when the gate is disabled), and
+    # must not silently disable enforcement either: httpx treats timeout<=0
+    # as "time out immediately", which this module's own network-error
+    # handler then reads as an unreachable backend and fails OPEN — a
+    # non-positive override would turn every governed action into a silent
+    # bypass. Fall back to the default in every invalid case.
     logger.warning(
-        "GOVERNANCE_GATE_TIMEOUT=%r is not a valid float — using the 5.0s default",
+        "GOVERNANCE_GATE_TIMEOUT=%r is not a valid positive, finite timeout — using "
+        "the 5.0s default",
         os.getenv("GOVERNANCE_GATE_TIMEOUT"),
     )
     _TIMEOUT = 5.0
+
+# Matches escalation_fsm.STATES in the main repo (docs/governance/AI-GOVERNANCE-
+# CONSTITUTION.md §3.2) — duplicated, not imported, because tranc3-bots is a
+# separately deployed package that cannot import src.compliance.escalation_fsm
+# (see module docstring above).
+_KNOWN_STATES = frozenset(
+    {
+        "draft",
+        "validated",
+        "rejected",
+        "policy_checked",
+        "approved",
+        "pending_cab",
+        "executing",
+        "completed",
+        "escalated",
+        "frozen",
+        "halted",
+    }
+)
 
 _BLOCKED_STATES = frozenset({"rejected", "frozen", "halted"})
 
@@ -119,9 +147,15 @@ async def check_action(bot_type: str, requestor: str) -> Optional[Dict[str, Any]
             f"object ({type(record).__name__}) — treated as a block, not an outage"
         )
 
-    if record.get("state") in _BLOCKED_STATES:
+    state = record.get("state")
+    if state not in _KNOWN_STATES:
+        raise GovernanceBlockedError(
+            f"Governance gate response for bot_type={bot_type!r} had an unknown or "
+            f"missing state ({state!r}) — treated as a block, not an outage"
+        )
+    if state in _BLOCKED_STATES:
         raise GovernanceBlockedError(
             f"Bot dispatch for {bot_type!r} blocked by governance "
-            f"({record.get('state')}): {record.get('reason') or ''}".strip()
+            f"({state}): {record.get('reason') or ''}".strip()
         )
     return record
