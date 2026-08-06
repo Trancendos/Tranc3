@@ -760,12 +760,14 @@ class EscalationFSM:
         # CAB row already carried `expected_status` before this call, most likely
         # decided by a different approver on the original (crashed) attempt. Crediting
         # the retry caller here would misattribute that decision in the durable
-        # transition-history audit trail.
-        reason = (
-            "Reconciled existing CAB decision"
-            if current_status == expected_status
-            else f"CAB decision by {approver}"
-        )
+        # transition-history audit trail. cubic P2 follow-up: naming *nobody* loses
+        # accountability too — pull the actual decider off the persisted CAB row
+        # instead of dropping the name entirely.
+        if current_status == expected_status:
+            actual_approver = cab_gate.get_approver(record.cab_change_id) or "unknown"
+            reason = f"Reconciled existing CAB decision by {actual_approver}"
+        else:
+            reason = f"CAB decision by {approver}"
         record = self._update_state(record_id, expected_status, reason=reason)
         self._emit(f"governance.action.{expected_status}", record, EventSeverity.INFO)
         return record

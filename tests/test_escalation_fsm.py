@@ -711,6 +711,20 @@ def test_resolve_cab_approve_actually_persists_in_cab_gate(fsm):
     assert check_after["approved"] is True
 
 
+def test_cab_gate_get_approver_returns_persisted_approver(fsm):
+    change_id = cab_gate_module.cab_gate.register_change(
+        change_type="test", description="test", requestor="agent-1", risk="low"
+    )
+    assert cab_gate_module.cab_gate.get_approver(change_id) is None
+
+    cab_gate_module.cab_gate.approve_change(change_id, approver="human-1")
+    assert cab_gate_module.cab_gate.get_approver(change_id) == "human-1"
+
+
+def test_cab_gate_get_approver_unknown_change_returns_none(fsm):
+    assert cab_gate_module.cab_gate.get_approver("CAB-DOESNOTEXIST") is None
+
+
 def test_resolve_cab_reject_actually_persists_in_cab_gate(fsm):
     """cubic P1, reject path: rejecting via the FSM must persist in cab_changes too,
     not just flip the FSM record to 'rejected' with nothing backing it."""
@@ -968,6 +982,9 @@ def test_resolve_cab_retry_after_partial_failure_reconciles_instead_of_wedging(f
     assert retried.state == "approved"
     assert "human-2" not in retried.reason
     assert "Reconciled" in retried.reason
+    # cubic P2 follow-up: the reconciled reason must still name who actually
+    # decided (human-1), not drop accountability entirely.
+    assert "human-1" in retried.reason
 
     with cab_gate_module._get_conn() as conn:
         row = conn.execute(

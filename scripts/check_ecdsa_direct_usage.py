@@ -118,6 +118,14 @@ def _joined_str_child_ids(tree: ast.Module) -> set[int]:
     The fold-check already covers everything gathered here (and reports the more
     informative "constant-folded" message), so the plain Constant check skips
     anything in this set.
+
+    cubic P1 follow-up: that recursion must only suppress a nested constant when
+    the *enclosing* JoinedStr actually folds to a concrete string as a whole — a
+    node like f"{'ES256' + suffix}" (suffix non-constant) never folds, so the
+    fold-check will never report it, and blindly suppressing 'ES256' here would
+    make the whole occurrence invisible to both checks. Only collect when
+    _fold_str_const(node) succeeds, so an unfoldable f-string's literal segments
+    stay visible to the plain-Constant check instead.
     """
     ids: set[int] = set()
 
@@ -128,6 +136,8 @@ def _joined_str_child_ids(tree: ast.Module) -> set[int]:
             _collect(node.left)
             _collect(node.right)
         elif isinstance(node, ast.JoinedStr):
+            if _fold_str_const(node) is None:
+                return
             for value in node.values:
                 if isinstance(value, ast.Constant):
                     ids.add(id(value))

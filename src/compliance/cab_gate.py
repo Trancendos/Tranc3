@@ -142,6 +142,18 @@ class CABGate:
             ).fetchone()
         return row["status"] if row is not None else None
 
+    def get_approver(self, change_id: str) -> Optional[str]:
+        """Return the `approver` column for a change, or None if it doesn't exist
+        or hasn't been decided yet. Used by EscalationFSM.resolve_cab()'s
+        reconciliation path to attribute an already-persisted decision to whoever
+        actually made it, not to a later retry caller."""
+        with _get_conn() as conn:
+            row = conn.execute(
+                "SELECT approver FROM cab_changes WHERE change_id = ?",
+                (change_id,),
+            ).fetchone()
+        return row["approver"] if row is not None else None
+
     def check_change(self, change_type: str, change_id: str, requestor: str) -> dict[str, Any]:
         """
         Return whether a registered change has CAB approval.

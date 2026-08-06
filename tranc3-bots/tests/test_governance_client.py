@@ -206,15 +206,17 @@ async def test_non_200_status_fails_closed_not_open(monkeypatch):
         await governance_client.check_action("generate", requestor="test")
 
 
-async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeypatch):
-    """cubic P1: a typo'd or empty GOVERNANCE_GATE_TIMEOUT must not crash the whole
-    package at import time, even when the gate is disabled.
+def _assert_bad_timeout_env_falls_back_to_default(monkeypatch, bad_value: str) -> None:
+    """Shared by the two tests below (cubic P3: was duplicated verbatim). Sets
+    GOVERNANCE_GATE_TIMEOUT=bad_value, reloads governance_client against the real
+    environment, and asserts _TIMEOUT falls back to 5.0 — then always restores the
+    module's pre-reload state.
 
-    cubic P3 follow-up: importlib.reload() re-executes the module against the *real*
-    environment, bypassing the autouse _reset_defaults fixture for the other three
-    module-level settings — save and restore them explicitly so an ambient
-    GOVERNANCE_GATE_ENABLED/TRANC3_ENGINE_URL/INTERNAL_SECRET in the real environment
-    can't leak into tests that run after this one.
+    importlib.reload() re-executes the module against the *real* environment,
+    bypassing the autouse _reset_defaults fixture for the other three module-level
+    settings — save and restore them explicitly so an ambient
+    GOVERNANCE_GATE_ENABLED/TRANC3_ENGINE_URL/INTERNAL_SECRET in the real
+    environment can't leak into tests that run after this one.
     """
     import importlib
 
@@ -224,7 +226,7 @@ async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeyp
         "_INTERNAL_SECRET": governance_client._INTERNAL_SECRET,
         "_TIMEOUT": governance_client._TIMEOUT,
     }
-    monkeypatch.setenv("GOVERNANCE_GATE_TIMEOUT", "not-a-number")
+    monkeypatch.setenv("GOVERNANCE_GATE_TIMEOUT", bad_value)
     try:
         reloaded = importlib.reload(governance_client)
         assert reloaded._TIMEOUT == 5.0
@@ -233,6 +235,12 @@ async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeyp
         importlib.reload(governance_client)
         for name, value in saved.items():
             monkeypatch.setattr(governance_client, name, value)
+
+
+async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeypatch):
+    """cubic P1: a typo'd or empty GOVERNANCE_GATE_TIMEOUT must not crash the whole
+    package at import time, even when the gate is disabled."""
+    _assert_bad_timeout_env_falls_back_to_default(monkeypatch, "not-a-number")
 
 
 @pytest.mark.parametrize("bad_timeout", ["0", "-1", "-5.5", "inf", "nan"])
@@ -245,20 +253,4 @@ async def test_non_positive_or_non_finite_governance_gate_timeout_falls_back_to_
     every governed action into a silent bypass, not just a slow one. An infinite or
     NaN override is equally invalid (float('inf')/float('nan') both parse without
     raising ValueError). All must fall back to the 5.0s default, same as a typo."""
-    import importlib
-
-    saved = {
-        "_GATE_ENABLED": governance_client._GATE_ENABLED,
-        "_BACKEND_URL": governance_client._BACKEND_URL,
-        "_INTERNAL_SECRET": governance_client._INTERNAL_SECRET,
-        "_TIMEOUT": governance_client._TIMEOUT,
-    }
-    monkeypatch.setenv("GOVERNANCE_GATE_TIMEOUT", bad_timeout)
-    try:
-        reloaded = importlib.reload(governance_client)
-        assert reloaded._TIMEOUT == 5.0
-    finally:
-        monkeypatch.delenv("GOVERNANCE_GATE_TIMEOUT", raising=False)
-        importlib.reload(governance_client)
-        for name, value in saved.items():
-            monkeypatch.setattr(governance_client, name, value)
+    _assert_bad_timeout_env_falls_back_to_default(monkeypatch, bad_timeout)
