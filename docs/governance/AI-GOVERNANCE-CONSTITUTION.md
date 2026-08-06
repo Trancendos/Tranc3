@@ -17,9 +17,9 @@
 > are designed to plug into Magna Carta's existing machinery (CAB Gate, Observatory, `ai_governance.py`),
 > not replace it.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.1.0 · **Status:** Phase 2 complete (terminology,
-schema, and a real escalation FSM with 11 seed charters — not yet called by any live agent/bot code
-path; see §3.5) · **Last verified:** 2026-08-06
+**Owner:** Platform Owner Trancendos · **Version:** 1.2.0 · **Status:** Phase 3 landed (terminology,
+schema, a real escalation FSM with 11 seed charters, and both Tier 4/5 dispatch call sites now
+actually route through it — see §3.5) · **Last verified:** 2026-08-06
 
 ---
 
@@ -110,10 +110,9 @@ routes it — this is real code, not aspiration. 11 seed charters ship today: on
 per `PrimeDomain` (§1.2's 9 domains), a Tier 4 fallback for unmapped entities, and one shared Tier 5
 Bot charter. See §3 for what the FSM actually does.
 
-**What's still not done**: no live platform code *calls* `EscalationFSM.submit()` yet — Tier 4/5
-entities don't route their actions through it today. The FSM exists, is tested, and is reachable via
-`/governance/*`, but nothing in `src/agents/orchestrator.py` or `tranc3-bots/bots/registry.py` calls
-it. Wiring an actual caller in is Phase 3.
+**Update 2026-08-06 (Phase 3):** both real dispatch call sites now route through it — see §3.5 for
+what actually landed and why `AgentOrchestrator` and `BotRegistry` needed different integration
+shapes.
 
 ---
 
@@ -194,13 +193,51 @@ now logs an `AIIncident`; `jsonschema` is a hard, pinned dependency (fails close
 unvalidated); and `scripts/check_ecdsa_direct_usage.py` uses `ast` instead of line regex, so it
 can't miss `ecdsa.*` submodule imports or false-positive on its own docstring.
 
-What's still explicitly not done, matching how Matrix Suites was built in stages (7.1 design → 7.2
-event emission → 7.3–7.5 further integration) rather than landing all at once: **no live platform
-code calls `EscalationFSM.submit()` yet.** The FSM works, is tested, and is reachable via HTTP, but
-`src/agents/orchestrator.py`'s `AgentOrchestrator` and `tranc3-bots/bots/registry.py`'s `BotRegistry`
-don't route dispatched tasks through it — so today it validates and would-enforce, but doesn't yet
-actually intercept a real Tier 4/5 action anywhere in the platform. Wiring that call site in, and
-expanding the 11 seed charters as real capability gaps are found, is Phase 3.
+**Phase 3 (2026-08-06): both real Tier 4/5 dispatch call sites now route through `submit()`.**
+Matching how Matrix Suites was built in stages (7.1 design → 7.2 event emission → 7.3–7.5 further
+integration) rather than landing everything at once, the two call sites needed different
+integration shapes because they have very different risk profiles:
+
+- **`src/agents/orchestrator.py`'s `AgentOrchestrator` (Tier 4, zero existing callers anywhere in
+  the repo — verified by grep before wiring, so this was a safe unconditional change).**
+  `AgentConfig` gained a `domain` field (`PrimeDomain` slug, default `"unassigned"`); `AgentTask`
+  gained `action` (the charter-matched verb; falls back to `description` if unset) and
+  `escalation_record_id`. `submit_task()` now calls `EscalationFSM.submit()` (tier=4) before
+  touching the priority queue: an `approved` outcome enqueues the task exactly as before;
+  `rejected`/`halted` leaves it un-queued with `status="blocked_governance"`;
+  `escalated`/`pending_cab` leaves it un-queued with `status="pending_governance"`, inspectable via
+  `get_task()` and resolvable through the existing `/governance/actions/{id}/cab-decision` route.
+  No exception is raised in the non-approved cases — the task record itself carries the outcome,
+  consistent with how `pending_cab` already works for CAB Gate elsewhere in this FSM. A new
+  `get_escalation_fsm()` singleton getter was added to `escalation_fsm.py` (mirroring
+  `get_charter_registry()`) for in-process callers to share.
+- **`tranc3-bots/bots/registry.py`'s `BotRegistry` (Tier 5, a separately deployed live service —
+  its own `pyproject.toml`, own Dockerfile that does not `COPY` the main repo's `src/` tree, no
+  `jsonschema` dependency, and zero existing `from src.` / `import src.` precedent anywhere in that
+  package).** A direct Python import of `src.compliance.escalation_fsm` was not a risk to manage
+  down, it was architecturally infeasible — the package that would import it doesn't ship the
+  module. Instead `bots/governance_client.py` calls the main backend's existing
+  `POST /governance/actions` HTTP route (the same route `/governance/*` already exposes for
+  exactly this kind of cross-service check), reusing `TRANC3_ENGINE_URL` — the env var this
+  package already uses to reach the main backend for inference-bot dispatch. The whole thing is
+  gated behind `GOVERNANCE_GATE_ENABLED` (mirroring `cab_gate.py`'s `CAB_GATE_ENABLED` precedent),
+  defaulting to off, so this can ship without unconditionally coupling every live bot dispatch to
+  the main backend's availability. When enabled: a network/timeout error talking to the governance
+  endpoint fails **open** (logged, dispatch proceeds) — that's an infrastructure availability
+  problem, not a policy signal — but an actual `rejected`/`halted` FSM decision fails **closed**
+  (`GovernanceBlockedError`, which `BotPool._execute()` already turns into a normal
+  `JobStatus.FAILED` result — no new error-handling path needed). `bot-stateless-utility.json`'s
+  `allowed_actions` was also corrected from a placeholder AeonMind-inspired verb list to the real
+  `BotType` enum values (`generate`, `embed`, `emotion`, `tokenize`, `consciousness`,
+  `personality`, `predict`, `code`, `memory`, `monitor`, `search`, `summarise`) — the previous list
+  couldn't have matched a real dispatch and would have escalated every single bot call as
+  ambiguous the moment the gate was ever turned on.
+
+What's still explicitly not done: `GOVERNANCE_GATE_ENABLED` has not been turned on for the deployed
+`tranc3-bots` service — that's a separate, deliberate rollout decision (it changes live bot-traffic
+behavior and needs a shared `INTERNAL_SECRET` provisioned between the two services first), not a
+code gap. Expanding the 11 seed charters as real capability gaps are found remains ongoing, ordinary
+maintenance rather than a phase of its own.
 
 ---
 

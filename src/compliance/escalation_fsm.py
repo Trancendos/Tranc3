@@ -253,6 +253,22 @@ def get_charter_registry() -> CharterRegistry:
         return _registry
 
 
+_fsm_lock = threading.Lock()
+_fsm: Optional["EscalationFSM"] = None
+
+
+def get_escalation_fsm() -> "EscalationFSM":
+    """Process-wide EscalationFSM singleton for in-process callers (e.g.
+    AgentOrchestrator) — Phase 3 wiring. Cross-service callers (e.g. tranc3-bots,
+    a separately deployed package) go through the HTTP /governance/actions route
+    instead; see governance_routes.py."""
+    global _fsm
+    with _fsm_lock:
+        if _fsm is None:
+            _fsm = EscalationFSM()
+        return _fsm
+
+
 # ---------------------------------------------------------------------------
 # Escalation records (SQLite-backed, mirrors cab_gate.py's storage pattern)
 # ---------------------------------------------------------------------------
