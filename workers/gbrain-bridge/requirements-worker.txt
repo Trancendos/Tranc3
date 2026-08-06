@@ -1,5 +1,24 @@
-fastapi==0.115.12
+# Exact-pinned — Do NOT use >= or ~=
+# starlette (pulled in transitively by fastapi) was pinned to a vulnerable
+# version; fixes PYSEC-2026-161/248/249/1941/1942/2280/2281 (CVE-2026-48710,
+# CVE-2026-54282, CVE-2026-54283, CVE-2025-54121, CVE-2025-62727,
+# CVE-2026-48817, CVE-2026-48818). python-jose and pyasn1 bumped to match the
+# fixed pins used elsewhere (e.g. workers/infinity-auth): python-jose 3.5.0
+# fixes CVE-2024-33663/CVE-2024-29370; pyasn1 0.6.4 fixes
+# CVE-2026-30922/CVE-2026-59884/CVE-2026-59885/CVE-2026-59886.
+# ecdsa is now explicit-pinned below (was previously unpinned/transitive via
+# python-jose's `Requires-Dist: ecdsa!=0.15`, violating this repo's
+# exact-pinning policy). 0.19.2 fixes PYSEC-2026-2467 (DoS via malformed DER
+# signature length field). CVE-2024-23342 (PYSEC-2026-1325, Minerva timing
+# attack) remains an accepted risk: python-ecdsa's pure-Python implementation
+# cannot be made constant-time and no upstream fix exists (fix_versions: []).
+# This worker never signs/verifies ES256/ES384/ES512 JWTs, so the vulnerable
+# ECDSA sign/ECDH code paths are never invoked. See SECURITY.md.
+fastapi==0.136.3
+starlette==1.3.1
 uvicorn==0.34.3
 pydantic==2.11.5
 httpx==0.28.1
-python-jose[cryptography]==3.4.0
+python-jose[cryptography]==3.5.0
+ecdsa==0.19.2
+pyasn1==0.6.4

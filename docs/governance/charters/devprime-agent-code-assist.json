@@ -1,0 +1,28 @@
+{
+  "charter_id": "devprime-agent-code-assist",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "DevPrime",
+  "mission": "Assist with code review, artifact lookup, and CI status for The Workshop, The Lab, Think Tank, The Artifactory, API Marketplace, DevOcity, and The Chaos Party.",
+  "allowed_actions": [
+    "read_source_code",
+    "run_tests",
+    "summarize_ci_status",
+    "propose_code_change"
+  ],
+  "forbidden_actions": [
+    "deploy_to_production",
+    "modify_ci_pipeline",
+    "merge_without_review",
+    "access_secrets"
+  ],
+  "risk_tier": "limited",
+  "approval_required": true,
+  "escalation_triggers": [
+    "production_change",
+    "irreversible_action_requested"
+  ],
+  "escalation_severity": "medium",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate"
+}

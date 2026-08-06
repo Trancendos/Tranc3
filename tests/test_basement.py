@@ -261,6 +261,9 @@ class TestBasementObservatoryEvent:
         event.target = "resource1"
         event.outcome = "success"
         event.service = "api"
+        event.severity = "info"
+        event.legal_hold = False
+        event.retention_class = None
         rec = self.basement.ingest_observatory_event(event)
         assert "user_action" in rec.content
         assert rec.source == ArchiveSource.OBSERVATORY
@@ -273,6 +276,8 @@ class TestBasementObservatoryEvent:
         event.outcome = "failure"
         event.service = "auth"
         event.severity = "critical"
+        event.legal_hold = False
+        event.retention_class = None
         rec = self.basement.ingest_observatory_event(event)
         assert rec.retained is True
         assert rec.source == ArchiveSource.SECURITY
@@ -285,8 +290,56 @@ class TestBasementObservatoryEvent:
         event.outcome = "success"
         event.service = "auth"
         event.severity = "security"
+        event.legal_hold = False
+        event.retention_class = None
         rec = self.basement.ingest_observatory_event(event)
         assert rec.retained is True
+
+    def test_ingest_observatory_event_legal_hold_info_severity_retained(self):
+        """cubic P1: an INFO-severity event forwarded here specifically because
+        it's legal_hold=True must not then be marked non-retained — otherwise
+        Basement's own eviction would defeat the whole point of forwarding it."""
+        event = MagicMock()
+        event.event_type = "routine.action"
+        event.actor = "user1"
+        event.target = "resource1"
+        event.outcome = "success"
+        event.service = "api"
+        event.severity = "info"
+        event.legal_hold = True
+        event.retention_class = None
+        rec = self.basement.ingest_observatory_event(event)
+        assert rec.retained is True
+        assert rec.source == ArchiveSource.SECURITY
+        assert rec.metadata["legal_hold"] is True
+
+    def test_ingest_observatory_event_retention_class_info_severity_retained(self):
+        event = MagicMock()
+        event.event_type = "incident.evidence_captured"
+        event.actor = "user1"
+        event.target = "resource1"
+        event.outcome = "success"
+        event.service = "api"
+        event.severity = "info"
+        event.legal_hold = False
+        event.retention_class = "forensic"
+        rec = self.basement.ingest_observatory_event(event)
+        assert rec.retained is True
+        assert rec.metadata["retention_class"] == "forensic"
+
+    def test_ingest_observatory_event_without_legal_hold_or_retention_class_not_retained(self):
+        event = MagicMock()
+        event.event_type = "routine.action"
+        event.actor = "user1"
+        event.target = "resource1"
+        event.outcome = "success"
+        event.service = "api"
+        event.severity = "info"
+        event.legal_hold = False
+        event.retention_class = None
+        rec = self.basement.ingest_observatory_event(event)
+        assert rec.retained is False
+        assert rec.source == ArchiveSource.OBSERVATORY
 
 
 # ── get_basement() singleton ────────────────────────────────────────

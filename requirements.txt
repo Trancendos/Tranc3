@@ -81,6 +81,20 @@ sse-starlette==3.4.4
 uvicorn==0.48.0
 structlog==26.1.0
 python-jose[cryptography]==3.5.0
+# ecdsa explicit pin (previously unpinned/transitive via python-jose's
+# `Requires-Dist: ecdsa!=0.15`, violating this repo's exact-pinning policy --
+# see SECURITY.md "Core Security Principles"). 0.19.2 fixes PYSEC-2026-2467
+# (DoS via malformed DER signature length field).
+ecdsa==0.19.2
+# Accepted risk (upstream-blocked, do not re-flag as unfixed): CVE-2024-23342
+# (PYSEC-2026-1325) is a Minerva timing side-channel in
+# ecdsa.SigningKey.sign_digest() / ECDH; unlike PYSEC-2026-2467 above, no
+# patched release exists for this one (fix_versions: [] in the advisory) --
+# the maintainers have stated side-channel attacks are out of scope and there
+# is no planned fix.
+# This app's JWT usage (src/auth/tokens.py, src/auth/facade.py) is HS256-only -- the
+# vulnerable ECDSA sign/ECDH code paths are never invoked. Re-check if ES256/ES384/ES512
+# support is ever added.
 email-validator==2.2.0
 # pyasn1: fixes CVE-2026-30922 (integer overflow / DoS in BER/DER parser)
 # transitive dep (via python-jose/rsa) — pinned explicitly to prevent downgrade
@@ -143,6 +157,13 @@ cachetools==7.1.4
 # nats-py: NATS JetStream client — high-throughput inter-worker messaging alternative to Redis
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
+
+# === JSON Schema Validation ===
+# jsonschema: validates docs/governance/charters/*.json against agent-charter.schema.json
+#   (src/compliance/escalation_fsm.py, AI Governance Constitution Phase 2). Previously an
+#   unpinned soft dependency (try/except ImportError) — CharterRegistry now fails closed if
+#   this is missing rather than silently skipping validation of governance permissions.
+jsonschema==4.25.1
 
 # === Redis Client ===
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
