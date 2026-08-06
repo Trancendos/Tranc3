@@ -357,10 +357,20 @@ def _get_conn() -> sqlite3.Connection:
         # "current state as of upgrade" transition per existing record so
         # list_transitions() doesn't silently report an empty history for them. This can't
         # recover the actual lost intermediate states, only the last known one.
+        #
+        # The WHERE NOT EXISTS guard makes this safe even if two connections both take
+        # this branch concurrently (both saw the table missing before either's CREATE
+        # TABLE committed) — SQLite serializes the two write transactions, and whichever
+        # runs second will see the first's already-backfilled rows and skip them, instead
+        # of duplicating every transition.
         conn.execute(
             """
             INSERT INTO escalation_transitions (record_id, state, reason, ts)
-            SELECT record_id, state, reason, updated_at FROM escalation_records
+            SELECT er.record_id, er.state, er.reason, er.updated_at
+            FROM escalation_records er
+            WHERE NOT EXISTS (
+                SELECT 1 FROM escalation_transitions et WHERE et.record_id = er.record_id
+            )
             """
         )
     # Supports list_transitions()'s WHERE record_id = ? ORDER BY id ASC without a full

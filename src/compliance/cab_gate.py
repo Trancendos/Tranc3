@@ -63,7 +63,15 @@ def _init_db(conn: sqlite3.Connection) -> None:
     """)
     existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(cab_changes)").fetchall()}
     if "decided_at" not in existing_cols:
-        conn.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
+        try:
+            conn.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
+        except sqlite3.OperationalError as exc:
+            # Multiple Uvicorn workers can each observe the missing column and race
+            # through this ALTER on first startup against a pre-existing DB file —
+            # the loser isn't wrong, it just lost the race, so tolerate exactly that
+            # outcome rather than crashing API startup.
+            if "duplicate column name: decided_at" not in str(exc):
+                raise
     conn.commit()
 
 

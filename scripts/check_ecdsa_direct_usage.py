@@ -112,7 +112,9 @@ def _scan_file(path: Path) -> tuple[list[str], list[str]]:
 
     try:
         tree = ast.parse(source, filename=rel)
-    except SyntaxError as exc:
+    except (SyntaxError, ValueError) as exc:
+        # ast.parse() raises ValueError (not SyntaxError) for source containing NUL
+        # bytes — still a parse failure, not a skip.
         return [], [f"{rel}: could not parse as Python ({exc}) — treated as a failure, not skipped"]
 
     violations: list[str] = []
