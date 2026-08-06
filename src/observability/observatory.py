@@ -67,6 +67,13 @@ class AuditEvent:
     outcome: str = "success"  # "success" | "failure" | "partial"
     metadata: Dict[str, Any] = field(default_factory=dict)
     session_id: Optional[str] = None
+    # Compliance retention tagging (e.g. governance/incident evidence): an optional
+    # named retention tier ("routine", "incident", "forensic", ...) a downstream
+    # archival consumer can key its own retention timer off, and an explicit
+    # legal-hold flag that must survive this event's eviction from the in-memory
+    # ring buffer — see the forwarding check in Observatory.record() below.
+    retention_class: Optional[str] = None
+    legal_hold: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize the audit event to a JSON-friendly dictionary."""
@@ -118,6 +125,8 @@ class Observatory:
         metadata: Optional[Dict[str, Any]] = None,
         actor_ip: Optional[str] = None,
         session_id: Optional[str] = None,
+        retention_class: Optional[str] = None,
+        legal_hold: bool = False,
     ) -> AuditEvent:
         """Record an audit event, persist it to the ring buffer, and notify subscribers."""
         event = AuditEvent(
@@ -132,6 +141,8 @@ class Observatory:
             outcome=outcome,
             metadata=metadata or {},
             session_id=session_id,
+            retention_class=retention_class,
+            legal_hold=legal_hold,
         )
         self._buffer.append(event)
         logger.debug(  # codeql[py/cleartext-logging]
@@ -143,8 +154,11 @@ class Observatory:
         )
         self._notify_subscribers(event)
 
-        # Forward SECURITY and CRITICAL events to The Basement for permanent archival
-        if severity in (EventSeverity.SECURITY, EventSeverity.CRITICAL):
+        # Forward SECURITY and CRITICAL events to The Basement for permanent archival —
+        # also forward anything explicitly flagged legal_hold regardless of severity,
+        # since this ring buffer silently evicts its oldest entries at buffer_size and
+        # a legal hold's whole point is that the record must survive that eviction.
+        if severity in (EventSeverity.SECURITY, EventSeverity.CRITICAL) or legal_hold:
             try:
                 from src.basement.archive import get_basement
 
