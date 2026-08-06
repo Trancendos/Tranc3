@@ -28,10 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-try:
-    import jsonschema
-except ImportError:  # pragma: no cover - jsonschema is a standard project dependency
-    jsonschema = None  # type: ignore[assignment]
+import jsonschema
 
 from Dimensional.sanitize import sanitize_for_log
 from src.compliance.ai_governance import IncidentSeverity, log_ai_incident
@@ -173,9 +170,7 @@ class CharterRegistry:
         self._charters: Dict[str, Charter] = {}
         self._by_tier_domain: Dict[tuple, List[Charter]] = {}
         self._schema = _load_schema()
-        self._validator = (
-            jsonschema.Draft202012Validator(self._schema) if jsonschema is not None else None
-        )
+        self._validator = jsonschema.Draft202012Validator(self._schema)
         self.reload()
 
     def reload(self) -> None:
@@ -197,13 +192,12 @@ class CharterRegistry:
                     f"Failed to read charter file {path.name}: {exc}"
                 ) from exc
 
-            if self._validator is not None:
-                errors = sorted(self._validator.iter_errors(data), key=lambda e: e.path)
-                if errors:
-                    first = errors[0]
-                    raise CharterValidationError(
-                        f"Charter {path.name} failed schema validation: {first.message}"
-                    )
+            errors = sorted(self._validator.iter_errors(data), key=lambda e: e.path)
+            if errors:
+                first = errors[0]
+                raise CharterValidationError(
+                    f"Charter {path.name} failed schema validation: {first.message}"
+                )
 
             charter = Charter.from_dict(data)
             if charter.charter_id in charters:
@@ -320,6 +314,21 @@ def _get_conn() -> sqlite3.Connection:
         )
         """
     )
+    # Append-only, mirroring src/roles/registry.py's role_assignment_history pattern —
+    # escalation_records above holds current state only (UPDATE overwrites it), so this
+    # table is the only place the full transition path survives a process restart or an
+    # Observatory ring-buffer rotation.
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS escalation_transitions (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            record_id  TEXT NOT NULL,
+            state      TEXT NOT NULL,
+            reason     TEXT,
+            ts         REAL NOT NULL
+        )
+        """
+    )
     conn.commit()
     return conn
 
@@ -379,6 +388,10 @@ class EscalationFSM:
                     record.reason,
                 ),
             )
+            conn.execute(
+                "INSERT INTO escalation_transitions (record_id, state, reason, ts) VALUES (?, ?, ?, ?)",
+                (record.record_id, record.state, record.reason, record.created_at),
+            )
             conn.commit()
 
     def _update_state(
@@ -394,6 +407,10 @@ class EscalationFSM:
                 """,
                 (state, now, reason, record_id),
             )
+            conn.execute(
+                "INSERT INTO escalation_transitions (record_id, state, reason, ts) VALUES (?, ?, ?, ?)",
+                (record_id, state, reason, now),
+            )
             conn.commit()
             row = conn.execute(
                 "SELECT * FROM escalation_records WHERE record_id = ?", (record_id,)
@@ -401,6 +418,17 @@ class EscalationFSM:
         if row is None:
             raise RecordNotFoundError(f"Unknown record_id: {record_id!r}")
         return _row_to_record(row)
+
+    def list_transitions(self, record_id: str) -> List[Dict[str, Any]]:
+        """The durable transition path for a record — survives process restarts and
+        Observatory ring-buffer rotation, unlike the current-state-only row above."""
+        with _get_conn() as conn:
+            rows = conn.execute(
+                "SELECT state, reason, ts FROM escalation_transitions "
+                "WHERE record_id = ? ORDER BY id ASC",
+                (record_id,),
+            ).fetchall()
+        return [{"state": r["state"], "reason": r["reason"], "ts": r["ts"]} for r in rows]
 
     def get(self, record_id: str) -> EscalationRecord:
         with _get_conn() as conn:
@@ -437,14 +465,53 @@ class EscalationFSM:
             },
         )
 
-    def _log_incident(self, charter: Charter, record: EscalationRecord, description: str) -> None:
-        severity = _SEVERITY_TO_INCIDENT.get(charter.escalation_severity, IncidentSeverity.MEDIUM)
+    def _log_incident(
+        self,
+        record: EscalationRecord,
+        description: str,
+        charter: Optional[Charter] = None,
+        severity: Optional[IncidentSeverity] = None,
+    ) -> None:
+        """Log an AIIncident for every escalation/freeze — cubic P2: these were previously
+        only logged from the confidence-threshold branch, so unknown-action escalations and
+        freezes were invisible to governance incident views. Falls back to charter_id
+        'unassigned' and IncidentSeverity.MEDIUM when no charter could be resolved."""
+        if severity is None:
+            severity = (
+                _SEVERITY_TO_INCIDENT.get(charter.escalation_severity, IncidentSeverity.MEDIUM)
+                if charter is not None
+                else IncidentSeverity.MEDIUM
+            )
         log_ai_incident(
-            model_id=charter.charter_id,
+            model_id=charter.charter_id if charter is not None else "unassigned",
             description=description,
             severity=severity,
             reporter=record.requestor,
         )
+
+    def _observatory_severity(self, charter: Optional[Charter]) -> EventSeverity:
+        """Map a charter's escalation_severity onto the Observatory's EventSeverity scale.
+
+        cubic P2: escalations were previously always emitted as EventSeverity.WARNING
+        regardless of the charter's own severity, so a 'critical'-severity charter's
+        escalation could miss Observatory's CRITICAL archival path."""
+        if charter is None:
+            return EventSeverity.WARNING
+        return _SEVERITY_TO_OBSERVATORY.get(charter.escalation_severity, EventSeverity.WARNING)
+
+    # Signals an ActionRequest.context can carry that map 1:1 onto charter escalation_triggers
+    # (excluding confidence_below_threshold, which has its own dedicated numeric check above).
+    _CONTEXT_TRIGGERS = frozenset(
+        {
+            "policy_conflict",
+            "sensitive_data_detected",
+            "irreversible_action_requested",
+            "external_communication",
+            "production_change",
+            "prompt_injection_suspected",
+            "audit_gap",
+        }
+    )
 
     # -- the entry point -----------------------------------------------------
 
@@ -492,6 +559,7 @@ class EscalationFSM:
             )
             self._insert(record)
             self._emit("governance.action.escalated", record, EventSeverity.WARNING)
+            self._log_incident(record, f"Unassigned action {request.action!r} escalated")
             return record
 
         record = EscalationRecord(
@@ -518,9 +586,34 @@ class EscalationFSM:
                 "escalated",
                 reason=f"confidence {request.confidence} below charter threshold {threshold}",
             )
-            self._emit("governance.action.escalated", record, EventSeverity.WARNING)
+            self._emit("governance.action.escalated", record, self._observatory_severity(charter))
             self._log_incident(
-                charter, record, f"Low-confidence action {request.action!r} escalated"
+                record, f"Low-confidence action {request.action!r} escalated", charter=charter
+            )
+            return record
+
+        # cubic P1: configured safety signals (sensitive_data_detected,
+        # prompt_injection_suspected, etc.) previously had no effect — a charter could
+        # declare them in escalation_triggers and a caller could set them in context, and
+        # the action would still sail through to approved/pending_cab. Evaluate every
+        # trigger the charter actually declares against the caller-supplied context before
+        # policy_checked, same as the confidence check above.
+        active_triggers = [
+            t
+            for t in charter.escalation_triggers
+            if t in self._CONTEXT_TRIGGERS and request.context.get(t)
+        ]
+        if active_triggers:
+            record = self._update_state(
+                record_id,
+                "escalated",
+                reason=f"context signal(s) triggered: {', '.join(sorted(active_triggers))}",
+            )
+            self._emit("governance.action.escalated", record, self._observatory_severity(charter))
+            self._log_incident(
+                record,
+                f"Action {request.action!r} escalated on signal(s): {', '.join(sorted(active_triggers))}",
+                charter=charter,
             )
             return record
 
@@ -550,12 +643,33 @@ class EscalationFSM:
         return record
 
     def resolve_cab(self, record_id: str, approver: str, approved: bool) -> EscalationRecord:
-        """Apply a CAB Gate decision (approve_change already called by the caller) to a record."""
+        """Apply a CAB Gate decision to a record.
+
+        cubic P1: this previously trusted the caller's `approved` boolean directly and
+        flipped FSM state without ever touching cab_gate's own `cab_changes` row — so a
+        record could read 'approved' here while its underlying CAB change stayed 'pending'
+        forever, letting a caller bypass MC-RULE-007 and leaving the two governance stores
+        (escalation_records, cab_changes) permanently diverged. Now calls into CABGate for
+        both outcomes and only transitions FSM state if that persisted decision succeeds.
+        """
         record = self.get(record_id)
         if record.state != "pending_cab":
             raise EscalationError(
                 f"Record {record_id!r} is not pending_cab (state={record.state!r})"
             )
+        if not record.cab_change_id:
+            raise EscalationError(f"Record {record_id!r} has no associated cab_change_id")
+
+        if approved:
+            applied = cab_gate.approve_change(record.cab_change_id, approver)
+        else:
+            applied = cab_gate.reject_change(record.cab_change_id, approver)
+        if not applied:
+            raise EscalationError(
+                f"CAB Gate decision for change {record.cab_change_id!r} was not applied "
+                "(not found, or already resolved) — FSM state left unchanged"
+            )
+
         new_state = "approved" if approved else "rejected"
         record = self._update_state(record_id, new_state, reason=f"CAB decision by {approver}")
         self._emit(f"governance.action.{new_state}", record, EventSeverity.INFO)
@@ -564,6 +678,12 @@ class EscalationFSM:
     def freeze(self, record_id: str, reason: str) -> EscalationRecord:
         record = self._update_state(record_id, "frozen", reason=reason)
         self._emit("governance.action.frozen", record, EventSeverity.CRITICAL)
+        charter: Optional[Charter] = None
+        try:
+            charter = self._registry.get(record.charter_id)
+        except CharterNotFoundError:
+            pass
+        self._log_incident(record, f"Action {record.action!r} frozen: {reason}", charter=charter)
         return record
 
     def halt(self, record_id: str, reason: str) -> EscalationRecord:

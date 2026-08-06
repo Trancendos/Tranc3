@@ -158,6 +158,13 @@ cachetools==7.1.4
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
 
+# === JSON Schema Validation ===
+# jsonschema: validates docs/governance/charters/*.json against agent-charter.schema.json
+#   (src/compliance/escalation_fsm.py, AI Governance Constitution Phase 2). Previously an
+#   unpinned soft dependency (try/except ImportError) — CharterRegistry now fails closed if
+#   this is missing rather than silently skipping validation of governance permissions.
+jsonschema==4.25.1
+
 # === Redis Client ===
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
 #   src/security/security_framework.py, src/mcp/tools.py for caching, session

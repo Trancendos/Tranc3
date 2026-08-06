@@ -18,6 +18,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import src.compliance.ai_governance as ai_governance_module
+import src.compliance.cab_gate as cab_gate_module
 import src.compliance.escalation_fsm as fsm_module
 from src.compliance.escalation_fsm import (
     ActionForbiddenError,
@@ -29,6 +31,7 @@ from src.compliance.escalation_fsm import (
     EscalationFSM,
     RecordNotFoundError,
 )
+from src.observability.observatory import EventSeverity, Observatory
 
 ALLOWED_ONLY = {
     "charter_id": "test-allowed-only",
@@ -89,11 +92,28 @@ CONFIDENCE_GATED = {
 }
 
 
+SAFETY_GATED = {
+    "charter_id": "test-safety-gated",
+    "version": "1.0.0",
+    "tier": 4,
+    "domain": "SecPrime",
+    "mission": "Test charter with critical severity and non-confidence escalation triggers.",
+    "allowed_actions": ["read_threat_intel"],
+    "forbidden_actions": ["quarantine_service"],
+    "risk_tier": "high",
+    "approval_required": False,
+    "escalation_triggers": ["sensitive_data_detected", "prompt_injection_suspected"],
+    "escalation_severity": "critical",
+    "audit_sink": "observatory",
+    "fallback_behavior": "stop_and_escalate",
+}
+
+
 @pytest.fixture
 def charters_dir(tmp_path):
     d = tmp_path / "charters"
     d.mkdir()
-    for charter in (ALLOWED_ONLY, APPROVAL_REQUIRED, CONFIDENCE_GATED):
+    for charter in (ALLOWED_ONLY, APPROVAL_REQUIRED, CONFIDENCE_GATED, SAFETY_GATED):
         with open(d / f"{charter['charter_id']}.json", "w", encoding="utf-8") as f:
             json.dump(charter, f)
     return d
@@ -107,6 +127,13 @@ def registry(charters_dir):
 @pytest.fixture
 def fsm(registry, tmp_path, monkeypatch):
     monkeypatch.setattr(fsm_module, "_DB_PATH", tmp_path / "escalation_fsm.db")
+    monkeypatch.setattr(cab_gate_module, "_DB_PATH", tmp_path / "cab_changes.db")
+    monkeypatch.setattr(ai_governance_module, "_DB_PATH", tmp_path / "ai_governance.db")
+    # cab_gate.cab_gate is a module-level singleton constructed at import time — its
+    # __init__ already ran _init_db() against whatever _DB_PATH was active then, so the
+    # freshly-monkeypatched tmp_path DB needs the cab_changes table created explicitly.
+    with cab_gate_module._get_conn() as conn:
+        cab_gate_module._init_db(conn)
     return EscalationFSM(registry)
 
 
@@ -148,7 +175,7 @@ def unauthenticated_client(registry, fsm, monkeypatch):
 
 
 def test_registry_loads_all_fixture_charters(registry):
-    assert len(registry.list_all()) == 3
+    assert len(registry.list_all()) == 4
 
 
 def test_registry_get_unknown_charter_raises(registry):
@@ -491,3 +518,268 @@ def test_route_get_does_not_require_internal_secret(unauthenticated_client):
     """GET routes are read-only and unauthenticated, same as matrix_suites_routes."""
     resp = unauthenticated_client.get("/governance/charters")
     assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for cubic's findings on commit a757f1dd
+# ---------------------------------------------------------------------------
+
+
+def test_context_safety_trigger_escalates(fsm):
+    """cubic P1: sensitive_data_detected/prompt_injection_suspected previously had no
+    effect on FSM state even when the charter declared them as escalation_triggers."""
+    record = fsm.submit(
+        ActionRequest(
+            tier=4,
+            domain="SecPrime",
+            action="read_threat_intel",
+            requestor="agent-sec",
+            context={"sensitive_data_detected": True},
+        )
+    )
+    assert record.state == "escalated"
+    assert "sensitive_data_detected" in record.reason
+
+
+def test_context_safety_trigger_absent_does_not_escalate(fsm):
+    record = fsm.submit(
+        ActionRequest(
+            tier=4,
+            domain="SecPrime",
+            action="read_threat_intel",
+            requestor="agent-sec",
+            context={},
+        )
+    )
+    assert record.state == "approved"
+
+
+def test_context_trigger_not_declared_by_charter_is_ignored(fsm):
+    """Only triggers the charter actually declares in escalation_triggers should fire —
+    a context flag for an undeclared trigger must not affect the outcome."""
+    record = fsm.submit(
+        ActionRequest(
+            tier=4,
+            domain="ArchPrime",
+            action="read_thing",
+            requestor="agent-1",
+            context={"production_change": True},  # ALLOWED_ONLY doesn't declare this trigger
+        )
+    )
+    assert record.state == "approved"
+
+
+def test_escalation_severity_maps_to_observatory_critical(fsm, monkeypatch):
+    """cubic P2: a critical-severity charter's escalation was previously always emitted
+    as EventSeverity.WARNING, missing Observatory's CRITICAL archival path."""
+    captured = []
+    original_record = Observatory.record
+
+    def spy_record(self, event_type, *, severity=None, **kwargs):
+        captured.append((event_type, severity))
+        return original_record(self, event_type, severity=severity, **kwargs)
+
+    monkeypatch.setattr(Observatory, "record", spy_record)
+
+    record = fsm.submit(
+        ActionRequest(
+            tier=4,
+            domain="SecPrime",
+            action="read_threat_intel",
+            requestor="agent-sec",
+            context={"sensitive_data_detected": True},
+        )
+    )
+    assert record.state == "escalated"
+    escalated_events = [c for c in captured if c[0] == "governance.action.escalated"]
+    assert escalated_events
+    assert escalated_events[-1][1] == EventSeverity.CRITICAL
+
+
+def test_unassigned_escalation_logs_incident(fsm, monkeypatch):
+    """cubic P2: unknown-action escalations previously never logged an AIIncident,
+    making them invisible to governance incident views."""
+    logged = []
+    monkeypatch.setattr(
+        fsm_module,
+        "log_ai_incident",
+        lambda **kw: logged.append(kw) or ai_governance_module.AIIncident(**kw),
+    )
+    record = fsm.submit(
+        ActionRequest(tier=4, domain="ArchPrime", action="totally_unknown_action", requestor="a")
+    )
+    assert record.state == "escalated"
+    assert len(logged) == 1
+    assert logged[0]["model_id"] == "unassigned"
+
+
+def test_freeze_logs_incident(fsm, monkeypatch):
+    """cubic P2: freeze() previously never logged an AIIncident."""
+    logged = []
+    monkeypatch.setattr(
+        fsm_module,
+        "log_ai_incident",
+        lambda **kw: logged.append(kw) or ai_governance_module.AIIncident(**kw),
+    )
+    record = fsm.submit(
+        ActionRequest(tier=4, domain="ArchPrime", action="read_thing", requestor="agent-1")
+    )
+    fsm.freeze(record.record_id, reason="suspicious pattern")
+    assert len(logged) == 1
+    assert logged[0]["model_id"] == "test-allowed-only"
+
+
+def test_transition_history_records_every_state(fsm):
+    """cubic P2: escalation_records only stores current state (UPDATE overwrites it) —
+    escalation_transitions must retain the full path."""
+    record = fsm.submit(
+        ActionRequest(tier=3, domain="CommPrime", action="transfer_funds", requestor="agent-2")
+    )
+    fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
+    fsm.complete(record.record_id)
+
+    transitions = fsm.list_transitions(record.record_id)
+    states = [t["state"] for t in transitions]
+    assert states == [
+        "validated",
+        "policy_checked",
+        "pending_cab",
+        "approved",
+        "executing",
+        "completed",
+    ]
+
+
+def test_transition_history_survives_new_fsm_instance(registry, tmp_path, monkeypatch):
+    """The whole point of a durable table: a fresh EscalationFSM (simulating a process
+    restart) reading the same DB file must still see the full history."""
+    monkeypatch.setattr(fsm_module, "_DB_PATH", tmp_path / "escalation_fsm.db")
+    monkeypatch.setattr(cab_gate_module, "_DB_PATH", tmp_path / "cab_changes.db")
+    monkeypatch.setattr(ai_governance_module, "_DB_PATH", tmp_path / "ai_governance.db")
+
+    fsm1 = EscalationFSM(registry)
+    record = fsm1.submit(
+        ActionRequest(tier=4, domain="ArchPrime", action="read_thing", requestor="agent-1")
+    )
+
+    fsm2 = EscalationFSM(registry)
+    transitions = fsm2.list_transitions(record.record_id)
+    assert [t["state"] for t in transitions] == ["validated", "policy_checked", "approved"]
+
+
+def test_resolve_cab_approve_actually_persists_in_cab_gate(fsm):
+    """cubic P1: resolve_cab previously flipped FSM state to 'approved' without ever
+    calling cab_gate.approve_change() — the underlying cab_changes row stayed 'pending'
+    forever, letting a caller bypass MC-RULE-007 and leaving the two stores diverged."""
+    record = fsm.submit(
+        ActionRequest(tier=3, domain="CommPrime", action="transfer_funds", requestor="agent-2")
+    )
+    change_id = record.cab_change_id
+    assert change_id is not None
+
+    check_before = cab_gate_module.cab_gate.check_change(
+        "governance.CommPrime.transfer_funds", change_id, "agent-2"
+    )
+    assert check_before["approved"] is False
+
+    fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
+
+    check_after = cab_gate_module.cab_gate.check_change(
+        "governance.CommPrime.transfer_funds", change_id, "agent-2"
+    )
+    assert check_after["approved"] is True
+
+
+def test_resolve_cab_reject_actually_persists_in_cab_gate(fsm):
+    """cubic P1, reject path: rejecting via the FSM must persist in cab_changes too,
+    not just flip the FSM record to 'rejected' with nothing backing it."""
+    record = fsm.submit(
+        ActionRequest(tier=3, domain="CommPrime", action="transfer_funds", requestor="agent-2")
+    )
+    change_id = record.cab_change_id
+
+    resolved = fsm.resolve_cab(record.record_id, approver="human-1", approved=False)
+    assert resolved.state == "rejected"
+
+    with cab_gate_module._get_conn() as conn:
+        row = conn.execute(
+            "SELECT status, approver FROM cab_changes WHERE change_id = ?", (change_id,)
+        ).fetchone()
+    assert row["status"] == "rejected"
+    assert row["approver"] == "human-1"
+
+
+def test_resolve_cab_without_cab_change_id_raises(fsm, monkeypatch):
+    """Defensive: a pending_cab record with no cab_change_id (shouldn't happen via
+    submit(), but guards against future callers constructing records another way)
+    must not silently succeed."""
+    record = fsm.submit(
+        ActionRequest(tier=3, domain="CommPrime", action="transfer_funds", requestor="agent-2")
+    )
+    with fsm_module._get_conn() as conn:
+        conn.execute(
+            "UPDATE escalation_records SET cab_change_id = NULL WHERE record_id = ?",
+            (record.record_id,),
+        )
+        conn.commit()
+    with pytest.raises(EscalationError, match="no associated cab_change_id"):
+        fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
+
+
+def test_ecdsa_check_catches_submodule_import(tmp_path):
+    """cubic P1: `from ecdsa.keys import SigningKey` previously bypassed the regex,
+    which only matched a bare `from ecdsa import ...`."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "bad.py").write_text("from ecdsa.keys import SigningKey\n")
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "bad.py")
+    assert violations
+    assert not errors
+
+
+def test_ecdsa_check_ignores_comment_and_docstring(tmp_path):
+    """cubic P2: the old line-based regex flagged ES256 mentioned in a comment or
+    docstring (it flagged this very script's own module docstring)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "good.py").write_text(
+        "# mentions ES256 in a comment\n"
+        "def f():\n"
+        '    """Docstring mentioning ES256 for documentation only."""\n'
+        "    return 1\n"
+    )
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "good.py")
+    assert not violations
+    assert not errors
+
+
+def test_ecdsa_check_fails_closed_on_unparseable_file(tmp_path):
+    """cubic P2: an unreadable/unparseable file was previously silently skipped
+    (treated as clean); it must now be reported as an error instead."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "broken.py").write_text("def broken(:\n")
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "broken.py")
+    assert not violations
+    assert errors

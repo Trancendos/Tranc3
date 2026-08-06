@@ -186,6 +186,40 @@ class CABGate:
             )
         return updated
 
+    def reject_change(self, change_id: str, approver: str) -> bool:
+        """Reject a change request. Returns True on success, False if not found.
+
+        Mirrors approve_change() — 'approver' is the deciding reviewer either way, not
+        implying approval. Persists the rejection (status='rejected') so callers (e.g.
+        src/compliance/escalation_fsm.py's EscalationFSM.resolve_cab()) can't report a
+        decision here without it surviving in cab_changes.
+        """
+        now = time.time()
+        with _get_conn() as conn:
+            cur = conn.execute(
+                """
+                UPDATE cab_changes
+                SET status = 'rejected', approver = ?, approved_at = ?
+                WHERE change_id = ? AND status = 'pending'
+                """,
+                (approver, now, change_id),
+            )
+            conn.commit()
+            updated = cur.rowcount > 0
+
+        if updated:
+            logger.info(
+                "CAB change rejected | change_id=%s | approver=%s",
+                change_id,
+                approver,
+            )
+        else:
+            logger.warning(
+                "CAB reject failed — not found or already resolved | change_id=%s",
+                change_id,
+            )
+        return updated
+
     # ── Internal ───────────────────────────────────────────────────────────────
 
     def _cab_required_for(self, change_type: str, risk: str) -> bool:

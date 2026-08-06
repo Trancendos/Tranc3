@@ -111,6 +111,18 @@ def get_action(record_id: str):
     return record.to_dict()
 
 
+@router.get("/actions/{record_id}/transitions")
+def get_action_transitions(record_id: str):
+    """The durable transition history for a record (escalation_transitions table) —
+    survives a process restart or an Observatory ring-buffer rotation, unlike the
+    current-state-only row GET /actions/{record_id} returns."""
+    try:
+        _fsm.get(record_id)
+    except RecordNotFoundError:
+        return JSONResponse({"error": "unknown_record"}, status_code=404)
+    return _fsm.list_transitions(record_id)
+
+
 @router.post("/actions")
 def submit_action(body: SubmitActionRequest, x_internal_secret: Optional[str] = Header(None)):
     """Resolve an action request against its charter. See EscalationFSM.submit()."""
