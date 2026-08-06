@@ -312,11 +312,11 @@ def test_emit_expiry_events_skips_active_and_revoked():
     assert events == []
 
 
-def test_emit_expiry_events_rolls_back_claim_on_emit_failure(monkeypatch):
+def test_emit_expiry_events_emit_failure_leaves_expiry_notified_false(monkeypatch):
     """cubic P2: the original version committed expiry_notified=1 before calling
     _emit() — an Observatory failure mid-scan permanently lost that waiver's
-    audit event with no way to retry. The claim must roll back on failure so a
-    later scan picks it up again."""
+    audit event with no way to retry. A failed emit must leave expiry_notified
+    false, not true."""
     waiver = register_waiver(
         subject="test",
         justification="test",
@@ -325,6 +325,30 @@ def test_emit_expiry_events_rolls_back_claim_on_emit_failure(monkeypatch):
         effective_from=time.time() - 7200,
         expires_on=time.time() - 3600,
     )
+
+    def _failing_emit(*_args, **_kwargs):
+        raise RuntimeError("observatory unavailable")
+
+    monkeypatch.setattr(waivers_module, "_emit", _failing_emit)
+    first = emit_expiry_events()
+    assert first == []
+    assert get_waiver(waiver.waiver_id).expiry_notified is False
+
+
+def test_emit_expiry_events_retries_after_emit_failure_once_lease_expires(monkeypatch):
+    """cubic P1 follow-up: a plain rollback-on-exception only recovers from a
+    Python exception, not from the *process* dying between the claim commit and
+    _emit() — so the claim is a time-boxed lease, not a one-way flag. Shrinks the
+    lease to effectively zero so this test doesn't need to sleep for real."""
+    waiver = register_waiver(
+        subject="test",
+        justification="test",
+        requestor="agent-1",
+        approver="human-1",
+        effective_from=time.time() - 7200,
+        expires_on=time.time() - 3600,
+    )
+    monkeypatch.setattr(waivers_module, "_EXPIRY_CLAIM_LEASE_SECONDS", -1.0)
 
     original_emit = waivers_module._emit
 
@@ -336,12 +360,57 @@ def test_emit_expiry_events_rolls_back_claim_on_emit_failure(monkeypatch):
     assert first == []
     assert get_waiver(waiver.waiver_id).expiry_notified is False
 
-    # cubic: undo() would also revert the autouse _isolated_db fixture's
-    # _DB_PATH patch (same monkeypatch instance, function-scoped) — restore
-    # only _emit specifically, not the whole monkeypatch session.
     monkeypatch.setattr(waivers_module, "_emit", original_emit)
     second = emit_expiry_events()
     assert len(second) == 1
+    assert get_waiver(waiver.waiver_id).expiry_notified is True
+
+
+def test_emit_expiry_events_skips_waiver_with_fresh_lease_held_by_another_worker():
+    """cubic P1 follow-up: while another worker's claim lease is still fresh
+    (simulating that worker mid-flight, between its own claim and its own
+    _emit() call), this scan must not also claim and emit the same waiver."""
+    waiver = register_waiver(
+        subject="test",
+        justification="test",
+        requestor="agent-1",
+        approver="human-1",
+        effective_from=time.time() - 7200,
+        expires_on=time.time() - 3600,
+    )
+    with waivers_module._get_conn() as conn:
+        conn.execute(
+            "UPDATE waivers SET expiry_claim_expires_at = ? WHERE waiver_id = ?",
+            (time.time() + 3600, waiver.waiver_id),
+        )
+        conn.commit()
+
+    assert emit_expiry_events() == []
+    assert get_waiver(waiver.waiver_id).expiry_notified is False
+
+
+def test_emit_expiry_events_reclaims_stale_lease():
+    """A lease left over from a worker that crashed before completing its own
+    claim (expiry_claim_expires_at in the past, expiry_notified still false)
+    must be reclaimable by the next scan — this is the crash-recovery path the
+    lease exists for."""
+    waiver = register_waiver(
+        subject="test",
+        justification="test",
+        requestor="agent-1",
+        approver="human-1",
+        effective_from=time.time() - 7200,
+        expires_on=time.time() - 3600,
+    )
+    with waivers_module._get_conn() as conn:
+        conn.execute(
+            "UPDATE waivers SET expiry_claim_expires_at = ? WHERE waiver_id = ?",
+            (time.time() - 30, waiver.waiver_id),
+        )
+        conn.commit()
+
+    events = emit_expiry_events()
+    assert len(events) == 1
     assert get_waiver(waiver.waiver_id).expiry_notified is True
 
 
@@ -367,12 +436,19 @@ def test_emit_expiry_events_claim_prevents_concurrent_duplicate(monkeypatch):
         # own per-row claim UPDATE — inject the "other worker" race right before
         # that claim executes, so this call's UPDATE genuinely loses the race.
         if call_count["n"] == 2:
+            # sqlite3.Connection's context-manager protocol only commits/rolls
+            # back the transaction on exit — it does NOT close the connection,
+            # so an explicit close() is still needed to actually release the
+            # file handle (cubic P3).
             other = real_get_conn()
-            other.execute(
-                "UPDATE waivers SET expiry_notified = 1 WHERE waiver_id = ?",
-                (waiver.waiver_id,),
-            )
-            other.commit()
+            try:
+                other.execute(
+                    "UPDATE waivers SET expiry_notified = 1 WHERE waiver_id = ?",
+                    (waiver.waiver_id,),
+                )
+                other.commit()
+            finally:
+                other.close()
         return real_get_conn()
 
     monkeypatch.setattr(waivers_module, "_get_conn", _racing_get_conn)

@@ -83,7 +83,8 @@ def _init_db(conn: sqlite3.Connection) -> None:
             revoked_at             REAL,
             revoked_by             TEXT,
             revoke_reason          TEXT,
-            expiry_notified        INTEGER NOT NULL DEFAULT 0
+            expiry_notified        INTEGER NOT NULL DEFAULT 0,
+            expiry_claim_expires_at REAL
         )
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_waivers_expires_on ON waivers (expires_on)")
@@ -324,6 +325,9 @@ def revoke_waiver(waiver_id: str, revoked_by: str, reason: str) -> Waiver:
     return waiver
 
 
+_EXPIRY_CLAIM_LEASE_SECONDS = 60.0
+
+
 def emit_expiry_events() -> List[AuditEvent]:
     """Scan for waivers that have crossed expires_on and haven't been notified
     yet, emit one governance.waiver.expired event per waiver, and mark them
@@ -332,48 +336,68 @@ def emit_expiry_events() -> List[AuditEvent]:
     Intended to be called on a cadence (e.g. by ChronosSphere), same pattern as
     matrix_suites.emit_overdue_events().
 
-    cubic P1/P2: the original version SELECTed candidates, bulk-UPDATEd them all
-    notified, then emitted — two concurrent callers could both SELECT the same
-    row before either UPDATE committed (duplicate emission), and a mid-loop
-    Observatory failure left already-notified rows with no event ever recorded
-    (permanent loss). Each row is now claimed individually via a conditional
-    UPDATE ... WHERE expiry_notified = 0 whose rowcount proves this call is the
-    sole winner for that row, and a failed _emit() rolls the claim back so the
-    row stays eligible for the next scan instead of being silently dropped.
+    cubic P1/P2/P1: three rounds on this function's atomicity —
+    1. The original version SELECTed candidates, bulk-UPDATEd them all notified,
+       then emitted: two concurrent callers could both SELECT the same row
+       before either UPDATE committed (duplicate emission).
+    2. Claiming each row individually via `UPDATE ... WHERE expiry_notified = 0`
+       (rowcount proving sole ownership) fixed the duplicate-emission race, and
+       rolling the claim back in a `except Exception` handler recovered from a
+       *Python* exception during _emit() — but not from the *process* exiting
+       between the claim commit and the _emit() call (a crash, not a raise):
+       expiry_notified=1 would survive in SQLite with no event ever recorded,
+       permanently.
+    3. The claim is now a time-boxed lease (expiry_claim_expires_at), not a
+       one-way flag: a row is only truly done once expiry_notified is set,
+       which only happens *after* _emit() returns successfully. A crash between
+       claiming and emitting leaves expiry_notified=0 with a lease that expires
+       within _EXPIRY_CLAIM_LEASE_SECONDS, so the next scan reclaims it instead
+       of leaking it forever — closing the gap a plain exception handler can't
+       reach, without reintroducing the original concurrent-duplicate race.
     """
     now = time.time()
     with _get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM waivers WHERE expires_on <= ? AND revoked_at IS NULL "
-            "AND expiry_notified = 0",
-            (now,),
+            "AND expiry_notified = 0 "
+            "AND (expiry_claim_expires_at IS NULL OR expiry_claim_expires_at < ?)",
+            (now, now),
         ).fetchall()
     candidates = [_row_to_waiver(r) for r in rows]
 
     events = []
     for waiver in candidates:
+        claim_now = time.time()
+        lease_until = claim_now + _EXPIRY_CLAIM_LEASE_SECONDS
         with _get_conn() as conn:
             cur = conn.execute(
-                "UPDATE waivers SET expiry_notified = 1 "
-                "WHERE waiver_id = ? AND expiry_notified = 0",
-                (waiver.waiver_id,),
+                "UPDATE waivers SET expiry_claim_expires_at = ? "
+                "WHERE waiver_id = ? AND expiry_notified = 0 "
+                "AND (expiry_claim_expires_at IS NULL OR expiry_claim_expires_at < ?)",
+                (lease_until, waiver.waiver_id, claim_now),
             )
             conn.commit()
             if cur.rowcount != 1:
-                continue  # another concurrent caller already claimed this one
+                continue  # another caller already holds (or just took) the lease
 
         try:
-            events.append(_emit("governance.waiver.expired", waiver, EventSeverity.CRITICAL))
+            event = _emit("governance.waiver.expired", waiver, EventSeverity.CRITICAL)
         except Exception:
-            with _get_conn() as conn:
-                conn.execute(
-                    "UPDATE waivers SET expiry_notified = 0 WHERE waiver_id = ?",
-                    (waiver.waiver_id,),
-                )
-                conn.commit()
+            # Don't bother clearing the lease — letting it expire naturally in
+            # _EXPIRY_CLAIM_LEASE_SECONDS is simpler and behaves identically to
+            # the crash case this whole redesign exists to handle.
             logger.warning(
-                "Waiver expiry event emission failed for waiver_id=%s — left "
-                "retryable on the next scan",
+                "Waiver expiry event emission failed for waiver_id=%s — "
+                "reclaimable after the lease expires",
                 sanitize_for_log(waiver.waiver_id),  # codeql[py/log-injection]
             )
+            continue
+
+        with _get_conn() as conn:
+            conn.execute(
+                "UPDATE waivers SET expiry_notified = 1 WHERE waiver_id = ?",
+                (waiver.waiver_id,),
+            )
+            conn.commit()
+        events.append(event)
     return events
