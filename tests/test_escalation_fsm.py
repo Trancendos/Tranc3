@@ -230,7 +230,9 @@ def test_submit_unmatched_action_escalates_not_permissive(fsm):
     """Per AI-GOVERNANCE-CONSTITUTION.md §3.4: ambiguity escalates, never defaults
     permissive — an action no charter covers must not silently succeed."""
     record = fsm.submit(
-        ActionRequest(tier=4, domain="ArchPrime", action="do_something_unspecified", requestor="agent-1")
+        ActionRequest(
+            tier=4, domain="ArchPrime", action="do_something_unspecified", requestor="agent-1"
+        )
     )
     assert record.state == "escalated"
 
