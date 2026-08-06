@@ -178,7 +178,21 @@ own "human agency" principle (*"high-risk decisions require human review"*).
 What Phase 2 built: `src/compliance/escalation_fsm.py` (charter loading/validation, the FSM itself,
 CAB Gate + `ai_governance` + Observatory wiring, `list_halted()`), `src/compliance/governance_routes.py`
 (`/governance/charters`, `/governance/actions`, `/governance/halted`, mounted in `api.py`), 11 real
-seed charters, and 38 passing tests (`tests/test_escalation_fsm.py`).
+seed charters, and 54 passing tests (`tests/test_escalation_fsm.py`).
+
+Hardened post-landing after cubic's review of the first commit found 2 P1s and 7 P2s in this code
+(all fixed, not declined): `resolve_cab()` now actually calls into `CABGate.approve_change()` /
+`reject_change()` and verifies the decision was applied before transitioning FSM state, rather than
+trusting the caller's boolean and leaving `cab_changes` permanently diverged from
+`escalation_records`; every non-confidence escalation trigger a charter declares
+(`sensitive_data_detected`, `prompt_injection_suspected`, etc.) is now actually evaluated against
+`ActionRequest.context`, not just `confidence_below_threshold`; every transition is now also
+appended to a durable `escalation_transitions` table (`GET /governance/actions/{id}/transitions`),
+since `escalation_records` alone only ever held current state; Observatory severity is drawn from
+each charter's own `escalation_severity` instead of a flat `WARNING`; every escalation and freeze
+now logs an `AIIncident`; `jsonschema` is a hard, pinned dependency (fails closed, not silently
+unvalidated); and `scripts/check_ecdsa_direct_usage.py` uses `ast` instead of line regex, so it
+can't miss `ecdsa.*` submodule imports or false-positive on its own docstring.
 
 What's still explicitly not done, matching how Matrix Suites was built in stages (7.1 design → 7.2
 event emission → 7.3–7.5 further integration) rather than landing all at once: **no live platform
