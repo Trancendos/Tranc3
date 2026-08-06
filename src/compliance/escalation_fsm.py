@@ -334,6 +334,12 @@ def _get_conn() -> sqlite3.Connection:
     # escalation_records above holds current state only (UPDATE overwrites it), so this
     # table is the only place the full transition path survives a process restart or an
     # Observatory ring-buffer rotation.
+    transitions_table_existed = (
+        conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='escalation_transitions'"
+        ).fetchone()
+        is not None
+    )
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS escalation_transitions (
@@ -345,6 +351,18 @@ def _get_conn() -> sqlite3.Connection:
         )
         """
     )
+    if not transitions_table_existed:
+        # First time this table is created on a DB that may already have escalation_records
+        # rows predating it (an upgrade, not a fresh install) — backfill one synthetic
+        # "current state as of upgrade" transition per existing record so
+        # list_transitions() doesn't silently report an empty history for them. This can't
+        # recover the actual lost intermediate states, only the last known one.
+        conn.execute(
+            """
+            INSERT INTO escalation_transitions (record_id, state, reason, ts)
+            SELECT record_id, state, reason, updated_at FROM escalation_records
+            """
+        )
     conn.commit()
     return conn
 
@@ -415,7 +433,7 @@ class EscalationFSM:
     ) -> EscalationRecord:
         now = time.time()
         with _get_conn() as conn:
-            conn.execute(
+            cur = conn.execute(
                 """
                 UPDATE escalation_records
                 SET state = ?, updated_at = ?, reason = COALESCE(?, reason)
@@ -423,10 +441,15 @@ class EscalationFSM:
                 """,
                 (state, now, reason, record_id),
             )
-            conn.execute(
-                "INSERT INTO escalation_transitions (record_id, state, reason, ts) VALUES (?, ?, ?, ?)",
-                (record_id, state, reason, now),
-            )
+            # Only append a transition row when the UPDATE actually matched a record —
+            # otherwise an unknown record_id (e.g. a bogus halt()/resolve_cab() call)
+            # would leave a phantom transition row for a record_id that was never
+            # inserted, polluting escalation_transitions without a parent action.
+            if cur.rowcount > 0:
+                conn.execute(
+                    "INSERT INTO escalation_transitions (record_id, state, reason, ts) VALUES (?, ?, ?, ?)",
+                    (record_id, state, reason, now),
+                )
             conn.commit()
             row = conn.execute(
                 "SELECT * FROM escalation_records WHERE record_id = ?", (record_id,)

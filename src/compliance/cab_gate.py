@@ -18,6 +18,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
+from Dimensional.sanitize import sanitize_for_log
+
 logger = logging.getLogger("tranc3.compliance.cab_gate")
 
 CAB_GATE_ENABLED = os.getenv("CAB_GATE_ENABLED", "false").lower() == "true"
@@ -55,9 +57,13 @@ def _init_db(conn: sqlite3.Connection) -> None:
             status       TEXT NOT NULL DEFAULT 'pending',
             approver     TEXT,
             created_at   REAL NOT NULL,
-            approved_at  REAL
+            approved_at  REAL,
+            decided_at   REAL
         )
     """)
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(cab_changes)").fetchall()}
+    if "decided_at" not in existing_cols:
+        conn.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
     conn.commit()
 
 
@@ -119,8 +125,20 @@ class CABGate:
             }
 
         cab_required = self._cab_required_for(change_type, row["risk"])
-        approved = row["status"] == "approved"
+        status = row["status"]
 
+        # A rejected decision is authoritative regardless of cab_required — the
+        # `approved if cab_required else True` shortcut below only applies when the
+        # change was never explicitly decided, so a rejected-but-not-cab-required
+        # change can't be reported as approved:true.
+        if status == "rejected":
+            return {
+                "approved": False,
+                "reason": f"Change '{change_id}' was rejected",
+                "cab_required": cab_required,
+            }
+
+        approved = status == "approved"
         return {
             "approved": approved if cab_required else True,
             "reason": "approved" if approved else "pending CAB approval",
@@ -165,10 +183,10 @@ class CABGate:
             cur = conn.execute(
                 """
                 UPDATE cab_changes
-                SET status = 'approved', approver = ?, approved_at = ?
+                SET status = 'approved', approver = ?, approved_at = ?, decided_at = ?
                 WHERE change_id = ? AND status = 'pending'
                 """,
-                (approver, now, change_id),
+                (approver, now, now, change_id),
             )
             conn.commit()
             updated = cur.rowcount > 0
@@ -176,13 +194,13 @@ class CABGate:
         if updated:
             logger.info(
                 "CAB change approved | change_id=%s | approver=%s",
-                change_id,
-                approver,
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
+                sanitize_for_log(approver),  # codeql[py/log-injection]
             )
         else:
             logger.warning(
                 "CAB approve failed — not found or already approved | change_id=%s",
-                change_id,
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
             )
         return updated
 
@@ -192,14 +210,17 @@ class CABGate:
         Mirrors approve_change() — 'approver' is the deciding reviewer either way, not
         implying approval. Persists the rejection (status='rejected') so callers (e.g.
         src/compliance/escalation_fsm.py's EscalationFSM.resolve_cab()) can't report a
-        decision here without it surviving in cab_changes.
+        decision here without it surviving in cab_changes. Deliberately does NOT set
+        approved_at (that column means "the time this was approved" — a rejected
+        change was never approved); decided_at carries the neutral "when was this
+        resolved" timestamp for both outcomes.
         """
         now = time.time()
         with _get_conn() as conn:
             cur = conn.execute(
                 """
                 UPDATE cab_changes
-                SET status = 'rejected', approver = ?, approved_at = ?
+                SET status = 'rejected', approver = ?, decided_at = ?
                 WHERE change_id = ? AND status = 'pending'
                 """,
                 (approver, now, change_id),
@@ -210,13 +231,13 @@ class CABGate:
         if updated:
             logger.info(
                 "CAB change rejected | change_id=%s | approver=%s",
-                change_id,
-                approver,
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
+                sanitize_for_log(approver),  # codeql[py/log-injection]
             )
         else:
             logger.warning(
                 "CAB reject failed — not found or already resolved | change_id=%s",
-                change_id,
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
             )
         return updated
 

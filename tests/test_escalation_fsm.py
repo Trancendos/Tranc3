@@ -435,6 +435,27 @@ def test_route_get_action_not_found(client):
     assert resp.json()["error"] == "unknown_record"
 
 
+def test_route_get_action_transitions(client):
+    submit_resp = client.post(
+        "/governance/actions",
+        json={"tier": 4, "domain": "ArchPrime", "action": "read_thing", "requestor": "agent-1"},
+    )
+    record_id = submit_resp.json()["record_id"]
+
+    resp = client.get(f"/governance/actions/{record_id}/transitions")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [t["state"] for t in body] == ["validated", "policy_checked", "approved"]
+    for transition in body:
+        assert set(transition.keys()) == {"state", "reason", "ts"}
+
+
+def test_route_get_action_transitions_not_found(client):
+    resp = client.get("/governance/actions/ESC-DOESNOTEXIST/transitions")
+    assert resp.status_code == 404
+    assert resp.json()["error"] == "unknown_record"
+
+
 def test_route_list_halted_empty_by_default(client):
     resp = client.get("/governance/halted")
     assert resp.status_code == 200
@@ -709,6 +730,57 @@ def test_resolve_cab_reject_actually_persists_in_cab_gate(fsm):
     assert row["approver"] == "human-1"
 
 
+def test_check_change_rejected_but_not_cab_required_is_not_reported_approved(fsm):
+    """cubic P2: check_change()'s `approved if cab_required else True` shortcut
+    previously ran even for a rejected change, so a rejected-but-not-cab-required
+    change (e.g. later reclassified to low risk) could be reported as approved:true."""
+    change_id = cab_gate_module.cab_gate.register_change(
+        change_type="not-in-any-required-list",
+        description="test",
+        requestor="agent-1",
+        risk="low",
+    )
+    cab_gate_module.cab_gate.reject_change(change_id, approver="human-1")
+
+    result = cab_gate_module.cab_gate.check_change("not-in-any-required-list", change_id, "agent-1")
+    assert result["approved"] is False
+    assert "rejected" in result["reason"]
+
+
+def test_reject_change_does_not_set_approved_at(fsm):
+    """cubic P2: a rejected row previously carried a non-null approved_at, making the
+    audit row read as an approval for a decision that was actually a rejection."""
+    change_id = cab_gate_module.cab_gate.register_change(
+        change_type="test", description="test", requestor="agent-1", risk="low"
+    )
+    cab_gate_module.cab_gate.reject_change(change_id, approver="human-1")
+
+    with cab_gate_module._get_conn() as conn:
+        row = conn.execute(
+            "SELECT status, approved_at, decided_at FROM cab_changes WHERE change_id = ?",
+            (change_id,),
+        ).fetchone()
+    assert row["status"] == "rejected"
+    assert row["approved_at"] is None
+    assert row["decided_at"] is not None
+
+
+def test_approve_change_sets_both_approved_at_and_decided_at(fsm):
+    change_id = cab_gate_module.cab_gate.register_change(
+        change_type="test", description="test", requestor="agent-1", risk="low"
+    )
+    cab_gate_module.cab_gate.approve_change(change_id, approver="human-1")
+
+    with cab_gate_module._get_conn() as conn:
+        row = conn.execute(
+            "SELECT status, approved_at, decided_at FROM cab_changes WHERE change_id = ?",
+            (change_id,),
+        ).fetchone()
+    assert row["status"] == "approved"
+    assert row["approved_at"] is not None
+    assert row["decided_at"] is not None
+
+
 def test_resolve_cab_without_cab_change_id_raises(fsm, monkeypatch):
     """Defensive: a pending_cab record with no cab_change_id (shouldn't happen via
     submit(), but guards against future callers constructing records another way)
@@ -783,3 +855,128 @@ def test_ecdsa_check_fails_closed_on_unparseable_file(tmp_path):
     violations, errors = mod._scan_file(tmp_path / "broken.py")
     assert not violations
     assert errors
+
+
+def test_ecdsa_check_ignores_package_relative_import(tmp_path):
+    """cubic P2: `from .ecdsa import ...` / `from ..ecdsa import ...` resolve within the
+    current package, never to the third-party 'ecdsa' distribution this check is scoped
+    to — node.level > 0 must not be treated as the real dependency."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "local.py").write_text("from .ecdsa import helper\nfrom ..ecdsa import other\n")
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "local.py")
+    assert not violations
+    assert not errors
+
+
+def test_ecdsa_check_catches_constant_folded_algorithm(tmp_path):
+    """cubic P1: a runtime ES256 literal assembled from constant pieces (string
+    concatenation or an all-constant f-string) can bypass a bare-literal check while
+    still exercising the vulnerable JWT path."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "sneaky.py").write_text('ALG = "ES" + "256"\nALG2 = f"ES{\'256\'}"\n')
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "sneaky.py")
+    assert len(violations) == 2
+    assert not errors
+
+
+def test_ecdsa_check_constant_folding_does_not_false_positive_on_partial_strings(tmp_path):
+    """Concatenating unrelated strings must not trip the folded-constant check."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "unrelated.py").write_text('GREETING = "hello" + "world"\n')
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "unrelated.py")
+    assert not violations
+    assert not errors
+
+
+def test_update_state_does_not_insert_phantom_transition_for_unknown_record(fsm):
+    """cubic P2: halt()/resolve_cab() etc. on a bogus record_id previously still
+    appended a transition row for a record_id that was never inserted into
+    escalation_records, polluting escalation_transitions without a parent action."""
+    with pytest.raises(RecordNotFoundError):
+        fsm.halt("ESC-DOESNOTEXIST", reason="test")
+
+    with fsm_module._get_conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM escalation_transitions WHERE record_id = ?",
+            ("ESC-DOESNOTEXIST",),
+        ).fetchone()
+    assert row["n"] == 0
+
+
+def test_transitions_table_backfills_existing_records_on_upgrade(registry, tmp_path, monkeypatch):
+    """cubic P2: a DB that already has escalation_records rows from before the
+    escalation_transitions table existed must not silently report an empty history for
+    them once the table is created."""
+    db_path = tmp_path / "escalation_fsm.db"
+    monkeypatch.setattr(fsm_module, "_DB_PATH", db_path)
+    monkeypatch.setattr(cab_gate_module, "_DB_PATH", tmp_path / "cab_changes.db")
+    monkeypatch.setattr(ai_governance_module, "_DB_PATH", tmp_path / "ai_governance.db")
+    with cab_gate_module._get_conn() as conn:
+        cab_gate_module._init_db(conn)
+
+    # Simulate a pre-upgrade DB: escalation_records exists and has a row, but
+    # escalation_transitions does not exist yet.
+    import sqlite3
+
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        """
+        CREATE TABLE escalation_records (
+            record_id     TEXT PRIMARY KEY,
+            charter_id    TEXT NOT NULL,
+            action        TEXT NOT NULL,
+            requestor     TEXT NOT NULL,
+            state         TEXT NOT NULL,
+            created_at    REAL NOT NULL,
+            updated_at    REAL NOT NULL,
+            cab_change_id TEXT,
+            reason        TEXT
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO escalation_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            "ESC-PREEXISTING",
+            "test-allowed-only",
+            "read_thing",
+            "agent-1",
+            "approved",
+            1.0,
+            2.0,
+            None,
+            None,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    pre_upgrade_fsm = EscalationFSM(registry)
+    transitions = pre_upgrade_fsm.list_transitions("ESC-PREEXISTING")
+    assert len(transitions) == 1
+    assert transitions[0]["state"] == "approved"
+    assert transitions[0]["ts"] == 2.0

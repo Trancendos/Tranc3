@@ -177,7 +177,7 @@ own "human agency" principle (*"high-risk decisions require human review"*).
 What Phase 2 built: `src/compliance/escalation_fsm.py` (charter loading/validation, the FSM itself,
 CAB Gate + `ai_governance` + Observatory wiring, `list_halted()`), `src/compliance/governance_routes.py`
 (`/governance/charters`, `/governance/actions`, `/governance/halted`, mounted in `api.py`), 11 real
-seed charters, and 54 passing tests (`tests/test_escalation_fsm.py`).
+seed charters, and 52 passing tests (`tests/test_escalation_fsm.py`).
 
 Hardened post-landing after cubic's review of the first commit found 2 P1s and 7 P2s in this code
 (all fixed, not declined): `resolve_cab()` now actually calls into `CABGate.approve_change()` /
@@ -280,6 +280,6 @@ in code that already exists rather than invented from scratch:
 - `docs/governance/charters/` — the 11 real seed charters (§2.3).
 - `src/compliance/escalation_fsm.py`, `src/compliance/governance_routes.py` — the Phase 2
   implementation (§3), `/governance/*` routes mounted in `api.py`.
-- `tests/test_escalation_fsm.py` — 38 tests covering the FSM, charter registry, and routes.
+- `tests/test_escalation_fsm.py` — 52 tests covering the FSM, charter registry, and routes.
 - `scripts/check_ecdsa_direct_usage.py` — unrelated to this doc's subject but landed alongside it in
   the same PR: a CI drift guard for the ecdsa accepted-risk scope claim in `.trivyignore`.

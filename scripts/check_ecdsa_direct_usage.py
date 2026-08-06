@@ -52,6 +52,41 @@ def _is_ecdsa_module(name: str) -> bool:
     return name == "ecdsa" or name.startswith("ecdsa.")
 
 
+def _fold_str_const(node: ast.AST) -> str | None:
+    """Best-effort constant folding for a string literal, simple string
+    concatenation (e.g. "ES" + "256"), or an all-constant f-string, so a
+    trivially-obfuscated algorithm literal can't silently bypass the scan the
+    way a bare 'ES256' string literal would. Deliberately bounded — this is
+    not a general constant-propagation pass, just the handful of shapes that
+    would otherwise defeat a literal-string check for zero extra cost."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _fold_str_const(node.left)
+        right = _fold_str_const(node.right)
+        if left is not None and right is not None:
+            return left + right
+        return None
+    if isinstance(node, ast.JoinedStr):
+        parts: list[str] = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+            elif (
+                isinstance(value, ast.FormattedValue)
+                and value.format_spec is None
+                and value.conversion in (-1, None)
+            ):
+                folded = _fold_str_const(value.value)
+                if folded is None:
+                    return None
+                parts.append(folded)
+            else:
+                return None
+        return "".join(parts)
+    return None
+
+
 def _docstring_node_ids(tree: ast.Module) -> set[int]:
     """id() of every Constant node that's a module/class/function docstring."""
     ids: set[int] = set()
@@ -91,7 +126,10 @@ def _scan_file(path: Path) -> tuple[list[str], list[str]]:
                         f"{rel}:{node.lineno}: direct ecdsa import — 'import {alias.name}'"
                     )
         elif isinstance(node, ast.ImportFrom):
-            if node.module and _is_ecdsa_module(node.module):
+            # node.level > 0 is a package-relative import ('from .ecdsa import ...' /
+            # 'from ..ecdsa import ...') — that resolves within the current package,
+            # never to the third-party 'ecdsa' distribution this check is scoped to.
+            if node.level == 0 and node.module and _is_ecdsa_module(node.module):
                 violations.append(
                     f"{rel}:{node.lineno}: direct ecdsa import — 'from {node.module} import ...'"
                 )
@@ -100,6 +138,12 @@ def _scan_file(path: Path) -> tuple[list[str], list[str]]:
                 continue
             if node.value in _ES_ALGORITHMS:
                 violations.append(f"{rel}:{node.lineno}: ES256/384/512 usage — {node.value!r}")
+        elif isinstance(node, (ast.BinOp, ast.JoinedStr)):
+            folded = _fold_str_const(node)
+            if folded in _ES_ALGORITHMS:
+                violations.append(
+                    f"{rel}:{node.lineno}: ES256/384/512 usage (constant-folded) — {folded!r}"
+                )
 
     return violations, []
 
