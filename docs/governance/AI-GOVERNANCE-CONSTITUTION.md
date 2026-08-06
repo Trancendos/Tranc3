@@ -210,7 +210,18 @@ integration shapes because they have very different risk profiles:
   No exception is raised in the non-approved cases — the task record itself carries the outcome,
   consistent with how `pending_cab` already works for CAB Gate elsewhere in this FSM. A new
   `get_escalation_fsm()` singleton getter was added to `escalation_fsm.py` (mirroring
-  `get_charter_registry()`) for in-process callers to share.
+  `get_charter_registry()`) for in-process callers to share. `submit_task()` on its own does *not*
+  close the loop, though: the `/governance/actions/{id}/cab-decision` route only updates the FSM
+  record, it has no idea `AgentOrchestrator` or a given task exists — so a CAB-approved task would
+  otherwise stay `pending_governance` forever (a real gap cubic caught). `resync_governance(task_id)`
+  is the explicit closing step: call it after a decision lands (from a poller, or right after a
+  known cab-decision call) and it re-checks the task's escalation record, enqueueing on `approved`
+  or setting `blocked_governance` on `rejected`/`halted`; it's a no-op (returns the task unchanged)
+  for anything not currently `pending_governance`, so it's safe to call repeatedly. There is no
+  automatic trigger between the two modules yet — that would need an event bus this platform
+  doesn't have between compliance and agents today. Reloading tasks from SQLite on restart is also
+  gated: a `status='pending'` row with no `escalation_record_id` predates this wiring entirely and
+  is loaded but deliberately left out of the runnable queue rather than trusted at face value.
 - **`tranc3-bots/bots/registry.py`'s `BotRegistry` (Tier 5, a separately deployed live service —
   its own `pyproject.toml`, own Dockerfile that does not `COPY` the main repo's `src/` tree, no
   `jsonschema` dependency, and zero existing `from src.` / `import src.` precedent anywhere in that

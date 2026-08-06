@@ -144,6 +144,19 @@ def _scan_file(path: Path) -> tuple[list[str], list[str]]:
                 violations.append(
                     f"{rel}:{node.lineno}: ES256/384/512 usage (constant-folded) — {folded!r}"
                 )
+        elif isinstance(node, ast.Name) and node.id in _ES_ALGORITHMS:
+            # Catches an algorithm selected via a bare identifier, e.g. a constant
+            # imported as `from jose.constants import ES256` and then referenced
+            # directly — a bare string literal check alone would miss this.
+            violations.append(
+                f"{rel}:{node.lineno}: ES256/384/512 usage (identifier) — {node.id!r}"
+            )
+        elif isinstance(node, ast.Attribute) and node.attr in _ES_ALGORITHMS:
+            # Catches e.g. `jwt.encode(..., algorithm=Algorithms.ES256)` — an enum/
+            # namespace attribute access that a string-literal-only check would miss.
+            violations.append(
+                f"{rel}:{node.lineno}: ES256/384/512 usage (attribute) — {node.attr!r}"
+            )
 
     return violations, []
 

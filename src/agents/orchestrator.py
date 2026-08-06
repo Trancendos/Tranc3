@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import heapq
+import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass, field
@@ -22,8 +23,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from src.compliance.escalation_fsm import ActionRequest, get_escalation_fsm
+from src.compliance.escalation_fsm import ActionRequest, RecordNotFoundError, get_escalation_fsm
 from src.database.encrypted_sqlite import connect as sqlite3_connect
+
+logger = logging.getLogger("tranc3.agents.orchestrator")
 
 # ── Dataclasses ───────────────────────────────────────────────────────────────
 
@@ -45,12 +48,12 @@ class AgentConfig:
 class AgentTask:
     """A unit of work submitted to an agent."""
 
+    # Field order preserves the pre-Phase-3 constructor contract for positional
+    # callers — the two Phase 3 additions (action, escalation_record_id) are
+    # appended at the end, not inserted in the middle.
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     agent_id: str = ""
     description: str = ""
-    action: str = (
-        ""  # charter-matched verb (e.g. "read_approved_documents"); falls back to description
-    )
     priority: int = 5  # 0-10
     # pending|running|completed|failed|pending_governance|blocked_governance
     status: str = "pending"
@@ -59,6 +62,9 @@ class AgentTask:
     completed_at: Optional[str] = None
     result: Optional[str] = None
     error: Optional[str] = None
+    action: str = (
+        ""  # charter-matched verb (e.g. "read_approved_documents"); falls back to description
+    )
     escalation_record_id: Optional[str] = None
 
 
@@ -155,11 +161,15 @@ class AgentOrchestrator:
 
         Per §3.4 of docs/governance/AI-GOVERNANCE-CONSTITUTION.md, ambiguity never
         defaults permissive: an unmatched action escalates rather than being queued.
-        A 'rejected'/'halted' outcome leaves the task un-queued with
-        status='blocked_governance'; 'escalated'/'pending_cab' leaves it un-queued
-        with status='pending_governance' until resolved via the /governance routes.
-        Returns the task id in all cases so the caller can inspect
-        escalation_record_id / status to see why a task didn't run.
+        A 'rejected' outcome leaves the task un-queued with status='blocked_governance'
+        ('halted' is not reachable here — EscalationFSM.submit() never returns it; that
+        state is only reached later via an explicit EscalationFSM.halt() call, which is
+        exactly what resync_governance() below picks up on a subsequent check).
+        'escalated'/'pending_cab' leaves it un-queued with status='pending_governance'
+        until resolved via the /governance routes — call resync_governance(task_id)
+        afterwards to actually enqueue (or block) the task once that decision lands;
+        nothing does this automatically today. Returns the task id in all cases so the
+        caller can inspect escalation_record_id / status to see why a task didn't run.
         """
         if not task.id:
             task.id = str(uuid.uuid4())
@@ -175,7 +185,7 @@ class AgentOrchestrator:
         record = get_escalation_fsm().submit(request)
         task.escalation_record_id = record.record_id
 
-        if record.state in ("rejected", "halted"):
+        if record.state == "rejected":
             task.status = "blocked_governance"
             task.error = f"Blocked by governance ({record.state}): {record.reason or ''}".strip()
             self._tasks[task.id] = task
@@ -191,6 +201,41 @@ class AgentOrchestrator:
             task.status = "pending_governance"
             self._persist_task(task)
         return task.id
+
+    def resync_governance(self, task_id: str) -> Optional[AgentTask]:
+        """Re-check a 'pending_governance' task's escalation record and, if it has
+        since reached a resting state, actually apply that decision — closing the
+        loop submit_task() otherwise leaves open. Without this, a task approved via
+        POST /governance/actions/{id}/cab-decision stays 'pending_governance' forever:
+        that route only updates the FSM record, it has no idea AgentOrchestrator or
+        this task exist. Not wired to any automatic trigger (no event bus between the
+        two modules) — call it explicitly (e.g. from a poller, or right after you know
+        a CAB decision landed for this task's escalation_record_id).
+
+        Returns the updated task, or None if task_id is unknown. A task not currently
+        'pending_governance' is returned unchanged (idempotent to call repeatedly).
+        """
+        task = self._tasks.get(task_id)
+        if task is None:
+            return None
+        if task.status != "pending_governance" or not task.escalation_record_id:
+            return task
+
+        try:
+            record = get_escalation_fsm().get(task.escalation_record_id)
+        except RecordNotFoundError:
+            return task
+
+        if record.state == "approved":
+            task.status = "pending"
+            self._persist_task(task)
+            heapq.heappush(self._queue, (-task.priority, task.created_at, task.id))
+        elif record.state in ("rejected", "halted"):
+            task.status = "blocked_governance"
+            task.error = f"Blocked by governance ({record.state}): {record.reason or ''}".strip()
+            self._persist_task(task)
+        # else: still escalated/pending_cab/policy_checked — nothing to do yet.
+        return task
 
     def get_task(self, task_id: str) -> Optional[AgentTask]:
         """Return the task with the given id, or None."""
@@ -286,7 +331,19 @@ class AgentOrchestrator:
             )
             self._tasks[task.id] = task
             if task.status == "pending":
-                heapq.heappush(self._queue, (-task.priority, task.created_at, task.id))
+                if task.escalation_record_id:
+                    heapq.heappush(self._queue, (-task.priority, task.created_at, task.id))
+                else:
+                    # A 'pending' row with no escalation_record_id predates Phase 3's
+                    # gating (submit_task() always sets one now) — an upgrade must not
+                    # silently run this legacy work outside the Tier 4 gate. Leave it
+                    # inspectable via get_task() but out of the runnable queue until
+                    # it's resubmitted through submit_task().
+                    logger.warning(
+                        "agent_tasks row %s is 'pending' with no escalation_record_id "
+                        "(pre-Phase-3 data) — not enqueueing; resubmit via submit_task()",
+                        task.id,
+                    )
 
 
 # ── Module-level singleton ─────────────────────────────────────────────────────

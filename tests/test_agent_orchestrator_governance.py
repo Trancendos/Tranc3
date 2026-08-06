@@ -152,3 +152,85 @@ def test_task_survives_reload_from_db(orch, fsm, tmp_path, monkeypatch):
     assert stored is not None
     assert stored.action == "read_approved_documents"
     assert stored.escalation_record_id == orch.get_task(task_id).escalation_record_id
+
+
+def test_agent_task_positional_construction_preserves_field_order():
+    """cubic P2: `action` must not be inserted between the pre-Phase-3 fields — a
+    positional caller like AgentTask(id, agent_id, description, priority, status)
+    must still bind priority/status to the right slots."""
+    task = AgentTask("task-1", "agent-x", "some description", 7, "pending")
+    assert task.priority == 7
+    assert task.status == "pending"
+    assert task.action == ""
+
+
+def test_resync_governance_enqueues_after_cab_approval(orch, fsm):
+    """cubic P1: submit_task() alone never re-enqueues a CAB-approved task — the
+    governance route only updates the FSM record. resync_governance() closes that
+    loop when called after the decision lands."""
+    orch.register_agent(AgentConfig(id="agent-6", name="A6", role="reader", domain="CommPrime"))
+    task = AgentTask(agent_id="agent-6", action="read_ledger_summary")
+    task_id = orch.submit_task(task)
+    assert orch.get_task(task_id).status == "pending_governance"
+    assert not any(t[2] == task_id for t in orch._queue)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.resolve_cab(record_id, approver="human-1", approved=True)
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "pending"
+    assert any(t[2] == task_id for t in orch._queue)
+
+
+def test_resync_governance_blocks_after_cab_rejection(orch, fsm):
+    orch.register_agent(AgentConfig(id="agent-7", name="A7", role="reader", domain="CommPrime"))
+    task = AgentTask(agent_id="agent-7", action="read_ledger_summary")
+    task_id = orch.submit_task(task)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.resolve_cab(record_id, approver="human-1", approved=False)
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "blocked_governance"
+    assert not any(t[2] == task_id for t in orch._queue)
+
+
+def test_resync_governance_is_a_noop_for_already_resolved_task(orch):
+    orch.register_agent(AgentConfig(id="agent-8", name="A8", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-8", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+    assert orch.get_task(task_id).status == "pending"
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "pending"
+    # Calling it again must not double-enqueue.
+    queue_hits = [t for t in orch._queue if t[2] == task_id]
+    assert len(queue_hits) == 1
+
+
+def test_resync_governance_unknown_task_returns_none(orch):
+    assert orch.resync_governance("does-not-exist") is None
+
+
+def test_reload_does_not_enqueue_legacy_pending_row_without_escalation_record(
+    orch, fsm, tmp_path, monkeypatch
+):
+    """cubic P1: a 'pending' agent_tasks row with no escalation_record_id predates
+    Phase 3's gating — an upgrade must not silently run it outside the Tier 4 gate."""
+    orch._db.execute(
+        """
+        INSERT INTO agent_tasks
+            (id, agent_id, description, action, priority, status, created_at,
+             started_at, completed_at, result, error, escalation_record_id)
+        VALUES ('legacy-1', 'agent-9', 'pre-phase-3 work', '', 5, 'pending',
+                '2020-01-01T00:00:00', NULL, NULL, NULL, NULL, NULL)
+        """
+    )
+    orch._db.commit()
+
+    monkeypatch.setattr(orchestrator_module, "get_escalation_fsm", lambda: fsm)
+    reloaded = AgentOrchestrator(db_path=str(tmp_path / "agents.db"))
+    stored = reloaded.get_task("legacy-1")
+    assert stored is not None
+    assert stored.status == "pending"
+    assert not any(t[2] == "legacy-1" for t in reloaded._queue)

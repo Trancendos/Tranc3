@@ -140,3 +140,32 @@ async def test_internal_secret_forwarded_when_set(monkeypatch):
 
     await governance_client.check_action("generate", requestor="test")
     assert _FakeAsyncClient.last_call["headers"] == {"X-Internal-Secret": "shh"}
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+async def test_auth_failure_fails_closed_not_open(monkeypatch, status_code):
+    """cubic P1: a missing/mismatched INTERNAL_SECRET is a configuration error, not an
+    infra outage — treating the backend's 401/403 the same as a network failure would
+    mean governance was silently never actually being enforced once the gate was
+    turned on."""
+    monkeypatch.setattr(governance_client, "_GATE_ENABLED", True)
+    monkeypatch.setattr(governance_client, "_BACKEND_URL", "http://backend:8000")
+    _FakeAsyncClient.response = _FakeResponse({"error": "forbidden"}, status_code=status_code)
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+
+    with pytest.raises(governance_client.GovernanceBlockedError):
+        await governance_client.check_action("generate", requestor="test")
+
+
+async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeypatch):
+    """cubic P1: a typo'd or empty GOVERNANCE_GATE_TIMEOUT must not crash the whole
+    package at import time, even when the gate is disabled."""
+    import importlib
+
+    monkeypatch.setenv("GOVERNANCE_GATE_TIMEOUT", "not-a-number")
+    try:
+        reloaded = importlib.reload(governance_client)
+        assert reloaded._TIMEOUT == 5.0
+    finally:
+        monkeypatch.delenv("GOVERNANCE_GATE_TIMEOUT", raising=False)
+        importlib.reload(governance_client)

@@ -26,26 +26,37 @@ logger = logging.getLogger(__name__)
 _GATE_ENABLED = os.getenv("GOVERNANCE_GATE_ENABLED", "false").strip().lower() == "true"
 _BACKEND_URL = os.getenv("TRANC3_ENGINE_URL", "")
 _INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
-_TIMEOUT = float(os.getenv("GOVERNANCE_GATE_TIMEOUT", "5.0"))
+
+try:
+    _TIMEOUT = float(os.getenv("GOVERNANCE_GATE_TIMEOUT", "5.0"))
+except (TypeError, ValueError):
+    # A typo'd or empty override must not prevent the whole package from
+    # importing, even when the gate is disabled — fall back to the default.
+    logger.warning(
+        "GOVERNANCE_GATE_TIMEOUT=%r is not a valid float — using the 5.0s default",
+        os.getenv("GOVERNANCE_GATE_TIMEOUT"),
+    )
+    _TIMEOUT = 5.0
 
 _BLOCKED_STATES = frozenset({"rejected", "halted"})
+_AUTH_STATUS_CODES = frozenset({401, 403})
 
 
 class GovernanceBlockedError(RuntimeError):
-    """The escalation FSM resolved this action to 'rejected' or 'halted'."""
-
-
-def gate_enabled() -> bool:
-    return _GATE_ENABLED
+    """The escalation FSM resolved this action to 'rejected' or 'halted', or the
+    gate itself is misconfigured (401/403 — see module docstring)."""
 
 
 async def check_action(bot_type: str, requestor: str) -> Optional[Dict[str, Any]]:
     """Submit a Tier 5 ActionRequest for `bot_type` to the main backend's escalation FSM.
 
     Returns the resolved escalation record dict, or None when the gate is disabled,
-    unconfigured, or the governance call itself failed (see module docstring for why
-    that fails open rather than closed). Raises GovernanceBlockedError when the FSM
-    resolved to 'rejected' or 'halted'.
+    unconfigured, or the governance call itself failed on a network/timeout error (see
+    module docstring for why that fails open rather than closed). Raises
+    GovernanceBlockedError when the FSM resolved to 'rejected'/'halted', or when the
+    backend rejected the call with 401/403 — a bad or missing INTERNAL_SECRET is a
+    configuration error, not an infra outage, and silently failing open on it would
+    mean governance was never actually being enforced.
     """
     if not _GATE_ENABLED:
         return None
@@ -57,11 +68,11 @@ async def check_action(bot_type: str, requestor: str) -> Optional[Dict[str, Any]
         )
         return None
 
-    try:
-        import httpx
+    import httpx
 
-        url = _BACKEND_URL.rstrip("/") + "/governance/actions"
-        headers = {"X-Internal-Secret": _INTERNAL_SECRET} if _INTERNAL_SECRET else {}
+    url = _BACKEND_URL.rstrip("/") + "/governance/actions"
+    headers = {"X-Internal-Secret": _INTERNAL_SECRET} if _INTERNAL_SECRET else {}
+    try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             resp = await client.post(
                 url,
@@ -73,9 +84,26 @@ async def check_action(bot_type: str, requestor: str) -> Optional[Dict[str, Any]
                 },
                 headers=headers,
             )
-            resp.raise_for_status()
-            record = resp.json()
-    except Exception as exc:  # network error, timeout, non-2xx, bad JSON — infra, not policy
+    except (httpx.TimeoutException, httpx.TransportError) as exc:
+        # Network unreachable / connection refused / timed out — an infra
+        # availability problem, not a policy signal. Fail open.
+        logger.warning(
+            "Governance gate call failed for bot_type=%s (%s) — failing open", bot_type, exc
+        )
+        return None
+
+    if resp.status_code in _AUTH_STATUS_CODES:
+        raise GovernanceBlockedError(
+            f"Governance gate rejected the request for bot_type={bot_type!r} with "
+            f"HTTP {resp.status_code} — INTERNAL_SECRET is missing or does not match "
+            "the main backend's; this is a configuration error, not an outage, and "
+            "must not silently fail open"
+        )
+
+    try:
+        resp.raise_for_status()
+        record = resp.json()
+    except Exception as exc:  # other non-2xx / bad JSON from a reachable backend
         logger.warning(
             "Governance gate call failed for bot_type=%s (%s) — failing open", bot_type, exc
         )

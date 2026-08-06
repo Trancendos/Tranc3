@@ -363,6 +363,12 @@ def _get_conn() -> sqlite3.Connection:
             SELECT record_id, state, reason, updated_at FROM escalation_records
             """
         )
+    # Supports list_transitions()'s WHERE record_id = ? ORDER BY id ASC without a full
+    # table scan as this append-only table grows.
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_escalation_transitions_record_id "
+        "ON escalation_transitions (record_id, id)"
+    )
     conn.commit()
     return conn
 

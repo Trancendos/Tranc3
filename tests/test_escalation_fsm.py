@@ -912,6 +912,56 @@ def test_ecdsa_check_constant_folding_does_not_false_positive_on_partial_strings
     assert not errors
 
 
+def test_ecdsa_check_catches_algorithm_as_attribute(tmp_path):
+    """cubic P1: `jwt.encode(..., algorithm=Algorithms.ES256)` selects the ECDSA path
+    while a bare-literal-only check passes — the algorithm is an attribute access, not
+    a string literal."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "attr.py").write_text(
+        "import jwt\njwt.encode({}, key, algorithm=Algorithms.ES256)\n"
+    )
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "attr.py")
+    assert violations
+    assert not errors
+
+
+def test_ecdsa_check_catches_algorithm_as_bare_name(tmp_path):
+    """A constant imported and referenced directly (`from jose.constants import
+    ES256`) is a bare Name, not a string literal or an attribute access."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "name.py").write_text("ALG = ES256\n")
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "name.py")
+    assert violations
+    assert not errors
+
+
+def test_escalation_transitions_index_created(fsm):
+    """Supports list_transitions()'s per-record_id lookup without a full table scan
+    as the append-only table grows."""
+    with fsm_module._get_conn() as conn:
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='index' "
+            "AND name='idx_escalation_transitions_record_id'"
+        ).fetchone()
+    assert row is not None
+
+
 def test_update_state_does_not_insert_phantom_transition_for_unknown_record(fsm):
     """cubic P2: halt()/resolve_cab() etc. on a bogus record_id previously still
     appended a transition row for a record_id that was never inserted into
