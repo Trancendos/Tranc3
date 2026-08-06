@@ -23,10 +23,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from Dimensional.sanitize import sanitize_for_log
 from src.compliance.escalation_fsm import ActionRequest, RecordNotFoundError, get_escalation_fsm
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger("tranc3.agents.orchestrator")
+
+# Governance FSM states that must never leave a task runnable. 'frozen' sits
+# between 'escalated' and 'halted' in the FSM (§3.2) — a critical-severity hold,
+# not yet irreversible, but still a hard stop on this task until a human acts.
+_BLOCKING_STATES = frozenset({"rejected", "frozen", "halted"})
 
 # ── Dataclasses ───────────────────────────────────────────────────────────────
 
@@ -83,10 +89,27 @@ class AgentPerformance:
 # ── Database helpers ──────────────────────────────────────────────────────────
 
 
+def _add_column_if_missing(
+    conn: sqlite3.Connection, table: str, column: str, ddl_type: str
+) -> None:
+    """ALTER TABLE ADD COLUMN, tolerating the race where a second concurrent worker
+    also observed the column missing and got there first — see cab_gate.py's
+    _init_db() for the same pattern. busy_timeout (set on the connection below)
+    means a losing worker waits for the winner's transaction instead of getting an
+    immediate 'database is locked'; once it proceeds, it hits 'duplicate column
+    name' instead, which this tolerates."""
+    try:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}")
+    except sqlite3.OperationalError as exc:
+        if f"duplicate column name: {column}" not in str(exc):
+            raise
+
+
 def _ensure_db(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3_connect(str(path), check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS agent_tasks (
@@ -107,9 +130,9 @@ def _ensure_db(path: Path) -> sqlite3.Connection:
     )
     existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(agent_tasks)").fetchall()}
     if "action" not in existing_cols:
-        conn.execute("ALTER TABLE agent_tasks ADD COLUMN action TEXT DEFAULT ''")
+        _add_column_if_missing(conn, "agent_tasks", "action", "TEXT DEFAULT ''")
     if "escalation_record_id" not in existing_cols:
-        conn.execute("ALTER TABLE agent_tasks ADD COLUMN escalation_record_id TEXT")
+        _add_column_if_missing(conn, "agent_tasks", "escalation_record_id", "TEXT")
     conn.commit()
     return conn
 
@@ -162,9 +185,11 @@ class AgentOrchestrator:
         Per §3.4 of docs/governance/AI-GOVERNANCE-CONSTITUTION.md, ambiguity never
         defaults permissive: an unmatched action escalates rather than being queued.
         A 'rejected' outcome leaves the task un-queued with status='blocked_governance'
-        ('halted' is not reachable here — EscalationFSM.submit() never returns it; that
-        state is only reached later via an explicit EscalationFSM.halt() call, which is
-        exactly what resync_governance() below picks up on a subsequent check).
+        ('halted'/'frozen' are not reachable here — EscalationFSM.submit() never
+        returns them; those states are only reached later via an explicit
+        EscalationFSM.halt()/freeze() call — see dequeue_task(), which is what
+        actually enforces them against an already-queued task, since being
+        'approved' at submit time is not a permanent guarantee).
         'escalated'/'pending_cab' leaves it un-queued with status='pending_governance'
         until resolved via the /governance routes — call resync_governance(task_id)
         afterwards to actually enqueue (or block) the task once that decision lands;
@@ -230,7 +255,7 @@ class AgentOrchestrator:
             task.status = "pending"
             self._persist_task(task)
             heapq.heappush(self._queue, (-task.priority, task.created_at, task.id))
-        elif record.state in ("rejected", "halted"):
+        elif record.state in _BLOCKING_STATES:
             task.status = "blocked_governance"
             task.error = f"Blocked by governance ({record.state}): {record.reason or ''}".strip()
             self._persist_task(task)
@@ -331,19 +356,86 @@ class AgentOrchestrator:
             )
             self._tasks[task.id] = task
             if task.status == "pending":
-                if task.escalation_record_id:
-                    heapq.heappush(self._queue, (-task.priority, task.created_at, task.id))
-                else:
-                    # A 'pending' row with no escalation_record_id predates Phase 3's
-                    # gating (submit_task() always sets one now) — an upgrade must not
-                    # silently run this legacy work outside the Tier 4 gate. Leave it
-                    # inspectable via get_task() but out of the runnable queue until
-                    # it's resubmitted through submit_task().
-                    logger.warning(
-                        "agent_tasks row %s is 'pending' with no escalation_record_id "
-                        "(pre-Phase-3 data) — not enqueueing; resubmit via submit_task()",
-                        task.id,
-                    )
+                self._reenqueue_if_still_approved(task)
+
+    def _reenqueue_if_still_approved(self, task: AgentTask) -> None:
+        """Restores a 'pending' task to the runnable queue on process restart — but
+        only after re-checking its *live* governance state, not the status column
+        alone. A stored status='pending' snapshot only reflects what was true at the
+        moment it was last persisted; if the escalation record was halted or frozen
+        any time between then and this restart (e.g. via POST
+        /governance/actions/{id}/halt), blindly trusting the column would silently
+        make hard-stopped work runnable again.
+        """
+        if not task.escalation_record_id:
+            # A 'pending' row with no escalation_record_id predates Phase 3's gating
+            # (submit_task() always sets one now) — an upgrade must not silently run
+            # this legacy work outside the Tier 4 gate. Leave it inspectable via
+            # get_task() but out of the runnable queue until resubmitted.
+            logger.warning(
+                "agent_tasks row %s is 'pending' with no escalation_record_id "
+                "(pre-Phase-3 data) — not enqueueing; resubmit via submit_task()",
+                sanitize_for_log(task.id),  # codeql[py/log-injection]
+            )
+            return
+
+        try:
+            record = get_escalation_fsm().get(task.escalation_record_id)
+        except RecordNotFoundError:
+            record = None
+
+        if record is None or record.state in _BLOCKING_STATES:
+            task.status = "blocked_governance"
+            reason = record.reason if record else "escalation record no longer found"
+            state = record.state if record else "unknown"
+            task.error = f"Blocked by governance ({state}): {reason or ''}".strip()
+            self._persist_task(task)
+            return
+
+        if record.state != "approved":
+            # escalated/pending_cab/policy_checked — no longer a clean 'approved'
+            # snapshot; fall back to the same un-queued, inspectable state
+            # submit_task() itself would have left it in.
+            task.status = "pending_governance"
+            self._persist_task(task)
+            return
+
+        heapq.heappush(self._queue, (-task.priority, task.created_at, task.id))
+
+    def dequeue_task(self) -> Optional[AgentTask]:
+        """Pop the next runnable task for a worker to execute — the sanctioned way to
+        consume this queue, and the reason one exists at all: a task can sit queued
+        for a while before a worker reaches it, and if its escalation record was
+        halted or frozen after it was enqueued, the stale status='pending' snapshot
+        on the task itself must not be trusted at dispatch time. Re-validates the
+        live governance state for each candidate, skipping (and blocking) anything
+        no longer 'approved', until it finds a genuinely runnable task or the queue
+        empties. Marks the returned task 'running' before handing it back.
+        """
+        while self._queue:
+            _, _, task_id = heapq.heappop(self._queue)
+            task = self._tasks.get(task_id)
+            if task is None or task.status != "pending" or not task.escalation_record_id:
+                continue  # stale queue entry — already handled/mutated elsewhere
+
+            try:
+                record = get_escalation_fsm().get(task.escalation_record_id)
+            except RecordNotFoundError:
+                continue
+
+            if record.state != "approved":
+                task.status = "blocked_governance"
+                task.error = (
+                    f"Blocked by governance ({record.state}): {record.reason or ''}".strip()
+                )
+                self._persist_task(task)
+                continue
+
+            task.status = "running"
+            task.started_at = datetime.now(timezone.utc).isoformat()
+            self._persist_task(task)
+            return task
+        return None
 
 
 # ── Module-level singleton ─────────────────────────────────────────────────────

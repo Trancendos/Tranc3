@@ -212,6 +212,76 @@ def test_resync_governance_unknown_task_returns_none(orch):
     assert orch.resync_governance("does-not-exist") is None
 
 
+def test_resync_governance_blocks_on_frozen_state(orch, fsm):
+    """cubic P2: resync_governance() previously only treated rejected/halted as
+    blocking, silently leaving a frozen task as pending_governance."""
+    orch.register_agent(
+        AgentConfig(id="agent-frozen", name="AF", role="reader", domain="CommPrime")
+    )
+    task = AgentTask(agent_id="agent-frozen", action="read_ledger_summary")
+    task_id = orch.submit_task(task)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.freeze(record_id, reason="suspicious pattern")
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "blocked_governance"
+    assert "frozen" in resynced.error
+
+
+def test_dequeue_task_returns_approved_task_marked_running(orch):
+    orch.register_agent(AgentConfig(id="agent-dq1", name="DQ1", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq1", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+
+    dequeued = orch.dequeue_task()
+    assert dequeued is not None
+    assert dequeued.id == task_id
+    assert dequeued.status == "running"
+    assert dequeued.started_at is not None
+
+
+def test_dequeue_task_empty_queue_returns_none(orch):
+    assert orch.dequeue_task() is None
+
+
+def test_dequeue_task_skips_and_blocks_task_halted_after_enqueue(orch, fsm):
+    """cubic P1: a task already sitting in the runnable queue must not be
+    dispatchable once its escalation record is halted after the fact — the
+    stale status='pending' snapshot on the task itself is not authoritative."""
+    orch.register_agent(AgentConfig(id="agent-dq2", name="DQ2", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq2", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+    assert any(t[2] == task_id for t in orch._queue)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.halt(record_id, reason="hard stop triggered")
+
+    assert orch.dequeue_task() is None
+    stored = orch.get_task(task_id)
+    assert stored.status == "blocked_governance"
+    assert "halted" in stored.error
+
+
+def test_reload_does_not_reenqueue_task_halted_before_restart(orch, fsm, tmp_path, monkeypatch):
+    """cubic P1: restarting the orchestrator must not resurrect hard-stopped work —
+    _load_tasks_from_db() must re-check the live FSM state, not just the stored
+    status='pending' + escalation_record_id-present combination."""
+    orch.register_agent(AgentConfig(id="agent-dq3", name="DQ3", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq3", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.halt(record_id, reason="hard stop before restart")
+
+    monkeypatch.setattr(orchestrator_module, "get_escalation_fsm", lambda: fsm)
+    reloaded = AgentOrchestrator(db_path=str(tmp_path / "agents.db"))
+    stored = reloaded.get_task(task_id)
+    assert stored is not None
+    assert stored.status == "blocked_governance"
+    assert not any(t[2] == task_id for t in reloaded._queue)
+
+
 def test_reload_does_not_enqueue_legacy_pending_row_without_escalation_record(
     orch, fsm, tmp_path, monkeypatch
 ):

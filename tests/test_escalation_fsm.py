@@ -828,6 +828,74 @@ def test_resolve_cab_without_cab_change_id_raises(fsm, monkeypatch):
         fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
 
 
+def test_resolve_cab_retry_after_partial_failure_reconciles_instead_of_wedging(fsm):
+    """cubic P2: simulates a process crash between cab_gate committing its decision
+    and _update_state() completing — the escalation_records row is manually forced
+    back to 'pending_cab' (as if the crash happened before that column updated) while
+    cab_changes already shows 'approved'. A naive retry would call
+    cab_gate.approve_change() again, which no-ops (WHERE status='pending' matches
+    nothing) and previously raised as if nothing had been applied. It must instead
+    recognize the already-persisted decision and complete the FSM transition."""
+    record = fsm.submit(
+        ActionRequest(tier=3, domain="CommPrime", action="transfer_funds", requestor="agent-2")
+    )
+    change_id = record.cab_change_id
+
+    resolved = fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
+    assert resolved.state == "approved"
+
+    # Force the FSM record back to pending_cab, simulating a crash between cab_gate's
+    # commit and this FSM transition — cab_changes itself is left untouched (still
+    # 'approved').
+    with fsm_module._get_conn() as conn:
+        conn.execute(
+            "UPDATE escalation_records SET state = 'pending_cab' WHERE record_id = ?",
+            (record.record_id,),
+        )
+        conn.commit()
+
+    retried = fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
+    assert retried.state == "approved"
+
+    with cab_gate_module._get_conn() as conn:
+        row = conn.execute(
+            "SELECT status FROM cab_changes WHERE change_id = ?", (change_id,)
+        ).fetchone()
+    assert row["status"] == "approved"
+
+
+def test_resolve_cab_conflicting_decision_raises(fsm):
+    """A record already resolved the opposite way in cab_changes is a genuine
+    conflict — not a safe retry — and must not be silently overwritten."""
+    record = fsm.submit(
+        ActionRequest(tier=3, domain="CommPrime", action="transfer_funds", requestor="agent-2")
+    )
+    fsm.resolve_cab(record.record_id, approver="human-1", approved=True)
+
+    with fsm_module._get_conn() as conn:
+        conn.execute(
+            "UPDATE escalation_records SET state = 'pending_cab' WHERE record_id = ?",
+            (record.record_id,),
+        )
+        conn.commit()
+
+    with pytest.raises(EscalationError, match="conflicts with the requested decision"):
+        fsm.resolve_cab(record.record_id, approver="human-2", approved=False)
+
+
+def test_cab_gate_get_status_returns_none_for_unknown_change(fsm):
+    assert cab_gate_module.cab_gate.get_status("CAB-DOESNOTEXIST") is None
+
+
+def test_cab_gate_get_status_returns_raw_status(fsm):
+    change_id = cab_gate_module.cab_gate.register_change(
+        change_type="test", description="test", requestor="agent-1", risk="low"
+    )
+    assert cab_gate_module.cab_gate.get_status(change_id) == "pending"
+    cab_gate_module.cab_gate.approve_change(change_id, approver="human-1")
+    assert cab_gate_module.cab_gate.get_status(change_id) == "approved"
+
+
 def test_ecdsa_check_catches_submodule_import(tmp_path):
     """cubic P1: `from ecdsa.keys import SigningKey` previously bypassed the regex,
     which only matched a bare `from ecdsa import ...`."""
@@ -925,6 +993,25 @@ def test_ecdsa_check_catches_constant_folded_algorithm(tmp_path):
     assert not errors
 
 
+def test_ecdsa_check_literal_only_fstring_reports_once(tmp_path):
+    """cubic P3: f"ES256" (no interpolation) parses as JoinedStr(values=[Constant
+    ('ES256')]) — ast.walk visits both the JoinedStr and its child Constant, so
+    without deduplication this one source occurrence was reported twice."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "literal_fstring.py").write_text('ALG = f"ES256"\n')
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "literal_fstring.py")
+    assert len(violations) == 1
+    assert not errors
+
+
 def test_ecdsa_check_constant_folding_does_not_false_positive_on_partial_strings(tmp_path):
     """Concatenating unrelated strings must not trip the folded-constant check."""
     import importlib.util
@@ -978,6 +1065,47 @@ def test_ecdsa_check_catches_algorithm_as_bare_name(tmp_path):
     mod.REPO_ROOT = tmp_path
     violations, errors = mod._scan_file(tmp_path / "name.py")
     assert violations
+    assert not errors
+
+
+def test_ecdsa_check_catches_aliased_algorithm_import(tmp_path):
+    """cubic P1: `from jose.constants import ES256 as ALG` binds the local name to
+    'ALG', so every later reference to it is the identifier 'ALG', not 'ES256' — the
+    ast.Name/Attribute checks (which match on the *local* identifier) would never see
+    the literal 'ES256' again after this rename. The import statement itself, where
+    the original imported name still appears as alias.name, is the only place left to
+    catch it."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "aliased.py").write_text("from jose.constants import ES256 as ALG\nx = ALG\n")
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "aliased.py")
+    assert violations
+    assert not errors
+
+
+def test_ecdsa_check_aliased_import_ignores_relative_import(tmp_path):
+    """The aliased-import check should stay scoped like the ecdsa-module check —
+    a package-relative import can't be the third-party dependency this check is
+    scoped to."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_ecdsa_direct_usage", "scripts/check_ecdsa_direct_usage.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    (tmp_path / "relative.py").write_text("from .constants import ES256 as ALG\n")
+    mod.REPO_ROOT = tmp_path
+    violations, errors = mod._scan_file(tmp_path / "relative.py")
+    assert not violations
     assert not errors
 
 

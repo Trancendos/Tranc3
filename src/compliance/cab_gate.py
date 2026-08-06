@@ -10,7 +10,7 @@ import sqlite3
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from fastapi import Request, Response
@@ -43,6 +43,10 @@ def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    # Without this, SQLite's default busy_timeout is 0 — a second worker racing the
+    # migration below gets an immediate "database is locked" instead of waiting for
+    # the first worker's transaction to commit and retrying.
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
@@ -65,11 +69,20 @@ def _init_db(conn: sqlite3.Connection) -> None:
     if "decided_at" not in existing_cols:
         try:
             conn.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
+            # Backfill the new neutral decision-time column for rows that predate it —
+            # otherwise every historical approved change reads as decided_at=NULL,
+            # which audit/reporting queries keyed on decided_at would misread as
+            # still-unresolved.
+            conn.execute(
+                "UPDATE cab_changes SET decided_at = approved_at "
+                "WHERE status = 'approved' AND decided_at IS NULL"
+            )
         except sqlite3.OperationalError as exc:
             # Multiple Uvicorn workers can each observe the missing column and race
             # through this ALTER on first startup against a pre-existing DB file —
             # the loser isn't wrong, it just lost the race, so tolerate exactly that
-            # outcome rather than crashing API startup.
+            # outcome rather than crashing API startup. (The winner already ran the
+            # backfill above, so the loser doesn't need to repeat it.)
             if "duplicate column name: decided_at" not in str(exc):
                 raise
     conn.commit()
@@ -111,6 +124,20 @@ class CABGate:
             logger.error("CABGate config load error: %s", exc)
 
     # ── Public API ─────────────────────────────────────────────────────────────
+
+    def get_status(self, change_id: str) -> Optional[str]:
+        """Return the raw `status` column ('pending'/'approved'/'rejected') for a
+        change, or None if it doesn't exist. Unlike check_change(), this doesn't need
+        change_type/requestor and doesn't compute cab_required — it's for callers
+        (e.g. EscalationFSM.resolve_cab()'s reconciliation path) that just need to
+        know what was actually persisted, not whether it satisfies a policy.
+        """
+        with _get_conn() as conn:
+            row = conn.execute(
+                "SELECT status FROM cab_changes WHERE change_id = ?",
+                (change_id,),
+            ).fetchone()
+        return row["status"] if row is not None else None
 
     def check_change(self, change_type: str, change_id: str, requestor: str) -> dict[str, Any]:
         """

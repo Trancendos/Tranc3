@@ -11,10 +11,16 @@
 #
 # Gated by GOVERNANCE_GATE_ENABLED, mirroring cab_gate.py's CAB_GATE_ENABLED
 # precedent, so this can ship without unconditionally coupling every bot dispatch
-# to the main backend's availability. A network/timeout error talking to the
-# governance endpoint fails OPEN (logged, dispatch proceeds) — that is an
-# infrastructure availability problem, not a policy signal. An actual 'rejected'
-# or 'halted' FSM decision fails CLOSED (raises GovernanceBlockedError).
+# to the main backend's availability. The fail-open/fail-closed line is drawn at
+# "did we get a response at all", not at status code: a network/timeout error
+# (no response — the backend is genuinely unreachable) fails OPEN, since that's
+# an infrastructure availability problem, not a policy signal. Any actual HTTP
+# response — 2xx with bad/non-object JSON, 401/403, other 4xx, or 5xx — means the
+# backend IS reachable and something else is wrong (misconfiguration, backend bug,
+# overload), which fails CLOSED. Treating a reachable-but-broken backend the same
+# as an unreachable one would mean governance silently stops being enforced the
+# moment the governance service itself has a bad day — indistinguishable from it
+# never being enforced at all.
 from __future__ import annotations
 
 import logging
@@ -38,25 +44,22 @@ except (TypeError, ValueError):
     )
     _TIMEOUT = 5.0
 
-_BLOCKED_STATES = frozenset({"rejected", "halted"})
-_AUTH_STATUS_CODES = frozenset({401, 403})
+_BLOCKED_STATES = frozenset({"rejected", "frozen", "halted"})
 
 
 class GovernanceBlockedError(RuntimeError):
-    """The escalation FSM resolved this action to 'rejected' or 'halted', or the
-    gate itself is misconfigured (401/403 — see module docstring)."""
+    """The escalation FSM resolved this action to a blocking state, or the
+    governance call couldn't be trusted (bad response, auth failure, etc.) —
+    see module docstring for the fail-open/fail-closed split."""
 
 
 async def check_action(bot_type: str, requestor: str) -> Optional[Dict[str, Any]]:
     """Submit a Tier 5 ActionRequest for `bot_type` to the main backend's escalation FSM.
 
-    Returns the resolved escalation record dict, or None when the gate is disabled,
-    unconfigured, or the governance call itself failed on a network/timeout error (see
-    module docstring for why that fails open rather than closed). Raises
-    GovernanceBlockedError when the FSM resolved to 'rejected'/'halted', or when the
-    backend rejected the call with 401/403 — a bad or missing INTERNAL_SECRET is a
-    configuration error, not an infra outage, and silently failing open on it would
-    mean governance was never actually being enforced.
+    Returns the resolved escalation record dict, or None when the gate is disabled
+    or unconfigured. Raises GovernanceBlockedError for every other outcome except a
+    genuine network/timeout failure — see module docstring for the fail-open (no
+    response) vs. fail-closed (got a response, but it's not usable) split.
     """
     if not _GATE_ENABLED:
         return None
@@ -85,29 +88,36 @@ async def check_action(bot_type: str, requestor: str) -> Optional[Dict[str, Any]
                 headers=headers,
             )
     except (httpx.TimeoutException, httpx.TransportError) as exc:
-        # Network unreachable / connection refused / timed out — an infra
-        # availability problem, not a policy signal. Fail open.
+        # No response at all — network unreachable / connection refused / timed
+        # out. A genuine infra availability problem, not a policy signal. Fail open.
         logger.warning(
             "Governance gate call failed for bot_type=%s (%s) — failing open", bot_type, exc
         )
         return None
 
-    if resp.status_code in _AUTH_STATUS_CODES:
+    # Everything past this point means the backend responded — fail closed on
+    # anything that isn't a clean, usable 'approved'-or-otherwise decision.
+    if resp.status_code != 200:
         raise GovernanceBlockedError(
-            f"Governance gate rejected the request for bot_type={bot_type!r} with "
-            f"HTTP {resp.status_code} — INTERNAL_SECRET is missing or does not match "
-            "the main backend's; this is a configuration error, not an outage, and "
-            "must not silently fail open"
+            f"Governance gate call for bot_type={bot_type!r} got HTTP {resp.status_code} "
+            "from a reachable backend — treated as a block, not an outage, so a "
+            "misconfigured secret or a struggling governance service can't silently "
+            "disable enforcement"
         )
 
     try:
-        resp.raise_for_status()
         record = resp.json()
-    except Exception as exc:  # other non-2xx / bad JSON from a reachable backend
-        logger.warning(
-            "Governance gate call failed for bot_type=%s (%s) — failing open", bot_type, exc
+    except ValueError as exc:
+        raise GovernanceBlockedError(
+            f"Governance gate response for bot_type={bot_type!r} was not valid JSON "
+            f"({exc}) — treated as a block, not an outage"
+        ) from exc
+
+    if not isinstance(record, dict):
+        raise GovernanceBlockedError(
+            f"Governance gate response for bot_type={bot_type!r} was not a JSON "
+            f"object ({type(record).__name__}) — treated as a block, not an outage"
         )
-        return None
 
     if record.get("state") in _BLOCKED_STATES:
         raise GovernanceBlockedError(

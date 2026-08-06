@@ -315,6 +315,11 @@ def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    # Without this, SQLite's default busy_timeout is 0 — a second concurrent worker
+    # writing to this file (e.g. racing the transitions-table migration below) gets
+    # an immediate "database is locked" instead of waiting for the first worker's
+    # transaction to commit and retrying (same fix as cab_gate.py's _get_conn()).
+    conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS escalation_records (
@@ -706,6 +711,15 @@ class EscalationFSM:
         forever, letting a caller bypass MC-RULE-007 and leaving the two governance stores
         (escalation_records, cab_changes) permanently diverged. Now calls into CABGate for
         both outcomes and only transitions FSM state if that persisted decision succeeds.
+
+        cubic P2 follow-up: a process crash between cab_gate committing its decision and
+        this method's own _update_state() call would previously wedge the record in
+        'pending_cab' forever — retrying would call approve_change()/reject_change()
+        again, which no-ops on a no-longer-'pending' row (WHERE status='pending' matches
+        nothing) and raises here as if the decision had never been applied, even though
+        it genuinely had been. Checking the already-persisted status first makes a retry
+        after a partial failure a no-op that still completes the FSM transition, instead
+        of a permanent split-brain between the two stores.
         """
         record = self.get(record_id)
         if record.state != "pending_cab":
@@ -715,19 +729,37 @@ class EscalationFSM:
         if not record.cab_change_id:
             raise EscalationError(f"Record {record_id!r} has no associated cab_change_id")
 
-        if approved:
-            applied = cab_gate.approve_change(record.cab_change_id, approver)
+        expected_status = "approved" if approved else "rejected"
+        current_status = cab_gate.get_status(record.cab_change_id)
+
+        if current_status == expected_status:
+            # Reconciliation: this exact decision was already persisted (most likely a
+            # retry after a prior call crashed right after committing it) — nothing left
+            # to apply, just catch the FSM record's state up to match.
+            applied = True
+        elif current_status == "pending":
+            if approved:
+                applied = cab_gate.approve_change(record.cab_change_id, approver)
+            else:
+                applied = cab_gate.reject_change(record.cab_change_id, approver)
         else:
-            applied = cab_gate.reject_change(record.cab_change_id, approver)
+            # current_status is the opposite decision, or the change is missing
+            # entirely — a genuine conflict, not a safe retry.
+            raise EscalationError(
+                f"CAB change {record.cab_change_id!r} has status {current_status!r}, "
+                f"which conflicts with the requested decision (approved={approved})"
+            )
+
         if not applied:
             raise EscalationError(
                 f"CAB Gate decision for change {record.cab_change_id!r} was not applied "
                 "(not found, or already resolved) — FSM state left unchanged"
             )
 
-        new_state = "approved" if approved else "rejected"
-        record = self._update_state(record_id, new_state, reason=f"CAB decision by {approver}")
-        self._emit(f"governance.action.{new_state}", record, EventSeverity.INFO)
+        record = self._update_state(
+            record_id, expected_status, reason=f"CAB decision by {approver}"
+        )
+        self._emit(f"governance.action.{expected_status}", record, EventSeverity.INFO)
         return record
 
     def freeze(self, record_id: str, reason: str) -> EscalationRecord:

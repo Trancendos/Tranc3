@@ -157,11 +157,53 @@ async def test_auth_failure_fails_closed_not_open(monkeypatch, status_code):
         await governance_client.check_action("generate", requestor="test")
 
 
+@pytest.mark.parametrize("body", [["state", "approved"], "approved", 42, None])
+async def test_non_dict_json_response_fails_closed_not_crash(monkeypatch, body):
+    """cubic P2 (redesigned per a later P1 round): a reachable governance endpoint
+    returning valid but non-object JSON (e.g. a list, a bare string) must not crash
+    check_action with AttributeError on record.get() — but it also must not silently
+    let dispatch through. A response WAS received; it's just unusable, which fails
+    closed like every other 'backend is reachable but something's wrong' case."""
+    monkeypatch.setattr(governance_client, "_GATE_ENABLED", True)
+    monkeypatch.setattr(governance_client, "_BACKEND_URL", "http://backend:8000")
+    _FakeAsyncClient.response = _FakeResponse(body)
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+
+    with pytest.raises(governance_client.GovernanceBlockedError):
+        await governance_client.check_action("generate", requestor="test")
+
+
+async def test_non_200_status_fails_closed_not_open(monkeypatch):
+    """cubic P1: a 5xx (or any other non-2xx) from a *reachable* backend previously
+    fell into the same fail-open branch as a genuine network failure — a struggling
+    or buggy governance service could silently disable enforcement entirely."""
+    monkeypatch.setattr(governance_client, "_GATE_ENABLED", True)
+    monkeypatch.setattr(governance_client, "_BACKEND_URL", "http://backend:8000")
+    _FakeAsyncClient.response = _FakeResponse({"error": "internal"}, status_code=500)
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+
+    with pytest.raises(governance_client.GovernanceBlockedError):
+        await governance_client.check_action("generate", requestor="test")
+
+
 async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeypatch):
     """cubic P1: a typo'd or empty GOVERNANCE_GATE_TIMEOUT must not crash the whole
-    package at import time, even when the gate is disabled."""
+    package at import time, even when the gate is disabled.
+
+    cubic P3 follow-up: importlib.reload() re-executes the module against the *real*
+    environment, bypassing the autouse _reset_defaults fixture for the other three
+    module-level settings — save and restore them explicitly so an ambient
+    GOVERNANCE_GATE_ENABLED/TRANC3_ENGINE_URL/INTERNAL_SECRET in the real environment
+    can't leak into tests that run after this one.
+    """
     import importlib
 
+    saved = {
+        "_GATE_ENABLED": governance_client._GATE_ENABLED,
+        "_BACKEND_URL": governance_client._BACKEND_URL,
+        "_INTERNAL_SECRET": governance_client._INTERNAL_SECRET,
+        "_TIMEOUT": governance_client._TIMEOUT,
+    }
     monkeypatch.setenv("GOVERNANCE_GATE_TIMEOUT", "not-a-number")
     try:
         reloaded = importlib.reload(governance_client)
@@ -169,3 +211,5 @@ async def test_invalid_governance_gate_timeout_env_falls_back_to_default(monkeyp
     finally:
         monkeypatch.delenv("GOVERNANCE_GATE_TIMEOUT", raising=False)
         importlib.reload(governance_client)
+        for name, value in saved.items():
+            monkeypatch.setattr(governance_client, name, value)

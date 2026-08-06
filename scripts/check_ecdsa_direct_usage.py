@@ -102,6 +102,25 @@ def _docstring_node_ids(tree: ast.Module) -> set[int]:
     return ids
 
 
+def _joined_str_child_ids(tree: ast.Module) -> set[int]:
+    """id() of every Constant that's a literal part of an f-string (JoinedStr.values).
+
+    A literal-only f-string like f"ES256" is still walked as both the JoinedStr node
+    and its child Constant('ES256') node — without this, the plain-Constant check
+    below and the JoinedStr fold-check would each independently flag the same source
+    occurrence, reporting it twice in CI output. The fold-check already covers these
+    nodes (and reports the more informative "constant-folded" message), so the plain
+    Constant check skips anything in this set.
+    """
+    ids: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.JoinedStr):
+            for value in node.values:
+                if isinstance(value, ast.Constant):
+                    ids.add(id(value))
+    return ids
+
+
 def _scan_file(path: Path) -> tuple[list[str], list[str]]:
     """Returns (violations, errors) for one file."""
     rel = str(path.relative_to(REPO_ROOT))
@@ -119,6 +138,7 @@ def _scan_file(path: Path) -> tuple[list[str], list[str]]:
 
     violations: list[str] = []
     docstring_ids = _docstring_node_ids(tree)
+    joined_str_child_ids = _joined_str_child_ids(tree)
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -135,8 +155,18 @@ def _scan_file(path: Path) -> tuple[list[str], list[str]]:
                 violations.append(
                     f"{rel}:{node.lineno}: direct ecdsa import — 'from {node.module} import ...'"
                 )
+            # Independent of which module it's from: `from jose.constants import ES256
+            # as ALG` binds the local name to `ALG`, so the later ast.Name check (which
+            # matches on the *local* identifier) would never see the literal 'ES256'
+            # again — the import itself is the only place that name still appears.
+            if node.level == 0:
+                aliased = [a.name for a in node.names if a.name in _ES_ALGORITHMS]
+                if aliased:
+                    violations.append(
+                        f"{rel}:{node.lineno}: ES256/384/512 usage (import) — {aliased!r}"
+                    )
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
-            if id(node) in docstring_ids:
+            if id(node) in docstring_ids or id(node) in joined_str_child_ids:
                 continue
             if node.value in _ES_ALGORITHMS:
                 violations.append(f"{rel}:{node.lineno}: ES256/384/512 usage — {node.value!r}")
