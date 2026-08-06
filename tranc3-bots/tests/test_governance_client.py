@@ -58,6 +58,10 @@ def _reset_defaults(monkeypatch):
     monkeypatch.setattr(governance_client, "_BACKEND_URL", "")
     monkeypatch.setattr(governance_client, "_INTERNAL_SECRET", "")
     _FakeAsyncClient.last_call = None
+    # cubic P3: .response is shared class state too — without resetting it here, a
+    # test that forgets to set its own response would silently reuse whatever the
+    # previous test left behind instead of failing loudly.
+    _FakeAsyncClient.response = None
 
 
 async def test_gate_disabled_by_default_is_a_noop(monkeypatch):
