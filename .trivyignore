@@ -25,9 +25,13 @@ KSV118
 # direct dependency). No fixed version exists for this CVE specifically
 # (fix_versions: [] in the advisory) — the ecdsa maintainers have stated
 # side-channel attacks are out of scope. Every listed service's JWT usage is
-# HS256/RS256-only (grep-confirmed no ES256/384/512 usage), so the vulnerable
-# ECDSA sign/ECDH code paths are never invoked. Full context: SECURITY.md
-# "Accepted Risks" table. Re-check trigger: ES256/ES384/ES512 JWT support added,
+# HS256/RS256-only, so the vulnerable ECDSA sign/ECDH/keygen code paths
+# (signature generation, key generation, and ECDH per the advisory — not just
+# JWT signing) are never invoked. This is enforced, not just asserted:
+# scripts/check_ecdsa_direct_usage.py runs in CI (security-scan.yml) and fails
+# the build if a direct `import ecdsa` or an ES256/384/512 JWT algorithm is
+# ever introduced, so this scope claim can't silently go stale. Full context:
+# SECURITY.md "Accepted Risks" table. Re-check trigger: that CI check fails,
 # or a patched ecdsa release ships for this CVE specifically.
 CVE-2024-23342
 

@@ -17,8 +17,9 @@
 > are designed to plug into Magna Carta's existing machinery (CAB Gate, Observatory, `ai_governance.py`),
 > not replace it.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Status:** Phase 1 (terminology +
-schema design) · **Last verified:** 2026-08-06
+**Owner:** Platform Owner Trancendos · **Version:** 1.1.0 · **Status:** Phase 2 complete (terminology,
+schema, and a real escalation FSM with 11 seed charters — not yet called by any live agent/bot code
+path; see §3.5) · **Last verified:** 2026-08-06
 
 ---
 
@@ -100,16 +101,23 @@ reuses existing platform vocabulary instead of inventing parallel enums:
 See the companion schema file for the full structure, required fields, and the worked example
 (a Tier 4 Agent charter under ArchPrime's domain).
 
-### 2.3 What this schema does *not* claim to do yet
+### 2.3 Phase 2 status — enforcement now exists
 
-It validates a charter document. It does not yet *enforce* one at runtime — no code today reads a
-charter and blocks a mismatched action. That enforcement is the escalation state machine in §3,
-and per the honesty standard set by every other doc in this directory, is being called out as
-designed-not-built rather than glossed over.
+Updated 2026-08-06: this is no longer designed-but-not-built. `src/compliance/escalation_fsm.py`
+loads and validates every charter in `docs/governance/charters/` against the schema at import time,
+and `EscalationFSM.submit()` genuinely resolves an action request against a charter and blocks or
+routes it — this is real code, not aspiration. 11 seed charters ship today: one Tier 4 Agent charter
+per `PrimeDomain` (§1.2's 9 domains), a Tier 4 fallback for unmapped entities, and one shared Tier 5
+Bot charter. See §3 for what the FSM actually does.
+
+**What's still not done**: no live platform code *calls* `EscalationFSM.submit()` yet — Tier 4/5
+entities don't route their actions through it today. The FSM exists, is tested, and is reachable via
+`/governance/*`, but nothing in `src/agents/orchestrator.py` or `tranc3-bots/bots/registry.py` calls
+it. Wiring an actual caller in is Phase 3.
 
 ---
 
-## 3. Unified escalation state machine — design, not yet implemented
+## 3. Unified escalation state machine — implemented
 
 ### 3.1 The gap this closes
 
@@ -125,7 +133,7 @@ wanted (routing a policy violation from detection through human approval).
 Reusing the brainstormed FSM shape, because it's sound — the states themselves aren't the novel
 part, wiring them to *real* platform mechanisms instead of hypothetical ones is:
 
-```
+```text
 draft -> validated              (charter schema validation passes)
 draft -> rejected                (schema validation fails)
 validated -> policy_checked      (no charter conflict — see §3.4)
@@ -144,14 +152,18 @@ frozen -> halted                  (irreversible violation — this is the Hard S
 
 ### 3.3 Where each transition actually writes data
 
-No new logging system. Every transition writes to systems that already exist:
+No new logging system. Every transition writes to systems that already exist — this is what
+`EscalationFSM` in `src/compliance/escalation_fsm.py` does today, not a plan:
 
-- Schema validation results → not persisted (stateless check)
-- `pending_cab` / `approved` / `rejected` (CAB path) → `cab_changes` table, `src/compliance/cab_gate.py`
+- Schema validation results → not persisted (stateless check, `CharterRegistry.reload()`)
+- `pending_cab` (CAB path) → `cab_gate.register_change()`, resolved via `EscalationFSM.resolve_cab()`
+  which calls back into the same `cab_changes` table `src/compliance/cab_gate.py` already owns
 - `escalated` / `frozen` → `AIIncident` log, `src/compliance/ai_governance.py` (`log_ai_incident()`)
-- Every transition → **The Observatory** audit trail (already the platform's one real audit log)
-- `halted` → this is the aggregation point Hard Stop Matrix asked for; a `GET` on this state across
-  all active charters answers "is anything hard-stopped right now" for the first time
+- Every transition → **The Observatory** audit trail via `Observatory.record()`, `category=GOVERNANCE`
+- `halted` → `EscalationFSM.list_halted()` / `GET /governance/halted` is the aggregation point Hard
+  Stop Matrix asked for — answers "is anything hard-stopped right now" for the first time
+- State + full history persisted in SQLite (`escalation_records` table, zero-cost/self-hosted, same
+  pattern as `cab_changes`), exposed at `/governance/actions/{record_id}`, `/governance/charters*`
 
 ### 3.4 Conflict resolution
 
@@ -163,11 +175,18 @@ own "human agency" principle (*"high-risk decisions require human review"*).
 
 ### 3.5 Explicitly out of scope for this phase
 
-Implementing the FSM as running code (a `src/compliance/escalation_fsm.py` with real state
-persistence and CAB Gate wiring) is Phase 2, matching how Matrix Suites was built in stages (7.1
-design → 7.2 event emission → 7.3–7.5 further integration) rather than landing all at once. Phase 1
-is this design plus the schema in §2, which is enough to validate real charters and get the
-terminology question resolved without touching any live enforcement path yet.
+What Phase 2 built: `src/compliance/escalation_fsm.py` (charter loading/validation, the FSM itself,
+CAB Gate + `ai_governance` + Observatory wiring, `list_halted()`), `src/compliance/governance_routes.py`
+(`/governance/charters`, `/governance/actions`, `/governance/halted`, mounted in `api.py`), 11 real
+seed charters, and 38 passing tests (`tests/test_escalation_fsm.py`).
+
+What's still explicitly not done, matching how Matrix Suites was built in stages (7.1 design → 7.2
+event emission → 7.3–7.5 further integration) rather than landing all at once: **no live platform
+code calls `EscalationFSM.submit()` yet.** The FSM works, is tested, and is reachable via HTTP, but
+`src/agents/orchestrator.py`'s `AgentOrchestrator` and `tranc3-bots/bots/registry.py`'s `BotRegistry`
+don't route dispatched tasks through it — so today it validates and would-enforce, but doesn't yet
+actually intercept a real Tier 4/5 action anywhere in the platform. Wiring that call site in, and
+expanding the 11 seed charters as real capability gaps are found, is Phase 3.
 
 ---
 
@@ -207,3 +226,9 @@ in code that already exists rather than invented from scratch:
 - `src/compliance/cab_gate.py`, `src/compliance/ai_governance.py`, `src/roles/registry.py` — the
   real systems this design wires into rather than duplicates.
 - `docs/governance/schemas/agent-charter.schema.json` — companion JSON Schema (§2).
+- `docs/governance/charters/` — the 11 real seed charters (§2.3).
+- `src/compliance/escalation_fsm.py`, `src/compliance/governance_routes.py` — the Phase 2
+  implementation (§3), `/governance/*` routes mounted in `api.py`.
+- `tests/test_escalation_fsm.py` — 38 tests covering the FSM, charter registry, and routes.
+- `scripts/check_ecdsa_direct_usage.py` — unrelated to this doc's subject but landed alongside it in
+  the same PR: a CI drift guard for the ecdsa accepted-risk scope claim in `.trivyignore`.

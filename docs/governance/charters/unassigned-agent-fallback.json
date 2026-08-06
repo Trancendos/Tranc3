@@ -1,0 +1,35 @@
+{
+  "charter_id": "unassigned-agent-fallback",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "unassigned",
+  "mission": "Default charter for Tier 4 Agents not yet mapped to a PrimeDomain \u2014 per \u00a73.4, ambiguity escalates rather than defaulting permissive.",
+  "allowed_actions": [
+    "read_approved_documents"
+  ],
+  "forbidden_actions": [
+    "execute_write_actions",
+    "external_communication",
+    "production_change",
+    "access_restricted_data"
+  ],
+  "risk_tier": "high",
+  "approval_required": true,
+  "escalation_triggers": [
+    "policy_conflict",
+    "confidence_below_threshold"
+  ],
+  "escalation_severity": "high",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate",
+  "confidence_model": {
+    "threshold": 0.5,
+    "weights": {
+      "decision_quality": 0.3,
+      "adaptation_speed": 0.25,
+      "state_coherence": 0.2,
+      "resource_efficiency": 0.15,
+      "communication": 0.1
+    }
+  }
+}

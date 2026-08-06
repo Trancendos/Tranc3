@@ -115,12 +115,20 @@
     "confidence_model": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Optional. When present, ties escalation_triggers.confidence_below_threshold to AeonMind's real Intelligence Score weights instead of a bare threshold with no scoring behind it.",
+      "description": "Required whenever escalation_triggers contains confidence_below_threshold (see the top-level if/then below) — ties that trigger to AeonMind's real Intelligence Score weights instead of a bare threshold with no scoring behind it. Once present, threshold and all five weights are mandatory: a partial model is rejected rather than silently treated as unconstrained.",
+      "required": ["threshold", "weights"],
       "properties": {
         "threshold": { "type": "number", "minimum": 0, "maximum": 1 },
         "weights": {
           "type": "object",
           "additionalProperties": false,
+          "required": [
+            "decision_quality",
+            "adaptation_speed",
+            "state_coherence",
+            "resource_efficiency",
+            "communication"
+          ],
           "properties": {
             "decision_quality": { "type": "number", "minimum": 0, "maximum": 1 },
             "adaptation_speed": { "type": "number", "minimum": 0, "maximum": 1 },
@@ -132,8 +140,32 @@
       }
     }
   },
-  "$defs": {
-    "example": {
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "escalation_triggers": {
+            "contains": { "const": "confidence_below_threshold" }
+          }
+        },
+        "required": ["escalation_triggers"]
+      },
+      "then": { "required": ["confidence_model"] }
+    },
+    {
+      "if": { "required": ["confidence_model"] },
+      "then": {
+        "properties": {
+          "escalation_triggers": {
+            "contains": { "const": "confidence_below_threshold" }
+          }
+        },
+        "required": ["escalation_triggers"]
+      }
+    }
+  ],
+  "examples": [
+    {
       "charter_id": "archprime-agent-readonly-retrieval",
       "version": "1.0.0",
       "tier": 4,
@@ -158,5 +190,5 @@
         }
       }
     }
-  }
+  ]
 }

@@ -76,6 +76,9 @@ jobs:
             --severity-level medium \
             --confidence-level medium
 
+      - name: ecdsa accepted-risk drift guard (CVE-2024-23342)
+        run: python3 scripts/check_ecdsa_direct_usage.py
+
       - name: Security dimension (repo-weighted)
         run: python3 scripts/security_score.py --min-percent 90
 

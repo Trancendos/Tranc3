@@ -797,6 +797,13 @@ from src.compliance.matrix_suites_routes import (
 
 app.include_router(_matrix_suites_router)
 
+# ── AI Governance Constitution (Phase 2 — escalation FSM) ─────────────────────
+from src.compliance.governance_routes import (
+    router as _governance_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_governance_router)
+
 # ── The Town Hall (governance + compliance) ───────────────────────────────────
 from src.townhall.routes import (
     router as _townhall_router,  # noqa: F401  # intentional top-level import
