@@ -54,8 +54,8 @@ The mapping:
 | 1 — ORCHESTRATOR | Sovereign / Trance-One | Cornelius MacIntyre, The Queen, tAImra — the 3 cross-cutting Orchestrators |
 | 2 — PRIME | Primes / T2ance | The 9 `PrimeDomain`s (ArchPrime, CommPrime, CreatePrime, DevPrime, KnowPrime, SecPrime, WellPrime, GovPrime, OpsPrime — `t2ance/domain_authority.py`) |
 | 3 — AI | Lead AI / Tranc3 | The default tier for every named AI not elevated above — ~40 of the 43 entities |
-| 4 — AGENT | Agents (`agent_teams`) | **Correction to the brainstorm this doc responds to**: only 4 of 43 Locations (TateKing, Arcadian Exchange, The Lab, Infinity) have populated `agent_teams`; there is no uniform "every AI owns 2 agents" ratio in the actual code |
-| 5 — BOT | Bots (`BotRegistry`) | **Correction**: 12 bot *types*, shared platform-wide via `tranc3-bots/bots/registry.py` — not something each AI separately owns 6 of |
+| 4 — AGENT | Agents (`agent_alpha`/`agent_beta`, `agent_teams`) | **Correction to the brainstorm this doc responds to, refined 2026-08-06**: every one of the 43 Locations has exactly 2 base Agents (`agent_alpha`, `agent_beta` — non-optional fields on `LocationEntity`, confirmed by grep: 43/43). For the 39 single-AI Locations that base pair *is* effectively "2 agents per AI." The uneven part is `agent_teams`, populated for only 4 Locations (TateKing, Arcadian Exchange, The Lab, Infinity) where each named AI *within* that Location gets its own additional dedicated pair on top of the base one — so "every AI (at name granularity, ~40 of them) owns exactly 2 agents" still doesn't hold platform-wide, but "every Location owns exactly 2" does |
+| 5 — BOT | Bots (`bot_01`–`bot_04`, `BotRegistry`) | **Correction, refined 2026-08-06**: two distinct things, neither is 6. `platform.py` gives every one of the 43 Locations exactly 4 uniquely-flavored Bot entities (`bot_01`–`bot_04`, e.g. Ping-Bot/Ack-Bot/Syn-Bot/Fin-Bot — confirmed by grep: 172 = 43×4, no Location has 5+). Separately, `tranc3-bots/bots/registry.py`'s `BotRegistry` dispatches 12 functional bot *types*, shared platform-wide — not owned per-AI or per-Location at all |
 
 **What AeonMind's definitions add that the platform naming never specified**: autonomy semantics per
 tier (a Bot has zero decision-making capability and no state; an Agent has delegated autonomy
@@ -73,8 +73,12 @@ the Trance-One/T2ance/Tranc3 model matrix, and the governed advancement pipeline
 
 ### 2.1 Why not the brainstormed "2 agents + 6 bots, one charter per AI" model
 
-The originating brainstorm assumed a uniform ownership ratio and one charter per AI. Neither holds:
-agent/bot ownership is genuinely uneven (§1.2), and a single 40-entity charter list would duplicate
+The originating brainstorm's numbers were partly right: every Location genuinely does have 2 base
+Agents (see §1.2's corrected row — that part of the brainstorm holds at Location granularity). The
+"6 bots" figure was never right in either sense the code actually has (4 named per Location, or 12
+shared types platform-wide), and `agent_teams`'s extra per-name pairs for 4 Locations mean the ratio
+isn't uniform at AI-name granularity either. More fundamentally, "one charter per AI" doesn't hold
+regardless of the ownership numbers: a single 40-entity charter list would just duplicate
 `PLATFORM_ENTITIES.md` rather than add anything. Instead, charters are scoped to **capability
 classes** shared across entities at the same tier — much closer to how `t2ance/domain_authority.py`
 already governs entities by `PrimeDomain` rather than one-off per entity.
