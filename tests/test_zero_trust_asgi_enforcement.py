@@ -32,6 +32,14 @@ def client(monkeypatch):
     async def admin():
         return {"ok": True}
 
+    @app.post("/auth/register")
+    async def register():
+        return {"ok": True}
+
+    @app.post("/auth/token")
+    async def token():
+        return {"ok": True}
+
     with TestClient(app) as c:
         yield c
 
@@ -56,3 +64,29 @@ class TestMfaRouteActuallyEnforced:
         resp = client.get("/admin", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}
+
+
+class TestOrdinaryRoutesNotMfaGated:
+    """
+    Regression for a second bug cubic-dev-ai found in the MFA enforcement fix (P1,
+    confidence 10): rejecting on AccessPolicy.MFA_REQUIRED without first resetting the
+    Zero Trust decision meant *every* unauthenticated request — not just configured
+    mfa_routes — inherited ZeroTrustMiddleware.extract_context()'s tentative default of
+    MFA_REQUIRED (see src/auth/zero_trust.py's _determine_policy()), including bootstrap
+    endpoints like /auth/register and /auth/token that have no business being MFA-gated.
+    """
+
+    def test_register_route_not_blocked_without_mfa(self, client):
+        resp = client.post("/auth/register")
+        assert resp.status_code == 200
+        assert resp.json() == {"ok": True}
+
+    def test_token_route_not_blocked_without_mfa(self, client):
+        resp = client.post("/auth/token")
+        assert resp.status_code == 200
+        assert resp.json() == {"ok": True}
+
+    def test_admin_route_still_requires_mfa(self, client):
+        """The fix for the false-positive must not regress the real MFA gate."""
+        resp = client.get("/admin")
+        assert resp.status_code == 401

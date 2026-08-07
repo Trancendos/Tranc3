@@ -65,9 +65,12 @@
   > (`ERR_INJECTION_DETECTED = -32004`) before the payload reaches `tools/call`, and the
   > resolved client IP (`X-Forwarded-For`-aware, not the raw TCP peer — see §5) is
   > strike-tracked; 3 high-severity hits from the same IP escalates to a Cryptex
-  > `block_ip()` call, denying that IP platform-wide via the same check
-  > `GovernanceMiddleware` already gates other mutating routes on. Non-high-severity
-  > findings and clean payloads are unaffected. Full trace:
+  > `block_ip()` call. That block is now actually enforced platform-wide: this endpoint
+  > and `GovernanceMiddleware`'s `is_blocked()` gate on other mutating routes both resolve
+  > the client IP via the same `src/shared/client_ip.py` helper (cubic-flagged bug, fixed
+  > same day — before this fix the two checks disagreed under Traefik, so a block set here
+  > never matched what `GovernanceMiddleware` looked up). Non-high-severity findings and
+  > clean payloads are unaffected. Full trace:
   > `docs/governance/SECURITY-POSTURE-MATRIX.md` §3.
 - **Error handling:** JSON-RPC standard codes in `server.py`; platform canonical codes via
   `src/errors/error_catalog.py` (42 `ErrorCode` members defined). The scanner's documented

@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
 from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
+from src.shared.client_ip import resolve_client_ip
 
 from .payload_scanner import scan_rpc_payload
 from .tools import registry
@@ -74,25 +75,15 @@ def _resolve_client_ip(request: Request) -> Optional[str]:
     """
     Best-effort real client IP, preferring the Traefik-set X-Forwarded-For header.
 
-    request.client.host is the direct TCP peer — in the production Docker stack that's
-    Traefik's own container IP, not the original caller, since Traefik proxies the
-    connection. Blocking that value would ban the shared reverse proxy for all routed
-    traffic, not the offending caller. Same fallback order as
-    src/shared/rate_limiter.py's _get_client_key().
-
-    Trusting X-Forwarded-For here depends on infra/traefik/traefik.yml *not* setting
-    entryPoints.*.forwardedHeaders.insecure=true or a trustedIPs allowlist that admits
-    the public internet — neither is set today, so Traefik's documented default applies:
-    it discards any X-Forwarded-For the client sent and sets the header itself from the
-    real connection it observed, rather than trusting or appending to client input. If
-    that ever changes, this value becomes spoofable (a caller could frame another IP for
-    the Cryptex block below) and this comment's assumption needs re-checking against the
-    live Traefik config — see docs/governance/SECURITY-POSTURE-MATRIX.md §6.
+    Delegates to src/shared/client_ip.py's resolve_client_ip() — the same resolver
+    GovernanceMiddleware (src/security/middleware.py) uses for its is_blocked() check.
+    Using two different resolvers here was the cause of a real bug: this endpoint used
+    to strike-track and block the XFF-resolved IP while GovernanceMiddleware checked
+    request.client.host (Traefik's own container IP), so a Cryptex block set here never
+    actually matched what GovernanceMiddleware looked up on the next request — the block
+    had no effect. See docs/governance/SECURITY-POSTURE-MATRIX.md §6.
     """
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else None
+    return resolve_client_ip(request.headers, request.client.host if request.client else None)
 
 
 def _record_injection_strike(client_ip: str) -> None:

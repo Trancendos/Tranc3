@@ -767,3 +767,25 @@ class TestFullRequestFlow:
         )
         # Unhealthy device + no MFA → DENY (from _determine_policy during extraction)
         assert ctx.access_policy == AccessPolicy.DENY
+
+    def test_ordinary_unauthenticated_route_not_mfa_gated(self):
+        """Regression: extract_context() defaults access_policy to MFA_REQUIRED for any
+        non-mfa_verified caller (see _determine_policy). Before evaluate() reset that
+        default, an unauthenticated request to an *ordinary*, non-mfa_routes path — e.g.
+        a login/register bootstrap endpoint — inherited that default unchanged and was
+        incorrectly treated as requiring MFA, even though no mfa_routes/healthy_device_routes/
+        risk-score condition actually matched this path. cubic-dev-ai flagged this (P1,
+        confidence 10) against Tranc3#493.
+        """
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin", "/api/secrets"],
+            )
+        )
+        ctx = mw.extract_context({})  # no headers at all — a fresh, unauthenticated caller
+        result = mw.evaluate(ctx, "/auth/register")
+        assert result.access_policy == AccessPolicy.ALLOW
+
+        ctx2 = mw.extract_context({})
+        result2 = mw.evaluate(ctx2, "/auth/token")
+        assert result2.access_policy == AccessPolicy.ALLOW

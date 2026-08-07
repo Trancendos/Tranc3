@@ -67,9 +67,16 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
         ):
             try:
                 from src.cryptex.threat_detector import get_cryptex
+                from src.shared.client_ip import resolve_client_ip
 
                 cx = get_cryptex()
-                ip = request.client.host if request.client else None
+                # Same X-Forwarded-For-aware resolver src/mcp/server.py uses to strike-track
+                # and block callers — using request.client.host here (Traefik's own container
+                # IP under the proxy) meant a block set via the MCP injection guard never
+                # actually matched what this check looked up on the next request.
+                ip = resolve_client_ip(
+                    request.headers, request.client.host if request.client else None
+                )
                 if cx.is_blocked(ip=ip):
                     return _JSONResponse(
                         {"error": "Access denied"},
