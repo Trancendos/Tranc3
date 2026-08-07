@@ -15,11 +15,20 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.security import trusted_proxy
 from src.security.middleware import ZeroTrustASGIMiddleware
 from src.security.trusted_proxy import (
     is_trusted_proxy_peer,
     sanitize_zero_trust_client_headers,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_hostname_cache():
+    """Isolate tests from each other's cached DNS-resolution state."""
+    trusted_proxy._hostname_cache = None
+    yield
+    trusted_proxy._hostname_cache = None
 
 
 class TestIsTrustedProxyPeer:
@@ -82,6 +91,72 @@ class TestSanitizeZeroTrustClientHeaders:
         )
         assert headers["Authorization"] == "Bearer x"
         assert "X-Device-Posture" not in headers
+
+    def test_uncommon_header_casing_is_still_stripped(self, monkeypatch):
+        """cubic/Sourcery-flagged regression: the original implementation only
+        matched two hardcoded case variants ('x-device-posture',
+        'X-Device-Posture'), so any other casing — all-caps, or whatever a
+        non-ASGI-normalizing caller/proxy sends — would slip through
+        unstripped. Matching case-insensitively closes that."""
+        monkeypatch.delenv("TRUSTED_PROXY_CIDRS", raising=False)
+        monkeypatch.setenv("TRUSTED_PROXY_HOSTNAMES", "no-such-host-in-this-test.invalid")
+        headers = sanitize_zero_trust_client_headers(
+            {"X-DEVICE-POSTURE": "healthy", "x-Client-Country": "US"},
+            peer_ip="172.28.9.9",
+        )
+        assert "X-DEVICE-POSTURE" not in headers
+        assert "x-Client-Country" not in headers
+
+
+class TestHostnameResolutionCaching:
+    def test_gethostbyname_not_called_again_within_ttl(self, monkeypatch):
+        """cubic/Sourcery-flagged regression: socket.gethostbyname() is a
+        blocking syscall; calling it on every request from an async
+        dispatch() would stall the event loop. Verifies repeated calls with
+        the same TRUSTED_PROXY_HOSTNAMES value hit the cache, not the
+        network, within the TTL window."""
+        monkeypatch.delenv("TRUSTED_PROXY_CIDRS", raising=False)
+        monkeypatch.setenv("TRUSTED_PROXY_HOSTNAMES", "localhost")
+        calls = []
+        original = trusted_proxy.socket.gethostbyname
+
+        def _counting_gethostbyname(name):
+            calls.append(name)
+            return original(name)
+
+        monkeypatch.setattr(trusted_proxy.socket, "gethostbyname", _counting_gethostbyname)
+
+        assert is_trusted_proxy_peer("127.0.0.1") is True
+        assert is_trusted_proxy_peer("127.0.0.1") is True
+        assert is_trusted_proxy_peer("127.0.0.1") is True
+        assert calls == ["localhost"]  # only the first call actually resolved
+
+    def test_cache_does_not_leak_across_different_hostname_configs(self, monkeypatch):
+        monkeypatch.delenv("TRUSTED_PROXY_CIDRS", raising=False)
+        monkeypatch.setenv("TRUSTED_PROXY_HOSTNAMES", "localhost")
+        assert is_trusted_proxy_peer("127.0.0.1") is True
+
+        monkeypatch.setenv("TRUSTED_PROXY_HOSTNAMES", "no-such-host-in-this-test.invalid")
+        assert is_trusted_proxy_peer("127.0.0.1") is False
+
+    def test_cache_expires_after_ttl(self, monkeypatch):
+        monkeypatch.delenv("TRUSTED_PROXY_CIDRS", raising=False)
+        monkeypatch.setenv("TRUSTED_PROXY_HOSTNAMES", "localhost")
+        calls = []
+        original = trusted_proxy.socket.gethostbyname
+
+        def _counting_gethostbyname(name):
+            calls.append(name)
+            return original(name)
+
+        monkeypatch.setattr(trusted_proxy.socket, "gethostbyname", _counting_gethostbyname)
+
+        assert is_trusted_proxy_peer("127.0.0.1") is True
+        # Force the cached entry to look expired without a real sleep.
+        raw, _resolved_at, ips = trusted_proxy._hostname_cache
+        trusted_proxy._hostname_cache = (raw, 0.0, ips)
+        assert is_trusted_proxy_peer("127.0.0.1") is True
+        assert calls == ["localhost", "localhost"]  # re-resolved after expiry
 
 
 @pytest.fixture

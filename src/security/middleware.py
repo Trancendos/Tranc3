@@ -9,6 +9,8 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from src.security.trusted_proxy import sanitize_zero_trust_client_headers
+
 logger = logging.getLogger(__name__)
 
 SECURITY_HEADERS = {
@@ -245,8 +247,6 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         if any(path.startswith(pfx) for pfx in self._SKIP_PREFIXES):
             return await call_next(request)
-
-        from src.security.trusted_proxy import sanitize_zero_trust_client_headers
 
         headers = resolve_mfa_verified_header(
             dict(request.headers), request.headers.get("Authorization", "")

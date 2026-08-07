@@ -36,13 +36,23 @@ import ipaddress
 import logging
 import os
 import socket
+import time
 
 logger = logging.getLogger("tranc3.security.trusted_proxy")
 
-_DEVICE_POSTURE_KEYS = ("x-device-posture", "X-Device-Posture")
-_CLIENT_COUNTRY_KEYS = ("x-client-country", "X-Client-Country")
+_DEVICE_POSTURE_HEADER = "x-device-posture"
+_CLIENT_COUNTRY_HEADER = "x-client-country"
 
 _DEFAULT_TRUSTED_HOSTNAMES = "traefik,tranc3-traefik"
+
+# socket.gethostbyname() is a blocking syscall; calling it on every request
+# from an async dispatch() would stall the event loop. Cache the resolved
+# set for a short TTL instead of forever, so a Traefik container restart
+# (new IP on tranc3-net — see _resolve_hostnames()'s docstring) is picked up
+# within seconds rather than requiring a process restart, without paying a
+# DNS lookup on every single request.
+_HOSTNAME_CACHE_TTL_SECONDS = 30
+_hostname_cache: tuple[str, float, set[str]] | None = None  # (raw, resolved_at, ips)
 
 
 def _parse_cidrs(raw: str) -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
@@ -58,14 +68,7 @@ def _parse_cidrs(raw: str) -> list[ipaddress.IPv4Network | ipaddress.IPv6Network
     return networks
 
 
-def _resolve_hostnames(raw: str) -> set[str]:
-    """Resolve configured hostnames to their current container IPs.
-
-    Re-resolved on every call rather than cached: Docker container IPs on
-    tranc3-net are assigned at container start (no static ipv4_address is
-    reserved for Traefik in docker-compose.production.yml), so the address
-    behind a given hostname can change across a redeploy/restart.
-    """
+def _resolve_hostnames_uncached(raw: str) -> set[str]:
     resolved: set[str] = set()
     for name in raw.split(","):
         name = name.strip()
@@ -79,6 +82,30 @@ def _resolve_hostnames(raw: str) -> set[str]:
             # error, just no match from this candidate.
             continue
     return resolved
+
+
+def _resolve_hostnames(raw: str) -> set[str]:
+    """Resolve configured hostnames to their current container IPs.
+
+    Cached for _HOSTNAME_CACHE_TTL_SECONDS rather than resolved fresh on
+    every call: Docker container IPs on tranc3-net are assigned at
+    container start (no static ipv4_address is reserved for Traefik in
+    docker-compose.production.yml), so the address behind a given hostname
+    can change across a redeploy/restart — but socket.gethostbyname() is a
+    blocking syscall, and this is called from an async ASGI dispatch() on
+    every request, so resolving on every call would stall the event loop.
+    A short TTL balances picking up a changed IP quickly against not doing
+    a blocking DNS lookup per-request.
+    """
+    global _hostname_cache
+    now = time.monotonic()
+    if _hostname_cache is not None:
+        cached_raw, resolved_at, ips = _hostname_cache
+        if cached_raw == raw and (now - resolved_at) < _HOSTNAME_CACHE_TTL_SECONDS:
+            return ips
+    ips = _resolve_hostnames_uncached(raw)
+    _hostname_cache = (raw, now, ips)
+    return ips
 
 
 def is_trusted_proxy_peer(peer_ip: str | None) -> bool:
@@ -118,10 +145,17 @@ def sanitize_zero_trust_client_headers(
     absent, same as if the header had never been sent — not substituted
     with anything, since there is no signed-claim equivalent to fall back
     on for these two fields.
+
+    Matches on the header name case-insensitively (HTTP header names are
+    case-insensitive per RFC 7230, and ASGI servers normalize them to
+    lowercase — but this shouldn't rely on every caller/server doing that)
+    rather than enumerating specific case variants, so e.g. `X-DEVICE-
+    POSTURE` or `x-Device-Posture` can't slip through unstripped.
     """
     if is_trusted_proxy_peer(peer_ip):
         return headers
-    sanitized = dict(headers)
-    for key in (*_DEVICE_POSTURE_KEYS, *_CLIENT_COUNTRY_KEYS):
-        sanitized.pop(key, None)
-    return sanitized
+    return {
+        key: value
+        for key, value in headers.items()
+        if key.lower() not in (_DEVICE_POSTURE_HEADER, _CLIENT_COUNTRY_HEADER)
+    }
