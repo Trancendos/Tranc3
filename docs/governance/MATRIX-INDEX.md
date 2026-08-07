@@ -8,7 +8,7 @@
 > Traffic (real building blocks, no unified matrix), and the AI Relationship Matrix. This index is
 > the map; the docs it links to (existing or newly written) are the territory.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-07-30
+**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-08-07 (Swarm Coordination Matrix row added)
 
 ---
 
@@ -66,6 +66,7 @@
 | Attribute Matrix | Exists + documented | `LocationEntity` dataclass fields themselves (`src/entities/platform.py`) | `PLATFORM_ENTITIES.md` |
 | Entity Matrix | Exists + documented | `PLATFORM_ENTITIES` | `PLATFORM_ENTITIES.md` |
 | Association Matrix | Exists, thin | `src/cmdb/models.py` — CMDB-style associations between platform components, but this is infrastructure CMDB, not entity-to-entity association in the `PLATFORM_ENTITIES` sense | Noted here |
+| Swarm Coordination Matrix | Exists, newly documented | `workers/cache-service/worker.py`'s `ThresholdGuard` — real, tested ACO-pheromone backend selection (reinforce/decay, greedy max), reused across ~15 workers; `workers/hive-service/`'s `SwarmCoordinator` — real group-lifecycle registry, not emergent coordination. `src/distributed/swarm_intelligence.py`'s `DistributedIntelligenceSwarm` is scaffolding only (`ENABLE_SWARM` defaults `false`, unreferenced by any deployed service) | [SWARM-COORDINATION-MATRIX.md](SWARM-COORDINATION-MATRIX.md) |
 
 ## 3. What this pass produced
 
