@@ -1,0 +1,65 @@
+# .github/workflows/perf-smoke.yml
+#
+# GitHub-hosted twin of .forgejo/workflows/perf-smoke.yml. Kept side by side
+# deliberately, not as a migration — see that file's header for the full
+# design rationale (non-blocking first step, no historical baseline yet).
+# This one needs no secrets and no internal network: it starts the API
+# server inside the job itself and load-tests localhost, so it can run on
+# GitHub's own runners today with zero setup.
+
+name: Perf Smoke Test
+
+on:
+  pull_request:
+    branches: ["main", "develop"]
+    paths:
+      - 'api.py'
+      - 'src/**'
+      - 'scripts/loadtest/**'
+      - '.github/workflows/perf-smoke.yml'
+  schedule:
+    - cron: '0 7 * * *'  # Daily 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  perf-smoke:
+    name: k6 smoke load test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install k6
+        run: |
+          if ! command -v k6 &>/dev/null; then
+            curl -sSfL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz \
+              | tar -xz --strip-components 1 -C /usr/local/bin k6-v0.54.0-linux-amd64/k6
+          fi
+          k6 version
+
+      - name: Start API server
+        run: |
+          SECRET_KEY=ci-test-secret-key nohup uvicorn api:app --host 0.0.0.0 --port 8000 \
+            > api-server.log 2>&1 &
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then
+              ready=1; break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat api-server.log || true; exit 1; fi
+
+      - name: Run k6 smoke load test
+        run: k6 run scripts/loadtest/smoke.js || true
+        env:
+          BASE_URL: http://localhost:8000

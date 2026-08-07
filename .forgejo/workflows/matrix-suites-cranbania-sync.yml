@@ -7,8 +7,14 @@
 # Stage 7.2's independent overdue-event emission).
 #
 # Requires CranBania (port 8071) reachable on tranc3-net — this workflow does nothing
-# useful until the self-hosted stack is actually deployed; it's staged ahead of that, same
-# as bot-health-watchdog.yml and perf-smoke.yml.
+# useful until the self-hosted stack is actually deployed; it's staged ahead of that.
+#
+# Unlike bot-health-watchdog.yml and perf-smoke.yml, this one has no GitHub-hosted
+# twin in .github/workflows/: `cranbania` is a hostname that only resolves inside the
+# self-hosted Docker network, so a GitHub-hosted runner has no route to it regardless
+# of where CRANBANIA_API_KEY is stored. This is a network-reachability gap, not a
+# secrets-storage one — it stays blocked until CranBania has a real, publicly
+# reachable URL to point CRANBANIA_URL at.
 
 name: Matrix Suites CranBania Sync
 
