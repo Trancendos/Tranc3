@@ -1,0 +1,67 @@
+# The Workshop — Perf/Load-Test Smoke Gate
+#
+# No perf/load-testing gate existed anywhere in this repo's CI before this —
+# no k6/locust, no latency regression check, nothing. This is a deliberately
+# small first step: light constant traffic against the root API's cheapest
+# real endpoints (see scripts/loadtest/smoke.js), checking basic request
+# handling doesn't regress into multi-second latency or start erroring under
+# a handful of concurrent users. It is NOT a capacity/stress test.
+#
+# Non-blocking (|| true) for now: there is no historical latency baseline to
+# validate the thresholds against yet, and self-hosted runner hardware varies
+# — a hard gate today could fail on infra noise rather than a real
+# regression. Promote to blocking once this has run enough times to trust
+# the threshold, same staged-rollout posture as estate_lint.py's new checks.
+
+name: Perf Smoke Test
+
+on:
+  pull_request:
+    paths:
+      - 'api.py'
+      - 'src/**'
+      - 'scripts/loadtest/**'
+      - '.forgejo/workflows/perf-smoke.yml'
+  schedule:
+    - cron: '0 7 * * *'  # Daily 07:00 UTC
+  workflow_dispatch:
+
+jobs:
+  perf-smoke:
+    name: k6 smoke load test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install k6
+        run: |
+          if ! command -v k6 &>/dev/null; then
+            curl -sSfL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz \
+              | tar -xz --strip-components 1 -C /usr/local/bin k6-v0.54.0-linux-amd64/k6
+          fi
+          k6 version
+
+      - name: Start API server
+        run: |
+          SECRET_KEY=ci-test-secret-key nohup uvicorn api:app --host 0.0.0.0 --port 8000 \
+            > api-server.log 2>&1 &
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then
+              ready=1; break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat api-server.log || true; exit 1; fi
+
+      - name: Run k6 smoke load test
+        run: k6 run scripts/loadtest/smoke.js || true
+        env:
+          BASE_URL: http://localhost:8000
