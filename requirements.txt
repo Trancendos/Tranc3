@@ -198,5 +198,7 @@ defusedxml==0.7.1     # Prevents XXE attacks (CWE-611); used by billing.py, oci/
 # Run: pip install -r requirements-security.txt
 # See: requirements-security.txt for scanning toolchain
 
-# AeonMind polyglot AI engine (editable local install)
--e aeonmind/python
+# AeonMind polyglot AI engine (editable local install) — installed separately
+# in Dockerfile after the source tree is copied in; a local editable path
+# can't resolve at this point in the Docker build, before `aeonmind/` exists
+# in the build context. Local dev: `pip install -e aeonmind/python` manually.
