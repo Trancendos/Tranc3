@@ -73,11 +73,10 @@ class AuthDatabase:
         would silently start asserting mfa_verified=true, even though no MFA challenge
         was ever completed in that session.
         """
-        try:
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(sessions)").fetchall()}
+        if "mfa_verified" not in columns:
             self._conn.execute("ALTER TABLE sessions ADD COLUMN mfa_verified INTEGER DEFAULT 0")
             self._conn.commit()
-        except sqlite3.OperationalError:
-            pass  # column already exists
 
     def _ensure_auth_codes_table(self) -> None:
         self._conn.execute("""

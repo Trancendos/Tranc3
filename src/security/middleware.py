@@ -179,11 +179,12 @@ def resolve_mfa_verified_header(headers: dict[str, str], authorization: str) -> 
     headers = dict(headers)
     headers.pop("x-mfa-verified", None)
     headers.pop("X-MFA-Verified", None)
-    if authorization.startswith("Bearer "):
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() == "bearer" and token:
         try:
             from auth import verify_token  # lazy, avoids circular import
 
-            claims = verify_token(authorization[7:])
+            claims = verify_token(token)
             if claims and claims.get("mfa_verified"):
                 headers["X-MFA-Verified"] = "true"
         except Exception:

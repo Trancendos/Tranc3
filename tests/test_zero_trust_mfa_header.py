@@ -13,6 +13,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 import pytest
 
 from auth import create_token
@@ -21,7 +23,7 @@ from src.security.middleware import resolve_mfa_verified_header
 
 @pytest.fixture(autouse=True)
 def _jwt_secret(monkeypatch):
-    monkeypatch.setenv("JWT_SECRET", "test-jwt-secret-for-unit-tests-00002")
+    monkeypatch.setenv("JWT_SECRET", secrets.token_hex(32))
 
 
 class TestResolveMfaVerifiedHeader:

@@ -14,6 +14,7 @@ import json
 import logging
 import time
 import uuid
+from collections import OrderedDict
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Request
@@ -61,7 +62,12 @@ ERR_INJECTION_DETECTED = -32004
 # can legitimately appear in a tool call's arguments) can't get a caller permanently
 # banned; a sustained pattern of high-severity hits still does.
 _INJECTION_BLOCK_THRESHOLD = 3
-_injection_strike_counts: Dict[str, int] = {}
+# Bounded so a caller can't grow this dict without limit by cycling through spoofed
+# X-Forwarded-For values (state is in-memory and per-process anyway — lost on restart,
+# same trade-off this platform already accepts for rate limiting; see CLAUDE.md
+# "In-memory rate limiting over Cloudflare KV").
+_INJECTION_STRIKE_MAP_MAX_ENTRIES = 10_000
+_injection_strike_counts: OrderedDict[str, int] = OrderedDict()
 
 
 def _resolve_client_ip(request: Request) -> Optional[str]:
@@ -73,6 +79,15 @@ def _resolve_client_ip(request: Request) -> Optional[str]:
     connection. Blocking that value would ban the shared reverse proxy for all routed
     traffic, not the offending caller. Same fallback order as
     src/shared/rate_limiter.py's _get_client_key().
+
+    Trusting X-Forwarded-For here depends on infra/traefik/traefik.yml *not* setting
+    entryPoints.*.forwardedHeaders.insecure=true or a trustedIPs allowlist that admits
+    the public internet — neither is set today, so Traefik's documented default applies:
+    it discards any X-Forwarded-For the client sent and sets the header itself from the
+    real connection it observed, rather than trusting or appending to client input. If
+    that ever changes, this value becomes spoofable (a caller could frame another IP for
+    the Cryptex block below) and this comment's assumption needs re-checking against the
+    live Traefik config — see docs/governance/SECURITY-POSTURE-MATRIX.md §6.
     """
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded:
@@ -84,6 +99,9 @@ def _record_injection_strike(client_ip: str) -> None:
     """Escalate to a Cryptex IP block only after repeated high-severity detections."""
     count = _injection_strike_counts.get(client_ip, 0) + 1
     _injection_strike_counts[client_ip] = count
+    _injection_strike_counts.move_to_end(client_ip)
+    while len(_injection_strike_counts) > _INJECTION_STRIKE_MAP_MAX_ENTRIES:
+        _injection_strike_counts.popitem(last=False)
     if count < _INJECTION_BLOCK_THRESHOLD:
         return
     try:

@@ -118,9 +118,10 @@
 - **Fixed defect:** `workers/artifactory-service/` had no Dockerfile at all, so it could not be
   built via `docker compose build` — see truthfulness header. Fixed by adding one matching the
   established single-file-worker convention.
-- **Documented, not fixed:** the same missing-Dockerfile defect exists in 7 other worker
-  directories — see truthfulness header for the full list and rationale for scoping the fix to
-  this entity only.
+- **Documented, not fixed:** as of the 2026-08-07 round-3 re-verification, the missing-Dockerfile-
+  *file* defect is resolved for every plain directory; the two remaining build-breaking issues are
+  `cranbania`'s missing submodule checkout and `rate-limit-service-go`'s undeployed/dead-code
+  status — see truthfulness header for the full detail.
 
 ## 4. RACI Matrix
 

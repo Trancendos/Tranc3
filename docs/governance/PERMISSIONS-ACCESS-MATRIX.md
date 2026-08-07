@@ -60,10 +60,16 @@ straight from the raw client request with nothing between the caller and the app
 any caller could set it themselves and satisfy MFA-gated routes with no real MFA challenge. Fixed:
 `mfa_verified` is now derived from the signed JWT's own claim (set server-side by
 `workers/infinity-auth/router.py` only after a real TOTP/backup-code check), never from client
-input. `device_posture`/`country` remain genuinely header-derived, soft risk-scoring signals — no
-real device-attestation or GeoIP pipeline backs them yet, which is an honest, still-open gap, not a
-security hole in the same class (they raise risk score; they don't grant a bypass the way a forged
-MFA-verified header did). Full trace: [SECURITY-POSTURE-MATRIX.md](SECURITY-POSTURE-MATRIX.md) §2.
+input. `device_posture`/`country` remain genuinely header-derived, and no real device-attestation or
+GeoIP pipeline backs them yet — an honest, still-open gap, not a security hole in the same class as
+the header-spoofing bug (no caller-supplied header alone impersonates a *verified* MFA challenge the
+way the old raw `X-MFA-Verified` did). But `device_posture` is not purely a soft risk-scoring input:
+for any path listed in `ZeroTrustOptions.healthy_device_routes` (`src/auth/zero_trust.py`), a
+non-`HEALTHY` posture is a hard `DENY`, not just an added risk-score point — so a caller who can
+influence the header this pipeline reads can also hard-block themselves out of (or into, if the
+header is trusted upstream of a real attestation source) those specific routes. `country` remains
+purely score/policy-list driven (`ZERO_TRUST_BLOCKED_COUNTRIES`), no separate hard-gate route list.
+Full trace: [SECURITY-POSTURE-MATRIX.md](SECURITY-POSTURE-MATRIX.md) §2.
 
 ## 4. How the three relate
 

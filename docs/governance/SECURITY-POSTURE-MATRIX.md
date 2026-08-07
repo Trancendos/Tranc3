@@ -3,7 +3,7 @@
 > **What this is.** The user pasted CrowdStrike's 2026 Global Threat Report and asked, plainly: does
 > this hold any value for Trancendos, and are our protective/defensive measures actually up to
 > scratch? Most of that report doesn't transfer — it's written for enterprises with managed endpoint
-> fleets, SOC staff, and adversary-tracked intrusion sets, and Tranc3 is a single-operator,
+> fleets, SOC staff, and adversary-tracked intrusion sets, and Trancendos is a single-operator,
 > zero-cost, self-hosted platform with none of that. But two of its structural themes turned out to
 > be real, checkable questions once pointed at actual code, and checking them found a live
 > vulnerability and a piece of dead security code. This document traces both to their fix, follows

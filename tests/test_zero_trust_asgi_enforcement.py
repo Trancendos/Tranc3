@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -19,7 +21,7 @@ from src.security.middleware import ZeroTrustASGIMiddleware
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setenv("JWT_SECRET", "test-jwt-secret-for-unit-tests-00003")
+    monkeypatch.setenv("JWT_SECRET", secrets.token_hex(32))
     monkeypatch.setenv("ZERO_TRUST_ENABLED", "true")
     monkeypatch.setenv("ZERO_TRUST_MFA_ROUTES", "/admin")
 
