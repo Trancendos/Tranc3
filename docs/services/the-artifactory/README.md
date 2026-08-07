@@ -25,17 +25,32 @@
 > Dockerfile matching the convention used by comparable single-file workers (`python:3.12-slim`,
 > non-root user, port 8047 matching `WORKER_PORT = int(os.getenv("PORT", "8047"))` in
 > `worker.py` and compose's `PORT=8047`/`8047:8047`/Traefik routing).
-> **Broader gap found, not fixed (out of scope for this pass):** the same missing-Dockerfile
-> defect exists in **8 other** `workers/*/` directories referenced by
-> `docker-compose.production.yml`: `backup-service`, `cranbania` (git submodule — may be
-> intentional), `fabulousa-service`, `ice-box-service`, `litellm-service`, `queue-service-go`,
-> `rate-limit-service-go` (the last two are Go services requiring a different Dockerfile
-> template — not verified in this pass), and `the-void` (ambiguous — may be Cloudflare-Worker-only
-> per `CLAUDE.md`'s "migrating to self-hosted" note, not necessarily meant to have a container
-> Dockerfile). This pack fixes only `artifactory-service`'s instance, in scope for this entity;
-> the other 8 are flagged here as a real, previously-undocumented platform-wide gap for a
-> dedicated follow-up pass — fixing 8 Dockerfiles across two languages and a submodule without
-> individually verifying each one's runtime would risk introducing new defects.
+> **Broader gap found on 2026-07-05, mostly resolved by other work since (re-verified 2026-08-07,
+> corrected 2026-08-07 round 3 — see Verification Log):** at the time this pack was authored, the
+> same missing-Dockerfile defect existed in 7 other `workers/*/` directories referenced by
+> `docker-compose.production.yml`. Re-checking every compose service with a `build: { context:
+> ./workers/..., dockerfile: Dockerfile }` block against the filesystem: `backup-service`,
+> `fabulousa-service`, `ice-box-service`, and `litellm-service` have all gained a Dockerfile in the
+> intervening month of work, and `the-void` is not a `workers/` directory at all (no such path
+> exists — the CF-Worker-only ambiguity noted originally turned out to mean exactly that: it was
+> never meant to be a container). `cranbania` is a **different case, not a resolved one**: its
+> Dockerfile exists inside the `workers/cranbania` **git submodule**'s own tree, and this checkout
+> happens to have that submodule populated — but none of `.forgejo/workflows/deploy-fly.yml`,
+> `deploy-self-hosted.yml`, or any other deploy workflow's `actions/checkout` step sets
+> `submodules: true`/`recursive` (only the unrelated `sync-cranbania-submodule.yml` does). A fresh
+> checkout via the actual deploy pipeline would leave `workers/cranbania/` empty and
+> `docker compose build cranbania` would fail — so this **is** a live, previously-undocumented
+> build-breaking defect, just a different one (missing submodule checkout, not a missing file) than
+> the pattern this section otherwise describes. `queue-service-go`, also originally counted here,
+> was separately removed entirely as dead code (never wired into compose, zero commits since
+> creation) rather than given a Dockerfile — see `docs/governance/SWARM-COORDINATION-MATRIX.md`
+> §3. The one remaining Dockerfile-less directory, `rate-limit-service-go`, is **not referenced by
+> `docker-compose.production.yml` at all**, so it is not a build-breaking defect in the same sense
+> as the others — it is undeployed, unreferenced dead-code-shaped scaffolding, the same class as
+> the now-deleted `queue-service-go`. The original "missing Dockerfile *file*" gap is resolved for
+> every plain directory; two build-breaking issues remain: `cranbania`'s submodule-checkout gap in
+> the deploy pipeline (new, above), and deciding `rate-limit-service-go`'s fate (delete as dead
+> code, or build it out) — see §10/§12/§13 below, corrected to match.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -103,9 +118,10 @@
 - **Fixed defect:** `workers/artifactory-service/` had no Dockerfile at all, so it could not be
   built via `docker compose build` — see truthfulness header. Fixed by adding one matching the
   established single-file-worker convention.
-- **Documented, not fixed:** the same missing-Dockerfile defect exists in 8 other worker
-  directories — see truthfulness header for the full list and rationale for scoping the fix to
-  this entity only.
+- **Documented, not fixed:** as of the 2026-08-07 round-3 re-verification, the missing-Dockerfile-
+  *file* defect is resolved for every plain directory; the two remaining build-breaking issues are
+  `cranbania`'s missing submodule checkout and `rate-limit-service-go`'s undeployed/dead-code
+  status — see truthfulness header for the full detail.
 
 ## 4. RACI Matrix
 
@@ -180,7 +196,12 @@
   by any caller reaching `api.py` with no credential check. See SIM §5.
 - Any Dockerfile-less worker directory referenced by `docker-compose.production.yml` MUST be
   treated as a build-breaking defect, not a cosmetic gap — see the broader-gap note in the
-  truthfulness header; a follow-up pass should audit and fix the remaining 8.
+  truthfulness header. As of 2026-08-07 this holds for every plain directory (0 of 73 non-submodule
+  compose-referenced worker build contexts are missing a Dockerfile); `cranbania`'s Dockerfile
+  exists but isn't reliably fetched by the deploy pipeline (git-submodule checkout gap — see
+  truthfulness header), which is the same class of defect wearing a different cause.
+  `rate-limit-service-go` still lacks a Dockerfile but is not compose-referenced, so it is a
+  dead-code decision (§12), not a build-breaking defect.
 
 ## 11. Procedure (PROC)
 
@@ -200,8 +221,16 @@
   persistence; only the 6 seed records reappear.
 - **`workers/artifactory-service` fails to build:** was a genuine missing-Dockerfile defect —
   fixed in this pass; confirm `workers/artifactory-service/Dockerfile` exists in the deployed
-  checkout if this recurs. Check the other 8 flagged directories (truthfulness header) for the
-  same class of failure if their builds fail too.
+  checkout if this recurs. 4 of the other directories originally flagged alongside it
+  (`backup-service`, `fabulousa-service`, `ice-box-service`, `litellm-service`) have since gained
+  their own Dockerfiles independently of this pack — see the truthfulness header.
+  `rate-limit-service-go` remains Dockerfile-less but isn't in compose, so it can't fail a build.
+- **`cranbania` fails to build (`Dockerfile not found`):** expected on a fresh checkout —
+  `workers/cranbania` is a git submodule and no deploy workflow's `actions/checkout` step passes
+  `submodules: true`/`recursive` (only the unrelated `sync-cranbania-submodule.yml` does). Fix by
+  adding `submodules: recursive` to the checkout step in whichever workflow builds
+  `docker-compose.production.yml`, or by running `git submodule update --init --recursive` before
+  `docker compose build` in that pipeline.
 - **`push_version()` accepted a bogus digest:** expected — `src/artifactory/*` never validates
   `digest`/`size_bytes` against real content; this module is metadata-only by design.
 
@@ -209,10 +238,12 @@
 
 - Naming: canonical entity name "The Artifactory" per `CLAUDE.md`/`PLATFORM_ENTITIES.md`.
 - Every service referenced in `docker-compose.production.yml` with a `build: { dockerfile:
-  Dockerfile }` block MUST have a corresponding `Dockerfile` in its build context — a missing
-  Dockerfile is a build-breaking defect, not a documentation gap. The defect fixed here is the
-  reason for this standard; the 8 remaining instances are tracked as a known gap pending a
-  dedicated follow-up.
+  Dockerfile }` block MUST have a corresponding `Dockerfile` **reliably present in the checkout
+  the build actually runs against** — a missing Dockerfile is a build-breaking defect, not a
+  documentation gap, and that includes one that's missing only because a submodule wasn't
+  initialized. The defect fixed here is the reason for this standard; as of 2026-08-07 it holds
+  for 73 of 74 checked, with `cranbania` the one open exception (submodule-checkout gap, not a
+  missing file — see truthfulness header).
 
 ## Verification Log
 
@@ -220,3 +251,6 @@
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/artifactory/registry.py` (256 lines), `src/artifactory/routes.py` (100 lines), `api.py` router registration (line 871), `workers/artifactory-service/worker.py`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine build-breaking defect: `workers/artifactory-service/` had no Dockerfile despite being referenced by compose's build block. Also discovered, and explicitly flagged rather than rushed-fixed, the same defect in 8 other worker directories across the repo (2 Go services, 1 submodule, 1 ambiguous CF-vs-container case, 4 plain Python workers) — a real, previously undocumented platform-wide gap. |
 | 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `src/artifactory/routes.py` | Elevated the "no route-level auth" POL bullet from a flat fact to an explicit security-gap callout, naming the specific unauthenticated mutation routes (`POST /artifacts`, `POST /artifacts/{id}/versions`, `DELETE /artifacts/{id}`, `POST /retention/apply`). |
+| 2026-08-07 (round 1) | Claude (session, cubic-dev-ai review triage on Tranc3#493) | `docs/governance/SWARM-COORDINATION-MATRIX.md` §3, this file's §3/§10/§12/§13 | `queue-service-go` (one of the 8 directories in the 2026-07-05 row above) was deleted as dead code, dropping the live count to 7 — the truthfulness header above was updated to say 7, but §3/§10/§12/§13 and this log's older row still said 8/"2 Go services" until this pass. Fixed the four living-body references to say 7 (1 Go service — `rate-limit-service-go` only). The 2026-07-05 row is left unedited as the accurate point-in-time record of what existed on that date; this row is the reconciliation, not a rewrite of history. |
+| 2026-08-07 (round 2) | Claude (session, cubic-dev-ai review triage on Tranc3#493) | `docker-compose.production.yml` parsed programmatically — every service with a `build: { context: ./workers/*, dockerfile: Dockerfile }` block checked against the filesystem (74 services) | The "7" from round 1 was itself already stale: `backup-service`, `cranbania`, `fabulousa-service`, `ice-box-service`, and `litellm-service` had each independently gained a Dockerfile since 2026-07-05, and `the-void` was never a `workers/` directory at all (confirmed non-existent path — the original "ambiguous CF-vs-container" framing was right for the wrong reason). Result: **0 of 74** compose-referenced worker build contexts are missing a Dockerfile. Only `rate-limit-service-go` remains Dockerfile-less, and it isn't referenced by compose, so it's a dead-code question (same class as the deleted `queue-service-go`), not a build defect. Rewrote the truthfulness header and §10/§12/§13 to state this rather than decrementing a number that was already wrong. |
+| 2026-08-07 (round 3) | Claude (session, cubic-dev-ai review triage on Tranc3#493) | `.gitmodules`, `workers/cranbania/.git` (confirmed submodule), every `.forgejo/workflows/*.yml`'s `actions/checkout` step | Round 2's "0 of 74" was itself wrong for `cranbania`: this session's checkout happens to have the `workers/cranbania` git submodule populated (Dockerfile genuinely present on disk here), but that's an artefact of this sandbox, not of the deploy pipeline — grepped every `.forgejo/workflows/*.yml` and found no `deploy-fly.yml`/`deploy-self-hosted.yml`/etc. `actions/checkout` step sets `submodules: true` or `recursive`; only the unrelated `sync-cranbania-submodule.yml` does. A real deploy-pipeline checkout would leave `workers/cranbania/` empty, and `docker compose build cranbania` would fail on a missing Dockerfile it does have in its own repo, just not fetched. Corrected the count to **73 of 74** non-submodule contexts confirmed, with `cranbania` flagged as a distinct, still-open, previously-undocumented defect (missing `submodules: recursive` on checkout, not a missing file) rather than folded into "resolved." |
