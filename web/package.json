@@ -51,7 +51,7 @@
         "clsx": "2.1.1",
         "playwright": "1.61.1",
         "postcss": "8.5.23",
-        "react-router": "7.18.2",
+        "react-router": "8.3.0",
         "react-router-dom": "7.18.2",
         "storybook": "10.4.6",
         "tailwind-merge": "3.6.0",
@@ -62,13 +62,13 @@
     },
     "overrides": {
         "brace-expansion": "^5.0.8",
-        "dompurify": "^3.4.12",
+        "dompurify": "^3.4.13",
         "valibot": "^1.4.2"
     },
     "pnpm": {
         "overrides": {
             "brace-expansion": "^5.0.8",
-            "dompurify": "^3.4.12",
+            "dompurify": "^3.4.13",
             "valibot": "^1.4.2"
         }
     }
