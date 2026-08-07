@@ -106,7 +106,7 @@
 - **Fixed defect:** `workers/artifactory-service/` had no Dockerfile at all, so it could not be
   built via `docker compose build` — see truthfulness header. Fixed by adding one matching the
   established single-file-worker convention.
-- **Documented, not fixed:** the same missing-Dockerfile defect exists in 8 other worker
+- **Documented, not fixed:** the same missing-Dockerfile defect exists in 7 other worker
   directories — see truthfulness header for the full list and rationale for scoping the fix to
   this entity only.
 
@@ -183,7 +183,7 @@
   by any caller reaching `api.py` with no credential check. See SIM §5.
 - Any Dockerfile-less worker directory referenced by `docker-compose.production.yml` MUST be
   treated as a build-breaking defect, not a cosmetic gap — see the broader-gap note in the
-  truthfulness header; a follow-up pass should audit and fix the remaining 8.
+  truthfulness header; a follow-up pass should audit and fix the remaining 7.
 
 ## 11. Procedure (PROC)
 
@@ -203,7 +203,7 @@
   persistence; only the 6 seed records reappear.
 - **`workers/artifactory-service` fails to build:** was a genuine missing-Dockerfile defect —
   fixed in this pass; confirm `workers/artifactory-service/Dockerfile` exists in the deployed
-  checkout if this recurs. Check the other 8 flagged directories (truthfulness header) for the
+  checkout if this recurs. Check the other 7 flagged directories (truthfulness header) for the
   same class of failure if their builds fail too.
 - **`push_version()` accepted a bogus digest:** expected — `src/artifactory/*` never validates
   `digest`/`size_bytes` against real content; this module is metadata-only by design.
@@ -214,7 +214,7 @@
 - Every service referenced in `docker-compose.production.yml` with a `build: { dockerfile:
   Dockerfile }` block MUST have a corresponding `Dockerfile` in its build context — a missing
   Dockerfile is a build-breaking defect, not a documentation gap. The defect fixed here is the
-  reason for this standard; the 8 remaining instances are tracked as a known gap pending a
+  reason for this standard; the 7 remaining instances are tracked as a known gap pending a
   dedicated follow-up.
 
 ## Verification Log
@@ -223,3 +223,4 @@
 |---|---|---|---|
 | 2026-07-05 | Claude (session) | `src/artifactory/registry.py` (256 lines), `src/artifactory/routes.py` (100 lines), `api.py` router registration (line 871), `workers/artifactory-service/worker.py`, `docker-compose.production.yml` | Confirmed Live-tier, full pack authored. Found and fixed a genuine build-breaking defect: `workers/artifactory-service/` had no Dockerfile despite being referenced by compose's build block. Also discovered, and explicitly flagged rather than rushed-fixed, the same defect in 8 other worker directories across the repo (2 Go services, 1 submodule, 1 ambiguous CF-vs-container case, 4 plain Python workers) — a real, previously undocumented platform-wide gap. |
 | 2026-07-07 | Claude (session, cubic-dev-ai review triage) | `src/artifactory/routes.py` | Elevated the "no route-level auth" POL bullet from a flat fact to an explicit security-gap callout, naming the specific unauthenticated mutation routes (`POST /artifacts`, `POST /artifacts/{id}/versions`, `DELETE /artifacts/{id}`, `POST /retention/apply`). |
+| 2026-08-07 | Claude (session, cubic-dev-ai review triage on Tranc3#493) | `docs/governance/SWARM-COORDINATION-MATRIX.md` §3, this file's §3/§10/§12/§13 | `queue-service-go` (one of the 8 directories in the 2026-07-05 row above) was deleted as dead code, dropping the live count to 7 — the truthfulness header above was updated to say 7, but §3/§10/§12/§13 and this log's older row still said 8/"2 Go services" until this pass. Fixed the four living-body references to say 7 (1 Go service — `rate-limit-service-go` only). The 2026-07-05 row is left unedited as the accurate point-in-time record of what existed on that date; this row is the reconciliation, not a rewrite of history. |

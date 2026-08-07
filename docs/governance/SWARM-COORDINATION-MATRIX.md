@@ -34,14 +34,22 @@ decays it (`CACHE_PHEROMONE_DECAY`, default `0.05`). Backend selection is a gree
 current pheromone. Exercised in `tests/test_workers_p3.py` (backend-selection assertions with
 guard-state snapshot/restore between tests) — this is real, not decorative.
 
-The identical `ThresholdGuard`/pheromone idiom is grepped across 11 other workers (Observatory,
-TranceFlow, The Grid, analytics-service, library-service, lab-service, storage-service, Cryptex,
-cron-service, VRAR3D, files-service — 12 total including cache-service) plus 4 shared `src/`
-modules (`src/adaptive/dna_router.py`, `src/mesh/genetic_router.py`,
+The same *general* ACO-pheromone pattern — a scalar that reinforces on success and decays on
+failure, guiding a greedy pick — greps across 11 other workers (Observatory, TranceFlow, The Grid,
+analytics-service, library-service, lab-service, storage-service, Cryptex, cron-service, VRAR3D,
+files-service — 12 total including cache-service) plus 4 shared `src/` modules
+(`src/adaptive/dna_router.py`, `src/mesh/genetic_router.py`,
 `src/nanoservices/symbiotic_collective/symbiotic_collective.py`, and
-`src/ai_gateway/provider_rotation.py`). This doc verifies cache-service's copy line-by-line; the
-others share the pattern by grep evidence only — a full per-file audit is recorded as a gap in §6,
-not claimed here.
+`src/ai_gateway/provider_rotation.py`). **These are not literally the same `ThresholdGuard` class
+reused** — spot-checking a sample shows independent implementations of the same idea:
+`files-service/worker.py` defines its own separate `_ThresholdGuard`; `provider_rotation.py` calls
+a differently-named `AntColonyRouter` (`Dimensional.swarm.ant_colony`); `genetic_router.py`
+implements its own `RouteGene` dataclass with a `pheromone` field and its own
+deposit/decay/desirability methods; `dna_router.py` is a genetic-algorithm wrapper that says it's
+*"compatible with"* the ACO pheromone router rather than being one itself. This doc verifies
+cache-service's copy line-by-line; the rest share the *concept*, not a shared implementation — a
+full per-file audit of how many independent variants exist is recorded as a gap in §6, not claimed
+here.
 
 **So the core instinct — "pheromone-style adaptive selection is a real Trancendos idiom" — is correct.**
 It's just much smaller than the external brainstorm assumed: one float per option, reinforce/decay,
@@ -81,7 +89,12 @@ after deeper checking:
    pass (`docs/services/the-artifactory/README.md`) had already flagged it as missing a Dockerfile
    but left it unresolved. Rather than build deployment infrastructure for an untested, fully
    redundant Go reimplementation of the role `queue-service` (Python, deployed, tested) already
-   fills, the directory was deleted and the stale doc reference removed.
+   fills, the directory was deleted and the stale doc reference removed. It's also recorded (as
+   `SRV-QUEUEGO-001`/`APP-QUEUEGO-001`/`DEP-QUEUEGO-001`, all already annotated `"not deployed, not
+   reviewed"`) in three `docs/architecture/ea-workbook/*.csv` rows alongside two sibling
+   never-deployed Go/Rust rewrites (`monitoring-go`, `rate-limit-service-go`/`-rs`) — those CSV
+   rows are point-in-time inventory snapshots from an earlier session, left as-is rather than
+   edited here, consistent with treating `docs/services/INDEX.md` as an append-only record above.
 2. **`hive-service` does *not* have a port drift — initial read was wrong, corrected here.** This
    doc originally flagged `worker.py`'s bare Python default (`HIVE_PORT` env var, falling back to
    `8060` only if unset) against compose's routed port (`8051`) as a mismatch. Checking the actual
