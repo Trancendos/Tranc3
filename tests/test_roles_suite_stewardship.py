@@ -120,3 +120,18 @@ class TestGetSuiteStewardship:
         _fresh_registry(tmp_path, monkeypatch)
         path = _write_fixture(tmp_path)
         assert get_suite_stewardship("SUITE-NOPE", path) is None
+
+    def test_duplicate_suite_id_raises_registry_error(self, tmp_path, monkeypatch):
+        """cubic/Qodo-flagged regression: returning the first match for a
+        duplicated suite_id could silently point a caller at the wrong
+        suite's steward/escalation chain instead of surfacing the registry
+        as broken — mirrors src/compliance/matrix_suites.py's _find_suite()."""
+        _fresh_registry(tmp_path, monkeypatch)
+        p = tmp_path / "matrix_suites.yaml"
+        dup = dict(FIXTURE["suites"][0])
+        p.write_text(
+            yaml.safe_dump({"meta": {}, "suites": [FIXTURE["suites"][0], dup]}),
+            encoding="utf-8",
+        )
+        with pytest.raises(MatrixSuitesRegistryError):
+            get_suite_stewardship("SUITE-FIN", str(p))

@@ -102,10 +102,20 @@ def list_suite_stewardships(matrix_suites_path: Optional[str] = None) -> List[Su
 def get_suite_stewardship(
     suite_id: str, matrix_suites_path: Optional[str] = None
 ) -> Optional[SuiteStewardship]:
-    for stewardship in list_suite_stewardships(matrix_suites_path):
-        if stewardship.suite_id == suite_id:
-            return stewardship
-    return None
+    """Look up one Suite's stewardship by ID.
+
+    Mirrors src/compliance/matrix_suites.py's _find_suite(): two registry
+    entries sharing one suite_id is a broken registry, not "pick the first
+    one" — silently resolving to whichever came first could point a caller
+    at the wrong suite's escalation chain/steward entirely. Raises
+    MatrixSuitesRegistryError in that case rather than returning a match.
+    """
+    matches = [s for s in list_suite_stewardships(matrix_suites_path) if s.suite_id == suite_id]
+    if len(matches) > 1:
+        raise MatrixSuitesRegistryError(
+            f"Ambiguous suite_id (registry has duplicates): {suite_id!r}"
+        )
+    return matches[0] if matches else None
 
 
 __all__ = [
