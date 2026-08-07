@@ -10,7 +10,6 @@
     "wrangler": "4.110.0"
   },
   "overrides": {
-    "wrangler": "^4.102.0",
     "esbuild": ">=0.25.0",
     "ws": ">=8.21.0"
   }
