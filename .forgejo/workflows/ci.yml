@@ -45,6 +45,16 @@ jobs:
       - name: Check master service matrix freshness
         run: python scripts/check_master_matrix_freshness.py
 
+      - name: Estate lint (duplication + registry drift)
+        # Non-blocking (no --strict): the registry/compose reconciliation
+        # checks currently carry a real pre-existing backlog (unregistered
+        # services, container-naming) unrelated to duplication detection —
+        # failing CI on those now would be a surprise, unscoped break. The
+        # duplication/orphan checks specifically (see
+        # config/estate/duplication_baseline.yaml) are the newly-added part;
+        # promote this to --strict once the pre-existing backlog is triaged.
+        run: python scripts/estate_lint.py || true
+
       - name: Create logs dir
         run: mkdir -p logs
 
