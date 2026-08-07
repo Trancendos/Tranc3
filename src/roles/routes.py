@@ -15,15 +15,24 @@ in a threadpool instead of on the event loop, so this avoids blocking it.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from auth import get_current_user
+from Dimensional.sanitize import sanitize_for_log
 from src.roles.registry import RoleAssignment, UnknownLocationError, get_registry
+from src.roles.suite_stewardship import (
+    MatrixSuitesError,
+    SuiteStewardship,
+    get_suite_stewardship,
+    list_suite_stewardships,
+)
 
 router = APIRouter(prefix="/roles", tags=["roles"])
+logger = logging.getLogger("tranc3.roles.routes")
 
 
 class AssignRequest(BaseModel):
@@ -57,6 +66,62 @@ def _serialize(assignment: RoleAssignment) -> Dict[str, Any]:
 @router.get("/")
 def list_roles() -> List[Dict[str, Any]]:
     return [_serialize(r) for r in get_registry().list_roles()]
+
+
+def _serialize_suite(stewardship: SuiteStewardship) -> Dict[str, Any]:
+    return {
+        "suite_id": stewardship.suite_id,
+        "name": stewardship.name,
+        "pillar": stewardship.pillar,
+        "steward_location": stewardship.steward_location,
+        "designed_steward_ai": stewardship.designed_steward_ai,
+        "current_steward_ai": stewardship.current_steward_ai,
+        "presiding_prime": stewardship.presiding_prime,
+        "escalation": stewardship.escalation,
+        "review_cadence": stewardship.review_cadence,
+        "next_review": stewardship.next_review,
+        "drifted": stewardship.drifted,
+    }
+
+
+# Matrix Suites Stage 7.5 (docs/governance/MATRIX-SUITES.md §7, Magna Carta
+# submodule): the 8 Suites aren't their own Locations, so they don't get rows
+# in role_assignments — this reads each Suite's designed steward baseline
+# from Magna Carta's matrix_suites.yaml and cross-references it against the
+# live Role Registry holder at that suite's steward_location (see
+# src/roles/suite_stewardship.py's module docstring for the full reasoning).
+# Registered before the `{location:path}` catch-all below, same reason as
+# `role_history`/`assign_role`/`unassign_role`: an unsuffixed
+# `{location:path}` GET route would otherwise swallow "suites" and
+# "suites/<suite_id>" as if they were location names.
+
+
+@router.get("/suites")
+def list_suites() -> List[Dict[str, Any]]:
+    try:
+        return [_serialize_suite(s) for s in list_suite_stewardships()]
+    except MatrixSuitesError as exc:
+        logger.warning(
+            "list_suites() rejected: %s",
+            sanitize_for_log(exc),  # codeql[py/log-injection]
+        )
+        raise HTTPException(status_code=404, detail="invalid_registry") from exc
+
+
+@router.get("/suites/{suite_id}")
+def get_suite(suite_id: str) -> Dict[str, Any]:
+    try:
+        stewardship = get_suite_stewardship(suite_id)
+    except MatrixSuitesError as exc:
+        logger.warning(
+            "get_suite() rejected for suite_id=%s: %s",
+            sanitize_for_log(suite_id),  # codeql[py/log-injection]
+            sanitize_for_log(exc),  # codeql[py/log-injection]
+        )
+        raise HTTPException(status_code=404, detail="invalid_registry") from exc
+    if stewardship is None:
+        raise HTTPException(status_code=404, detail=f"Unknown suite: {suite_id}")
+    return _serialize_suite(stewardship)
 
 
 # One of the 43 canonical locations ("ChronosSphere / ArcStream") contains a
