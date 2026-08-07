@@ -259,8 +259,13 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     tier = get_tier_for_role(role)
     infinity_role = get_infinity_role_for_role(role)
 
-    # Create tokens with tier-aware claims
-    access_token = create_access_token(user_id, username, role=role)
+    # Create tokens with tier-aware claims.
+    # mfa_verified reflects whether this login actually passed a real TOTP/backup-code
+    # check above (row["mfa_enabled"] is truthy) — never derived from client input, so
+    # it can't be spoofed the way a client-supplied X-MFA-Verified header could be.
+    access_token = create_access_token(
+        user_id, username, role=role, extra_claims={"mfa_verified": bool(row["mfa_enabled"])}
+    )
     refresh_token = create_refresh_token()
 
     # Store session
@@ -318,7 +323,7 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
 
     # Get user with role
     user = db.execute(
-        "SELECT username, role FROM users WHERE user_id = ?",
+        "SELECT username, role, mfa_enabled FROM users WHERE user_id = ?",
         (row["user_id"],),
     ).fetchone()
     if not user:
@@ -345,8 +350,15 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
     )
     db.commit()
 
-    # Issue new access token with tier-aware claims
-    access_token = create_access_token(row["user_id"], user["username"], role=role)
+    # Issue new access token with tier-aware claims. mfa_verified is re-derived from the
+    # account's current MFA state rather than carried blindly forward — if MFA was
+    # disabled since the original login, the refreshed token correctly stops asserting it.
+    access_token = create_access_token(
+        row["user_id"],
+        user["username"],
+        role=role,
+        extra_claims={"mfa_verified": bool(user["mfa_enabled"])},
+    )
 
     return TokenResponse(
         access_token=access_token,

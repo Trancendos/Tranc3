@@ -164,6 +164,33 @@ class RBACMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+def resolve_mfa_verified_header(headers: dict[str, str], authorization: str) -> dict[str, str]:
+    """
+    Return *headers* with X-MFA-Verified replaced by a value derived from the signed JWT
+    in *authorization*, never from whatever the client itself sent.
+
+    Traefik does not strip X-MFA-Verified before proxying to workers (only CORS-allowlists
+    it), so trusting it directly from ``request.headers`` lets any caller satisfy MFA-gated
+    routes by simply setting the header — no real MFA challenge required. The JWT's
+    ``mfa_verified`` claim is set server-side, only after a real TOTP/backup-code check, by
+    workers/infinity-auth/router.py's login/refresh endpoints — that claim is the only
+    source of truth this function will honour.
+    """
+    headers = dict(headers)
+    headers.pop("x-mfa-verified", None)
+    headers.pop("X-MFA-Verified", None)
+    if authorization.startswith("Bearer "):
+        try:
+            from auth import verify_token  # lazy, avoids circular import
+
+            claims = verify_token(authorization[7:])
+            if claims and claims.get("mfa_verified"):
+                headers["X-MFA-Verified"] = "true"
+        except Exception:
+            pass  # unparseable/expired token → mfa_verified stays unset (False)
+    return headers
+
+
 class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
     """
     ASGI wrapper around ZeroTrustMiddleware.
@@ -211,7 +238,9 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(pfx) for pfx in self._SKIP_PREFIXES):
             return await call_next(request)
 
-        headers = dict(request.headers)
+        headers = resolve_mfa_verified_header(
+            dict(request.headers), request.headers.get("Authorization", "")
+        )
         context = self._zt.extract_context(headers)
         decision = self._zt.evaluate(context, path)
 
