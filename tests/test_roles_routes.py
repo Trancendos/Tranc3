@@ -171,3 +171,51 @@ class TestUnassignRoute:
             assert resp.status_code == 404
         finally:
             client.app.dependency_overrides.pop(get_current_user, None)
+
+
+class TestSuiteStewardshipRoutes:
+    """Matrix Suites Stage 7.5 — /roles/suites cross-references Magna Carta's
+    real matrix_suites.yaml (via the compliance/magna-carta submodule checked
+    out in this repo) against the RoleRegistry fixture the `client` fixture
+    already seeds with the real 43 canonical Locations."""
+
+    def test_list_suites_is_public(self, client):
+        resp = client.get("/roles/suites")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body) == 8
+        suite_ids = {s["suite_id"] for s in body}
+        assert {"SUITE-FIN", "SUITE-SEC", "SUITE-LEG"} <= suite_ids
+
+    def test_get_known_suite_matches_baseline(self, client):
+        resp = client.get("/roles/suites/SUITE-SEC")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["steward_location"] == "Cryptex"
+        assert body["designed_steward_ai"] == "Renik"
+        assert body["current_steward_ai"] == "Renik"
+        assert body["drifted"] is False
+
+    def test_get_unknown_suite_404s(self, client):
+        resp = client.get("/roles/suites/SUITE-NOPE")
+        assert resp.status_code == 404
+
+    def test_suites_route_not_swallowed_by_location_catchall(self, client):
+        """Registration order matters: {location:path} must not intercept
+        '/roles/suites' as if 'suites' were a location name."""
+        resp = client.get("/roles/suites")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+    def test_reassigning_steward_location_shows_drift(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
+        try:
+            resp = client.post("/roles/Cryptex/assign", json={"ai_name": "Temp Steward"})
+            assert resp.status_code == 200
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+        resp = client.get("/roles/suites/SUITE-SEC")
+        body = resp.json()
+        assert body["current_steward_ai"] == "Temp Steward"
+        assert body["designed_steward_ai"] == "Renik"
+        assert body["drifted"] is True
