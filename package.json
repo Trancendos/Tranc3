@@ -24,7 +24,7 @@
     "vite": "7.3.5",
     "ws": "8.21.0",
     "esbuild": "0.28.1",
-    "postcss": "8.5.18"
+    "postcss": "8.5.23"
   },
   "devDependencies": {},
   "engines": {
