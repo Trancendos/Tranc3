@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from Dimensional.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
 from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
 
+from .payload_scanner import scan_rpc_payload
 from .tools import registry
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ ERR_INTERNAL_ERROR = -32603
 ERR_TOOL_NOT_FOUND = -32001
 ERR_TOOL_EXECUTION = -32002
 ERR_RESOURCE_NOT_FOUND = -32003
+ERR_INJECTION_DETECTED = -32004
 
 # ---------------------------------------------------------------------------
 # Pydantic models
@@ -344,6 +346,35 @@ async def rpc_endpoint(
     if not method or not isinstance(method, str):
         return JSONResponse(
             content=_err(req_id, ERR_INVALID_REQUEST, "method must be a non-empty string"),
+            status_code=200,
+        )
+
+    # Prompt-injection scan — payload_scanner.py existed but was never called from this
+    # endpoint until now, leaving The Spark's one purpose-built defense against jailbreak/
+    # instruction-override attempts against tools/call arguments inert. Fail-safe by design
+    # (scan_rpc_payload never raises), so this can't itself become a DoS vector.
+    scan = scan_rpc_payload(body)
+    if not scan.ok and scan.high_severity:
+        client_ip = request.client.host if request.client else None
+        logger.warning(
+            "mcp.rpc injection blocked method=%s ip=%s findings=%s",
+            sanitize_for_log(method),
+            sanitize_for_log(client_ip or "unknown"),
+            scan.summary(),
+        )
+        if client_ip:
+            try:
+                from src.cryptex.threat_detector import get_cryptex
+
+                get_cryptex().block_ip(client_ip)
+            except Exception:
+                pass  # nosec B110 - never let Cryptex unavailability break the reject path
+        return JSONResponse(
+            content=_err(
+                req_id,
+                ERR_INJECTION_DETECTED,
+                "Request blocked: prompt-injection pattern detected",
+            ),
             status_code=200,
         )
 
