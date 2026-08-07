@@ -38,7 +38,11 @@ def client(monkeypatch):
     _injection_strike_counts.clear()
     app = FastAPI()
     app.include_router(mcp_router)
-    with TestClient(app) as c:
+    # TestClient's default peer address is the literal string "testclient" (not a real IP),
+    # which resolve_client_ip() correctly treats as untrusted (can't parse => not private) —
+    # so X-Forwarded-For would be silently ignored below. Give it a private peer address to
+    # simulate the real deployment, where Traefik's own container IP is the direct TCP peer.
+    with TestClient(app, client=("172.18.0.5", 12345)) as c:
         yield c
     _injection_strike_counts.clear()
 
@@ -100,6 +104,40 @@ class TestClientIpResolution:
             client = _FakeClient()
 
         assert _resolve_client_ip(_FakeRequest()) == "203.0.113.7"
+
+
+class TestSpoofedForwardedHeaderCannotFrameVictim:
+    """
+    CodeRabbit (Major, on Tranc3#493): a caller reaching /mcp/rpc directly — bypassing
+    Traefik — could set X-Forwarded-For to an arbitrary victim IP and get three
+    high-severity hits attributed to (and eventually blocking) that victim instead of
+    themselves. Verified end-to-end through the real /mcp/rpc endpoint, not just the
+    resolver unit, with a non-private direct peer standing in for "reached us directly."
+    """
+
+    _VICTIM_IP = "198.51.100.42"
+
+    def teardown_method(self):
+        get_cryptex().unblock_ip(self._VICTIM_IP)
+
+    def test_untrusted_peer_spoofed_header_does_not_strike_the_victim(self, monkeypatch):
+        monkeypatch.setenv("REQUIRE_AUTH", "false")
+        _injection_strike_counts.clear()
+        app = FastAPI()
+        app.include_router(mcp_router)
+        # A genuinely public, non-private direct peer — i.e. NOT the trusted Traefik hop.
+        # (RFC 5737 documentation ranges like 203.0.113.0/24 are treated as "private" by
+        # Python's ipaddress module, same as RFC 1918, so a real public address is needed
+        # here to exercise the untrusted path.)
+        with TestClient(app, client=("1.2.3.4", 54321)) as attacker_client:
+            for _ in range(_INJECTION_BLOCK_THRESHOLD):
+                attacker_client.post(
+                    "/mcp/rpc",
+                    json=_INJECTION_BODY,
+                    headers={"X-Forwarded-For": self._VICTIM_IP},
+                )
+        assert not get_cryptex().is_blocked(ip=self._VICTIM_IP)
+        _injection_strike_counts.clear()
 
 
 class TestInjectionStrikeThreshold:
