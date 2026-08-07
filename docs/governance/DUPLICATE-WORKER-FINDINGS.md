@@ -31,6 +31,16 @@ of the same logical service are live at once, on different routes:
 `nexus-ws-rs`'s own compose comment literally says *"Nexus WebSocket hub (Rust) — The Nexus
 real-time comms hub"* — same entity, same stated purpose as `infinity-ws`, different language.
 
+**A second, independent compliance problem on top of the duplication:** all three Rust workers'
+own `traefik.http.routers.*.rule` labels in `docker-compose.production.yml` route them via
+`Host(...trancendos.com)` — genuine subdomains — not the `https://trancendos.com/<path>`
+subdirectory scheme CLAUDE.md's Deployment Topology section mandates for every other Trancendos
+service ("All Trancendos services are subdirectories of `trancendos.com`, not subdomains"). This
+table documents that existing (non-compliant) routing accurately, on purpose — it is not proposing
+new subdomains, and rewriting the URLs here to look like subdirectories would misdescribe how
+these three services actually resolve today. Whichever option below is chosen, fixing the Traefik
+`rule=` labels to match the subdirectory convention is part of the work, not a separate task.
+
 **Why this matters:** two live implementations of a rate limiter, a secrets vault, and a
 real-time comms hub is a materially worse state than an unwired stub — it means two independent
 sources of truth for rate-limit counters, two independent AES-GCM vaults potentially holding
