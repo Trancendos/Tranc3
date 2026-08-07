@@ -1,0 +1,40 @@
+# The Workshop — Matrix Suites CranBania Card Sync (Stage 7.4)
+#
+# Ensures every Matrix Suite (compliance/magna-carta/compliance/matrix_suites.yaml) has an
+# open CranBania review card, so a suite review is a tracked card with an SLA, not a
+# calendar hope — see src/compliance/matrix_suites_cranbania.py's module docstring for the
+# full design (why tags substitute for a CranBania "lane", and why this doesn't duplicate
+# Stage 7.2's independent overdue-event emission).
+#
+# Requires CranBania (port 8071) reachable on tranc3-net — this workflow does nothing
+# useful until the self-hosted stack is actually deployed; it's staged ahead of that, same
+# as bot-health-watchdog.yml and perf-smoke.yml.
+
+name: Matrix Suites CranBania Sync
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Sync suite review cards
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Install httpx + PyYAML
+        run: pip install --quiet httpx pyyaml
+
+      - name: Sync suite review cards
+        run: python scripts/sync_matrix_suite_cranbania_cards.py
+        env:
+          CRANBANIA_URL: http://cranbania:8071
+          CRANBANIA_API_KEY: ${{ secrets.CRANBANIA_API_KEY }}
