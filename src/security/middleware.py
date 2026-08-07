@@ -249,4 +249,15 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
             logger.warning("ZeroTrust blocked request: path=%s reason=%s", path, reason)
             return _JSONResponse({"error": "Access denied", "reason": reason}, status_code=403)
 
+        # MFA_REQUIRED was previously only used to compute risk score/logging — it fell
+        # through to call_next() same as ALLOW, so mfa_routes (/admin, /api/secrets by
+        # default) were never actually gated on MFA even once mfa_verified stopped being
+        # spoofable via a raw header. Reject here so the policy is actually enforced.
+        if decision.access_policy.value == "mfa_required":
+            logger.warning("ZeroTrust MFA required: path=%s", path)
+            return _JSONResponse(
+                {"error": "MFA required", "reason": "This route requires a verified MFA session"},
+                status_code=401,
+            )
+
         return await call_next(request)

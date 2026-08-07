@@ -263,18 +263,22 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     # mfa_verified reflects whether this login actually passed a real TOTP/backup-code
     # check above (row["mfa_enabled"] is truthy) — never derived from client input, so
     # it can't be spoofed the way a client-supplied X-MFA-Verified header could be.
+    session_mfa_verified = bool(row["mfa_enabled"])
     access_token = create_access_token(
-        user_id, username, role=role, extra_claims={"mfa_verified": bool(row["mfa_enabled"])}
+        user_id, username, role=role, extra_claims={"mfa_verified": session_mfa_verified}
     )
     refresh_token = create_refresh_token()
 
-    # Store session
+    # Store session. mfa_verified is persisted here (not re-derived from the account's
+    # current mfa_enabled flag on every refresh) so that enabling MFA later can't
+    # retroactively mark an already-open, pre-MFA session as having passed a challenge
+    # it never actually completed.
     now = datetime.now(timezone.utc).isoformat()
     session_id = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRY_DAYS)).isoformat()
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-        (session_id, user_id, refresh_token, now, expires_at),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at, mfa_verified) VALUES (?, ?, ?, ?, ?, ?)",
+        (session_id, user_id, refresh_token, now, expires_at, int(session_mfa_verified)),
     )
 
     # Update last login
@@ -306,7 +310,7 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
 
     # Find session
     row = db.execute(
-        "SELECT session_id, user_id, expires_at, is_revoked FROM sessions WHERE refresh_token = ?",
+        "SELECT session_id, user_id, expires_at, is_revoked, mfa_verified FROM sessions WHERE refresh_token = ?",
         (request.refresh_token,),
     ).fetchone()
 
@@ -342,22 +346,34 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
     # Revoke old session
     db.execute("UPDATE sessions SET is_revoked = 1 WHERE session_id = ?", (row["session_id"],))
 
+    # mfa_verified can only ever be carried forward, never granted, on refresh: it requires
+    # BOTH that the session's own record shows a real MFA challenge was passed at login
+    # (not re-derived from the account's current flag — see database.py's migration note;
+    # enabling MFA later must not retroactively "verify" a session that predates it) AND
+    # that the account still has MFA enabled now (so disabling MFA correctly de-asserts it).
+    new_mfa_verified = bool(row["mfa_verified"]) and bool(user["mfa_enabled"])
+
     # Create new session
     new_session_id = str(uuid.uuid4())
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-        (new_session_id, row["user_id"], new_refresh_token, now, new_expires_at),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at, mfa_verified) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            new_session_id,
+            row["user_id"],
+            new_refresh_token,
+            now,
+            new_expires_at,
+            int(new_mfa_verified),
+        ),
     )
     db.commit()
 
-    # Issue new access token with tier-aware claims. mfa_verified is re-derived from the
-    # account's current MFA state rather than carried blindly forward — if MFA was
-    # disabled since the original login, the refreshed token correctly stops asserting it.
+    # Issue new access token with tier-aware claims.
     access_token = create_access_token(
         row["user_id"],
         user["username"],
         role=role,
-        extra_claims={"mfa_verified": bool(user["mfa_enabled"])},
+        extra_claims={"mfa_verified": new_mfa_verified},
     )
 
     return TokenResponse(

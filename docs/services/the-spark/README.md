@@ -17,8 +17,7 @@
   standards-compliant **Model Context Protocol** server (JSON-RPC 2.0 over HTTP + SSE).
 - **In scope:** tool registration/discovery, JSON-RPC request handling, SSE event bus,
   semantic tool selection (RAG-MCP), prompt-injection scanning of inbound payloads
-  (scanner module present; runtime wiring **PLANNED** — see §2), The Digital Grid
-  status surfacing.
+  (enforced since 2026-08-07 — see §2), The Digital Grid status surfacing.
 - **Out of scope:** model inference (delegated to Luminous / AI Gateway), workflow
   execution (The Digital Grid), auth issuance (Infinity).
 - **Lead AI (Tier 3):** Imfy (AID-SPK-01); **Prime (Tier 2):** Norman Hawkins.
@@ -37,7 +36,7 @@
   | `src/mcp/server.py` | JSON-RPC 2.0 handler, routes, `_SSEBus`, request/response/error models |
   | `src/mcp/tools.py` | Tool registry + tool implementations |
   | `src/mcp/tool_rag.py` | Semantic tool selection — FAISS `IndexFlatIP` + sentence-transformers |
-  | `src/mcp/payload_scanner.py` | Prompt-injection scanner (`scan_rpc_payload` → `ScanFinding`/`ScanResult`). **Present but NOT yet wired into `server.py`'s `/mcp/rpc` handler — integration PLANNED.** |
+  | `src/mcp/payload_scanner.py` | Prompt-injection scanner (`scan_rpc_payload` → `ScanFinding`/`ScanResult`). **Wired into `server.py`'s `/mcp/rpc` handler since 2026-08-07** — runs on every inbound payload before dispatch. |
   | `src/mcp/client.py` | Outbound `MCPClient` / `MCPClientPool` for remote MCP servers |
   | `src/mcp/spark_*_tools.py` | Tool packs: gbrain, knowledge, phase4, phase5 |
 
@@ -61,12 +60,19 @@
         → MCPResponse | MCPError → client
         (SSE subscribers notified via _SSEBus)
   ```
-  > **PLANNED:** `payload_scanner.scan_rpc_payload()` is intended to run on the inbound
-  > payload before dispatch, failing open with logging. It is **not yet called** from the
-  > handler; until wired, prompt-injection scanning is not enforced at runtime.
+  > **Enforced (2026-08-07):** `payload_scanner.scan_rpc_payload()` runs on the inbound
+  > payload before dispatch. A high-severity finding returns a JSON-RPC error
+  > (`ERR_INJECTION_DETECTED = -32004`) before the payload reaches `tools/call`, and the
+  > resolved client IP (`X-Forwarded-For`-aware, not the raw TCP peer — see §5) is
+  > strike-tracked; 3 high-severity hits from the same IP escalates to a Cryptex
+  > `block_ip()` call, denying that IP platform-wide via the same check
+  > `GovernanceMiddleware` already gates other mutating routes on. Non-high-severity
+  > findings and clean payloads are unaffected. Full trace:
+  > `docs/governance/SECURITY-POSTURE-MATRIX.md` §3.
 - **Error handling:** JSON-RPC standard codes in `server.py`; platform canonical codes via
   `src/errors/error_catalog.py` (42 `ErrorCode` members defined). The scanner's documented
-  fail-open-with-logging policy (`payload_scanner.py`) applies **once the PLANNED wiring lands**.
+  fail-open-with-logging policy (`payload_scanner.py`) is live — `scan_rpc_payload()` never
+  raises, so a scanner bug fails open rather than blocking legitimate traffic.
 - **Concurrency / state:** async FastAPI; `_SSEBus` fans events to subscribers; tool RAG
   index is in-process and ephemeral (rebuildable, no persistent state required to serve).
 
@@ -107,7 +113,7 @@
 - **Auth boundary:** `/mcp/rpc` and `/mcp/sse` require a valid platform token
   (`Depends(get_current_user)`, Infinity/JWT). `/mcp/tools`, `/mcp/health`, and
   `/mcp/grid/status` are currently **unauthenticated** (see §2 route table). Inbound
-  payload scanning via `payload_scanner` is **PLANNED**, not yet enforced.
+  payload scanning via `payload_scanner` is enforced on `/mcp/rpc` (see §2).
 - **Data classification:** tool arguments may carry user content; no secrets persisted by
   The Spark itself.
 
@@ -167,9 +173,11 @@
 
 - **Applicable platform policies:** `POL-AI-001` (AI Ethics & Governance),
   `POL-OPS-002`, `POL-PRI-001` — see `docs/policies/`.
-- **Service-specific rules (target):** inbound `/mcp/rpc` payloads should be scanned for
-  prompt injection with bypass events logged (audit to The Observatory). **Status: PLANNED
-  — the scanner exists (`payload_scanner.py`) but is not yet wired into the handler.**
+- **Service-specific rules:** inbound `/mcp/rpc` payloads are scanned for prompt injection
+  (`payload_scanner.py`, enforced 2026-08-07); high-severity findings are rejected and
+  logged via the standard `logger.warning()` path, not yet a dedicated Observatory audit
+  event — that specific integration (bypass events surfaced to The Observatory) remains
+  unbuilt and is not claimed here.
 - **Data handling:** The Spark persists no user content; tool-level data handling is
   governed by the downstream service's policy.
 - **Access:** `/mcp/rpc` and `/mcp/sse` require a valid platform token (Infinity); the
@@ -221,3 +229,4 @@
 | 2026-07-02 | Platform Engineering | `60b3b18` | Initial pack authored against `src/mcp/`. |
 | 2026-07-02 | Platform Engineering | `2250aaf` | Corrected error-code count (42) and Lead AI (Imfy). |
 | 2026-07-02 | Platform Engineering | `HEAD` | **Truthfulness corrections** verified against `src/mcp/server.py`: payload scanner exists but is **not wired** into the `/mcp/rpc` handler (marked PLANNED); only `/mcp/rpc` + `/mcp/sse` are token-protected (`/mcp/tools`, `/mcp/health`, `/mcp/grid/status` are open); Prometheus `/metrics` is app-level (`api.py` / ecosystem router), not on the MCP router. |
+| 2026-08-07 | Claude (session, CrowdStrike 2026 report review + cubic-dev-ai triage on Tranc3#493) | `HEAD` | Wired `payload_scanner.scan_rpc_payload()` into `/mcp/rpc` — the PLANNED status from 2026-07-02 above is now landed. Updated the 6 "PLANNED"/"not yet enforced" references across §1/§2/§5/§10 to describe the enforced behaviour: reject on high-severity finding (`ERR_INJECTION_DETECTED`), strike-tracked adaptive Cryptex `block_ip()` after repeated hits from the same IP (not a single-hit permanent ban — cubic flagged that the scanner's own catalogue includes literal patterns like bare `SECRET_KEY`/`file://` that can appear in legitimate tool calls), client IP resolved via `X-Forwarded-For` rather than the raw TCP peer (cubic P0: the raw peer is Traefik's own container IP in production, banning it would have denied all mutating traffic platform-wide). Full trace: `docs/governance/SECURITY-POSTURE-MATRIX.md`. |

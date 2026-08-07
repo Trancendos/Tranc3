@@ -51,6 +51,55 @@ ERR_RESOURCE_NOT_FOUND = -32003
 ERR_INJECTION_DETECTED = -32004
 
 # ---------------------------------------------------------------------------
+# Prompt-injection strike tracking
+# ---------------------------------------------------------------------------
+
+# Number of high-severity scanner hits from the same IP before it gets Cryptex-blocked.
+# Every request is still rejected on its own regardless of strike count — this threshold
+# only gates the escalation to a platform-wide IP ban, so one false positive (the
+# scanner's catalogue includes literal patterns like bare "SECRET_KEY" or "file://" that
+# can legitimately appear in a tool call's arguments) can't get a caller permanently
+# banned; a sustained pattern of high-severity hits still does.
+_INJECTION_BLOCK_THRESHOLD = 3
+_injection_strike_counts: Dict[str, int] = {}
+
+
+def _resolve_client_ip(request: Request) -> Optional[str]:
+    """
+    Best-effort real client IP, preferring the Traefik-set X-Forwarded-For header.
+
+    request.client.host is the direct TCP peer — in the production Docker stack that's
+    Traefik's own container IP, not the original caller, since Traefik proxies the
+    connection. Blocking that value would ban the shared reverse proxy for all routed
+    traffic, not the offending caller. Same fallback order as
+    src/shared/rate_limiter.py's _get_client_key().
+    """
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else None
+
+
+def _record_injection_strike(client_ip: str) -> None:
+    """Escalate to a Cryptex IP block only after repeated high-severity detections."""
+    count = _injection_strike_counts.get(client_ip, 0) + 1
+    _injection_strike_counts[client_ip] = count
+    if count < _INJECTION_BLOCK_THRESHOLD:
+        return
+    try:
+        from src.cryptex.threat_detector import get_cryptex
+
+        get_cryptex().block_ip(client_ip)
+        logger.warning(
+            "mcp.rpc ip blocked after repeated injection attempts ip=%s strikes=%d",
+            sanitize_for_log(client_ip),
+            count,
+        )
+    except Exception:
+        pass  # nosec B110 - never let Cryptex unavailability break the reject path
+
+
+# ---------------------------------------------------------------------------
 # Pydantic models
 # ---------------------------------------------------------------------------
 
@@ -355,20 +404,15 @@ async def rpc_endpoint(
     # (scan_rpc_payload never raises), so this can't itself become a DoS vector.
     scan = scan_rpc_payload(body)
     if not scan.ok and scan.high_severity:
-        client_ip = request.client.host if request.client else None
+        client_ip = _resolve_client_ip(request)
         logger.warning(
             "mcp.rpc injection blocked method=%s ip=%s findings=%s",
             sanitize_for_log(method),
             sanitize_for_log(client_ip or "unknown"),
-            scan.summary(),
-        )
+            sanitize_for_log(scan.summary()),
+        )  # codeql[py/log-injection]
         if client_ip:
-            try:
-                from src.cryptex.threat_detector import get_cryptex
-
-                get_cryptex().block_ip(client_ip)
-            except Exception:
-                pass  # nosec B110 - never let Cryptex unavailability break the reject path
+            _record_injection_strike(client_ip)
         return JSONResponse(
             content=_err(
                 req_id,

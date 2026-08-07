@@ -54,6 +54,17 @@ self-hosted, zero-cost (replaces a Cloudflare Zero Trust dependency). Real mecha
 **Question answered:** *"Given this request's device, location, and MFA state right now, should it
 be allowed, denied, or challenged?"*
 
+**Correction (2026-08-07):** "extracted from request headers" above was true of `mfa_verified` in a
+way that was a real vulnerability, not just an implementation detail — `X-MFA-Verified` was read
+straight from the raw client request with nothing between the caller and the app validating it, so
+any caller could set it themselves and satisfy MFA-gated routes with no real MFA challenge. Fixed:
+`mfa_verified` is now derived from the signed JWT's own claim (set server-side by
+`workers/infinity-auth/router.py` only after a real TOTP/backup-code check), never from client
+input. `device_posture`/`country` remain genuinely header-derived, soft risk-scoring signals — no
+real device-attestation or GeoIP pipeline backs them yet, which is an honest, still-open gap, not a
+security hole in the same class (they raise risk score; they don't grant a bypass the way a forged
+MFA-verified header did). Full trace: [SECURITY-POSTURE-MATRIX.md](SECURITY-POSTURE-MATRIX.md) §2.
+
 ## 4. How the three relate
 
 ```text
