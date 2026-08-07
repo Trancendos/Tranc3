@@ -35,7 +35,7 @@ tqdm==4.67.1
 # === Security & Infrastructure ===
 # Fixes: CVE-2026-26007 (key exchange), CVE-2024-12797 (Flush+Reload),
 #        CVE-2026-34073 (padding oracle), debricked-267656
-cryptography==48.0.1
+cryptography==50.0.0
 
 # Fixes: 20 CVEs including request smuggling, DoS, header parsing,
 #        information disclosure (CVE-2025-69223 through CVE-2026-34520)
