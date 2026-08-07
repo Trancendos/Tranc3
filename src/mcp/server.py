@@ -92,7 +92,7 @@ def _record_injection_strike(client_ip: str) -> None:
         get_cryptex().block_ip(client_ip)
         logger.warning(
             "mcp.rpc ip blocked after repeated injection attempts ip=%s strikes=%d",
-            sanitize_for_log(client_ip),
+            sanitize_for_log(client_ip),  # codeql[py/log-injection]
             count,
         )
     except Exception:
@@ -407,10 +407,10 @@ async def rpc_endpoint(
         client_ip = _resolve_client_ip(request)
         logger.warning(
             "mcp.rpc injection blocked method=%s ip=%s findings=%s",
-            sanitize_for_log(method),
-            sanitize_for_log(client_ip or "unknown"),
-            sanitize_for_log(scan.summary()),
-        )  # codeql[py/log-injection]
+            sanitize_for_log(method),  # codeql[py/log-injection]
+            sanitize_for_log(client_ip or "unknown"),  # codeql[py/log-injection]
+            sanitize_for_log(scan.summary()),  # codeql[py/log-injection]
+        )
         if client_ip:
             _record_injection_strike(client_ip)
         return JSONResponse(
