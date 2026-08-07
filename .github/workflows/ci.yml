@@ -48,6 +48,13 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # tests/ includes cases that read the real compliance/magna-carta
+          # submodule content (e.g. Matrix Suites tests) — without this, the
+          # submodule dirs are empty gitlinks on ubuntu-latest's fresh
+          # checkout, and those tests silently fall back to "no suites"/404
+          # instead of exercising real data.
+          submodules: recursive
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6

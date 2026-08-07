@@ -44,13 +44,13 @@
 > the pattern this section otherwise describes. `queue-service-go`, also originally counted here,
 > was separately removed entirely as dead code (never wired into compose, zero commits since
 > creation) rather than given a Dockerfile — see `docs/governance/SWARM-COORDINATION-MATRIX.md`
-> §3. The one remaining Dockerfile-less directory, `rate-limit-service-go`, is **not referenced by
-> `docker-compose.production.yml` at all**, so it is not a build-breaking defect in the same sense
-> as the others — it is undeployed, unreferenced dead-code-shaped scaffolding, the same class as
-> the now-deleted `queue-service-go`. The original "missing Dockerfile *file*" gap is resolved for
-> every plain directory; two build-breaking issues remain: `cranbania`'s submodule-checkout gap in
-> the deploy pipeline (new, above), and deciding `rate-limit-service-go`'s fate (delete as dead
-> code, or build it out) — see §10/§12/§13 below, corrected to match.
+> §3. `rate-limit-service-go` — and `monitoring-go`, found in the same 2026-08-07 systematic
+> duplication sweep that turned up this section's `cranbania` submodule gap — were both **also**
+> removed entirely as dead code (never wired into `docker-compose.production.yml`, dependency-bump
+> commits only, same class as `queue-service-go`) rather than given Dockerfiles or built out. The
+> original "missing Dockerfile *file*" gap is resolved for every plain directory; the only
+> build-breaking issue remaining from this section is `cranbania`'s submodule-checkout gap in the
+> deploy pipeline (new, above) — now fixed, see §10/§12/§13 below.
 
 ## 1. Service Governance Charter (GOV)
 
@@ -200,8 +200,9 @@
   compose-referenced worker build contexts are missing a Dockerfile); `cranbania`'s Dockerfile
   exists but isn't reliably fetched by the deploy pipeline (git-submodule checkout gap — see
   truthfulness header), which is the same class of defect wearing a different cause.
-  `rate-limit-service-go` still lacks a Dockerfile but is not compose-referenced, so it is a
-  dead-code decision (§12), not a build-breaking defect.
+  `rate-limit-service-go` and `monitoring-go` — both Dockerfile-less, both not
+  compose-referenced — were deleted as dead code on 2026-08-07 rather than left as an open
+  decision; see the Verification Log.
 
 ## 11. Procedure (PROC)
 
@@ -224,13 +225,19 @@
   checkout if this recurs. 4 of the other directories originally flagged alongside it
   (`backup-service`, `fabulousa-service`, `ice-box-service`, `litellm-service`) have since gained
   their own Dockerfiles independently of this pack — see the truthfulness header.
-  `rate-limit-service-go` remains Dockerfile-less but isn't in compose, so it can't fail a build.
-- **`cranbania` fails to build (`Dockerfile not found`):** expected on a fresh checkout —
-  `workers/cranbania` is a git submodule and no deploy workflow's `actions/checkout` step passes
-  `submodules: true`/`recursive` (only the unrelated `sync-cranbania-submodule.yml` does). Fix by
-  adding `submodules: recursive` to the checkout step in whichever workflow builds
-  `docker-compose.production.yml`, or by running `git submodule update --init --recursive` before
-  `docker compose build` in that pipeline.
+  `rate-limit-service-go` and `monitoring-go` were deleted 2026-08-07 rather than left
+  Dockerfile-less indefinitely.
+- **`cranbania` fails to build (`Dockerfile not found`):** was previously expected on a fresh
+  checkout — `workers/cranbania` is a git submodule and no deploy or CI workflow's
+  `actions/checkout` step passed `submodules: true`/`recursive` (only the unrelated
+  `sync-cranbania-submodule.yml` did). Fixed 2026-08-07 by adding `submodules: recursive` to the
+  three checkout steps that run the `pytest tests/` suite against real submodule content
+  (`.forgejo/workflows/ci.yml`'s `full-suite` job, `.github/workflows/ci.yml`'s `Pytest` job,
+  `.github/workflows/test.yml`'s `Full Pytest Suite` job) — see the Verification Log. Not yet
+  applied to `nightly.yml`/`benchmark-eval.yml`/`phase7-nanoservices.yml`/`phase8-trancex.yml`,
+  which run the same suite on a different cadence and carry the identical gap; and not yet needed
+  by `deploy-fly.yml`/`deploy-self-hosted.yml`, since neither currently builds a `cranbania` image
+  (confirmed by reading `build-workers`'s job steps — if that changes, this note is stale).
 - **`push_version()` accepted a bogus digest:** expected — `src/artifactory/*` never validates
   `digest`/`size_bytes` against real content; this module is metadata-only by design.
 
@@ -241,9 +248,10 @@
   Dockerfile }` block MUST have a corresponding `Dockerfile` **reliably present in the checkout
   the build actually runs against** — a missing Dockerfile is a build-breaking defect, not a
   documentation gap, and that includes one that's missing only because a submodule wasn't
-  initialized. The defect fixed here is the reason for this standard; as of 2026-08-07 it holds
-  for 73 of 74 checked, with `cranbania` the one open exception (submodule-checkout gap, not a
-  missing file — see truthfulness header).
+  initialized. The defect fixed here is the reason for this standard; as of 2026-08-07 the
+  Dockerfile-presence gap holds for 73 of 74 checked, and `cranbania`'s submodule-checkout gap in
+  the CI pytest jobs is now fixed (see Verification Log) — the same gap in the four still-unfixed
+  workflows named there remains open.
 
 ## Verification Log
 
@@ -254,3 +262,4 @@
 | 2026-08-07 (round 1) | Claude (session, cubic-dev-ai review triage on Tranc3#493) | `docs/governance/SWARM-COORDINATION-MATRIX.md` §3, this file's §3/§10/§12/§13 | `queue-service-go` (one of the 8 directories in the 2026-07-05 row above) was deleted as dead code, dropping the live count to 7 — the truthfulness header above was updated to say 7, but §3/§10/§12/§13 and this log's older row still said 8/"2 Go services" until this pass. Fixed the four living-body references to say 7 (1 Go service — `rate-limit-service-go` only). The 2026-07-05 row is left unedited as the accurate point-in-time record of what existed on that date; this row is the reconciliation, not a rewrite of history. |
 | 2026-08-07 (round 2) | Claude (session, cubic-dev-ai review triage on Tranc3#493) | `docker-compose.production.yml` parsed programmatically — every service with a `build: { context: ./workers/*, dockerfile: Dockerfile }` block checked against the filesystem (74 services) | The "7" from round 1 was itself already stale: `backup-service`, `cranbania`, `fabulousa-service`, `ice-box-service`, and `litellm-service` had each independently gained a Dockerfile since 2026-07-05, and `the-void` was never a `workers/` directory at all (confirmed non-existent path — the original "ambiguous CF-vs-container" framing was right for the wrong reason). Result: **0 of 74** compose-referenced worker build contexts are missing a Dockerfile. Only `rate-limit-service-go` remains Dockerfile-less, and it isn't referenced by compose, so it's a dead-code question (same class as the deleted `queue-service-go`), not a build defect. Rewrote the truthfulness header and §10/§12/§13 to state this rather than decrementing a number that was already wrong. |
 | 2026-08-07 (round 3) | Claude (session, cubic-dev-ai review triage on Tranc3#493) | `.gitmodules`, `workers/cranbania/.git` (confirmed submodule), every `.forgejo/workflows/*.yml`'s `actions/checkout` step | Round 2's "0 of 74" was itself wrong for `cranbania`: this session's checkout happens to have the `workers/cranbania` git submodule populated (Dockerfile genuinely present on disk here), but that's an artefact of this sandbox, not of the deploy pipeline — grepped every `.forgejo/workflows/*.yml` and found no `deploy-fly.yml`/`deploy-self-hosted.yml`/etc. `actions/checkout` step sets `submodules: true` or `recursive`; only the unrelated `sync-cranbania-submodule.yml` does. A real deploy-pipeline checkout would leave `workers/cranbania/` empty, and `docker compose build cranbania` would fail on a missing Dockerfile it does have in its own repo, just not fetched. Corrected the count to **73 of 74** non-submodule contexts confirmed, with `cranbania` flagged as a distinct, still-open, previously-undocumented defect (missing `submodules: recursive` on checkout, not a missing file) rather than folded into "resolved." |
+| 2026-08-07 (round 4) | Claude (session, systematic duplication sweep) | Full `workers/` (92 dirs) vs `docker-compose.production.yml` (173 services) cross-reference; every checkout step across `.forgejo/`+`.github/` workflows that runs `pytest tests/` | Deleted `rate-limit-service-go` and, newly found in this pass, `monitoring-go` — both Go, both zero compose references, both dependency-bump-only commit history (no real feature work since creation), same class as `queue-service-go`. Fixed round 3's `cranbania` submodule-checkout gap on the 3 checkout steps that actually run `pytest tests/` (which includes tests reading real `compliance/magna-carta` content): `.forgejo/workflows/ci.yml`'s `full-suite` job, `.github/workflows/ci.yml`'s `Pytest` job, `.github/workflows/test.yml`'s `Full Pytest Suite` job. NOT yet applied to `nightly.yml`/`benchmark-eval.yml`/`phase7-nanoservices.yml`/`phase8-trancex.yml`, which run the same suite on a different cadence — same gap, lower priority, left open. Separately discovered: `.github/workflows/ci.yml`'s `Pytest` job and `test.yml`'s `Full Pytest Suite` job both end their pytest invocation with `\|\| true` ("Don't block PRs on test failures yet" / "during stabilization") — neither has ever actually gated on test results, which is *why* the submodule gap was invisible on every green PR check for as long as it existed. Only `.forgejo/workflows/ci.yml`'s `full-suite` job (self-hosted) genuinely enforces pytest results. Not fixed in this pass — `docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md` already documents 6 known-failing `tests/test_waivers.py` cases from cross-test state leakage, so removing the masking would immediately fail CI platform-wide until triaged; flagged as an explicit decision point rather than silently unmasked. Also new in this pass, not remediated (out of scope for a "dead code" fix — these are live production services, not stubs): `rate-limit-service-rs`/`vault-service-rs`/`nexus-ws-rs` (Rust) are each deployed *concurrently* with their Python originals rather than as unwired alternates, and `bullmq-queue-service` (Node) vs `queue-service` (Python) is a genuine same-responsibility overlap with no consumer wired to either — see `docs/governance/DUPLICATE-WORKER-FINDINGS.md`. |

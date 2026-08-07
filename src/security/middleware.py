@@ -246,9 +246,13 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(pfx) for pfx in self._SKIP_PREFIXES):
             return await call_next(request)
 
+        from src.security.trusted_proxy import sanitize_zero_trust_client_headers
+
         headers = resolve_mfa_verified_header(
             dict(request.headers), request.headers.get("Authorization", "")
         )
+        peer_ip = request.client.host if request.client else None
+        headers = sanitize_zero_trust_client_headers(headers, peer_ip)
         context = self._zt.extract_context(headers)
         decision = self._zt.evaluate(context, path)
 
