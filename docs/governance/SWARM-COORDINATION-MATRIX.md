@@ -42,7 +42,7 @@ cron-service, VRAR3D, files-service) plus `src/adaptive/dna_router.py`, `src/mes
 others share the pattern by grep evidence only — a full per-file audit is recorded as a gap in §6,
 not claimed here.
 
-**So the core instinct — "pheromone-style adaptive selection is a real Tranc3 idiom" — is correct.**
+**So the core instinct — "pheromone-style adaptive selection is a real Trancendos idiom" — is correct.**
 It's just much smaller than the external brainstorm assumed: one float per option, reinforce/decay,
 greedy pick. No islands, no Redis, no MMAS bounds, no migration.
 
@@ -103,7 +103,7 @@ Dockerfile or `docker-compose.production.yml` service** and has no test coverage
 `FeatureFlag.SWARM_INTELLIGENCE`, gated by `ENABLE_SWARM` — **defaulting to `false`**, grouped with
 equally-inactive `ENABLE_HOLOGRAPHIC` and `ENABLE_EVOLUTION` flags. This is honestly-marked
 speculative scaffolding, not a hidden production system — no correction needed there, just don't
-mistake it for evidence that "real" distributed swarm intelligence already runs in Tranc3.
+mistake it for evidence that "real" distributed swarm intelligence already runs on Trancendos.
 
 ## 5. Verdict on the external brainstorm
 
