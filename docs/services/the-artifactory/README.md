@@ -26,16 +26,19 @@
 > non-root user, port 8047 matching `WORKER_PORT = int(os.getenv("PORT", "8047"))` in
 > `worker.py` and compose's `PORT=8047`/`8047:8047`/Traefik routing).
 > **Broader gap found, not fixed (out of scope for this pass):** the same missing-Dockerfile
-> defect exists in **8 other** `workers/*/` directories referenced by
+> defect exists in **7 other** `workers/*/` directories referenced by
 > `docker-compose.production.yml`: `backup-service`, `cranbania` (git submodule — may be
-> intentional), `fabulousa-service`, `ice-box-service`, `litellm-service`, `queue-service-go`,
-> `rate-limit-service-go` (the last two are Go services requiring a different Dockerfile
+> intentional), `fabulousa-service`, `ice-box-service`, `litellm-service`,
+> `rate-limit-service-go` (a Go service requiring a different Dockerfile
 > template — not verified in this pass), and `the-void` (ambiguous — may be Cloudflare-Worker-only
 > per `CLAUDE.md`'s "migrating to self-hosted" note, not necessarily meant to have a container
 > Dockerfile). This pack fixes only `artifactory-service`'s instance, in scope for this entity;
-> the other 8 are flagged here as a real, previously-undocumented platform-wide gap for a
-> dedicated follow-up pass — fixing 8 Dockerfiles across two languages and a submodule without
+> the other 7 are flagged here as a real, previously-undocumented platform-wide gap for a
+> dedicated follow-up pass — fixing 7 Dockerfiles across two languages and a submodule without
 > individually verifying each one's runtime would risk introducing new defects.
+> **Update (2026-08-07):** `queue-service-go`, originally counted in this list, was removed
+> entirely as dead code (never wired into compose, zero commits since creation) rather than
+> given a Dockerfile — see `docs/governance/SWARM-COORDINATION-MATRIX.md` §3.
 
 ## 1. Service Governance Charter (GOV)
 

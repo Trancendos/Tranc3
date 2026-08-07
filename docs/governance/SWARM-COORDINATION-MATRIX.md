@@ -34,11 +34,12 @@ decays it (`CACHE_PHEROMONE_DECAY`, default `0.05`). Backend selection is a gree
 current pheromone. Exercised in `tests/test_workers_p3.py` (backend-selection assertions with
 guard-state snapshot/restore between tests) — this is real, not decorative.
 
-The identical `ThresholdGuard`/pheromone idiom is grepped across ~15 other workers (Observatory,
+The identical `ThresholdGuard`/pheromone idiom is grepped across 11 other workers (Observatory,
 TranceFlow, The Grid, analytics-service, library-service, lab-service, storage-service, Cryptex,
-cron-service, VRAR3D, files-service) plus `src/adaptive/dna_router.py`, `src/mesh/genetic_router.py`,
+cron-service, VRAR3D, files-service — 12 total including cache-service) plus 4 shared `src/`
+modules (`src/adaptive/dna_router.py`, `src/mesh/genetic_router.py`,
 `src/nanoservices/symbiotic_collective/symbiotic_collective.py`, and
-`src/ai_gateway/provider_rotation.py`. This doc verifies cache-service's copy line-by-line; the
+`src/ai_gateway/provider_rotation.py`). This doc verifies cache-service's copy line-by-line; the
 others share the pattern by grep evidence only — a full per-file audit is recorded as a gap in §6,
 not claimed here.
 
@@ -62,31 +63,38 @@ text, same honest-gap treatment `MATRIX-INDEX.md` gives other unbuilt "abilities
 
 ## 3. Genuine drift found while researching this (not previously documented in this session)
 
-Five separate queue/cache/hive-named workers exist in `workers/`:
+Four separate queue/cache/hive-named workers were deployed in `workers/` at the time of writing
+(a fifth, `queue-service-go`, was removed as dead code in the same pass — see below):
 
 | Worker | Language | Compose-deployed? | Role |
 |---|---|---|---|
 | `queue-service` | Python | ✅ (port 8022) | Priority task queue, retry/dead-letter/sweep. Docstring: *"Lead AI: The Queen"* |
 | `cache-service` | Python | ✅ (port 8023) | ACO pheromone router (§1) |
-| `hive-service` | Python | ✅ (compose routes `8051`) | `SwarmCoordinator` / `FlowMonitor` (§2) |
+| `hive-service` | Python | ✅ (port 8051) | `SwarmCoordinator` / `FlowMonitor` (§2) |
 | `bullmq-queue-service` | Node/TypeScript | ✅ (port 8092) | BullMQ-backed queue; ownership vs. `queue-service` unclear from either worker's own docs |
-| `queue-service-go` | Go | ❌ not in `docker-compose.production.yml` | Referenced only in `docs/services/the-artifactory/README.md` and `docs/services/INDEX.md` — orphaned |
 
-Two concrete, previously-unflagged issues:
+One concrete, previously-unflagged issue confirmed, and one initially-suspected issue retracted
+after deeper checking:
 
-1. **Port drift on `hive-service`.** `worker.py`'s own default is `Port: 8060`; the compose file
-   routes Traefik to `loadbalancer.server.port=8051`. This is the same class of problem
-   `CLAUDE.md`'s "Routing defects (issue #188)" section already resolved for `audit-service`,
-   `queue-service`, `search-service`, and `infinity-void` — `hive-service` isn't in that resolved
-   list and should be checked the same way (does compose set `PORT=8051` explicitly, or is this a
-   live mismatch?).
-2. **`queue-service-go` is dead code** — built, documented in two places, but never wired into the
-   deployed stack. Either deploy it or remove the stale doc references.
+1. **`queue-service-go` was dead code — removed.** Zero commits since its single creation commit,
+   no Dockerfile, not referenced anywhere in `docker-compose.production.yml`. A 2026-07-05 audit
+   pass (`docs/services/the-artifactory/README.md`) had already flagged it as missing a Dockerfile
+   but left it unresolved. Rather than build deployment infrastructure for an untested, fully
+   redundant Go reimplementation of the role `queue-service` (Python, deployed, tested) already
+   fills, the directory was deleted and the stale doc reference removed.
+2. **`hive-service` does *not* have a port drift — initial read was wrong, corrected here.** This
+   doc originally flagged `worker.py`'s bare Python default (`HIVE_PORT` env var, falling back to
+   `8060` only if unset) against compose's routed port (`8051`) as a mismatch. Checking the actual
+   `Dockerfile` shows its `CMD` hardcodes `uvicorn worker:app --port 8051` directly — the Python
+   fallback is unreachable dead code, the same pattern `CLAUDE.md`'s "Routing defects (issue #188)"
+   section already documents for `audit-service`/`queue-service`/`search-service`. Compose also sets
+   `HIVE_PORT=8051` explicitly as a second, redundant safeguard. No drift exists; retracted rather
+   than left standing, since a false finding in a doc about honest verification would defeat its
+   own purpose.
 
-Neither issue is caused by, or related to, the external brainstorm — they surfaced purely from
+Neither issue is caused by, or related to, the external brainstorm — both surfaced purely from
 tracing "does HIVE's queue/cache infrastructure actually work the way the docs say" for this
-review. Filed here rather than silently fixed, since which of `queue-service` /
-`bullmq-queue-service` should own task queuing long-term is a real design decision, not a typo.
+review.
 
 ## 4. What's not real: `DistributedIntelligenceSwarm` / `main_2060.py`
 
@@ -97,7 +105,8 @@ round-robin. `_execute_on_node` "executes" by encoding text as `ord(c) % 768` in
 `IntelligenceBlockchain` and `HomomorphicCrypto` scaffolding that reads as far more sophisticated
 than what it does.
 
-It is reachable only via `src/main_2060.py` (name is the platform's own signal: a 2060 vision file,
+It is reachable only via `main_2060.py` (repo root, not under `src/` — name is the platform's own
+signal: a 2060 vision file,
 not the real entry point — that's `api.py` per `CLAUDE.md`), which is **not referenced by any
 Dockerfile or `docker-compose.production.yml` service** and has no test coverage. It sits behind
 `FeatureFlag.SWARM_INTELLIGENCE`, gated by `ENABLE_SWARM` — **defaulting to `false`**, grouped with
@@ -118,12 +127,9 @@ mistake it for evidence that "real" distributed swarm intelligence already runs 
 
 ## 6. Honest gaps (recorded, not built)
 
-- **No per-worker audit of the other ~15 `ThresholdGuard` copies.** §1 verified `cache-service`
+- **No per-worker audit of the other 11 `ThresholdGuard` copies.** §1 verified `cache-service`
   line-by-line; the rest share the pattern by grep only. Whether they're independent copies (drift
   risk) or intentional per-worker tuning is unknown.
-- **`hive-service` port drift (§3.1)** — needs the same fix pattern `CLAUDE.md` already used for
-  `infinity-void` (explicit `PORT=8051` in compose `environment:`), or confirmation it's already
-  correct and just undocumented.
 - **`queue-service` vs. `bullmq-queue-service` ownership** — two independently-deployed task queues
   with no documented division of responsibility.
 - **No stigmergic (multi-option, decaying-field) coordination exists above the single-scalar
