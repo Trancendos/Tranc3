@@ -9,6 +9,8 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from src.security.trusted_proxy import sanitize_zero_trust_client_headers
+
 logger = logging.getLogger(__name__)
 
 SECURITY_HEADERS = {
@@ -249,6 +251,8 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
         headers = resolve_mfa_verified_header(
             dict(request.headers), request.headers.get("Authorization", "")
         )
+        peer_ip = request.client.host if request.client else None
+        headers = sanitize_zero_trust_client_headers(headers, peer_ip)
         context = self._zt.extract_context(headers)
         decision = self._zt.evaluate(context, path)
 
