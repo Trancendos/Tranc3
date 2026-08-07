@@ -207,6 +207,18 @@ class TestSuiteStewardshipRoutes:
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)
 
+    def test_malformed_registry_404s_not_500s(self, client, tmp_path, monkeypatch):
+        """Regression: a non-mapping suite entry used to reach suite.get(...)
+        unguarded and raise an unhandled AttributeError (500) instead of the
+        routes' intended 404 invalid_registry — see
+        src/roles/suite_stewardship.py's isinstance(suite, dict) guard."""
+        bad = tmp_path / "bad_matrix_suites.yaml"
+        bad.write_text("meta: {}\nsuites: [null]\n", encoding="utf-8")
+        monkeypatch.setenv("MATRIX_SUITES_PATH", str(bad))
+        resp = client.get("/roles/suites")
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "invalid_registry"
+
     def test_reassigning_steward_location_shows_drift(self, client):
         client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:

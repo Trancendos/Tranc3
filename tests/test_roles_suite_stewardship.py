@@ -6,8 +6,10 @@
 
 from __future__ import annotations
 
+import pytest
 import yaml
 
+from src.compliance.matrix_suites import MatrixSuitesRegistryError
 from src.roles import registry as registry_module
 from src.roles.registry import RoleRegistry
 from src.roles.suite_stewardship import get_suite_stewardship, list_suite_stewardships
@@ -90,6 +92,20 @@ class TestListSuiteStewardships:
     def test_missing_registry_file_returns_empty(self, tmp_path, monkeypatch):
         _fresh_registry(tmp_path, monkeypatch)
         assert list_suite_stewardships(str(tmp_path / "nope.yaml")) == []
+
+    def test_non_mapping_suite_entry_raises_registry_error(self, tmp_path, monkeypatch):
+        """CodeQL/CodeRabbit-flagged regression: a null or scalar entry in the
+        suites list used to reach suite.get(...) and raise an unhandled
+        AttributeError — routes only catch MatrixSuitesError, so this became
+        an unhandled 500 instead of a clean 404 invalid_registry."""
+        _fresh_registry(tmp_path, monkeypatch)
+        p = tmp_path / "matrix_suites.yaml"
+        p.write_text(
+            yaml.safe_dump({"meta": {}, "suites": [FIXTURE["suites"][0], None]}),
+            encoding="utf-8",
+        )
+        with pytest.raises(MatrixSuitesRegistryError):
+            list_suite_stewardships(str(p))
 
 
 class TestGetSuiteStewardship:

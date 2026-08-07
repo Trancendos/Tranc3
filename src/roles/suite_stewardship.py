@@ -30,7 +30,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
-from src.compliance.matrix_suites import MatrixSuitesError, load_suites
+from src.compliance.matrix_suites import (
+    MatrixSuitesError,
+    MatrixSuitesRegistryError,
+    load_suites,
+)
 from src.roles.registry import get_registry
 
 
@@ -58,15 +62,21 @@ def _coerce_str_list(raw: Any) -> List[str]:
 def list_suite_stewardships(matrix_suites_path: Optional[str] = None) -> List[SuiteStewardship]:
     """Cross-reference every Suite's designed steward against the live Role Registry.
 
-    Raises MatrixSuitesError (via load_suites) if the Magna Carta registry
-    file is missing or malformed — callers map that to an HTTP error rather
-    than silently returning an empty list, matching how src/compliance/
-    matrix_suites_routes.py treats the same underlying failure.
+    A missing registry file is not an error — load_suites() returns [] for it,
+    and this function passes that empty list straight through, same as an
+    estate with zero defined suites would look. A *malformed* registry file
+    (invalid YAML, wrong root/field shape, or a non-mapping suite entry) does
+    raise MatrixSuitesError (a MatrixSuitesRegistryError specifically), which
+    callers map to an HTTP error rather than silently returning an empty list
+    — matching how src/compliance/matrix_suites_routes.py treats the same
+    underlying failure.
     """
     suites = load_suites(matrix_suites_path)
     registry = get_registry()
     results: List[SuiteStewardship] = []
     for suite in suites:
+        if not isinstance(suite, dict):
+            raise MatrixSuitesRegistryError("matrix_suites.yaml: each suite must be a mapping")
         steward_location = str(suite.get("steward_location") or "")
         designed_ai = str(suite.get("steward_ai") or "")
         role = registry.get_role(steward_location) if steward_location else None
