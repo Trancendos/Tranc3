@@ -48,7 +48,7 @@ jobs:
 
       - name: Start API server
         run: |
-          SECRET_KEY=ci-test-secret-key nohup uvicorn api:app --host 0.0.0.0 --port 8000 \
+          nohup uvicorn api:app --host 0.0.0.0 --port 8000 \
             > api-server.log 2>&1 &
           ready=0
           for i in $(seq 1 30); do
@@ -58,6 +58,15 @@ jobs:
             sleep 1
           done
           if [ "$ready" -ne 1 ]; then cat api-server.log || true; exit 1; fi
+        env:
+          # api.py fails fast (unconditionally, not just in production) if any
+          # of these four are unset — matches ci.yml's Pytest job convention.
+          # SQLite/plain-redis-URL are enough to satisfy the presence check;
+          # neither is actually connected to at import time.
+          SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
 
       - name: Run k6 smoke load test
         run: k6 run scripts/loadtest/smoke.js || true
