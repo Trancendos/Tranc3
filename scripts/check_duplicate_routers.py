@@ -97,8 +97,7 @@ KNOWN_COUPLED: dict[str, str] = {
         "event_bus/wiring.py"
     ),
     "_turingshub_router": (
-        "core/load-bearing AI response pipeline dependency, not a "
-        "nanoservice duplicate"
+        "core/load-bearing AI response pipeline dependency, not a nanoservice duplicate"
     ),
     "_search_router": (
         "PENDING VERIFICATION: MONOLITH-EXTRACTION-FINDINGS.md flags this as "
