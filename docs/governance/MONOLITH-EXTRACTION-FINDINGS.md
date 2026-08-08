@@ -1,8 +1,8 @@
 # Monolith Extraction Findings — 2026-08-08 systematic sweep
 
-**Status:** 8 confirmed-safe removals shipped in this pass. 6 more candidates identified with
-real in-process coupling — those need a deliberate design decision (HTTP bridge, or leave
-in-process on purpose), not a mechanical fix. Nothing below was silently resolved.
+**Status:** 7 confirmed-safe removals shipped in this pass. An 8th (`src/resonate/`) was reverted
+after review — see below. 7 candidates now need a deliberate design decision (HTTP bridge, or
+leave in-process on purpose), not a mechanical fix. Nothing below was silently resolved.
 
 ## What this found
 
@@ -39,13 +39,24 @@ For each `src/<name>/` module mounted in `api.py`:
    synchronously, in-process, on the SECURITY/CRITICAL audit event path that the module's own
    docstring says is "never dropped." Turning that into a network call changes its failure
    semantics on a security-critical path. Left alone — see "Needs a decision" below.
+5. Step 2's grep only caught in-process Python-level callers — it did not verify that a
+   candidate worker's actual HTTP route surface matched what the monolith router served. That
+   gap was real: `src/resonate/` passed step 2 (zero in-process callers) and was initially
+   removed, but a post-merge review caught that `workers/resonate/` exposes a completely
+   different API (`/health`, `/score`, `/score/conversation`, `/conversations/{id}`,
+   `/history/{user_id}`) than the router it was meant to replace
+   (`/resonate/status`, `/wrap`, `/escalate/{user_id}`) — not a superset, a different service.
+   The mount was restored. This means step 2 alone is **not sufficient** proof of safety; the
+   remaining "Removed" list below was re-checked for the same gap (worker route paths spot-read
+   against the removed router's paths), but a systematic HTTP-level equivalence check like the
+   one already done for `taimra` (see summary above) was not repeated for all 7 — treat this list
+   as the same confidence level as the rest of this doc, not as fully proven.
 
 ## Removed in this pass (`api.py`, verified zero other in-process callers)
 
 | Router removed | Real worker | Port |
 |---|---|---|
 | `src/taimra/routes.py` | `workers/taimra/` | 8074 |
-| `src/resonate/routes.py` | `workers/resonate/` | 8076 |
 | `src/studio/routes.py` | `workers/the-studio/` | 8069 |
 | `src/lab/routes.py` | `workers/the-lab/` + `workers/lab-service/` | 8055 / 8066 |
 | `src/chronos/routes.py` | `workers/cron-service/` | 8021 |
@@ -53,15 +64,28 @@ For each `src/<name>/` module mounted in `api.py`:
 | `src/artifactory/routes.py` | `workers/artifactory-service/` | 8047 |
 | `src/vrar3d/routes.py` | `workers/vrar3d/` | 8060 |
 
-`api.py`: 2678 → 2650 lines. Verified: `python3 -m py_compile`, a live `import api` with
-`app.routes` building successfully (300 routes), `ruff check api.py` clean, and the full relevant
-test subset (`test_canonical_routes.py`, `test_api.py`, `test_shared_resource_routers_auth.py`,
-`test_tranquility_taimra_auth.py`, `test_resonate_escalation.py` — 133 tests) passing.
-`CLAUDE.md`'s entity table updated for the 7 rows that said "(router registered in `api.py`)" —
-they now point at the real worker paths.
+`api.py`: 2678 → 2654 lines net (8 removed, 1 — Resonate — restored with an explanatory comment).
+Verified: `python3 -m py_compile`, a live `import api` with `app.routes` building successfully,
+`ruff check api.py` clean, and the full relevant test subset (`test_canonical_routes.py`,
+`test_api.py`, `test_shared_resource_routers_auth.py`, `test_tranquility_taimra_auth.py`,
+`test_resonate_escalation.py` — 133 tests) passing.
+`CLAUDE.md`'s entity table updated for the 6 rows that said "(router registered in `api.py`)" —
+they now point at the real worker paths. Resonate's row was reverted back to "In repo".
 
 ## Needs a decision, not a mechanical fix
 
+- **`src/resonate/`** — no in-process caller (step 2 was clean), but `workers/resonate/`
+  (Port 8076, in compose) is not a behavioral replacement: it serves an empathy-scoring API
+  (`/score`, `/score/conversation`, `/conversations/{id}`, `/history/{user_id}`), while the
+  monolith router serves an escalation workflow (`/resonate/status`, `/wrap`,
+  `/escalate/{user_id}`). Separately, the production Traefik rule
+  (`Host(resonate.trancendos.com) && PathPrefix(/resonate)` →
+  `docker-compose.production.yml`) forwards to the worker without stripping the `/resonate`
+  prefix, and the worker's routes aren't under that prefix either — that routing rule looks
+  broken independent of anything in this PR. Whoever picks this up needs to decide: build the
+  escalation endpoints into the worker (and fix the Traefik prefix), or keep the monolith router
+  as the long-term home for escalation and let the worker own scoring only. Left mounted in
+  `api.py` until that call is made.
 - **`src/basement/`** — real in-process caller (`observatory.py`, security-critical path, see
   above). `workers/basement/` (427 lines, in compose) exists and is presumably the intended
   target, but wiring Observatory to it needs an actual HTTP client call with retry/circuit-breaker

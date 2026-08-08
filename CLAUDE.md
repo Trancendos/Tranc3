@@ -146,7 +146,7 @@ mounted in `api.py`).
 | **I-Mind** | Elouise | Sensitivity to emotion engine | ✅ In repo | `src/imind/` (router registered in `api.py`) |
 | **tAimra** | tAImra | Opt-in digital twin & life assistant | ✅ Self-hosted | `workers/taimra/` (Port 8074) — a real, SQLite-backed superset of the old `src/taimra/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
 | **VRAR3D** | Entari | Standalone 3D / VR immersion | ✅ Self-hosted | `workers/vrar3d/` (Port 8060) — supersedes the old `src/vrar3d/` router once mounted in `api.py`, unmounted (dead duplicate removed); Three.js / A-Frame planned frontend |
-| **Resonate** | Magdalena | Empathy engine | ✅ Self-hosted | `workers/resonate/` (Port 8076) — supersedes the old `src/resonate/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
+| **Resonate** | Magdalena | Empathy engine | ✅ In repo | `src/resonate/` (router registered in `api.py`); `workers/resonate/` (Port 8076) exists but exposes a different API surface (score/conversation, not the router's status/wrap/escalate) — not yet a drop-in replacement, so the in-process mount stays for now |
 
 ### Already-deployed Cloudflare Workers (not yet in this repo)
 

@@ -870,9 +870,22 @@ from src.tranquility.routes import (
 
 app.include_router(_tranquility_router)
 
-# ── tAimra, Resonate, The Studio, The Lab, ChronosSphere, DevOcity, The
+# ── Resonate (empathy engine — escalation workflow) ──────────────────────────
+# NOT removed like its siblings below: workers/resonate/worker.py exposes a
+# different API surface (/health, /score, /score/conversation,
+# /conversations/{id}, /history/{user_id}) than this router's
+# /resonate/status|wrap|escalate/{user_id} — it is not a behavioral drop-in
+# replacement, so the in-process mount stays until that gap is closed (see
+# docs/governance/MONOLITH-EXTRACTION-FINDINGS.md).
+from src.resonate.routes import (
+    router as _resonate_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_resonate_router)
+
+# ── tAimra, The Studio, The Lab, ChronosSphere, DevOcity, The
 # Artifactory, VRAR3D: each already has a real, standalone, deployed worker
-# (workers/taimra, workers/resonate, workers/the-studio, workers/the-lab +
+# (workers/taimra, workers/the-studio, workers/the-lab +
 # workers/lab-service, workers/cron-service, workers/devocity,
 # workers/artifactory-service, workers/vrar3d — all in
 # docker-compose.production.yml) that supersedes the in-process src/<name>/
