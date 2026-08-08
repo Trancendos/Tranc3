@@ -55,6 +55,11 @@ ROUTER_TO_WORKER: dict[str, tuple[str, str]] = {
     "_library_router": ("src.library.routes", "library-service"),
     "_search_router": ("src.routers.search_api", "search-service"),
     "_turingshub_router": ("src.personality.turingshub.routes", "turings-hub-service"),
+    "_nexus_router": ("src.nexus.routes", "infinity-ws"),
+    "_townhall_router": ("src.townhall.routes", "cranbania"),
+    "_admin_os_router": ("src.admin_os.routes", "infinity-admin"),
+    "_section7_router": ("src.research.routes", "the-dutchy"),
+    "_billing_router": ("src.monetisation.router", "payments-service"),
     # Confirmed-safe removals from the 2026-08-08 sweep — kept here (even
     # though `_mounted_routers()` will skip them while unmounted) so that if
     # one is ever re-added to api.py without a fresh equivalence check, this
@@ -79,8 +84,13 @@ KNOWN_COUPLED: dict[str, str] = {
         "router (escalation) — see MONOLITH-EXTRACTION-FINDINGS.md"
     ),
     "_imind_router": (
-        "src/tranquility/wellbeing.py imports src.imind.protocol directly "
-        "in-process; router-only removal not yet verified for HTTP equivalence"
+        "VERIFIED NOT EQUIVALENT: src/imind/protocol.py's assess() is a "
+        "regex-driven crisis/self-harm/suicide detector with SECURITY-severity "
+        "human escalation; workers/imind/worker.py only does generic "
+        "sentiment/emotion scoring (dominant_emotion/polarity/confidence) with "
+        "no crisis-pattern logic at all. Unmounting would silently remove a "
+        "safeguarding feature, not a duplicate. src/tranquility/wellbeing.py "
+        "also imports src.imind.protocol directly in-process."
     ),
     "_basement_router": (
         "src/observability/observatory.py calls get_basement() synchronously "
@@ -100,10 +110,43 @@ KNOWN_COUPLED: dict[str, str] = {
         "core/load-bearing AI response pipeline dependency, not a nanoservice duplicate"
     ),
     "_search_router": (
-        "PENDING VERIFICATION: MONOLITH-EXTRACTION-FINDINGS.md flags this as "
-        "needing an HTTP-route-equivalence check against workers/search-service/ "
-        "before any removal decision (not done yet) — kept mounted, not a "
-        "confirmed keep"
+        "VERIFIED NOT EQUIVALENT: this router is a hybrid BM25+vector RAG "
+        "pipeline (Meilisearch/Qdrant/Weaviate/Chroma); workers/search-service/ "
+        "is SQLite FTS5 full-text only, with no vector/embedding/RAG capability "
+        "at all — missing half the feature, not a superset"
+    ),
+    "_nexus_router": (
+        "src.nexus.hub.get_nexus() (the underlying pub/sub singleton, not just "
+        "the router) is called in-process by section7.py, cryptex/threat_detector.py, "
+        "and research/section7.py; workers/infinity-ws/ has no REST pub/sub "
+        "surface to bridge to yet, only a health check + raw WebSocket handling"
+    ),
+    "_townhall_router": (
+        "VERIFIED NOT EQUIVALENT: this router is a policy/compliance check "
+        "engine; workers/cranbania/ (the same-named 'worker') is a completely "
+        "different product — a Kanban/ITSM board with 40+ MCP tools and zero "
+        "policy-check endpoints. Real caller: research/section7.py"
+    ),
+    "_admin_os_router": (
+        "VERIFIED NOT EQUIVALENT: this router's cells/fabric/files/backups "
+        "features have no counterpart in workers/infinity-admin/, which is "
+        "config/entity-override focused instead. api.py's own startup "
+        "auto-backup loop depends on src.admin_os.backup_loop directly"
+    ),
+    "_section7_router": (
+        "VERIFIED NOT EQUIVALENT: this router (src.research.routes, backed by "
+        "src.research.section7.Section7) generates platform self-health/security "
+        "reports from Cryptex+Observatory in-process; workers/the-dutchy/ is RSS/"
+        "news market-intelligence ingestion — same entity name, different subject "
+        "matter entirely"
+    ),
+    "_billing_router": (
+        "api.py calls tier_enforcer.check_and_increment() synchronously on "
+        "live request-handling paths (per-request tier/rate enforcement, not "
+        "just the /billing endpoints) — workers/payments-service/ is a near-empty "
+        "health-only stub; workers/ledger-service/ exists but implements a "
+        "different feature (double-entry accounting ledger, not Stripe/subscription "
+        "billing)"
     ),
 }
 
