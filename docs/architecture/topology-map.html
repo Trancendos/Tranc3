@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trancendos Platform Topology</title>
+<style>
+  :root {
+    --bg: #eef1f8;
+    --surface: #ffffff;
+    --surface-2: #f4f6fb;
+    --border: #d6dcea;
+    --text: #171b26;
+    --text-dim: #5b6478;
+    --accent: #3860e0;
+    --accent-soft: #3860e022;
+    --status-core: #6b7280;
+    --status-modularize: #c9820f;
+    --status-risk: #d1414a;
+    --status-safe: #1f9d63;
+    --status-removed: #9aa3b8;
+    --status-stale: #d1414a;
+    --status-unclassified: #7c88a6;
+    --status-decided: #2f8f7a;
+    --status-bridged: #0e8f9e;
+    --suite: #7c5cd6;
+    --canvas-bg: #e4e9f4;
+    --focus: #3860e0;
+    font-family: -apple-system, "Segoe UI", "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0e14;
+      --surface: #131826;
+      --surface-2: #1b2233;
+      --border: #2a3346;
+      --text: #e4e8f1;
+      --text-dim: #8b95ac;
+      --accent: #6f96ff;
+      --accent-soft: #6f96ff22;
+      --status-core: #8b93a3;
+      --status-modularize: #f5a623;
+      --status-risk: #ff5c5c;
+      --status-safe: #4ade80;
+      --status-removed: #5b6478;
+      --status-stale: #ff5c5c;
+      --status-unclassified: #8b95ac;
+      --status-decided: #45b8a0;
+      --status-bridged: #3ddce8;
+      --suite: #a78bfa;
+      --canvas-bg: #0e1220;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0e14;
+    --surface: #131826;
+    --surface-2: #1b2233;
+    --border: #2a3346;
+    --text: #e4e8f1;
+    --text-dim: #8b95ac;
+    --accent: #6f96ff;
+    --accent-soft: #6f96ff22;
+    --status-core: #8b93a3;
+    --status-modularize: #f5a623;
+    --status-risk: #ff5c5c;
+    --status-safe: #4ade80;
+    --status-removed: #5b6478;
+    --status-stale: #ff5c5c;
+    --status-unclassified: #8b95ac;
+    --status-decided: #45b8a0;
+    --status-bridged: #3ddce8;
+    --suite: #a78bfa;
+    --canvas-bg: #0e1220;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .mono { font-family: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin: 0;
+    white-space: nowrap;
+  }
+  header .sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .stats {
+    display: flex;
+    gap: 14px;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+  }
+  .stat .n {
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .l {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .stat.warn .n { color: var(--status-modularize); }
+  .stat.risk .n { color: var(--status-risk); }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr 300px;
+    min-height: 0;
+  }
+
+  .panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 14px;
+    font-size: 12.5px;
+  }
+  .panel + .panel { border-right: none; border-left: 1px solid var(--border); }
+
+  .panel h2 {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+  }
+  .panel h2:not(:first-child) { margin-top: 18px; }
+
+  .chip-row { display: flex; flex-direction: column; gap: 4px; }
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    user-select: none;
+  }
+  .chip:hover { background: var(--surface-2); }
+  .chip.off { opacity: 0.4; }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .chip .sq { width: 9px; height: 9px; flex: none; }
+  .chip .count {
+    margin-left: auto;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="search"] {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 12.5px;
+    outline: none;
+  }
+  input[type="search"]:focus { border-color: var(--focus); }
+
+  .canvas-wrap {
+    position: relative;
+    background: var(--canvas-bg);
+    overflow: hidden;
+  }
+  canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  .hint {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    padding: 5px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  #detail {
+    padding: 16px;
+    font-size: 12.5px;
+  }
+  #detail .empty { color: var(--text-dim); font-size: 12px; }
+  #detail .kind-badge {
+    display: inline-block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  #detail h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+  #detail .meta-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  #detail .meta-row .k { color: var(--text-dim); }
+  #detail .meta-row .v { text-align: right; font-variant-numeric: tabular-nums; }
+  #detail .reason {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    line-height: 1.5;
+  }
+  #detail .edges { margin-top: 12px; }
+  #detail .edge-item {
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    margin-bottom: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  #detail .edge-item:hover { background: var(--accent-soft); }
+  #detail .edge-item .k { color: var(--text-dim); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Trancendos Platform Topology</h1>
+    <span class="sub mono" id="generated-at"></span>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <main>
+    <div class="panel" id="left-panel">
+      <h2>Search</h2>
+      <input type="search" id="search" placeholder="Find a node…" />
+
+      <h2>Layers</h2>
+      <div class="chip-row" id="layer-toggles"></div>
+
+      <h2>Status</h2>
+      <div class="chip-row" id="status-toggles"></div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="graph"></canvas>
+      <div class="hint">Drag to pan · scroll to zoom · drag a node to pin it · click for detail</div>
+    </div>
+
+    <div class="panel" id="detail">
+      <div class="empty">Click any node to inspect it — location, service, router, or governance suite.</div>
+    </div>
+  </main>
+
+<script type="application/json" id="graph-data">{"summary":{"generated_at":"2026-08-08T19:25:18.121805+00:00","total_nodes":227,"total_edges":111,"locations":43,"lead_ais":46,"deployed_services":88,"mounted_routers":35,"matrix_suites":8,"needs_modularization":6,"confirmed_separate_features":4,"bridged":1,"unreasoned_duplicate_risk":0,"core_load_bearing":11,"no_worker_exists":7,"safe_duplicate_removed":7,"stale_claims":18},"nodes":[{"id":"worker:tranc3-backend","type":"service","label":"tranc3-backend","port":"8000","deployed":true},{"id":"worker:tranc3-ai","type":"service","label":"tranc3-ai","port":"8001","deployed":true},{"id":"worker:infinity-void","type":"service","label":"infinity-void","port":"8002","deployed":true},{"id":"worker:api-gateway","type":"service","label":"api-gateway","port":"8003","deployed":true},{"id":"worker:infinity-ws","type":"service","label":"infinity-ws","port":"8004","deployed":true},{"id":"worker:infinity-auth","type":"service","label":"infinity-auth","port":"8005","deployed":true},{"id":"worker:users-service","type":"service","label":"users-service","port":"8006","deployed":true},{"id":"worker:monitoring","type":"service","label":"monitoring","port":"8007","deployed":true},{"id":"worker:notifications","type":"service","label":"notifications","port":"8008","deployed":true},{"id":"worker:infinity-ai","type":"service","label":"infinity-ai","port":"8009","deployed":true},{"id":"worker:the-grid","type":"service","label":"the-grid","port":"8010","deployed":true},{"id":"worker:products-service","type":"service","label":"products-service","port":"8011","deployed":true},{"id":"worker:orders-service","type":"service","label":"orders-service","port":"8012","deployed":true},{"id":"worker:payments-service","type":"service","label":"payments-service","port":"8013","deployed":true},{"id":"worker:files-service","type":"service","label":"files-service","port":"8014","deployed":true},{"id":"worker:identity-service","type":"service","label":"identity-service","port":"8015","deployed":true},{"id":"worker:analytics-service","type":"service","label":"analytics-service","port":"8016","deployed":true},{"id":"worker:search-service","type":"service","label":"search-service","port":"8017","deployed":true},{"id":"worker:email-service","type":"service","label":"email-service","port":"8018","deployed":true},{"id":"worker:sms-service","type":"service","label":"sms-service","port":"8019","deployed":true},{"id":"worker:storage-service","type":"service","label":"storage-service","port":"8020","deployed":true},{"id":"worker:cron-service","type":"service","label":"cron-service","port":"8021","deployed":true},{"id":"worker:queue-service","type":"service","label":"queue-service","port":"8022","deployed":true},{"id":"worker:cache-service","type":"service","label":"cache-service","port":"8023","deployed":true},{"id":"worker:config-service","type":"service","label":"config-service","port":"8024","deployed":true},{"id":"worker:audit-service","type":"service","label":"audit-service","port":"8025","deployed":true},{"id":"worker:rate-limit-service","type":"service","label":"rate-limit-service","port":"8026","deployed":true},{"id":"worker:geo-service","type":"service","label":"geo-service","port":"8027","deployed":true},{"id":"worker:cdn-service","type":"service","label":"cdn-service","port":"8028","deployed":true},{"id":"worker:health-aggregator","type":"service","label":"health-aggregator","port":"8029","deployed":true},{"id":"worker:gbrain-bridge","type":"service","label":"gbrain-bridge","port":"8030","deployed":true},{"id":"worker:topology-service","type":"service","label":"topology-service","port":"8031","deployed":true},{"id":"worker:ledger-service","type":"service","label":"ledger-service","port":"8032","deployed":true},{"id":"worker:model-router-service","type":"service","label":"model-router-service","port":"8033","deployed":true},{"id":"worker:workflow-engine-service","type":"service","label":"workflow-engine-service","port":"8034","deployed":true},{"id":"worker:skills-benchmark-service","type":"service","label":"skills-benchmark-service","port":"8035","deployed":true},{"id":"worker:vault-service","type":"service","label":"vault-service","port":"8038","deployed":true},{"id":"worker:lab-service","type":"service","label":"lab-service","port":"8066","deployed":true},{"id":"worker:tranceflow","type":"service","label":"tranceflow","port":"8059","deployed":true},{"id":"worker:vrar3d","type":"service","label":"vrar3d","port":"8060","deployed":true},{"id":"worker:blender-worker","type":"service","label":"blender-worker","port":"8050","deployed":true},{"id":"worker:triposr-worker","type":"service","label":"triposr-worker","port":"8111","deployed":true},{"id":"worker:ffmpeg-worker","type":"service","label":"ffmpeg-worker","port":"8052","deployed":true},{"id":"worker:infinity-portal","type":"service","label":"infinity-portal","port":"8042","deployed":true},{"id":"worker:infinity-one","type":"service","label":"infinity-one","port":"8043","deployed":true},{"id":"worker:infinity-admin","type":"service","label":"infinity-admin","port":"8044","deployed":true},{"id":"worker:infinity-shards","type":"service","label":"infinity-shards","port":"8045","deployed":true},{"id":"worker:infinity-bridge","type":"service","label":"infinity-bridge","port":"8070","deployed":true},{"id":"worker:cranbania","type":"service","label":"cranbania","port":"8071","deployed":true},{"id":"worker:library-service","type":"service","label":"library-service","port":"8067","deployed":true},{"id":"worker:cryptex","type":"service","label":"cryptex","port":"8053","deployed":true},{"id":"worker:observatory","type":"service","label":"observatory","port":"8065","deployed":true},{"id":"worker:imaginarium","type":"service","label":"imaginarium","port":"8064","deployed":true},{"id":"worker:tateking","type":"service","label":"tateking","port":"8061","deployed":true},{"id":"worker:remotion-render-service","type":"service","label":"remotion-render-service","port":"8093","deployed":true},{"id":"worker:bullmq-queue-service","type":"service","label":"bullmq-queue-service","port":"8092","deployed":true},{"id":"worker:vault-service-rs","type":"service","label":"vault-service-rs","port":"8094","deployed":true},{"id":"worker:rate-limit-service-rs","type":"service","label":"rate-limit-service-rs","port":"8099","deployed":true},{"id":"worker:nexus-ws-rs","type":"service","label":"nexus-ws-rs","port":"8004","deployed":true},{"id":"worker:sashas-photo-studio","type":"service","label":"sashas-photo-studio","port":"8062","deployed":true},{"id":"worker:the-lab","type":"service","label":"the-lab","port":"8055","deployed":true},{"id":"worker:deepagents-orchestrator-service","type":"service","label":"deepagents-orchestrator-service","port":"8037","deployed":true},{"id":"worker:taimra","type":"service","label":"taimra","port":"8074","deployed":true},{"id":"worker:imind","type":"service","label":"imind","port":"8075","deployed":true},{"id":"worker:resonate","type":"service","label":"resonate","port":"8076","deployed":true},{"id":"worker:tranquility","type":"service","label":"tranquility","port":"8077","deployed":true},{"id":"worker:the-studio","type":"service","label":"the-studio","port":"8069","deployed":true},{"id":"worker:the-academy","type":"service","label":"the-academy","port":"8056","deployed":true},{"id":"worker:turings-hub-service","type":"service","label":"turings-hub-service","port":"8058","deployed":true},{"id":"worker:warp-tunnel","type":"service","label":"warp-tunnel","port":"8072","deployed":true},{"id":"worker:warp-radio","type":"service","label":"warp-radio","port":"8073","deployed":true},{"id":"worker:the-dutchy","type":"service","label":"the-dutchy","port":"8057","deployed":true},{"id":"worker:devocity","type":"service","label":"devocity","port":"8110","deployed":true},{"id":"worker:chaos-party","type":"service","label":"chaos-party","port":"8079","deployed":true},{"id":"worker:basement","type":"service","label":"basement","port":"8068","deployed":true},{"id":"worker:backup-service","type":"service","label":"backup-service","port":"8078","deployed":true},{"id":"worker:langchain-integration-service","type":"service","label":"langchain-integration-service","port":"8036","deployed":true},{"id":"worker:mlflow-service","type":"service","label":"mlflow-service","port":"8039","deployed":true},{"id":"worker:litellm-service","type":"service","label":"litellm-service","port":"8049","deployed":true},{"id":"worker:artifactory-service","type":"service","label":"artifactory-service","port":"8047","deployed":true},{"id":"worker:sentinel-station-service","type":"service","label":"sentinel-station-service","port":"8041","deployed":true},{"id":"worker:swarm-coordinator-service","type":"service","label":"swarm-coordinator-service","port":"8109","deployed":true},{"id":"worker:hive-service","type":"service","label":"hive-service","port":"8051","deployed":true},{"id":"worker:ice-box-service","type":"service","label":"ice-box-service","port":"8046","deployed":true},{"id":"worker:fabulousa-service","type":"service","label":"fabulousa-service","port":"8048","deployed":true},{"id":"worker:llamaindex-service","type":"service","label":"llamaindex-service","port":"8096","deployed":true},{"id":"worker:haystack-service","type":"service","label":"haystack-service","port":"8097","deployed":true},{"id":"worker:dspy-service","type":"service","label":"dspy-service","port":"8098","deployed":true},{"id":"router:_mcp_router","type":"router","label":"src.mcp.server","mounted":true,"classification":"unclassified","reason":"Mounted, no worker-duplication question raised in the sweep."},{"id":"router:_observatory_router","type":"router","label":"src.observability.routes","mounted":true,"classification":"core_load_bearing","reason":"Widest fan-in in the whole platform (~20 modules call observe() synchronously). Same-named workers/observatory/ is a different feature (trace/metrics dashboard); workers/audit-service/ is the route-shape-closer match but still a separate process."},{"id":"router:_nexus_router","type":"router","label":"src.nexus.routes","mounted":true,"classification":"bridged","reason":"BRIDGED (not pending): src.nexus.hub.get_nexus() (the underlying pub/sub singleton, not just the router) is called in-process by section7.py, cryptex/threat_detector.py, and research/section7.py, so the router mount is genuinely load-bearing and can't just be unmounted. But it is already fanned out to workers/infinity-ws/: NexusHub.publish() -> _forward_to_ws_hub() -> POST {worker}/broadcast (fire-and-forget, capped in-flight concurrency, never blocks publish()), and the worker's POST /broadcast (workers/infinity-ws/worker.py) delivers it to WebSocket subscribers of that channel. An earlier pass of this table incorrectly claimed the worker had 'no REST pub/sub surface to bridge to yet' \u2014 it does, and has since before this table existed (see git blame on the /broadcast route)."},{"id":"router:_matrix_suites_router","type":"router","label":"src.compliance.matrix_suites_routes","mounted":true,"classification":"unclassified","reason":"Mounted, no worker-duplication question raised in the sweep."},{"id":"router:_waivers_router","type":"router","label":"src.compliance.waivers_routes","mounted":true,"classification":"unclassified","reason":"Mounted, no worker-duplication question raised in the sweep."},{"id":"router:_governance_router","type":"router","label":"src.compliance.governance_routes","mounted":true,"classification":"unclassified","reason":"Mounted, no worker-duplication question raised in the sweep."},{"id":"router:_townhall_router","type":"router","label":"src.townhall.routes","mounted":true,"classification":"confirmed_separate_features","reason":"CONFIRMED SEPARATE FEATURES: this router is a policy/compliance check engine (GDPR/UK-GDPR/PRINCE2/ITIL4/Zero-Cost policies); workers/cranbania/ (the same-named 'worker') is a completely different product \u2014 a Next.js/TypeScript Kanban/ITSM board with 40+ MCP tools and zero policy-check endpoints, not even the same language/runtime to bridge to. Real caller: research/section7.py, already in-process and already wrapped in try/except (degrades to a debug log, not a hard failure) \u2014 no network hop, so no fail-open/fail-closed question exists here the way it does for basement/cryptex/billing. Same 'same name, different function' pattern as admin_os/search_api/section7 \u2014 see CONFIRMED_SEPARATE_FEATURES in MONOLITH-EXTRACTION-FINDINGS.md."},{"id":"router:_library_router","type":"router","label":"src.library.routes","mounted":true,"classification":"needs_modularization","reason":"real in-process callers (synchronous .create()/.by_tag() writes/reads on the singleton, not just router imports): section7/information_router.py, observability/library_pipeline.py, models/knowledge.py, event_bus/wiring.py. Also VERIFIED NOT A SAFE SUPERSET SWAP: this router's src/library/knowledge_base.py Article model carries a DataClassification (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED/TOP_SECRET) enforced by routes.py's _can_read() \u2014 RESTRICTED/TOP_SECRET articles require admin or matching author \u2014 plus author and retention_days. workers/library-service/ is a generic pluggable wiki-backend facade (Outline/BookStack/WikiJS/Gollum/DokuWiki/MkDocs/Gitea/TiddlyWiki) with no classification/author/retention concept and no per-caller authorization at all (only a shared X-Internal-Secret). Bridging in-process writes to it as-is would silently drop that access-control layer, same class of regression as the reverted Resonate removal \u2014 needs a decision (extend the worker's model first, or accept these stay separate) before any bridge, not a plain client wrapper."},{"id":"router:_basement_router","type":"router","label":"src.basement.routes","mounted":true,"classification":"needs_modularization","reason":"src/observability/observatory.py calls get_basement() synchronously on the SECURITY/CRITICAL audit path \u2014 needs an HTTP bridge with explicit failure semantics before unmounting"},{"id":"router:_admin_os_router","type":"router","label":"src.admin_os.routes","mounted":true,"classification":"confirmed_separate_features","reason":"VERIFIED NOT EQUIVALENT: this router's cells/fabric/files/backups features have no counterpart in workers/infinity-admin/, which is config/entity-override focused instead. api.py's own startup auto-backup loop depends on src.admin_os.backup_loop directly"},{"id":"router:_cryptex_router","type":"router","label":"src.cryptex.routes","mounted":true,"classification":"needs_modularization","reason":"real in-process callers: section7/information_router.py, mcp/server.py, security/middleware.py"},{"id":"router:_section7_router","type":"router","label":"src.research.routes","mounted":true,"classification":"confirmed_separate_features","reason":"VERIFIED NOT EQUIVALENT: this router (src.research.routes, backed by src.research.section7.Section7) generates platform self-health/security reports from Cryptex+Observatory in-process; workers/the-dutchy/ is RSS/news market-intelligence ingestion \u2014 same entity name, different subject matter entirely"},{"id":"router:_grid_router","type":"router","label":"src.workflow.routes","mounted":true,"classification":"unclassified","reason":"Mounted, no worker-duplication question raised in the sweep."},{"id":"router:_imind_router","type":"router","label":"src.imind.routes","mounted":true,"classification":"needs_modularization","reason":"VERIFIED NOT EQUIVALENT: src/imind/protocol.py's assess() is a regex-driven crisis/self-harm/suicide detector with SECURITY-severity human escalation; workers/imind/worker.py only does generic sentiment/emotion scoring (dominant_emotion/polarity/confidence) with no crisis-pattern logic at all. Unmounting would silently remove a safeguarding feature, not a duplicate. src/tranquility/wellbeing.py also imports src.imind.protocol directly in-process."},{"id":"router:_tranquility_router","type":"router","label":"src.tranquility.routes","mounted":true,"classification":"unclassified","reason":"Mounted, no worker-duplication question raised in the sweep."},{"id":"router:_resonate_router","type":"router","label":"src.resonate.routes","mounted":true,"classification":"needs_modularization","reason":"workers/resonate/ implements a different feature (scoring) than this router (escalation) \u2014 see MONOLITH-EXTRACTION-FINDINGS.md"},{"id":"router:_turingshub_router","type":"router","label":"src.personality.turingshub.routes","mounted":true,"classification":"core_load_bearing","reason":"core/load-bearing AI response pipeline dependency, not a nanoservice duplicate"},{"id":"router:_apimarket_router","type":"router","label":"src.apimarket.routes","mounted":true,"classification":"no_worker_exists","reason":"No workers/apimarket* in compose. Genuine future-extraction candidate."},{"id":"router:_roles_router","type":"router","label":"src.roles.routes","mounted":true,"classification":"no_worker_exists","reason":"No worker. Real in-process callers on the registry class (relations/registry.py, personality/role_resolution.py) \u2014 any future extraction needs a bridge, not just an unmount."},{"id":"router:_deployment_modes_router","type":"router","label":"src.deployment_modes.routes","mounted":true,"classification":"no_worker_exists","reason":"No worker. Genuine future-extraction candidate."},{"id":"router:_notebooks_router","type":"router","label":"src.notebooks.routes","mounted":true,"classification":"no_worker_exists","reason":"No worker. Genuine future-extraction candidate."},{"id":"router:_relations_router","type":"router","label":"src.relations.routes","mounted":true,"classification":"no_worker_exists","reason":"No worker. Real caller: roles/registry.py."},{"id":"router:_access_router","type":"router","label":"src.access.routes","mounted":true,"classification":"no_worker_exists","reason":"No worker. Genuine future-extraction candidate."},{"id":"router:_search_router","type":"router","label":"src.routers.search_api","mounted":true,"classification":"confirmed_separate_features","reason":"VERIFIED NOT EQUIVALENT: this router is a hybrid BM25+vector RAG pipeline (Meilisearch/Qdrant/Weaviate/Chroma); workers/search-service/ is SQLite FTS5 full-text only, with no vector/embedding/RAG capability at all \u2014 missing half the feature, not a superset"},{"id":"router:_citadel_router","type":"router","label":"src.citadel.routes","mounted":true,"classification":"core_load_bearing","reason":"DevOps hub wrapper around this host's own Docker/Traefik/Forgejo."},{"id":"router:_luminous_router","type":"router","label":"src.bio_neural.routes","mounted":true,"classification":"core_load_bearing","reason":"The AI inference/consciousness pipeline itself."},{"id":"router:_thinktank_router","type":"router","label":"src.quantum.routes","mounted":true,"classification":"core_load_bearing","reason":"The quantum neural core inference pipeline itself."},{"id":"router:_enhanced_router","type":"router","label":"src.routers.enhanced_capabilities","mounted":true,"classification":"core_load_bearing","reason":"Intentional aggregator facade over several in-process engines."},{"id":"router:_ecosystem_router","type":"router","label":"src.routers.ecosystem","mounted":true,"classification":"core_load_bearing","reason":"Intentional aggregator facade over several in-process engines."},{"id":"router:_aeonmind_router","type":"router","label":"src.routers.aeonmind","mounted":true,"classification":"core_load_bearing","reason":"Sole live implementation of the AeonMind bridge spec."},{"id":"router:_t2ance_router","type":"router","label":"t2ance.router","mounted":true,"classification":"core_load_bearing","reason":"Part of the Trancendos Models Matrix tiering engine itself."},{"id":"router:_trance_one_router","type":"router","label":"trance_one.router","mounted":true,"classification":"core_load_bearing","reason":"Part of the Trancendos Models Matrix tiering engine itself."},{"id":"router:_tranc3ts_router","type":"router","label":"src.routers.tranc3ts_bridge","mounted":true,"classification":"core_load_bearing","reason":"IS the HTTP bridge surface for external TypeScript callers."},{"id":"router:_billing_router","type":"router","label":"src.monetisation.router","mounted":true,"classification":"needs_modularization","reason":"api.py calls tier_enforcer.check_and_increment() synchronously on live request-handling paths (per-request tier/rate enforcement, not just the /billing endpoints) \u2014 workers/payments-service/ is a near-empty health-only stub; workers/ledger-service/ exists but implements a different feature (double-entry accounting ledger, not Stripe/subscription billing)"},{"id":"router:_models_router","type":"router","label":"src.models.routes","mounted":true,"classification":"no_worker_exists","reason":"No worker. No tight in-process coupling from other subsystems."},{"id":"removed:src.taimra.routes","type":"router","label":"src.taimra.routes","mounted":false,"classification":"safe_duplicate_removed","reason":"Confirmed genuine duplicate of workers/taimra/, unmounted from api.py in the 2026-08-08 sweep."},{"id":"removed:src.studio.routes","type":"router","label":"src.studio.routes","mounted":false,"classification":"safe_duplicate_removed","reason":"Confirmed genuine duplicate of workers/the-studio/, unmounted from api.py in the 2026-08-08 sweep."},{"id":"removed:src.lab.routes","type":"router","label":"src.lab.routes","mounted":false,"classification":"safe_duplicate_removed","reason":"Confirmed genuine duplicate of workers/the-lab/, unmounted from api.py in the 2026-08-08 sweep."},{"id":"removed:src.chronos.routes","type":"router","label":"src.chronos.routes","mounted":false,"classification":"safe_duplicate_removed","reason":"Confirmed genuine duplicate of workers/cron-service/, unmounted from api.py in the 2026-08-08 sweep."},{"id":"removed:src.devocity.routes","type":"router","label":"src.devocity.routes","mounted":false,"classification":"safe_duplicate_removed","reason":"Confirmed genuine duplicate of workers/devocity/, unmounted from api.py in the 2026-08-08 sweep."},{"id":"removed:src.artifactory.routes","type":"router","label":"src.artifactory.routes","mounted":false,"classification":"safe_duplicate_removed","reason":"Confirmed genuine duplicate of workers/artifactory-service/, unmounted from api.py in the 2026-08-08 sweep."},{"id":"removed:src.vrar3d.routes","type":"router","label":"src.vrar3d.routes","mounted":false,"classification":"safe_duplicate_removed","reason":"Confirmed genuine duplicate of workers/vrar3d/, unmounted from api.py in the 2026-08-08 sweep."},{"id":"location:The Nexus","type":"location","label":"The Nexus","pillar":"Architectural","pid":"PID-NXS","primary_function":"AI Communication Gateway & AI, Agent, and Bot / Worker Transfer Hub","claimed_worker_port":8004,"claimed_worker_path":"workers/infinity-ws/"},{"id":"location:The HIVE","type":"location","label":"The HIVE","pillar":"Architectural","pid":"PID-HVE","primary_function":"Data Transport Hub","claimed_worker_port":8022,"claimed_worker_path":"workers/queue-service/"},{"id":"location:Arcadia","type":"location","label":"Arcadia","pillar":"Commercial / Financial","pid":"PID-ARC","primary_function":"Post-Login User Frontend, Forum & Email Hub","claimed_worker_port":null,"claimed_worker_path":"web/"},{"id":"location:Luminous","type":"location","label":"Luminous","pillar":"Architectural","pid":"PID-LUM","primary_function":"Core Platform Brain & Orchestration Engine","claimed_worker_port":8009,"claimed_worker_path":"workers/infinity-ai/"},{"id":"location:The Town Hall","type":"location","label":"The Town Hall","pillar":"Architectural","pid":"PID-TWH","primary_function":"Governance & Compliance Center","claimed_worker_port":null,"claimed_worker_path":"src/townhall/"},{"id":"location:The Studio","type":"location","label":"The Studio","pillar":"Creativity","pid":"PID-STD","primary_function":"Central Hub of the Creativity Center","claimed_worker_port":null,"claimed_worker_path":"src/studio/"},{"id":"location:Sashas Photo Studio","type":"location","label":"Sashas Photo Studio","pillar":"Creativity","pid":"PID-SPS","primary_function":"Photo & Image Generation Center","claimed_worker_port":null,"claimed_worker_path":"src/studio/"},{"id":"location:TranceFlow","type":"location","label":"TranceFlow","pillar":"Creativity","pid":"PID-TFL","primary_function":"3D Modeling & Games Creation Studio","claimed_worker_port":null,"claimed_worker_path":"src/studio/"},{"id":"location:TateKing","type":"location","label":"TateKing","pillar":"Creativity","pid":"PID-TKG","primary_function":"Video Creation & Editing Platform","claimed_worker_port":null,"claimed_worker_path":"src/studio/"},{"id":"location:Fabulousa","type":"location","label":"Fabulousa","pillar":"Creativity","pid":"PID-FAB","primary_function":"Styling, UX, UI & Design Center","claimed_worker_port":null,"claimed_worker_path":"src/studio/"},{"id":"location:Imaginarium","type":"location","label":"Imaginarium","pillar":"Creativity","pid":"PID-IMG","primary_function":"Omni-Creative Masterpiece Wizard","claimed_worker_port":null,"claimed_worker_path":"src/studio/"},{"id":"location:The Digital Grid","type":"location","label":"The Digital Grid","pillar":"Development (Code)","pid":"PID-DGR","primary_function":"Workflow Platform","claimed_worker_port":8010,"claimed_worker_path":"workers/the-grid/"},{"id":"location:The Lab","type":"location","label":"The Lab","pillar":"Development (Code)","pid":"PID-LAB","primary_function":"Code Creation Platform","claimed_worker_port":null,"claimed_worker_path":"src/lab/"},{"id":"location:The Workshop","type":"location","label":"The Workshop","pillar":"Development (Code)","pid":"PID-WRK","primary_function":"Repository Storage (Forgejo)","claimed_worker_port":null,"claimed_worker_path":"deploy/forgejo/"},{"id":"location:The Chaos Party","type":"location","label":"The Chaos Party","pillar":"Development (Code)","pid":"PID-TCP","primary_function":"Central Testing Platform (Wonderland Theme)","claimed_worker_port":null,"claimed_worker_path":"tests/"},{"id":"location:The Artifactory","type":"location","label":"The Artifactory","pillar":"Commercial / Financial","pid":"PID-ART","primary_function":"Central Artifact Repository Library (JFrog style)","claimed_worker_port":null,"claimed_worker_path":"src/artifactory/"},{"id":"location:API Marketplace","type":"location","label":"API Marketplace","pillar":"Commercial / Financial","pid":"PID-APM","primary_function":"Central Integration Hub (APIs, Webhooks, OAuth)","claimed_worker_port":null,"claimed_worker_path":"src/apimarket/"},{"id":"location:Royal Bank of Arcadia","type":"location","label":"Royal Bank of Arcadia","pillar":"Commercial / Financial","pid":"PID-RBA","primary_function":"Financial & Operations Management","claimed_worker_port":8013,"claimed_worker_path":"workers/payments-service/"},{"id":"location:Arcadian Exchange","type":"location","label":"Arcadian Exchange","pillar":"Commercial / Financial","pid":"PID-AEX","primary_function":"Procurement & Resource Trading","claimed_worker_port":8012,"claimed_worker_path":"workers/orders-service/"},{"id":"location:The Observatory","type":"location","label":"The Observatory","pillar":"Knowledge","pid":"PID-OBS","primary_function":"Audit Log & Monitoring Platform","claimed_worker_port":8007,"claimed_worker_path":"workers/monitoring/"},{"id":"location:The Library","type":"location","label":"The Library","pillar":"Knowledge","pid":"PID-LIB","primary_function":"Knowledge Base & Wiki","claimed_worker_port":8017,"claimed_worker_path":"workers/search-service/"},{"id":"location:The Academy","type":"location","label":"The Academy","pillar":"Knowledge","pid":"PID-ACA","primary_function":"Education & Skill Training","claimed_worker_port":null,"claimed_worker_path":"src/academy/"},{"id":"location:DocUtari","type":"location","label":"DocUtari","pillar":"Knowledge","pid":"PID-DOC","primary_function":"Document Management Hub","claimed_worker_port":8014,"claimed_worker_path":"workers/files-service/"},{"id":"location:The Basement","type":"location","label":"The Basement","pillar":"Knowledge","pid":"PID-BSM","primary_function":"Archived Information Store","claimed_worker_port":null,"claimed_worker_path":"src/basement/"},{"id":"location:The Spark","type":"location","label":"The Spark","pillar":"Knowledge","pid":"PID-SPK","primary_function":"The MCP Skills Matrix","claimed_worker_port":null,"claimed_worker_path":"src/mcp/"},{"id":"location:Infinity","type":"location","label":"Infinity","pillar":"Security","pid":"PID-INF","primary_function":"Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer","claimed_worker_port":8005,"claimed_worker_path":"workers/infinity-auth/"},{"id":"location:The Void","type":"location","label":"The Void","pillar":"Security","pid":"PID-VOI","primary_function":"Secrets Vault, Password Store & Sensitive Data Store","claimed_worker_port":8024,"claimed_worker_path":"workers/config-service/"},{"id":"location:The Lighthouse","type":"location","label":"The Lighthouse","pillar":"Security","pid":"PID-LTH","primary_function":"Cryptographic Token Applicator","claimed_worker_port":8015,"claimed_worker_path":"workers/identity-service/"},{"id":"location:The Warp Tunnel","type":"location","label":"The Warp Tunnel","pillar":"Security","pid":"PID-WTP","primary_function":"Cryptographic Scanner & Automated Quarantine Transport","claimed_worker_port":null,"claimed_worker_path":"src/security/warp_tunnel/"},{"id":"location:Cryptex","type":"location","label":"Cryptex","pillar":"Security","pid":"PID-CRX","primary_function":"Cyber Defense (Threat Intelligence, DDoS, CVE Scanning)","claimed_worker_port":8026,"claimed_worker_path":"workers/rate-limit-service/"},{"id":"location:The Ice Box","type":"location","label":"The Ice Box","pillar":"Security","pid":"PID-ICB","primary_function":"Inception-Layered Sandbox Threat Isolation & Quarantine Centre","claimed_worker_port":null,"claimed_worker_path":"src/security/ice_box/"},{"id":"location:Warp Radio","type":"location","label":"Warp Radio","pillar":"Commercial / Financial","pid":"PID-WRA","primary_function":"Music & Audio Streaming Integration","claimed_worker_port":null,"claimed_worker_path":"src/warp_radio/"},{"id":"location:Section 7","type":"location","label":"Section 7","pillar":"DevOps","pid":"PID-DUT","primary_function":"Intelligence (Predictive lore, market intelligence)","claimed_worker_port":8027,"claimed_worker_path":"workers/geo-service/"},{"id":"location:The Citadel","type":"location","label":"The Citadel","pillar":"DevOps","pid":"PID-CTL","primary_function":"Strategic Ops (Main fortress for Think Tank/R&D/Temporal nodes)","claimed_worker_port":null,"claimed_worker_path":"deploy/"},{"id":"location:Think Tank","type":"location","label":"Think Tank","pillar":"DevOps","pid":"PID-TNK","primary_function":"R&D Centre","claimed_worker_port":null,"claimed_worker_path":"src/quantum/"},{"id":"location:Turing's Hub","type":"location","label":"Turing's Hub","pillar":"DevOps","pid":"PID-THB","primary_function":"Central Creation Forge (3D Avatar & AI Entity Generation)","claimed_worker_port":null,"claimed_worker_path":"src/personality/"},{"id":"location:ChronosSphere / ArcStream","type":"location","label":"ChronosSphere / ArcStream","pillar":"DevOps","pid":"PID-CHR","primary_function":"Task, Time and Scheduling Management","claimed_worker_port":8021,"claimed_worker_path":"workers/cron-service/"},{"id":"location:DevOcity","type":"location","label":"DevOcity","pillar":"DevOps","pid":"PID-DEV","primary_function":"Development Operations","claimed_worker_port":8029,"claimed_worker_path":"workers/health-aggregator/"},{"id":"location:Tranquility","type":"location","label":"Tranquility","pillar":"Wellbeing","pid":"PID-TRQ","primary_function":"Wellbeing Central Hub","claimed_worker_port":null,"claimed_worker_path":"src/tranquility/"},{"id":"location:I-Mind","type":"location","label":"I-Mind","pillar":"Wellbeing","pid":"PID-IMD","primary_function":"Sensitivity to Emotion Engine","claimed_worker_port":null,"claimed_worker_path":"src/imind/"},{"id":"location:tAimra","type":"location","label":"tAimra","pillar":"Wellbeing","pid":"PID-TMR","primary_function":"Opt-in Digital Twin System & Life Assistant","claimed_worker_port":null,"claimed_worker_path":"src/taimra/"},{"id":"location:VRAR3D","type":"location","label":"VRAR3D","pillar":"Wellbeing","pid":"PID-VR3","primary_function":"Standalone 3D / VR immersion","claimed_worker_port":null,"claimed_worker_path":"src/vrar3d/"},{"id":"location:Resonate","type":"location","label":"Resonate","pillar":"Wellbeing","pid":"PID-RES","primary_function":"Empathy Engine","claimed_worker_port":null,"claimed_worker_path":"src/resonate/"},{"id":"ai:Nexus-Prime","type":"lead_ai","label":"Nexus-Prime","aid":"AID-NXS-01"},{"id":"ai:The Queen","type":"lead_ai","label":"The Queen","aid":"AID-HVE-01"},{"id":"ai:Lilli SC","type":"lead_ai","label":"Lilli SC","aid":"AID-ARC-01"},{"id":"ai:Cornelius MacIntyre","type":"lead_ai","label":"Cornelius MacIntyre","aid":"AID-LUM-01"},{"id":"ai:Tristuran","type":"lead_ai","label":"Tristuran","aid":"AID-TWH-01"},{"id":"ai:Voxx","type":"lead_ai","label":"Voxx","aid":"AID-STD-01"},{"id":"ai:Madam Krystal","type":"lead_ai","label":"Madam Krystal","aid":"AID-SPS-01"},{"id":"ai:Junior Cesar","type":"lead_ai","label":"Junior Cesar","aid":"AID-TFL-01"},{"id":"ai:Benji Tate","type":"lead_ai","label":"Benji Tate","aid":"AID-TKG-01"},{"id":"ai:Sam King","type":"lead_ai","label":"Sam King","aid":"AID-TKG-01"},{"id":"ai:Baron Von Hilton","type":"lead_ai","label":"Baron Von Hilton","aid":"AID-FAB-01"},{"id":"ai:Tyler Towncroft","type":"lead_ai","label":"Tyler Towncroft","aid":"AID-DGR-01"},{"id":"ai:The Dr. (Nikolai O'denhime)","type":"lead_ai","label":"The Dr. (Nikolai O'denhime)","aid":"AID-LAB-01"},{"id":"ai:Slime","type":"lead_ai","label":"Slime","aid":"AID-LAB-01"},{"id":"ai:Larry Lowhammer","type":"lead_ai","label":"Larry Lowhammer","aid":"AID-WRK-01"},{"id":"ai:The Mad Hatter","type":"lead_ai","label":"The Mad Hatter","aid":"AID-TCP-01"},{"id":"ai:Lunascene","type":"lead_ai","label":"Lunascene","aid":"AID-ART-01"},{"id":"ai:Solarscene","type":"lead_ai","label":"Solarscene","aid":"AID-APM-01"},{"id":"ai:Dorris Fontaine","type":"lead_ai","label":"Dorris Fontaine","aid":"AID-RBA-01"},{"id":"ai:Clarence Porter","type":"lead_ai","label":"Clarence Porter","aid":"AID-AEX-01"},{"id":"ai:Ann Porter","type":"lead_ai","label":"Ann Porter","aid":"AID-AEX-01"},{"id":"ai:George Porter","type":"lead_ai","label":"George Porter","aid":"AID-AEX-01"},{"id":"ai:Edward Porter","type":"lead_ai","label":"Edward Porter","aid":"AID-AEX-01"},{"id":"ai:James Porter","type":"lead_ai","label":"James Porter","aid":"AID-AEX-01"},{"id":"ai:Norman Hawkins","type":"lead_ai","label":"Norman Hawkins","aid":"AID-OBS-01"},{"id":"ai:Zimik","type":"lead_ai","label":"Zimik","aid":"AID-LIB-01"},{"id":"ai:Shimshi","type":"lead_ai","label":"Shimshi","aid":"AID-ACA-01"},{"id":"ai:Fiddsy","type":"lead_ai","label":"Fiddsy","aid":"AID-DOC-01"},{"id":"ai:Gary Glowman (Glow-Worm)","type":"lead_ai","label":"Gary Glowman (Glow-Worm)","aid":"AID-BSM-01"},{"id":"ai:Imfy","type":"lead_ai","label":"Imfy","aid":"AID-SPK-01"},{"id":"ai:The Guardian (Marcus Magnolia)","type":"lead_ai","label":"The Guardian (Marcus Magnolia)","aid":"AID-INF-01"},{"id":"ai:The Orb of Orisis","type":"lead_ai","label":"The Orb of Orisis","aid":"AID-INF-01"},{"id":"ai:Prometheus","type":"lead_ai","label":"Prometheus","aid":"AID-VOI-01"},{"id":"ai:Rocking Ricki","type":"lead_ai","label":"Rocking Ricki","aid":"AID-LTH-01"},{"id":"ai:Renik","type":"lead_ai","label":"Renik","aid":"AID-CRX-01"},{"id":"ai:Neonach","type":"lead_ai","label":"Neonach","aid":"AID-ICB-01"},{"id":"ai:The Dutchy","type":"lead_ai","label":"The Dutchy","aid":"AID-DUT-01"},{"id":"ai:Trancendos","type":"lead_ai","label":"Trancendos","aid":"AID-CTL-01"},{"id":"ai:Samantha Turing","type":"lead_ai","label":"Samantha Turing","aid":"AID-THB-01"},{"id":"ai:Chronos","type":"lead_ai","label":"Chronos","aid":"AID-CHR-01"},{"id":"ai:Kitty","type":"lead_ai","label":"Kitty","aid":"AID-DEV-01"},{"id":"ai:Savania","type":"lead_ai","label":"Savania","aid":"AID-TRQ-01"},{"id":"ai:Elouise","type":"lead_ai","label":"Elouise","aid":"AID-IMD-01"},{"id":"ai:tAImra","type":"lead_ai","label":"tAImra","aid":"AID-TMR-01"},{"id":"ai:Entari","type":"lead_ai","label":"Entari","aid":"AID-VR3-01"},{"id":"ai:Magdalena","type":"lead_ai","label":"Magdalena","aid":"AID-RES-01"},{"id":"suite:SUITE-FIN","type":"matrix_suite","label":"Financial Suite","pillar":"Commercial / Financial","steward_ai":"Dorris Fontaine","steward_location":"Royal Bank of Arcadia","matrix_count":4,"review_cadence":"monthly","next_review":"2026-08-31"},{"id":"suite:SUITE-LEG","type":"matrix_suite","label":"Legal & Regulatory Suite","pillar":"Architectural","steward_ai":"Tristuran","steward_location":"The Town Hall","matrix_count":5,"review_cadence":"monthly","next_review":"2026-08-31"},{"id":"suite:SUITE-SEC","type":"matrix_suite","label":"Security Suite","pillar":"Security","steward_ai":"Renik","steward_location":"Cryptex","matrix_count":6,"review_cadence":"monthly","next_review":"2026-08-31"},{"id":"suite:SUITE-KNO","type":"matrix_suite","label":"Knowledge Suite","pillar":"Knowledge","steward_ai":"Zimik","steward_location":"The Library","matrix_count":2,"review_cadence":"quarterly","next_review":"2026-10-31"},{"id":"suite:SUITE-ENG","type":"matrix_suite","label":"Engineering Suite","pillar":"Development (Code)","steward_ai":"The Dr. (Nikolai O'denhime)","steward_location":"The Lab","matrix_count":5,"review_cadence":"quarterly","next_review":"2026-10-31"},{"id":"suite:SUITE-AIG","type":"matrix_suite","label":"AI Governance Suite","pillar":"Architectural","steward_ai":"Samantha Turing","steward_location":"Turing's Hub","matrix_count":4,"review_cadence":"quarterly","next_review":"2026-10-31"},{"id":"suite:SUITE-OPS","type":"matrix_suite","label":"Operations Suite","pillar":"DevOps","steward_ai":"Trancendos","steward_location":"The Citadel","matrix_count":4,"review_cadence":"quarterly","next_review":"2026-10-31"},{"id":"suite:SUITE-EXP","type":"matrix_suite","label":"Experience Suite","pillar":"Creativity","steward_ai":"Baron Von Hilton","steward_location":"Fabulousa","matrix_count":1,"review_cadence":"quarterly","next_review":"2026-10-31"}],"edges":[{"source":"router:_nexus_router","target":"worker:infinity-ws","kind":"bridged"},{"source":"router:_townhall_router","target":"worker:cranbania","kind":"confirmed_separate_features"},{"source":"router:_library_router","target":"worker:library-service","kind":"needs_modularization"},{"source":"router:_basement_router","target":"worker:basement","kind":"needs_modularization"},{"source":"router:_admin_os_router","target":"worker:infinity-admin","kind":"confirmed_separate_features"},{"source":"router:_cryptex_router","target":"worker:cryptex","kind":"needs_modularization"},{"source":"router:_section7_router","target":"worker:the-dutchy","kind":"confirmed_separate_features"},{"source":"router:_imind_router","target":"worker:imind","kind":"needs_modularization"},{"source":"router:_resonate_router","target":"worker:resonate","kind":"needs_modularization"},{"source":"router:_turingshub_router","target":"worker:turings-hub-service","kind":"core_load_bearing"},{"source":"router:_search_router","target":"worker:search-service","kind":"confirmed_separate_features"},{"source":"router:_billing_router","target":"worker:payments-service","kind":"needs_modularization"},{"source":"removed:src.taimra.routes","target":"worker:taimra","kind":"removed"},{"source":"removed:src.studio.routes","target":"worker:the-studio","kind":"removed"},{"source":"removed:src.lab.routes","target":"worker:the-lab","kind":"removed"},{"source":"removed:src.chronos.routes","target":"worker:cron-service","kind":"removed"},{"source":"removed:src.devocity.routes","target":"worker:devocity","kind":"removed"},{"source":"removed:src.artifactory.routes","target":"worker:artifactory-service","kind":"removed"},{"source":"removed:src.vrar3d.routes","target":"worker:vrar3d","kind":"removed"},{"source":"location:The Nexus","target":"ai:Nexus-Prime","kind":"runs"},{"source":"location:The Nexus","target":"worker:infinity-ws","kind":"claim_verified"},{"source":"location:The HIVE","target":"ai:The Queen","kind":"runs"},{"source":"location:The HIVE","target":"worker:queue-service","kind":"claim_verified"},{"source":"location:Arcadia","target":"ai:Lilli SC","kind":"runs"},{"source":"location:Luminous","target":"ai:Cornelius MacIntyre","kind":"runs"},{"source":"location:Luminous","target":"worker:infinity-ai","kind":"claim_verified"},{"source":"location:The Town Hall","target":"ai:Tristuran","kind":"runs"},{"source":"location:The Studio","target":"ai:Voxx","kind":"runs"},{"source":"location:The Studio","target":"worker:the-studio","kind":"stale_claim"},{"source":"location:Sashas Photo Studio","target":"ai:Madam Krystal","kind":"runs"},{"source":"location:Sashas Photo Studio","target":"worker:the-studio","kind":"stale_claim"},{"source":"location:TranceFlow","target":"ai:Junior Cesar","kind":"runs"},{"source":"location:TranceFlow","target":"worker:the-studio","kind":"stale_claim"},{"source":"location:TateKing","target":"ai:Benji Tate","kind":"runs"},{"source":"location:TateKing","target":"ai:Sam King","kind":"runs"},{"source":"location:TateKing","target":"worker:the-studio","kind":"stale_claim"},{"source":"location:Fabulousa","target":"ai:Baron Von Hilton","kind":"runs"},{"source":"location:Fabulousa","target":"worker:the-studio","kind":"stale_claim"},{"source":"location:Imaginarium","target":"ai:Voxx","kind":"runs"},{"source":"location:Imaginarium","target":"worker:the-studio","kind":"stale_claim"},{"source":"location:The Digital Grid","target":"ai:Tyler Towncroft","kind":"runs"},{"source":"location:The Digital Grid","target":"worker:the-grid","kind":"claim_verified"},{"source":"location:The Lab","target":"ai:The Dr. (Nikolai O'denhime)","kind":"runs"},{"source":"location:The Lab","target":"ai:Slime","kind":"runs"},{"source":"location:The Lab","target":"worker:lab-service","kind":"stale_claim"},{"source":"location:The Workshop","target":"ai:Larry Lowhammer","kind":"runs"},{"source":"location:The Chaos Party","target":"ai:The Mad Hatter","kind":"runs"},{"source":"location:The Artifactory","target":"ai:Lunascene","kind":"runs"},{"source":"location:The Artifactory","target":"worker:artifactory-service","kind":"stale_claim"},{"source":"location:API Marketplace","target":"ai:Solarscene","kind":"runs"},{"source":"location:Royal Bank of Arcadia","target":"ai:Dorris Fontaine","kind":"runs"},{"source":"location:Royal Bank of Arcadia","target":"worker:payments-service","kind":"claim_verified"},{"source":"location:Arcadian Exchange","target":"ai:Clarence Porter","kind":"runs"},{"source":"location:Arcadian Exchange","target":"ai:Ann Porter","kind":"runs"},{"source":"location:Arcadian Exchange","target":"ai:George Porter","kind":"runs"},{"source":"location:Arcadian Exchange","target":"ai:Edward Porter","kind":"runs"},{"source":"location:Arcadian Exchange","target":"ai:James Porter","kind":"runs"},{"source":"location:Arcadian Exchange","target":"worker:orders-service","kind":"claim_verified"},{"source":"location:The Observatory","target":"ai:Norman Hawkins","kind":"runs"},{"source":"location:The Observatory","target":"worker:monitoring","kind":"claim_verified"},{"source":"location:The Library","target":"ai:Zimik","kind":"runs"},{"source":"location:The Library","target":"worker:search-service","kind":"claim_verified"},{"source":"location:The Academy","target":"ai:Shimshi","kind":"runs"},{"source":"location:The Academy","target":"worker:the-academy","kind":"stale_claim"},{"source":"location:DocUtari","target":"ai:Fiddsy","kind":"runs"},{"source":"location:DocUtari","target":"worker:files-service","kind":"claim_verified"},{"source":"location:The Basement","target":"ai:Gary Glowman (Glow-Worm)","kind":"runs"},{"source":"location:The Basement","target":"worker:basement","kind":"stale_claim"},{"source":"location:The Spark","target":"ai:Imfy","kind":"runs"},{"source":"location:Infinity","target":"ai:The Guardian (Marcus Magnolia)","kind":"runs"},{"source":"location:Infinity","target":"ai:The Orb of Orisis","kind":"runs"},{"source":"location:Infinity","target":"worker:infinity-auth","kind":"claim_verified"},{"source":"location:The Void","target":"ai:Prometheus","kind":"runs"},{"source":"location:The Void","target":"worker:config-service","kind":"claim_verified"},{"source":"location:The Lighthouse","target":"ai:Rocking Ricki","kind":"runs"},{"source":"location:The Lighthouse","target":"worker:identity-service","kind":"claim_verified"},{"source":"location:The Warp Tunnel","target":"ai:Rocking Ricki","kind":"runs"},{"source":"location:The Warp Tunnel","target":"worker:warp-tunnel","kind":"stale_claim"},{"source":"location:Cryptex","target":"ai:Renik","kind":"runs"},{"source":"location:Cryptex","target":"worker:rate-limit-service","kind":"claim_verified"},{"source":"location:The Ice Box","target":"ai:Neonach","kind":"runs"},{"source":"location:The Ice Box","target":"worker:ice-box-service","kind":"stale_claim"},{"source":"location:Warp Radio","target":"ai:Rocking Ricki","kind":"runs"},{"source":"location:Warp Radio","target":"worker:warp-radio","kind":"stale_claim"},{"source":"location:Section 7","target":"ai:The Dutchy","kind":"runs"},{"source":"location:Section 7","target":"worker:geo-service","kind":"claim_verified"},{"source":"location:The Citadel","target":"ai:Trancendos","kind":"runs"},{"source":"location:Think Tank","target":"ai:Trancendos","kind":"runs"},{"source":"location:Turing's Hub","target":"ai:Samantha Turing","kind":"runs"},{"source":"location:ChronosSphere / ArcStream","target":"ai:Chronos","kind":"runs"},{"source":"location:ChronosSphere / ArcStream","target":"worker:cron-service","kind":"claim_verified"},{"source":"location:DevOcity","target":"ai:Kitty","kind":"runs"},{"source":"location:DevOcity","target":"worker:health-aggregator","kind":"claim_verified"},{"source":"location:Tranquility","target":"ai:Savania","kind":"runs"},{"source":"location:Tranquility","target":"worker:tranquility","kind":"stale_claim"},{"source":"location:I-Mind","target":"ai:Elouise","kind":"runs"},{"source":"location:I-Mind","target":"worker:imind","kind":"stale_claim"},{"source":"location:tAimra","target":"ai:tAImra","kind":"runs"},{"source":"location:tAimra","target":"worker:taimra","kind":"stale_claim"},{"source":"location:VRAR3D","target":"ai:Entari","kind":"runs"},{"source":"location:VRAR3D","target":"worker:vrar3d","kind":"stale_claim"},{"source":"location:Resonate","target":"ai:Magdalena","kind":"runs"},{"source":"location:Resonate","target":"worker:resonate","kind":"stale_claim"},{"source":"suite:SUITE-FIN","target":"location:Royal Bank of Arcadia","kind":"stewarded_by"},{"source":"suite:SUITE-LEG","target":"location:The Town Hall","kind":"stewarded_by"},{"source":"suite:SUITE-SEC","target":"location:Cryptex","kind":"stewarded_by"},{"source":"suite:SUITE-KNO","target":"location:The Library","kind":"stewarded_by"},{"source":"suite:SUITE-ENG","target":"location:The Lab","kind":"stewarded_by"},{"source":"suite:SUITE-AIG","target":"location:Turing's Hub","kind":"stewarded_by"},{"source":"suite:SUITE-OPS","target":"location:The Citadel","kind":"stewarded_by"},{"source":"suite:SUITE-EXP","target":"location:Fabulousa","kind":"stewarded_by"}]}</script>
+<script>
+// Read from a non-executable script[type=application/json] block via
+// .textContent + JSON.parse rather than interpolating the payload directly
+// into a JS statement — graph data ultimately comes from repo content
+// (compose service names, entity/router labels, YAML-sourced suite names),
+// and the HTML parser ends a script element on a literal closing script
+// tag substring regardless of JS syntax (comment, string, anything), which
+// would otherwise terminate this block early no matter how the JSON was
+// escaped. Note this comment is deliberately phrased to avoid containing
+// that literal substring itself.
+const GRAPH = JSON.parse(document.getElementById("graph-data").textContent);
+
+// Graph field values (labels, reasons, metadata) come from repo content —
+// compose service names, entity/router labels, YAML-sourced suite names —
+// and get interpolated into innerHTML template strings below. None of that
+// is expected to contain HTML today, but nothing enforces it, so escape on
+// the way in rather than assume it.
+function esc(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+const STATUS_META = {
+  needs_modularization: { label: "Needs modularization", color: "var(--status-modularize)" },
+  unreasoned_duplicate_risk: { label: "Unreasoned duplicate risk", color: "var(--status-risk)" },
+  core_load_bearing: { label: "Core / load-bearing", color: "var(--status-core)" },
+  no_worker_exists: { label: "No worker exists yet", color: "var(--status-safe)" },
+  safe_duplicate_removed: { label: "Duplicate removed (history)", color: "var(--status-removed)" },
+  unclassified: { label: "Mounted, unclassified", color: "var(--status-unclassified)" },
+  confirmed_separate_features: { label: "Confirmed separate features", color: "var(--status-decided)" },
+  bridged: { label: "Bridged (HTTP fan-out already built)", color: "var(--status-bridged)" },
+  stale_claim: { label: "Stale entity claim", color: "var(--status-stale)" },
+};
+const TYPE_META = {
+  location: { label: "Locations", shape: "square", color: "var(--accent)" },
+  lead_ai: { label: "Lead AIs", shape: "circle", color: "var(--accent)" },
+  service: { label: "Deployed services", shape: "circle", color: "var(--status-safe)" },
+  router: { label: "In-process routers", shape: "diamond", color: "var(--status-unclassified)" },
+  matrix_suite: { label: "Matrix Suites", shape: "diamond", color: "var(--suite)" },
+};
+
+function resolveVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name.slice(4, -1)).trim();
+}
+
+// ---------- layout ----------
+const W0 = 3400, H0 = 2200;
+const BAND_X = { location: 0.1, lead_ai: 0.27, matrix_suite: 0.46, router: 0.63, service: 0.85 };
+const typeCounts = {};
+for (const n of GRAPH.nodes) typeCounts[n.type] = (typeCounts[n.type] || 0) + 1;
+const typeIndex = {};
+const nodes = GRAPH.nodes.map((n) => {
+  const idx = (typeIndex[n.type] = (typeIndex[n.type] || 0) + 1);
+  const total = typeCounts[n.type];
+  const colX = BAND_X[n.type] ?? 0.5;
+  return {
+    ...n,
+    x: colX * W0 + (Math.random() - 0.5) * 140,
+    y: (idx / (total + 1)) * H0 + (Math.random() - 0.5) * 80,
+    vx: 0,
+    vy: 0,
+    pinned: false,
+    r: n.type === "location" || n.type === "matrix_suite" ? 7 : n.type === "service" ? 6 : 4.5,
+  };
+});
+const nodeById = new Map(nodes.map((n) => [n.id, n]));
+const edges = GRAPH.edges
+  .map((e) => ({ ...e, s: nodeById.get(e.source), t: nodeById.get(e.target) }))
+  .filter((e) => e.s && e.t);
+
+// ---------- force simulation ----------
+function step() {
+  const REPULSE = 5200;
+  for (let i = 0; i < nodes.length; i++) {
+    const a = nodes[i];
+    if (a.pinned) continue;
+    let fx = 0, fy = 0;
+    for (let j = 0; j < nodes.length; j++) {
+      if (i === j) continue;
+      const b = nodes[j];
+      let dx = a.x - b.x, dy = a.y - b.y;
+      let d2 = dx * dx + dy * dy || 0.01;
+      if (d2 > 240000) continue;
+      const f = REPULSE / d2;
+      const d = Math.sqrt(d2);
+      fx += (dx / d) * f;
+      fy += (dy / d) * f;
+    }
+    a.fx = fx; a.fy = fy;
+  }
+  for (const e of edges) {
+    const dx = e.t.x - e.s.x, dy = e.t.y - e.s.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+    const k = 0.012;
+    const fx = dx * k, fy = dy * k;
+    if (!e.s.pinned) { e.s.fx += fx; e.s.fy += fy; }
+    if (!e.t.pinned) { e.t.fx -= fx; e.t.fy -= fy; }
+  }
+  const bandX = BAND_X;
+  for (const n of nodes) {
+    if (n.pinned) continue;
+    const targetX = (bandX[n.type] ?? 0.5) * W0;
+    n.fx += (targetX - n.x) * 0.02;
+    n.fy += (H0 / 2 - n.y) * 0.0015;
+    n.vx = (n.vx + n.fx * 0.02) * 0.82;
+    n.vy = (n.vy + n.fy * 0.02) * 0.82;
+    n.x += n.vx;
+    n.y += n.vy;
+  }
+}
+for (let i = 0; i < 260; i++) step();
+
+// ---------- rendering ----------
+const canvas = document.getElementById("graph");
+const ctx = canvas.getContext("2d");
+let viewX = 0, viewY = 0, zoom = 1;
+
+function fitView() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  }
+  const pad = 80;
+  const gw = maxX - minX + pad * 2, gh = maxY - minY + pad * 2;
+  zoom = Math.min(rect.width / gw, rect.height / gh, 1.1);
+  viewX = minX - pad;
+  viewY = minY - pad;
+}
+
+const active = { layers: new Set(Object.keys(TYPE_META)), statuses: new Set(Object.keys(STATUS_META)) };
+let selected = null;
+let hovered = null;
+let query = "";
+
+function nodeVisible(n) {
+  if (!active.layers.has(n.type)) return false;
+  if (n.classification && !active.statuses.has(n.classification)) return false;
+  return true;
+}
+function nodeColor(n) {
+  if (n.classification && STATUS_META[n.classification]) return resolveVar(STATUS_META[n.classification].color);
+  return resolveVar(TYPE_META[n.type].color);
+}
+function matchesQuery(n) {
+  if (!query) return false;
+  return n.label.toLowerCase().includes(query);
+}
+
+function draw() {
+  const rect = canvas.getBoundingClientRect();
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+  ctx.save();
+  ctx.translate(-viewX * zoom, -viewY * zoom);
+  ctx.scale(zoom, zoom);
+
+  const borderColor = resolveVar("var(--border)");
+  const textDim = resolveVar("var(--text-dim)");
+  const accent = resolveVar("var(--accent)");
+
+  // edges
+  for (const e of edges) {
+    if (!nodeVisible(e.s) || !nodeVisible(e.t)) continue;
+    const highlight = selected && (e.s.id === selected.id || e.t.id === selected.id);
+    ctx.beginPath();
+    ctx.moveTo(e.s.x, e.s.y);
+    ctx.lineTo(e.t.x, e.t.y);
+    if (e.kind === "removed" || e.kind === "stale_claim") ctx.setLineDash([4, 3]);
+    else ctx.setLineDash([]);
+    ctx.strokeStyle = highlight ? accent : e.kind === "stale_claim" ? resolveVar("var(--status-stale)") : borderColor;
+    ctx.lineWidth = (highlight ? 1.6 : 0.8) / zoom;
+    ctx.globalAlpha = highlight ? 0.9 : 0.45;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.globalAlpha = 1;
+
+  // nodes
+  for (const n of nodes) {
+    if (!nodeVisible(n)) continue;
+    const isSel = selected && selected.id === n.id;
+    const isHover = hovered && hovered.id === n.id;
+    const isMatch = matchesQuery(n);
+    const dim = query && !isMatch;
+    ctx.globalAlpha = dim ? 0.18 : 1;
+
+    const color = nodeColor(n);
+    const shape = TYPE_META[n.type].shape;
+    const r = n.r * (isSel || isHover ? 1.5 : 1);
+
+    ctx.beginPath();
+    if (shape === "circle") {
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    } else if (shape === "square") {
+      ctx.rect(n.x - r, n.y - r, r * 2, r * 2);
+    } else {
+      ctx.moveTo(n.x, n.y - r); ctx.lineTo(n.x + r, n.y); ctx.lineTo(n.x, n.y + r); ctx.lineTo(n.x - r, n.y);
+      ctx.closePath();
+    }
+    ctx.fillStyle = color;
+    ctx.fill();
+    if (isSel || isMatch) {
+      ctx.lineWidth = 2 / zoom;
+      ctx.strokeStyle = accent;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    const alwaysLabeled = n.type === "location" || n.type === "matrix_suite";
+    const labelZoom = alwaysLabeled ? 0.32 : 0.85;
+    if ((zoom > labelZoom || isSel || isHover || isMatch) && !dim) {
+      ctx.font = `${isSel ? 12 : 10}px -apple-system, sans-serif`;
+      ctx.fillStyle = textDim;
+      ctx.fillText(n.label, n.x + r + 4, n.y + 3);
+    }
+  }
+  ctx.restore();
+}
+
+function loop() { draw(); requestAnimationFrame(loop); }
+
+// ---------- interaction ----------
+let dragNode = null, panning = false, panStart = null, dragged = false;
+
+function toWorld(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) / zoom + viewX,
+    y: (clientY - rect.top) / zoom + viewY,
+  };
+}
+function hitTest(pt) {
+  let best = null, bestD = 14 / zoom;
+  for (const n of nodes) {
+    if (!nodeVisible(n)) continue;
+    const d = Math.hypot(n.x - pt.x, n.y - pt.y);
+    if (d < bestD) { bestD = d; best = n; }
+  }
+  return best;
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  const pt = toWorld(e.clientX, e.clientY);
+  const hit = hitTest(pt);
+  dragged = false;
+  if (hit) { dragNode = hit; hit.pinned = true; }
+  else { panning = true; panStart = { x: e.clientX, y: e.clientY, vx: viewX, vy: viewY }; }
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointermove", (e) => {
+  dragged = true;
+  if (dragNode) {
+    const pt = toWorld(e.clientX, e.clientY);
+    dragNode.x = pt.x; dragNode.y = pt.y; dragNode.vx = 0; dragNode.vy = 0;
+  } else if (panning) {
+    viewX = panStart.vx - (e.clientX - panStart.x) / zoom;
+    viewY = panStart.vy - (e.clientY - panStart.y) / zoom;
+  } else {
+    const pt = toWorld(e.clientX, e.clientY);
+    hovered = hitTest(pt);
+    canvas.style.cursor = hovered ? "pointer" : "grab";
+  }
+});
+canvas.addEventListener("pointerup", (e) => {
+  if (dragNode && !dragged) selectNode(dragNode);
+  else if (!dragNode && !panning) { /* noop */ }
+  else if (panning && !dragged) selectNode(null);
+  dragNode = null; panning = false;
+  canvas.releasePointerCapture(e.pointerId);
+});
+canvas.addEventListener("click", (e) => {
+  if (dragged) return;
+  const pt = toWorld(e.clientX, e.clientY);
+  selectNode(hitTest(pt));
+});
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const pt = toWorld(e.clientX, e.clientY);
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  zoom = Math.min(4, Math.max(0.15, zoom * factor));
+  const pt2 = toWorld(e.clientX, e.clientY);
+  viewX += pt.x - pt2.x;
+  viewY += pt.y - pt2.y;
+}, { passive: false });
+
+document.getElementById("search").addEventListener("input", (e) => {
+  query = e.target.value.trim().toLowerCase();
+});
+
+// ---------- detail panel ----------
+function edgesFor(n) {
+  return edges.filter((e) => e.s.id === n.id || e.t.id === n.id);
+}
+function selectNode(n) {
+  selected = n;
+  const el = document.getElementById("detail");
+  if (!n) {
+    el.innerHTML = '<div class="empty">Click any node to inspect it — location, service, router, or governance suite.</div>';
+    return;
+  }
+  const badge = TYPE_META[n.type]?.label ?? n.type;
+  const status = n.classification ? STATUS_META[n.classification] : null;
+  let meta = "";
+  const metaFields = {
+    port: "Port", pillar: "Pillar", primary_function: "Function", pid: "PID", aid: "AID",
+    claimed_worker_port: "Claimed port", claimed_worker_path: "Claimed path",
+    steward_ai: "Steward AI", steward_location: "Steward location",
+    matrix_count: "Matrices", review_cadence: "Cadence", next_review: "Next review",
+    mounted: "Mounted", deployed: "Deployed",
+  };
+  for (const [k, label] of Object.entries(metaFields)) {
+    if (n[k] === undefined || n[k] === null || n[k] === "") continue;
+    meta += `<div class="meta-row"><span class="k">${esc(label)}</span><span class="v mono">${esc(n[k])}</span></div>`;
+  }
+  const reason = n.reason
+    ? `<div class="reason">${esc(n.reason)}</div>`
+    : "";
+  const rel = edgesFor(n)
+    .map((e) => {
+      const other = e.s.id === n.id ? e.t : e.s;
+      return `<div class="edge-item" data-id="${esc(other.id)}"><span>${esc(other.label)}</span><span class="k">${esc(e.kind)}</span></div>`;
+    })
+    .join("");
+
+  el.innerHTML = `
+    <span class="kind-badge">${esc(badge)}${status ? " · " + esc(status.label) : ""}</span>
+    <h3>${esc(n.label)}</h3>
+    ${meta}
+    ${reason}
+    ${rel ? `<div class="edges"><h2 style="margin-top:14px">Connections (${edgesFor(n).length})</h2>${rel}</div>` : ""}
+  `;
+  el.querySelectorAll(".edge-item").forEach((row) => {
+    row.addEventListener("click", () => selectNode(nodeById.get(row.dataset.id)));
+  });
+}
+
+// ---------- side panels ----------
+function renderToggles(containerId, meta, activeSet, shapeKind) {
+  const container = document.getElementById(containerId);
+  const counts = {};
+  for (const n of nodes) {
+    const key = shapeKind === "layer" ? n.type : n.classification;
+    if (key) counts[key] = (counts[key] || 0) + 1;
+  }
+  container.innerHTML = "";
+  for (const [key, m] of Object.entries(meta)) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    const shapeEl = shapeKind === "layer" && m.shape === "square" ? "sq" : "dot";
+    chip.innerHTML = `<span class="${shapeEl}" style="background:${m.color}"></span><span>${m.label}</span><span class="count mono">${counts[key] || 0}</span>`;
+    chip.addEventListener("click", () => {
+      if (activeSet.has(key)) { activeSet.delete(key); chip.classList.add("off"); }
+      else { activeSet.add(key); chip.classList.remove("off"); }
+    });
+    container.appendChild(chip);
+  }
+}
+renderToggles("layer-toggles", TYPE_META, active.layers, "layer");
+renderToggles("status-toggles", STATUS_META, active.statuses, "status");
+
+// ---------- header stats ----------
+function renderStats() {
+  const s = GRAPH.summary;
+  document.getElementById("generated-at").textContent = "generated " + s.generated_at.replace("T", " ").slice(0, 16) + " UTC";
+  const items = [
+    { n: s.total_nodes, l: "Nodes" },
+    { n: s.deployed_services, l: "Services" },
+    { n: s.locations, l: "Locations" },
+    { n: s.matrix_suites, l: "Suites" },
+    { n: s.needs_modularization, l: "Needs work", cls: "warn" },
+    { n: s.unreasoned_duplicate_risk, l: "Unreasoned risk", cls: "risk" },
+    { n: s.stale_claims, l: "Stale claims", cls: "risk" },
+  ];
+  document.getElementById("stats").innerHTML = items
+    .map((i) => `<div class="stat ${i.cls || ""}"><span class="n mono">${i.n}</span><span class="l">${i.l}</span></div>`)
+    .join("");
+}
+
+renderStats();
+fitView();
+window.addEventListener("resize", () => { fitView(); });
+loop();
+</script>
+</body>
+</html>
