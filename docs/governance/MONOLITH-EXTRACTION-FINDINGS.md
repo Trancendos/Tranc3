@@ -57,7 +57,7 @@ For each `src/<name>/` module mounted in `api.py`:
 `app.routes` building successfully (300 routes), `ruff check api.py` clean, and the full relevant
 test subset (`test_canonical_routes.py`, `test_api.py`, `test_shared_resource_routers_auth.py`,
 `test_tranquility_taimra_auth.py`, `test_resonate_escalation.py` — 133 tests) passing.
-`CLAUDE.md`'s entity table updated for the 6 rows that said "(router registered in `api.py`)" —
+`CLAUDE.md`'s entity table updated for the 7 rows that said "(router registered in `api.py`)" —
 they now point at the real worker paths.
 
 ## Needs a decision, not a mechanical fix
