@@ -3,6 +3,10 @@
 **Status:** 7 confirmed-safe removals shipped in this pass. An 8th (`src/resonate/`) was reverted
 after review — see below. 7 candidates now need a deliberate design decision (HTTP bridge, or
 leave in-process on purpose), not a mechanical fix. Nothing below was silently resolved.
+`scripts/check_duplicate_routers.py` (wired into `production-gate.yml` in both `.github/workflows/`
+and `.forgejo/workflows/`) now guards against this pattern recurring — see its module docstring for
+what it does and, importantly, does not do (it cannot verify HTTP-route equivalence, only flag
+routers that look like the pattern for a human/agent to investigate).
 
 ## What this found
 
