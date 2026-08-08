@@ -863,11 +863,6 @@ from src.imind.routes import router as _imind_router  # noqa: F401  # intentiona
 
 app.include_router(_imind_router)
 
-# ── tAimra (digital twin — opt-in, OFFLINE by default) ────────────────────────
-from src.taimra.routes import router as _taimra_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_taimra_router)
-
 # ── Tranquility (wellbeing hub) ────────────────────────────────────────────────
 from src.tranquility.routes import (
     router as _tranquility_router,  # noqa: F401  # intentional top-level import
@@ -875,29 +870,21 @@ from src.tranquility.routes import (
 
 app.include_router(_tranquility_router)
 
-# ── Resonate (empathy + understanding services) ────────────────────────────────
-from src.resonate.routes import (
-    router as _resonate_router,  # noqa: F401  # intentional top-level import
-)
-
-app.include_router(_resonate_router)
-
-# ── The Studio (creativity hub — Sasha's Photo, TateKing, TranceFlow, Fabulousa)
-from src.studio.routes import router as _studio_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_studio_router)
-
-# ── The Lab (AI code creation platform) ──────────────────────────────────────
-from src.lab.routes import router as _lab_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_lab_router)
-
-# ── ChronosSphere / ArcStream (time + schedule management) ───────────────────
-from src.chronos.routes import (
-    router as _chronos_router,  # noqa: F401  # intentional top-level import
-)
-
-app.include_router(_chronos_router)
+# ── tAimra, Resonate, The Studio, The Lab, ChronosSphere, DevOcity, The
+# Artifactory, VRAR3D: each already has a real, standalone, deployed worker
+# (workers/taimra, workers/resonate, workers/the-studio, workers/the-lab +
+# workers/lab-service, workers/cron-service, workers/devocity,
+# workers/artifactory-service, workers/vrar3d — all in
+# docker-compose.production.yml) that supersedes the in-process src/<name>/
+# routers those used to mount here. This was a real extraction that just
+# never had its old in-process router mount cleaned up afterward — same
+# "two sources of truth" pattern flagged in
+# docs/governance/DUPLICATE-WORKER-FINDINGS.md for other services. Verified
+# zero other in-process callers of these routers (only api.py + tests, which
+# import the router/class objects directly and are unaffected by unmounting
+# them here) before removing. The underlying src/<name>/ modules are left in
+# place — tests still exercise them directly — only the live HTTP mount on
+# this shared process is removed.
 
 # ── Turing's Hub (AI personality creation centre) ────────────────────────────
 from src.personality.turingshub.routes import (
@@ -905,20 +892,6 @@ from src.personality.turingshub.routes import (
 )
 
 app.include_router(_turingshub_router)
-
-# ── DevOcity (developer centre — API keys, webhooks, guides) ─────────────────
-from src.devocity.routes import (
-    router as _devocity_router,  # noqa: F401  # intentional top-level import
-)
-
-app.include_router(_devocity_router)
-
-# ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
-from src.artifactory.routes import (
-    router as _artifactory_router,  # noqa: F401  # intentional top-level import
-)
-
-app.include_router(_artifactory_router)
 
 # ── API Marketplace (connector hub — Gravitee.io foundation) ─────────────────
 from src.apimarket.routes import (
@@ -969,10 +942,9 @@ from src.routers.search_api import (
 
 app.include_router(_search_router)
 
-# ── VRAR3D (AR/VR wellbeing centre — Three.js / A-Frame WebXR) ───────────────
-from src.vrar3d.routes import router as _vrar3d_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_vrar3d_router)
+# ── VRAR3D: superseded by workers/vrar3d (real, deployed) — see the removal
+# note above the tAimra/Resonate/Studio/Lab/Chronos/DevOcity/Artifactory
+# cluster; same "old in-process mount never cleaned up" pattern.
 
 # ── The Citadel (DevOps hub — Forgejo + Fly.io + CF Workers) ─────────────────
 from src.citadel.routes import (
