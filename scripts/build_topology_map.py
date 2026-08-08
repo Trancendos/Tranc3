@@ -100,12 +100,25 @@ NO_WORKER_EXISTS: dict[str, str] = {
     "_access_router": "No worker. Genuine future-extraction candidate.",
     "_models_router": "No worker. No tight in-process coupling from other subsystems.",
 }
-# check_duplicate_routers.py tracks turingshub in KNOWN_COUPLED for CI
-# regression-safety (so a future PR can't unmount it silently), but its own
-# recorded reason says this is core/load-bearing, not a pending decision —
-# reclassify it here rather than lumping it in with genuine
-# needs_modularization candidates like Resonate/I-Mind/Cryptex.
-GUARD_COUPLED_RECLASSIFY: dict[str, str] = {"_turingshub_router": "core_load_bearing"}
+# check_duplicate_routers.py tracks these in KNOWN_COUPLED for CI
+# regression-safety (so a future PR can't unmount one silently), but their
+# recorded reasons resolve to something more specific than a still-open
+# "needs_modularization" decision — reclassify here rather than lumping them
+# in with genuine pending candidates like Resonate/Cryptex/Basement.
+GUARD_COUPLED_RECLASSIFY: dict[str, str] = {
+    "_turingshub_router": "core_load_bearing",
+    # Each of these three has zero live in-process caller and a gap to its
+    # same-named worker too large to call "unfinished" — search_api's is an
+    # entire vector-DB stack, admin_os's and section7's are different
+    # subsystems entirely (entity-config-admin vs. a cells/fabric concept;
+    # RSS market-intel vs. platform self-health reports). Nothing breaks
+    # either way, so there's no risk to weigh — the decision is just to stop
+    # treating a same-name coincidence as an open question. Revisit only if
+    # a real requirement emerges to unify them.
+    "_admin_os_router": "confirmed_separate_features",
+    "_search_router": "confirmed_separate_features",
+    "_section7_router": "confirmed_separate_features",
+}
 
 # Already-shipped safe removals (2026-08-08 sweep) — shown as historical
 # "duplicate eliminated" edges even though the router var no longer appears
@@ -413,6 +426,7 @@ def build_graph() -> dict[str, Any]:
         "mounted_routers": len(router_nodes),
         "matrix_suites": len(suite_nodes),
         "needs_modularization": classifications.count("needs_modularization"),
+        "confirmed_separate_features": classifications.count("confirmed_separate_features"),
         "unreasoned_duplicate_risk": classifications.count("unreasoned_duplicate_risk"),
         "core_load_bearing": classifications.count("core_load_bearing"),
         "no_worker_exists": classifications.count("no_worker_exists"),

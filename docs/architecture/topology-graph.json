@@ -1,6 +1,6 @@
 {
   "summary": {
-    "generated_at": "2026-08-08T18:03:33.451598+00:00",
+    "generated_at": "2026-08-08T18:59:43.606026+00:00",
     "total_nodes": 227,
     "total_edges": 111,
     "locations": 43,
@@ -8,7 +8,8 @@
     "deployed_services": 88,
     "mounted_routers": 35,
     "matrix_suites": 8,
-    "needs_modularization": 11,
+    "needs_modularization": 8,
+    "confirmed_separate_features": 3,
     "unreasoned_duplicate_risk": 0,
     "core_load_bearing": 11,
     "no_worker_exists": 7,
@@ -709,7 +710,7 @@
       "type": "router",
       "label": "src.admin_os.routes",
       "mounted": true,
-      "classification": "needs_modularization",
+      "classification": "confirmed_separate_features",
       "reason": "VERIFIED NOT EQUIVALENT: this router's cells/fabric/files/backups features have no counterpart in workers/infinity-admin/, which is config/entity-override focused instead. api.py's own startup auto-backup loop depends on src.admin_os.backup_loop directly"
     },
     {
@@ -725,7 +726,7 @@
       "type": "router",
       "label": "src.research.routes",
       "mounted": true,
-      "classification": "needs_modularization",
+      "classification": "confirmed_separate_features",
       "reason": "VERIFIED NOT EQUIVALENT: this router (src.research.routes, backed by src.research.section7.Section7) generates platform self-health/security reports from Cryptex+Observatory in-process; workers/the-dutchy/ is RSS/news market-intelligence ingestion \u2014 same entity name, different subject matter entirely"
     },
     {
@@ -821,7 +822,7 @@
       "type": "router",
       "label": "src.routers.search_api",
       "mounted": true,
-      "classification": "needs_modularization",
+      "classification": "confirmed_separate_features",
       "reason": "VERIFIED NOT EQUIVALENT: this router is a hybrid BM25+vector RAG pipeline (Meilisearch/Qdrant/Weaviate/Chroma); workers/search-service/ is SQLite FTS5 full-text only, with no vector/embedding/RAG capability at all \u2014 missing half the feature, not a superset"
     },
     {
@@ -1787,7 +1788,7 @@
     {
       "source": "router:_admin_os_router",
       "target": "worker:infinity-admin",
-      "kind": "needs_modularization"
+      "kind": "confirmed_separate_features"
     },
     {
       "source": "router:_cryptex_router",
@@ -1797,7 +1798,7 @@
     {
       "source": "router:_section7_router",
       "target": "worker:the-dutchy",
-      "kind": "needs_modularization"
+      "kind": "confirmed_separate_features"
     },
     {
       "source": "router:_imind_router",
@@ -1817,7 +1818,7 @@
     {
       "source": "router:_search_router",
       "target": "worker:search-service",
-      "kind": "needs_modularization"
+      "kind": "confirmed_separate_features"
     },
     {
       "source": "router:_billing_router",

@@ -1,17 +1,21 @@
 # Monolith Extraction Findings — 2026-08-08 systematic sweep
 
 **Status:** 7 confirmed-safe removals shipped in this pass. An 8th (`src/resonate/`) was reverted
-after review — see below. A second-pass sweep (below) has now classified every remaining module
-that was still mounted in `api.py`: 11 need a deliberate design decision (HTTP bridge, or leave
-in-process on purpose — up from 7 after `src/imind/` was found to be a second, higher-stakes
-Resonate-class near-miss and 4 more real candidates were confirmed), 10 are genuinely
-core/load-bearing with no nanoservice counterpart, 6 have no worker to compare against yet, and
-1 (`src/section7/`) turned out not to be a router at all. Nothing below was silently resolved.
+after review — see below. A second-pass sweep classified every remaining module that was still
+mounted in `api.py`, and a follow-up pass then resolved 3 of those from open questions into
+decided pairings: **8 still need a deliberate design decision** (HTTP bridge, or a product call on
+Resonate/I-Mind — down from 11), **3 are confirmed permanently-separate features** with zero risk
+either way (`search_api`, `admin_os`, `section7` reports — see `CONFIRMED_SEPARATE_FEATURES`), 10
+are genuinely core/load-bearing with no nanoservice counterpart, 6 have no worker to compare
+against yet, and 1 (`src/section7/`, the package — not to be confused with `_section7_router`
+above) turned out not to be a router at all. Nothing below was silently resolved.
 `scripts/check_duplicate_routers.py` (wired into `production-gate.yml` in both `.github/workflows/`
-and `.forgejo/workflows/`) now guards all 11 `NEEDS_MODULARIZATION` items against being unmounted
-without a fresh check — see its module docstring for what it does and, importantly, does not do
-(it cannot verify HTTP-route equivalence itself, only flag routers that look like the pattern and
-enforce that a documented reason exists before one is ever removed).
+and `.forgejo/workflows/`) guards all 11 tracked items (both the 8 still-open and the 3 decided)
+against being unmounted without a fresh check — see its module docstring for what it does and,
+importantly, does not do (it cannot verify HTTP-route equivalence itself, only flag routers that
+look like the pattern and enforce that a documented reason exists before one is ever removed).
+`scripts/build_topology_map.py` renders all of this as an interactive graph — see
+`docs/architecture/topology-map.html`.
 
 ## What this found
 
@@ -117,13 +121,11 @@ they now point at the real worker paths. Resonate's row was reverted back to "In
   `observability/library_pipeline.py`, `models/knowledge.py`, `event_bus/wiring.py`.
   `workers/library-service/` (936 lines, in compose) exists. Four separate in-process
   dependents — the widest fan-in of anything checked in this pass.
-- **`src/routers/search_api.py`** — **RESOLVED by the second-pass sweep below: NOT equivalent.**
-  This router is a hybrid BM25+vector RAG pipeline (Meilisearch/Qdrant/Weaviate/Chroma).
-  `workers/search-service/` (392 lines, in compose) is SQLite FTS5 full-text only — its own
-  docstring says "no external deps" — with no vector/embedding/RAG capability at all. Zero
-  in-process callers found, so this is low-risk to leave mounted, but it is not a duplicate to
-  remove; it's a decision about whether `search-service` should absorb the vector/RAG stack or
-  whether the in-process router stays the platform's only RAG surface.
+- **`src/routers/search_api.py`** — **RESOLVED, then DECIDED: see `CONFIRMED_SEPARATE_FEATURES`
+  below.** This router is a hybrid BM25+vector RAG pipeline (Meilisearch/Qdrant/Weaviate/Chroma);
+  `workers/search-service/` (392 lines, in compose) is SQLite FTS5 full-text only, with no
+  vector/embedding/RAG capability at all — not a duplicate. Zero in-process callers, so a
+  follow-up pass closed this out as a decided pairing rather than an open question.
 - **`src/personality/turingshub/`** — deep in-process fan-in across the core AI response pipeline
   (`src/dependencies.py`, `src/workers/inference_worker.py`, `src/routers/enhanced_capabilities.py`,
   plus several top-level scripts). This one reads as intentionally core/load-bearing, not a stray
@@ -152,21 +154,6 @@ immediately if any of them is ever unmounted without a fresh check.
   **completely different product** — same "two sources of truth by name only" trap as Resonate,
   not Resonate itself. Either build a policy-check API into cranbania, or accept these are two
   permanently separate features sharing an entity table row.
-- **`src/admin_os/`** (`_admin_os_router`) — `cells`/`fabric`/`files`/`backups` have no
-  counterpart in `workers/infinity-admin/` (config/entity-override focused). `api.py`'s own
-  startup auto-backup loop depends on `src.admin_os.backup_loop` directly, independent of the
-  router. Lowest-urgency bridge in this batch — no request-path caller, only a background task.
-  **Bonus finding, fixed in this pass:** `src/routers/admin_os.py` (a second, different 222-line
-  `APIRouter(prefix="/admin-os", ...)`, importing the same underlying `src.admin_os.*` modules)
-  existed in the repo, verified fully orphaned — not mounted anywhere, not imported by anything,
-  not even tests. Deleted; `api.py` still imports and builds the same 303 routes afterward.
-- **`src/research/routes.py`** (`_section7_router`, mounted as `/section7`) — generates platform
-  self-health/security reports from Cryptex+Observatory in-process
-  (`src.research.section7.Section7`). `workers/the-dutchy/` is RSS/news market-intelligence
-  ingestion — same entity name ("Section 7"), entirely different subject matter, not a superset.
-  Zero in-process callers (same shape as pre-removal Resonate) — low urgency, but not safe to
-  remove: either teach the-dutchy to generate these two report types over HTTP, or document that
-  "Section 7 reports" and "the-dutchy market intel" are permanently separate features.
 - **`src/monetisation/router.py`** (`_billing_router`, prefix `/billing`) — `api.py` calls
   `tier_enforcer.check_and_increment()` synchronously on live request-handling paths platform-wide
   (per-request tier/rate enforcement, not just the `/billing` endpoints — the highest-consequence
@@ -175,9 +162,42 @@ immediately if any of them is ever unmounted without a fresh check.
   exists but is a double-entry accounting ledger, a different feature from Stripe/subscription
   billing. Before any change: a fail-open vs. fail-closed decision for tier checks under a
   payments-service outage, and `payments-service` needs to actually be built out first.
-- **`src/basement/`**, **`src/cryptex/`**, **`src/library/`**, **`src/resonate/`**, **`src/imind/`**,
-  **`src/routers/search_api.py`** — carried forward from the first pass above, all now confirmed
-  by direct route-body comparison rather than import-grep alone (see corrected bullets above).
+- **`src/basement/`**, **`src/cryptex/`**, **`src/library/`**, **`src/resonate/`**, **`src/imind/`**
+  — carried forward from the first pass above, all now confirmed by direct route-body comparison
+  rather than import-grep alone (see corrected bullets above).
+
+### CONFIRMED_SEPARATE_FEATURES (2026-08-08, follow-up pass — decided, not open questions)
+
+Same "two sources of truth by name only" trap as Resonate/I-Mind, but resolved rather than left
+open: each pair below has **zero live in-process caller** on the monolith side and a gap to its
+same-named worker too large to call "the worker just needs finishing" — an entire vector-DB stack,
+or a wholly different subsystem, not a handful of missing endpoints. Nothing breaks either way, so
+there's no risk to weigh; the only real action was to stop treating a same-name coincidence as an
+unresolved duplicate question. Both routers/workers stay exactly as deployed today — revisit only
+if a real requirement emerges to unify them. `scripts/build_topology_map.py` classifies these as
+`confirmed_separate_features` (distinct from `needs_modularization`) so the topology map doesn't
+keep flagging them as pending.
+
+- **`src/routers/search_api.py`** vs. **`workers/search-service/`** — the router is a hybrid
+  BM25+vector RAG pipeline (Meilisearch/Qdrant/Weaviate/Chroma); the worker is SQLite FTS5
+  full-text only, with no vector/embedding/RAG capability at all. Decided: `search_api` is the
+  platform's RAG surface, `search-service` is a separate, simpler full-text search service.
+- **`src/admin_os/`** (`_admin_os_router`) vs. **`workers/infinity-admin/`** — checked the actual
+  route lists: the router's `cells`/`fabric`/`apoptosis`/`replicate`/`files`/`events`/`domain-model`
+  endpoints and the worker's `admin/config`/`admin/entities`/`admin/overrides`/`admin/tiers`
+  endpoints have **zero overlap** — a cellular-architecture/audit concept vs. entity-config
+  administration, not a partial subset either direction. `api.py`'s own startup auto-backup loop
+  depends on `src.admin_os.backup_loop` directly, independent of the router.
+  **Bonus finding, fixed in the prior pass:** `src/routers/admin_os.py` (a second, different
+  222-line `APIRouter(prefix="/admin-os", ...)`, importing the same underlying `src.admin_os.*`
+  modules) existed in the repo, verified fully orphaned — not mounted anywhere, not imported by
+  anything, not even tests. Deleted; `api.py` still imports and builds the same 303 routes after.
+- **`src/research/routes.py`** (`_section7_router`, mounted as `/section7`) vs.
+  **`workers/the-dutchy/`** — the router generates platform self-health/security reports from
+  Cryptex+Observatory in-process (`src.research.section7.Section7`); the worker does RSS/news
+  market-intelligence ingestion. Same entity name ("Section 7"), entirely different subject
+  matter. Decided: "Section 7 reports" and "the-dutchy market intel" are permanently separate
+  features sharing an entity table row, not a migration target.
 
 ### CORE_LOAD_BEARING (no nanoservice counterpart makes sense — left alone, not an oversight)
 

@@ -21,6 +21,7 @@
     --status-removed: #9aa3b8;
     --status-stale: #d1414a;
     --status-unclassified: #7c88a6;
+    --status-decided: #2f8f7a;
     --suite: #7c5cd6;
     --canvas-bg: #e4e9f4;
     --focus: #3860e0;
@@ -44,6 +45,7 @@
       --status-removed: #5b6478;
       --status-stale: #ff5c5c;
       --status-unclassified: #8b95ac;
+      --status-decided: #45b8a0;
       --suite: #a78bfa;
       --canvas-bg: #0e1220;
     }
@@ -64,6 +66,7 @@
     --status-removed: #5b6478;
     --status-stale: #ff5c5c;
     --status-unclassified: #8b95ac;
+    --status-decided: #45b8a0;
     --suite: #a78bfa;
     --canvas-bg: #0e1220;
   }
@@ -331,6 +334,7 @@ const STATUS_META = {
   no_worker_exists: { label: "No worker exists yet", color: "var(--status-safe)" },
   safe_duplicate_removed: { label: "Duplicate removed (history)", color: "var(--status-removed)" },
   unclassified: { label: "Mounted, unclassified", color: "var(--status-unclassified)" },
+  confirmed_separate_features: { label: "Confirmed separate features", color: "var(--status-decided)" },
   stale_claim: { label: "Stale entity claim", color: "var(--status-stale)" },
 };
 const TYPE_META = {
