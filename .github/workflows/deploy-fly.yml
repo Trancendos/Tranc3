@@ -184,7 +184,13 @@ jobs:
           DELAY_SECONDS=15
           STATUS="000"
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            STATUS=$(curl -sf https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
+            # -sS (not -f): -f makes curl exit non-zero on HTTP 4xx/5xx while
+            # still having written the %{http_code} output, so the `|| echo
+            # "000"` fallback below would ALSO fire and concatenate into a
+            # bogus "503000". Without -f, curl completes normally on any HTTP
+            # response and -w prints the real code; the fallback then only
+            # catches genuine transport failures (DNS, connection refused).
+            STATUS=$(curl -sS https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
             echo "Health check attempt $attempt/$MAX_ATTEMPTS status: $STATUS"
             [ "$STATUS" = "200" ] && break
             [ "$attempt" -lt "$MAX_ATTEMPTS" ] && sleep "$DELAY_SECONDS"
