@@ -81,6 +81,49 @@ jobs:
             echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
           fi
 
+      - name: Validate required deploy secrets
+        # Mirrors src/core/startup_validator.py's hard-fail checks (SECRET_KEY,
+        # JWT_SECRET >= 32 chars; DATABASE_URL, REDIS_URL non-empty; REDIS_URL
+        # scheme). `flyctl secrets set` happily accepts an empty/malformed
+        # value with no error — the app then only fails at runtime, minutes
+        # later, as a bare 503 with no indication why. Catch it here instead,
+        # with a readable message, before anything is deployed.
+        env:
+          IN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          IN_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          IN_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          IN_REDIS_URL: ${{ secrets.REDIS_URL }}
+        run: |
+          fail=0
+          check_len() {
+            name="$1"; val="$2"; min="$3"
+            if [ -z "$val" ]; then
+              echo "::error::$name is not set (or empty) in GitHub repo secrets (Settings > Secrets and variables > Actions)."
+              fail=1
+            elif [ "${#val}" -lt "$min" ]; then
+              echo "::error::$name is set but shorter than $min characters — startup_validator.py rejects this in production."
+              fail=1
+            fi
+          }
+          check_len SECRET_KEY "$IN_SECRET_KEY" 32
+          check_len JWT_SECRET "$IN_JWT_SECRET" 32
+          if [ -z "$IN_DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is not set (or empty) in GitHub repo secrets."
+            fail=1
+          fi
+          if [ -z "$IN_REDIS_URL" ]; then
+            echo "::error::REDIS_URL is not set (or empty) in GitHub repo secrets."
+            fail=1
+          elif ! echo "$IN_REDIS_URL" | grep -qE '^(redis|rediss|unix)://'; then
+            echo "::error::REDIS_URL doesn't start with redis://, rediss://, or unix:// — the app will silently fall back to an in-memory queue. Likely cause: the Upstash REST URL (https://...) was used instead of the TCP connection string."
+            fail=1
+          fi
+          if [ "$fail" -eq 1 ]; then
+            echo "::error::One or more required deploy secrets are missing/invalid — see errors above. Fix them, then re-run this workflow."
+            exit 1
+          fi
+          echo "All required deploy secrets present and well-formed."
+
       - name: Inject all production secrets into Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -130,11 +173,20 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Health check
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           sleep 15
           STATUS=$(curl -sf https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
           echo "Health check status: $STATUS"
-          [ "$STATUS" = "200" ] || { echo "Health check failed"; exit 1; }
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Health check failed (status=$STATUS). Dumping Fly status/logs for diagnosis below \
+              — no need to fetch these manually from the Fly dashboard next time."
+            flyctl status --app tranc3-backend || echo "(flyctl status unavailable)"
+            echo "--- flyctl logs (tranc3-backend) ---"
+            timeout 25 flyctl logs --app tranc3-backend --no-tail || echo "(log dump timed out or unavailable)"
+            exit 1
+          fi
 
   # ────────────────────────────────────────────────────────────────────────────
   # Bots: trancendos-bots on Fly.io
