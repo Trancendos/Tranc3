@@ -428,6 +428,15 @@ def render_html(graph: dict[str, Any]) -> str:
         encoding="utf-8"
     )
     payload = json.dumps(graph, indent=None, separators=(",", ":"))
+    # The HTML parser ends a <script> element on a literal "</script"
+    # substring regardless of the element's `type` attribute, so this is
+    # required even though the template already reads the payload via a
+    # non-executable script[type=application/json] block rather than
+    # interpolating it into a JS statement directly. Graph data ultimately
+    # comes from repo content (compose service names, entity/router labels,
+    # YAML-sourced suite names) that isn't expected to contain this, but
+    # nothing enforces that, so escape defensively rather than assume it.
+    payload = payload.replace("</script", "<\\/script")
     return template.replace("__TOPOLOGY_GRAPH_JSON__", payload)
 
 

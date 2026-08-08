@@ -8,10 +8,13 @@ guard's classification tables, and the Matrix Suites registry. Nothing
 enforces that the committed output still matches what the generator would
 produce right now, so — same class of bug `check_master_matrix_freshness.py`
 guards against for the EA workbook — it could silently drift from the code
-it claims to describe. This regenerates both files into a temp location and
-diffs them against the committed copies, ignoring only the `generated_at`
-timestamp (which legitimately differs on every run and carries no
-information about staleness).
+it claims to describe. The generator has no `--output` flag, so this backs
+up the committed files to a temp dir, runs the generator in place, diffs
+the regenerated output against the backup (ignoring only the `generated_at`
+timestamp, which legitimately differs on every run and carries no
+information about staleness), then restores the committed bytes — in a
+`finally`, so a crashed generator run can't leave the working tree holding
+regenerated-not-committed content.
 """
 
 from __future__ import annotations
@@ -51,16 +54,21 @@ def main() -> int:
         shutil.copyfile(COMMITTED_JSON, json_backup)
         shutil.copyfile(COMMITTED_HTML, html_backup)
 
-        result = subprocess.run(
-            [sys.executable, str(GENERATOR)], cwd=ROOT, capture_output=True, text=True
-        )
-        regenerated_json = _normalized(COMMITTED_JSON.read_text(encoding="utf-8"))
-        regenerated_html = _normalized(COMMITTED_HTML.read_text(encoding="utf-8"))
-
-        # Restore committed bytes regardless of outcome — this check only
-        # reports staleness, it never leaves a regenerated copy behind.
-        shutil.copyfile(json_backup, COMMITTED_JSON)
-        shutil.copyfile(html_backup, COMMITTED_HTML)
+        # The generator has no --output flag; it writes straight to
+        # COMMITTED_JSON/COMMITTED_HTML, so this necessarily mutates them
+        # for the duration of this block. Restoration is in `finally` so a
+        # crashed generator run (nonzero exit, or a read failure below if
+        # it left a file missing/truncated) can't skip it and leave the
+        # working tree holding regenerated-not-committed content.
+        try:
+            result = subprocess.run(
+                [sys.executable, str(GENERATOR)], cwd=ROOT, capture_output=True, text=True
+            )
+            regenerated_json = _normalized(COMMITTED_JSON.read_text(encoding="utf-8"))
+            regenerated_html = _normalized(COMMITTED_HTML.read_text(encoding="utf-8"))
+        finally:
+            shutil.copyfile(json_backup, COMMITTED_JSON)
+            shutil.copyfile(html_backup, COMMITTED_HTML)
 
         if result.returncode != 0:
             print("FAILED to run the generator for comparison:")
