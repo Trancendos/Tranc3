@@ -107,6 +107,10 @@ NO_WORKER_EXISTS: dict[str, str] = {
 # in with genuine pending candidates like Resonate/Cryptex/Basement.
 GUARD_COUPLED_RECLASSIFY: dict[str, str] = {
     "_turingshub_router": "core_load_bearing",
+    # Genuinely coupled (in-process singleton has real callers, router can't
+    # be unmounted) *and* already has a working HTTP bridge to its worker —
+    # neither "still needs a decision" nor "confirmed permanently separate".
+    "_nexus_router": "bridged",
     # Each of these three has zero live in-process caller and a gap to its
     # same-named worker too large to call "unfinished" — search_api's is an
     # entire vector-DB stack, admin_os's and section7's are different
@@ -118,6 +122,12 @@ GUARD_COUPLED_RECLASSIFY: dict[str, str] = {
     "_admin_os_router": "confirmed_separate_features",
     "_search_router": "confirmed_separate_features",
     "_section7_router": "confirmed_separate_features",
+    # townhall's in-process caller (research/section7.py) already wraps the
+    # call in try/except with graceful degradation — no live request path
+    # depends on it, and cranbania is a different tech stack entirely
+    # (Next.js/TypeScript Kanban board, not a Python FastAPI worker), so
+    # there's no HTTP bridge to build here, just a product boundary to accept.
+    "_townhall_router": "confirmed_separate_features",
 }
 
 # Already-shipped safe removals (2026-08-08 sweep) — shown as historical
@@ -427,6 +437,7 @@ def build_graph() -> dict[str, Any]:
         "matrix_suites": len(suite_nodes),
         "needs_modularization": classifications.count("needs_modularization"),
         "confirmed_separate_features": classifications.count("confirmed_separate_features"),
+        "bridged": classifications.count("bridged"),
         "unreasoned_duplicate_risk": classifications.count("unreasoned_duplicate_risk"),
         "core_load_bearing": classifications.count("core_load_bearing"),
         "no_worker_exists": classifications.count("no_worker_exists"),

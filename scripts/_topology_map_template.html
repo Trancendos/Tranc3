@@ -22,6 +22,7 @@
     --status-stale: #d1414a;
     --status-unclassified: #7c88a6;
     --status-decided: #2f8f7a;
+    --status-bridged: #0e8f9e;
     --suite: #7c5cd6;
     --canvas-bg: #e4e9f4;
     --focus: #3860e0;
@@ -46,6 +47,7 @@
       --status-stale: #ff5c5c;
       --status-unclassified: #8b95ac;
       --status-decided: #45b8a0;
+      --status-bridged: #3ddce8;
       --suite: #a78bfa;
       --canvas-bg: #0e1220;
     }
@@ -67,6 +69,7 @@
     --status-stale: #ff5c5c;
     --status-unclassified: #8b95ac;
     --status-decided: #45b8a0;
+    --status-bridged: #3ddce8;
     --suite: #a78bfa;
     --canvas-bg: #0e1220;
   }
@@ -335,6 +338,7 @@ const STATUS_META = {
   safe_duplicate_removed: { label: "Duplicate removed (history)", color: "var(--status-removed)" },
   unclassified: { label: "Mounted, unclassified", color: "var(--status-unclassified)" },
   confirmed_separate_features: { label: "Confirmed separate features", color: "var(--status-decided)" },
+  bridged: { label: "Bridged (HTTP fan-out already built)", color: "var(--status-bridged)" },
   stale_claim: { label: "Stale entity claim", color: "var(--status-stale)" },
 };
 const TYPE_META = {

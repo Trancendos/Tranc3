@@ -1,6 +1,6 @@
 {
   "summary": {
-    "generated_at": "2026-08-08T18:59:43.606026+00:00",
+    "generated_at": "2026-08-08T19:25:18.121805+00:00",
     "total_nodes": 227,
     "total_edges": 111,
     "locations": 43,
@@ -8,8 +8,9 @@
     "deployed_services": 88,
     "mounted_routers": 35,
     "matrix_suites": 8,
-    "needs_modularization": 8,
-    "confirmed_separate_features": 3,
+    "needs_modularization": 6,
+    "confirmed_separate_features": 4,
+    "bridged": 1,
     "unreasoned_duplicate_risk": 0,
     "core_load_bearing": 11,
     "no_worker_exists": 7,
@@ -654,8 +655,8 @@
       "type": "router",
       "label": "src.nexus.routes",
       "mounted": true,
-      "classification": "needs_modularization",
-      "reason": "src.nexus.hub.get_nexus() (the underlying pub/sub singleton, not just the router) is called in-process by section7.py, cryptex/threat_detector.py, and research/section7.py; workers/infinity-ws/ has no REST pub/sub surface to bridge to yet, only a health check + raw WebSocket handling"
+      "classification": "bridged",
+      "reason": "BRIDGED (not pending): src.nexus.hub.get_nexus() (the underlying pub/sub singleton, not just the router) is called in-process by section7.py, cryptex/threat_detector.py, and research/section7.py, so the router mount is genuinely load-bearing and can't just be unmounted. But it is already fanned out to workers/infinity-ws/: NexusHub.publish() -> _forward_to_ws_hub() -> POST {worker}/broadcast (fire-and-forget, capped in-flight concurrency, never blocks publish()), and the worker's POST /broadcast (workers/infinity-ws/worker.py) delivers it to WebSocket subscribers of that channel. An earlier pass of this table incorrectly claimed the worker had 'no REST pub/sub surface to bridge to yet' \u2014 it does, and has since before this table existed (see git blame on the /broadcast route)."
     },
     {
       "id": "router:_matrix_suites_router",
@@ -686,8 +687,8 @@
       "type": "router",
       "label": "src.townhall.routes",
       "mounted": true,
-      "classification": "needs_modularization",
-      "reason": "VERIFIED NOT EQUIVALENT: this router is a policy/compliance check engine; workers/cranbania/ (the same-named 'worker') is a completely different product \u2014 a Kanban/ITSM board with 40+ MCP tools and zero policy-check endpoints. Real caller: research/section7.py"
+      "classification": "confirmed_separate_features",
+      "reason": "CONFIRMED SEPARATE FEATURES: this router is a policy/compliance check engine (GDPR/UK-GDPR/PRINCE2/ITIL4/Zero-Cost policies); workers/cranbania/ (the same-named 'worker') is a completely different product \u2014 a Next.js/TypeScript Kanban/ITSM board with 40+ MCP tools and zero policy-check endpoints, not even the same language/runtime to bridge to. Real caller: research/section7.py, already in-process and already wrapped in try/except (degrades to a debug log, not a hard failure) \u2014 no network hop, so no fail-open/fail-closed question exists here the way it does for basement/cryptex/billing. Same 'same name, different function' pattern as admin_os/search_api/section7 \u2014 see CONFIRMED_SEPARATE_FEATURES in MONOLITH-EXTRACTION-FINDINGS.md."
     },
     {
       "id": "router:_library_router",
@@ -695,7 +696,7 @@
       "label": "src.library.routes",
       "mounted": true,
       "classification": "needs_modularization",
-      "reason": "real in-process callers: section7/information_router.py, observability/library_pipeline.py, models/knowledge.py, event_bus/wiring.py"
+      "reason": "real in-process callers (synchronous .create()/.by_tag() writes/reads on the singleton, not just router imports): section7/information_router.py, observability/library_pipeline.py, models/knowledge.py, event_bus/wiring.py. Also VERIFIED NOT A SAFE SUPERSET SWAP: this router's src/library/knowledge_base.py Article model carries a DataClassification (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED/TOP_SECRET) enforced by routes.py's _can_read() \u2014 RESTRICTED/TOP_SECRET articles require admin or matching author \u2014 plus author and retention_days. workers/library-service/ is a generic pluggable wiki-backend facade (Outline/BookStack/WikiJS/Gollum/DokuWiki/MkDocs/Gitea/TiddlyWiki) with no classification/author/retention concept and no per-caller authorization at all (only a shared X-Internal-Secret). Bridging in-process writes to it as-is would silently drop that access-control layer, same class of regression as the reverted Resonate removal \u2014 needs a decision (extend the worker's model first, or accept these stay separate) before any bridge, not a plain client wrapper."
     },
     {
       "id": "router:_basement_router",
@@ -1768,12 +1769,12 @@
     {
       "source": "router:_nexus_router",
       "target": "worker:infinity-ws",
-      "kind": "needs_modularization"
+      "kind": "bridged"
     },
     {
       "source": "router:_townhall_router",
       "target": "worker:cranbania",
-      "kind": "needs_modularization"
+      "kind": "confirmed_separate_features"
     },
     {
       "source": "router:_library_router",
