@@ -111,6 +111,9 @@ jobs:
       - name: Port registry validate (CLAUDE.md vs compose)
         run: python3 scripts/port_registry_validate.py
 
+      - name: Duplicate router guard (api.py vs deployed workers)
+        run: python3 scripts/check_duplicate_routers.py
+
       # The compose-config step below proves the *schema* is valid using synthesised
       # placeholder values. It deliberately says nothing about whether the real
       # generator can produce those values — and it could not: 47 of 53 required
