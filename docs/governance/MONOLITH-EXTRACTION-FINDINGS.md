@@ -13,7 +13,7 @@ Dockerfile, in `docker-compose.production.yml` — see CLAUDE.md's Self-Hosted W
 
 That assumption was wrong for most of them. Cross-referencing all `src/<name>/` modules mounted
 in `api.py` against `workers/` showed that **the real extraction already happened for nearly every
-one of them** — a substantial (380–1400+ line), genuinely more capable, already-deployed
+one of them** — a substantial (380–1400+ lines), genuinely more capable, already-deployed
 (`docker-compose.production.yml`) standalone worker exists at the port CLAUDE.md's own worker map
 already reserves. The actual problem isn't "not yet extracted" — it's that the *old* in-process
 router was never removed from `api.py` after the real extraction shipped, leaving two live
