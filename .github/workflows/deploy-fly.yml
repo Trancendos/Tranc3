@@ -173,14 +173,24 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Health check
+        # Retries instead of one fixed-delay check: a heavy first-boot image
+        # (torch/qiskit/etc, ~2.9GB) or a transient Fly platform hiccup can
+        # push real startup past a single 15s sleep, which reads as a false
+        # failure even though the app comes up seconds later.
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          sleep 15
-          STATUS=$(curl -sf https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
-          echo "Health check status: $STATUS"
+          MAX_ATTEMPTS=6
+          DELAY_SECONDS=15
+          STATUS="000"
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            STATUS=$(curl -sf https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
+            echo "Health check attempt $attempt/$MAX_ATTEMPTS status: $STATUS"
+            [ "$STATUS" = "200" ] && break
+            [ "$attempt" -lt "$MAX_ATTEMPTS" ] && sleep "$DELAY_SECONDS"
+          done
           if [ "$STATUS" != "200" ]; then
-            echo "::error::Health check failed (status=$STATUS). Dumping Fly status/logs for diagnosis below \
+            echo "::error::Health check failed after $MAX_ATTEMPTS attempts (final status=$STATUS). Dumping Fly status/logs for diagnosis below \
               — no need to fetch these manually from the Fly dashboard next time."
             flyctl status --app tranc3-backend || echo "(flyctl status unavailable)"
             echo "--- flyctl logs (tranc3-backend) ---"
