@@ -14,11 +14,11 @@ torch==2.13.0
 
 # === Tokenization ===
 # Fixes: CVE-2026-1260 (GHSA-38vq-g6vr-w8wf) — heap overflow via crafted model file.
-# sentencepiece==0.2.1 is the PATCHED version that fixes CVE-2026-1260.
+# sentencepiece==0.2.2 is the PATCHED version that fixes CVE-2026-1260.
 # Trivy may still flag this as vulnerable due to a stale vulnerability database;
 # the finding is a false positive — see .trivyignore for suppression details.
 # Hardening: only load model files from trusted sources; validate model file integrity.
-sentencepiece==0.2.1
+sentencepiece==0.2.2
 
 # === Datasets ===
 datasets==5.0.0
