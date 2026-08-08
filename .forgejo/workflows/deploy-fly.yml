@@ -72,12 +72,17 @@ jobs:
           fi
 
       - name: Validate required deploy secrets
-        # Mirrors src/core/startup_validator.py's hard-fail checks (SECRET_KEY,
-        # JWT_SECRET >= 32 chars; DATABASE_URL, REDIS_URL non-empty; REDIS_URL
-        # scheme). `flyctl secrets set` happily accepts an empty/malformed
-        # value with no error — the app then only fails at runtime, minutes
-        # later, as a bare 503 with no indication why. Catch it here instead,
-        # with a readable message, before anything is deployed.
+        # Mirrors both src/core/startup_validator.py's hard-fail checks
+        # (SECRET_KEY, JWT_SECRET >= 32 chars; DATABASE_URL, REDIS_URL
+        # non-empty; REDIS_URL scheme) AND src/core/config.py's
+        # Tranc3Config field_validators, which additionally reject the
+        # known dev placeholder strings and whitespace-only values even
+        # when they're long enough to pass the length check alone.
+        # `flyctl secrets set` happily accepts an empty/placeholder/
+        # malformed value with no error — the app then only fails at
+        # runtime, minutes later, as a bare 503 with no indication why.
+        # Catch it here instead, with a readable message, before anything
+        # is deployed.
         env:
           IN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
           IN_JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -86,17 +91,21 @@ jobs:
         run: |
           fail=0
           check_len() {
-            name="$1"; val="$2"; min="$3"
-            if [ -z "$val" ]; then
-              echo "::error::$name is not set (or empty) in The Workshop's org/repo secrets (Settings > Actions > Secrets)."
+            name="$1"; val="$2"; min="$3"; placeholder="$4"
+            trimmed="$(echo "$val" | tr -d '[:space:]')"
+            if [ -z "$trimmed" ]; then
+              echo "::error::$name is not set (or empty/whitespace-only) in The Workshop's org/repo secrets (Settings > Actions > Secrets)."
               fail=1
             elif [ "${#val}" -lt "$min" ]; then
               echo "::error::$name is set but shorter than $min characters — startup_validator.py rejects this in production."
               fail=1
+            elif [ -n "$placeholder" ] && [ "$val" = "$placeholder" ]; then
+              echo "::error::$name is still set to the dev placeholder value ('$placeholder') — config.py's field_validator rejects this in production. Set a real generated secret."
+              fail=1
             fi
           }
-          check_len SECRET_KEY "$IN_SECRET_KEY" 32
-          check_len JWT_SECRET "$IN_JWT_SECRET" 32
+          check_len SECRET_KEY "$IN_SECRET_KEY" 32 "dev-secret-key-change-in-production"
+          check_len JWT_SECRET "$IN_JWT_SECRET" 32 "dev-jwt-secret-change-in-production"
           if [ -z "$IN_DATABASE_URL" ]; then
             echo "::error::DATABASE_URL is not set (or empty) in secrets."
             fail=1
