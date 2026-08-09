@@ -16,6 +16,12 @@
 # so a burst can't accumulate unbounded tasks/sockets), fire-and-forget
 # asyncio.create_task(), never raises, never blocks the caller.
 
+# Hardening pass (post-implementation, same 2026-08-08 decision): a
+# CircuitBreaker skips even *scheduling* a forward once the worker has been
+# consistently unreachable, so a sustained outage doesn't leave a stream of
+# doomed connection attempts (and debug-log lines) piling up behind every
+# audit event — it self-probes back to closed once the worker recovers.
+
 from __future__ import annotations
 
 import asyncio
@@ -25,6 +31,8 @@ from typing import Any
 
 from Dimensional.sanitize import sanitize_for_log
 
+from src.mesh.circuit_breaker import CircuitBreaker
+
 logger = logging.getLogger(__name__)
 
 _BASEMENT_URL = os.environ.get("BASEMENT_URL", "http://basement:8068")
@@ -33,15 +41,20 @@ _BASEMENT_INTERNAL_SECRET = os.environ.get("BASEMENT_INTERNAL_SECRET", "")
 _FORWARD_CONCURRENCY = int(os.environ.get("BASEMENT_FORWARD_CONCURRENCY", "10"))
 _forward_inflight = 0
 
+_circuit = CircuitBreaker("basement")
+
 
 def forward_event(event: Any) -> None:
     """Schedule a fire-and-forget durable-archive write for an AuditEvent.
 
-    No-op if there's no running event loop (e.g. a sync test context) or if
-    the in-flight cap is already reached — matches the fail-open contract:
-    a skipped forward is silent, not an error.
+    No-op if there's no running event loop (e.g. a sync test context), the
+    in-flight cap is already reached, or the circuit breaker is open —
+    matches the fail-open contract: a skipped forward is silent, not an
+    error.
     """
     global _forward_inflight
+    if not _circuit.can_execute():
+        return
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -86,7 +99,9 @@ async def _post_archive(event: Any) -> None:
                 headers=headers,
             )
             response.raise_for_status()
+        _circuit.record_success()
     except Exception as exc:
+        _circuit.record_failure()
         # sanitize_for_log() strips CR/LF, but CodeQL's py/log-injection
         # query doesn't trace that across the module boundary — inline
         # .replace() too so the barrier is visible to it directly (same

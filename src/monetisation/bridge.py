@@ -32,6 +32,15 @@
 #      product decision, 2026-08-08: fail-open.
 #    Unlimited tiers (req_per_hour == -1, e.g. enterprise) skip the remote
 #    call entirely — there's nothing to enforce.
+#
+# Hardening pass (post-implementation, same 2026-08-08 decision): this is the
+# highest-request-volume of the four bridges, so a plain "try then timeout"
+# would mean every request pays up to _REQUEST_TIMEOUT_SECONDS of dead time
+# during a sustained rate-limit-service outage. A src/mesh/ CircuitBreaker
+# closes that gap — after a run of consecutive failures it opens and every
+# subsequent call skips the network attempt entirely (straight to the local
+# fallback, zero added latency) until its reset timeout elapses, then
+# self-probes back to closed. No manual re-enable needed.
 
 from __future__ import annotations
 
@@ -41,6 +50,8 @@ from typing import Dict
 
 from Dimensional.sanitize import sanitize_for_log
 
+from src.mesh.circuit_breaker import CircuitBreaker
+from src.mesh.types import CircuitBreakerConfig
 from src.monetisation.billing import TIERS, enforcer
 
 logger = logging.getLogger(__name__)
@@ -50,6 +61,13 @@ _RATE_LIMIT_INTERNAL_SECRET = os.environ.get("RATE_LIMIT_SERVICE_INTERNAL_SECRET
 _REQUEST_TIMEOUT_SECONDS = float(os.environ.get("RATE_LIMIT_SERVICE_TIMEOUT_SECONDS", "0.5"))
 
 _POLICY_PREFIX = "billing-"
+
+# Opens after 5 consecutive failures, self-probes back to closed after 15s —
+# shorter than the mesh default (30s) since this gates live request traffic
+# and should recover fast once the worker is back.
+_circuit = CircuitBreaker(
+    "rate-limit-service", config=CircuitBreakerConfig(failure_threshold=5, reset_timeout_ms=15_000)
+)
 
 
 def _policy_name(tier: str) -> str:
@@ -113,7 +131,7 @@ async def check_and_increment_durable(user_id: str, tier: str = "free") -> Dict:
     limits = TIERS.get(tier, TIERS["free"])
     hourly = limits.get("req_per_hour", 100)
 
-    if hourly is not None and hourly != -1:
+    if hourly is not None and hourly != -1 and _circuit.can_execute():
         try:
             import httpx
 
@@ -127,13 +145,18 @@ async def check_and_increment_durable(user_id: str, tier: str = "free") -> Dict:
                 # The worker made a considered, reachable decision — honor
                 # it. This is not the fail-open path; the worker is up and
                 # working correctly.
+                _circuit.record_success()
                 raise ValueError(f"Hourly rate limit exceeded ({hourly} req/hr for {tier})")
             response.raise_for_status()
+            _circuit.record_success()
         except ValueError:
             raise
         except Exception as exc:
             # Worker unreachable/erroring/timed out — fail open, fall
-            # through to the local in-process check below.
+            # through to the local in-process check below. Also counts
+            # toward the circuit breaker so a sustained outage stops paying
+            # the request-timeout cost on every single call.
+            _circuit.record_failure()
             logger.debug(
                 "monetisation: durable rate-limit check skipped for user=%s tier=%s: %s",
                 sanitize_for_log(user_id),

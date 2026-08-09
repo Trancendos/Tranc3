@@ -268,6 +268,23 @@ All four register their own `URL`/`INTERNAL_SECRET` pair on `tranc3-backend`'s e
 `${INTERNAL_SECRET}` — the same pattern `INFINITY_WS_URL`/`INFINITY_WS_INTERNAL_SECRET` already
 established for the nexus bridge.
 
+**Hardening pass, same session, before merge.** The owner's follow-up ask after "mark them all
+fail-open" was to then audit for hardening/adaptive opportunities rather than leave a bare
+try/except. One gap stood out on inspection: every bridge above retried the worker on every single
+call, with no memory of recent failures — for `monetisation`/billing specifically (by far the
+highest-request-volume of the four, since it runs on `/chat` and `/chat/stream`), that means a
+sustained `rate-limit-service` outage would cost every request the full request timeout before
+falling back, for as long as the outage lasted. Fixed by giving each bridge its own
+`src/mesh/circuit_breaker.py` `CircuitBreaker` instance (the platform's existing, already-available
+primitive for exactly this — zero-cost, pure Python, no new dependency): after a run of consecutive
+failures the breaker opens and the bridge stops even attempting the network call — straight to the
+local fallback — until a reset timeout elapses, then it self-probes back to closed. Billing uses a
+tightened 15s reset (default is 30s) since it gates live request latency and should recover fast;
+the other three use the mesh default. This is additive hardening only — the fail-open contract
+itself (worker down never blocks/delays/fails the triggering action) is unchanged; a request during
+an open circuit now just skips the network attempt instead of waiting out a timeout to reach the
+same fallback.
+
 ### CONFIRMED_SEPARATE_FEATURES (2026-08-08, follow-up pass — decided, not open questions)
 
 Same "two sources of truth by name only" trap as Resonate/I-Mind, but resolved rather than left

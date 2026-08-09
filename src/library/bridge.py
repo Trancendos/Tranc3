@@ -19,6 +19,11 @@
 # this bridge only adds a second, durable write for content that was never
 # access-restricted in the first place.
 
+# Hardening pass (post-implementation, same 2026-08-08 decision): a
+# CircuitBreaker skips even *scheduling* a forward once the worker has been
+# consistently unreachable, avoiding a pile-up of doomed connection attempts
+# during a sustained outage — self-probes back to closed once recovered.
+
 from __future__ import annotations
 
 import asyncio
@@ -27,6 +32,8 @@ import os
 from typing import Any
 
 from Dimensional.sanitize import sanitize_for_log
+
+from src.mesh.circuit_breaker import CircuitBreaker
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +45,21 @@ _FORWARDABLE_CLASSIFICATIONS = frozenset({"public", "internal", "confidential"})
 _FORWARD_CONCURRENCY = int(os.environ.get("LIBRARY_FORWARD_CONCURRENCY", "10"))
 _forward_inflight = 0
 
+_circuit = CircuitBreaker("library-service")
+
 
 def forward_article(article: Any) -> None:
     """Schedule a fire-and-forget durable-store write for a newly-created
     Article. Skipped entirely (not just redacted) for RESTRICTED/TOP_SECRET
-    content — see module docstring. No-op if there's no running event loop
-    or the in-flight cap is already reached.
+    content — see module docstring. No-op if there's no running event loop,
+    the in-flight cap is already reached, or the circuit breaker is open.
     """
     global _forward_inflight
     classification = getattr(article, "classification", None)
     classification_value = getattr(classification, "value", str(classification))
     if classification_value not in _FORWARDABLE_CLASSIFICATIONS:
+        return
+    if not _circuit.can_execute():
         return
     try:
         loop = asyncio.get_running_loop()
@@ -87,7 +98,9 @@ async def _post_document(article: Any) -> None:
                 headers=headers,
             )
             response.raise_for_status()
+        _circuit.record_success()
     except Exception as exc:
+        _circuit.record_failure()
         safe_id = str(getattr(article, "id", "")).replace("\r", "").replace("\n", "")
         logger.debug(
             "library: durable document forward skipped (article_id=%s): %s",

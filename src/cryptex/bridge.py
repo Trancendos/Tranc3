@@ -25,6 +25,11 @@
 # per-process Cryptex check remains the sole gate, exactly as it behaved
 # before this bridge existed. `is_blocked()` itself is never modified to
 # call out over the network; it stays a pure in-memory set lookup.
+#
+# Hardening pass (post-implementation, same 2026-08-08 decision): a shared
+# CircuitBreaker gates both the sync loop and the forward path so a
+# sustained outage stops attempting doomed connections on schedule and
+# self-probes back to closed once the worker recovers.
 
 from __future__ import annotations
 
@@ -33,6 +38,8 @@ import logging
 import os
 
 from Dimensional.sanitize import sanitize_for_log
+
+from src.mesh.circuit_breaker import CircuitBreaker
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +51,8 @@ _FORWARD_CONCURRENCY = int(os.environ.get("CRYPTEX_FORWARD_CONCURRENCY", "10"))
 _forward_inflight = 0
 
 _sync_task: "asyncio.Task | None" = None
+
+_circuit = CircuitBreaker("cryptex")
 
 
 def _headers() -> dict:
@@ -61,12 +70,15 @@ async def start_background_sync() -> None:
 
 async def _sync_loop() -> None:
     while True:
-        try:
-            await _sync_once()
-        except Exception as exc:
-            logger.debug(
-                "cryptex: background IOC sync skipped: %s", sanitize_for_log(exc)
-            )  # codeql[py/cleartext-logging]
+        if _circuit.can_execute():
+            try:
+                await _sync_once()
+                _circuit.record_success()
+            except Exception as exc:
+                _circuit.record_failure()
+                logger.debug(
+                    "cryptex: background IOC sync skipped: %s", sanitize_for_log(exc)
+                )  # codeql[py/cleartext-logging]
         await asyncio.sleep(_SYNC_INTERVAL_SECONDS)
 
 
@@ -99,6 +111,8 @@ def forward_block_ip(ip: str, reason: str = "") -> None:
     other processes pick it up on their next sync. Fail-open — never raises,
     never blocks the caller."""
     global _forward_inflight
+    if not _circuit.can_execute():
+        return
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -128,7 +142,9 @@ async def _post_block(ip: str, reason: str) -> None:
                 headers=_headers(),
             )
             response.raise_for_status()
+        _circuit.record_success()
     except Exception as exc:
+        _circuit.record_failure()
         safe_ip = str(ip).replace("\r", "").replace("\n", "")
         logger.debug(
             "cryptex: block-ip forward skipped (ip=%s): %s",
