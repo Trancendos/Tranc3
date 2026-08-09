@@ -104,13 +104,21 @@ NO_WORKER_EXISTS: dict[str, str] = {
 # regression-safety (so a future PR can't unmount one silently), but their
 # recorded reasons resolve to something more specific than a still-open
 # "needs_modularization" decision — reclassify here rather than lumping them
-# in with genuine pending candidates like Resonate/Cryptex/Basement.
+# in with genuine pending candidates like Resonate/I-Mind (the only two
+# still open — see BRIDGES_IMPLEMENTED in MONOLITH-EXTRACTION-FINDINGS.md).
 GUARD_COUPLED_RECLASSIFY: dict[str, str] = {
     "_turingshub_router": "core_load_bearing",
     # Genuinely coupled (in-process singleton has real callers, router can't
     # be unmounted) *and* already has a working HTTP bridge to its worker —
     # neither "still needs a decision" nor "confirmed permanently separate".
     "_nexus_router": "bridged",
+    # Newly bridged in the 2026-08-08 remediation pass, fail-open by
+    # explicit owner decision — see BRIDGES_IMPLEMENTED in
+    # MONOLITH-EXTRACTION-FINDINGS.md for what each bridge actually does.
+    "_basement_router": "bridged",
+    "_cryptex_router": "bridged",
+    "_billing_router": "bridged",
+    "_library_router": "bridged",
     # Each of these three has zero live in-process caller and a gap to its
     # same-named worker too large to call "unfinished" — search_api's is an
     # entire vector-DB stack, admin_os's and section7's are different

@@ -117,6 +117,18 @@ class Library:
             sanitize_for_log(title),
         )  # codeql[py/cleartext-logging]
         self._emit_observatory_event(art, "article.created")
+
+        # Durably persist to workers/library-service/ so non-restricted
+        # content survives a process restart — the in-process Library
+        # singleton above is memory-only. Fail-open, and deliberately never
+        # forwards RESTRICTED/TOP_SECRET content (see src/library/bridge.py).
+        try:
+            from src.library.bridge import forward_article
+
+            forward_article(art)
+        except Exception:
+            pass  # nosec B110 — graceful degradation; fail-open by design
+
         return art
 
     def get(self, article_id: str) -> Optional[Article]:

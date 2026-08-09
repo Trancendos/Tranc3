@@ -400,6 +400,14 @@ services:
       - HF_API_KEY=${HF_API_KEY:-}
       - INFINITY_WS_URL=http://infinity-ws:8004
       - INFINITY_WS_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - BASEMENT_URL=http://basement:8068
+      - BASEMENT_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - CRYPTEX_URL=http://cryptex:8053
+      - CRYPTEX_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - RATE_LIMIT_SERVICE_URL=http://rate-limit-service:8026
+      - RATE_LIMIT_SERVICE_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - LIBRARY_SERVICE_URL=http://library-service:8067
+      - LIBRARY_SERVICE_INTERNAL_SECRET=${INTERNAL_SECRET}
     ports:
       - "8000:8000"
     volumes:

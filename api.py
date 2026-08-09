@@ -111,6 +111,9 @@ from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-leve
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
 )
+from src.monetisation.bridge import (
+    check_and_increment_durable,  # noqa: F401  # intentional top-level import
+)
 from src.observability.metrics import (  # noqa: F401  # intentional top-level import
     log,
     record_churn_risk,
@@ -510,6 +513,22 @@ async def lifespan(app: FastAPI):
         logger.info("Infinity Admin OS auto-backup scheduler started")
     except Exception as _ab_exc:
         logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
+
+    try:
+        from src.cryptex.bridge import start_background_sync as _start_cryptex_sync
+
+        await _start_cryptex_sync()
+        logger.info("Cryptex IOC background sync started (fail-open, %ss interval)", 30)
+    except Exception as _cx_exc:
+        logger.warning("Cryptex IOC background sync unavailable: %s", sanitize_for_log(_cx_exc))
+
+    try:
+        from src.monetisation.bridge import ensure_tier_policies as _ensure_tier_policies
+
+        await _ensure_tier_policies()
+        logger.info("Billing tier rate-limit policies seeded on rate-limit-service (fail-open)")
+    except Exception as _bl_exc:
+        logger.warning("Billing tier policy seeding unavailable: %s", sanitize_for_log(_bl_exc))
 
     # Event Bus wiring — Observatory → EventBus → Library/ThinkTank/Search/Sentinel
     try:
@@ -1655,7 +1674,7 @@ async def chat(
 
     # Rate limiting
     try:
-        tier_enforcer.check_and_increment(user_id, tier)
+        await check_and_increment_durable(user_id, tier)
     except ValueError as e:
         raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
 
@@ -1911,7 +1930,7 @@ async def chat_stream(
 
     try:
         InputSanitizer.sanitize(chat_req.message)
-        tier_enforcer.check_and_increment(user_id, tier)
+        await check_and_increment_durable(user_id, tier)
     except ValueError as e:
         raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
     except Exception as e:

@@ -1,6 +1,6 @@
 {
   "summary": {
-    "generated_at": "2026-08-08T19:25:18.121805+00:00",
+    "generated_at": "2026-08-09T07:42:25.967874+00:00",
     "total_nodes": 227,
     "total_edges": 111,
     "locations": 43,
@@ -8,9 +8,9 @@
     "deployed_services": 88,
     "mounted_routers": 35,
     "matrix_suites": 8,
-    "needs_modularization": 6,
+    "needs_modularization": 2,
     "confirmed_separate_features": 4,
-    "bridged": 1,
+    "bridged": 5,
     "unreasoned_duplicate_risk": 0,
     "core_load_bearing": 11,
     "no_worker_exists": 7,
@@ -695,16 +695,16 @@
       "type": "router",
       "label": "src.library.routes",
       "mounted": true,
-      "classification": "needs_modularization",
-      "reason": "real in-process callers (synchronous .create()/.by_tag() writes/reads on the singleton, not just router imports): section7/information_router.py, observability/library_pipeline.py, models/knowledge.py, event_bus/wiring.py. Also VERIFIED NOT A SAFE SUPERSET SWAP: this router's src/library/knowledge_base.py Article model carries a DataClassification (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED/TOP_SECRET) enforced by routes.py's _can_read() \u2014 RESTRICTED/TOP_SECRET articles require admin or matching author \u2014 plus author and retention_days. workers/library-service/ is a generic pluggable wiki-backend facade (Outline/BookStack/WikiJS/Gollum/DokuWiki/MkDocs/Gitea/TiddlyWiki) with no classification/author/retention concept and no per-caller authorization at all (only a shared X-Internal-Secret). Bridging in-process writes to it as-is would silently drop that access-control layer, same class of regression as the reverted Resonate removal \u2014 needs a decision (extend the worker's model first, or accept these stay separate) before any bridge, not a plain client wrapper."
+      "classification": "bridged",
+      "reason": "BRIDGED 2026-08-08 (write-path only, by design): real in-process callers (synchronous .create()/.by_tag() writes/reads on the singleton, not just router imports): section7/information_router.py, observability/library_pipeline.py, models/knowledge.py, event_bus/wiring.py. VERIFIED NOT A SAFE SUPERSET SWAP for reads: this router's src/library/knowledge_base.py Article model carries a DataClassification (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED/TOP_SECRET) enforced by routes.py's _can_read() \u2014 RESTRICTED/TOP_SECRET articles require admin or matching author \u2014 plus author and retention_days. workers/library-service/ is a generic pluggable wiki-backend facade with no classification/author/retention concept and no per-caller authorization at all (only a shared X-Internal-Secret), so reads are NOT bridged and never will be without that gap being closed first. What IS bridged: src/library/bridge.py fire-and-forget forwards newly-created PUBLIC/INTERNAL/CONFIDENTIAL articles only (RESTRICTED/TOP_SECRET are never sent, regardless of reachability) to workers/library-service/'s POST /library/documents for durability. Fail-open: a forward failure never blocks the write."
     },
     {
       "id": "router:_basement_router",
       "type": "router",
       "label": "src.basement.routes",
       "mounted": true,
-      "classification": "needs_modularization",
-      "reason": "src/observability/observatory.py calls get_basement() synchronously on the SECURITY/CRITICAL audit path \u2014 needs an HTTP bridge with explicit failure semantics before unmounting"
+      "classification": "bridged",
+      "reason": "BRIDGED 2026-08-08: src/observability/observatory.py still calls get_basement() synchronously in-process (SECURITY/CRITICAL audit path \u2014 genuinely load-bearing, router stays mounted), but now also fire-and-forget forwards the same event to workers/basement/'s POST /archive via src/basement/bridge.py, so it durably survives a restart. Fail-open by explicit owner decision: a forward failure is logged at debug and never blocks the audit write."
     },
     {
       "id": "router:_admin_os_router",
@@ -719,8 +719,8 @@
       "type": "router",
       "label": "src.cryptex.routes",
       "mounted": true,
-      "classification": "needs_modularization",
-      "reason": "real in-process callers: section7/information_router.py, mcp/server.py, security/middleware.py"
+      "classification": "bridged",
+      "reason": "BRIDGED 2026-08-08: real in-process callers remain (section7/information_router.py, mcp/server.py, security/middleware.py \u2014 is_blocked()/analyse_request() stay pure in-memory, zero request-latency change). src/cryptex/bridge.py adds a background sync (pulls workers/cryptex/'s IOC list into the local block-set every 30s) plus a fire-and-forget forward on block_ip(), so a block set by one process becomes visible to every process instead of staying stuck in one process's memory. Fail-open: a sync or forward failure never affects request handling."
     },
     {
       "id": "router:_section7_router",
@@ -903,8 +903,8 @@
       "type": "router",
       "label": "src.monetisation.router",
       "mounted": true,
-      "classification": "needs_modularization",
-      "reason": "api.py calls tier_enforcer.check_and_increment() synchronously on live request-handling paths (per-request tier/rate enforcement, not just the /billing endpoints) \u2014 workers/payments-service/ is a near-empty health-only stub; workers/ledger-service/ exists but implements a different feature (double-entry accounting ledger, not Stripe/subscription billing)"
+      "classification": "bridged",
+      "reason": "BRIDGED 2026-08-08 \u2014 and to a different worker than earlier passes of this table assumed: workers/payments-service/ was never a rate-limit stub, it's 'Royal Bank of Arcadia' (accounts/ledger/transfers/deposits/AUM) \u2014 a real, fully-built, unrelated banking worker, same 'same name/entity, different function' trap as resonate/imind. workers/ledger-service/ is likewise a different feature (double-entry accounting, not Stripe/subscription billing). The actual right bridge target, already fully built and deployed: workers/rate-limit-service/ (token-bucket policy engine). api.py's two call sites now `await src.monetisation.bridge.check_and_increment_durable(...)`, which tries the worker's POST /check with a tight 0.5s timeout and falls back to the pre-existing, purely local TierEnforcer.check_and_increment() on any failure \u2014 fail-open by explicit owner decision. A reachable worker's 429 is still honored as a real deny, not treated as a failure."
     },
     {
       "id": "router:_models_router",
@@ -1779,12 +1779,12 @@
     {
       "source": "router:_library_router",
       "target": "worker:library-service",
-      "kind": "needs_modularization"
+      "kind": "bridged"
     },
     {
       "source": "router:_basement_router",
       "target": "worker:basement",
-      "kind": "needs_modularization"
+      "kind": "bridged"
     },
     {
       "source": "router:_admin_os_router",
@@ -1794,7 +1794,7 @@
     {
       "source": "router:_cryptex_router",
       "target": "worker:cryptex",
-      "kind": "needs_modularization"
+      "kind": "bridged"
     },
     {
       "source": "router:_section7_router",
@@ -1824,7 +1824,7 @@
     {
       "source": "router:_billing_router",
       "target": "worker:payments-service",
-      "kind": "needs_modularization"
+      "kind": "bridged"
     },
     {
       "source": "removed:src.taimra.routes",

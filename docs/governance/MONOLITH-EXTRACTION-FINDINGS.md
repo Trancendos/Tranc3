@@ -3,15 +3,18 @@
 **Status:** 7 confirmed-safe removals shipped in this pass. An 8th (`src/resonate/`) was reverted
 after review — see below. A second-pass sweep classified every remaining module that was still
 mounted in `api.py`, and a follow-up pass then resolved 3 of those from open questions into
-decided pairings: **7 still need a deliberate design decision** (HTTP bridge, or a product call on
-Resonate/I-Mind — down from 11), **1 is already bridged** (`src/nexus/` — see `BRIDGED`, discovered
-while starting the remediation pass on the still-open 8; it was never actually blocked, an earlier
-pass of this sweep just hadn't read `hub.py`'s forward path before writing the worker off as
-health-check-only), **3 are confirmed permanently-separate features** with zero risk either way
-(`search_api`, `admin_os`, `section7` reports — see `CONFIRMED_SEPARATE_FEATURES`), 10 are
-genuinely core/load-bearing with no nanoservice counterpart, 6 have no worker to compare against
-yet, and 1 (`src/section7/`, the package — not to be confused with `_section7_router` above) turned
-out not to be a router at all. Nothing below was silently resolved.
+decided pairings, followed by a remediation pass (2026-08-08, after the owner made an explicit
+fail-open call — see `BRIDGES_IMPLEMENTED` below) that built working HTTP bridges for 4 more:
+**only 2 still need a deliberate product decision** (Resonate/I-Mind — down from 11, and both are
+"does the worker need to gain a missing feature" calls, not engineering work), **5 are bridged**
+(`src/nexus/` was found already-bridged while starting this pass — see `BRIDGED` — and
+`src/basement/`, `src/cryptex/`, `src/monetisation/` (billing), `src/library/` were newly bridged
+this same pass, all fail-open by the owner's explicit 2026-08-08 decision — see
+`BRIDGES_IMPLEMENTED`), **4 are confirmed permanently-separate features** with zero risk either way
+(`search_api`, `admin_os`, `section7` reports, `townhall` — see `CONFIRMED_SEPARATE_FEATURES`), 10
+are genuinely core/load-bearing with no nanoservice counterpart, 6 have no worker to compare
+against yet, and 1 (`src/section7/`, the package — not to be confused with `_section7_router`
+above) turned out not to be a router at all. Nothing below was silently resolved.
 `scripts/check_duplicate_routers.py` (wired into `production-gate.yml` in both `.github/workflows/`
 and `.forgejo/workflows/`) guards all 11 tracked items (both the 8 still-open and the 3 decided)
 against being unmounted without a fresh check — see its module docstring for what it does and,
@@ -102,12 +105,13 @@ they now point at the real worker paths. Resonate's row was reverted back to "In
   escalation endpoints into the worker (and fix the Traefik prefix), or keep the monolith router
   as the long-term home for escalation and let the worker own scoring only. Left mounted in
   `api.py` until that call is made.
-- **`src/basement/`** — real in-process caller (`observatory.py`, security-critical path, see
-  above). `workers/basement/` (427 lines, in compose) exists and is presumably the intended
-  target, but wiring Observatory to it needs an actual HTTP client call with retry/circuit-breaker
-  (the platform already has `src/mesh/` Service Mesh for exactly this) plus a decision on what
-  happens to a SECURITY event if that call fails — buffer-and-retry, local fallback write, or
-  accept the small window. Not something to change without that design call made explicitly.
+- **`src/basement/`** — **BRIDGED 2026-08-08, see `BRIDGES_IMPLEMENTED`.** Real in-process caller
+  (`observatory.py`, security-critical path, see above). `workers/basement/` (427 lines, in
+  compose) exists and is presumably the intended target, but wiring Observatory to it needs an
+  actual HTTP client call with retry/circuit-breaker (the platform already has `src/mesh/` Service
+  Mesh for exactly this) plus a decision on what happens to a SECURITY event if that call fails —
+  buffer-and-retry, local fallback write, or accept the small window. Not something to change
+  without that design call made explicitly.
 - **`src/imind/`** — **CORRECTED after the second-pass sweep below: NOT safe to unmount, in any
   form.** `workers/imind/` (542 lines, in compose) does generic sentiment/emotion scoring
   (`dominant_emotion`, `polarity`, `confidence`). `src/imind/protocol.py`'s `assess()` — what
@@ -116,11 +120,12 @@ they now point at the real worker paths. Resonate's row was reverted back to "In
   router would silently remove a safeguarding feature, not delete a duplicate. This is the same
   mistake class as Resonate, on a feature where the stakes are much higher. `src/tranquility/wellbeing.py`
   also imports `src.imind.protocol` directly, independent of the router.
-- **`src/cryptex/`** — real in-process callers: `section7/information_router.py`,
-  `mcp/server.py`, `security/middleware.py`. `workers/cryptex/` (1078 lines, in compose) exists.
-  Security-tooling code with multiple live callers — needs the same careful HTTP-bridge treatment
-  as Basement, not a mechanical unmount.
-- **`src/library/`** — real in-process callers (synchronous `.create()`/`.by_tag()` writes/reads on
+- **`src/cryptex/`** — **BRIDGED 2026-08-08, see `BRIDGES_IMPLEMENTED`.** Real in-process callers:
+  `section7/information_router.py`, `mcp/server.py`, `security/middleware.py`.
+  `workers/cryptex/` (1078 lines, in compose) exists. Security-tooling code with multiple live
+  callers — needs the same careful HTTP-bridge treatment as Basement, not a mechanical unmount.
+- **`src/library/`** — **BRIDGED 2026-08-08 (write-path only — see `BRIDGES_IMPLEMENTED`).** Real
+  in-process callers (synchronous `.create()`/`.by_tag()` writes/reads on
   the singleton, not just imports of the router): `section7/information_router.py`,
   `observability/library_pipeline.py`, `models/knowledge.py`, `event_bus/wiring.py`. Four separate
   in-process dependents — the widest fan-in of anything checked in this pass. `workers/library-service/`
@@ -158,18 +163,17 @@ immediately if any of them is ever unmounted without a fresh check.
 
 ### NEEDS_MODULARIZATION (real coupling and/or non-equivalent worker — decision required)
 
-- **`src/monetisation/router.py`** (`_billing_router`, prefix `/billing`) — `api.py` calls
-  `tier_enforcer.check_and_increment()` synchronously on live request-handling paths platform-wide
-  (per-request tier/rate enforcement, not just the `/billing` endpoints — the highest-consequence
-  bridge candidate found, since it gates essentially every rate/tier-limited request).
-  `workers/payments-service/` is a near-empty `/health`-only stub; `workers/ledger-service/`
-  exists but is a double-entry accounting ledger, a different feature from Stripe/subscription
-  billing. Before any change: a fail-open vs. fail-closed decision for tier checks under a
-  payments-service outage, and `payments-service` needs to actually be built out first.
-- **`src/basement/`**, **`src/cryptex/`**, **`src/library/`**, **`src/resonate/`**, **`src/imind/`**
-  — carried forward from the first pass above, all now confirmed by direct route-body comparison
-  rather than import-grep alone (see corrected bullets above). `library`'s bullet was expanded
-  during the 2026-08-08 remediation pass with a specific access-control gap found in its worker.
+Only `resonate` and `imind` remain here — both need a *product* decision (does the worker need to
+gain a missing feature, or does the monolith router stay the long-term home for that feature),
+not an engineering bridge. Everything else that was here — `basement`, `cryptex`, `monetisation`
+(billing), and `library` — was resolved this pass; see `BRIDGES_IMPLEMENTED` below.
+
+- **`src/resonate/`**, **`src/imind/`** — carried forward from the first pass above (see corrected
+  bullets there): both have a same-named worker that is missing a distinct feature (empathy
+  escalation vs. scoring; crisis/self-harm detection vs. generic sentiment scoring), not a partial
+  gap a client wrapper can paper over. Unlike the four bridged this pass, there's no fail-open/
+  fail-closed axis that applies here — the question is whether to build the missing feature into
+  the worker at all, which is a product call, not a reachability-handling one.
 
 ### BRIDGED (2026-08-08, remediation pass — genuinely coupled, and already wired correctly)
 
@@ -195,6 +199,74 @@ immediately if any of them is ever unmounted without a fresh check.
   trusting the prior write-up. `scripts/build_topology_map.py` classifies this as `bridged`
   (distinct from both `needs_modularization` and `confirmed_separate_features`) so the map shows it
   as resolved infrastructure, not an open question.
+
+### BRIDGES_IMPLEMENTED (2026-08-08, remediation pass — owner decision: fail-open)
+
+The owner's explicit direction, once shown the fail-open/fail-closed question for
+basement/cryptex/billing (and library, once its access-control gap surfaced): **mark them all
+fail-open for now**, then audit afterwards for hardening/adaptive opportunities (see the
+`Post-implementation hardening audit` item this unblocks). All four bridges below share the same
+shape: the worker being unreachable never blocks, delays, or fails the request/action that
+triggered it — it only means that one write/check didn't also land durably/globally, and every one
+of them logs that at `debug` level rather than raising.
+
+- **`src/basement/`** — `src/basement/bridge.py` (new). `Observatory.record()` already called
+  `get_basement().ingest_observatory_event(event)` in-process on SECURITY/CRITICAL/retention-
+  tagged/legal-hold events; that stayed unchanged (still the fast, always-available path within
+  this process's lifetime). Added alongside it: a fire-and-forget POST to
+  `workers/basement/`'s `POST /archive` (its SQLite+FTS5-backed durable store), so those events
+  survive a process restart — which the in-memory `Basement` singleton alone cannot do. Same
+  capped-in-flight-concurrency, `asyncio.create_task()`, never-raises pattern as `src/nexus/hub.py`.
+- **`src/cryptex/`** — `src/cryptex/bridge.py` (new). The actual gap here wasn't the *failure*
+  semantics — `security/middleware.py`'s Cryptex scan was already wrapped in a catch-all
+  `except Exception: pass  # never block on Cryptex failure`, i.e. already fail-open at the
+  exception-handling level. The real gap: `Cryptex._blocked_ips` is a plain Python `set()`, private
+  to whichever single backend process handled the request that triggered the block — in a
+  multi-process/multi-replica deployment, a block set by one process was invisible to every other
+  one. Fixed with two mechanisms, both deliberately kept **off** the hot request path so no request
+  latency depends on the worker: (1) a background loop (`start_background_sync()`, started at
+  `api.py` startup) pulls `workers/cryptex/`'s `GET /intel?ioc_type=ip` list into the local
+  `_blocked_ips` set every 30s — a failed pull just skips that cycle, never evicts what's already
+  blocked locally; (2) `Cryptex.block_ip()` (and the auto-mitigation path in `_apply_mitigations()`,
+  now routed through `block_ip()` instead of writing the set directly, so it gets the same
+  treatment) fire-and-forget POSTs the block to `workers/cryptex/`'s `POST /intel/ingest` so every
+  other process picks it up on its next sync. `is_blocked()` itself was **not** changed to make a
+  network call — it stays a pure in-memory lookup, so per-request latency is unaffected either way.
+- **`src/monetisation/`** (billing) — `src/monetisation/bridge.py` (new). **Also corrects a wrong
+  target from the earlier passes of this doc**: `workers/payments-service/` was never a
+  rate-limiting stub waiting to be built out — reading its actual code (`Royal Bank of Arcadia` —
+  accounts/ledger/transfers/deposits/AUM) shows it's a full double-entry banking ledger, a
+  completely different concern from tier/rate-limit enforcement, and was never going to become one.
+  The actual right target was already deployed and fully built: `workers/rate-limit-service/`
+  (a token-bucket policy engine, `POST /check`, named policies via `POST /policies`). Bridge design:
+  `ensure_tier_policies()` seeds one named policy per billing tier at startup (capacity = the
+  tier's `req_per_hour`, refill_rate = that ÷ 3600 — continuous refill, smoother than the
+  in-process fixed-window counter); `check_and_increment_durable()` tries the worker's `POST
+  /check` first with a tight 0.5s timeout — a real `await`, not fire-and-forget, since the caller
+  needs an actual allow/deny answer — and only on an exception/timeout falls through to the
+  pre-existing, purely local `TierEnforcer.check_and_increment()`. A reachable worker returning 429
+  is honored as a real "no" (that's the worker doing its job, not a failure); only
+  unreachability/errors trigger the fail-open fallback. Both `api.py` call sites
+  (`/chat`, `/chat/stream`) now `await check_and_increment_durable(...)` instead of calling the
+  enforcer directly. Unlimited tiers (`req_per_hour == -1`, e.g. enterprise) skip the remote call
+  entirely.
+- **`src/library/`** — `src/library/bridge.py` (new), **write-path only, by design**. The
+  access-control gap found in the earlier pass (`workers/library-service/` has no
+  classification/author/retention concept) is real and unchanged — so this bridge never routes
+  reads through the worker, and it only forwards articles at PUBLIC/INTERNAL/CONFIDENTIAL
+  classification; RESTRICTED/TOP_SECRET content is never sent to the worker, full stop, regardless
+  of reachability. `Library.create()` now also fire-and-forget POSTs forwardable articles to
+  `workers/library-service/`'s `POST /library/documents` for durability. `src/library/routes.py`'s
+  in-process `Library` singleton (with its `_can_read()` classification gate) remains the sole
+  authoritative read path for every classification level — nothing about reads changed.
+
+All four register their own `URL`/`INTERNAL_SECRET` pair on `tranc3-backend`'s environment block in
+`docker-compose.production.yml` (`BASEMENT_URL`/`BASEMENT_INTERNAL_SECRET`,
+`CRYPTEX_URL`/`CRYPTEX_INTERNAL_SECRET`,
+`RATE_LIMIT_SERVICE_URL`/`RATE_LIMIT_SERVICE_INTERNAL_SECRET`,
+`LIBRARY_SERVICE_URL`/`LIBRARY_SERVICE_INTERNAL_SECRET`), each sourced from the same shared
+`${INTERNAL_SECRET}` — the same pattern `INFINITY_WS_URL`/`INFINITY_WS_INTERNAL_SECRET` already
+established for the nexus bridge.
 
 ### CONFIRMED_SEPARATE_FEATURES (2026-08-08, follow-up pass — decided, not open questions)
 
