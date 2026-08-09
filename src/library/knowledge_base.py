@@ -154,6 +154,18 @@ class Library:
             if article_id in ids:
                 ids.remove(article_id)
         self._emit_observatory_event(art, "article.deleted")
+
+        # Propagate the delete to workers/library-service/ so a previously
+        # forwarded durable copy (see src/library/bridge.py) doesn't outlive
+        # its source article. Fail-open, and a no-op if this article was
+        # never forwarded in the first place.
+        try:
+            from src.library.bridge import forward_delete
+
+            forward_delete(article_id)
+        except Exception:
+            pass  # nosec B110 — graceful degradation; fail-open by design
+
         return True
 
     # ── Search ────────────────────────────────────────────────────────────────

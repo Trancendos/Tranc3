@@ -253,12 +253,59 @@ of them logs that at `debug` level rather than raising.
 - **`src/library/`** — `src/library/bridge.py` (new), **write-path only, by design**. The
   access-control gap found in the earlier pass (`workers/library-service/` has no
   classification/author/retention concept) is real and unchanged — so this bridge never routes
-  reads through the worker, and it only forwards articles at PUBLIC/INTERNAL/CONFIDENTIAL
-  classification; RESTRICTED/TOP_SECRET content is never sent to the worker, full stop, regardless
-  of reachability. `Library.create()` now also fire-and-forget POSTs forwardable articles to
+  reads through the worker. `Library.create()` fire-and-forget POSTs forwardable articles to
   `workers/library-service/`'s `POST /library/documents` for durability. `src/library/routes.py`'s
   in-process `Library` singleton (with its `_can_read()` classification gate) remains the sole
   authoritative read path for every classification level — nothing about reads changed.
+
+  **Tightened further, same day, after review of what "forwardable" actually meant:**
+  - **Classification narrowed to PUBLIC/INTERNAL only** — CONFIDENTIAL was dropped from the
+    forwardable set. `routes.py`'s `_can_read()` only gates RESTRICTED/TOP_SECRET, so CONFIDENTIAL
+    is technically as readable in-process as PUBLIC/INTERNAL today, but "authenticated platform
+    user" (the in-process bar) and "holds the shared `X-Internal-Secret`" (the worker's bar) are
+    different *kinds* of trust, not the same bar in two places — once something lands in the
+    worker's store it's readable by anything holding that one secret, forever, independent of
+    what the in-process policy is or later becomes. CONFIDENTIAL now stays in-process only,
+    alongside RESTRICTED/TOP_SECRET.
+  - **Content-level PII gate, independent of classification** — classification is a label an
+    author assigns, not a scan of what's actually in the body; a PUBLIC or INTERNAL article can
+    still contain someone's email, card number, or UK National Insurance number. Every forward now
+    also runs `src.security.log_redactor.contains_pii()` (new — extracted the email/credit-card
+    patterns `log_redactor.py`'s `redact()` already used into named constants shared with a new
+    detection-only `contains_pii()`, plus added a UK NI-number pattern) on the title and body; a
+    hit skips the forward the same way a non-forwardable classification does. Explicitly a
+    heuristic, not a compliance-grade DLP scanner — documented as such in both docstrings.
+  - **Delete propagation** — `Library.delete()` previously had no counterpart on the forward side:
+    deleting the source article left any durably-forwarded copy orphaned in the worker forever, a
+    real data-minimization/right-to-erasure gap. Closed two ways: (1) `workers/library-service/`
+    already had `LibraryDatabase.delete_document()` at the DB layer but no route or service method
+    ever exposed it — added `LibraryRouter.delete_document()` (`service.py`) and
+    `DELETE /library/documents/{doc_id}` (`router.py`); (2) `src/library/bridge.py` now tracks an
+    in-process `article_id -> worker doc_id` map (populated on a successful forward) and
+    `Library.delete()` calls a new `forward_delete()` that looks up and deletes the durable copy.
+    The mapping is in-process only, matching the best-effort character of everything else here — a
+    delete for an article forwarded before a process restart has nothing to look up and is
+    silently skipped, same fail-open posture as an unreachable worker.
+  - **Provenance/IP-protection tagging** — every forwarded document's metadata now carries a
+    `content_hash` (SHA-256 of the body) and a fixed `source_system` marker. Cheap, tamper-evident
+    fingerprinting: a leaked copy of forwarded content can be matched back to its exact source
+    article, and a hash mismatch would reveal the worker's stored copy had silently diverged from
+    the original — without the engineering cost of full content watermarking (the platform already
+    has a steganographic-style watermarker for LLM chat responses, `watermarker.watermark()` in
+    `api.py`; applying that same technique to arbitrary knowledge-base article text was considered
+    and deferred — a heavier, security-review-worthy feature on its own, not a same-day addition).
+
+  **Investigated and deliberately not implemented this pass** (documented so it isn't rediscovered
+  as an oversight): a `Jurisdiction` enum (`EU`/`US`/`UK`/`APAC`/`GLOBAL`/`LOCAL_ONLY`) already
+  exists in `src/nanoservices/daas_stream/daas_stream.py`, right next to `DataClassification`, but
+  `Article` carries no jurisdiction field and nothing here uses it — a genuine future hook for
+  data-residency-aware forwarding (e.g. don't forward EU-resident personal data to a worker outside
+  an approved jurisdiction) once `Article` gains that field. Similarly, `Observatory`'s `AuditEvent`
+  has `retention_class`/`legal_hold` fields (added for compliance evidence handling); `Article` has
+  only `retention_days`, no `legal_hold` — extending `Article` to match and excluding legal-hold
+  content from forwarding (a second, less-controlled durable copy complicates chain-of-custody for
+  anything under a hold) is a reasonable next step but needs a schema change, not a same-day
+  addition. Neither blocks anything currently shipped; both are recorded here as scoped follow-ups.
 
 All four register their own `URL`/`INTERNAL_SECRET` pair on `tranc3-backend`'s environment block in
 `docker-compose.production.yml` (`BASEMENT_URL`/`BASEMENT_INTERNAL_SECRET`,

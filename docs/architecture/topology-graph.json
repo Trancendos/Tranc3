@@ -1,6 +1,6 @@
 {
   "summary": {
-    "generated_at": "2026-08-09T07:46:31.374884+00:00",
+    "generated_at": "2026-08-09T16:24:29.328715+00:00",
     "total_nodes": 227,
     "total_edges": 111,
     "locations": 43,
@@ -696,7 +696,7 @@
       "label": "src.library.routes",
       "mounted": true,
       "classification": "bridged",
-      "reason": "BRIDGED 2026-08-08 (write-path only, by design): real in-process callers (synchronous .create()/.by_tag() writes/reads on the singleton, not just router imports): section7/information_router.py, observability/library_pipeline.py, models/knowledge.py, event_bus/wiring.py. VERIFIED NOT A SAFE SUPERSET SWAP for reads: this router's src/library/knowledge_base.py Article model carries a DataClassification (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED/TOP_SECRET) enforced by routes.py's _can_read() \u2014 RESTRICTED/TOP_SECRET articles require admin or matching author \u2014 plus author and retention_days. workers/library-service/ is a generic pluggable wiki-backend facade with no classification/author/retention concept and no per-caller authorization at all (only a shared X-Internal-Secret), so reads are NOT bridged and never will be without that gap being closed first. What IS bridged: src/library/bridge.py fire-and-forget forwards newly-created PUBLIC/INTERNAL/CONFIDENTIAL articles only (RESTRICTED/TOP_SECRET are never sent, regardless of reachability) to workers/library-service/'s POST /library/documents for durability. Fail-open: a forward failure never blocks the write."
+      "reason": "BRIDGED 2026-08-08 (write-path only, by design): real in-process callers (synchronous .create()/.by_tag() writes/reads on the singleton, not just router imports): section7/information_router.py, observability/library_pipeline.py, models/knowledge.py, event_bus/wiring.py. VERIFIED NOT A SAFE SUPERSET SWAP for reads: this router's src/library/knowledge_base.py Article model carries a DataClassification (PUBLIC/INTERNAL/CONFIDENTIAL/RESTRICTED/TOP_SECRET) enforced by routes.py's _can_read() \u2014 RESTRICTED/TOP_SECRET articles require admin or matching author \u2014 plus author and retention_days. workers/library-service/ is a generic pluggable wiki-backend facade with no classification/author/retention concept and no per-caller authorization at all (only a shared X-Internal-Secret), so reads are NOT bridged and never will be without that gap being closed first. What IS bridged: src/library/bridge.py fire-and-forget forwards newly-created articles for durability, narrowed (2026-08-08 review) to PUBLIC/INTERNAL only \u2014 CONFIDENTIAL/RESTRICTED/TOP_SECRET are never sent, regardless of reachability, since 'authenticated platform user' and 'holds the shared secret' are different kinds of trust even where routes.py's own _can_read() treats them the same. Also gated on src.security.log_redactor.contains_pii() independent of classification, since a PUBLIC/INTERNAL article can still contain personal data the label doesn't capture. Deletes propagate too (Library.delete() -> forward_delete() -> the worker's new DELETE /library/documents/{doc_id}), so a source deletion doesn't leave an orphaned durable copy. Fail-open throughout: a forward or delete failure never blocks the in-process write."
     },
     {
       "id": "router:_basement_router",

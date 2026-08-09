@@ -48,6 +48,12 @@ def _make_library_router(db: LibraryDatabase, router_svc: LibraryRouter) -> APIR
             raise HTTPException(status_code=404, detail="Document not found")
         return result
 
+    @api.delete("/documents/{doc_id}", status_code=204, dependencies=[Depends(_auth)])
+    async def delete_document(doc_id: str):
+        deleted = await router_svc.delete_document(doc_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Document not found")
+
     @api.post("/search", response_model=SearchResponse, dependencies=[Depends(_auth)])
     async def search(req: SearchRequest):
         return await router_svc.search(req.query, req.collection, req.limit)
