@@ -80,17 +80,30 @@ ROUTER_TO_WORKER: dict[str, tuple[str, str]] = {
 # self-explanatory instead of becoming an unreviewed escape hatch.
 KNOWN_COUPLED: dict[str, str] = {
     "_resonate_router": (
-        "workers/resonate/ implements a different feature (scoring) than this "
-        "router (escalation) — see MONOLITH-EXTRACTION-FINDINGS.md"
+        "2026-08-12: workers/resonate/ has been given the escalation feature "
+        "it was missing (escalations table, wrap_response()/escalate_to_human() "
+        "ported from src/resonate/empathy.py, GET /status, POST /wrap, "
+        "POST /escalate/{user_id} — see MONOLITH-EXTRACTION-FINDINGS.md). Worker "
+        "now has feature parity with the router. The router still stays "
+        "mounted and authoritative for live traffic — the worker's build "
+        "context (./workers/resonate) can't import src/, so it needed its own "
+        "self-contained port rather than a shared module; swapping live "
+        "traffic over to the worker is a deliberate, separately-scoped "
+        "follow-up, not bundled into this parity work."
     ),
     "_imind_router": (
-        "VERIFIED NOT EQUIVALENT: src/imind/protocol.py's assess() is a "
-        "regex-driven crisis/self-harm/suicide detector with SECURITY-severity "
-        "human escalation; workers/imind/worker.py only does generic "
-        "sentiment/emotion scoring (dominant_emotion/polarity/confidence) with "
-        "no crisis-pattern logic at all. Unmounting would silently remove a "
-        "safeguarding feature, not a duplicate. src/tranquility/wellbeing.py "
-        "also imports src.imind.protocol directly in-process."
+        "2026-08-12: workers/imind/ has been given the crisis-detection "
+        "feature it was missing (_CRISIS_PATTERNS/_MENTAL_HEALTH_PATTERNS + "
+        "assess_sensitivity() ported verbatim from src/imind/protocol.py's "
+        "assess(), sensitivity_assessments table, GET /status, POST /assess — "
+        "see MONOLITH-EXTRACTION-FINDINGS.md). Worker now has feature parity "
+        "with the router's crisis/self-harm/suicide detection. The router "
+        "still stays mounted and authoritative for the live safeguarding path "
+        "— this is a safeguarding feature with real users, so swapping live "
+        "traffic over to the worker is a deliberate, separately-scoped "
+        "follow-up, not bundled into this parity work. "
+        "src/tranquility/wellbeing.py also imports src.imind.protocol "
+        "directly in-process."
     ),
     "_basement_router": (
         "BRIDGED 2026-08-08: src/observability/observatory.py still calls "

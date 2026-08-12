@@ -5,8 +5,10 @@ after review — see below. A second-pass sweep classified every remaining modul
 mounted in `api.py`, and a follow-up pass then resolved 3 of those from open questions into
 decided pairings, followed by a remediation pass (2026-08-08, after the owner made an explicit
 fail-open call — see `BRIDGES_IMPLEMENTED` below) that built working HTTP bridges for 4 more:
-**only 2 still need a deliberate product decision** (Resonate/I-Mind — down from 11, and both are
-"does the worker need to gain a missing feature" calls, not engineering work), **5 are bridged**
+**2 had their product decision made and the worker-side feature parity built** (Resonate/I-Mind —
+2026-08-12, owner chose "build the missing feature into the worker" for both — see
+`WORKER_FEATURE_PARITY` below; the router stays mounted and authoritative for live traffic pending
+a separately-scoped cutover), **5 are bridged**
 (`src/nexus/` was found already-bridged while starting this pass — see `BRIDGED` — and
 `src/basement/`, `src/cryptex/`, `src/monetisation/` (billing), `src/library/` were newly bridged
 this same pass, all fail-open by the owner's explicit 2026-08-08 decision — see
@@ -163,17 +165,65 @@ immediately if any of them is ever unmounted without a fresh check.
 
 ### NEEDS_MODULARIZATION (real coupling and/or non-equivalent worker — decision required)
 
-Only `resonate` and `imind` remain here — both need a *product* decision (does the worker need to
-gain a missing feature, or does the monolith router stay the long-term home for that feature),
-not an engineering bridge. Everything else that was here — `basement`, `cryptex`, `monetisation`
-(billing), and `library` — was resolved this pass; see `BRIDGES_IMPLEMENTED` below.
+`resonate` and `imind` were the last two here. Both got their product decision on 2026-08-12 (owner
+chose "build the missing feature into the worker" for both, over the lower-risk "keep the router as
+the permanent home" alternative) and the worker-side feature parity has now been built — see
+`WORKER_FEATURE_PARITY` below. Neither is reclassified out of `needs_modularization` yet: the
+in-process router remains mounted and authoritative for live traffic in both cases, so unmounting
+either router today would still be wrong. Everything else that was ever here — `basement`,
+`cryptex`, `monetisation` (billing), and `library` — was resolved in the 2026-08-08 pass; see
+`BRIDGES_IMPLEMENTED` below.
 
 - **`src/resonate/`**, **`src/imind/`** — carried forward from the first pass above (see corrected
-  bullets there): both have a same-named worker that is missing a distinct feature (empathy
+  bullets there): both had a same-named worker that was missing a distinct feature (empathy
   escalation vs. scoring; crisis/self-harm detection vs. generic sentiment scoring), not a partial
-  gap a client wrapper can paper over. Unlike the four bridged this pass, there's no fail-open/
-  fail-closed axis that applies here — the question is whether to build the missing feature into
-  the worker at all, which is a product call, not a reachability-handling one.
+  gap a client wrapper could paper over. That gap is now closed on the worker side (see
+  `WORKER_FEATURE_PARITY`); what remains is the separately-scoped decision of whether/when to cut
+  live traffic over from the router to the worker.
+
+### WORKER_FEATURE_PARITY (2026-08-12 — owner decision: build into worker, for both)
+
+Asked which way to resolve `resonate`/`imind` (per `AskUserQuestion`: "keep the router as the
+permanent home" vs. "build the missing feature into the worker"), the owner chose **build into the
+worker** for both — explicitly against the lower-effort/lower-risk recommendation in each case.
+Scope for this pass was deliberately capped at closing the feature gap on the worker side; actually
+cutting live traffic over from the router to the worker was excluded as a separate, higher-stakes
+decision (Resonate's escalation path and I-Mind's crisis-detection path both carry real live users,
+and neither router has been unmounted).
+
+A real architectural constraint governed how the port had to be done: both workers' compose
+`build.context` is their own subdirectory (`./workers/resonate`, `./workers/imind`), not the repo
+root, so `src/` is never copied into their Docker image and they cannot `from src.* import ...` —
+unlike `context: .` workers such as `infinity-ws`. Both ports are therefore fully self-contained:
+own SQLite table, own copy of the ported logic, no in-process import of the router's module and no
+access to the Observatory ring buffer.
+
+- **`src/resonate/` → `workers/resonate/worker.py`** — added an `escalations` SQLite table, and
+  ported `src/resonate/empathy.py`'s `wrap_response()` / `dispatch_escalation_notification()` /
+  `escalate_to_human()` logic verbatim. New endpoints: `GET /status`, `POST /wrap`,
+  `POST /escalate/{user_id}` (all `X-Internal-Secret`-gated, matching the worker's existing
+  `_auth` dependency). Also fixed a real pre-existing routing bug found while doing this: the
+  production Traefik rule was `Host(resonate.trancendos.com) && PathPrefix(/resonate)` with no
+  `stripprefix` middleware, while every one of the worker's routes (old and new) is bare/unprefixed
+  — any real request through the documented URL would have 404'd. Fixed with the same
+  `strip-<name>` middleware pattern already used for `cranbania`/`prefect`/`temporal`/etc.
+  (`docker-compose.production.yml`).
+- **`src/imind/` → `workers/imind/worker.py`** — added a `sensitivity_assessments` SQLite table,
+  and ported `src/imind/protocol.py`'s crisis/self-harm/mental-health regex patterns
+  (`_CRISIS_PATTERNS`, `_MENTAL_HEALTH_PATTERNS`) and `assess()` logic verbatim as
+  `assess_sensitivity()` — same level derivation (`critical`/`high`/`medium`/`none`), same
+  `escalate` flag, same `response_modifier` text (including the UK/US crisis-helpline numbers).
+  New endpoints: `GET /status`, `POST /assess` (both `X-Internal-Secret`-gated). Found and fixed
+  the identical Traefik `stripprefix` bug as Resonate (`Host(imind.trancendos.com) &&
+  PathPrefix(/imind)`, no `strip-imind` middleware) — same fix pattern applied.
+- Both changes verified with `ast.parse`, a dynamic module load confirming every route (old and
+  new) registers correctly, spot-checks of `assess_sensitivity()` against known crisis/self-harm/
+  mental-health/neutral inputs, `ruff check` + `ruff format`, and the existing
+  `tests/test_resonate_escalation.py` / `tests/test_imind.py` suites (unchanged, still green).
+- `scripts/check_duplicate_routers.py`'s `KNOWN_COUPLED` reasoning for both routers was updated to
+  describe the new parity and explicitly state the router remains authoritative — CI still refuses
+  to let either router be unmounted without a fresh review, which is correct: parity on the worker
+  side is not the same thing as a verified-safe cutover.
 
 ### BRIDGED (2026-08-08, remediation pass — genuinely coupled, and already wired correctly)
 

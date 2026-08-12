@@ -3267,6 +3267,13 @@ services:
       - "traefik.http.routers.imind.entrypoints=websecure"
       - "traefik.http.routers.imind.tls=true"
       - "traefik.http.routers.imind.tls.certresolver=letsencrypt"
+      # Was routing PathPrefix(/imind) straight to the worker with no
+      # prefix stripped, but every worker route (/health, /analyse,
+      # /status, /assess, ...) is bare — a request to /imind/assess
+      # 404'd. Same stripprefix pattern already used for
+      # cranbania/prefect/temporal/resonate/etc.
+      - "traefik.http.routers.imind.middlewares=strip-imind@docker"
+      - "traefik.http.middlewares.strip-imind.stripprefix.prefixes=/imind"
       - "traefik.http.services.imind.loadbalancer.server.port=8075"
 
   # ── Resonate — empathy engine (Port 8076) ──────────────────────────────────────────────
@@ -3293,6 +3300,13 @@ services:
       - "traefik.http.routers.resonate.entrypoints=websecure"
       - "traefik.http.routers.resonate.tls=true"
       - "traefik.http.routers.resonate.tls.certresolver=letsencrypt"
+      # Was routing PathPrefix(/resonate) straight to the worker with no
+      # prefix stripped, but every worker route (/health, /score, /wrap,
+      # /status, /escalate/{user_id}, ...) is bare — a request to
+      # /resonate/score 404'd. Same stripprefix pattern already used for
+      # cranbania/prefect/temporal/etc. below.
+      - "traefik.http.routers.resonate.middlewares=strip-resonate@docker"
+      - "traefik.http.middlewares.strip-resonate.stripprefix.prefixes=/resonate"
       - "traefik.http.services.resonate.loadbalancer.server.port=8076"
 
   # ── Tranquility — wellbeing hub (Port 8058) ──────────────────────────────────────────────

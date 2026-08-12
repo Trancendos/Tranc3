@@ -4,7 +4,7 @@ Trancendos imind — Sensitivity to Emotion Engine
 Emotion detection from text using keyword sentiment analysis.
 Zero-cost: no external NLP APIs, pure Python keyword matching.
 
-Port: 8059  Entity: I-Mind  Lead AI: Elouise
+Port: 8075  Entity: I-Mind  Lead AI: Elouise
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import os
 import re
 import sqlite3
 import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -22,7 +23,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-WORKER_PORT = int(os.getenv("PORT") or "8059")
+WORKER_PORT = int(os.getenv("PORT") or "8075")
 WORKER_NAME = "imind"
 DB_PATH = Path(__file__).parent / "data" / "imind.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -243,6 +244,125 @@ def detect_emotions(text: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Crisis / self-harm / mental-health sensitivity detection — SAFEGUARDING PATH
+#
+# Ported from src/imind/protocol.py's IMind.assess() (2026-08-09) — the
+# in-process router's actual crisis-detection logic, which this worker never
+# had (detect_emotions() above only does generic keyword sentiment scoring,
+# with no crisis-pattern matching at all). The router's in-process mount
+# stays authoritative for the live request-time gate for now — this is a
+# safeguarding path with real users; swapping the router to actually
+# delegate here is a deliberate follow-up decision, not bundled into this
+# change. Standalone by design, matching this worker's existing
+# architecture (own SQLite DB, own INTERNAL_SECRET, no `src.*` imports —
+# its Docker build context is `./workers/imind`, not the repo root, so
+# `src.observability.observatory` isn't importable here). CRITICAL/HIGH/
+# MEDIUM assessments are durably recorded in this worker's own
+# `sensitivity_assessments` table rather than Observatory's in-process ring
+# buffer.
+# ---------------------------------------------------------------------------
+
+_CRISIS_PATTERNS = [
+    re.compile(r"\b(suicide|suicidal|end my life|kill myself|want to die)\b", re.I),
+    re.compile(r"\b(self[- ]harm|cut myself|hurt myself)\b", re.I),
+    re.compile(r"\b(no reason to live|can't go on|give up on life)\b", re.I),
+]
+
+_MENTAL_HEALTH_PATTERNS = [
+    re.compile(r"\b(depressed|depression|anxiety|anxious|panic attack|ptsd)\b", re.I),
+    re.compile(r"\b(mental health|therapy|therapist|psychiatrist|medication for)\b", re.I),
+]
+
+
+def assess_sensitivity(text: str, actor: str | None = None) -> dict:
+    """Crisis/self-harm/mental-health pattern scan. Returns the same shape
+    as src/imind/protocol.py's SensitivityAssessment.to_dict()."""
+    categories: list[str] = []
+    level = "none"
+
+    # Crisis detection — highest priority
+    if _CRISIS_PATTERNS[0].search(text):
+        categories.append("crisis")
+        level = "critical"
+
+    # Self-harm
+    if "crisis" not in categories:
+        for pat in _CRISIS_PATTERNS[1:]:
+            if pat.search(text):
+                categories.append("self_harm")
+                level = "high"
+                break
+
+    # Mental health
+    for pat in _MENTAL_HEALTH_PATTERNS:
+        if pat.search(text):
+            if "mental_health" not in categories:
+                categories.append("mental_health")
+            if level == "none":
+                level = "medium"
+            break
+
+    escalate = level in ("critical", "high")
+
+    modifier = ""
+    if level == "critical":
+        modifier = (
+            "IMPORTANT: The user may be in crisis. Respond with empathy, "
+            "provide crisis helpline numbers (UK: 116 123 Samaritans, "
+            "US: 988 Suicide & Crisis Lifeline), and encourage professional help. "
+            "Do not minimise their feelings."
+        )
+    elif level == "high":
+        modifier = (
+            "The user has mentioned self-harm. Respond with care and empathy. "
+            "Provide mental health resources. Do not provide harmful information."
+        )
+    elif level == "medium":
+        modifier = (
+            "The user has mentioned mental health topics. "
+            "Respond with warmth and empathy. Suggest professional support if appropriate."
+        )
+
+    assessment = {
+        "id": str(uuid.uuid4()),
+        "level": level,
+        "categories": categories,
+        "escalate": escalate,
+        "response_modifier": modifier,
+    }
+
+    if level != "none":
+        _record_assessment(assessment, actor)
+
+    return assessment
+
+
+def _record_assessment(assessment: dict, actor: str | None) -> None:
+    """Durably persist a non-NONE assessment to this worker's own DB — there
+    is no Observatory ring buffer reachable from this process. Never raises;
+    a persistence failure must not block the caller from getting their
+    assessment result back."""
+    try:
+        with get_conn() as conn:
+            conn.execute(
+                "INSERT INTO sensitivity_assessments "
+                "(assessment_id, actor, level, categories, escalate, assessed_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (
+                    assessment["id"],
+                    actor,
+                    assessment["level"],
+                    json.dumps(assessment["categories"]),
+                    int(assessment["escalate"]),
+                    time.time(),
+                ),
+            )
+            conn.commit()
+    except Exception as exc:
+        logger.error("imind: failed to persist sensitivity assessment: %s", exc)
+
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -273,8 +393,18 @@ def init_db() -> None:
                 total_analyses  INTEGER DEFAULT 0,
                 updated_at      REAL NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS sensitivity_assessments (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                assessment_id   TEXT NOT NULL,
+                actor           TEXT,
+                level           TEXT NOT NULL,
+                categories      TEXT,
+                escalate        INTEGER NOT NULL DEFAULT 0,
+                assessed_at     REAL NOT NULL
+            );
             CREATE INDEX IF NOT EXISTS idx_analyses_user ON analyses(user_id);
             CREATE INDEX IF NOT EXISTS idx_profiles_user ON emotion_profiles(user_id);
+            CREATE INDEX IF NOT EXISTS idx_assessments_level ON sensitivity_assessments(level);
         """)
         conn.commit()
 
@@ -321,6 +451,11 @@ class BatchAnalyseIn(BaseModel):
     user_id: str = "anonymous"
 
 
+class AssessIn(BaseModel):
+    text: str
+    actor: str | None = None
+
+
 @_router.get("/health")
 async def health():
     with get_conn() as conn:
@@ -334,6 +469,32 @@ async def health():
         "total_analyses": analyses,
         "user_profiles": profiles,
     }
+
+
+@_router.get("/status")
+async def status(x_internal_secret: str = Header(default="")):
+    _auth(x_internal_secret)
+    with get_conn() as conn:
+        total_assessments = conn.execute("SELECT COUNT(*) FROM sensitivity_assessments").fetchone()[
+            0
+        ]
+        total_escalations = conn.execute(
+            "SELECT COUNT(*) FROM sensitivity_assessments WHERE escalate=1"
+        ).fetchone()[0]
+    return {
+        "service": WORKER_NAME,
+        "status": "active",
+        "total_assessments": total_assessments,
+        "total_escalations": total_escalations,
+    }
+
+
+@_router.post("/assess")
+async def assess(body: AssessIn, x_internal_secret: str = Header(default="")):
+    _auth(x_internal_secret)
+    if not body.text.strip():
+        raise HTTPException(status_code=400, detail="text required")
+    return assess_sensitivity(body.text, actor=body.actor)
 
 
 @_router.get("/metrics")
