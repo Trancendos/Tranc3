@@ -39,9 +39,20 @@ Read the virtual disk state:
 | Failed | Too many members lost | Array is gone — rebuild from scratch |
 | Foreign | Controller sees a config it did not create | Import it *only* if the old data matters |
 
-Since the plan is a clean install, a failed array is not a disaster — but you must know
-which drives are actually healthy before committing the machine to a rebuild. Do not
-build on a disk that is about to die.
+**A "Failed" reading is the only state that closes the data question.** Degraded rebuilds;
+Foreign imports and the data returns. Treat recovery as the default assumption until the
+controller says otherwise — the 13 VMs are the previous owner's, at least one carries a
+Windows Server licence, and none of it has been inventoried yet.
+
+If the array does come back, do this before anything else:
+
+1. Boot ESXi and inventory the 13 VMs — what they are, what still runs.
+2. Harvest licence keys from any Windows guest while it is bootable (`slmgr /dlv`, or a
+   key-recovery tool).
+3. Export anything worth keeping to external storage (OVF export, or copy the VMDKs).
+
+You must also know which drives are genuinely healthy before committing the machine to a
+rebuild. Do not build on a disk that is about to die.
 
 ### 1.2 Power supply 2 failed — and it is the likely fan cause
 
@@ -83,9 +94,39 @@ recommendation, for reasons specific to this hardware:
 - **The layer buys little here.** The estate needs one Linux Docker host. Putting an
   unpatchable hypervisor underneath a single VM adds attack surface and complexity for
   no isolation benefit that matters at this scale.
-- **Nothing is being preserved.** With the datastore gone, the usual argument for
-  leaving a working hypervisor alone does not apply. This is the cheapest possible
-  moment to change the decision.
+> **CORRECTION (2026-08-12).** An earlier revision of this section claimed "nothing is
+> being preserved", reasoning from the host reporting 0 B storage. **That was wrong.**
+> 0 B means ESXi cannot *read* the datastore; it does not mean the datastore is empty.
+> The 13 inherited VMs report "Invalid" because their config cannot be parsed while the
+> volume is offline — their VMDK files are most likely intact on disk. There are also
+> licences in play (an ESXi key, and at least one Windows Server licence configured by
+> the machine's previous owner) that were not investigated before that recommendation
+> was made.
+>
+> **Do not wipe this host until §1.1 is answered and the VMs have been inventoried.**
+> Proxmox remains the intended direction, but as a destination to migrate *to*, not a
+> reason to discard what is already there.
+
+### Licensing and migration notes
+
+- **Newer ESXi is unavailable on this hardware, and that is a CPU limit rather than a
+  licensing one.** Broadcom restored a free ESXi tier with 8.0 Update 3e in 2025, so
+  cost is no longer the barrier — but vSphere 7 dropped the Xeon 5600 series and 8
+  raised requirements further. The X5675 runs neither. An existing 6.7 key also carries
+  no entitlement to 7 or 8. The real choice is "stay on 6.7" or "leave VMware", not
+  "upgrade ESXi".
+- **A Windows Server licence is not tied to VMware.** It licenses the guest OS and runs
+  unchanged on KVM/Proxmox. Dell OEM licences are tied to the *physical server*, which
+  is not changing. Standard permits 2 running VMs; Datacenter is unlimited. Harvest the
+  product key from inside the VM (`slmgr /dlv`) while it is still bootable, before any
+  migration.
+- **VMware VMs are migratable, not disposable.** Proxmox VE 8.2+ ships an ESXi import
+  wizard that connects to an ESXi host, browses its VMs, and imports them with most
+  config mapped across.
+- **But one physical host cannot run both hypervisors at once.** A Proxmox move
+  therefore means exporting the VMs to external storage (OVF export or VMDK copy)
+  *before* wiping, then importing after. Budget for that step, and for somewhere to put
+  the exports.
 
 **Chosen replacement: Proxmox VE, bare metal** (owner decision, 2026-08-12). It is free
 and open-source, actively maintained, imposes no CPU-generation restriction of the kind
