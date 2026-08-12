@@ -120,6 +120,54 @@ def pytest_runtest_makereport(item, call):
         )
 
 
+# ── Guard: shared auth env vars must not be mutated mid-session ──────────────
+# Several modules capture these into a module-level constant at *their* import
+# time (e.g. src/compliance/waivers_routes.py's _INTERNAL_SECRET). If one test
+# module reassigns the env var without restoring it, whether any other module
+# saw the real value comes down to collection order — which produces failures
+# that reproduce only in a full-suite run and pass in isolation, the most
+# expensive kind to debug. tests/test_vrar3d_viewer.py did exactly this and
+# broke every authenticated waiver route for a whole run.
+#
+# This fails the offending test loudly and names the variable, instead of
+# letting the damage surface as an unrelated 403 several hundred tests later.
+# Use monkeypatch.setenv (auto-restoring) or read the existing value; if a
+# module genuinely must reassign one of these, save and restore it the way
+# tests/test_analytics_service.py does.
+# Scoped to the module, not the test: a module-scoped fixture that overrides one
+# of these for its own tests and restores afterwards (as
+# tests/test_analytics_service.py does, deliberately and with a comment
+# explaining why) is legitimate and must not trip this. What is never
+# legitimate is a module *finishing* with the value still changed, because from
+# that point on every later import sees the wrong one.
+_GUARDED_ENV_VARS = ("INTERNAL_SECRET", "SECRET_KEY", "JWT_SECRET", "MASTER_KEY_SEED")
+_env_baseline = {name: os.environ.get(name) for name in _GUARDED_ENV_VARS}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _assert_shared_env_unchanged(request):
+    yield
+    drifted = [
+        f"{name}: {_env_baseline[name]!r} -> {os.environ.get(name)!r}"
+        for name in _GUARDED_ENV_VARS
+        if os.environ.get(name) != _env_baseline[name]
+    ]
+    if drifted:
+        # Restore before failing so the rest of the run is not also poisoned.
+        for name in _GUARDED_ENV_VARS:
+            if _env_baseline[name] is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = _env_baseline[name]
+        raise AssertionError(
+            f"{getattr(request.module, '__name__', '?')} left a shared auth env var "
+            "changed. Later-imported modules capture these into module-level "
+            "constants, so this makes unrelated tests fail depending on collection "
+            "order:\n  " + "\n  ".join(drifted) + "\nUse monkeypatch.setenv, or "
+            "save/restore around the change."
+        )
+
+
 # ── Shared sample data fixtures ───────────────────────────────────────────────
 
 

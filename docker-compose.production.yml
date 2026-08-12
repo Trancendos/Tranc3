@@ -1319,10 +1319,33 @@ services:
       - "traefik.http.routers.cranbania.entrypoints=websecure"
       - "traefik.http.routers.cranbania.tls=true"
       - "traefik.http.routers.cranbania.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.cranbania.middlewares=strip-townhall@docker,ratelimit-cranbania@docker"
+      # Network boundary in front of The Town Hall — owner decision 2026-08-12.
+      #
+      # CranBania's middleware.ts deliberately gates only *mutating* methods: the
+      # shipped browser dashboard calls fetch("/api/...") with no credential and
+      # has no session layer, so gating reads in middleware would break the UI
+      # the moment CRANBANIA_API_KEY is set. That leaves board state, cards,
+      # journal/audit entries, workspace export and ITSM incidents world-readable
+      # whenever this service is reachable — a go-live gate on its own
+      # (docs/GO_LIVE_GAP_ANALYSIS.md §2.2).
+      #
+      # Until Infinity-One SSO exists (the long-term direction), reads are
+      # protected at the network edge instead of in application code. Set
+      # TOWNHALL_ALLOWED_CIDRS to the operator's own address/VPN range, e.g.
+      # "203.0.113.4/32,10.8.0.0/24". The default is loopback-only: a deployment
+      # that forgets to set it locks The Town Hall down rather than publishing
+      # it, matching the fail-closed posture CRANBANIA_API_KEY already has above.
+      #
+      # ipallowlist evaluates the *immediate* peer unless told otherwise; Traefik
+      # is the only hop in front of this router, so no depth/excludedIPs setting
+      # is needed here. If a CDN or another proxy is ever put in front of
+      # Traefik, this must gain an ipstrategy.depth or it will see that proxy's
+      # address for every request and allow everyone.
+      - "traefik.http.routers.cranbania.middlewares=strip-townhall@docker,ratelimit-cranbania@docker,townhall-allowlist@docker"
       - "traefik.http.middlewares.strip-townhall.stripprefix.prefixes=/townhall"
       - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.average=100"
       - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.burst=50"
+      - "traefik.http.middlewares.townhall-allowlist.ipallowlist.sourcerange=${TOWNHALL_ALLOWED_CIDRS:-127.0.0.1/32}"
       - "traefik.http.services.cranbania.loadbalancer.server.port=8071"
 
   # ── Qdrant — High-performance vector database (Apache 2.0) ─────────────
