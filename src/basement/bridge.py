@@ -30,7 +30,6 @@ import os
 from typing import Any
 
 from Dimensional.sanitize import sanitize_for_log
-
 from src.mesh.circuit_breaker import CircuitBreaker
 
 logger = logging.getLogger(__name__)
