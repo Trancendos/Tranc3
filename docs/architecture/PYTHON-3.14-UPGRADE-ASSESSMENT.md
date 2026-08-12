@@ -1,9 +1,18 @@
 # Python 3.11 → 3.14 Upgrade Assessment
 
-**Status:** Stages 1, 2 and 6 (dependency half) landed. **Every one of the 84 workers with a
-requirements file now resolves a Python-3.14-usable artifact for every pinned dependency —
-zero blockers remain in the dependency layer.** Stage 3 onward (actually moving base images) is
-unblocked and not yet started. Still a staged project, tracked here rather than in a single PR.
+**Status:** Stages 1, 2 and 6 landed. **82 of the 84 workers with a requirements file are
+Python-3.14-ready; 2 are hard-blocked** (`tranceflow` and `vrar3d`, on `open3d` — see Section 2b).
+Stage 3 onward (actually moving base images) is unblocked for the 82 and not yet started. Still a
+staged project, tracked here rather than in a single PR.
+
+> **Correction, same day.** An earlier revision of this document claimed "84 ready, 0 blocked".
+> That was wrong, and wrong in a way worth recording: the readiness script only resolved exact
+> `==` pins, so a *floating* requirement whose package has no 3.14 release at all was silently
+> counted as fine and mentioned only in an informational "unpinned" list. `open3d` is exactly
+> that case. The script now checks floating requirements for the one thing that is knowable
+> without resolving them — whether the package has any 3.14-usable release at all — and reports
+> it as a blocker. The lesson is the same one as Section 2a's: a checker that quietly skips what
+> it cannot evaluate reports a better number than the truth.
 
 **Date:** 2026-08-01, substantially revised 2026-08-12 when Stage 2 replaced this document's
 predictions with measured data. **Section 2's original risk ranking was wrong in both
@@ -97,16 +106,42 @@ confirming on the first deploy that touches a populated volume rather than takin
 
 After those five one-line bumps: **84 workers ready, 0 blocked.**
 
+## 2b. `open3d` — the one hard blocker left (2026-08-12)
+
+`tranceflow` and `vrar3d` both depend on `open3d` (floating, `>=0.18`). **No release of `open3d`
+— including the current 0.19.0 — publishes an artifact usable on CPython 3.14.** No cp314 wheel,
+no abi3 wheel, no pure-Python fallback. This is not a "pin it higher" fix; there is no version to
+pin to. Until upstream ships 3.14 wheels, those two workers cannot move off 3.11/3.12, whatever
+the rest of the estate does.
+
+That is survivable rather than fatal, because the workers are independently deployable: the
+staged rollout can take the 82 ready workers to 3.14 and leave these two on their current base
+image. It does mean the estate will be *mixed-version* for a while, which is worth stating
+plainly rather than discovering during Stage 5.
+
+Options, none of which need deciding yet:
+- **Wait for upstream.** Cheapest; open3d has shipped new-CPython wheels before, just later than
+  most.
+- **Leave both workers on 3.11 indefinitely** and accept a permanently mixed estate.
+- **Drop or replace `open3d`.** Both workers already carry `trimesh`, `pyvista` and `meshio`,
+  which overlap much of what open3d is used for — worth checking whether the dependency is
+  actually load-bearing in either worker before treating it as immovable. That check has not been
+  done; do not assume it is removable.
+
 ### Still not covered by the measurement
 
-- **14 workers carry unpinned requirements** (`>=`, `~=`, or bare names) — `tranceflow` and
-  `vrar3d` have 8 each, `lab-service` and `library-service` 7 each, plus
-  `artifactory-service`, `blender-worker`, `dimensional-nexus-service`, `fabulousa-service`,
-  `ffmpeg-worker`, `hive-service`, `infinity-auth`, `infinity-bridge-service`, `litellm-service`,
-  `triposr-worker`. The script deliberately does not guess what those resolve to — what a floating
-  pin picks at build time is precisely the thing it cannot know, and reporting them as "ready"
-  would be false confidence. They are listed separately in its output. Pinning them is the
-  remaining half of Stage 6.
+- **Floating pins: 14 workers → 2.** `scripts/pin_worker_requirements.py` (new) converted 60
+  floating requirements across 14 workers into exact `==` pins, resolving each to the newest
+  stable release that both satisfies the existing constraint and is 3.14-usable — deliberately
+  close to what a build would already have picked, so pinning freezes the version rather than
+  moving anyone onto a new major. Only `open3d` in `tranceflow`/`vrar3d` is still floating, and
+  only because there is no version worth pinning to (Section 2b). The script handles the
+  OpenTelemetry instrumentation packages' `0.NNbM`-only release channel as a real release line
+  rather than treating every one of their versions as an unusable prerelease.
+- **Resolvable ≠ correct.** Pinning makes builds reproducible; it does not prove the newly-pinned
+  versions behave identically to whatever floated before. The pins match what a build today would
+  resolve, so this is not a behaviour change *as of today* — but it does freeze a version that
+  will now stop drifting, which is the point.
 - **6 directories have no requirements file at all** — `bullmq-queue-service`, `cranbania`,
   `nexus-ws-rs`, `rate-limit-service-rs`, `remotion-render-service`, `vault-service-rs`. These are
   the Rust/Node services and the CranBania submodule; they have no Python interpreter to upgrade,

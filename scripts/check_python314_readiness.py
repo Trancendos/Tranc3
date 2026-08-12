@@ -102,13 +102,42 @@ def _lowest_working_version(data: dict, at_least: str) -> Optional[str]:
     return min(candidates, key=_version_key)
 
 
+def parse_unpinned(path: Path) -> List[str]:
+    """Package names on non-exact requirement lines (`>=`, `~=`, bare)."""
+    names = []
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line or line.startswith("-") or "==" in line:
+            continue
+        match = re.match(r"^([A-Za-z0-9._-]+)", line)
+        if match:
+            names.append(match.group(1))
+    return names
+
+
+def package_has_any_314_release(package: str) -> Optional[bool]:
+    """True if ANY release of this package is 3.14-usable; None if lookup failed.
+
+    A floating requirement can't be resolved to a single version here, but a
+    package with *no* 3.14-usable release at any version is a hard blocker
+    regardless of which version the build picks — that case must not hide in
+    the informational "unpinned" list.
+    """
+    data = _pypi(package)
+    if data is None:
+        return None
+    return any(_usable_kind(files) for files in data.get("releases", {}).values() if files)
+
+
 def parse_pins(path: Path) -> List[Tuple[str, str]]:
     """Extract (package, version) for exact `==` pins only.
 
-    Non-pinned requirements (`>=`, `~=`, bare names) are skipped rather than
-    guessed at: what they resolve to at build time is exactly the thing this
-    script cannot know, and pretending otherwise would report false confidence.
-    They are surfaced separately by the caller.
+    Non-pinned requirements (`>=`, `~=`, bare names) are not resolved to a
+    version — what they resolve to at build time is exactly the thing this
+    script cannot know, and pretending otherwise would report false
+    confidence. They are surfaced separately by the caller, and separately
+    checked for the one thing that *is* knowable about them: whether the
+    package has any 3.14-usable release at all.
     """
     pins = []
     for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -161,6 +190,12 @@ def check_worker(worker_dir: Path) -> Optional[dict]:
         blockers.append(
             (package, version, "no-3.14-artifact", _lowest_working_version(data, version))
         )
+
+    # Floating requirements can't be resolved to a version, but a package with
+    # zero 3.14-usable releases blocks whichever version the build picks.
+    for package in parse_unpinned(req_path):
+        if package_has_any_314_release(package) is False:
+            blockers.append((package, "(unpinned)", "package-has-no-3.14-release", None))
 
     return {
         "worker": worker_dir.name,
