@@ -121,6 +121,25 @@ CranBania (Traefik forward-auth / IP allowlist / private network), or complete t
 Infinity-One SSO integration already identified as the long-term direction. Also make
 compose fail loudly on an empty `CRANBANIA_API_KEY` rather than defaulting it blank.
 
+> **RESOLVED 2026-08-12.** Both halves are now closed.
+> - *Missing key:* `docker-compose.production.yml` uses
+>   `CRANBANIA_API_KEY: ${CRANBANIA_API_KEY:?required}` — compose refuses to start
+>   rather than defaulting blank. CranBania's own `middleware.ts` also fails closed
+>   (503 on mutating routes in production when the key is unset), as defence in depth.
+> - *Ungated reads:* the owner chose a **network boundary now** over waiting for SSO.
+>   A Traefik `ipallowlist` middleware (`townhall-allowlist`) now fronts the
+>   `/townhall` router, its source range driven by `TOWNHALL_ALLOWED_CIDRS` and
+>   defaulting to `127.0.0.1/32` — so an operator who never sets it gets a Town Hall
+>   reachable only from the host, rather than a public one. Set it to the operator's
+>   own address/VPN range before go-live; see `.env.production.example`.
+>
+> This is explicitly an interim measure. Infinity-One SSO remains the long-term
+> direction, and this middleware should be retired when the browser dashboard gains a
+> real session layer. One caveat carried in the compose comment: `ipallowlist`
+> evaluates the immediate peer, so if a CDN or another proxy is ever placed in front
+> of Traefik this needs an `ipstrategy.depth` or it will see that proxy's address for
+> every request and allow everyone.
+
 ### 2.3 Nothing is deployed
 
 `Ops executed on Citadel (live)` scores **12%**. `citadel_preflight.py` fails on exactly
