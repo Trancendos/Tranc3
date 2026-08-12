@@ -408,6 +408,11 @@ services:
       - RATE_LIMIT_SERVICE_INTERNAL_SECRET=${INTERNAL_SECRET}
       - LIBRARY_SERVICE_URL=http://library-service:8067
       - LIBRARY_SERVICE_INTERNAL_SECRET=${INTERNAL_SECRET}
+      # This deployment's data-residency region, gating which jurisdiction-tagged
+      # library articles may be forwarded to the durable store — see
+      # src/library/bridge.py. GLOBAL (the default) = unconstrained; set to
+      # EU/US/UK/APAC to refuse forwarding articles tagged for another region.
+      - LIBRARY_DEPLOYMENT_JURISDICTION=${LIBRARY_DEPLOYMENT_JURISDICTION:-GLOBAL}
     ports:
       - "8000:8000"
     volumes:

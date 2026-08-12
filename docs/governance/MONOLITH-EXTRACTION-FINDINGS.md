@@ -345,17 +345,37 @@ of them logs that at `debug` level rather than raising.
     `api.py`; applying that same technique to arbitrary knowledge-base article text was considered
     and deferred — a heavier, security-review-worthy feature on its own, not a same-day addition).
 
-  **Investigated and deliberately not implemented this pass** (documented so it isn't rediscovered
-  as an oversight): a `Jurisdiction` enum (`EU`/`US`/`UK`/`APAC`/`GLOBAL`/`LOCAL_ONLY`) already
-  exists in `src/nanoservices/daas_stream/daas_stream.py`, right next to `DataClassification`, but
-  `Article` carries no jurisdiction field and nothing here uses it — a genuine future hook for
-  data-residency-aware forwarding (e.g. don't forward EU-resident personal data to a worker outside
-  an approved jurisdiction) once `Article` gains that field. Similarly, `Observatory`'s `AuditEvent`
-  has `retention_class`/`legal_hold` fields (added for compliance evidence handling); `Article` has
-  only `retention_days`, no `legal_hold` — extending `Article` to match and excluding legal-hold
-  content from forwarding (a second, less-controlled durable copy complicates chain-of-custody for
-  anything under a hold) is a reasonable next step but needs a schema change, not a same-day
-  addition. Neither blocks anything currently shipped; both are recorded here as scoped follow-ups.
+  **Follow-ups scoped here on 2026-08-08 and implemented on 2026-08-12** (both were originally
+  recorded as "investigated and deliberately not implemented this pass, needs a schema change" —
+  that schema change has now been made):
+  - **Jurisdiction.** `Article` gains a `jurisdiction: Jurisdiction` field, reusing the existing
+    `EU`/`US`/`UK`/`APAC`/`GLOBAL`/`LOCAL_ONLY` enum in
+    `src/nanoservices/daas_stream/daas_stream.py` rather than inventing a second residency
+    taxonomy. `bridge.py` enforces it on the forward path: `LOCAL_ONLY` never forwards at all
+    (that value's whole meaning is "must not leave the creating process"), and any other
+    region-constrained value forwards only into a deployment whose own jurisdiction
+    (`LIBRARY_DEPLOYMENT_JURISDICTION`, default `GLOBAL`) is either unconstrained or the same
+    region — so an EU-resident article is not shipped into a US-resident durable store by a
+    deployment that has been told which region it is. Default `GLOBAL`/`GLOBAL` keeps behaviour
+    identical for anyone who never sets the variable. The resolved jurisdiction is also written
+    into the forwarded document's metadata so the durable store records the constraint next to
+    the content.
+  - **Legal hold.** `Article` gains a `legal_hold: bool` field matching `Observatory`'s
+    `AuditEvent` field of the same name. Held content is never forwarded (a second,
+    separately-governed durable copy that the hold's custodian doesn't know about complicates
+    chain-of-custody rather than helping it). The delete path is the deliberate mirror image:
+    `Library.delete()` does **not** propagate a delete for held content, because a hold can be
+    applied via `update()` *after* a forward already happened, and deleting that durable copy is
+    precisely what the hold forbids — held content outliving its source is the intended outcome
+    here, not an orphan.
+  - Both are settable through `POST /library/articles`; `legal_hold` is admin-only (placing a hold
+    is a governance action), matching the existing admin-only `author` override, while
+    `jurisdiction` is caller-settable since every non-default value is *more* restrictive.
+  - 13 new tests in `tests/test_library.py` cover the field defaults, `to_dict()` exposure,
+    `create()` pass-through, each forward gate (legal hold, `LOCAL_ONLY`, region match/mismatch
+    against a monkeypatched deployment jurisdiction, `GLOBAL` article into a regional deployment),
+    a duck-typed object with no `jurisdiction` attribute (must not crash the gate), and both
+    delete-propagation branches.
 
 All four register their own `URL`/`INTERNAL_SECRET` pair on `tranc3-backend`'s environment block in
 `docker-compose.production.yml` (`BASEMENT_URL`/`BASEMENT_INTERNAL_SECRET`,

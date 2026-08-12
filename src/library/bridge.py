@@ -55,6 +55,28 @@
 # copy of forwarded content be matched back to its exact source article and
 # confirms the worker's stored copy hasn't silently diverged from the
 # original, without the engineering cost of full content watermarking.
+#
+# Legal hold (2026-08-12): an article flagged legal_hold is never forwarded.
+# A hold means "preserve this exactly where it is, under the custodian who
+# placed the hold" — creating a second copy in a separately-governed store
+# that custodian doesn't know about works against the hold rather than for
+# it. The delete path is the mirror image: Library.delete() deliberately does
+# NOT propagate a delete for held content (a hold can be applied via update()
+# after a forward already happened, so a durable copy can exist), because
+# deleting it is precisely what the hold forbids.
+#
+# Jurisdiction (2026-08-12): articles carry a Jurisdiction (the same enum used
+# for data streams). LOCAL_ONLY is never forwarded — the whole point of that
+# value is that the content must not leave the process that created it. Every
+# other value is checked against this deployment's own jurisdiction
+# (LIBRARY_DEPLOYMENT_JURISDICTION, default GLOBAL): an article forwards only
+# if it is GLOBAL (unconstrained) or its jurisdiction matches the deployment's
+# — so an EU-resident article is not shipped into a US-resident durable store
+# by a deployment that has been told which region it is. A deployment left at
+# the GLOBAL default accepts anything except LOCAL_ONLY, which keeps the
+# out-of-the-box behaviour unchanged for anyone who hasn't set the variable.
+# The resolved jurisdiction is also carried into the forwarded document's
+# metadata so the durable store records the constraint alongside the content.
 
 from __future__ import annotations
 
@@ -65,7 +87,6 @@ import os
 from typing import Any
 
 from Dimensional.sanitize import sanitize_for_log
-
 from src.mesh.circuit_breaker import CircuitBreaker
 from src.security.log_redactor import contains_pii
 
@@ -76,6 +97,14 @@ _LIBRARY_INTERNAL_SECRET = os.environ.get("LIBRARY_SERVICE_INTERNAL_SECRET", "")
 
 # CONFIDENTIAL deliberately excluded — see module docstring.
 _FORWARDABLE_CLASSIFICATIONS = frozenset({"public", "internal"})
+
+# This deployment's own data-residency region. Default GLOBAL = "unconstrained",
+# which preserves the pre-jurisdiction behaviour for deployments that never set
+# it. See the module docstring's "Jurisdiction" note.
+_DEPLOYMENT_JURISDICTION = os.environ.get("LIBRARY_DEPLOYMENT_JURISDICTION", "GLOBAL").upper()
+
+# Never leaves the creating process, regardless of deployment jurisdiction.
+_NEVER_FORWARD_JURISDICTION = "LOCAL_ONLY"
 
 _FORWARD_CONCURRENCY = int(os.environ.get("LIBRARY_FORWARD_CONCURRENCY", "10"))
 _forward_inflight = 0
@@ -91,10 +120,37 @@ def _headers() -> dict[str, str]:
     return {"X-Internal-Secret": _LIBRARY_INTERNAL_SECRET} if _LIBRARY_INTERNAL_SECRET else {}
 
 
+def _jurisdiction_value(article: Any) -> str:
+    jurisdiction = getattr(article, "jurisdiction", None)
+    if jurisdiction is None:
+        # Pre-jurisdiction Article, or a duck-typed caller that doesn't carry
+        # the field — treat as unconstrained, matching the field's default.
+        return "GLOBAL"
+    return str(getattr(jurisdiction, "value", jurisdiction)).upper()
+
+
+def _jurisdiction_permits_forward(article: Any) -> bool:
+    """Data-residency gate — see the module docstring's "Jurisdiction" note."""
+    jurisdiction = _jurisdiction_value(article)
+    if jurisdiction == _NEVER_FORWARD_JURISDICTION:
+        return False
+    if jurisdiction == "GLOBAL":
+        return True
+    # A region-constrained article only forwards into a deployment that is
+    # unconstrained or in that same region.
+    return _DEPLOYMENT_JURISDICTION in ("GLOBAL", jurisdiction)
+
+
 def _is_forwardable(article: Any) -> bool:
     classification = getattr(article, "classification", None)
     classification_value = getattr(classification, "value", str(classification))
     if classification_value not in _FORWARDABLE_CLASSIFICATIONS:
+        return False
+    # A hold means "preserve exactly where it is" — a second copy in a
+    # separately-governed store works against that. See module docstring.
+    if getattr(article, "legal_hold", False):
+        return False
+    if not _jurisdiction_permits_forward(article):
         return False
     # Content-level gate, independent of the classification label — see
     # module docstring's "PII gate" note.
@@ -106,9 +162,11 @@ def _is_forwardable(article: Any) -> bool:
 def forward_article(article: Any) -> None:
     """Schedule a fire-and-forget durable-store write for a newly-created
     Article. Skipped entirely (not just redacted) for CONFIDENTIAL/
-    RESTRICTED/TOP_SECRET content or content that looks like it carries PII
-    — see module docstring. No-op if there's no running event loop, the
-    in-flight cap is already reached, or the circuit breaker is open.
+    RESTRICTED/TOP_SECRET content, content under legal hold, content whose
+    jurisdiction forbids leaving this process or this deployment's region, or
+    content that looks like it carries PII — see module docstring. No-op if
+    there's no running event loop, the in-flight cap is already reached, or
+    the circuit breaker is open.
     """
     global _forward_inflight
     if not _is_forwardable(article):
@@ -141,6 +199,7 @@ async def _post_document(article: Any) -> None:
                 "source_article_id": article.id,
                 "author": article.author,
                 "classification": getattr(classification, "value", str(classification)),
+                "jurisdiction": _jurisdiction_value(article),
                 "source_system": "trancendos-library-bridge",
                 "content_hash": hashlib.sha256(body.encode("utf-8")).hexdigest(),
             },

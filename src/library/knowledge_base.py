@@ -18,7 +18,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from Dimensional.sanitize import sanitize_for_log
-from src.nanoservices.daas_stream.daas_stream import DataClassification
+from src.nanoservices.daas_stream.daas_stream import DataClassification, Jurisdiction
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,19 @@ class Article:
     # a second, separate axis.
     classification: DataClassification = DataClassification.INTERNAL
     retention_days: Optional[int] = None  # None = retain forever
+    # Data-residency constraint, reusing the same enum already applied to data
+    # streams (src/nanoservices/daas_stream) rather than introducing a second
+    # jurisdiction taxonomy. GLOBAL (the default) means "no residency
+    # constraint"; LOCAL_ONLY means this article must never leave the process
+    # that created it. src/library/bridge.py enforces this on the forward path
+    # — see _is_forwardable() there.
+    jurisdiction: Jurisdiction = Jurisdiction.GLOBAL
+    # Legal hold, matching Observatory.AuditEvent's field of the same name: an
+    # explicit "this must be preserved exactly where it is" flag. Content under
+    # hold is never forwarded to the durable worker store (a second, separately
+    # governed copy the hold's custodian doesn't know about is a liability, not
+    # a benefit), and a delete of held content is never propagated.
+    legal_hold: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -62,6 +75,8 @@ class Article:
             "outline_id": self.outline_id,
             "classification": self.classification.value,
             "retention_days": self.retention_days,
+            "jurisdiction": self.jurisdiction.value,
+            "legal_hold": self.legal_hold,
         }
 
     def retention_expired(self, now: Optional[float] = None) -> bool:
@@ -96,6 +111,8 @@ class Library:
         outline_id: Optional[str] = None,
         classification: DataClassification = DataClassification.INTERNAL,
         retention_days: Optional[int] = None,
+        jurisdiction: Jurisdiction = Jurisdiction.GLOBAL,
+        legal_hold: bool = False,
     ) -> Article:
         art = Article(
             title=title,
@@ -107,6 +124,8 @@ class Library:
             status=ArticleStatus.PUBLISHED,
             classification=classification,
             retention_days=retention_days,
+            jurisdiction=jurisdiction,
+            legal_hold=legal_hold,
         )
         self._articles[art.id] = art
         for tag in art.tags:
@@ -159,12 +178,20 @@ class Library:
         # forwarded durable copy (see src/library/bridge.py) doesn't outlive
         # its source article. Fail-open, and a no-op if this article was
         # never forwarded in the first place.
-        try:
-            from src.library.bridge import forward_delete
+        #
+        # Legal hold is the one case where propagating is the *wrong* thing:
+        # the hold can be set via update() after the article was already
+        # forwarded, so a durable copy of held content can exist. Deleting it
+        # is exactly what a hold forbids, so the durable copy is deliberately
+        # left in place — held content outliving its source is the intended
+        # outcome, not an orphan.
+        if not art.legal_hold:
+            try:
+                from src.library.bridge import forward_delete
 
-            forward_delete(article_id)
-        except Exception:
-            pass  # nosec B110 — graceful degradation; fail-open by design
+                forward_delete(article_id)
+            except Exception:
+                pass  # nosec B110 — graceful degradation; fail-open by design
 
         return True
 
