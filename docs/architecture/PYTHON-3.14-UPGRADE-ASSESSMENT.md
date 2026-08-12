@@ -1,9 +1,13 @@
 # Python 3.11 → 3.14 Upgrade Assessment
 
-**Status:** Assessment complete, Stage 1 (non-blocking CI signal) landed. Not a merge — a
-staged project, tracked here rather than in a single PR.
+**Status:** Stages 1, 2 and 6 (dependency half) landed. **Every one of the 84 workers with a
+requirements file now resolves a Python-3.14-usable artifact for every pinned dependency —
+zero blockers remain in the dependency layer.** Stage 3 onward (actually moving base images) is
+unblocked and not yet started. Still a staged project, tracked here rather than in a single PR.
 
-**Date:** 2026-08-01
+**Date:** 2026-08-01, substantially revised 2026-08-12 when Stage 2 replaced this document's
+predictions with measured data. **Section 2's original risk ranking was wrong in both
+directions** — see Section 2a. Read Section 2a, not Section 2, for the current picture.
 
 ## 1. Current state (inventory)
 
@@ -56,6 +60,60 @@ resolve to whatever the latest wheels happen to be at build time, untested again
 than the `2.11.5`–`2.13.4` used everywhere else — worth reconciling regardless of the Python
 version work, since it's existing drift.
 
+## 2a. Dependency risk — MEASURED (2026-08-12, supersedes Section 2)
+
+Section 2 above was explicitly reasoning, not measurement. `scripts/check_python314_readiness.py`
+(added with this revision) replaces it with fact: it reads every worker's pinned requirements and
+asks PyPI, per exact pinned version, whether an artifact usable by CPython 3.14 on **linux/x86_64**
+actually exists — pure-Python wheel, cp314 manylinux/musllinux wheel, or abi3 wheel. The
+linux/x86_64 restriction matters: every worker ships as a linux/amd64 `python:*-slim` container, so
+a macOS or Windows cp314 wheel proves nothing about whether the image builds.
+
+**Section 2's predictions were wrong in both directions.**
+
+| Section 2 said | Reality (measured) |
+|---|---|
+| `qiskit-aer` — "the one dependency in the estate most likely to still be missing a 3.14 wheel or require a source build" | **Already fine.** The exact pinned `qiskit-aer==0.17.2` ships `qiskit_aer-0.17.2-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl`. `qiskit==2.4.1` is an abi3 wheel (`cp310-abi3-manylinux_2_28_x86_64`), forward-compatible with 3.14 by construction. |
+| `opentelemetry-exporter-otlp-proto-grpc` — "grpcio's C-extension has occasionally lagged" | **Already fine.** The exporter itself is pure-Python (`1.42.1-py3-none-any.whl`); its `grpcio` dependency ships cp314 manylinux *and* musllinux x86_64 wheels at 1.83.0. |
+| (not mentioned at all) | **`duckdb==1.3.0` was a real blocker** — no cp314 wheel at that version; the lowest stable release that has one is **1.4.2**. Affected `analytics-service`, `cache-service`, `storage-service`. |
+| (not mentioned at all) | **`pyyaml==6.0.2` was a real blocker** — 6.0.3 is the patch release that added 3.14 wheels. Affected `infinity-ai`, `swarm-coordinator-service`. |
+
+The lesson worth keeping: the packages that felt risky (heavy C++/Rust extensions with visible
+maintenance) had all kept pace, and the packages that blocked were mundane ones nobody thought to
+check. Ranking dependency risk by "how complicated does this package feel" produced exactly the
+wrong worklist — which is why this is now a script that runs, not a table someone reasons about.
+
+**Both blockers are fixed** (Stage 6's dependency half, pulled forward because it was the only
+thing standing between the estate and 3.14 readiness):
+
+- `duckdb==1.3.0` → `1.4.2` in `analytics-service`, `cache-service`, `storage-service`
+- `pyyaml==6.0.2` → `6.0.3` in `infinity-ai`, `swarm-coordinator-service`
+
+Both were smoke-tested on the **current 3.11 runtime** against the APIs these workers actually use
+(`duckdb.connect`/`execute`/`fetchall` round-trip; `yaml.safe_load`) before being applied, since
+the bump ships on 3.11 today and only pays off on 3.14 later. DuckDB's storage format is stable
+across the 1.x line, so an existing 1.3-written `.duckdb` file is readable by 1.4 — worth
+confirming on the first deploy that touches a populated volume rather than taking on trust.
+
+After those five one-line bumps: **84 workers ready, 0 blocked.**
+
+### Still not covered by the measurement
+
+- **14 workers carry unpinned requirements** (`>=`, `~=`, or bare names) — `tranceflow` and
+  `vrar3d` have 8 each, `lab-service` and `library-service` 7 each, plus
+  `artifactory-service`, `blender-worker`, `dimensional-nexus-service`, `fabulousa-service`,
+  `ffmpeg-worker`, `hive-service`, `infinity-auth`, `infinity-bridge-service`, `litellm-service`,
+  `triposr-worker`. The script deliberately does not guess what those resolve to — what a floating
+  pin picks at build time is precisely the thing it cannot know, and reporting them as "ready"
+  would be false confidence. They are listed separately in its output. Pinning them is the
+  remaining half of Stage 6.
+- **6 directories have no requirements file at all** — `bullmq-queue-service`, `cranbania`,
+  `nexus-ws-rs`, `rate-limit-service-rs`, `remotion-render-service`, `vault-service-rs`. These are
+  the Rust/Node services and the CranBania submodule; they have no Python interpreter to upgrade,
+  so their absence here is correct, not a gap.
+- **Resolvable ≠ runs.** A wheel existing proves the image can build. It does not prove the worker
+  behaves correctly on 3.14 — that is what Stage 3's pilot is for.
+
 ## 3. Why staged, not a mass edit
 
 - ~90 Dockerfiles pinned by digest, ~30 CI workflow files hardcoding `"3.11"`, and a
@@ -72,13 +130,28 @@ version work, since it's existing drift.
 |---|---|---|---|
 | **0** | Reconcile the `requires-python` floor: root/`tranc3-bots` at `>=3.11` vs. `aeonmind/python`/`tranc3_crypto` at `>=3.10`. Decide one floor (recommend `>=3.11` everywhere, since that's already the majority and the CI reality) before layering 3.14 on top of an inconsistent base. | None (docs/config only) | Not started — needs an owner decision, not just a mechanical edit |
 | **1** | Add `'3.14'` to the existing `aeonmind/python` CI matrix (`.github/workflows/python.yml`) as the first real, empirical signal — nothing in this repo has actually been run against 3.14 yet. | Low — additive, non-blocking if marked `continue-on-error` | **Done this session** (see below) |
-| **2** | Once Stage 1 is green (or its failures are understood), explicitly verify `qiskit-aer` and `opentelemetry-exporter-otlp-proto-grpc` against 3.14 — `pip install` in a 3.14 venv and confirm a wheel resolves, not a source build. This is the one step that can't be reasoned about from release history alone. | Investigation only | Blocked on Stage 1 signal |
-| **3** | Pick one low-traffic P3 worker as a pilot (e.g. `analytics-service` — no genuinely risky deps per Section 2), bump its Dockerfile to `python:3.14-slim` + resolve the new digest, run its test suite. | Low — single worker, independently revertible | Blocked on Stage 2 |
+| **2** | Verify the risky dependencies against 3.14 for real rather than from release history. | Investigation only | **Done 2026-08-12** — and done for the *whole estate*, not just the two flagged packages, via `scripts/check_python314_readiness.py`. Did not need Stage 1's CI signal after all: PyPI's own release metadata answers "does a usable artifact exist" directly, per exact pinned version. See Section 2a. |
+| **3** | Pick one low-traffic P3 worker as a pilot, bump its Dockerfile to `python:3.14-slim` + resolve the new digest, run its test suite. | Low — single worker, independently revertible | **Unblocked, not started.** Note: this row originally suggested `analytics-service` as the pilot "no genuinely risky deps per Section 2" — that was wrong, it was one of the five *blocked* workers (`duckdb`). It is fine now that the pin is bumped, but pick the pilot from the script's READY list rather than from intuition. The `python:3.14-slim` digest resolved 2026-08-12 is `sha256:a7fb1e634c4a578f9e0bd6327f11a3cde11b7a9395f48e24360c0988bcc5c2bc` — re-resolve at the time of use rather than trusting this value, since the tag moves with each patch build. |
 | **4** | Roll the same Dockerfile bump to the rest of the P3 workers in small batches, watching each for build/test failures before continuing. | Low per-batch | Blocked on Stage 3 |
 | **5** | P0–P2 workers, root `Dockerfile`/`docker/Dockerfile*`/`tranc3-bots/Dockerfile`, then retarget every hardcoded `"3.11"` CI pin (GitHub Actions and Forgejo) to `"3.14"`. This stage ships what 3.14 *runs on* — it does not touch `requires-python`, `ruff target-version`, or `mypy python_version`; per Section 6, those describe the *minimum* supported version and stay at 3.11 unless a separate, explicitly approved decision drops 3.11 support. | Moderate — this is the stage that actually changes what ships | Blocked on Stage 4 |
-| **6** | Pin the three currently-unpinned workers (`triposr-worker`, `blender-worker`, `ffmpeg-worker`) to the versions confirmed working in Stage 3–5, and reconcile the `pydantic==2.8.2` drift in `haystack-service`/`dspy-service`/`llamaindex-service` to match the rest of the estate. Bundled here since it's the same "pin things properly before/while touching the interpreter" work. | Low | Blocked on Stage 5 |
+| **6** | Pin the currently-unpinned workers and reconcile the `pydantic==2.8.2` drift in `haystack-service`/`dspy-service`/`llamaindex-service` to match the rest of the estate. Bundled here since it's the same "pin things properly before/while touching the interpreter" work. | Low | **Dependency half done early 2026-08-12** (the five 3.14-blocking pins — see Section 2a — pulled forward because they were the only thing between the estate and readiness). Remaining: the 14 workers with floating pins, which is more than the three this row originally named — `tranceflow`/`vrar3d` (8 each) and `lab-service`/`library-service` (7 each) are larger than the originally-flagged trio. Full list in the script's output. |
 
 ## 5. What's landed so far
+
+**Stage 2 + Stage 6 (dependency half)** — 2026-08-12. `scripts/check_python314_readiness.py` is
+new: it walks `workers/*/requirements{-worker,}.txt`, and for every exact `==` pin asks PyPI
+whether a 3.14/linux-x86_64-usable artifact exists, reporting blockers together with the lowest
+stable version that would fix each one. Run it with no arguments for the whole estate, or pass
+worker names to scope it. Exit code is 1 when anything is blocked, so it *can* gate a rollout
+batch in CI — it is deliberately not wired into any workflow, because this upgrade is a staged
+project rather than a merge gate, and a network-dependent check that fails on a PyPI hiccup is a
+bad gate for unrelated PRs.
+
+The first full run found 5 blocked workers, all fixed in the same pass (`duckdb==1.3.0` → `1.4.2`
+in `analytics-service`/`cache-service`/`storage-service`; `pyyaml==6.0.2` → `6.0.3` in
+`infinity-ai`/`swarm-coordinator-service`). Neither package was among the two this document had
+predicted would be the problem, and both of *those* turned out to already be fine — Section 2a has
+the full before/after. The estate now stands at 84 ready, 0 blocked.
 
 **Stage 1** — `.github/workflows/python.yml`'s `test` job matrix now includes `'3.14'`
 (`continue-on-error: true` on the added entry only, so a 3.14 failure surfaces as a visible
@@ -98,5 +171,14 @@ always run to completion, at the cost of some CI time in that scenario.
 
 - Whether to move the *floor* past 3.11 (i.e. drop 3.11 support) is a separate decision from
   *adding* 3.14 support — this assessment only covers reaching 3.14, not deprecating anything.
-- No Dockerfile, requirements file, or non-aeonmind CI workflow has been changed. Stage 1 is
-  additive and scoped to the one sub-project that already had multi-version infrastructure.
+  This is also why **Stage 0 is still not started**: reconciling the `requires-python` floor means
+  raising `aeonmind/python` and `rust_extensions/tranc3_crypto` from `>=3.10` to `>=3.11`, which
+  *drops* 3.10 support (and would retire the `3.10` leg of `python.yml`'s matrix). Every other
+  stage here only adds; that one takes something away, so it stays an explicit owner decision
+  rather than something inferred from "make it consistent".
+- **No Dockerfile has been changed** — nothing yet runs on 3.14. As of 2026-08-12 the change
+  surface is: five requirements pins bumped, one new script, and this document. The estate is
+  *ready* for 3.14, which is not the same as being *on* it; Stages 3–5 are what would actually
+  move it, and none of them have started.
+- `requires-python`, `ruff target-version`, and `mypy python_version` all remain at 3.11
+  throughout. Those describe the minimum supported version, not what the containers run.
