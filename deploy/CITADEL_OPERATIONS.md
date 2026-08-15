@@ -75,7 +75,32 @@ the OS is up, and gives you:
 **Set this up before anything else.** Every subsequent step gets easier, and a server
 you can only fix by walking to it is a server that stays broken longer.
 
-Configure it at boot (**Ctrl+E** during POST) with a static IP on your LAN.
+### Setup — do this at the machine, once
+
+1. **Reboot and press `Ctrl+E`** when "iDRAC6 Configuration Utility" appears during
+   POST (a few seconds after the Dell splash).
+2. **LAN Parameters:**
+   - *IPv4 Settings* → DHCP **Off**, set a static address on your LAN. Suggested
+     `192.168.1.5` (the host OS is `.4`; keep them adjacent and memorable). Set netmask
+     and gateway to match.
+   - *NIC Selection* → **Dedicated** if the T610 has the dedicated iDRAC port populated;
+     otherwise shared with LOM1.
+3. **LAN User Configuration:** change the default `root` / `calvin` password. Those
+   credentials are public knowledge and are actively scanned for.
+4. **Enable IPMI over LAN** — required for the monitoring below. It is off by default on
+   some firmware.
+5. Save and exit. iDRAC is now reachable at `https://192.168.1.5` independent of the
+   host OS.
+6. **Create a dedicated monitoring user:** *iDRAC Settings → Users →* add a user with
+   **Login to iDRAC** privilege only — no Configure, no Execute. `ipmi-exporter`
+   authenticates as this; it needs to read sensors and nothing else. Never point
+   monitoring at `root`.
+7. **Update iDRAC firmware** to the last Dell release for this model. iDRAC6 firmware
+   carries known vulnerabilities and the shipped version is from 2019 or earlier here.
+
+Once step 6 is done, put those credentials into `monitoring/ipmi.yml` (Vault-sourced in
+production — the file ships with placeholders that must be replaced) and set the target
+address in `monitoring/prometheus.yml`'s `ipmi-citadel` job.
 
 > **Security, and this is not optional:** iDRAC6 is from 2009 and has known
 > vulnerabilities, including trivially exploitable ones in old firmware. It must **never**

@@ -2980,6 +2980,47 @@ services:
     labels:
       - "traefik.enable=false"
 
+  # ── ipmi-exporter — Physical host health via iDRAC → Prometheus ──────────
+  # Prometheus community, Apache 2.0.
+  #
+  # node-exporter above sees only what the OS sees. It cannot report a failed
+  # power supply, a fan RPM, an inlet temperature, or a chassis intrusion —
+  # those live on the baseboard management controller, below the OS entirely.
+  # On the Citadel's PowerEdge T610 that is iDRAC6.
+  #
+  # This matters concretely: the host arrived with a failed PSU and a failed
+  # drive, both logged in the SEL for some time, and both first noticed by ear
+  # rather than by alert. With this scrape in place they would have fired as
+  # Prometheus alerts long before.
+  #
+  # Runs in "remote" mode — it does not need to be on the monitored machine, it
+  # talks IPMI-over-LAN to the BMC. Target addresses and credentials live in
+  # monitoring/ipmi.yml; see deploy/CITADEL_OPERATIONS.md §2 for iDRAC setup.
+  #
+  # SECURITY: iDRAC6 is 2009-vintage with known vulnerabilities. It must sit on
+  # a management VLAN, must never be internet-facing, and must never be
+  # published through the Cloudflare tunnel. This container reaches it over the
+  # LAN; nothing here exposes it.
+  ipmi-exporter:
+    image: prometheuscommunity/ipmi-exporter:v1.9.0
+    container_name: tranc3-ipmi-exporter
+    restart: unless-stopped
+    command:
+      - "--config.file=/config/ipmi.yml"
+    volumes:
+      - ./monitoring/ipmi.yml:/config/ipmi.yml:ro
+    ports:
+      - "9290:9290"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9290/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=false"
+
   # ═══════════════════════════════════════════════════════════════════════
   # EXTENDED WORKER LAYER — All platform entities
   # ═══════════════════════════════════════════════════════════════════════
