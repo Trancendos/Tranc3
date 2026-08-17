@@ -1827,7 +1827,7 @@ services:
   #            → mistral → huggingface (x8 rotation with hard stops)
   # ══════════════════════════════════════════════════════════════════════════
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest@sha256:76d036d18bb352ac3b4e0a84d5892b2cb2fe472e305bf2ac0619aef97fe6ced0
+    image: ghcr.io/berriai/litellm:main-latest@sha256:3a1980074ff2ac13883e0ffee1bebec345d8addd004be251079cee173b0e8305
     container_name: trancendos-litellm
     command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "4"]
     volumes:
