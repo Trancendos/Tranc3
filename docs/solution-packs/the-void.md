@@ -18,9 +18,10 @@
 | Pillar | Security | `Pillar` enum |
 | Reports to Prime(s) | The Guardian (Marcus Magnolia) | `primes` |
 | Status | 🔧 Migrating | `CLAUDE.md` service table |
-| Code path | `workers/config-service/` ✅ on disk | filesystem |
-| Port | 8024 | compose / `worker_port` |
-| Compose service | `config-service` | `docker-compose.production.yml` |
+| Code path | `workers/infinity-void/` ✅ on disk | filesystem |
+| Port | 8002 | compose / `worker_port` |
+| Compose service | `infinity-void` | `docker-compose.production.yml` |
+| Traefik route | `Host(`api.trancendos.com`) && PathPrefix(`/api/void`)` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Secrets + password vault (AES-GCM)
@@ -46,12 +47,15 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/config-service`**, so `src/` is *not* in the image. This Location
+- **Build context is `./workers/infinity-void`**, so `src/` is *not* in the image. This Location
   cannot `from src.* import ...` — ported logic must be self-contained. This is the
   single most common cause of a worker that passes tests and dies in the container.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
+- **Traefik `stripprefix` is mandatory** for `/the-void` routing; without the middleware
+  the router matches and the worker 404s on every path. This has bitten the estate
+  before (resonate, imind).
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -66,8 +70,8 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 ```mermaid
 flowchart LR
-    C[Client] --> A[api.py]
-    A --> S[The Void<br/>8024]
+    C[Client] --> T[Traefik]
+    T -->|/the-void| S[The Void<br/>8002]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[The Guardian (Marcus Magnolia)]
     S --> AA[Crypt-Keeper]
@@ -83,11 +87,11 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | in-process router | mounted in api.py |
+| Ingress | Traefik → the-void | Host(`api.trancendos.com`) && PathPrefix(`/api/void`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Crypt-Keeper + The Silencer | the two Agents below |
 | Automation | Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot | the four Bots below |
-| Persistence | SQLite | volume not yet declared |
+| Persistence | SQLite | void-data → /data |
 | Observability | structured JSON + W3C trace | `src/observability/tracing.py` |
 
 ## 6. Storyboard and schema — SCAFFOLD
@@ -96,7 +100,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  api.py routes
+1. Request arrives  →  Traefik strips /the-void
 2. Crypt-Keeper — Coordinates zero-knowledge DB access; splits/protects keys.
 3. The Silencer — Sanitizes outbound streams so sensitive data avoids general logs.
 4. Bots fire: Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot
@@ -172,10 +176,13 @@ has to name.
 **Compose service:**
 
 ```yaml
-  config-service:
-    build: { context: ./workers/config-service, dockerfile: Dockerfile }
-    environment: [ PORT=8024 ]
-    ports: [ "8024:8024" ]
+  infinity-void:
+    build: { context: ./workers/infinity-void, dockerfile: Dockerfile }
+    environment: [ PORT=8002 ]
+    ports: [ "8002:8002" ]
+    labels:
+      - "traefik.http.routers.the-void.middlewares=strip-the-void@docker"
+      - "traefik.http.middlewares.strip-the-void.stripprefix.prefixes=/the-void"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -183,13 +190,18 @@ has to name.
 Sequenced against the readiness gaps below, so the first epic is whatever is
 actually missing rather than a generic phase 1.
 
-### Epic 1 — Implement the abilities
+### Epic 1 — Verify routing end to end
+
+- As a client, requests to `/the-void` reach the worker with the prefix stripped.
+- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+
+### Epic 2 — Implement the abilities
 
 - As a user, I can exercise: Zero-Knowledge Vaulting.
 - As a user, I can exercise: Classified Data Enclave.
 - As an auditor, every action emits an Observatory event carrying `PID-VOI`.
 
-### Epic 2 — Prove it works
+### Epic 3 — Prove it works
 
 - As a maintainer, `tests/` covers The Void's health, status and each ability.
 - As a maintainer, the offline mode above is tested, not assumed.
@@ -198,8 +210,7 @@ actually missing rather than a generic phase 1.
 
 | Item | Evidence | Impact |
 |---|---|---|
-| Two candidate implementations: registered `workers/config-service/` vs `workers/vault-service/` | both directories exist on disk | Registry and CLAUDE.md name different workers for this Location — port, route and readiness above follow the registered one |
-| Compose service has no Traefik router | compose labels | Reachable inside the network only — no external route |
+| Two candidate implementations: registered `workers/infinity-void/` vs `workers/vault-service/` | both directories exist on disk | Registry and CLAUDE.md name different workers for this Location — port, route and readiness above follow the registered one |
 | No test files under the code path | filesystem check | Regressions land silently |
 | Status is 🔧 Migrating | CLAUDE.md service table | Partial — not production-complete |
 
@@ -222,7 +233,7 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 4/10 · Readiness 6/10 → Invest — above-median dependency, below-median readiness**
+**Criticality 5/10 · Readiness 6/10 → Invest — above-median dependency, below-median readiness**
 
 Classified against the estate's own medians (criticality 3, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
@@ -234,8 +245,8 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 
 | Axis | Score | Reasons |
 |---|---|---|
-| Criticality | 4/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); Security pillar — platform-wide blast radius (+2) |
-| Readiness | 6/10 | status 🔧 partial/migrating (+1); code path `workers/config-service/` exists on disk (+2); 1 Python file(s) present (+1); compose service `config-service` defined (+2) |
+| Criticality | 5/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); Security pillar — platform-wide blast radius (+2); externally routed via Traefik (+1) |
+| Readiness | 6/10 | status 🔧 partial/migrating (+1); code path `workers/infinity-void/` exists on disk (+2); 1 Python file(s) present (+1); compose service `infinity-void` defined (+2) |
 
 ## 14. Documentation — DERIVED
 
@@ -243,7 +254,7 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 - `src/entities/platform.py` — `PLATFORM_ENTITIES["The Void"]`
 - `docs/governance/LOCATION-FUNCTIONS.md` — Job Description
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — base tier and variants
-- `docker-compose.production.yml` — service `config-service`
-- `workers/config-service/` — implementation
+- `docker-compose.production.yml` — service `infinity-void`
+- `workers/infinity-void/` — implementation
 - `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation
 

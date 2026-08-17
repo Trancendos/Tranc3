@@ -18,9 +18,10 @@
 | Pillar | DevOps | `Pillar` enum |
 | Reports to Prime(s) | Trancendos | `primes` |
 | Status | ✅ Self-hosted | `CLAUDE.md` service table |
-| Code path | `workers/health-aggregator/` ✅ on disk | filesystem |
-| Port | 8029 | compose / `worker_port` |
-| Compose service | `health-aggregator` | `docker-compose.production.yml` |
+| Code path | `workers/devocity/` ✅ on disk | filesystem |
+| Port | 8110 | compose / `worker_port` |
+| Compose service | `devocity` | `docker-compose.production.yml` |
+| Traefik route | `Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`)` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Development operations hub
@@ -46,12 +47,15 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/health-aggregator`**, so `src/` is *not* in the image. This Location
+- **Build context is `./workers/devocity`**, so `src/` is *not* in the image. This Location
   cannot `from src.* import ...` — ported logic must be self-contained. This is the
   single most common cause of a worker that passes tests and dies in the container.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
+- **Traefik `stripprefix` is mandatory** for `/devocity` routing; without the middleware
+  the router matches and the worker 404s on every path. This has bitten the estate
+  before (resonate, imind).
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -66,8 +70,8 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 ```mermaid
 flowchart LR
-    C[Client] --> A[api.py]
-    A --> S[DevOcity<br/>8029]
+    C[Client] --> T[Traefik]
+    T -->|/devocity| S[DevOcity<br/>8110]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[Trancendos]
     S --> AA[The Foreman]
@@ -83,11 +87,11 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | in-process router | mounted in api.py |
+| Ingress | Traefik → devocity | Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Foreman + The Dispatcher | the two Agents below |
 | Automation | Crane-Bot, Wrench-Bot, Gear-Bot, Belt-Bot | the four Bots below |
-| Persistence | SQLite | volume not yet declared |
+| Persistence | SQLite | devocity-data → /app/data |
 | Observability | structured JSON + W3C trace | `src/observability/tracing.py` |
 
 ## 6. Storyboard and schema — SCAFFOLD
@@ -96,7 +100,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  api.py routes
+1. Request arrives  →  Traefik strips /devocity
 2. The Foreman — Coordinates deployment pipelines, checking safety metrics before pushes.
 3. The Dispatcher — Launches automated server scaling, optimizing system allocations.
 4. Bots fire: Crane-Bot, Wrench-Bot, Gear-Bot, Belt-Bot
@@ -172,10 +176,13 @@ has to name.
 **Compose service:**
 
 ```yaml
-  health-aggregator:
-    build: { context: ./workers/health-aggregator, dockerfile: Dockerfile }
-    environment: [ PORT=8029 ]
-    ports: [ "8029:8029" ]
+  devocity:
+    build: { context: ./workers/devocity, dockerfile: Dockerfile }
+    environment: [ PORT=8110 ]
+    ports: [ "8110:8110" ]
+    labels:
+      - "traefik.http.routers.devocity.middlewares=strip-devocity@docker"
+      - "traefik.http.middlewares.strip-devocity.stripprefix.prefixes=/devocity"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -183,13 +190,18 @@ has to name.
 Sequenced against the readiness gaps below, so the first epic is whatever is
 actually missing rather than a generic phase 1.
 
-### Epic 1 — Implement the abilities
+### Epic 1 — Verify routing end to end
+
+- As a client, requests to `/devocity` reach the worker with the prefix stripped.
+- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+
+### Epic 2 — Implement the abilities
 
 - As a user, I can exercise: Orchestrated Rollouts.
 - As a user, I can exercise: System Pulses.
 - As an auditor, every action emits an Observatory event carrying `PID-DEV`.
 
-### Epic 2 — Prove it works
+### Epic 3 — Prove it works
 
 - As a maintainer, `tests/` covers DevOcity's health, status and each ability.
 - As a maintainer, the offline mode above is tested, not assumed.
@@ -198,8 +210,6 @@ actually missing rather than a generic phase 1.
 
 | Item | Evidence | Impact |
 |---|---|---|
-| Two candidate implementations: registered `workers/health-aggregator/` vs `workers/devocity/` | both directories exist on disk | Registry and CLAUDE.md name different workers for this Location — port, route and readiness above follow the registered one |
-| Compose service has no Traefik router | compose labels | Reachable inside the network only — no external route |
 | No test files under the code path | filesystem check | Regressions land silently |
 
 ## 12. Wireframe — SCAFFOLD
@@ -221,7 +231,7 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 4/10 · Readiness 8/10 → Invest — above-median dependency, below-median readiness**
+**Criticality 5/10 · Readiness 8/10 → Invest — above-median dependency, below-median readiness**
 
 Classified against the estate's own medians (criticality 3, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
@@ -233,8 +243,8 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 
 | Axis | Score | Reasons |
 |---|---|---|
-| Criticality | 4/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); DevOps pillar — platform-wide blast radius (+2) |
-| Readiness | 8/10 | status ✅ in CLAUDE.md (+3); code path `workers/health-aggregator/` exists on disk (+2); 1 Python file(s) present (+1); compose service `health-aggregator` defined (+2) |
+| Criticality | 5/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); DevOps pillar — platform-wide blast radius (+2); externally routed via Traefik (+1) |
+| Readiness | 8/10 | status ✅ in CLAUDE.md (+3); code path `workers/devocity/` exists on disk (+2); 2 Python file(s) present (+1); compose service `devocity` defined (+2) |
 
 ## 14. Documentation — DERIVED
 
@@ -242,7 +252,7 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 - `src/entities/platform.py` — `PLATFORM_ENTITIES["DevOcity"]`
 - `docs/governance/LOCATION-FUNCTIONS.md` — Job Description
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — base tier and variants
-- `docker-compose.production.yml` — service `health-aggregator`
-- `workers/health-aggregator/` — implementation
+- `docker-compose.production.yml` — service `devocity`
+- `workers/devocity/` — implementation
 - `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation
 

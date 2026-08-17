@@ -11,7 +11,7 @@ rank safe, unimportant work above important, unfinished work.
 
 Quadrants split at each axis's median across all 43 Locations (criticality 3, readiness 8). The split is relative: "Defer" means below this estate's own middle, not unimportant.
 
-## Finish first — above-median dependency, above-median readiness  (5)
+## Finish first — above-median dependency, above-median readiness  (6)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
@@ -19,9 +19,10 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | Imaginarium | `PID-IMG` | Creativity | 7/10 | 9/10 | 4 | 8064 | [pack](imaginarium.md) |
 | The Lab | `PID-LAB` | Development (Code) | 7/10 | 9/10 | 3 | 8055 | [pack](the-lab.md) |
 | Tranquility | `PID-TRQ` | Wellbeing | 7/10 | 9/10 | 4 | 8077 | [pack](tranquility.md) |
+| Cryptex | `PID-CRX` | Security | 5/10 | 9/10 | 0 | 8053 | [pack](cryptex.md) |
 | TateKing | `PID-TKG` | Creativity | 4/10 | 9/10 | 0 | 8061 | [pack](tateking.md) |
 
-## Invest — above-median dependency, below-median readiness  (13)
+## Invest — above-median dependency, below-median readiness  (12)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
@@ -30,14 +31,13 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | The Nexus | `PID-NXS` | Architectural | 9/10 | 6/10 | 0 | 8004 | [pack](the-nexus.md) |
 | Royal Bank of Arcadia | `PID-RBA` | Commercial / Financial | 7/10 | 8/10 | 5 | 8013 | [pack](royal-bank-of-arcadia.md) |
 | Think Tank | `PID-TNK` | DevOps | 7/10 | 7/10 | 4 | — | [pack](think-tank.md) |
+| DevOcity | `PID-DEV` | DevOps | 5/10 | 8/10 | 0 | 8110 | [pack](devocity.md) |
+| Section 7 | `PID-DUT` | DevOps | 5/10 | 8/10 | 0 | 8057 | [pack](section-7.md) |
 | The Lighthouse | `PID-LTH` | Security | 5/10 | 8/10 | 0 | 8015 | [pack](the-lighthouse.md) |
+| The Void | `PID-VOI` | Security | 5/10 | 6/10 | 0 | 8002 | [pack](the-void.md) |
 | Arcadian Exchange | `PID-AEX` | Commercial / Financial | 4/10 | 8/10 | 0 | 8012 | [pack](arcadian-exchange.md) |
 | ChronosSphere / ArcStream | `PID-CHR` | DevOps | 4/10 | 8/10 | 0 | 8021 | [pack](chronossphere-arcstream.md) |
-| Cryptex | `PID-CRX` | Security | 4/10 | 8/10 | 0 | 8026 | [pack](cryptex.md) |
-| DevOcity | `PID-DEV` | DevOps | 4/10 | 8/10 | 0 | 8029 | [pack](devocity.md) |
-| Section 7 | `PID-DUT` | DevOps | 4/10 | 8/10 | 0 | 8027 | [pack](section-7.md) |
 | The HIVE | `PID-HVE` | Architectural | 4/10 | 8/10 | 0 | 8022 | [pack](the-hive.md) |
-| The Void | `PID-VOI` | Security | 4/10 | 6/10 | 0 | 8024 | [pack](the-void.md) |
 
 ## Harvest — built out, below-median dependency; polish and ship  (9)
 
@@ -67,10 +67,10 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | Turing's Hub | `PID-THB` | DevOps | 3/10 | 5/10 | 0 | — | [pack](turing-s-hub.md) |
 | The Library | `PID-LIB` | Knowledge | 2/10 | 8/10 | 0 | 8017 | [pack](the-library.md) |
 | The Workshop | `PID-WRK` | Development (Code) | 2/10 | 7/10 | 0 | 2222 | [pack](the-workshop.md) |
+| The Chaos Party | `PID-TCP` | Development (Code) | 2/10 | 6/10 | 0 | — | [pack](the-chaos-party.md) |
 | API Marketplace | `PID-APM` | Commercial / Financial | 1/10 | 7/10 | 0 | — | [pack](api-marketplace.md) |
 | Fabulousa | `PID-FAB` | Creativity | 1/10 | 7/10 | 0 | — | [pack](fabulousa.md) |
 | The Artifactory | `PID-ART` | Commercial / Financial | 1/10 | 7/10 | 0 | — | [pack](the-artifactory.md) |
 | The Spark | `PID-SPK` | Knowledge | 1/10 | 7/10 | 0 | — | [pack](the-spark.md) |
-| The Chaos Party | `PID-TCP` | Development (Code) | 1/10 | 6/10 | 0 | — | [pack](the-chaos-party.md) |
 | Arcadia | `PID-ARC` | Commercial / Financial | 1/10 | 3/10 | 0 | — | [pack](arcadia.md) |
 

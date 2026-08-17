@@ -13,6 +13,7 @@
 | Location | The Chaos Party | `src/entities/platform.py` |
 | Product ID | `PID-TCP` | `_assign_ids()` |
 | Lead AI | The Mad Hatter (`AID-TCP-01`) | `src/entities/platform.py` |
+| All Lead AIs | The Mad Hatter, Alice Dream | `lead_ais` |
 | Base model tier | Tranc3 | `get_orchestration_tier()` |
 | Job Description | Head of Quality Assurance & Testing | `docs/governance/LOCATION-FUNCTIONS.md` |
 | Pillar | Development (Code) | `Pillar` enum |
@@ -142,6 +143,13 @@ CREATE TABLE IF NOT EXISTS the_chaos_party_audit (
 | `NID-TCP-03` | Sugar-Cube-Bot | Generates messy mockup databases to test bad dataset handling. |
 | `NID-TCP-04` | Jam-Tart-Bot | Shuts down minor random services mid-test to check recovery. |
 
+**Per-Lead-AI agent teams** — this Location runs a dedicated pair per named AI.
+
+| Lead AI | Alpha | Beta |
+|---|---|---|
+| The Mad Hatter | The March Hare | The Dormouse |
+| Alice Dream | The White Rabbit | The Looking-Glass |
+
 ## 8. Design direction — SCAFFOLD
 
 **Foundation.** No OSS foundation is recorded for this Location. Either one
@@ -218,7 +226,7 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 1/10 · Readiness 6/10 → Defer — below median on both axes**
+**Criticality 2/10 · Readiness 6/10 → Defer — below median on both axes**
 
 Classified against the estate's own medians (criticality 3, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
@@ -230,7 +238,7 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 
 | Axis | Score | Reasons |
 |---|---|---|
-| Criticality | 1/10 | answers to 1 Prime(s) (+1) |
+| Criticality | 2/10 | answers to 1 Prime(s) (+1); 2 Lead AIs — multi-team Location (+1) |
 | Readiness | 6/10 | status 🔧 partial/migrating (+1); code path `tests/` exists on disk (+2); 217 Python files present (+2); 211 test file(s) (+1) |
 
 ## 14. Documentation — DERIVED

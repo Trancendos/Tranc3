@@ -18,9 +18,10 @@
 | Pillar | DevOps | `Pillar` enum |
 | Reports to Prime(s) | Trancendos | `primes` |
 | Status | ✅ In repo | `CLAUDE.md` service table |
-| Code path | `workers/geo-service/` ✅ on disk | filesystem |
-| Port | 8027 | compose / `worker_port` |
-| Compose service | `geo-service` | `docker-compose.production.yml` |
+| Code path | `workers/the-dutchy/` ✅ on disk | filesystem |
+| Port | 8057 | compose / `worker_port` |
+| Compose service | `the-dutchy` | `docker-compose.production.yml` |
+| Traefik route | `Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`)` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Intelligence & market analysis
@@ -46,12 +47,15 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/geo-service`**, so `src/` is *not* in the image. This Location
+- **Build context is `./workers/the-dutchy`**, so `src/` is *not* in the image. This Location
   cannot `from src.* import ...` — ported logic must be self-contained. This is the
   single most common cause of a worker that passes tests and dies in the container.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
+- **Traefik `stripprefix` is mandatory** for `/section-7` routing; without the middleware
+  the router matches and the worker 404s on every path. This has bitten the estate
+  before (resonate, imind).
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -66,8 +70,8 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 ```mermaid
 flowchart LR
-    C[Client] --> A[api.py]
-    A --> S[Section 7<br/>8027]
+    C[Client] --> T[Traefik]
+    T -->|/section-7| S[Section 7<br/>8057]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[Trancendos]
     S --> AA[The Spy]
@@ -83,11 +87,11 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | in-process router | mounted in api.py |
+| Ingress | Traefik → section-7 | Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Spy + The Oracle | the two Agents below |
 | Automation | Scraper-Bot, Parser-Bot, Crawler-Bot, Whisper-Bot | the four Bots below |
-| Persistence | SQLite | volume not yet declared |
+| Persistence | SQLite | the-dutchy-data → /app/data |
 | Observability | structured JSON + W3C trace | `src/observability/tracing.py` |
 
 ## 6. Storyboard and schema — SCAFFOLD
@@ -96,7 +100,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  api.py routes
+1. Request arrives  →  Traefik strips /section-7
 2. The Spy — Gathers sentiment data from public channels to gauge market trends.
 3. The Oracle — Converts intelligence records into structured development blueprints.
 4. Bots fire: Scraper-Bot, Parser-Bot, Crawler-Bot, Whisper-Bot
@@ -172,10 +176,13 @@ has to name.
 **Compose service:**
 
 ```yaml
-  geo-service:
-    build: { context: ./workers/geo-service, dockerfile: Dockerfile }
-    environment: [ PORT=8027 ]
-    ports: [ "8027:8027" ]
+  the-dutchy:
+    build: { context: ./workers/the-dutchy, dockerfile: Dockerfile }
+    environment: [ PORT=8057 ]
+    ports: [ "8057:8057" ]
+    labels:
+      - "traefik.http.routers.section-7.middlewares=strip-section-7@docker"
+      - "traefik.http.middlewares.strip-section-7.stripprefix.prefixes=/section-7"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -183,13 +190,18 @@ has to name.
 Sequenced against the readiness gaps below, so the first epic is whatever is
 actually missing rather than a generic phase 1.
 
-### Epic 1 — Implement the abilities
+### Epic 1 — Verify routing end to end
+
+- As a client, requests to `/section-7` reach the worker with the prefix stripped.
+- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+
+### Epic 2 — Implement the abilities
 
 - As a user, I can exercise: Quantum Sentiment Scraping.
 - As a user, I can exercise: Structural Blueprint Generation.
 - As an auditor, every action emits an Observatory event carrying `PID-DUT`.
 
-### Epic 2 — Prove it works
+### Epic 3 — Prove it works
 
 - As a maintainer, `tests/` covers Section 7's health, status and each ability.
 - As a maintainer, the offline mode above is tested, not assumed.
@@ -198,7 +210,6 @@ actually missing rather than a generic phase 1.
 
 | Item | Evidence | Impact |
 |---|---|---|
-| Compose service has no Traefik router | compose labels | Reachable inside the network only — no external route |
 | No test files under the code path | filesystem check | Regressions land silently |
 
 ## 12. Wireframe — SCAFFOLD
@@ -220,7 +231,7 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 4/10 · Readiness 8/10 → Invest — above-median dependency, below-median readiness**
+**Criticality 5/10 · Readiness 8/10 → Invest — above-median dependency, below-median readiness**
 
 Classified against the estate's own medians (criticality 3, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
@@ -232,8 +243,8 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 
 | Axis | Score | Reasons |
 |---|---|---|
-| Criticality | 4/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); DevOps pillar — platform-wide blast radius (+2) |
-| Readiness | 8/10 | status ✅ in CLAUDE.md (+3); code path `workers/geo-service/` exists on disk (+2); 1 Python file(s) present (+1); compose service `geo-service` defined (+2) |
+| Criticality | 5/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); DevOps pillar — platform-wide blast radius (+2); externally routed via Traefik (+1) |
+| Readiness | 8/10 | status ✅ in CLAUDE.md (+3); code path `workers/the-dutchy/` exists on disk (+2); 2 Python file(s) present (+1); compose service `the-dutchy` defined (+2) |
 
 ## 14. Documentation — DERIVED
 
@@ -241,7 +252,7 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 - `src/entities/platform.py` — `PLATFORM_ENTITIES["Section 7"]`
 - `docs/governance/LOCATION-FUNCTIONS.md` — Job Description
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — base tier and variants
-- `docker-compose.production.yml` — service `geo-service`
-- `workers/geo-service/` — implementation
+- `docker-compose.production.yml` — service `the-dutchy`
+- `workers/the-dutchy/` — implementation
 - `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation
 

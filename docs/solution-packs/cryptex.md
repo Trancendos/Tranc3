@@ -18,9 +18,10 @@
 | Pillar | Security | `Pillar` enum |
 | Reports to Prime(s) | The Guardian (Marcus Magnolia) | `primes` |
 | Status | ✅ In repo | `CLAUDE.md` service table |
-| Code path | `workers/rate-limit-service/` ✅ on disk | filesystem |
-| Port | 8026 | compose / `worker_port` |
-| Compose service | `rate-limit-service` | `docker-compose.production.yml` |
+| Code path | `workers/cryptex/` ✅ on disk | filesystem |
+| Port | 8053 | compose / `worker_port` |
+| Compose service | `cryptex` | `docker-compose.production.yml` |
+| Traefik route | `Host(`trancendos.com`) && PathPrefix(`/cryptex`)` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `MISP/MISP` (5.7K★, AGPL 3.0) | CLAUDE.md |
 
@@ -47,12 +48,15 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/rate-limit-service`**, so `src/` is *not* in the image. This Location
+- **Build context is `./workers/cryptex`**, so `src/` is *not* in the image. This Location
   cannot `from src.* import ...` — ported logic must be self-contained. This is the
   single most common cause of a worker that passes tests and dies in the container.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
+- **Traefik `stripprefix` is mandatory** for `/cryptex` routing; without the middleware
+  the router matches and the worker 404s on every path. This has bitten the estate
+  before (resonate, imind).
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -67,8 +71,8 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 ```mermaid
 flowchart LR
-    C[Client] --> A[api.py]
-    A --> S[Cryptex<br/>8026]
+    C[Client] --> T[Traefik]
+    T -->|/cryptex| S[Cryptex<br/>8053]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[The Guardian (Marcus Magnolia)]
     S --> AA[The Shield]
@@ -84,11 +88,11 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | in-process router | mounted in api.py |
+| Ingress | Traefik → cryptex | Host(`trancendos.com`) && PathPrefix(`/cryptex`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Shield + The Spear | the two Agents below |
 | Automation | Blocker-Bot, Trace-Bot, Patcher-Bot, Honeypot-Bot | the four Bots below |
-| Persistence | SQLite | volume not yet declared |
+| Persistence | SQLite | cryptex-data → /data |
 | Observability | structured JSON + W3C trace | `src/observability/tracing.py` |
 
 ## 6. Storyboard and schema — SCAFFOLD
@@ -97,7 +101,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  api.py routes
+1. Request arrives  →  Traefik strips /cryptex
 2. The Shield — Configures dynamic firewall rules, blocking network threats live.
 3. The Spear — Automatically performs pen-testing against internal defenses.
 4. Bots fire: Blocker-Bot, Trace-Bot, Patcher-Bot, Honeypot-Bot
@@ -173,10 +177,13 @@ has to name.
 **Compose service:**
 
 ```yaml
-  rate-limit-service:
-    build: { context: ./workers/rate-limit-service, dockerfile: Dockerfile }
-    environment: [ PORT=8026 ]
-    ports: [ "8026:8026" ]
+  cryptex:
+    build: { context: ./workers/cryptex, dockerfile: Dockerfile }
+    environment: [ PORT=8053 ]
+    ports: [ "8053:8053" ]
+    labels:
+      - "traefik.http.routers.cryptex.middlewares=strip-cryptex@docker"
+      - "traefik.http.middlewares.strip-cryptex.stripprefix.prefixes=/cryptex"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -184,13 +191,18 @@ has to name.
 Sequenced against the readiness gaps below, so the first epic is whatever is
 actually missing rather than a generic phase 1.
 
-### Epic 1 — Implement the abilities
+### Epic 1 — Verify routing end to end
+
+- As a client, requests to `/cryptex` reach the worker with the prefix stripped.
+- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+
+### Epic 2 — Implement the abilities
 
 - As a user, I can exercise: Active Countermeasures.
 - As a user, I can exercise: Automated Pen-Testing.
 - As an auditor, every action emits an Observatory event carrying `PID-CRX`.
 
-### Epic 2 — Prove it works
+### Epic 3 — Prove it works
 
 - As a maintainer, `tests/` covers Cryptex's health, status and each ability.
 - As a maintainer, the offline mode above is tested, not assumed.
@@ -199,8 +211,6 @@ actually missing rather than a generic phase 1.
 
 | Item | Evidence | Impact |
 |---|---|---|
-| Two candidate implementations: registered `workers/rate-limit-service/` vs `workers/cryptex/` | both directories exist on disk | Registry and CLAUDE.md name different workers for this Location — port, route and readiness above follow the registered one |
-| Compose service has no Traefik router | compose labels | Reachable inside the network only — no external route |
 | No test files under the code path | filesystem check | Regressions land silently |
 
 ## 12. Wireframe — SCAFFOLD
@@ -222,7 +232,7 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 4/10 · Readiness 8/10 → Invest — above-median dependency, below-median readiness**
+**Criticality 5/10 · Readiness 9/10 → Finish first — above-median dependency, above-median readiness**
 
 Classified against the estate's own medians (criticality 3, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
@@ -234,8 +244,8 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 
 | Axis | Score | Reasons |
 |---|---|---|
-| Criticality | 4/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); Security pillar — platform-wide blast radius (+2) |
-| Readiness | 8/10 | status ✅ in CLAUDE.md (+3); code path `workers/rate-limit-service/` exists on disk (+2); 2 Python file(s) present (+1); compose service `rate-limit-service` defined (+2) |
+| Criticality | 5/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); Security pillar — platform-wide blast radius (+2); externally routed via Traefik (+1) |
+| Readiness | 9/10 | status ✅ in CLAUDE.md (+3); code path `workers/cryptex/` exists on disk (+2); 7 Python files present (+2); compose service `cryptex` defined (+2) |
 
 ## 14. Documentation — DERIVED
 
@@ -243,7 +253,7 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 - `src/entities/platform.py` — `PLATFORM_ENTITIES["Cryptex"]`
 - `docs/governance/LOCATION-FUNCTIONS.md` — Job Description
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — base tier and variants
-- `docker-compose.production.yml` — service `rate-limit-service`
-- `workers/rate-limit-service/` — implementation
+- `docker-compose.production.yml` — service `cryptex`
+- `workers/cryptex/` — implementation
 - `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation
 
