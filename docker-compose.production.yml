@@ -3620,6 +3620,12 @@ services:
     container_name: tranc3-chaos-party
     <<: *worker-common
     environment:
+      # The Chaos Party forwards recorded runs to The Observatory's audit
+      # trail with trend context attached, closing the first leg of the
+      # testing → evidence → learning pipeline. Fail-open: a telemetry
+      # outage never fails a test run.
+      - AUDIT_SERVICE_URL=http://audit-service:8025
+      - OBSERVATORY_FORWARD_ENABLED=true
       - PORT=8079
     expose:
       - "8079"
