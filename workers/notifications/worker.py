@@ -30,6 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sanitize import sanitize_for_log
 from url_validation import SSRFError, validate_webhook_url
+import hmac
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -522,7 +523,12 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if x_internal_secret != _INTERNAL_SECRET:
+    # compare_digest, not `!=`: a plain comparison returns at the first
+    # differing byte, so response latency reveals how many leading
+    # characters a guess got right and the secret can be recovered a byte
+    # at a time. Canonical implementation: Dimensional/service_auth.py —
+    # not imported here because this worker's build context excludes it.
+    if not hmac.compare_digest(x_internal_secret or "", _INTERNAL_SECRET):
         raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
 
 

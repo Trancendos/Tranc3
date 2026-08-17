@@ -6,6 +6,47 @@ and what should be promoted into it.
 
 ---
 
+## 0. Who owns it
+
+**The Queen** — recorded in the Role Assignment Registry as the `Dimensional`
+platform role, reassignable at `/roles` with full audit history.
+
+Until now the SFSC had no owner, and every defect found in it during this review
+is the kind an owner would have caught: 447 lines of point-of-authorship
+security scanning wired to nothing; three duplicate `CircuitState` enums inside
+the core while an ADR consolidated the other four; eight files the
+`shared_core` → `Dimensional` rename left as stale copies; telemetry dead in 34
+services. All 43 Locations have a Lead AI who would have noticed. This did not.
+
+The Queen holds it on the registry's own evidence, not on the strength of the
+hive metaphor:
+
+| Evidence | Value |
+|---|---|
+| Her Job Description at The HIVE | **"Head of Data Transport & Swarm Operations"** |
+| The HIVE's primary function | Data Transport Hub |
+| Locations she owns | 1 — the fewest of any major Lead AI (Rocking Ricki 3, Voxx 2, Trancendos 2) |
+| Prime duties elsewhere | 0 — nothing competes for her attention |
+| Her Prime | Cornelius MacIntyre, highest Prime in-degree (12) — escalation needs no new path |
+
+A shared core imported by 314 files *is* data transport and swarm operations,
+which is the job her title already names.
+
+**Norman Hawkins was the alternative and was rejected.** He owns The Observatory,
+where Dimensional health telemetry lands — but he already owns two Locations and
+is Prime for five, and giving one AI both the producer and the sink removes the
+independent check.
+
+**A Dimensional is deliberately not a Location.** It has no pillar, no agent
+teams and no worker port. `PLATFORM_ROLES` in `src/entities/platform.py` is a
+parallel, smaller concept for exactly this, so the 43-entity registry is not
+bent to solve a governance problem. `src/roles/registry.py` seeds both and
+validates against both; unknown keys are still rejected.
+
+RACI: **The Queen** accountable; **The Observatory** the sink her telemetry
+lands in; **Cornelius MacIntyre** the escalation Prime.
+
+
 ## 1. What a Dimensional is
 
 A **Dimensional** is a Shared Functional Services Core (SFSC) capability: cross-cutting

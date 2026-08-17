@@ -186,7 +186,7 @@
       "warp-tunnel"
     ]
   },
-  "commit": "d3494cb5",
+  "commit": "ec8650ee",
   "failures_by_check": {
     "not built by any compose service": [
       "dimensional-nexus-service",
@@ -230,7 +230,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-17T19:05:01.251156+00:00",
+  "generated_at": "2026-08-17T19:38:15.284551+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -4021,6 +4021,7 @@
       "circuit breaker": {
         "dimensional_modules": [
           "Dimensional/architecture/oci_adaptive_provider.py",
+          "Dimensional/circuit_state.py",
           "Dimensional/infinity/sentinel_station.py",
           "Dimensional/orchestration/health_monitor.py"
         ],
@@ -4031,8 +4032,10 @@
         "verdict": "IN SCOPE, NOT REACHING \u2014 in the core, but 1 service(s) implement it anyway"
       },
       "internal-secret verification": {
-        "dimensional_modules": [],
-        "in_dimensional": false,
+        "dimensional_modules": [
+          "Dimensional/service_auth.py"
+        ],
+        "in_dimensional": true,
         "services_implementing_independently": [
           "artifactory-service",
           "audit-service",
@@ -4077,7 +4080,7 @@
           "vault-service",
           "workflow-engine-service"
         ],
-        "verdict": "CANDIDATE \u2014 42 services implement it independently, core has nothing"
+        "verdict": "IN SCOPE, NOT REACHING \u2014 in the core, but 42 service(s) implement it anyway"
       },
       "log sanitisation": {
         "dimensional_modules": [
@@ -4117,10 +4120,13 @@
         "OTel worker setup": [],
         "circuit breaker": [
           "Dimensional/architecture/oci_adaptive_provider.py",
+          "Dimensional/circuit_state.py",
           "Dimensional/infinity/sentinel_station.py",
           "Dimensional/orchestration/health_monitor.py"
         ],
-        "internal-secret verification": [],
+        "internal-secret verification": [
+          "Dimensional/service_auth.py"
+        ],
         "log sanitisation": [
           "Dimensional/sanitize.py"
         ],
@@ -4129,11 +4135,14 @@
         ],
         "token-bucket rate limit": []
       },
-      "module_count": 101
+      "module_count": 104
     },
     "internal_secret_variance": {
       "constant_time": [
+        "artifactory-service",
         "audit-service",
+        "blender-worker",
+        "cdn-service",
         "config-service",
         "cron-service",
         "deepagents-orchestrator-service",
@@ -4142,42 +4151,38 @@
         "fabulousa-service",
         "ffmpeg-worker",
         "gbrain-bridge",
+        "geo-service",
         "haystack-service",
         "health-aggregator",
+        "identity-service",
+        "imaginarium",
         "infinity-ai",
+        "langchain-integration-service",
+        "ledger-service",
         "litellm-service",
         "llamaindex-service",
         "mlflow-service",
+        "model-router-service",
+        "monitoring",
+        "notifications",
+        "orders-service",
         "payments-service",
         "products-service",
+        "queue-service",
+        "rate-limit-service",
         "search-service",
         "skills-benchmark-service",
+        "sms-service",
+        "tateking",
+        "the-lab",
+        "topology-service",
         "triposr-worker",
         "turings-hub-service",
         "vault-service",
         "workflow-engine-service"
       ],
       "fail_open": [],
-      "timing_unsafe": [
-        "artifactory-service",
-        "blender-worker",
-        "cdn-service",
-        "geo-service",
-        "identity-service",
-        "imaginarium",
-        "langchain-integration-service",
-        "ledger-service",
-        "model-router-service",
-        "monitoring",
-        "notifications",
-        "orders-service",
-        "queue-service",
-        "rate-limit-service",
-        "sms-service",
-        "tateking",
-        "the-lab",
-        "topology-service"
-      ],
+      "timing_unsafe": [],
       "total": 42
     }
   },

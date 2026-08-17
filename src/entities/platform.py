@@ -1697,7 +1697,6 @@ def _wire_multi_agent_teams() -> None:
         ),
     }
 
-
     # The Chaos Party runs two testing disciplines that must not share a team:
     # adversarial (The Mad Hatter) and deterministic (Alice Dream). A chaos agent
     # and an acceptance agent want opposite things from a run — one seeks
@@ -1922,3 +1921,65 @@ def get_all_ids() -> List[Dict]:
                 }
             )
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLATFORM ROLES — accountable ownership for things that are NOT Locations
+#
+# Every one of the 43 Locations has a Lead AI who notices when it breaks. The
+# Shared Functional Services Core (`Dimensional/`) had nobody, and the cost of
+# that showed up as a specific class of defect rather than as an abstraction:
+# 447 lines of point-of-authorship security scanning built and never wired to
+# anything; three duplicate CircuitState enums sitting inside the core while an
+# ADR consolidated the other four; eight files the shared_core -> Dimensional
+# rename left as stale copies; telemetry dead in 34 services. Each is the kind
+# of thing an owner would have caught.
+#
+# These roles are deliberately NOT added to PLATFORM_ENTITIES. A Dimensional is
+# not a Location — it has no pillar, no agent teams, no worker port — and
+# forcing one into the 43-entity registry would corrupt the entity model to
+# solve an ownership problem. They are a parallel, smaller concept: a named
+# responsibility with a default holder, seeded into the same Role Assignment
+# Registry so ownership stays mutable, audited, and reassignable at runtime
+# without a code change.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PlatformRole:
+    """A named responsibility that is not a Location."""
+
+    role_id: str
+    job_description: str
+    default_holder: str
+    scope: str
+    rationale: str
+
+
+PLATFORM_ROLES: Dict[str, PlatformRole] = {
+    "Dimensional": PlatformRole(
+        role_id="Dimensional",
+        job_description="Head of Data Transport & Swarm Operations",
+        default_holder="The Queen",
+        scope=(
+            "The Shared Functional Services Core (Dimensional/) — 101 modules "
+            "imported by 314 files: sanitisation, path/URL validation, security "
+            "automation, event bus, service registry, circuit state."
+        ),
+        rationale=(
+            "The Queen holds this because the registry already says so, not "
+            "because the metaphor is pleasing. Her Job Description at The HIVE "
+            "is literally 'Head of Data Transport & Swarm Operations', and a "
+            "shared core consumed by 314 files is data transport and swarm "
+            "operations. She also has the most capacity to take it: she owns "
+            "one Location, the fewest of any major Lead AI (Rocking Ricki 3, "
+            "Voxx 2, Trancendos 2), and is Prime for none, so nothing competes "
+            "for her attention. Her Prime is already Cornelius MacIntyre, the "
+            "highest in-degree Prime on the platform, so escalation needs no "
+            "new path. Norman Hawkins was the obvious alternative — he owns "
+            "The Observatory, where Dimensional health telemetry lands — but "
+            "he owns two Locations and is Prime for five, and giving one AI "
+            "both the producer and the sink removes the independent check."
+        ),
+    ),
+}

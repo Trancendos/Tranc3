@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `d3494cb5`. Regenerate with 
+Generated from repo state at `ec8650ee`. Regenerate with 
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -21,14 +21,14 @@ Generated from repo state at `d3494cb5`. Regenerate with
 
 ## Dimensionals — what is in scope, what is not
 
-`Dimensional/` holds 101 modules. 
+`Dimensional/` holds 104 modules. 
 A concern is *in scope* when the shared core owns it; a *candidate* when two or
 more services solve it independently; *out of scope* when exactly one service
 does, because that is not shared code, it is that service's job.
 
 | Concern | In core | Services doing it themselves | Verdict |
 |---|:---:|---:|---|
-| internal-secret verification | no | 42 | CANDIDATE — 42 services implement it independently, core has nothing |
+| internal-secret verification | yes | 42 | IN SCOPE, NOT REACHING — in the core, but 42 service(s) implement it anyway |
 | OTel worker setup | no | 35 | CANDIDATE — 35 services implement it independently, core has nothing |
 | log sanitisation | yes | 2 | IN SCOPE, NOT REACHING — in the core, but 2 service(s) implement it anyway |
 | path traversal guard | yes | 2 | IN SCOPE, NOT REACHING — in the core, but 2 service(s) implement it anyway |
@@ -44,8 +44,8 @@ that none of them import.
 
 | Behaviour | Services |
 |---|---:|
-| constant-time (`compare_digest`) | 23 |
-| timing-unsafe (`==` / `!=`) | 18 |
+| constant-time (`compare_digest`) | 41 |
+| timing-unsafe (`==` / `!=`) | 0 |
 | **fails open when the secret is unset** | 0 |
 
 ## NEEDS_WORK
