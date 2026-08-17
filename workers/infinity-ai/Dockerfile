@@ -17,6 +17,15 @@ COPY --chown=worker:worker config.py database.py models.py service.py router.py 
 COPY --chown=worker:worker config/zero_cost/ ./config/zero_cost/
 RUN mkdir -p /app/data \
     && chown -R worker:worker /app/data
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context observability=../../src/observability .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=observability --chown=worker:worker . /app/src/observability/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 # Security: drop to non-root user
 USER worker
 

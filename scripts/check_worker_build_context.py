@@ -68,6 +68,7 @@ vendored, and every vendored file matches its source, 1 otherwise.
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -149,6 +150,35 @@ def cross_boundary_imports(path: Path) -> list[tuple[int, str, bool]]:
     return found
 
 
+def supplied_by_build_context(context: Path, module: str) -> str | None:
+    """Return the named build context that delivers `module`, if any.
+
+    The third delivery route, alongside guarding and vendoring: the worker's
+    Dockerfile carries `COPY --from=<name> . <destination>` and Compose supplies
+    `<name>` via `additional_contexts:` (see
+    `scripts/apply_shared_core_contexts.py`). Read from the Dockerfile rather
+    than from Compose because the Dockerfile is what actually determines where
+    the files land in the image; that the two agree is enforced separately by
+    `apply_shared_core_contexts.py --check`.
+
+    Matching is on the destination path, not the context name, so renaming a
+    context cannot silently make this report a module as delivered when it is
+    not: `/app/src/observability/` satisfies `src.observability` and anything
+    under it, and `/app/Dimensional/` satisfies `Dimensional`.
+    """
+    dockerfile = context / "Dockerfile"
+    if not dockerfile.is_file():
+        return None
+    want = module.replace(".", "/")
+    for name, dest in re.findall(
+        r"^COPY --from=(\w+)[^\n]*? (/app/\S+)\s*$", dockerfile.read_text(encoding="utf-8"), re.M
+    ):
+        delivered = dest.removeprefix("/app/").rstrip("/")
+        if want == delivered or want.startswith(delivered + "/"):
+            return name
+    return None
+
+
 def is_test_file(path: Path, context: Path) -> bool:
     rel = path.relative_to(context)
     return "tests" in rel.parts or rel.name.startswith("test_") or rel.name.endswith("_test.py")
@@ -208,10 +238,16 @@ def main() -> int:
                 rel = py.relative_to(ROOT)
                 top = module.split(".")[0]
                 vendored = (context / top).is_dir()
+                supplied = supplied_by_build_context(context, module)
                 if vendored:
                     info.append(
                         f"{rel}:{lineno}: imports `{module}` — `{top}/` is vendored into "
                         f"`{context.relative_to(ROOT)}`, so it resolves in the image"
+                    )
+                elif supplied:
+                    info.append(
+                        f"{rel}:{lineno}: imports `{module}` — delivered by the "
+                        f"`{supplied}` named build context, so it resolves in the image"
                     )
                 elif guarded:
                     info.append(

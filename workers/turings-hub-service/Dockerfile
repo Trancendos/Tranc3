@@ -13,6 +13,15 @@ RUN mkdir -p assets/vrm assets/animations assets/portraits \
 RUN mkdir -p src/personality src/entities 2>/dev/null; \
     touch src/__init__.py src/personality/__init__.py src/entities/__init__.py
 
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context observability=../../src/observability .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=observability --chown=worker:worker . /app/src/observability/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 USER worker
 EXPOSE 8058
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

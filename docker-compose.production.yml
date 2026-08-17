@@ -449,6 +449,8 @@ services:
     build:
       context: ./workers/tranc3-ai
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-ai-worker
     environment:
       - TRANC3_BACKEND_URL=http://tranc3-backend:8000
@@ -476,6 +478,8 @@ services:
     build:
       context: ./workers/infinity-void
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: infinity-void-worker
     environment:
       - PORT=8002
@@ -611,6 +615,8 @@ services:
     build:
       context: ./workers/monitoring
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: monitoring-worker
     ports:
       - "8007:8007"
@@ -626,6 +632,9 @@ services:
     build:
       context: ./workers/notifications
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: notifications-worker
     ports:
       - "8008:8008"
@@ -641,6 +650,8 @@ services:
     build:
       context: ./workers/infinity-ai
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: infinity-ai-worker
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -680,6 +691,8 @@ services:
     build:
       context: ./workers/products-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: products-service-worker
     ports:
       - "8011:8011"
@@ -695,6 +708,8 @@ services:
     build:
       context: ./workers/orders-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: orders-service-worker
     ports:
       - "8012:8012"
@@ -710,6 +725,8 @@ services:
     build:
       context: ./workers/payments-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: payments-service-worker
     ports:
       - "8013:8013"
@@ -740,6 +757,8 @@ services:
     build:
       context: ./workers/identity-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: identity-service-worker
     ports:
       - "8015:8015"
@@ -764,7 +783,11 @@ services:
 
   search-service:
     <<: *worker-common
-    build: { context: ./workers/search-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/search-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: search-service-worker
     ports: ["8017:8017"]
     healthcheck:
@@ -773,7 +796,11 @@ services:
 
   email-service:
     <<: *worker-common
-    build: { context: ./workers/email-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/email-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: email-service-worker
     ports: ["8018:8018"]
     healthcheck:
@@ -782,7 +809,11 @@ services:
 
   sms-service:
     <<: *worker-common
-    build: { context: ./workers/sms-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/sms-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: sms-service-worker
     ports: ["8019:8019"]
     healthcheck:
@@ -802,7 +833,11 @@ services:
 
   cron-service:
     <<: *worker-common
-    build: { context: ./workers/cron-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/cron-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: cron-service-worker
     ports: ["8021:8021"]
     volumes:
@@ -813,7 +848,11 @@ services:
 
   queue-service:
     <<: *worker-common
-    build: { context: ./workers/queue-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/queue-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: queue-service-worker
     ports: ["8022:8022"]
     healthcheck:
@@ -831,7 +870,11 @@ services:
 
   config-service:
     <<: *worker-common
-    build: { context: ./workers/config-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/config-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: config-service-worker
     ports: ["8024:8024"]
     healthcheck:
@@ -840,7 +883,11 @@ services:
 
   audit-service:
     <<: *worker-common
-    build: { context: ./workers/audit-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/audit-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: audit-service-worker
     ports: ["8025:8025"]
     healthcheck:
@@ -849,7 +896,11 @@ services:
 
   rate-limit-service:
     <<: *worker-common
-    build: { context: ./workers/rate-limit-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/rate-limit-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: rate-limit-service-worker
     ports: ["8026:8026"]
     healthcheck:
@@ -858,7 +909,11 @@ services:
 
   geo-service:
     <<: *worker-common
-    build: { context: ./workers/geo-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/geo-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: geo-service-worker
     ports: ["8027:8027"]
     healthcheck:
@@ -867,7 +922,12 @@ services:
 
   cdn-service:
     <<: *worker-common
-    build: { context: ./workers/cdn-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/cdn-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: cdn-service-worker
     ports: ["8028:8028"]
     healthcheck:
@@ -876,7 +936,12 @@ services:
 
   health-aggregator:
     <<: *worker-common
-    build: { context: ./workers/health-aggregator, dockerfile: Dockerfile }
+    build:
+      context: ./workers/health-aggregator
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: health-aggregator-worker
     ports: ["8029:8029"]
     healthcheck:
@@ -887,7 +952,11 @@ services:
 
   gbrain-bridge:
     <<: *worker-common
-    build: { context: ./workers/gbrain-bridge, dockerfile: Dockerfile }
+    build:
+      context: ./workers/gbrain-bridge
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: gbrain-bridge-worker
     ports: ["8030:8030"]
     healthcheck:
@@ -896,7 +965,11 @@ services:
 
   topology-service:
     <<: *worker-common
-    build: { context: ./workers/topology-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/topology-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: topology-service-worker
     ports: ["8031:8031"]
     healthcheck:
@@ -905,7 +978,11 @@ services:
 
   ledger-service:
     <<: *worker-common
-    build: { context: ./workers/ledger-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/ledger-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: ledger-service-worker
     ports: ["8032:8032"]
     healthcheck:
@@ -914,7 +991,11 @@ services:
 
   model-router-service:
     <<: *worker-common
-    build: { context: ./workers/model-router-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/model-router-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: model-router-service-worker
     ports: ["8033:8033"]
     healthcheck:
@@ -923,7 +1004,11 @@ services:
 
   workflow-engine-service:
     <<: *worker-common
-    build: { context: ./workers/workflow-engine-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/workflow-engine-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: workflow-engine-service-worker
     environment:
       - CORS_ORIGINS=${CORS_ORIGINS:-${ALLOWED_ORIGINS:-http://localhost:3000}}
@@ -934,7 +1019,11 @@ services:
 
   skills-benchmark-service:
     <<: *worker-common
-    build: { context: ./workers/skills-benchmark-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/skills-benchmark-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: skills-benchmark-service-worker
     ports: ["8035:8035"]
     healthcheck:
@@ -943,7 +1032,11 @@ services:
 
   vault-service:
     <<: *worker-common
-    build: { context: ./workers/vault-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/vault-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: vault-service-worker
     ports: ["8038:8038"]
     environment:
@@ -1100,6 +1193,8 @@ services:
     build:
       context: ./workers/blender-worker
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: trancendos-blender-worker
     ports:
       - "8050:8050"
@@ -1115,6 +1210,8 @@ services:
     build:
       context: ./workers/triposr-worker
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: trancendos-triposr-worker
     ports:
       - "8111:8111"
@@ -1132,6 +1229,8 @@ services:
     <<: *worker-common
     build:
       context: ./workers/ffmpeg-worker
+      additional_contexts:
+        observability: ./src/observability
     container_name: trancendos-ffmpeg-worker
     ports:
       - "8052:8052"
@@ -3291,6 +3390,8 @@ services:
     build:
       context: ./workers/deepagents-orchestrator-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-deepagents-orchestrator-service
     <<: *worker-common
     environment:
@@ -3343,6 +3444,8 @@ services:
     build:
       context: ./workers/imind
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-imind
     <<: *worker-common
     environment:
@@ -3376,6 +3479,8 @@ services:
     build:
       context: ./workers/resonate
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-resonate
     <<: *worker-common
     environment:
@@ -3489,6 +3594,8 @@ services:
     build:
       context: ./workers/turings-hub-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-turings-hub-service
     <<: *worker-common
     environment:
@@ -3699,6 +3806,8 @@ services:
     build:
       context: ./workers/langchain-integration-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-langchain-integration-service
     <<: *worker-common
     environment:
@@ -3723,6 +3832,9 @@ services:
     build:
       context: ./workers/mlflow-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: tranc3-mlflow-service
     <<: *worker-common
     environment:
@@ -3859,6 +3971,8 @@ services:
     build:
       context: ./workers/hive-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-hive-service
     <<: *worker-common
     environment:

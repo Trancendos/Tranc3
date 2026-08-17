@@ -66,6 +66,13 @@ jobs:
       - name: Build-context import check
         run: python scripts/check_worker_build_context.py
 
+      # Catches the one way named build contexts fail: a Dockerfile that copies
+      # `--from=sharedcore` while its compose entry supplies no such context.
+      # That builds fine for anyone passing --build-context by hand and fails
+      # only in the deployment, so it has to be caught here.
+      - name: Shared-core build-context check
+        run: python scripts/apply_shared_core_contexts.py --check
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 
