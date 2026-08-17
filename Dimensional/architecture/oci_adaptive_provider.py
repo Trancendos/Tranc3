@@ -43,6 +43,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote, urlencode, urlparse
 
 import aiohttp
+from Dimensional.circuit_state import CircuitState  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +84,10 @@ class StorageTier(str, Enum):
     AWS = "aws_free"
 
 
-class CircuitState(str, Enum):
-    CLOSED = "closed"  # healthy — requests flow normally
-    OPEN = "open"  # failed — requests are rejected immediately
-    HALF_OPEN = "half_open"  # recovery probe in progress
+# CircuitState is imported at the top of this module from its canonical home,
+# Dimensional/circuit_state.py. It was previously defined here as a (str, Enum)
+# with identical members and values — one of three such copies inside
+# Dimensional/, and of eight across the platform.
 
 
 class SystemMode(str, Enum):

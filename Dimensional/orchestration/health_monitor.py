@@ -12,16 +12,15 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
 from Dimensional.sanitize import sanitize_for_log
+from Dimensional.circuit_state import CircuitState  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
 
-class CircuitState(str, Enum):
-    """Circuit breaker states."""
-
-    CLOSED = "closed"  # Normal — requests flow through
-    OPEN = "open"  # Tripped — requests are rejected
-    HALF_OPEN = "half_open"  # Testing — allowing probe requests
+# CircuitState is imported at the top of this module from its canonical home,
+# Dimensional/circuit_state.py. It was previously defined here as a (str, Enum)
+# with identical members and values — one of three such copies inside
+# Dimensional/, and of eight across the platform.
 
 
 class HealthStatus(str, Enum):
