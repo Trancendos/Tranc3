@@ -382,9 +382,16 @@ def _new_id() -> str:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.vault-service")
+        instrument_worker(app, service_name="tranc3.vault-service")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     _init_db()
     _init_openbao()
     logger.info("vault-service started — DB at %s", DB_PATH)

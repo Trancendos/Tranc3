@@ -42,6 +42,30 @@ jobs:
             --exclude ".forgejo" \
             .
 
+  topology:
+    # Two classes of defect that no test can catch, because both only fail
+    # inside a built container while passing locally: a service calling a
+    # sibling on `localhost`, and a worker importing a package its Docker build
+    # context excludes. Both are cheap static checks against compose itself.
+    name: Service Topology
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install PyYAML
+        run: pip install PyYAML
+
+      - name: Cross-service URL check
+        run: python scripts/check_service_urls.py
+
+      - name: Build-context import check
+        run: python scripts/check_worker_build_context.py
+
   test:
     name: Pytest
     runs-on: ubuntu-latest

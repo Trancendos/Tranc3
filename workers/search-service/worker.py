@@ -133,9 +133,16 @@ class SearchIn(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.search-service")
+        instrument_worker(app, service_name="tranc3.search-service")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     init_db()
     logger.info("search-service DB ready with FTS5")
     yield

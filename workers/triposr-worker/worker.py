@@ -158,9 +158,16 @@ class ReconstructRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.triposr-worker")
+        instrument_worker(app, service_name="tranc3.triposr-worker")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     if _check_tsr_available():
         logger.info("TripoSR package detected; model will be loaded on first request.")
     else:

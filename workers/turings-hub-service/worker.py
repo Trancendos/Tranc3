@@ -396,9 +396,16 @@ _audio_cache: Dict[str, bytes] = {}
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.turings-hub-service")
+        instrument_worker(app, service_name="tranc3.turings-hub-service")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     for d in (VRM_DIR, ANIM_DIR, PORTRAIT_DIR):
         d.mkdir(parents=True, exist_ok=True)
     logger.info("Turing's Hub 3D AI Model Builder started on port %d", PORT)

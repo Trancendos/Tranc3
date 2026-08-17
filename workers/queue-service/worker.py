@@ -141,9 +141,16 @@ class FailRequest(BaseModel):
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.the-hive")
+        instrument_worker(app, service_name="tranc3.the-hive")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     init_db()
     sweeper = asyncio.create_task(_stuck_task_sweeper())
     yield
