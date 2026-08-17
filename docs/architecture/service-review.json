@@ -1,0 +1,4195 @@
+{
+  "by_state": {
+    "INFRA": [
+      "airflow",
+      "alertmanager",
+      "authentik-db",
+      "authentik-redis",
+      "authentik-server",
+      "authentik-worker",
+      "blackbox-exporter",
+      "bookstack",
+      "bookstack-db",
+      "cadvisor",
+      "calcom",
+      "calcom-db",
+      "cuckoo",
+      "dagster-webserver",
+      "dependency-track-apiserver",
+      "dependency-track-frontend",
+      "dozzle",
+      "excalidraw",
+      "falco",
+      "forgejo",
+      "forgejo-runner",
+      "gotenberg",
+      "grafana",
+      "ipfs",
+      "ipmi-exporter",
+      "jaeger",
+      "kestra",
+      "krakend",
+      "langfuse",
+      "langfuse-db",
+      "litellm",
+      "llama-cpp-server",
+      "loki",
+      "mattermost",
+      "mattermost-db",
+      "meilisearch",
+      "minio",
+      "misp",
+      "misp-db",
+      "misp-redis",
+      "n8n",
+      "nats",
+      "netdata",
+      "node-exporter",
+      "ollama",
+      "openbao",
+      "openbas",
+      "openbas-db",
+      "openvas",
+      "otel-collector",
+      "outline",
+      "outline-db",
+      "outline-redis",
+      "paperless",
+      "paperless-db",
+      "paperless-redis",
+      "penpot-backend",
+      "penpot-db",
+      "penpot-exporter",
+      "penpot-frontend",
+      "prefect-server",
+      "prometheus",
+      "promtail",
+      "qdrant",
+      "renovate-bot",
+      "signoz-clickhouse",
+      "signoz-frontend",
+      "signoz-otel-collector",
+      "signoz-query-service",
+      "stirling-pdf",
+      "tempo",
+      "temporalite",
+      "tika",
+      "traefik",
+      "valkey",
+      "vault",
+      "victoriametrics",
+      "vllm",
+      "watchtower",
+      "wazuh-dashboard",
+      "wazuh-indexer",
+      "wazuh-manager",
+      "weaviate",
+      "woodpecker-agent",
+      "woodpecker-server",
+      "zot"
+    ],
+    "NEEDS_WORK": [
+      "audit-service",
+      "blender-worker",
+      "cdn-service",
+      "config-service",
+      "cron-service",
+      "deepagents-orchestrator-service",
+      "email-service",
+      "ffmpeg-worker",
+      "gbrain-bridge",
+      "geo-service",
+      "health-aggregator",
+      "identity-service",
+      "infinity-ai",
+      "infinity-void",
+      "langchain-integration-service",
+      "ledger-service",
+      "mlflow-service",
+      "model-router-service",
+      "monitoring",
+      "notifications",
+      "orders-service",
+      "payments-service",
+      "products-service",
+      "queue-service",
+      "rate-limit-service",
+      "search-service",
+      "skills-benchmark-service",
+      "sms-service",
+      "topology-service",
+      "tranc3-ai",
+      "triposr-worker",
+      "turings-hub-service",
+      "vault-service",
+      "workflow-engine-service"
+    ],
+    "ORPHANED": [
+      "dimensional-nexus-service",
+      "gateway-service",
+      "optional-services-health"
+    ],
+    "RUNNING": [
+      "analytics-service",
+      "api-gateway",
+      "artifactory-service",
+      "backup-service",
+      "basement",
+      "bullmq-queue-service",
+      "cache-service",
+      "chaos-party",
+      "cranbania",
+      "cryptex",
+      "devocity",
+      "dspy-service",
+      "fabulousa-service",
+      "files-service",
+      "haystack-service",
+      "hive-service",
+      "ice-box-service",
+      "imaginarium",
+      "imind",
+      "infinity-admin",
+      "infinity-auth",
+      "infinity-bridge",
+      "infinity-one",
+      "infinity-portal",
+      "infinity-shards",
+      "infinity-ws",
+      "lab-service",
+      "library-service",
+      "litellm-service",
+      "llamaindex-service",
+      "nexus-ws-rs",
+      "observatory",
+      "rate-limit-service-rs",
+      "remotion-render-service",
+      "resonate",
+      "sashas-photo-studio",
+      "sentinel-station-service",
+      "storage-service",
+      "swarm-coordinator-service",
+      "taimra",
+      "tateking",
+      "the-academy",
+      "the-dutchy",
+      "the-grid",
+      "the-lab",
+      "the-studio",
+      "tranc3-backend",
+      "tranceflow",
+      "tranquility",
+      "users-service",
+      "vault-service-rs",
+      "vrar3d",
+      "warp-radio",
+      "warp-tunnel"
+    ]
+  },
+  "commit": "c4c96970",
+  "failures_by_check": {
+    "not built by any compose service": [
+      "dimensional-nexus-service",
+      "gateway-service",
+      "optional-services-health"
+    ],
+    "telemetry_reaches": [
+      "audit-service",
+      "blender-worker",
+      "cdn-service",
+      "config-service",
+      "cron-service",
+      "deepagents-orchestrator-service",
+      "email-service",
+      "ffmpeg-worker",
+      "gbrain-bridge",
+      "geo-service",
+      "health-aggregator",
+      "identity-service",
+      "infinity-ai",
+      "infinity-void",
+      "langchain-integration-service",
+      "ledger-service",
+      "mlflow-service",
+      "model-router-service",
+      "monitoring",
+      "notifications",
+      "orders-service",
+      "payments-service",
+      "products-service",
+      "queue-service",
+      "rate-limit-service",
+      "search-service",
+      "skills-benchmark-service",
+      "sms-service",
+      "topology-service",
+      "tranc3-ai",
+      "triposr-worker",
+      "turings-hub-service",
+      "vault-service",
+      "workflow-engine-service"
+    ]
+  },
+  "generated_at": "2026-08-17T18:53:07.570355+00:00",
+  "mounted_routers": [
+    "_access_router",
+    "_admin_os_router",
+    "_aeonmind_router",
+    "_apimarket_router",
+    "_basement_router",
+    "_billing_router",
+    "_citadel_router",
+    "_cryptex_router",
+    "_deployment_modes_router",
+    "_ecosystem_router",
+    "_enhanced_router",
+    "_governance_router",
+    "_grid_router",
+    "_imind_router",
+    "_library_router",
+    "_luminous_router",
+    "_matrix_suites_router",
+    "_mcp_router",
+    "_models_router",
+    "_nexus_router",
+    "_notebooks_router",
+    "_observatory_router",
+    "_relations_router",
+    "_resonate_router",
+    "_roles_router",
+    "_search_router",
+    "_section7_router",
+    "_t2ance_router",
+    "_thinktank_router",
+    "_townhall_router",
+    "_tranc3ts_router",
+    "_trance_one_router",
+    "_tranquility_router",
+    "_turingshub_router",
+    "_waivers_router"
+  ],
+  "services": [
+    {
+      "checks": {},
+      "failures": [],
+      "image": "apache/airflow:2.9.3@sha256:0188b06abb250caccc48bb6d00fde5e74a211273f78b0d143bc4d63f2b67412d",
+      "lifecycle": "INFRA",
+      "service": "airflow"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "prom/alertmanager:v0.27.0@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5",
+      "lifecycle": "INFRA",
+      "service": "alertmanager"
+    },
+    {
+      "build_context": "workers/analytics-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8016, container binds 8016 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "analytics-service"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8003 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "api-gateway"
+    },
+    {
+      "build_context": "workers/artifactory-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8047, container binds 8047 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "artifactory-service"
+    },
+    {
+      "build_context": "workers/audit-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8025, container binds 8025 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "audit-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "lifecycle": "INFRA",
+      "service": "authentik-db"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005",
+      "lifecycle": "INFRA",
+      "service": "authentik-redis"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/goauthentik/server:latest@sha256:36233579415aa2e2e52a6b0c45736cb871fe71460bfe0cf95d83f67528fb1182",
+      "lifecycle": "INFRA",
+      "service": "authentik-server"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/goauthentik/server:latest@sha256:36233579415aa2e2e52a6b0c45736cb871fe71460bfe0cf95d83f67528fb1182",
+      "lifecycle": "INFRA",
+      "service": "authentik-worker"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8078 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "backup-service"
+    },
+    {
+      "build_context": "workers/basement",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by The Basement",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8068, container binds 8068 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "basement"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "prom/blackbox-exporter:v0.25.0@sha256:b04a9fef4fa086a02fc7fcd8dcdbc4b7b35cc30cdee860fdc6a19dd8b208d63e",
+      "lifecycle": "INFRA",
+      "service": "blackbox-exporter"
+    },
+    {
+      "build_context": "workers/blender-worker",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8050, container binds 8050 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "blender-worker"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "lscr.io/linuxserver/bookstack:latest@sha256:13dc508fb46aa7d2b726b6c872e4903892bda68391ac948a5603d3ca60f0937e",
+      "lifecycle": "INFRA",
+      "service": "bookstack"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "mariadb:12@sha256:628f228f0fd5913a220438693576b29b6fe4dc1fa0a1298c0e98579fae28635f",
+      "lifecycle": "INFRA",
+      "service": "bookstack-db"
+    },
+    {
+      "build_context": "workers/bullmq-queue-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8092 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "bullmq-queue-service"
+    },
+    {
+      "build_context": "workers/cache-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8023, container binds 8023 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "cache-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "gcr.io/cadvisor/cadvisor:v0.49.2@sha256:aea169b3b211216d9d61c33455ec3a85d2b6f63d8889b1ebf41b97163cffbbc5",
+      "lifecycle": "INFRA",
+      "service": "cadvisor"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "calcom/cal.com:latest@sha256:ace3bb1219fb7306585ab9f4d94d41af7ee064c343db0498173436bbe857bd49",
+      "lifecycle": "INFRA",
+      "service": "calcom"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "lifecycle": "INFRA",
+      "service": "calcom-db"
+    },
+    {
+      "build_context": "workers/cdn-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8028, container binds 8028 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "cdn-service"
+    },
+    {
+      "build_context": "workers/chaos-party",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8079, container binds 8079 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "chaos-party"
+    },
+    {
+      "build_context": "workers/config-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8024, container binds 8024 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "config-service"
+    },
+    {
+      "build_context": "workers/cranbania",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8071 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "cranbania"
+    },
+    {
+      "build_context": "workers/cron-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by ChronosSphere / ArcStream",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8021, container binds 8021 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "cron-service"
+    },
+    {
+      "build_context": "workers/cryptex",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by Cryptex",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in Dockerfile",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8053 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "cryptex"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "cuckoosandbox/cuckoo:latest",
+      "lifecycle": "INFRA",
+      "service": "cuckoo"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/dagster-io/dagster:latest",
+      "lifecycle": "INFRA",
+      "service": "dagster-webserver"
+    },
+    {
+      "build_context": "workers/deepagents-orchestrator-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8037, container binds 8037 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "deepagents-orchestrator-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "dependencytrack/apiserver:latest@sha256:f1da63ed610a076eebb3e324e6d4669be9e13302a887f4884b5f8b3c8767cf46",
+      "lifecycle": "INFRA",
+      "service": "dependency-track-apiserver"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "dependencytrack/frontend:latest@sha256:8854a8320475b9992cd5b30c42b937b48f19c9b914ec6b9a22ffd079c4247279",
+      "lifecycle": "INFRA",
+      "service": "dependency-track-frontend"
+    },
+    {
+      "build_context": "workers/devocity",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by DevOcity",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8110, container binds 8110 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "devocity"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "amir20/dozzle:latest@sha256:1c1060cfb5402093c4e0f03f3534d7deaffeb0a6f6dd034e7c5f244603f35fb3",
+      "lifecycle": "INFRA",
+      "service": "dozzle"
+    },
+    {
+      "build_context": "workers/dspy-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8098, container binds 8098 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "dspy-service"
+    },
+    {
+      "build_context": "workers/email-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8018, container binds 8018 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "email-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "excalidraw/excalidraw:latest@sha256:f7ee194addd607bf831d2af0f0a34463dd4225e426cf35199ef0b12a803398e9",
+      "lifecycle": "INFRA",
+      "service": "excalidraw"
+    },
+    {
+      "build_context": "workers/fabulousa-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8048, container binds 8048 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "fabulousa-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "falcosecurity/falco-no-driver:latest@sha256:ba05dfb209cc1c2e912ce116d230b5f59c4542e7286f05b663c499066d5d6a42",
+      "lifecycle": "INFRA",
+      "service": "falco"
+    },
+    {
+      "build_context": "workers/ffmpeg-worker",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8052, container binds 8052 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "ffmpeg-worker"
+    },
+    {
+      "build_context": "workers/files-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by DocUtari",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8014, container binds 8014 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "files-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "codeberg.org/forgejo/forgejo:7@sha256:d1044fe10757f7cd7725fa470d9e27814d2c5426a114098c24da425d3f25eb49",
+      "lifecycle": "INFRA",
+      "service": "forgejo"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "${RUNNER_IMAGE:-code.forgejo.org/forgejo/runner:3}",
+      "lifecycle": "INFRA",
+      "service": "forgejo-runner"
+    },
+    {
+      "build_context": "workers/gbrain-bridge",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8030, container binds 8030 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "gbrain-bridge"
+    },
+    {
+      "build_context": "workers/geo-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8027, container binds 8027 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "geo-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "gotenberg/gotenberg:8@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923",
+      "lifecycle": "INFRA",
+      "service": "gotenberg"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63",
+      "lifecycle": "INFRA",
+      "service": "grafana"
+    },
+    {
+      "build_context": "workers/haystack-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8097, container binds 8097 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "haystack-service"
+    },
+    {
+      "build_context": "workers/health-aggregator",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 2 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8029, container binds 8029 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "health-aggregator"
+    },
+    {
+      "build_context": "workers/hive-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 2 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8051, container binds 8051 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "src/ present in image",
+          "ok": true
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "hive-service"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8046, container binds 8046 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "ice-box-service"
+    },
+    {
+      "build_context": "workers/identity-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by The Lighthouse",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8015, container binds 8015 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "identity-service"
+    },
+    {
+      "build_context": "workers/imaginarium",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8064, container binds 8064 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "imaginarium"
+    },
+    {
+      "build_context": "workers/imind",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by I-Mind",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8075, container binds 8075 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "imind"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8044, container binds 8044 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "infinity-admin"
+    },
+    {
+      "build_context": "workers/infinity-ai",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by Luminous",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 6 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8009, container binds 8009 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "infinity-ai"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8005, container binds 8005 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "infinity-auth"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8070 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "infinity-bridge"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8043, container binds 8043 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "infinity-one"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8042, container binds 8042 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "infinity-portal"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8045, container binds 8045 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "infinity-shards"
+    },
+    {
+      "build_context": "workers/infinity-void",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by The Void",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8002, container binds 8002 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "infinity-void"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8004, container binds 8004 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "infinity-ws"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ipfs/kubo:v0.28.0@sha256:1f6e4f870bc3d5b90563a9d29fc399c53a16ef9cf6580e1491b7914a6c8e510e",
+      "lifecycle": "INFRA",
+      "service": "ipfs"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "prometheuscommunity/ipmi-exporter:v1.9.0",
+      "lifecycle": "INFRA",
+      "service": "ipmi-exporter"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "jaegertracing/all-in-one:1.55@sha256:f6b5d09073f14f76873d300f565a6691d815e81bea8e07e1dc3ff67e0596dd4e",
+      "lifecycle": "INFRA",
+      "service": "jaeger"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "kestra/kestra:latest-full@sha256:a105633a94ea55c068476d96223adf1fac17a8116179fd3b7c498253cd399eee",
+      "lifecycle": "INFRA",
+      "service": "kestra"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "devopsfaith/krakend:latest@sha256:f8bdaa8a1a43e157cdebadc8050f4bc8bf1432c29572968e0421c800ba590116",
+      "lifecycle": "INFRA",
+      "service": "krakend"
+    },
+    {
+      "build_context": "workers/lab-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8066, container binds 8066 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "lab-service"
+    },
+    {
+      "build_context": "workers/langchain-integration-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8036, container binds 8036 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "langchain-integration-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "langfuse/langfuse:latest@sha256:f635d308449ea02a182f8d4c156daf5709714badf25fb504e84bb229458204f6",
+      "lifecycle": "INFRA",
+      "service": "langfuse"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "lifecycle": "INFRA",
+      "service": "langfuse-db"
+    },
+    {
+      "build_context": "workers/ledger-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8032, container binds 8032 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "ledger-service"
+    },
+    {
+      "build_context": "workers/library-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8067, container binds 8067 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "library-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/berriai/litellm:main-latest@sha256:be646214d7bc1cda0be57debbbf58e822ca4f233ddc50d0c0c7fa9b4a28063af",
+      "lifecycle": "INFRA",
+      "service": "litellm"
+    },
+    {
+      "build_context": "workers/litellm-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8049, container binds 8049 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "litellm-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/ggerganov/llama.cpp:server",
+      "lifecycle": "INFRA",
+      "service": "llama-cpp-server"
+    },
+    {
+      "build_context": "workers/llamaindex-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8096, container binds 8096 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "llamaindex-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "grafana/loki:3.7.3@sha256:70b9f699fc9bb868b62f1cfd4f787dfa50242f1fd92e6089787d5d7daea75fe8",
+      "lifecycle": "INFRA",
+      "service": "loki"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "mattermost/mattermost-team-edition:9",
+      "lifecycle": "INFRA",
+      "service": "mattermost"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "lifecycle": "INFRA",
+      "service": "mattermost-db"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "getmeili/meilisearch:latest@sha256:a9eb29ee09ab4943db3b4c68620bd6f3382e6b2b0ac4431c0e607b48dbcd4c14",
+      "lifecycle": "INFRA",
+      "service": "meilisearch"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+      "lifecycle": "INFRA",
+      "service": "minio"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/misp/misp-docker/misp-core:latest@sha256:0eaa4e423d5cd965b7b76aa5665e81d5c05a35bc46a4ffec2ca52e0cfe627e86",
+      "lifecycle": "INFRA",
+      "service": "misp"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "mysql:9.7@sha256:8fdf311514c91fa5014e93e98e19d7f5d9eb162a462c13100c956dacc278ee21",
+      "lifecycle": "INFRA",
+      "service": "misp-db"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005",
+      "lifecycle": "INFRA",
+      "service": "misp-redis"
+    },
+    {
+      "build_context": "workers/mlflow-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8039, container binds 8039 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "mlflow-service"
+    },
+    {
+      "build_context": "workers/model-router-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8033, container binds 8033 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "model-router-service"
+    },
+    {
+      "build_context": "workers/monitoring",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by The Observatory",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8007, container binds 8007 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "monitoring"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "n8nio/n8n:latest@sha256:e0d9593724e36d2584a1686148155e881233b38ae1833101c97c6463c0d36711",
+      "lifecycle": "INFRA",
+      "service": "n8n"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "nats:2.10-alpine@sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+      "lifecycle": "INFRA",
+      "service": "nats"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "netdata/netdata:latest@sha256:ac44ec899289dffe02b225803c204e95eb426e6439fc5374cc76ce67683cf54b",
+      "lifecycle": "INFRA",
+      "service": "netdata"
+    },
+    {
+      "build_context": "workers/nexus-ws-rs",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8004 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "nexus-ws-rs"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "prom/node-exporter:v1.7.0@sha256:4cb2b9019f1757be8482419002cb7afe028fdba35d47958829e4cfeaf6246d80",
+      "lifecycle": "INFRA",
+      "service": "node-exporter"
+    },
+    {
+      "build_context": "workers/notifications",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8008, container binds 8008 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "notifications"
+    },
+    {
+      "build_context": "workers/observatory",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in Dockerfile",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8065 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "observatory"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ollama/ollama:latest@sha256:509fdf54e23bd50d87af646cb51c0a7a203d6a83cc4d6695b3b08c5be1c62c0a",
+      "lifecycle": "INFRA",
+      "service": "ollama"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "openbao/openbao:latest@sha256:6150c4a6b62067db6141c8da7a6a6b5763f4f47c315343d0c848b40fecdfd452",
+      "lifecycle": "INFRA",
+      "service": "openbao"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "filigran/openbas-platform:latest",
+      "lifecycle": "INFRA",
+      "service": "openbas"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "lifecycle": "INFRA",
+      "service": "openbas-db"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "greenbone/community-edition:latest",
+      "lifecycle": "INFRA",
+      "service": "openvas"
+    },
+    {
+      "build_context": "workers/orders-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by Arcadian Exchange",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8012, container binds 8012 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "orders-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "otel/opentelemetry-collector-contrib:0.96.0@sha256:7ef2a2ff46b9e432321fdd63df104bfeedaf7b4e276950f42c634d0f23521fc4",
+      "lifecycle": "INFRA",
+      "service": "otel-collector"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "outlinewiki/outline:latest@sha256:6744a369271ce3c5a37316e5bfc5311d8d4452eb5ee4ca9560c96c15fd718a39",
+      "lifecycle": "INFRA",
+      "service": "outline"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "lifecycle": "INFRA",
+      "service": "outline-db"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02",
+      "lifecycle": "INFRA",
+      "service": "outline-redis"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:65a4cabf0169ea7fbd90ab7bb28ba3f8b5909613635acda1a03ad606f34b456b",
+      "lifecycle": "INFRA",
+      "service": "paperless"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "lifecycle": "INFRA",
+      "service": "paperless-db"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005",
+      "lifecycle": "INFRA",
+      "service": "paperless-redis"
+    },
+    {
+      "build_context": "workers/payments-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by Royal Bank of Arcadia",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8013, container binds 8013 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "payments-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "penpotapp/backend:latest@sha256:6c8e3851f3734e98e48d5a4a68e2c64485f6bd67a1ffec809aa9f1847d90a646",
+      "lifecycle": "INFRA",
+      "service": "penpot-backend"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "lifecycle": "INFRA",
+      "service": "penpot-db"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "penpotapp/exporter:latest@sha256:b370f14927050fb05ac646441b5993d9337dda7eec60d944aa112819c88207bc",
+      "lifecycle": "INFRA",
+      "service": "penpot-exporter"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "penpotapp/frontend:latest@sha256:4725b4698d8d1bd25ee1666e0d900d20da8937fea845c6a088f76cd69293560b",
+      "lifecycle": "INFRA",
+      "service": "penpot-frontend"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "prefecthq/prefect:3-python3.12@sha256:9fd526c1da3a206ff322087266b01b1d24020331a51b95b768408f078cb315fe",
+      "lifecycle": "INFRA",
+      "service": "prefect-server"
+    },
+    {
+      "build_context": "workers/products-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8011, container binds 8011 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "products-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893",
+      "lifecycle": "INFRA",
+      "service": "prometheus"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "grafana/promtail:3.6.11@sha256:a761cb834cfaeee29745440d4884d6748f0a08d8f68928db1d707018c1dcfbe9",
+      "lifecycle": "INFRA",
+      "service": "promtail"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "qdrant/qdrant:latest@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c",
+      "lifecycle": "INFRA",
+      "service": "qdrant"
+    },
+    {
+      "build_context": "workers/queue-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by The HIVE",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8022, container binds 8022 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "queue-service"
+    },
+    {
+      "build_context": "workers/rate-limit-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8026, container binds 8026 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "rate-limit-service"
+    },
+    {
+      "build_context": "workers/rate-limit-service-rs",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8099 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "rate-limit-service-rs"
+    },
+    {
+      "build_context": "workers/remotion-render-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8093 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "remotion-render-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "renovate/renovate:latest@sha256:39182d1ab9fbf428bd702cb737c49197aa18930de666d7d57336468c5ecb8d63",
+      "lifecycle": "INFRA",
+      "service": "renovate-bot"
+    },
+    {
+      "build_context": "workers/resonate",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by Resonate",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8076 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "resonate"
+    },
+    {
+      "build_context": "workers/sashas-photo-studio",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8062, container binds 8062 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "sashas-photo-studio"
+    },
+    {
+      "build_context": "workers/search-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by The Library",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8017, container binds 8017 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "search-service"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8041, container binds 8041 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "sentinel-station-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "clickhouse/clickhouse-server:26.5.5-alpine@sha256:d6d599097220479d6a55d6dc838b44fdea7774003666860701c82dc178c6ad13",
+      "lifecycle": "INFRA",
+      "service": "signoz-clickhouse"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "signoz/frontend:latest@sha256:1c1bbb669cec1db31398aafdb8263c848107f78ef838d09659f01aa815362279",
+      "lifecycle": "INFRA",
+      "service": "signoz-frontend"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "signoz/signoz-otel-collector:latest@sha256:f9bf94d566055d06581f3befbf361cc26d670f31ad00cb31fda2ec380210c5ec",
+      "lifecycle": "INFRA",
+      "service": "signoz-otel-collector"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "signoz/query-service:latest@sha256:f65e3eb821a5ce0f30d766de792e83d9ac90cfd953dd5c3742056d2acc444b5c",
+      "lifecycle": "INFRA",
+      "service": "signoz-query-service"
+    },
+    {
+      "build_context": "workers/skills-benchmark-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8035, container binds 8035 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "skills-benchmark-service"
+    },
+    {
+      "build_context": "workers/sms-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8019, container binds 8019 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "sms-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "stirlingtools/stirling-pdf:latest@sha256:7ed4d9681d18e4fbc3aa6a63647c4b5c2bcc4b75841df7c05d7e3d2320f5c9a1",
+      "lifecycle": "INFRA",
+      "service": "stirling-pdf"
+    },
+    {
+      "build_context": "workers/storage-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8020, container binds 8020 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "storage-service"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8109 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "swarm-coordinator-service"
+    },
+    {
+      "build_context": "workers/taimra",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by tAimra",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8074, container binds 8074 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "taimra"
+    },
+    {
+      "build_context": "workers/tateking",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8061, container binds 8061 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "tateking"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "grafana/tempo:3.0.2@sha256:cda87c212d8c584dc0b89e337e7ed648a5100feb657e5d528480ee4fa03dbbe3",
+      "lifecycle": "INFRA",
+      "service": "tempo"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "temporalio/temporalite:latest",
+      "lifecycle": "INFRA",
+      "service": "temporalite"
+    },
+    {
+      "build_context": "workers/the-academy",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8056, container binds 8056 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "the-academy"
+    },
+    {
+      "build_context": "workers/the-dutchy",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by Section 7",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8057, container binds 8057 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "the-dutchy"
+    },
+    {
+      "build_context": "workers/the-grid",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by The Digital Grid",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8010, container binds 8010 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "the-grid"
+    },
+    {
+      "build_context": "workers/the-lab",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8055, container binds 8055 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "the-lab"
+    },
+    {
+      "build_context": "workers/the-studio",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8069, container binds 8069 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "the-studio"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "apache/tika:latest-full@sha256:d8e6ed96260ad89307a93195a1b856102987a818ac648502f8efbaf313d32470",
+      "lifecycle": "INFRA",
+      "service": "tika"
+    },
+    {
+      "build_context": "workers/topology-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8031, container binds 8031 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "topology-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "traefik:v3.0@sha256:a208c74fd80a566d4ea376053bff73d31616d7af3f1465a7747b8b89ee34d97e",
+      "lifecycle": "INFRA",
+      "service": "traefik"
+    },
+    {
+      "build_context": "workers/tranc3-ai",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8001, container binds 8001 via worker.py PORT default (compose sets no PORT)",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "tranc3-ai"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8000 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "tranc3-backend"
+    },
+    {
+      "build_context": "workers/tranceflow",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8059, container binds 8059 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "tranceflow"
+    },
+    {
+      "build_context": "workers/tranquility",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by Tranquility",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8077, container binds 8077 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "tranquility"
+    },
+    {
+      "build_context": "workers/triposr-worker",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8111, container binds 8111 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "triposr-worker"
+    },
+    {
+      "build_context": "workers/turings-hub-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8058, container binds 8058 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "turings-hub-service"
+    },
+    {
+      "build_context": ".",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8006, container binds 8006 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "users-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02",
+      "lifecycle": "INFRA",
+      "service": "valkey"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "hashicorp/vault:2.0@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54",
+      "lifecycle": "INFRA",
+      "service": "vault"
+    },
+    {
+      "build_context": "workers/vault-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8038, container binds 8038 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "vault-service"
+    },
+    {
+      "build_context": "workers/vault-service-rs",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose=8094 bind=None (undetermined)",
+          "ok": null
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "vault-service-rs"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "victoriametrics/victoria-metrics:latest@sha256:40ea45a6d14b6ad9f2f1fff597309d456ff9885d77d8d1da5fd559b251db9987",
+      "lifecycle": "INFRA",
+      "service": "victoriametrics"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "vllm/vllm-openai:latest@sha256:251eba5cc7c12fed0b75da22a9240e582b1c9e39f6fbc064f86781b963bd814f",
+      "lifecycle": "INFRA",
+      "service": "vllm"
+    },
+    {
+      "build_context": "workers/vrar3d",
+      "checks": {
+        "entity_mapped": {
+          "detail": "claimed by VRAR3D",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8060, container binds 8060 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "vrar3d"
+    },
+    {
+      "build_context": "workers/warp-radio",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8073, container binds 8073 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "warp-radio"
+    },
+    {
+      "build_context": "workers/warp-tunnel",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 0 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8072, container binds 8072 via compose PORT",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "does not call instrument_worker",
+          "ok": null
+        }
+      },
+      "failures": [],
+      "lifecycle": "RUNNING",
+      "service": "warp-tunnel"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "containrrr/watchtower:1.7.1@sha256:6dd50763bbd632a83cb154d5451700530d1e44200b268a4e9488fefdfcf2b038",
+      "lifecycle": "INFRA",
+      "service": "watchtower"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "wazuh/wazuh-dashboard:4.8.2@sha256:38891174e822a459e3b21c16ddd633dea68dedcd892241410b5f6bd7a9cecf8a",
+      "lifecycle": "INFRA",
+      "service": "wazuh-dashboard"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "wazuh/wazuh-indexer:4.8.2@sha256:9e9ae4157d71e3f0b6120a93eb6c21aac247a0e962c24732e4f37652276af23b",
+      "lifecycle": "INFRA",
+      "service": "wazuh-indexer"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "wazuh/wazuh-manager:4.8.2@sha256:ae4bef121658fe2868914fe20a8ebd25ee6a4378df56b3e59e6e40ec5976e0a0",
+      "lifecycle": "INFRA",
+      "service": "wazuh-manager"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "cr.weaviate.io/semitechnologies/weaviate:1.25.4",
+      "lifecycle": "INFRA",
+      "service": "weaviate"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "woodpeckerci/woodpecker-agent:latest@sha256:d95ac8a778881709c05d2ec931577e278447cc4097fd31122955c169d264b7e4",
+      "lifecycle": "INFRA",
+      "service": "woodpecker-agent"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "woodpeckerci/woodpecker-server:latest@sha256:ed8cdc14dad4488d595786373ffbf5c7eea2de9ae183e97fd40308e486cb94a9",
+      "lifecycle": "INFRA",
+      "service": "woodpecker-server"
+    },
+    {
+      "build_context": "workers/workflow-engine-service",
+      "checks": {
+        "entity_mapped": {
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "ok": null
+        },
+        "healthcheck": {
+          "detail": "defined in compose",
+          "ok": true
+        },
+        "imports_resolve": {
+          "detail": "0 unguarded, 1 guarded, 0 vendored",
+          "offenders": [],
+          "ok": true
+        },
+        "port_agreement": {
+          "detail": "compose routes 8034, container binds 8034 via Dockerfile CMD",
+          "ok": true
+        },
+        "sibling_urls_dns": {
+          "detail": "0 live localhost default(s) aimed at a sibling",
+          "offenders": [],
+          "ok": true
+        },
+        "telemetry_reaches": {
+          "detail": "import is guarded but src/ is absent \u2014 telemetry silently off",
+          "ok": false
+        }
+      },
+      "failures": [
+        "telemetry_reaches"
+      ],
+      "lifecycle": "NEEDS_WORK",
+      "service": "workflow-engine-service"
+    },
+    {
+      "checks": {},
+      "failures": [],
+      "image": "ghcr.io/project-zot/zot-linux-amd64:latest@sha256:34f18f783037f967dba10df02f9d4086c4d626f5643ef9f5e51e4a4547280a0b",
+      "lifecycle": "INFRA",
+      "service": "zot"
+    },
+    {
+      "build_context": "workers/dimensional-nexus-service",
+      "checks": {},
+      "failures": [
+        "not built by any compose service"
+      ],
+      "has_dockerfile": true,
+      "lifecycle": "ORPHANED",
+      "python_files": 10,
+      "service": "dimensional-nexus-service"
+    },
+    {
+      "build_context": "workers/gateway-service",
+      "checks": {},
+      "failures": [
+        "not built by any compose service"
+      ],
+      "has_dockerfile": true,
+      "lifecycle": "ORPHANED",
+      "python_files": 11,
+      "service": "gateway-service"
+    },
+    {
+      "build_context": "workers/optional-services-health",
+      "checks": {},
+      "failures": [
+        "not built by any compose service"
+      ],
+      "has_dockerfile": true,
+      "lifecycle": "ORPHANED",
+      "python_files": 1,
+      "service": "optional-services-health"
+    }
+  ],
+  "sfsc": {
+    "concerns": {
+      "JWT verify": {
+        "dimensional_modules": [
+          "Dimensional/infinity/auth_gateway.py",
+          "Dimensional/security.py"
+        ],
+        "in_dimensional": true,
+        "services_implementing_independently": [],
+        "verdict": "IN SCOPE \u2014 in the core, nothing duplicating it"
+      },
+      "OTel worker setup": {
+        "dimensional_modules": [],
+        "in_dimensional": false,
+        "services_implementing_independently": [
+          "audit-service",
+          "blender-worker",
+          "cdn-service",
+          "config-service",
+          "cron-service",
+          "deepagents-orchestrator-service",
+          "email-service",
+          "ffmpeg-worker",
+          "gbrain-bridge",
+          "geo-service",
+          "health-aggregator",
+          "hive-service",
+          "identity-service",
+          "infinity-ai",
+          "infinity-void",
+          "langchain-integration-service",
+          "ledger-service",
+          "mlflow-service",
+          "model-router-service",
+          "monitoring",
+          "notifications",
+          "orders-service",
+          "payments-service",
+          "products-service",
+          "queue-service",
+          "rate-limit-service",
+          "search-service",
+          "skills-benchmark-service",
+          "sms-service",
+          "topology-service",
+          "tranc3-ai",
+          "triposr-worker",
+          "turings-hub-service",
+          "vault-service",
+          "workflow-engine-service"
+        ],
+        "verdict": "CANDIDATE \u2014 35 services implement it independently, core has nothing"
+      },
+      "circuit breaker": {
+        "dimensional_modules": [
+          "Dimensional/architecture/oci_adaptive_provider.py",
+          "Dimensional/infinity/sentinel_station.py",
+          "Dimensional/orchestration/health_monitor.py"
+        ],
+        "in_dimensional": true,
+        "services_implementing_independently": [
+          "chaos-party"
+        ],
+        "verdict": "IN SCOPE, NOT REACHING \u2014 in the core, but 1 service(s) implement it anyway"
+      },
+      "internal-secret verification": {
+        "dimensional_modules": [],
+        "in_dimensional": false,
+        "services_implementing_independently": [
+          "artifactory-service",
+          "audit-service",
+          "blender-worker",
+          "cdn-service",
+          "config-service",
+          "cron-service",
+          "deepagents-orchestrator-service",
+          "dspy-service",
+          "email-service",
+          "fabulousa-service",
+          "ffmpeg-worker",
+          "files-service",
+          "gbrain-bridge",
+          "geo-service",
+          "haystack-service",
+          "health-aggregator",
+          "identity-service",
+          "imaginarium",
+          "infinity-ai",
+          "langchain-integration-service",
+          "ledger-service",
+          "litellm-service",
+          "llamaindex-service",
+          "mlflow-service",
+          "model-router-service",
+          "monitoring",
+          "notifications",
+          "orders-service",
+          "payments-service",
+          "products-service",
+          "queue-service",
+          "rate-limit-service",
+          "search-service",
+          "skills-benchmark-service",
+          "sms-service",
+          "tateking",
+          "the-lab",
+          "topology-service",
+          "triposr-worker",
+          "turings-hub-service",
+          "vault-service",
+          "workflow-engine-service"
+        ],
+        "verdict": "CANDIDATE \u2014 42 services implement it independently, core has nothing"
+      },
+      "log sanitisation": {
+        "dimensional_modules": [
+          "Dimensional/sanitize.py"
+        ],
+        "in_dimensional": true,
+        "services_implementing_independently": [
+          "infinity-ai",
+          "notifications"
+        ],
+        "verdict": "IN SCOPE, NOT REACHING \u2014 in the core, but 2 service(s) implement it anyway"
+      },
+      "path traversal guard": {
+        "dimensional_modules": [
+          "Dimensional/path_validation.py"
+        ],
+        "in_dimensional": true,
+        "services_implementing_independently": [
+          "cdn-service",
+          "mlflow-service"
+        ],
+        "verdict": "IN SCOPE, NOT REACHING \u2014 in the core, but 2 service(s) implement it anyway"
+      },
+      "token-bucket rate limit": {
+        "dimensional_modules": [],
+        "in_dimensional": false,
+        "services_implementing_independently": [],
+        "verdict": "ABSENT \u2014 nothing implements it"
+      }
+    },
+    "dimensional": {
+      "concern_coverage": {
+        "JWT verify": [
+          "Dimensional/infinity/auth_gateway.py",
+          "Dimensional/security.py"
+        ],
+        "OTel worker setup": [],
+        "circuit breaker": [
+          "Dimensional/architecture/oci_adaptive_provider.py",
+          "Dimensional/infinity/sentinel_station.py",
+          "Dimensional/orchestration/health_monitor.py"
+        ],
+        "internal-secret verification": [],
+        "log sanitisation": [
+          "Dimensional/sanitize.py"
+        ],
+        "path traversal guard": [
+          "Dimensional/path_validation.py"
+        ],
+        "token-bucket rate limit": []
+      },
+      "module_count": 101
+    },
+    "internal_secret_variance": {
+      "constant_time": [
+        "config-service",
+        "cron-service",
+        "deepagents-orchestrator-service",
+        "dspy-service",
+        "email-service",
+        "ffmpeg-worker",
+        "gbrain-bridge",
+        "haystack-service",
+        "litellm-service",
+        "llamaindex-service",
+        "mlflow-service",
+        "payments-service",
+        "products-service",
+        "search-service",
+        "skills-benchmark-service",
+        "triposr-worker",
+        "turings-hub-service",
+        "vault-service",
+        "workflow-engine-service"
+      ],
+      "fail_open": [
+        "audit-service",
+        "fabulousa-service",
+        "health-aggregator",
+        "infinity-ai"
+      ],
+      "timing_unsafe": [
+        "artifactory-service",
+        "audit-service",
+        "blender-worker",
+        "cdn-service",
+        "fabulousa-service",
+        "geo-service",
+        "health-aggregator",
+        "identity-service",
+        "imaginarium",
+        "infinity-ai",
+        "langchain-integration-service",
+        "ledger-service",
+        "model-router-service",
+        "monitoring",
+        "notifications",
+        "orders-service",
+        "queue-service",
+        "rate-limit-service",
+        "sms-service",
+        "tateking",
+        "the-lab",
+        "topology-service"
+      ],
+      "total": 42
+    }
+  },
+  "totals": {
+    "INFRA": 86,
+    "NEEDS_WORK": 34,
+    "ORPHANED": 3,
+    "RUNNING": 54
+  }
+}

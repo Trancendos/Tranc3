@@ -66,6 +66,9 @@ jobs:
       - name: Build-context import check
         run: python scripts/check_worker_build_context.py
 
+      - name: Service review freshness
+        run: python scripts/build_service_review.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
