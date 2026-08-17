@@ -40,13 +40,25 @@ if (
     )
 INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
-# Sub-service endpoints (all self-hosted, zero-cost)
+# Sub-service endpoints (all self-hosted, zero-cost).
+#
+# Defaults use Compose service-name DNS, not localhost. Inside a container
+# `localhost` is that container, so a localhost default can never reach a
+# sibling service no matter which port it names — it fails closed and silently.
+# The estate's own convention is `http://<compose-service>:<port>` (26 such
+# vars already in docker-compose.production.yml, e.g. LIBRARY_SERVICE_URL=
+# http://library-service:8067); these now match it.
+#
+# Every port here was previously wrong as well, each pointing at an unrelated
+# worker: 8051=hive-service, 8057=the-dutchy, 8065=observatory,
+# 8066=lab-service, 8067=library-service. Ports are the compose-published
+# values, which are the deployment truth.
 SERVICE_URLS = {
-    "photo_studio": os.getenv("PHOTO_STUDIO_URL", "http://localhost:8051"),
-    "warp_radio": os.getenv("WARP_RADIO_URL", "http://localhost:8057"),
-    "the_studio": os.getenv("THE_STUDIO_URL", "http://localhost:8065"),
-    "tateking": os.getenv("TATEKING_URL", "http://localhost:8066"),
-    "tranceflow": os.getenv("TRANCEFLOW_URL", "http://localhost:8067"),
+    "photo_studio": os.getenv("PHOTO_STUDIO_URL", "http://sashas-photo-studio:8062"),
+    "warp_radio": os.getenv("WARP_RADIO_URL", "http://warp-radio:8073"),
+    "the_studio": os.getenv("THE_STUDIO_URL", "http://the-studio:8069"),
+    "tateking": os.getenv("TATEKING_URL", "http://tateking:8061"),
+    "tranceflow": os.getenv("TRANCEFLOW_URL", "http://tranceflow:8059"),
 }
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")

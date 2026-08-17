@@ -389,6 +389,16 @@ services:
       dockerfile: Dockerfile
     container_name: tranc3-backend
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - QDRANT_URL=http://qdrant:6333
+      - EMBED_URL=http://tranc3-ai:8001
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - WAZUH_URL=http://wazuh-manager:55000
+      - VLLM_BASE_URL=http://vllm:8090
+      - LLAMACPP_BASE_URL=http://llama-cpp-server:8091
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DATABASE_URL=${DATABASE_URL}
@@ -3035,6 +3045,16 @@ services:
     environment:
       - PORT=8064
       - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
+      # Imaginarium (Voxx) fans a creative brief out to the five Locations it
+      # orchestrates. Set explicitly so the worker's in-code defaults are never
+      # the thing production depends on — same reasoning as infinity-void's
+      # PORT=8002. Service-name DNS, not localhost: inside a container
+      # localhost is the container itself.
+      - PHOTO_STUDIO_URL=http://sashas-photo-studio:8062
+      - WARP_RADIO_URL=http://warp-radio:8073
+      - THE_STUDIO_URL=http://the-studio:8069
+      - TATEKING_URL=http://tateking:8061
+      - TRANCEFLOW_URL=http://tranceflow:8059
     expose:
       - "8064"
     ports:
@@ -3243,6 +3263,12 @@ services:
     container_name: tranc3-the-lab
     <<: *worker-common
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - OLLAMA_URL=http://ollama:11434
+      - LITELLM_URL=http://litellm:4000
       - PORT=8055
       - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
     expose:
@@ -3718,6 +3744,11 @@ services:
     container_name: tranc3-litellm-service
     <<: *worker-common
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - LITELLM_URL=http://litellm:4000
       - PORT=8049
     expose:
       - "8049"
@@ -3742,6 +3773,11 @@ services:
     container_name: tranc3-artifactory-service
     <<: *worker-common
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - ZOT_URL=http://zot:5000
       - PORT=8047
     expose:
       - "8047"
