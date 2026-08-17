@@ -83,7 +83,7 @@ httpx==0.28.1
 pydantic==2.13.4
 pydantic-settings==2.14.2
 sse-starlette==3.4.4
-uvicorn==0.48.0
+uvicorn==0.52.3
 structlog==26.1.0
 python-jose[cryptography]==3.5.0
 # ecdsa explicit pin (previously unpinned/transitive via python-jose's
