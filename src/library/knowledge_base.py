@@ -113,7 +113,14 @@ class Library:
         retention_days: Optional[int] = None,
         jurisdiction: Jurisdiction = Jurisdiction.GLOBAL,
         legal_hold: bool = False,
+        status: ArticleStatus = ArticleStatus.PUBLISHED,
     ) -> Article:
+        # `status` defaults to PUBLISHED so every existing caller is unchanged,
+        # but it has to be settable: Basement promotion creates articles that are
+        # proposals awaiting an admin's judgement, not established knowledge.
+        # Auto-publishing a machine-detected pattern into the knowledge base
+        # would let a false positive become something the platform then treats
+        # as fact.
         art = Article(
             title=title,
             body=body,
@@ -121,7 +128,7 @@ class Library:
             author=author,
             source=source,
             outline_id=outline_id,
-            status=ArticleStatus.PUBLISHED,
+            status=status,
             classification=classification,
             retention_days=retention_days,
             jurisdiction=jurisdiction,
