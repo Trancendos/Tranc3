@@ -14,7 +14,7 @@
 # cannot be made constant-time and no upstream fix exists (fix_versions: []).
 # This worker never signs/verifies ES256/ES384/ES512 JWTs, so the vulnerable
 # ECDSA sign/ECDH code paths are never invoked. See SECURITY.md.
-fastapi==0.136.3
+fastapi==0.141.1
 starlette==1.3.1
 uvicorn==0.34.3
 pydantic==2.11.5
