@@ -23,6 +23,7 @@ GET  /stats               — counts by service/action/severity for 24h / 7d / 3
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -413,8 +414,26 @@ async def health() -> dict:
 
 
 def _require_internal(x_internal_secret: Optional[str] = Header(None)) -> None:
-    """Validate X-Internal-Secret header for write endpoints."""
-    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
+    """Validate X-Internal-Secret header for write endpoints. Fails closed.
+
+    Previously `if INTERNAL_SECRET and ...` — an unset or blank secret skipped
+    the check entirely, so the three POST routes it guards (/events,
+    /audit, /audit/batch) accepted unauthenticated writes. Those write the
+    hash-chained audit log, so an open instance means audit forgery: anyone on
+    tranc3-net could append events the Observatory would treat as genuine.
+    `.env.example` ships INTERNAL_SECRET blank, so an operator who copies the
+    template without filling it in gets exactly that, silently.
+
+    compare_digest rather than `!=` so the comparison does not leak the secret's
+    prefix through timing. It is stdlib, so this needs no import from `src/` or
+    `Dimensional/` — neither of which is in this worker's build context.
+    """
+    if not INTERNAL_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="INTERNAL_SECRET is not configured; refusing unauthenticated writes",
+        )
+    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 

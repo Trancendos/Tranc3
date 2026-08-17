@@ -186,7 +186,7 @@
       "warp-tunnel"
     ]
   },
-  "commit": "c4c96970",
+  "commit": "d3494cb5",
   "failures_by_check": {
     "not built by any compose service": [
       "dimensional-nexus-service",
@@ -230,7 +230,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-17T18:53:07.570355+00:00",
+  "generated_at": "2026-08-17T19:05:01.251156+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -4133,14 +4133,18 @@
     },
     "internal_secret_variance": {
       "constant_time": [
+        "audit-service",
         "config-service",
         "cron-service",
         "deepagents-orchestrator-service",
         "dspy-service",
         "email-service",
+        "fabulousa-service",
         "ffmpeg-worker",
         "gbrain-bridge",
         "haystack-service",
+        "health-aggregator",
+        "infinity-ai",
         "litellm-service",
         "llamaindex-service",
         "mlflow-service",
@@ -4153,23 +4157,14 @@
         "vault-service",
         "workflow-engine-service"
       ],
-      "fail_open": [
-        "audit-service",
-        "fabulousa-service",
-        "health-aggregator",
-        "infinity-ai"
-      ],
+      "fail_open": [],
       "timing_unsafe": [
         "artifactory-service",
-        "audit-service",
         "blender-worker",
         "cdn-service",
-        "fabulousa-service",
         "geo-service",
-        "health-aggregator",
         "identity-service",
         "imaginarium",
-        "infinity-ai",
         "langchain-integration-service",
         "ledger-service",
         "model-router-service",

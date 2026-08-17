@@ -438,6 +438,13 @@ def concern_spread(compose: dict[str, dict]) -> dict[str, dict]:
     return out
 
 
+def _strip_prose(src: str) -> str:
+    """Remove docstrings and comments so prose is never classified as code."""
+    src = re.sub(r'"""(?:.|\n)*?"""', "", src)
+    src = re.sub(r"'''(?:.|\n)*?'''", "", src)
+    return re.sub(r"#[^\n]*", "", src)
+
+
 _DEF_BODY = re.compile(
     r"def\s+\w*(?:verify|require|check)_internal\w*\s*\(.*?(?=\ndef |\nclass |\Z)", re.S
 )
@@ -456,28 +463,30 @@ def internal_secret_variance(compose: dict[str, dict], services: list[str]) -> d
         ctx = build_context(compose[name])
         if not ctx:
             continue
-        for py in ctx.rglob("*.py"):
+        for py in sorted(ctx.rglob("*.py")):
             try:
                 text = py.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
-            m = _DEF_BODY.search(text)
-            if not m:
-                continue
-            body = m.group(0)[:600]
-            if "compare_digest" in body:
-                out["constant_time"].append(name)
-            elif "!=" in body or "==" in body:
-                out["timing_unsafe"].append(name)
-            # Two shapes of the same fail-open, and matching only the first
-            # undercounted: `if SECRET and x != SECRET: raise` skips the check
-            # when the secret is unset, and so does an early
-            # `if not SECRET: return` guard above the comparison.
-            if re.search(r"if\s+\w*INTERNAL_SECRET\w*\s+and\b", body) or re.search(
-                r"if\s+not\s+\w*INTERNAL_SECRET\w*\s*:\s*\n\s*return\b", body
-            ):
-                out["fail_open"].append(name)
-            break
+            for m in _DEF_BODY.finditer(text):
+                # Strip docstrings and comments before classifying. A docstring
+                # explaining "this used to be `if INTERNAL_SECRET and ...`"
+                # otherwise reads as that code and reports a fixed service as
+                # still vulnerable — which is exactly what happened once the
+                # four fail-open checks were fixed and documented.
+                body = _strip_prose(m.group(0))[:600]
+                if "compare_digest" in body:
+                    out["constant_time"].append(name)
+                elif "!=" in body or "==" in body:
+                    out["timing_unsafe"].append(name)
+                # Two shapes of the same fail-open, and matching only the
+                # first undercounted: `if SECRET and x != SECRET: raise` skips
+                # the check when the secret is unset, and so does an early
+                # `if not SECRET: return` guard above the comparison.
+                if re.search(r"if\s+\w*INTERNAL_SECRET\w*\s+and\b", body) or re.search(
+                    r"if\s+not\s+\w*INTERNAL_SECRET\w*\s*:\s*\n\s*return\b", body
+                ):
+                    out["fail_open"].append(name)
     for k in ("constant_time", "timing_unsafe", "fail_open"):
         out[k] = sorted(set(out[k]))
     return out

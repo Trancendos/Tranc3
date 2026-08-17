@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `c4c96970`. Regenerate with 
+Generated from repo state at `d3494cb5`. Regenerate with 
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -44,17 +44,9 @@ that none of them import.
 
 | Behaviour | Services |
 |---|---:|
-| constant-time (`compare_digest`) | 19 |
-| timing-unsafe (`==` / `!=`) | 22 |
-| **fails open when the secret is unset** | 4 |
-
-Fails open — an unset `INTERNAL_SECRET` disables the check rather than
-refusing the request:
-
-- `audit-service`
-- `fabulousa-service`
-- `health-aggregator`
-- `infinity-ai`
+| constant-time (`compare_digest`) | 23 |
+| timing-unsafe (`==` / `!=`) | 18 |
+| **fails open when the secret is unset** | 0 |
 
 ## NEEDS_WORK
 

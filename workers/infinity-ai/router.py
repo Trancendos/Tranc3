@@ -5,6 +5,7 @@ All routes are registered on an APIRouter and included in main.py.
 
 from __future__ import annotations
 
+import hmac
 import os
 from datetime import datetime, timezone
 
@@ -35,9 +36,17 @@ def init_router(db, gateway):
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
+    # Fails closed. The early `if not INTERNAL_SECRET: return` meant a blank
+    # secret opened every route on protected_router — and `.env.example` ships
+    # it blank, so a template copied without editing disables auth silently.
     if not INTERNAL_SECRET:
-        return
-    if x_internal_secret != INTERNAL_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="INTERNAL_SECRET is not configured; refusing unauthenticated access",
+        )
+    # compare_digest, not `!=`: a plain comparison returns early on the first
+    # differing byte and leaks the secret's prefix through response timing.
+    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
         raise HTTPException(
             status_code=401,
             detail="Invalid or missing X-Internal-Secret header",

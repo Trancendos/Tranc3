@@ -15,6 +15,7 @@ Foundation: Penpot (self-hosted)
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 from datetime import datetime, timezone
@@ -92,13 +93,26 @@ async def _penpot_post(path: str, payload: dict[str, Any]) -> Any:
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    """Gate mutating routes behind INTERNAL_SECRET when it's configured.
+    """Gate every /fabulousa route behind INTERNAL_SECRET. Fails closed.
 
-    No-op (open) if INTERNAL_SECRET is unset, matching the platform's other
-    optional-auth workers (e.g. storage-service) — operators must set the
-    env var to actually enforce this.
+    Was a no-op when INTERNAL_SECRET was unset, described as "matching the
+    platform's other optional-auth workers". That consistency argument no longer
+    holds: the platform default is now fail-closed, because `.env.example` ships
+    the variable blank and a silent no-op is indistinguishable from working auth.
+
+    Note this gates reads as well as writes despite the old docstring saying
+    "mutating routes" — GET /fabulousa/projects and GET /fabulousa/assets both
+    depend on it. Fail-closed is the consistent choice for both.
+
+    compare_digest rather than `!=`, to avoid leaking the secret's prefix
+    through timing. stdlib, so no cross-build-context import is needed.
     """
-    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
+    if not INTERNAL_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="INTERNAL_SECRET is not configured; refusing unauthenticated access",
+        )
+    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
