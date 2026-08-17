@@ -278,7 +278,7 @@ services:
   # Apache 2.0. Prevents Docker Hub rate-limiting for the platform.
   # All workers can pull images from http://zot:5000 inside the network.
   zot:
-    image: ghcr.io/project-zot/zot-linux-amd64:latest@sha256:34f18f783037f967dba10df02f9d4086c4d626f5643ef9f5e51e4a4547280a0b
+    image: ghcr.io/project-zot/zot-linux-amd64:latest@sha256:95a837a0afacf5b7edc0c92493f04beee6891989b8d2fd50a00cf65a1e6d4fd5
     container_name: tranc3-zot
     <<: *common
     ports:
