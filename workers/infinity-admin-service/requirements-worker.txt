@@ -2,7 +2,7 @@
 fastapi==0.136.3
 starlette==1.3.1
 uvicorn==0.34.3
-pydantic==2.11.5
+pydantic==2.13.4
 python-jose[cryptography]==3.5.0
 # ecdsa explicit pin (previously unpinned/transitive via python-jose's
 # `Requires-Dist: ecdsa!=0.15`, violating this repo's exact-pinning policy).
