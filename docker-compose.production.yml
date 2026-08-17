@@ -1956,7 +1956,7 @@ services:
   # Used by: The Library, DocUtari, API Marketplace, The Lab
   # ══════════════════════════════════════════════════════════════════════════
   meilisearch:
-    image: getmeili/meilisearch:latest@sha256:d36e713e8f89483af1ab0d72011bbd503f5ab100b68ccbfad51c39e3f0a0567d
+    image: getmeili/meilisearch:latest@sha256:8d6643d86d71fad6ad3cba92cde7ccfce9e4d6c384bda67598eb553571c32431
     container_name: trancendos-meilisearch
     volumes:
       - meilisearch-data:/meili_data
