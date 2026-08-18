@@ -110,11 +110,38 @@ def _canonical_key(name: str) -> str | None:
     return normalised if normalised in CANONICAL else None
 
 
+def submodule_paths() -> set[Path]:
+    """Absolute paths of every git submodule, read from .gitmodules.
+
+    Submodules are other repositories that happen to be checked out inside
+    this working tree. Rewriting a file in one produces a change this repo
+    cannot commit — it would show up only as a moved submodule pointer — and
+    `--check` would then fail CI over a file this repo does not own. The
+    estate has two (`compliance/magna-carta`, `workers/cranbania`), and while
+    neither declares a canonical package today, nothing stops one from doing
+    so tomorrow, so the boundary is enforced rather than assumed.
+    """
+    gitmodules = REPO_ROOT / ".gitmodules"
+    if not gitmodules.is_file():
+        return set()
+    return {
+        REPO_ROOT / match.strip()
+        for match in re.findall(
+            r"^\s*path\s*=\s*(.+)$", gitmodules.read_text(encoding="utf-8"), re.M
+        )
+    }
+
+
 def requirements_files() -> list[Path]:
+    submodules = submodule_paths()
+
+    def in_submodule(path: Path) -> bool:
+        return any(sub == path or sub in path.parents for sub in submodules)
+
     found = [
         p
         for p in REPO_ROOT.rglob("requirements*.txt")
-        if not (SKIP_DIRS & set(p.parts)) and p.is_file()
+        if not (SKIP_DIRS & set(p.parts)) and p.is_file() and not in_submodule(p)
     ]
     return sorted(found)
 
@@ -186,6 +213,13 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # Combined, these contradict each other: --write makes the estate canonical
+    # and --check reports on what was *not* canonical, so `--write --check`
+    # would apply every fix and then exit 1 for having had something to fix.
+    # A CI job that reached for both would fail precisely when it succeeded.
+    if args.write and args.check:
+        parser.error("--write and --check are mutually exclusive: --write fixes, --check reports")
+
     all_changes: list[Change] = []
     all_notes: list[str] = []
     touched: list[Path] = []
@@ -206,7 +240,10 @@ def main() -> int:
 
     for change in all_changes:
         rel = change.path.relative_to(REPO_ROOT)
-        print(f"{rel}:{change.lineno}: {change.before.strip()}  ->  {change.after.strip()}")
+        # Deliberately not .strip()ed: indentation and spacing around the
+        # operator are meant to survive the rewrite, so the log has to be able
+        # to show it if they ever stop doing so.
+        print(f"{rel}:{change.lineno}: {change.before}  ->  {change.after}")
 
     verb = "Aligned" if args.write else "Would align"
     print(
