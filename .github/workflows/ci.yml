@@ -79,6 +79,14 @@ jobs:
       - name: Internal-auth delegation check
         run: python scripts/migrate_internal_auth.py --check
 
+      # The shared web-framework stack (fastapi/starlette/pydantic/uvicorn/redis)
+      # is restated in 86 requirements files. Left unguarded it drifts — the
+      # estate once held 5 different uvicorn pins at once — and drift on this
+      # stack is coupled: fastapi constrains starlette and pydantic, so a
+      # sliding pin can stop satisfying its own framework at image-build time.
+      - name: Framework pin alignment
+        run: python scripts/align_framework_pins.py --check
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 
