@@ -51,6 +51,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # The History integrity step needs real history. The default depth of 1
+          # gives a graft boundary that `rev-list --max-parents=0` reports as a
+          # root, and no origin/main at all — which is how the first version of
+          # that check silently verified nothing. The script also deepens `main`
+          # itself (so it works on Forgejo and locally); this makes it certain here.
+          fetch-depth: 0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -84,6 +91,17 @@ jobs:
       # estate once held 5 different uvicorn pins at once — and drift on this
       # stack is coupled: fastapi constrains starlette and pydantic, so a
       # sliding pin can stop satisfying its own framework at image-build time.
+      # Pins main's root commit, so a real history rewrite (re-root, whole-graph
+      # squash, force push of an unrelated tree) fails on the commit that causes
+      # it rather than surfacing months later as "why is every branch
+      # unmergeable?". It deepens main itself first: on the shallow clone
+      # actions/checkout produces, `rev-list --max-parents=0` returns a graft
+      # boundary that is indistinguishable from a root, and `merge-base` reports
+      # perfectly related branches as unrelated — a trap that already produced
+      # one confident, wrong conclusion (see BRANCH-SALVAGE-ANALYSIS.md §3).
+      - name: History integrity
+        run: python scripts/check_history_integrity.py
+
       - name: Framework pin alignment
         run: python scripts/align_framework_pins.py --check
 
