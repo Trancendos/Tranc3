@@ -1,5 +1,5 @@
 # FFmpeg worker — non-root hardened (Forgejo #2127)
-FROM python:3.12-slim-bookworm@sha256:8a7e7cc04fd3e2bd787f7f24e22d5d119aa590d429b50c95dfe12b3abe52f48b
+FROM python:3.14-slim-bookworm@sha256:23c59390fc717bf09f9336908199a0ae75d9c4264bf296123f94ad772fea3b52
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
