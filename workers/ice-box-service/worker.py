@@ -27,6 +27,7 @@ sys.path.insert(0, str(ROOT))  # noqa: E402
 from fastapi import Depends, FastAPI, Header, HTTPException  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+from Dimensional.service_auth_fastapi import guard_internal_secret  # noqa: E402
 from src.security.ice_box.analyser import ThreatAnalyser, ThreatVerdict  # noqa: E402
 from src.security.ice_box.quarantine import QuarantineStore  # noqa: E402
 from src.security.ice_box.signatures import get_library  # noqa: E402
@@ -43,14 +44,19 @@ INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    """Gate the quarantine-release write behind INTERNAL_SECRET when configured.
+    """Gate the quarantine-release write behind INTERNAL_SECRET. Fails closed.
 
-    No-op (open) if INTERNAL_SECRET is unset, matching the platform's other
-    optional-auth workers (e.g. storage-service) — operators must set the
-    env var to actually enforce this.
+    This was previously a no-op when INTERNAL_SECRET was unset, justified as
+    "matching the platform's other optional-auth workers". That justification
+    described a shared defect rather than a policy: the endpoint it guards
+    releases a file from quarantine, and `.env.example` ships INTERNAL_SECRET
+    blank, so an operator who copied the template without editing it could
+    release quarantined content with no credential at all.
+
+    It now answers 503 when the secret is unset, which is what
+    `Dimensional.service_auth` does for every gate on the platform.
     """
-    if INTERNAL_SECRET and x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(x_internal_secret, mismatch_status=403, detail="Forbidden")
 
 
 app = FastAPI(
@@ -195,7 +201,10 @@ def get_quarantine(quarantine_id: str):
     }
 
 
-@app.post("/quarantine/{quarantine_id}/release", dependencies=[Depends(_require_internal_auth)])
+@app.post(
+    "/quarantine/{quarantine_id}/release",
+    dependencies=[Depends(_require_internal_auth)],
+)
 def release_quarantine(quarantine_id: str, req: ReleaseRequest):
     ok = _quarantine.release(quarantine_id, reason=req.reason, reviewed_by=req.reviewed_by)
     if not ok:
@@ -235,4 +244,6 @@ def health():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("worker:app", host="0.0.0.0", port=PORT, reload=False)  # nosec B104 — containerised service
+    uvicorn.run(
+        "worker:app", host="0.0.0.0", port=PORT, reload=False
+    )  # nosec B104 — containerised service

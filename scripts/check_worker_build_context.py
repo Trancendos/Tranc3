@@ -117,7 +117,12 @@ def guarded_line_ranges(tree: ast.AST) -> list[tuple[int, int]]:
             names = {n.id for n in ast.walk(handler.type) if isinstance(n, ast.Name)} | {
                 n.attr for n in ast.walk(handler.type) if isinstance(n, ast.Attribute)
             }
-            if names & {"ImportError", "ModuleNotFoundError", "Exception", "BaseException"}:
+            if names & {
+                "ImportError",
+                "ModuleNotFoundError",
+                "Exception",
+                "BaseException",
+            }:
                 catches = True
                 break
         if catches:
@@ -171,7 +176,9 @@ def supplied_by_build_context(context: Path, module: str) -> str | None:
         return None
     want = module.replace(".", "/")
     for name, dest in re.findall(
-        r"^COPY --from=(\w+)[^\n]*? (/app/\S+)\s*$", dockerfile.read_text(encoding="utf-8"), re.M
+        r"^COPY --from=(\w+)[^\n]*? (/app/\S+)\s*$",
+        dockerfile.read_text(encoding="utf-8"),
+        re.M,
     ):
         delivered = dest.removeprefix("/app/").rstrip("/")
         if want == delivered or want.startswith(delivered + "/"):

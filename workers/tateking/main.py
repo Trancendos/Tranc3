@@ -29,7 +29,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-import hmac
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -95,13 +96,12 @@ def _ffmpeg_available() -> bool:
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    # compare_digest, not `!=`: a plain comparison returns at the first
-    # differing byte, so response latency reveals how many leading
-    # characters a guess got right and the secret can be recovered a byte
-    # at a time. Canonical implementation: Dimensional/service_auth.py —
-    # not imported here because this worker's build context excludes it.
-    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # through the `sharedcore` named build context. It compares with
+    # compare_digest and refuses when the secret is unset.
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 # ---------------------------------------------------------------------------

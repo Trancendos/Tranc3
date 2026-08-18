@@ -21,7 +21,8 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import hmac
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8064")
 WORKER_NAME = "imaginarium"
@@ -210,14 +211,13 @@ _router = APIRouter()
 def _auth(x_internal_secret: str = Header(default="")) -> None:
     global _req_count, _err_count
     _req_count += 1
-    # compare_digest, not `!=`: a plain comparison returns at the first
-    # differing byte, so response latency reveals how many leading
-    # characters a guess got right and the secret can be recovered a byte
-    # at a time. Canonical implementation: Dimensional/service_auth.py —
-    # not imported here because this worker's build context excludes it.
-    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
+    try:
+        guard_internal_secret(
+            x_internal_secret, INTERNAL_SECRET, mismatch_status=401, detail="Unauthorized"
+        )
+    except HTTPException:
         _err_count += 1
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise
 
 
 class ProjectIn(BaseModel):

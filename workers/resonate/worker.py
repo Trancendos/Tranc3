@@ -22,6 +22,8 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 WORKER_PORT = int(os.environ.get("PORT", "8076"))
 WORKER_NAME = "resonate"
 DB_PATH = Path(__file__).parent / "data" / "resonate.db"
@@ -255,9 +257,13 @@ def wrap_response(
     parts = []
 
     if sensitivity_level in ("critical", "high"):
-        parts.append(random.choice(_EMPATHY_PREFIXES))  # nosec B311 — non-cryptographic random usage
+        parts.append(
+            random.choice(_EMPATHY_PREFIXES)
+        )  # nosec B311 — non-cryptographic random usage
     elif sensitivity_level == "medium" or (user_mood is not None and user_mood <= 2):
-        parts.append(random.choice(_EMPATHY_PREFIXES[:2]))  # nosec B311 — non-cryptographic empathy variation
+        parts.append(
+            random.choice(_EMPATHY_PREFIXES[:2])
+        )  # nosec B311 — non-cryptographic empathy variation
 
     parts.append(response)
 
@@ -270,7 +276,9 @@ def wrap_response(
             "You don't have to face this alone. \U0001f499"
         )
     elif sensitivity_level in ("medium", "high"):
-        parts.append(f"\n\n*{random.choice(_VALIDATION_PHRASES)}*")  # nosec B311 — non-cryptographic phrase variation
+        parts.append(
+            f"\n\n*{random.choice(_VALIDATION_PHRASES)}*"
+        )  # nosec B311 — non-cryptographic phrase variation
 
     return "\n\n".join(p.strip() for p in parts if p.strip())
 
@@ -427,9 +435,13 @@ _router = APIRouter()
 def _auth(x_internal_secret: str = Header(default="")) -> None:
     global _req_count, _err_count
     _req_count += 1
-    if x_internal_secret != INTERNAL_SECRET:
+    try:
+        guard_internal_secret(
+            x_internal_secret, INTERNAL_SECRET, mismatch_status=401, detail="Unauthorized"
+        )
+    except HTTPException:
         _err_count += 1
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise
 
 
 class ScoreIn(BaseModel):

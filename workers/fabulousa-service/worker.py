@@ -15,7 +15,6 @@ Foundation: Penpot (self-hosted)
 
 from __future__ import annotations
 
-import hmac
 import logging
 import os
 from datetime import datetime, timezone
@@ -25,6 +24,8 @@ import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -107,13 +108,9 @@ def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
     compare_digest rather than `!=`, to avoid leaking the secret's prefix
     through timing. stdlib, so no cross-build-context import is needed.
     """
-    if not INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=503,
-            detail="INTERNAL_SECRET is not configured; refusing unauthenticated access",
-        )
-    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 async def _figma_get(path: str) -> Any:

@@ -13,7 +13,6 @@ Model is loaded lazily on the first /reconstruct request.
 from __future__ import annotations
 
 import base64
-import hmac
 import io
 import logging
 import os
@@ -24,10 +23,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8111")
 WORKER_NAME = "triposr-worker"
@@ -52,8 +53,9 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 logging.basicConfig(

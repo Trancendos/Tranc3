@@ -10,7 +10,6 @@ Zero-cost: FastAPI + SQLite + httpx — no paid external dependencies.
 from __future__ import annotations
 
 import asyncio
-import hmac
 import ipaddress
 import logging
 import os
@@ -28,6 +27,8 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Config
@@ -523,13 +524,9 @@ def _require_internal(x_internal_secret: Optional[str]) -> None:
     The two-tier split is kept, because the distinction it draws is real: reads
     return 403, registration returns a 503 naming the missing configuration.
     """
-    if not INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=503,
-            detail="INTERNAL_SECRET is not configured; refusing unauthenticated access",
-        )
-    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 def _require_internal_strict(x_internal_secret: Optional[str]) -> None:
@@ -539,13 +536,9 @@ def _require_internal_strict(x_internal_secret: Optional[str]) -> None:
     URL from its own network every interval — an unauthenticated instance of
     this would be an open SSRF primitive against tranc3-net.
     """
-    if not INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=503,
-            detail="INTERNAL_SECRET must be configured to register/remove dynamic services",
-        )
-    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 @app.post("/services", status_code=201, summary="Dynamically register a service to monitor")

@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-from Dimensional.sanitize import sanitize_for_log
 from Dimensional.circuit_state import CircuitState  # noqa: F401
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -495,9 +495,11 @@ class AdaptiveHealthMonitor:
             config = self._monitored[name]
             circuit = self._circuits.get(name)
             summary[name] = {
-                "status": config.get("status", HealthStatus.UNKNOWN).value
-                if isinstance(config.get("status"), HealthStatus)
-                else str(config.get("status", "unknown")),
+                "status": (
+                    config.get("status", HealthStatus.UNKNOWN).value
+                    if isinstance(config.get("status"), HealthStatus)
+                    else str(config.get("status", "unknown"))
+                ),
                 "circuit": circuit.to_dict() if circuit else None,
                 "trend": self.get_health_trend(name),
                 "latency": self.get_latency_stats(name),

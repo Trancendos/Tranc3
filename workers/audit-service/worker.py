@@ -23,7 +23,6 @@ GET  /stats               — counts by service/action/severity for 24h / 7d / 3
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
 import logging
 import os
@@ -40,6 +39,8 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -428,13 +429,9 @@ def _require_internal(x_internal_secret: Optional[str] = Header(None)) -> None:
     prefix through timing. It is stdlib, so this needs no import from `src/` or
     `Dimensional/` — neither of which is in this worker's build context.
     """
-    if not INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=503,
-            detail="INTERNAL_SECRET is not configured; refusing unauthenticated writes",
-        )
-    if not hmac.compare_digest(x_internal_secret or "", INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 @app.post("/events", response_model=AuditEventCreated, status_code=201)

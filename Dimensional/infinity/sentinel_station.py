@@ -57,6 +57,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Set
 
+from Dimensional.circuit_state import CircuitState  # noqa: F401
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.sentinel_config import (
     FallbackConfig,
@@ -64,7 +65,6 @@ from Dimensional.infinity.sentinel_config import (
     SentinelStationConfig,
     sentinel_config,
 )
-from Dimensional.circuit_state import CircuitState  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

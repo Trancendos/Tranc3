@@ -22,7 +22,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import hmac
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -177,13 +178,15 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    # compare_digest, not `!=`: a plain comparison returns at the first
-    # differing byte, so response latency reveals how many leading
-    # characters a guess got right and the secret can be recovered a byte
-    # at a time. Canonical implementation: Dimensional/service_auth.py —
-    # not imported here because this worker's build context excludes it.
-    if not hmac.compare_digest(x_internal_secret or "", _INTERNAL_SECRET):
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # through the `sharedcore` named build context. It compares with
+    # compare_digest and refuses when the secret is unset.
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
@@ -293,9 +296,7 @@ async def browse_listings(
         params.append(seller_id)
 
     where_clause = " AND ".join(conditions)
-    listing_sql = (
-        f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608
-    )
+    listing_sql = f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608
     count_sql = f"SELECT COUNT(*) FROM listings WHERE {where_clause}"  # noqa: S608
 
     conn = _get_conn()
@@ -418,15 +419,13 @@ async def exchange_stats():
         )
         total_orders = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
 
-        most_traded = conn.execute(
-            """
+        most_traded = conn.execute("""
             SELECT l.resource_type, COUNT(o.id) as order_count, SUM(o.quantity) as total_qty, SUM(o.total_price) as total_value
             FROM orders o JOIN listings l ON l.id=o.listing_id
             GROUP BY l.resource_type
             ORDER BY order_count DESC
             LIMIT 10
-            """
-        ).fetchall()
+            """).fetchall()
 
         return {
             "active_listings": total_active,

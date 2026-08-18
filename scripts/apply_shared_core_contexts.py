@@ -135,9 +135,7 @@ def render_dockerfile_block(names: list[str], user: str) -> str:
     unused context still has to be supplied at build time, so granting one
     creates a build dependency that buys nothing.
     """
-    flags = " ".join(
-        f"--build-context {n}={_relative_from_worker(CONTEXTS[n][0])}" for n in names
-    )
+    flags = " ".join(f"--build-context {n}={_relative_from_worker(CONTEXTS[n][0])}" for n in names)
     lines = [
         BEGIN,
         "# Not copied into this directory — there is one copy of the core, at the",
@@ -182,9 +180,7 @@ def patch_dockerfile(worker: str, names: list[str]) -> tuple[bool, str]:
     user = user_match.group(1)
 
     block = render_dockerfile_block(names, user)
-    existing = re.search(
-        rf"^{re.escape(BEGIN)}.*?^{re.escape(END)}\n", text, re.S | re.M
-    )
+    existing = re.search(rf"^{re.escape(BEGIN)}.*?^{re.escape(END)}\n", text, re.S | re.M)
     if existing:
         if existing.group(0).rstrip("\n") == block:
             return False, f"{worker}: already current"

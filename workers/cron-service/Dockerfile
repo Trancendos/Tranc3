@@ -11,8 +11,9 @@ RUN mkdir -p /data \
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
 # Not copied into this directory — there is one copy of the core, at the
 # repo root. Supplied by docker-compose.production.yml, or for a direct
-#   docker build --build-context observability=../../src/observability .
+#   docker build --build-context sharedcore=../../Dimensional --build-context observability=../../src/observability .
 # See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=worker:worker . /app/Dimensional/
 COPY --from=observability --chown=worker:worker . /app/src/observability/
 ENV PYTHONPATH=/app
 # --- end SFSC ---

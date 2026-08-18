@@ -4,6 +4,15 @@ COPY requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
 COPY . .
 RUN mkdir -p /data && addgroup --system appgroup && adduser --system --ingroup appgroup appuser && chown -R appuser:appgroup /app /data
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context sharedcore=../../Dimensional .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=appuser:appuser . /app/Dimensional/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 USER appuser
 EXPOSE 8053
 # Shell form so ${CRYPTEX_PORT} is expanded at runtime. The exec form cannot

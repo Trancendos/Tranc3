@@ -616,6 +616,7 @@ services:
       context: ./workers/monitoring
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: monitoring-worker
     ports:
@@ -651,6 +652,7 @@ services:
       context: ./workers/infinity-ai
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: infinity-ai-worker
     environment:
@@ -676,6 +678,8 @@ services:
     build:
       context: ./workers/the-grid
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: the-grid-worker
     ports:
       - "8010:8010"
@@ -692,6 +696,7 @@ services:
       context: ./workers/products-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: products-service-worker
     ports:
@@ -709,6 +714,7 @@ services:
       context: ./workers/orders-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: orders-service-worker
     ports:
@@ -726,6 +732,7 @@ services:
       context: ./workers/payments-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: payments-service-worker
     ports:
@@ -742,6 +749,8 @@ services:
     build:
       context: ./workers/files-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: files-service-worker
     ports:
       - "8014:8014"
@@ -758,6 +767,7 @@ services:
       context: ./workers/identity-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: identity-service-worker
     ports:
@@ -774,7 +784,11 @@ services:
 
   analytics-service:
     <<: *worker-common
-    build: { context: ./workers/analytics-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/analytics-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: analytics-service-worker
     ports: ["8016:8016"]
     healthcheck:
@@ -787,6 +801,7 @@ services:
       context: ./workers/search-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: search-service-worker
     ports: ["8017:8017"]
@@ -800,6 +815,7 @@ services:
       context: ./workers/email-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: email-service-worker
     ports: ["8018:8018"]
@@ -813,6 +829,7 @@ services:
       context: ./workers/sms-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: sms-service-worker
     ports: ["8019:8019"]
@@ -822,7 +839,11 @@ services:
 
   storage-service:
     <<: *worker-common
-    build: { context: ./workers/storage-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/storage-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: storage-service-worker
     ports: ["8020:8020"]
     volumes:
@@ -837,6 +858,7 @@ services:
       context: ./workers/cron-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: cron-service-worker
     ports: ["8021:8021"]
@@ -852,6 +874,7 @@ services:
       context: ./workers/queue-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: queue-service-worker
     ports: ["8022:8022"]
@@ -861,7 +884,11 @@ services:
 
   cache-service:
     <<: *worker-common
-    build: { context: ./workers/cache-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/cache-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: cache-service-worker
     ports: ["8023:8023"]
     healthcheck:
@@ -874,6 +901,7 @@ services:
       context: ./workers/config-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: config-service-worker
     ports: ["8024:8024"]
@@ -887,6 +915,7 @@ services:
       context: ./workers/audit-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: audit-service-worker
     ports: ["8025:8025"]
@@ -900,6 +929,7 @@ services:
       context: ./workers/rate-limit-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: rate-limit-service-worker
     ports: ["8026:8026"]
@@ -913,6 +943,7 @@ services:
       context: ./workers/geo-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: geo-service-worker
     ports: ["8027:8027"]
@@ -956,6 +987,7 @@ services:
       context: ./workers/gbrain-bridge
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: gbrain-bridge-worker
     ports: ["8030:8030"]
@@ -969,6 +1001,7 @@ services:
       context: ./workers/topology-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: topology-service-worker
     ports: ["8031:8031"]
@@ -982,6 +1015,7 @@ services:
       context: ./workers/ledger-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: ledger-service-worker
     ports: ["8032:8032"]
@@ -995,6 +1029,7 @@ services:
       context: ./workers/model-router-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: model-router-service-worker
     ports: ["8033:8033"]
@@ -1008,6 +1043,7 @@ services:
       context: ./workers/workflow-engine-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: workflow-engine-service-worker
     environment:
@@ -1023,6 +1059,7 @@ services:
       context: ./workers/skills-benchmark-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: skills-benchmark-service-worker
     ports: ["8035:8035"]
@@ -1036,6 +1073,7 @@ services:
       context: ./workers/vault-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: vault-service-worker
     ports: ["8038:8038"]
@@ -1049,7 +1087,11 @@ services:
 
   lab-service:
     <<: *worker-common
-    build: { context: ./workers/lab-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/lab-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: lab-service-worker
     ports: ["8066:8066"]
     environment:
@@ -1075,7 +1117,11 @@ services:
 
   tranceflow:
     <<: *worker-common
-    build: { context: ./workers/tranceflow, dockerfile: Dockerfile }
+    build:
+      context: ./workers/tranceflow
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-tranceflow
     ports: ["8059:8059"]
     expose: ["8059"]
@@ -1109,7 +1155,11 @@ services:
 
   vrar3d:
     <<: *worker-common
-    build: { context: ./workers/vrar3d, dockerfile: Dockerfile }
+    build:
+      context: ./workers/vrar3d
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-vrar3d
     ports: ["8060:8060"]
     expose: ["8060"]
@@ -1194,6 +1244,7 @@ services:
       context: ./workers/blender-worker
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: trancendos-blender-worker
     ports:
@@ -1211,6 +1262,7 @@ services:
       context: ./workers/triposr-worker
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: trancendos-triposr-worker
     ports:
@@ -1230,6 +1282,7 @@ services:
     build:
       context: ./workers/ffmpeg-worker
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: trancendos-ffmpeg-worker
     ports:
@@ -1835,6 +1888,8 @@ services:
     build:
       context: ./workers/library-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: trancendos-library-service
     environment:
       LIBRARY_PORT: "8067"
@@ -2744,6 +2799,8 @@ services:
     build:
       context: ./workers/cryptex
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     image: trancendos/cryptex:latest
     container_name: cryptex-worker
     restart: unless-stopped
@@ -2786,6 +2843,8 @@ services:
     build:
       context: ./workers/observatory
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-observatory
     restart: unless-stopped
     environment:
@@ -3139,6 +3198,8 @@ services:
     build:
       context: ./workers/imaginarium
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-imaginarium
     <<: *worker-common
     environment:
@@ -3176,6 +3237,8 @@ services:
     build:
       context: ./workers/tateking
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-tateking
     <<: *worker-common
     environment:
@@ -3333,6 +3396,8 @@ services:
     build:
       context: ./workers/sashas-photo-studio
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-sashas-photo-studio
     <<: *worker-common
     environment:
@@ -3359,6 +3424,8 @@ services:
     build:
       context: ./workers/the-lab
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-lab
     <<: *worker-common
     environment:
@@ -3391,6 +3458,7 @@ services:
       context: ./workers/deepagents-orchestrator-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: tranc3-deepagents-orchestrator-service
     <<: *worker-common
@@ -3416,6 +3484,8 @@ services:
     build:
       context: ./workers/taimra
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-taimra
     <<: *worker-common
     environment:
@@ -3445,6 +3515,7 @@ services:
       context: ./workers/imind
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: tranc3-imind
     <<: *worker-common
@@ -3480,6 +3551,7 @@ services:
       context: ./workers/resonate
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: tranc3-resonate
     <<: *worker-common
@@ -3514,6 +3586,8 @@ services:
     build:
       context: ./workers/tranquility
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-tranquility
     <<: *worker-common
     environment:
@@ -3542,6 +3616,8 @@ services:
     build:
       context: ./workers/the-studio
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-studio
     <<: *worker-common
     environment:
@@ -3568,6 +3644,8 @@ services:
     build:
       context: ./workers/the-academy
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-academy
     <<: *worker-common
     environment:
@@ -3595,6 +3673,7 @@ services:
       context: ./workers/turings-hub-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: tranc3-turings-hub-service
     <<: *worker-common
@@ -3620,6 +3699,8 @@ services:
     build:
       context: ./workers/warp-tunnel
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-warp-tunnel
     <<: *worker-common
     environment:
@@ -3646,6 +3727,8 @@ services:
     build:
       context: ./workers/warp-radio
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-warp-radio
     <<: *worker-common
     environment:
@@ -3672,6 +3755,8 @@ services:
     build:
       context: ./workers/the-dutchy
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-dutchy
     <<: *worker-common
     environment:
@@ -3698,6 +3783,8 @@ services:
     build:
       context: ./workers/devocity
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-devocity
     <<: *worker-common
     environment:
@@ -3724,6 +3811,8 @@ services:
     build:
       context: ./workers/chaos-party
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-chaos-party
     <<: *worker-common
     environment:
@@ -3756,6 +3845,8 @@ services:
     build:
       context: ./workers/basement
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-basement
     <<: *worker-common
     environment:
@@ -3807,6 +3898,7 @@ services:
       context: ./workers/langchain-integration-service
       dockerfile: Dockerfile
       additional_contexts:
+        sharedcore: ./Dimensional
         observability: ./src/observability
     container_name: tranc3-langchain-integration-service
     <<: *worker-common
@@ -3859,6 +3951,8 @@ services:
     build:
       context: ./workers/litellm-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-litellm-service
     <<: *worker-common
     environment:
@@ -3888,6 +3982,8 @@ services:
     build:
       context: ./workers/artifactory-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-artifactory-service
     <<: *worker-common
     environment:
@@ -4023,6 +4119,8 @@ services:
     build:
       context: ./workers/fabulousa-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-fabulousa-service
     <<: *worker-common
     environment:
@@ -4047,6 +4145,8 @@ services:
     build:
       context: ./workers/llamaindex-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-llamaindex-service
     <<: *worker-common
     environment:
@@ -4072,6 +4172,8 @@ services:
     build:
       context: ./workers/haystack-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-haystack-service
     <<: *worker-common
     environment:
@@ -4098,6 +4200,8 @@ services:
     build:
       context: ./workers/dspy-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-dspy-service
     <<: *worker-common
     environment:

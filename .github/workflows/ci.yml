@@ -73,6 +73,12 @@ jobs:
       - name: Shared-core build-context check
         run: python scripts/apply_shared_core_contexts.py --check
 
+      # Fails if any service compares the internal secret in-line again. The
+      # estate had 84 such gates, 35 timing-unsafe and 10 fail-open; this is
+      # what stops an 85th appearing.
+      - name: Internal-auth delegation check
+        run: python scripts/migrate_internal_auth.py --check
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 
