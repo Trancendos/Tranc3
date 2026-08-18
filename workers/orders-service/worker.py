@@ -296,7 +296,9 @@ async def browse_listings(
         params.append(seller_id)
 
     where_clause = " AND ".join(conditions)
-    listing_sql = f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608
+    listing_sql = (
+        f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608
+    )
     count_sql = f"SELECT COUNT(*) FROM listings WHERE {where_clause}"  # noqa: S608
 
     conn = _get_conn()

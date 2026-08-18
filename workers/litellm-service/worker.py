@@ -441,7 +441,9 @@ async def get_budget() -> dict[str, Any]:
             "status": (
                 "hard_stop"
                 if not _provider_available(provider)[0]
-                else "degraded" if _provider_degraded(provider) else "ok"
+                else "degraded"
+                if _provider_degraded(provider)
+                else "ok"
             ),
         }
     return {"budget": budget, "preferred_provider": _select_provider()}

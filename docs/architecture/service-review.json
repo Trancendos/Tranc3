@@ -89,39 +89,72 @@
       "zot"
     ],
     "NEEDS_WORK": [
+      "analytics-service",
+      "artifactory-service",
       "audit-service",
+      "basement",
       "blender-worker",
+      "cache-service",
       "cdn-service",
+      "chaos-party",
       "config-service",
       "cron-service",
+      "cryptex",
       "deepagents-orchestrator-service",
+      "devocity",
+      "dspy-service",
       "email-service",
+      "fabulousa-service",
       "ffmpeg-worker",
+      "files-service",
       "gbrain-bridge",
       "geo-service",
+      "haystack-service",
       "health-aggregator",
       "identity-service",
+      "imaginarium",
+      "imind",
       "infinity-ai",
       "infinity-void",
+      "lab-service",
       "langchain-integration-service",
       "ledger-service",
+      "library-service",
+      "litellm-service",
+      "llamaindex-service",
       "mlflow-service",
       "model-router-service",
       "monitoring",
       "notifications",
+      "observatory",
       "orders-service",
       "payments-service",
       "products-service",
       "queue-service",
       "rate-limit-service",
+      "resonate",
+      "sashas-photo-studio",
       "search-service",
       "skills-benchmark-service",
       "sms-service",
+      "storage-service",
+      "taimra",
+      "tateking",
+      "the-academy",
+      "the-dutchy",
+      "the-grid",
+      "the-lab",
+      "the-studio",
       "topology-service",
       "tranc3-ai",
+      "tranceflow",
+      "tranquility",
       "triposr-worker",
       "turings-hub-service",
       "vault-service",
+      "vrar3d",
+      "warp-radio",
+      "warp-tunnel",
       "workflow-engine-service"
     ],
     "ORPHANED": [
@@ -130,25 +163,12 @@
       "optional-services-health"
     ],
     "RUNNING": [
-      "analytics-service",
       "api-gateway",
-      "artifactory-service",
       "backup-service",
-      "basement",
       "bullmq-queue-service",
-      "cache-service",
-      "chaos-party",
       "cranbania",
-      "cryptex",
-      "devocity",
-      "dspy-service",
-      "fabulousa-service",
-      "files-service",
-      "haystack-service",
       "hive-service",
       "ice-box-service",
-      "imaginarium",
-      "imind",
       "infinity-admin",
       "infinity-auth",
       "infinity-bridge",
@@ -156,19 +176,67 @@
       "infinity-portal",
       "infinity-shards",
       "infinity-ws",
+      "nexus-ws-rs",
+      "rate-limit-service-rs",
+      "remotion-render-service",
+      "sentinel-station-service",
+      "swarm-coordinator-service",
+      "tranc3-backend",
+      "users-service",
+      "vault-service-rs"
+    ]
+  },
+  "commit": "26c80e7a",
+  "failures_by_check": {
+    "imports_resolve": [
+      "analytics-service",
+      "artifactory-service",
+      "audit-service",
+      "basement",
+      "blender-worker",
+      "cache-service",
+      "cdn-service",
+      "chaos-party",
+      "config-service",
+      "cron-service",
+      "cryptex",
+      "deepagents-orchestrator-service",
+      "devocity",
+      "dspy-service",
+      "email-service",
+      "fabulousa-service",
+      "ffmpeg-worker",
+      "files-service",
+      "gbrain-bridge",
+      "geo-service",
+      "haystack-service",
+      "health-aggregator",
+      "identity-service",
+      "imaginarium",
+      "imind",
+      "infinity-ai",
       "lab-service",
+      "langchain-integration-service",
+      "ledger-service",
       "library-service",
       "litellm-service",
       "llamaindex-service",
-      "nexus-ws-rs",
+      "mlflow-service",
+      "model-router-service",
+      "monitoring",
+      "notifications",
       "observatory",
-      "rate-limit-service-rs",
-      "remotion-render-service",
+      "orders-service",
+      "payments-service",
+      "products-service",
+      "queue-service",
+      "rate-limit-service",
       "resonate",
       "sashas-photo-studio",
-      "sentinel-station-service",
+      "search-service",
+      "skills-benchmark-service",
+      "sms-service",
       "storage-service",
-      "swarm-coordinator-service",
       "taimra",
       "tateking",
       "the-academy",
@@ -176,18 +244,17 @@
       "the-grid",
       "the-lab",
       "the-studio",
-      "tranc3-backend",
+      "topology-service",
       "tranceflow",
       "tranquility",
-      "users-service",
-      "vault-service-rs",
+      "triposr-worker",
+      "turings-hub-service",
+      "vault-service",
       "vrar3d",
       "warp-radio",
-      "warp-tunnel"
-    ]
-  },
-  "commit": "ec8650ee",
-  "failures_by_check": {
+      "warp-tunnel",
+      "workflow-engine-service"
+    ],
     "not built by any compose service": [
       "dimensional-nexus-service",
       "gateway-service",
@@ -230,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-17T19:38:15.284551+00:00",
+  "generated_at": "2026-08-18T01:24:35.762607+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -295,9 +362,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/analytics-service/worker.py:35 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8016, container binds 8016 via Dockerfile CMD",
@@ -313,8 +382,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "analytics-service"
     },
     {
@@ -363,9 +434,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/artifactory-service/worker.py:30 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8047, container binds 8047 via Dockerfile CMD",
@@ -381,8 +454,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "artifactory-service"
     },
     {
@@ -397,9 +472,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/audit-service/worker.py:43 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8025, container binds 8025 via Dockerfile CMD",
@@ -416,6 +493,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -495,9 +573,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/basement/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8068, container binds 8068 via compose PORT",
@@ -513,8 +593,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "basement"
     },
     {
@@ -536,9 +618,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/blender-worker/worker.py:29 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8050, container binds 8050 via Dockerfile CMD",
@@ -555,6 +639,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -620,9 +705,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/cache-service/worker.py:36 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8023, container binds 8023 via Dockerfile CMD",
@@ -638,8 +725,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "cache-service"
     },
     {
@@ -675,9 +764,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/cdn-service/worker.py:31 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8028, container binds 8028 via Dockerfile CMD",
@@ -694,6 +785,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -711,9 +803,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/chaos-party/worker.py:27 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8079, container binds 8079 via compose PORT",
@@ -729,8 +823,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "chaos-party"
     },
     {
@@ -745,9 +841,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/config-service/worker.py:27 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8024, container binds 8024 via Dockerfile CMD",
@@ -764,6 +862,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -815,9 +914,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/cron-service/worker.py:44 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8021, container binds 8021 via Dockerfile CMD",
@@ -834,6 +935,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -851,9 +953,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/cryptex/router.py:12 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose=8053 bind=None (undetermined)",
@@ -869,8 +973,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "cryptex"
     },
     {
@@ -899,9 +1005,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/deepagents-orchestrator-service/worker.py:30 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8037, container binds 8037 via Dockerfile CMD",
@@ -918,6 +1026,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -949,9 +1058,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/devocity/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8110, container binds 8110 via compose PORT",
@@ -967,14 +1078,16 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "devocity"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "amir20/dozzle:latest@sha256:1c1060cfb5402093c4e0f03f3534d7deaffeb0a6f6dd034e7c5f244603f35fb3",
+      "image": "amir20/dozzle:latest@sha256:01f9018ffdaa0ec523f9a91dea3eff65b25cdb5f0566ac6d5a2cb4cf591e35e9",
       "lifecycle": "INFRA",
       "service": "dozzle"
     },
@@ -990,9 +1103,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/dspy-service/worker.py:28 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8098, container binds 8098 via Dockerfile CMD",
@@ -1008,8 +1123,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "dspy-service"
     },
     {
@@ -1024,9 +1141,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/email-service/worker.py:33 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8018, container binds 8018 via Dockerfile CMD",
@@ -1043,6 +1162,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1067,9 +1187,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/fabulousa-service/worker.py:28 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8048, container binds 8048 via compose PORT",
@@ -1085,8 +1207,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "fabulousa-service"
     },
     {
@@ -1108,9 +1232,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/ffmpeg-worker/worker.py:23 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8052, container binds 8052 via Dockerfile CMD",
@@ -1127,6 +1253,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1144,9 +1271,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/files-service/worker.py:37 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8014, container binds 8014 via Dockerfile CMD",
@@ -1162,8 +1291,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "files-service"
     },
     {
@@ -1192,9 +1323,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/gbrain-bridge/worker.py:42 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8030, container binds 8030 via Dockerfile CMD",
@@ -1211,6 +1344,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1228,9 +1362,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/geo-service/worker.py:34 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8027, container binds 8027 via Dockerfile CMD",
@@ -1247,6 +1383,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1278,9 +1415,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/haystack-service/worker.py:27 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8097, container binds 8097 via Dockerfile CMD",
@@ -1296,8 +1435,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "haystack-service"
     },
     {
@@ -1312,9 +1453,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 2 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 2 guarded, 0 vendored",
+          "offenders": [
+            "workers/health-aggregator/worker.py:31 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8029, container binds 8029 via Dockerfile CMD",
@@ -1331,6 +1474,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1348,7 +1492,7 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 2 vendored",
+          "detail": "0 unguarded, 0 guarded, 3 vendored",
           "offenders": [],
           "ok": true
         },
@@ -1416,9 +1560,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/identity-service/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8015, container binds 8015 via Dockerfile CMD",
@@ -1435,6 +1581,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1452,9 +1599,12 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "2 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/imaginarium/main.py:14 Dimensional.service_auth_fastapi",
+            "workers/imaginarium/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8064, container binds 8064 via compose PORT",
@@ -1470,8 +1620,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "imaginarium"
     },
     {
@@ -1486,9 +1638,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/imind/worker.py:26 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8075, container binds 8075 via compose PORT",
@@ -1504,8 +1658,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "imind"
     },
     {
@@ -1554,9 +1710,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 6 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 6 guarded, 0 vendored",
+          "offenders": [
+            "workers/infinity-ai/router.py:14 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8009, container binds 8009 via Dockerfile CMD",
@@ -1573,6 +1731,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1865,9 +2024,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/lab-service/router.py:13 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8066, container binds 8066 via Dockerfile CMD",
@@ -1883,8 +2044,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "lab-service"
     },
     {
@@ -1899,9 +2062,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/langchain-integration-service/worker.py:48 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8036, container binds 8036 via Dockerfile CMD",
@@ -1918,6 +2083,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1949,9 +2115,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/ledger-service/worker.py:43 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8032, container binds 8032 via Dockerfile CMD",
@@ -1968,6 +2136,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -1985,9 +2154,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/library-service/router.py:12 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8067, container binds 8067 via Dockerfile CMD",
@@ -2003,14 +2174,16 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "library-service"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/berriai/litellm:main-latest@sha256:be646214d7bc1cda0be57debbbf58e822ca4f233ddc50d0c0c7fa9b4a28063af",
+      "image": "ghcr.io/berriai/litellm:main-latest@sha256:3a1980074ff2ac13883e0ffee1bebec345d8addd004be251079cee173b0e8305",
       "lifecycle": "INFRA",
       "service": "litellm"
     },
@@ -2026,9 +2199,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/litellm-service/worker.py:42 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8049, container binds 8049 via compose PORT",
@@ -2044,8 +2219,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "litellm-service"
     },
     {
@@ -2067,9 +2244,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/llamaindex-service/worker.py:28 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8096, container binds 8096 via Dockerfile CMD",
@@ -2085,8 +2264,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "llamaindex-service"
     },
     {
@@ -2113,7 +2294,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "getmeili/meilisearch:latest@sha256:a9eb29ee09ab4943db3b4c68620bd6f3382e6b2b0ac4431c0e607b48dbcd4c14",
+      "image": "getmeili/meilisearch:latest@sha256:8d6643d86d71fad6ad3cba92cde7ccfce9e4d6c384bda67598eb553571c32431",
       "lifecycle": "INFRA",
       "service": "meilisearch"
     },
@@ -2157,9 +2338,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/mlflow-service/worker.py:69 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8039, container binds 8039 via Dockerfile CMD",
@@ -2176,6 +2359,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2193,9 +2377,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/model-router-service/worker.py:43 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8033, container binds 8033 via Dockerfile CMD",
@@ -2212,6 +2398,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2229,9 +2416,12 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "2 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/monitoring/worker.py:43 Dimensional.service_auth",
+            "workers/monitoring/worker.py:44 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8007, container binds 8007 via Dockerfile CMD",
@@ -2248,6 +2438,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2327,9 +2518,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/notifications/worker.py:766 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8008, container binds 8008 via Dockerfile CMD",
@@ -2346,6 +2539,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2363,9 +2557,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/observatory/router.py:12 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose=8065 bind=None (undetermined)",
@@ -2381,8 +2577,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "observatory"
     },
     {
@@ -2432,9 +2630,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/orders-service/worker.py:26 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8012, container binds 8012 via Dockerfile CMD",
@@ -2451,6 +2651,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2517,9 +2718,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/payments-service/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8013, container binds 8013 via Dockerfile CMD",
@@ -2536,6 +2739,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2588,9 +2792,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/products-service/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8011, container binds 8011 via Dockerfile CMD",
@@ -2607,6 +2813,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2645,9 +2852,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/queue-service/worker.py:28 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8022, container binds 8022 via Dockerfile CMD",
@@ -2664,6 +2873,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2681,9 +2891,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/rate-limit-service/worker.py:27 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8026, container binds 8026 via Dockerfile CMD",
@@ -2700,6 +2912,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2792,9 +3005,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/resonate/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose=8076 bind=None (undetermined)",
@@ -2810,8 +3025,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "resonate"
     },
     {
@@ -2826,9 +3043,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/sashas-photo-studio/worker.py:27 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8062, container binds 8062 via compose PORT",
@@ -2844,8 +3063,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "sashas-photo-studio"
     },
     {
@@ -2860,9 +3081,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/search-service/worker.py:28 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8017, container binds 8017 via Dockerfile CMD",
@@ -2879,6 +3102,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2958,9 +3182,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/skills-benchmark-service/worker.py:43 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8035, container binds 8035 via Dockerfile CMD",
@@ -2977,6 +3203,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -2994,9 +3221,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/sms-service/worker.py:32 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8019, container binds 8019 via Dockerfile CMD",
@@ -3013,6 +3242,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -3037,9 +3267,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/storage-service/worker.py:41 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8020, container binds 8020 via Dockerfile CMD",
@@ -3055,8 +3287,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "storage-service"
     },
     {
@@ -3105,9 +3339,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/taimra/worker.py:24 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8074, container binds 8074 via compose PORT",
@@ -3123,8 +3359,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "taimra"
     },
     {
@@ -3139,9 +3377,12 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "2 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/tateking/main.py:33 Dimensional.service_auth_fastapi",
+            "workers/tateking/worker.py:26 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8061, container binds 8061 via compose PORT",
@@ -3157,8 +3398,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "tateking"
     },
     {
@@ -3187,9 +3430,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/the-academy/worker.py:24 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8056, container binds 8056 via compose PORT",
@@ -3205,8 +3450,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "the-academy"
     },
     {
@@ -3221,9 +3468,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/the-dutchy/worker.py:26 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8057, container binds 8057 via compose PORT",
@@ -3239,8 +3488,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "the-dutchy"
     },
     {
@@ -3255,9 +3506,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/the-grid/router.py:13 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8010, container binds 8010 via Dockerfile CMD",
@@ -3273,8 +3526,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "the-grid"
     },
     {
@@ -3289,9 +3544,12 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "2 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/the-lab/main.py:26 Dimensional.service_auth_fastapi",
+            "workers/the-lab/worker.py:27 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8055, container binds 8055 via compose PORT",
@@ -3307,8 +3565,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "the-lab"
     },
     {
@@ -3323,9 +3583,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/the-studio/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8069, container binds 8069 via compose PORT",
@@ -3341,8 +3603,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "the-studio"
     },
     {
@@ -3364,9 +3628,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/topology-service/worker.py:44 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8031, container binds 8031 via Dockerfile CMD",
@@ -3383,6 +3649,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -3477,9 +3744,12 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "2 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/tranceflow/router.py:12 Dimensional.service_auth_fastapi",
+            "workers/tranceflow/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8059, container binds 8059 via Dockerfile CMD",
@@ -3495,8 +3765,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "tranceflow"
     },
     {
@@ -3511,9 +3783,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/tranquility/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8077, container binds 8077 via compose PORT",
@@ -3529,8 +3803,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "tranquility"
     },
     {
@@ -3545,9 +3821,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/triposr-worker/worker.py:31 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8111, container binds 8111 via Dockerfile CMD",
@@ -3564,6 +3842,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -3581,9 +3860,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/turings-hub-service/worker.py:55 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8058, container binds 8058 via Dockerfile CMD",
@@ -3600,6 +3881,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -3665,9 +3947,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/vault-service/worker.py:48 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8038, container binds 8038 via Dockerfile CMD",
@@ -3684,6 +3968,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -3749,9 +4034,12 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "2 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/vrar3d/router.py:13 Dimensional.service_auth_fastapi",
+            "workers/vrar3d/worker.py:25 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8060, container binds 8060 via Dockerfile CMD",
@@ -3767,8 +4055,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "vrar3d"
     },
     {
@@ -3783,9 +4073,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/warp-radio/worker.py:26 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8073, container binds 8073 via compose PORT",
@@ -3801,8 +4093,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "warp-radio"
     },
     {
@@ -3817,9 +4111,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 0 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 0 guarded, 0 vendored",
+          "offenders": [
+            "workers/warp-tunnel/worker.py:28 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8072, container binds 8072 via compose PORT",
@@ -3835,8 +4131,10 @@
           "ok": null
         }
       },
-      "failures": [],
-      "lifecycle": "RUNNING",
+      "failures": [
+        "imports_resolve"
+      ],
+      "lifecycle": "NEEDS_WORK",
       "service": "warp-tunnel"
     },
     {
@@ -3900,9 +4198,11 @@
           "ok": true
         },
         "imports_resolve": {
-          "detail": "0 unguarded, 1 guarded, 0 vendored",
-          "offenders": [],
-          "ok": true
+          "detail": "1 unguarded, 1 guarded, 0 vendored",
+          "offenders": [
+            "workers/workflow-engine-service/worker.py:40 Dimensional.service_auth_fastapi"
+          ],
+          "ok": false
         },
         "port_agreement": {
           "detail": "compose routes 8034, container binds 8034 via Dockerfile CMD",
@@ -3919,6 +4219,7 @@
         }
       },
       "failures": [
+        "imports_resolve",
         "telemetry_reaches"
       ],
       "lifecycle": "NEEDS_WORK",
@@ -3927,7 +4228,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/project-zot/zot-linux-amd64:latest@sha256:34f18f783037f967dba10df02f9d4086c4d626f5643ef9f5e51e4a4547280a0b",
+      "image": "ghcr.io/project-zot/zot-linux-amd64:latest@sha256:95a837a0afacf5b7edc0c92493f04beee6891989b8d2fd50a00cf65a1e6d4fd5",
       "lifecycle": "INFRA",
       "service": "zot"
     },
@@ -3939,7 +4240,7 @@
       ],
       "has_dockerfile": true,
       "lifecycle": "ORPHANED",
-      "python_files": 10,
+      "python_files": 11,
       "service": "dimensional-nexus-service"
     },
     {
@@ -4033,7 +4334,8 @@
       },
       "internal-secret verification": {
         "dimensional_modules": [
-          "Dimensional/service_auth.py"
+          "Dimensional/service_auth.py",
+          "Dimensional/service_auth_fastapi.py"
         ],
         "in_dimensional": true,
         "services_implementing_independently": [
@@ -4048,7 +4350,6 @@
           "email-service",
           "fabulousa-service",
           "ffmpeg-worker",
-          "files-service",
           "gbrain-bridge",
           "geo-service",
           "haystack-service",
@@ -4080,7 +4381,7 @@
           "vault-service",
           "workflow-engine-service"
         ],
-        "verdict": "IN SCOPE, NOT REACHING \u2014 in the core, but 42 service(s) implement it anyway"
+        "verdict": "IN SCOPE, NOT REACHING \u2014 in the core, but 41 service(s) implement it anyway"
       },
       "log sanitisation": {
         "dimensional_modules": [
@@ -4125,7 +4426,8 @@
           "Dimensional/orchestration/health_monitor.py"
         ],
         "internal-secret verification": [
-          "Dimensional/service_auth.py"
+          "Dimensional/service_auth.py",
+          "Dimensional/service_auth_fastapi.py"
         ],
         "log sanitisation": [
           "Dimensional/sanitize.py"
@@ -4135,61 +4437,21 @@
         ],
         "token-bucket rate limit": []
       },
-      "module_count": 104
+      "module_count": 105
     },
     "internal_secret_variance": {
-      "constant_time": [
-        "artifactory-service",
-        "audit-service",
-        "blender-worker",
-        "cdn-service",
-        "config-service",
-        "cron-service",
-        "deepagents-orchestrator-service",
-        "dspy-service",
-        "email-service",
-        "fabulousa-service",
-        "ffmpeg-worker",
-        "gbrain-bridge",
-        "geo-service",
-        "haystack-service",
-        "health-aggregator",
-        "identity-service",
-        "imaginarium",
-        "infinity-ai",
-        "langchain-integration-service",
-        "ledger-service",
-        "litellm-service",
-        "llamaindex-service",
-        "mlflow-service",
-        "model-router-service",
-        "monitoring",
-        "notifications",
-        "orders-service",
-        "payments-service",
-        "products-service",
-        "queue-service",
-        "rate-limit-service",
-        "search-service",
-        "skills-benchmark-service",
-        "sms-service",
-        "tateking",
-        "the-lab",
-        "topology-service",
-        "triposr-worker",
-        "turings-hub-service",
-        "vault-service",
-        "workflow-engine-service"
-      ],
+      "constant_time": [],
       "fail_open": [],
-      "timing_unsafe": [],
-      "total": 42
+      "timing_unsafe": [
+        "the-lab"
+      ],
+      "total": 41
     }
   },
   "totals": {
     "INFRA": 86,
-    "NEEDS_WORK": 34,
+    "NEEDS_WORK": 67,
     "ORPHANED": 3,
-    "RUNNING": 54
+    "RUNNING": 21
   }
 }

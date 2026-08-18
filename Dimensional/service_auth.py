@@ -58,7 +58,10 @@ codes the platform already uses are 503 for "not configured" and 403/401 for
 from __future__ import annotations
 
 import hmac
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "ServiceAuthError",
@@ -137,6 +140,14 @@ def check_internal_secret(
     same one verification with a return value they can act on.
 
     `status_code` and `detail` are meaningful only when `ok` is False.
+
+    The returned detail is never the exception's own message. An earlier version
+    passed `str(exc)` through for the unconfigured case, reasoning that naming
+    the missing variable helps whoever has to fix it — but the party reading that
+    HTTP body is an *unauthenticated* caller, and it told them the service exists
+    and is misconfigured. CodeQL flagged it as information exposure through an
+    exception and was right. The specific reason goes to the log, which is where
+    the operator actually looks; the caller gets the generic detail.
     """
     try:
         verify_internal_secret(
@@ -146,9 +157,8 @@ def check_internal_secret(
             mismatch_status=mismatch_status,
         )
     except ServiceAuthError as exc:
-        return (
-            False,
-            exc.status_code,
-            (str(exc) if exc.status_code == unconfigured_status else detail),
-        )
+        if exc.status_code == unconfigured_status:
+            logger.error("internal-secret gate refusing all callers: %s", exc)
+            return False, exc.status_code, "Service unavailable"
+        return False, exc.status_code, detail
     return True, 200, ""

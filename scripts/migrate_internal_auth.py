@@ -3,17 +3,17 @@
 
 THE STATE THIS STARTS FROM
 
-74 services each wrote their own `X-Internal-Secret` check — 84 gate functions
+74 services each wrote their own `X-Internal-Secret` check — 77 gate functions
 for one concern. A full AST scan of `workers/` classifies them:
 
-  * 35 compare with `!=`, which returns at the first differing byte and leaks the
+  * 28 compare with `!=`, which returns at the first differing byte and leaks the
     secret's prefix through response timing;
-  * 7 fail **open** — `if not INTERNAL_SECRET: return` or `if SECRET and ...`
+  * 10 fail **open** — `if not INTERNAL_SECRET: return` or `if SECRET and ...`
     waves every request through when the variable is unset, and `.env.example`
     ships it blank;
   * the rest are correct, by each author's care rather than by policy.
 
-One implementation cannot drift 84 ways. `Dimensional.service_auth` is that
+One implementation cannot drift 77 ways. `Dimensional.service_auth` is that
 implementation and `Dimensional.service_auth_fastapi` translates it to
 HTTPException; this script rewrites each gate to call them.
 
@@ -63,7 +63,7 @@ actually imports, so the two compose without either knowing about the other.
 Run it after this one. Services that build from the repo root already have it.
 
 Run with `--check` in CI: exits 1 if any gate still compares in-line, so a new
-service cannot quietly add an 85th implementation.
+service cannot quietly add a 78th implementation.
 """
 
 from __future__ import annotations
@@ -500,7 +500,8 @@ def insert_import(text: str) -> str:
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             last = max(last, node.end_lineno)
             # Several workers call sys.path.append() before importing from the
-            # repo, and mark each of those imports `# noqa: E402`. An inserted
+            # repo, and mark each of those imports with an E402 suppression.
+            # An inserted
             # import lands in the same position and needs the same marker, or
             # it becomes the one E402 in an otherwise clean file.
             needs_noqa = needs_noqa or seen_code
@@ -508,9 +509,10 @@ def insert_import(text: str) -> str:
             isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
         ):
             seen_code = True
-    # Assembled rather than written literally: a bare `# noqa: E402` in this
-    # source is read by ruff as a directive on *this* line, which it then
-    # reports as malformed because the line has nothing to suppress.
+    # Assembled rather than written literally: spelling the suppression marker
+    # out in this source makes ruff read it as a directive on *this* line,
+    # which it then reports as malformed because the line has nothing to
+    # suppress.
     suffix = "  # " + "noqa: E402" if needs_noqa else ""
     lines = text.splitlines(keepends=True)
     lines.insert(last, IMPORT_LINE + suffix + "\n")

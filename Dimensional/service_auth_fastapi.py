@@ -3,7 +3,7 @@
 `Dimensional.service_auth` deliberately imports no web framework: it deals in
 strings and raises a plain exception, so a script or a non-HTTP caller can use
 it. That leaves every FastAPI service to write the same four-line translation
-from `ServiceAuthError` to `HTTPException` — which is how one concern became 84
+from `ServiceAuthError` to `HTTPException` — which is how one concern became 77
 hand-rolled gates in the first place. This module writes that translation once.
 
 Import cost stays honest: this imports fastapi, which every service using it
@@ -23,11 +23,14 @@ judgement about the caller.
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from fastapi import Header, HTTPException
 
 from Dimensional.service_auth import ServiceAuthError, verify_internal_secret
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "guard_internal_secret",
@@ -46,10 +49,16 @@ def guard_internal_secret(
 ) -> None:
     """Verify a presented secret, raising HTTPException instead of ServiceAuthError.
 
-    The mismatch detail is caller-supplied and defaults to a bare "Forbidden".
-    The unconfigured detail is not caller-supplied: it names the missing variable,
-    because that message is read by the operator who has to fix it, never by the
-    caller who cannot.
+    Neither detail is derived from the exception. The mismatch detail is
+    caller-supplied and defaults to a bare "Forbidden"; the unconfigured case
+    answers a generic "Service unavailable" and logs the specific reason.
+
+    An earlier version returned `str(exc)` for the unconfigured case, on the
+    reasoning that naming the missing variable helps whoever must fix it. That
+    was the wrong channel: the reader of this HTTP body is an unauthenticated
+    caller, and it disclosed that the service exists and is misconfigured.
+    CodeQL flagged it as information exposure through an exception. The operator
+    reads logs — `check_internal_secret` records it there.
     """
     try:
         verify_internal_secret(
@@ -59,10 +68,10 @@ def guard_internal_secret(
             mismatch_status=mismatch_status,
         )
     except ServiceAuthError as exc:
-        raise HTTPException(
-            status_code=exc.status_code,
-            detail=str(exc) if exc.status_code == unconfigured_status else detail,
-        ) from exc
+        if exc.status_code == unconfigured_status:
+            logger.error("internal-secret gate refusing all callers: %s", exc)
+            raise HTTPException(status_code=exc.status_code, detail="Service unavailable") from exc
+        raise HTTPException(status_code=exc.status_code, detail=detail) from exc
 
 
 async def require_internal_secret(

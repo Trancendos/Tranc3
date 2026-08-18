@@ -257,13 +257,9 @@ def wrap_response(
     parts = []
 
     if sensitivity_level in ("critical", "high"):
-        parts.append(
-            random.choice(_EMPATHY_PREFIXES)
-        )  # nosec B311 — non-cryptographic random usage
+        parts.append(random.choice(_EMPATHY_PREFIXES))  # nosec B311 — non-cryptographic random usage
     elif sensitivity_level == "medium" or (user_mood is not None and user_mood <= 2):
-        parts.append(
-            random.choice(_EMPATHY_PREFIXES[:2])
-        )  # nosec B311 — non-cryptographic empathy variation
+        parts.append(random.choice(_EMPATHY_PREFIXES[:2]))  # nosec B311 — non-cryptographic empathy variation
 
     parts.append(response)
 
@@ -276,9 +272,7 @@ def wrap_response(
             "You don't have to face this alone. \U0001f499"
         )
     elif sensitivity_level in ("medium", "high"):
-        parts.append(
-            f"\n\n*{random.choice(_VALIDATION_PHRASES)}*"
-        )  # nosec B311 — non-cryptographic phrase variation
+        parts.append(f"\n\n*{random.choice(_VALIDATION_PHRASES)}*")  # nosec B311 — non-cryptographic phrase variation
 
     return "\n\n".join(p.strip() for p in parts if p.strip())
 
