@@ -81,7 +81,12 @@ _NOISE = [
     # ahead of int so "30.5" is not consumed as two separate integers.
     (re.compile(r"\b\d+\.\d+"), "<float>"),
     (re.compile(r"\b\d{3,}"), "<num>"),
-    (re.compile(r"/tmp/\S+"), "<tmp>"),
+    # A redaction pattern, not a filesystem path: it strips temp paths *out* of
+    # failure messages before clustering, so the same failure from two different
+    # scratch directories compares equal. Bandit's hardcoded-tmp check matches
+    # the literal anywhere it appears — including inside the regex that removes
+    # it — so the suppression below is on the pattern, not on any temp-file use.
+    (re.compile(r"/tmp/\S+"), "<tmp>"),  # nosec B108
 ]
 
 
