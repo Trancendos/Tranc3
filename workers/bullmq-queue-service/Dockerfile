@@ -1,4 +1,4 @@
-FROM node:24-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d AS builder
+FROM node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e703e5fe503 AS builder
 
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -8,7 +8,7 @@ COPY src/ ./src/
 RUN npm run build
 
 # ---- runtime ----
-FROM node:24-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
+FROM node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e703e5fe503
 
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
