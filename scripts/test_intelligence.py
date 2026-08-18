@@ -69,8 +69,14 @@ USAGE
 
 In CI, a sharded job body is:
 
-    python scripts/test_intelligence.py --shard ${{ matrix.shard }} --of 4 > ids
-    python -m pytest $(cat ids)
+    python scripts/test_intelligence.py --shard ${{ matrix.shard }} --of 4 > ids.txt
+    python -m pytest @ids.txt
+
+`@file` (pytest's argument-file syntax, one argument per line) rather than
+`$(cat ids.txt)`: 29 nodeids in this suite contain spaces -- parametrised
+penetration cases like `test_command_injection_in_tool_name[&& rm -rf /]` --
+and unquoted command substitution word-splits every one of them into several
+bogus arguments.
 """
 
 from __future__ import annotations
@@ -190,11 +196,19 @@ def find_flaky(records: list[dict]) -> tuple[list[dict], list[dict]]:
         if conflicted:
             flaky.append({"test": test, "commits": sorted(conflicted)})
             continue
+        # "unknown" is excluded here too, not just from the flaky branch above.
+        # A legacy failure with no commit plus a known pass proves nothing: the
+        # two could be the same commit (which would be flakiness) or different
+        # ones (which would be a fix). Counting it as "unstable ACROSS commits"
+        # asserts the second, which the data does not support. Dropping these
+        # means an all-legacy dataset reports nothing -- the correct answer when
+        # nothing can be established, and the same contract the docstring states.
         outcomes: set[str] = set()
-        for o in per_commit.values():
-            outcomes |= o
+        known_commits = [c for c in per_commit if c != "unknown"]
+        for commit in known_commits:
+            outcomes |= per_commit[commit]
         if {PASS, FAIL} <= outcomes:
-            unstable.append({"test": test, "commits": sorted(per_commit)})
+            unstable.append({"test": test, "commits": sorted(known_commits)})
     return (
         sorted(flaky, key=lambda d: d["test"]),
         sorted(unstable, key=lambda d: d["test"]),
@@ -234,9 +248,28 @@ def shard_totals(buckets: list[list[str]], timings: dict[str, float]) -> list[fl
 # test, so the difference is per-shard wall clock, not a one-off.
 DEFAULT_COLLECT_PATH = "tests"
 
+# MIRRORS the `test` job's selection in .github/workflows/ci.yml. It has to: the
+# coverage denominator must be the set of tests that actually RUN, or the gate
+# measures the wrong population. CI excludes integration- and chaos-marked tests
+# and ignores tests/test_full_suite.py, none of which ever produce timing
+# records -- counting them would put ~hundreds of permanently-untimed tests in
+# the denominator and make the 80% bar unreachable no matter how complete the
+# profile was. Sharding needs the same selection for the opposite reason: a
+# shard listing tests CI then filters out wastes that shard's budget.
+#
+# If ci.yml's selection changes, change this too.
+DEFAULT_SELECTION = (
+    "-m",
+    "not integration and not chaos",
+    "--ignore=tests/test_full_suite.py",
+)
 
-def collect_test_ids(path: str = DEFAULT_COLLECT_PATH) -> list[str]:
-    """Every test pytest can currently see under `path`.
+
+def collect_test_ids(
+    path: str = DEFAULT_COLLECT_PATH,
+    selection: tuple[str, ...] = DEFAULT_SELECTION,
+) -> list[str]:
+    """Every test pytest currently selects under `path`.
 
     Driven through pytest's `pytest_collection_modifyitems` hook rather than by
     parsing `--collect-only` text. That output is not a stable interface: with
@@ -247,6 +280,13 @@ def collect_test_ids(path: str = DEFAULT_COLLECT_PATH) -> list[str]:
 
     Run in a subprocess so importing the suite's conftest (which sets env vars
     and touches the filesystem) cannot affect this process.
+
+    Returns [] on ANY non-zero pytest exit. A collection error in one module
+    still lets the hook emit every module that collected cleanly, so returning
+    the partial list would silently drop the failing module's tests from a shard
+    -- the same shape of quiet incompleteness the text parser above produced.
+    An incomplete answer here is indistinguishable from a smaller suite, so it
+    must not be returned as one.
     """
     import subprocess
 
@@ -256,21 +296,24 @@ def collect_test_ids(path: str = DEFAULT_COLLECT_PATH) -> list[str]:
         "    def pytest_collection_modifyitems(self, items):\n"
         "        for i in items:\n"
         "            sys.stdout.write('NODEID\\t' + i.nodeid + '\\n')\n"
-        "sys.exit(pytest.main(['--collect-only', '-q', '--no-header', '-p', 'no:cacheprovider',\n"
-        "                      sys.argv[1]], plugins=[_C()]))\n"
+        "sys.exit(pytest.main(['--collect-only', '-q', '--no-header',\n"
+        "                      '-p', 'no:cacheprovider'] + sys.argv[1:], plugins=[_C()]))\n"
     )
     proc = subprocess.run(
-        [sys.executable, "-c", driver, path],
+        [sys.executable, "-c", driver, path, *selection],
         capture_output=True,
         text=True,
         cwd=REPO,
     )
-    ids = [
+    if proc.returncode != 0:
+        sys.stderr.write(
+            f"[ERROR] pytest collection exited {proc.returncode}; refusing to report a "
+            f"partial test set.\n{proc.stderr[-2000:]}\n"
+        )
+        return []
+    return [
         line[len("NODEID\t") :] for line in proc.stdout.splitlines() if line.startswith("NODEID\t")
     ]
-    if not ids and proc.returncode != 0:
-        sys.stderr.write(proc.stderr[-2000:] + "\n")
-    return ids
 
 
 def publish(records: list[dict], url: str, secret: str, suite_id: int | None) -> int:
@@ -284,7 +327,13 @@ def publish(records: list[dict], url: str, secret: str, suite_id: int | None) ->
         {
             "name": r["test"],
             "status": status_map.get(r.get("outcome"), "error"),
-            "duration_ms": float(r.get("duration_ms") or 0.0),
+            # The worker's TestRunIn declares `duration_ms: Optional[int]`, and
+            # Pydantic 2 rejects a float with a fractional part (int_from_float)
+            # rather than truncating it. Real durations are almost always
+            # fractional, so sending floats made the whole batch 422 -- and
+            # because publishing is fail-open by contract, that surfaced only as
+            # "0 inserted" rather than an error anyone would notice.
+            "duration_ms": round(float(r.get("duration_ms") or 0.0)),
             "error_msg": (r.get("reason") or "")[:2000],
             "ran_by": "test_intelligence",
             "metadata": {"commit": r.get("commit", "unknown"), "run_id": r.get("run_id", "")},
