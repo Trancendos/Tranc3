@@ -108,6 +108,15 @@ jobs:
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 
+      # Guards an ADOPTED timing profile against rot; a no-op until one is
+      # bootstrapped, because failing CI for a feature nobody has turned on yet
+      # is noise. Once `.test-timings.json` exists, a profile that has fallen
+      # below 80% coverage of the collected suite fails here -- below that the
+      # shard split degrades toward balancing test COUNTS, which is the wrong
+      # quantity and silently gives back the wall-clock win.
+      - name: Test timing profile freshness
+        run: python scripts/test_intelligence.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
