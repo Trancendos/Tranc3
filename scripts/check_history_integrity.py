@@ -171,19 +171,42 @@ def main() -> int:
         return 1
 
     all_branches = branches(args.main_ref)
-    orphans = [b for b in all_branches if git("merge-base", args.main_ref, b)[0] != 0]
+    orphans, broken = [], []
+    for b in all_branches:
+        # git distinguishes these, and so must we: exit 1 means "no merge base",
+        # a real answer; 128 means a bad object or unreadable ref, which is a
+        # failure to look. Treating 128 as "orphan" is how a corrupt or
+        # unfetched ref gets silently reported as a finding about history.
+        code, _ = git("merge-base", args.main_ref, b)
+        if code == 1:
+            orphans.append(b)
+        elif code != 0:
+            broken.append(b)
+
+    if broken:
+        print(
+            f"[ERROR] could not read history for {len(broken)} ref(s) — git failed rather than\n"
+            f"        answering. These are unverified, not orphaned: "
+            f"{', '.join(broken[:5])}{' …' if len(broken) > 5 else ''}",
+            file=sys.stderr,
+        )
+        return 1
 
     if orphans:
         print(
-            f"[INFO] {len(orphans)} of {len(all_branches)} non-bot branch(es) share no history "
-            f"with {args.main_ref}. They cannot be merged, rebased or cherry-picked by "
-            f"ancestry — recovery has to go through content, not commits."
+            f"[INFO] {len(orphans)} of {len(all_branches)} non-bot branch(es) share no merge-base "
+            f"with {args.main_ref}. A default `git merge` and any three-dot diff will refuse; "
+            f"`git cherry-pick <commit>` still works (conflicts aside), and a deliberate merge "
+            f"needs `--allow-unrelated-histories`."
         )
         if args.list_orphans:
             for b in orphans:
                 print(f"        {b}")
 
-    if EXPECTED_ROOT not in roots:
+    # Exact set, not membership: an unrelated-history merge grafts a second root
+    # onto main while leaving EXPECTED_ROOT reachable, so `in` would pass over
+    # precisely the event this is meant to catch.
+    if set(roots) != {EXPECTED_ROOT}:
         print(
             f"\n[ERROR] {args.main_ref}'s history was rewritten.\n"
             f"        expected root : {EXPECTED_ROOT}\n"

@@ -51,6 +51,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # The History integrity step needs real history. The default depth of 1
+          # gives a graft boundary that `rev-list --max-parents=0` reports as a
+          # root, and no origin/main at all — which is how the first version of
+          # that check silently verified nothing. The script also deepens `main`
+          # itself (so it works on Forgejo and locally); this makes it certain here.
+          fetch-depth: 0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6

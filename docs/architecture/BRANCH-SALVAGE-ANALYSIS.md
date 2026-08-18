@@ -43,7 +43,7 @@ measuring `main`'s own three months of progress, not branch content.
 
 Only a three-way comparison against the merge-base separates the four cases:
 
-```
+```console
 branch == base                    -> branch never changed it
 branch != base and main == base   -> BRANCH-ONLY   (real, salvageable)
 branch != base and main == branch -> SUPERSEDED    (landed elsewhere)
@@ -74,7 +74,7 @@ The general lesson: on a shallow clone, git's history commands answer
 indistinguishable from a root; `merge-base` reports "unrelated" for related
 branches. Nothing errors. Always check:
 
-```
+```console
 git rev-parse --is-shallow-repository
 ```
 
