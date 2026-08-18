@@ -23,9 +23,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -49,8 +51,12 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # through the `sharedcore` named build context. It compares with
+    # compare_digest and refuses when the secret is unset.
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 ZOT_URL = os.getenv("ZOT_URL", "http://localhost:5000").rstrip("/")

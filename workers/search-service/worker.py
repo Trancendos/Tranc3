@@ -11,7 +11,6 @@ Zero-cost: FastAPI + SQLite FTS5 (built-in), no external deps.
 
 from __future__ import annotations
 
-import hmac
 import json
 import logging
 import os
@@ -25,6 +24,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT", "8083"))
 WORKER_NAME = "search-service"
@@ -133,9 +134,16 @@ class SearchIn(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.search-service")
+        instrument_worker(app, service_name="tranc3.search-service")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     init_db()
     logger.info("search-service DB ready with FTS5")
     yield
@@ -184,8 +192,12 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])

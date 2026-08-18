@@ -376,6 +376,13 @@ class LibraryRouter:
             updated_at=saved.get("updated_at"),
         )
 
+    async def delete_document(self, doc_id: str) -> bool:
+        """Delete a document by ID. DB-layer-only — this doesn't attempt to
+        delete from the external backend (Outline/BookStack/WikiJS/etc.)
+        that create_document() may have written to, only the local record;
+        the external backend, if any, retains its own copy."""
+        return self._db.delete_document(doc_id)
+
     async def search(
         self, query: str, collection: Optional[str] = None, limit: int = 20
     ) -> SearchResponse:

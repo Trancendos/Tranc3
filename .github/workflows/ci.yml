@@ -42,6 +42,46 @@ jobs:
             --exclude ".forgejo" \
             .
 
+  topology:
+    # Two classes of defect that no test can catch, because both only fail
+    # inside a built container while passing locally: a service calling a
+    # sibling on `localhost`, and a worker importing a package its Docker build
+    # context excludes. Both are cheap static checks against compose itself.
+    name: Service Topology
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install PyYAML
+        run: pip install PyYAML
+
+      - name: Cross-service URL check
+        run: python scripts/check_service_urls.py
+
+      - name: Build-context import check
+        run: python scripts/check_worker_build_context.py
+
+      # Catches the one way named build contexts fail: a Dockerfile that copies
+      # `--from=sharedcore` while its compose entry supplies no such context.
+      # That builds fine for anyone passing --build-context by hand and fails
+      # only in the deployment, so it has to be caught here.
+      - name: Shared-core build-context check
+        run: python scripts/apply_shared_core_contexts.py --check
+
+      # Fails if any service compares the internal secret in-line again. The
+      # estate had 77 such gates, 28 timing-unsafe and 10 fail-open; this is
+      # what stops an 85th appearing.
+      - name: Internal-auth delegation check
+        run: python scripts/migrate_internal_auth.py --check
+
+      - name: Service review freshness
+        run: python scripts/build_service_review.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest

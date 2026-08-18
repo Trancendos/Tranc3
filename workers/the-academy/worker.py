@@ -21,6 +21,8 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 WORKER_PORT = int(os.getenv("PORT") or "8056")
 WORKER_NAME = "the-academy"
 DB_PATH = Path(__file__).parent / "data" / "academy.db"
@@ -290,9 +292,13 @@ _router = APIRouter()
 def _auth(x_internal_secret: str = Header(default="")) -> None:
     global _req_count, _err_count
     _req_count += 1
-    if x_internal_secret != INTERNAL_SECRET:
+    try:
+        guard_internal_secret(
+            x_internal_secret, INTERNAL_SECRET, mismatch_status=401, detail="Unauthorized"
+        )
+    except HTTPException:
         _err_count += 1
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise
 
 
 class CourseIn(BaseModel):
@@ -545,9 +551,9 @@ async def mark_progress(body: ProgressIn, x_internal_secret: str = Header(defaul
         "course_id": lesson["course_id"],
         "completed": True,
         "score": body.score,
-        "course_progress_pct": round(completed_lessons / total_lessons * 100, 1)
-        if total_lessons
-        else 0,
+        "course_progress_pct": (
+            round(completed_lessons / total_lessons * 100, 1) if total_lessons else 0
+        ),
         "newly_awarded_badges": _serialize_awarded(newly_awarded_badges),
     }
 
