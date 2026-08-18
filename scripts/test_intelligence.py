@@ -91,9 +91,40 @@ TIMINGS = REPO / ".test-timings.json"
 
 # Below this share of currently-known tests present in the profile, the split
 # degrades toward count-balancing and the profile is worth regenerating.
-MIN_COVERAGE = 0.80
+# Overridable per-suite via --min-coverage or TEST_INTELLIGENCE_MIN_COVERAGE:
+# `tranc3-bots/` carries its own pytest config and may reasonably want a
+# different bar from the main suite, and tuning that should not need a code edit.
+DEFAULT_MIN_COVERAGE = 0.80
 
 PASS, FAIL = "passed", "failed"
+
+
+def _env_min_coverage() -> float:
+    """Coverage bar from the environment, falling back to the default.
+
+    A malformed value is ignored rather than fatal: this is a tuning knob, and
+    a typo in CI env should not take down a check that would otherwise run.
+    """
+    raw = os.environ.get("TEST_INTELLIGENCE_MIN_COVERAGE", "").strip()
+    if not raw:
+        return DEFAULT_MIN_COVERAGE
+    try:
+        value = float(raw)
+    except ValueError:
+        print(
+            f"[WARN] TEST_INTELLIGENCE_MIN_COVERAGE={raw!r} is not a number; "
+            f"using {DEFAULT_MIN_COVERAGE:.2f}",
+            file=sys.stderr,
+        )
+        return DEFAULT_MIN_COVERAGE
+    if not 0.0 <= value <= 1.0:
+        print(
+            f"[WARN] TEST_INTELLIGENCE_MIN_COVERAGE={value} is outside [0, 1]; "
+            f"using {DEFAULT_MIN_COVERAGE:.2f}",
+            file=sys.stderr,
+        )
+        return DEFAULT_MIN_COVERAGE
+    return value
 
 
 def load_records(path: Path) -> list[dict]:
@@ -302,7 +333,19 @@ def main() -> int:
         action="store_true",
         help="with --check, fail when no timing profile exists at all",
     )
+    ap.add_argument(
+        "--min-coverage",
+        type=float,
+        default=_env_min_coverage(),
+        help=(
+            "with --check, the share of collected tests the profile must cover "
+            f"(default: {DEFAULT_MIN_COVERAGE:.2f}, or TEST_INTELLIGENCE_MIN_COVERAGE)"
+        ),
+    )
     args = ap.parse_args()
+
+    if not 0.0 <= args.min_coverage <= 1.0:
+        ap.error("--min-coverage must be a fraction between 0 and 1")
 
     if (args.shard is None) != (args.of is None):
         ap.error("--shard and --of must be given together")
@@ -378,10 +421,10 @@ def main() -> int:
             return 1
         known = [t for t in ids if t in stored]
         coverage = len(known) / len(ids)
-        if coverage < MIN_COVERAGE:
+        if coverage < args.min_coverage:
             print(
                 f"[ERROR] timing profile covers {coverage:.0%} of {len(ids)} collected test(s); "
-                f"{MIN_COVERAGE:.0%} required.\n"
+                f"{args.min_coverage:.0%} required.\n"
                 f"        Shard balance degrades toward count-balancing below this.\n"
                 f"        Refresh with: python scripts/test_intelligence.py --update-timings",
                 file=sys.stderr,

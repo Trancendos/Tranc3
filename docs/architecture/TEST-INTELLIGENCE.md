@@ -107,6 +107,14 @@ python scripts/test_intelligence.py --shard 0 --of 4   # nodeids for shard 0
 python scripts/test_intelligence.py --publish          # -> The Chaos Party /runs/batch
 ```
 
+The `--check` coverage bar defaults to 80% and is tunable without a code edit,
+via `--min-coverage 0.9` or `TEST_INTELLIGENCE_MIN_COVERAGE=0.9` — `tranc3-bots/`
+carries its own pytest config and may reasonably want a different bar. A
+malformed env value warns and falls back to the default rather than failing: it
+is a tuning knob, and a typo in CI env should not take down a check that would
+otherwise run. An out-of-range `--min-coverage` is rejected outright, because an
+explicit flag is a stated intention rather than ambient configuration.
+
 A sharded CI job body:
 
 ```yaml
