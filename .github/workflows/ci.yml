@@ -84,6 +84,14 @@ jobs:
       # estate once held 5 different uvicorn pins at once — and drift on this
       # stack is coupled: fastapi constrains starlette and pydantic, so a
       # sliding pin can stop satisfying its own framework at image-build time.
+      # `main` was re-rooted on 2026-07-18, which silently orphaned all 59
+      # branches based on the previous root — no merge-base, so no merge,
+      # rebase or cherry-pick works against them. Nothing failed at the time;
+      # it surfaced months later as "why is every branch unmergeable?". This
+      # makes a repeat loud on the commit that causes it.
+      - name: History integrity
+        run: python scripts/check_history_integrity.py
+
       - name: Framework pin alignment
         run: python scripts/align_framework_pins.py --check
 
