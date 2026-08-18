@@ -1,50 +1,69 @@
 #!/usr/bin/env python3
-"""Detect a history rewrite of `main`, and report branches orphaned by one.
+"""Pin `main`'s root commit, and refuse to pass on history it could not read.
 
-THE FAILURE THIS CATCHES
+WHY THIS EXISTS — AND THE MISTAKE THAT PRODUCED IT
 
-On 2026-07-18 this repository's `main` was re-rooted. Today `main` holds 92
-commits, every one of them dated 2026-07-18 or later, under root commit
-902a5a91. The 59 non-bot branches still carry 763+ commits under a *different*
-root, 5addbf11, dated 2026-04-21. The two graphs share no commit at all, so:
+A branch-salvage investigation on 2026-08-18 concluded that `main` had been
+re-rooted, because in the analysis environment:
 
     git merge-base origin/main origin/<any-branch>   ->  exit 1, no output
 
-and every ancestry-based operation fails with it. You cannot merge, rebase,
-cherry-pick or three-way diff a branch against a trunk it has no basis in. That
-is why those branches sat unmergeable: not because the work was bad, but because
-the ground they were standing on was removed.
+for all 59 non-bot branches, `main` appeared to hold only 92 commits, and
+`rev-list --max-parents=0 origin/main` reported 902a5a91 (2026-07-18) while the
+branches reported 5addbf11 (2026-04-21). Two roots, no shared commit: an obvious
+history rewrite.
 
-The damage was quiet. Nothing failed at the moment of the rewrite — it only
-showed up months later as "why does every branch look unmerged?", by which time
-the cause was long out of sight. This check makes the same event loud and
-immediate.
+None of it was true. **The clone was shallow.** 902a5a91 was the shallow graft
+boundary, not a root, and `merge-base` failed because the shared history had
+simply never been fetched. After `git fetch --unshallow`, `main` has 1,392
+commits back to the same 5addbf11 the branches descend from, and all 60 branches
+share a merge-base. No rewrite ever happened.
+
+The lesson is the reason this script is worth keeping: on a shallow clone, git's
+history commands answer confidently and wrongly. `rev-list --max-parents=0`
+returns a graft boundary that looks exactly like a root, and `merge-base` reports
+"unrelated" for branches that are perfectly related. Nothing errors; you just get
+a false story with real-looking commit hashes attached.
 
 WHAT IT CHECKS
 
-  1. `main`'s root commit still matches EXPECTED_ROOT. A change means history
-     was rewritten (re-root, squash of the whole graph, filter-branch, a force
-     push of an unrelated tree). This is the hard failure.
-  2. How many branches have no merge-base with `main`. Orphans cannot be merged
-     by any normal means, so they are reported for triage rather than left to be
-     rediscovered one confusing branch at a time.
+  1. `main`'s root commit still matches EXPECTED_ROOT — 5addbf11, the real one.
+     A genuine change means history really was rewritten (re-root, whole-graph
+     squash, filter-branch, force push of an unrelated tree). Hard failure.
+  2. How many branches have no merge-base with `main`, reported for triage.
+     On a correctly-deepened clone this should be zero.
 
-WHY NOT JUST PIN A COMMIT COUNT OR A DATE
+WHY IT FETCHES, AND WHY IT FAILS RATHER THAN SKIPS
 
-Both move legitimately every time anyone merges. The root commit is the one
-identifier that is stable for the life of a repository and changes *only* when
-history is rewritten — which is exactly, and only, the event worth alarming on.
+`actions/checkout` clones shallow and single-branch, so `refs/remotes/origin/main`
+does not exist and any root it could compute would be a graft boundary. The first
+revision of this script treated that as "nothing to check" and exited 0 — a green
+tick over an unread history, which is how the shallow-clone trap gets
+institutionalised rather than caught. It now deepens `main` itself, and if it
+still cannot read complete history it exits non-zero: an unverifiable guard must
+not report success, the same fail-open shape this estate removed from its auth
+gates.
+
+Only `main` is deepened, not `fetch-depth: 0`, which would also pull every
+branch's full history for no benefit here.
+
+WHY NOT PIN A COMMIT COUNT OR A DATE
+
+Both move legitimately on every merge. The root commit is the one identifier
+stable for the life of a repository, changing *only* on a rewrite — exactly, and
+only, the event worth alarming on. It is also the value a shallow clone gets
+wrong, which is the second thing this catches.
 
 UPDATING THE BASELINE
 
 If a rewrite is ever deliberate, update EXPECTED_ROOT in the same commit that
 performs it, so the new value is reviewed alongside the reason. Never update it
-to make a red build go green: a surprise here means the trunk moved under
-everyone's feet, and the branches that were based on the old one are now
-orphaned whether or not this check passes.
+to make a red build go green — and before assuming a mismatch means a rewrite,
+check `git rev-parse --is-shallow-repository` first. That is the mistake this
+docstring exists to stop anyone repeating.
 
-Exit 0 when the root is intact, 1 when it has changed. Orphan branches are
-reported but do not fail the build -- they are a backlog, not a regression.
+Exit 0 when the root is intact, 1 when it has changed or cannot be verified.
+Orphan counts are reported but do not fail the build.
 """
 
 from __future__ import annotations
@@ -55,10 +74,15 @@ import sys
 
 # Root commit of `main` as of the 2026-07-18 re-root. See the module docstring
 # before changing this value.
-EXPECTED_ROOT = "902a5a910cf4c7f4348796ef331140ed1b170fb9"
+EXPECTED_ROOT = "5addbf114ddb837385d34dba786c9bb6317eab44"
 
-MAIN = "origin/main"
-BOT_PREFIXES = ("dependabot", "renovate")
+DEFAULT_MAIN_REF = "origin/main"
+DEFAULT_MAIN_BRANCH = "main"
+
+# Matched as a path segment, not a substring: a human branch legitimately named
+# `claude/fix-renovate-config` is not a bot branch, and `"renovate" in name`
+# would silently drop it from the orphan report.
+BOT_OWNERS = ("dependabot", "renovate")
 
 
 def git(*args: str) -> tuple[int, str]:
@@ -66,23 +90,47 @@ def git(*args: str) -> tuple[int, str]:
     return p.returncode, p.stdout.strip()
 
 
+def is_bot_branch(remote_ref: str) -> bool:
+    """True for `origin/dependabot/...` and `origin/renovate/...`."""
+    _, _, name = remote_ref.partition("/")
+    return name.split("/", 1)[0] in BOT_OWNERS
+
+
 def root_commits(ref: str) -> list[str]:
     code, out = git("rev-list", "--max-parents=0", ref)
     return out.split() if code == 0 and out else []
 
 
-def branches() -> list[str]:
+def branches(main_ref: str) -> list[str]:
     code, out = git("branch", "-r", "--format=%(refname:short)")
     if code != 0:
         return []
     return [
         b.strip()
         for b in out.splitlines()
-        if b.strip()
-        and "HEAD" not in b
-        and b.strip() != MAIN
-        and not any(p in b for p in BOT_PREFIXES)
+        if b.strip() and "HEAD" not in b and b.strip() != main_ref and not is_bot_branch(b.strip())
     ]
+
+
+def ensure_main_history(main_ref: str, main_branch: str) -> bool:
+    """Make `main_ref` exist with complete history, deepening if necessary."""
+    have_ref = git("rev-parse", "--verify", main_ref)[0] == 0
+    shallow = git("rev-parse", "--is-shallow-repository")[1] == "true"
+    if have_ref and not shallow:
+        return True
+
+    # --unshallow errors on a complete repository, so fall back to a plain fetch.
+    if git("fetch", "--no-tags", "--unshallow", "origin", main_branch)[0] != 0:
+        git("fetch", "--no-tags", "origin", main_branch)
+
+    if git("rev-parse", "--verify", main_ref)[0] != 0:
+        # A single-branch clone fetches into FETCH_HEAD without creating the
+        # remote-tracking ref; point it there so the rest of the check works.
+        code, sha = git("rev-parse", "--verify", "FETCH_HEAD")
+        if code == 0 and sha:
+            git("update-ref", f"refs/remotes/{main_ref}", sha)
+
+    return git("rev-parse", "--verify", main_ref)[0] == 0
 
 
 def main() -> int:
@@ -92,25 +140,44 @@ def main() -> int:
         action="store_true",
         help="print every orphaned branch, not just the count",
     )
+    parser.add_argument(
+        "--main-ref",
+        default=DEFAULT_MAIN_REF,
+        help=f"remote-tracking ref for the trunk (default: {DEFAULT_MAIN_REF})",
+    )
+    parser.add_argument(
+        "--main-branch",
+        default=DEFAULT_MAIN_BRANCH,
+        help=f"branch name to fetch when deepening (default: {DEFAULT_MAIN_BRANCH})",
+    )
     args = parser.parse_args()
 
-    if git("rev-parse", "--verify", MAIN)[0] != 0:
-        print(f"[SKIP] {MAIN} not present — nothing to check (shallow or partial clone?)")
-        return 0
+    if not ensure_main_history(args.main_ref, args.main_branch):
+        print(
+            f"[ERROR] cannot resolve {args.main_ref}, so the root commit cannot be verified.\n"
+            f"        This check refuses to report success on history it could not read.\n"
+            f"        In CI, ensure the runner can fetch `{args.main_branch}` from origin.",
+            file=sys.stderr,
+        )
+        return 1
 
-    roots = root_commits(MAIN)
+    roots = root_commits(args.main_ref)
     if not roots:
-        print(f"[SKIP] could not resolve a root commit for {MAIN}")
-        return 0
+        print(
+            f"[ERROR] no root commit reachable from {args.main_ref} — history is still "
+            f"incomplete, so a rewrite could not be detected either way.",
+            file=sys.stderr,
+        )
+        return 1
 
-    orphans = [b for b in branches() if git("merge-base", MAIN, b)[0] != 0]
-    total = len(branches())
+    all_branches = branches(args.main_ref)
+    orphans = [b for b in all_branches if git("merge-base", args.main_ref, b)[0] != 0]
 
     if orphans:
         print(
-            f"[INFO] {len(orphans)} of {total} non-bot branch(es) share no history with {MAIN}. "
-            f"They cannot be merged, rebased or cherry-picked by ancestry — recovery has to go "
-            f"through content, not commits."
+            f"[INFO] {len(orphans)} of {len(all_branches)} non-bot branch(es) share no history "
+            f"with {args.main_ref}. They cannot be merged, rebased or cherry-picked by "
+            f"ancestry — recovery has to go through content, not commits."
         )
         if args.list_orphans:
             for b in orphans:
@@ -118,13 +185,14 @@ def main() -> int:
 
     if EXPECTED_ROOT not in roots:
         print(
-            f"\n[ERROR] {MAIN}'s history was rewritten.\n"
+            f"\n[ERROR] {args.main_ref}'s history was rewritten.\n"
             f"        expected root : {EXPECTED_ROOT}\n"
             f"        actual root(s): {', '.join(roots)}\n\n"
             f"        Every branch based on the previous root is now orphaned: no merge-base, so\n"
             f"        no merge, rebase or cherry-pick will work against it. If this rewrite was\n"
             f"        deliberate, update EXPECTED_ROOT in this script in the same commit that\n"
-            f"        performs it. If it was not, recover {MAIN} before any further work lands on it.",
+            f"        performs it. If it was not, recover {args.main_ref} before further work\n"
+            f"        lands on it.",
             file=sys.stderr,
         )
         return 1
