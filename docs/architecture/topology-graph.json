@@ -1,10 +1,10 @@
 {
   "summary": {
-    "generated_at": "2026-08-12T08:42:43.645079+00:00",
-    "total_nodes": 227,
-    "total_edges": 111,
+    "generated_at": "2026-08-18T01:20:49.122674+00:00",
+    "total_nodes": 228,
+    "total_edges": 112,
     "locations": 43,
-    "lead_ais": 46,
+    "lead_ais": 47,
     "deployed_services": 88,
     "mounted_routers": 35,
     "matrix_suites": 8,
@@ -1237,8 +1237,8 @@
       "pillar": "Security",
       "pid": "PID-VOI",
       "primary_function": "Secrets Vault, Password Store & Sensitive Data Store",
-      "claimed_worker_port": 8024,
-      "claimed_worker_path": "workers/config-service/"
+      "claimed_worker_port": 8002,
+      "claimed_worker_path": "workers/infinity-void/"
     },
     {
       "id": "location:The Lighthouse",
@@ -1267,8 +1267,8 @@
       "pillar": "Security",
       "pid": "PID-CRX",
       "primary_function": "Cyber Defense (Threat Intelligence, DDoS, CVE Scanning)",
-      "claimed_worker_port": 8026,
-      "claimed_worker_path": "workers/rate-limit-service/"
+      "claimed_worker_port": 8053,
+      "claimed_worker_path": "workers/cryptex/"
     },
     {
       "id": "location:The Ice Box",
@@ -1297,8 +1297,8 @@
       "pillar": "DevOps",
       "pid": "PID-DUT",
       "primary_function": "Intelligence (Predictive lore, market intelligence)",
-      "claimed_worker_port": 8027,
-      "claimed_worker_path": "workers/geo-service/"
+      "claimed_worker_port": 8057,
+      "claimed_worker_path": "workers/the-dutchy/"
     },
     {
       "id": "location:The Citadel",
@@ -1347,8 +1347,8 @@
       "pillar": "DevOps",
       "pid": "PID-DEV",
       "primary_function": "Development Operations",
-      "claimed_worker_port": 8029,
-      "claimed_worker_path": "workers/health-aggregator/"
+      "claimed_worker_port": 8110,
+      "claimed_worker_path": "workers/devocity/"
     },
     {
       "id": "location:Tranquility",
@@ -1494,6 +1494,12 @@
       "id": "ai:The Mad Hatter",
       "type": "lead_ai",
       "label": "The Mad Hatter",
+      "aid": "AID-TCP-01"
+    },
+    {
+      "id": "ai:Alice Dream",
+      "type": "lead_ai",
+      "label": "Alice Dream",
       "aid": "AID-TCP-01"
     },
     {
@@ -2002,6 +2008,11 @@
       "kind": "runs"
     },
     {
+      "source": "location:The Chaos Party",
+      "target": "ai:Alice Dream",
+      "kind": "runs"
+    },
+    {
       "source": "location:The Artifactory",
       "target": "ai:Lunascene",
       "kind": "runs"
@@ -2133,7 +2144,7 @@
     },
     {
       "source": "location:The Void",
-      "target": "worker:config-service",
+      "target": "worker:infinity-void",
       "kind": "claim_verified"
     },
     {
@@ -2163,7 +2174,7 @@
     },
     {
       "source": "location:Cryptex",
-      "target": "worker:rate-limit-service",
+      "target": "worker:cryptex",
       "kind": "claim_verified"
     },
     {
@@ -2193,7 +2204,7 @@
     },
     {
       "source": "location:Section 7",
-      "target": "worker:geo-service",
+      "target": "worker:the-dutchy",
       "kind": "claim_verified"
     },
     {
@@ -2228,7 +2239,7 @@
     },
     {
       "source": "location:DevOcity",
-      "target": "worker:health-aggregator",
+      "target": "worker:devocity",
       "kind": "claim_verified"
     },
     {
