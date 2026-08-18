@@ -123,15 +123,15 @@ mounted in `api.py`).
 | **The Academy** | Shimshi | Learning management — education & skill training | ✅ In repo | `workers/the-academy/worker.py` (standalone worker, port 8056); Custom LMS |
 | **DocUtari** | Fiddsy | Document management hub | ✅ In repo | `workers/files-service/`, `workers/storage-service/` (standalone workers); Paperless-ngx planned frontend |
 | **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | ✅ In repo | `src/basement/` (router registered in `api.py`) |
-| **The Studio** | Voxx | Central hub of the Creativity Center | ✅ In repo | `src/studio/` (router registered in `api.py`) |
+| **The Studio** | Voxx | Central hub of the Creativity Center | ✅ Self-hosted | `workers/the-studio/` (Port 8069) — supersedes the old `src/studio/` router once mounted in `api.py`, unmounted (dead duplicate removed, see #56/#57 duplication-sweep pattern) |
 | **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | ✅ In repo | `workers/sashas-photo-studio/main.py` (standalone worker, actual Dockerfile `CMD` entrypoint — the sibling `worker.py` is a superseded Pollinations.ai-backed implementation no longer run in production); ComfyUI (primary) + AUTOMATIC1111 (fallback) backend now integrated via HTTP against self-hosted instances, offline placeholder as last resort |
 | **TranceFlow** | Junior Cesar | 3D modeling & games creation studio | ✅ In repo | `workers/tranceflow/worker.py` (standalone worker); Godot Engine integration planned |
 | **TateKing** | Benji Tate & Sam King | Video creation & editing platform | ✅ In repo | `workers/tateking/worker.py` (standalone worker); FFmpeg + custom UI planned |
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | ✅ In repo | `workers/imaginarium/worker.py` (standalone worker); orchestrates the others |
-| **The Lab** | The Dr. (Nikolai O'denhime) + Slime | Code creation platform (Claude Code-style) | ✅ In repo | `src/lab/` (router registered in `api.py`) |
+| **The Lab** | The Dr. (Nikolai O'denhime) + Slime | Code creation platform (Claude Code-style) | ✅ Self-hosted | `workers/the-lab/` (Port 8055) + `workers/lab-service/` (Port 8066) — supersedes the old `src/lab/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
 | **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py`; `workers/chaos-party/worker.py` (standalone worker, port 8079) |
-| **The Artifactory** | Lunascene | Central artifact repository library | ✅ In repo | `src/artifactory/` (router registered in `api.py`); Gitea packages / Zot planned backend |
+| **The Artifactory** | Lunascene | Central artifact repository library | ✅ Self-hosted | `workers/artifactory-service/` (Port 8047, Zot OCI registry bridge) — supersedes the old `src/artifactory/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | ✅ In repo | `src/apimarket/` (router registered in `api.py`); Gravitee.io planned integration |
 | **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | `src/cryptex/` (router registered in `api.py`); Wazuh + MISP planned integration |
 | **The Ice Box** | Neonach | Sandbox threat isolation & quarantine | ✅ In repo | `workers/ice-box-service/` (standalone worker, port 8046); Cuckoo sandbox planned integration |
@@ -141,12 +141,12 @@ mounted in `api.py`).
 | **The Citadel** | Trancendos | Strategic ops & DevOps fortress | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
 | **Think Tank** | Trancendos | R&D centre — solutions & forefront technologies | ✅ In repo | `src/quantum/` (router registered in `api.py`), `src/deepmind/` |
 | **ChronosSphere / ArcStream** | Chronos | Task, time & scheduling management | ✅ In repo | `workers/cron-service/` (standalone worker, port 8021); Cal.com planned integration |
-| **DevOcity** | Kitty | Development operations hub | ✅ In repo | `src/devocity/` (router registered in `api.py`); custom dev portal concept |
+| **DevOcity** | Kitty | Development operations hub | ✅ Self-hosted | `workers/devocity/` (Port 8110) — supersedes the old `src/devocity/` router once mounted in `api.py`, unmounted (dead duplicate removed); custom dev portal concept |
 | **Tranquility** | Savania | Wellbeing central hub | ✅ In repo | `src/tranquility/` (router registered in `api.py`) |
 | **I-Mind** | Elouise | Sensitivity to emotion engine | ✅ In repo | `src/imind/` (router registered in `api.py`) |
-| **tAimra** | tAImra | Opt-in digital twin & life assistant | ✅ In repo | `src/taimra/` (router registered in `api.py`) |
-| **VRAR3D** | Entari | Standalone 3D / VR immersion | ✅ In repo | `src/vrar3d/` (router registered in `api.py`); Three.js / A-Frame planned frontend |
-| **Resonate** | Magdalena | Empathy engine | ✅ In repo | `src/resonate/` (router registered in `api.py`) |
+| **tAimra** | tAImra | Opt-in digital twin & life assistant | ✅ Self-hosted | `workers/taimra/` (Port 8074) — a real, SQLite-backed superset of the old `src/taimra/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
+| **VRAR3D** | Entari | Standalone 3D / VR immersion | ✅ Self-hosted | `workers/vrar3d/` (Port 8060) — supersedes the old `src/vrar3d/` router once mounted in `api.py`, unmounted (dead duplicate removed); Three.js / A-Frame planned frontend |
+| **Resonate** | Magdalena | Empathy engine | ✅ In repo | `src/resonate/` (router registered in `api.py`); `workers/resonate/` (Port 8076) exists but exposes a different API surface (score/conversation, not the router's status/wrap/escalate) — not yet a drop-in replacement, so the in-process mount stays for now |
 
 ### Already-deployed Cloudflare Workers (not yet in this repo)
 
