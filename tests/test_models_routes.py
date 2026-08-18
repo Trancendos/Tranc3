@@ -69,7 +69,8 @@ class TestMatrixReadRoutes:
     def test_get_matrix_is_public(self, client):
         resp = client.get("/models/matrix")
         assert resp.status_code == 200
-        assert resp.json()["total_ais"] == 50
+        # 51 — see test_models_matrix.py; Alice Dream added to The Chaos Party.
+        assert resp.json()["total_ais"] == 51
 
     def test_get_ai_model_specialized(self, client):
         resp = client.get("/models/matrix/George Porter")

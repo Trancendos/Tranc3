@@ -1,0 +1,35 @@
+# ipmi-exporter configuration — Citadel physical host health
+#
+# Scrapes the baseboard management controller (iDRAC6 on the PowerEdge T610)
+# over IPMI-over-LAN. This surfaces what the OS cannot see: power supply
+# status, fan RPM, inlet/CPU temperatures, chassis intrusion, and the System
+# Event Log.
+#
+# Credentials: create a DEDICATED read-only iDRAC user for this — do not reuse
+# root. In iDRAC: iDRAC Settings -> Users -> add a user with "Login to iDRAC"
+# only, no Configure/Execute privileges. Monitoring needs to read sensors and
+# nothing else.
+#
+# This file contains a password. It is mounted read-only and should be
+# sourced from Vault in production like the rest of the estate's secrets, not
+# committed with a real value. The placeholder below must be replaced.
+
+modules:
+  default:
+    # Privilege level: "user" is enough to read sensors. Do not raise it.
+    privilege: "user"
+    collectors:
+      - bmc        # BMC firmware version, up/down
+      - ipmi       # sensor readings — temps, fans, voltages
+      - chassis    # chassis power state and intrusion
+      - sel        # System Event Log entry count
+    # iDRAC6 is old and can be slow to answer under load. The default 5s
+    # timeout produces spurious scrape failures on this generation.
+    timeout: 10000
+    user: "REPLACE_ME_IPMI_MONITOR_USER"
+    pass: "REPLACE_ME_LOAD_FROM_VAULT"
+
+    # Drop the noisiest discrete sensors that carry no actionable signal on a
+    # T610, so the useful ones stay visible in Grafana.
+    exclude_sensor_ids:
+      - 0

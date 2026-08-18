@@ -13,6 +13,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 RUN chown -R tranc3:tranc3 /app
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context sharedcore=../../Dimensional --build-context observability=../../src/observability .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=tranc3:tranc3 . /app/Dimensional/
+COPY --from=observability --chown=tranc3:tranc3 . /app/src/observability/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 USER tranc3
 
 RUN mkdir -p /app/workdir && chown -R worker:worker /app/workdir

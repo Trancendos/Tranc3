@@ -389,6 +389,16 @@ services:
       dockerfile: Dockerfile
     container_name: tranc3-backend
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - QDRANT_URL=http://qdrant:6333
+      - EMBED_URL=http://tranc3-ai:8001
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - WAZUH_URL=http://wazuh-manager:55000
+      - VLLM_BASE_URL=http://vllm:8090
+      - LLAMACPP_BASE_URL=http://llama-cpp-server:8091
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DATABASE_URL=${DATABASE_URL}
@@ -400,6 +410,19 @@ services:
       - HF_API_KEY=${HF_API_KEY:-}
       - INFINITY_WS_URL=http://infinity-ws:8004
       - INFINITY_WS_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - BASEMENT_URL=http://basement:8068
+      - BASEMENT_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - CRYPTEX_URL=http://cryptex:8053
+      - CRYPTEX_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - RATE_LIMIT_SERVICE_URL=http://rate-limit-service:8026
+      - RATE_LIMIT_SERVICE_INTERNAL_SECRET=${INTERNAL_SECRET}
+      - LIBRARY_SERVICE_URL=http://library-service:8067
+      - LIBRARY_SERVICE_INTERNAL_SECRET=${INTERNAL_SECRET}
+      # This deployment's data-residency region, gating which jurisdiction-tagged
+      # library articles may be forwarded to the durable store — see
+      # src/library/bridge.py. GLOBAL (the default) = unconstrained; set to
+      # EU/US/UK/APAC to refuse forwarding articles tagged for another region.
+      - LIBRARY_DEPLOYMENT_JURISDICTION=${LIBRARY_DEPLOYMENT_JURISDICTION:-GLOBAL}
     ports:
       - "8000:8000"
     volumes:
@@ -426,6 +449,8 @@ services:
     build:
       context: ./workers/tranc3-ai
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-ai-worker
     environment:
       - TRANC3_BACKEND_URL=http://tranc3-backend:8000
@@ -453,6 +478,8 @@ services:
     build:
       context: ./workers/infinity-void
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: infinity-void-worker
     environment:
       - PORT=8002
@@ -588,6 +615,9 @@ services:
     build:
       context: ./workers/monitoring
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: monitoring-worker
     ports:
       - "8007:8007"
@@ -603,6 +633,9 @@ services:
     build:
       context: ./workers/notifications
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: notifications-worker
     ports:
       - "8008:8008"
@@ -618,6 +651,9 @@ services:
     build:
       context: ./workers/infinity-ai
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: infinity-ai-worker
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -642,6 +678,8 @@ services:
     build:
       context: ./workers/the-grid
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: the-grid-worker
     ports:
       - "8010:8010"
@@ -657,6 +695,9 @@ services:
     build:
       context: ./workers/products-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: products-service-worker
     ports:
       - "8011:8011"
@@ -672,6 +713,9 @@ services:
     build:
       context: ./workers/orders-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: orders-service-worker
     ports:
       - "8012:8012"
@@ -687,6 +731,9 @@ services:
     build:
       context: ./workers/payments-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: payments-service-worker
     ports:
       - "8013:8013"
@@ -702,6 +749,8 @@ services:
     build:
       context: ./workers/files-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: files-service-worker
     ports:
       - "8014:8014"
@@ -717,6 +766,9 @@ services:
     build:
       context: ./workers/identity-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: identity-service-worker
     ports:
       - "8015:8015"
@@ -732,7 +784,11 @@ services:
 
   analytics-service:
     <<: *worker-common
-    build: { context: ./workers/analytics-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/analytics-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: analytics-service-worker
     ports: ["8016:8016"]
     healthcheck:
@@ -741,7 +797,12 @@ services:
 
   search-service:
     <<: *worker-common
-    build: { context: ./workers/search-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/search-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: search-service-worker
     ports: ["8017:8017"]
     healthcheck:
@@ -750,7 +811,12 @@ services:
 
   email-service:
     <<: *worker-common
-    build: { context: ./workers/email-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/email-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: email-service-worker
     ports: ["8018:8018"]
     healthcheck:
@@ -759,7 +825,12 @@ services:
 
   sms-service:
     <<: *worker-common
-    build: { context: ./workers/sms-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/sms-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: sms-service-worker
     ports: ["8019:8019"]
     healthcheck:
@@ -768,7 +839,11 @@ services:
 
   storage-service:
     <<: *worker-common
-    build: { context: ./workers/storage-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/storage-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: storage-service-worker
     ports: ["8020:8020"]
     volumes:
@@ -779,7 +854,12 @@ services:
 
   cron-service:
     <<: *worker-common
-    build: { context: ./workers/cron-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/cron-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: cron-service-worker
     ports: ["8021:8021"]
     volumes:
@@ -790,7 +870,12 @@ services:
 
   queue-service:
     <<: *worker-common
-    build: { context: ./workers/queue-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/queue-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: queue-service-worker
     ports: ["8022:8022"]
     healthcheck:
@@ -799,7 +884,11 @@ services:
 
   cache-service:
     <<: *worker-common
-    build: { context: ./workers/cache-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/cache-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: cache-service-worker
     ports: ["8023:8023"]
     healthcheck:
@@ -808,7 +897,12 @@ services:
 
   config-service:
     <<: *worker-common
-    build: { context: ./workers/config-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/config-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: config-service-worker
     ports: ["8024:8024"]
     healthcheck:
@@ -817,7 +911,12 @@ services:
 
   audit-service:
     <<: *worker-common
-    build: { context: ./workers/audit-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/audit-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: audit-service-worker
     ports: ["8025:8025"]
     healthcheck:
@@ -826,7 +925,12 @@ services:
 
   rate-limit-service:
     <<: *worker-common
-    build: { context: ./workers/rate-limit-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/rate-limit-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: rate-limit-service-worker
     ports: ["8026:8026"]
     healthcheck:
@@ -835,7 +939,12 @@ services:
 
   geo-service:
     <<: *worker-common
-    build: { context: ./workers/geo-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/geo-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: geo-service-worker
     ports: ["8027:8027"]
     healthcheck:
@@ -844,7 +953,12 @@ services:
 
   cdn-service:
     <<: *worker-common
-    build: { context: ./workers/cdn-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/cdn-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: cdn-service-worker
     ports: ["8028:8028"]
     healthcheck:
@@ -853,7 +967,12 @@ services:
 
   health-aggregator:
     <<: *worker-common
-    build: { context: ./workers/health-aggregator, dockerfile: Dockerfile }
+    build:
+      context: ./workers/health-aggregator
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: health-aggregator-worker
     ports: ["8029:8029"]
     healthcheck:
@@ -864,7 +983,12 @@ services:
 
   gbrain-bridge:
     <<: *worker-common
-    build: { context: ./workers/gbrain-bridge, dockerfile: Dockerfile }
+    build:
+      context: ./workers/gbrain-bridge
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: gbrain-bridge-worker
     ports: ["8030:8030"]
     healthcheck:
@@ -873,7 +997,12 @@ services:
 
   topology-service:
     <<: *worker-common
-    build: { context: ./workers/topology-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/topology-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: topology-service-worker
     ports: ["8031:8031"]
     healthcheck:
@@ -882,7 +1011,12 @@ services:
 
   ledger-service:
     <<: *worker-common
-    build: { context: ./workers/ledger-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/ledger-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: ledger-service-worker
     ports: ["8032:8032"]
     healthcheck:
@@ -891,7 +1025,12 @@ services:
 
   model-router-service:
     <<: *worker-common
-    build: { context: ./workers/model-router-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/model-router-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: model-router-service-worker
     ports: ["8033:8033"]
     healthcheck:
@@ -900,7 +1039,12 @@ services:
 
   workflow-engine-service:
     <<: *worker-common
-    build: { context: ./workers/workflow-engine-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/workflow-engine-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: workflow-engine-service-worker
     environment:
       - CORS_ORIGINS=${CORS_ORIGINS:-${ALLOWED_ORIGINS:-http://localhost:3000}}
@@ -911,7 +1055,12 @@ services:
 
   skills-benchmark-service:
     <<: *worker-common
-    build: { context: ./workers/skills-benchmark-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/skills-benchmark-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: skills-benchmark-service-worker
     ports: ["8035:8035"]
     healthcheck:
@@ -920,7 +1069,12 @@ services:
 
   vault-service:
     <<: *worker-common
-    build: { context: ./workers/vault-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/vault-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: vault-service-worker
     ports: ["8038:8038"]
     environment:
@@ -933,7 +1087,11 @@ services:
 
   lab-service:
     <<: *worker-common
-    build: { context: ./workers/lab-service, dockerfile: Dockerfile }
+    build:
+      context: ./workers/lab-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: lab-service-worker
     ports: ["8066:8066"]
     environment:
@@ -959,7 +1117,11 @@ services:
 
   tranceflow:
     <<: *worker-common
-    build: { context: ./workers/tranceflow, dockerfile: Dockerfile }
+    build:
+      context: ./workers/tranceflow
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-tranceflow
     ports: ["8059:8059"]
     expose: ["8059"]
@@ -993,7 +1155,11 @@ services:
 
   vrar3d:
     <<: *worker-common
-    build: { context: ./workers/vrar3d, dockerfile: Dockerfile }
+    build:
+      context: ./workers/vrar3d
+      dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-vrar3d
     ports: ["8060:8060"]
     expose: ["8060"]
@@ -1077,6 +1243,9 @@ services:
     build:
       context: ./workers/blender-worker
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: trancendos-blender-worker
     ports:
       - "8050:8050"
@@ -1092,6 +1261,9 @@ services:
     build:
       context: ./workers/triposr-worker
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: trancendos-triposr-worker
     ports:
       - "8111:8111"
@@ -1109,6 +1281,9 @@ services:
     <<: *worker-common
     build:
       context: ./workers/ffmpeg-worker
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: trancendos-ffmpeg-worker
     ports:
       - "8052:8052"
@@ -1306,10 +1481,33 @@ services:
       - "traefik.http.routers.cranbania.entrypoints=websecure"
       - "traefik.http.routers.cranbania.tls=true"
       - "traefik.http.routers.cranbania.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.cranbania.middlewares=strip-townhall@docker,ratelimit-cranbania@docker"
+      # Network boundary in front of The Town Hall — owner decision 2026-08-12.
+      #
+      # CranBania's middleware.ts deliberately gates only *mutating* methods: the
+      # shipped browser dashboard calls fetch("/api/...") with no credential and
+      # has no session layer, so gating reads in middleware would break the UI
+      # the moment CRANBANIA_API_KEY is set. That leaves board state, cards,
+      # journal/audit entries, workspace export and ITSM incidents world-readable
+      # whenever this service is reachable — a go-live gate on its own
+      # (docs/GO_LIVE_GAP_ANALYSIS.md §2.2).
+      #
+      # Until Infinity-One SSO exists (the long-term direction), reads are
+      # protected at the network edge instead of in application code. Set
+      # TOWNHALL_ALLOWED_CIDRS to the operator's own address/VPN range, e.g.
+      # "203.0.113.4/32,10.8.0.0/24". The default is loopback-only: a deployment
+      # that forgets to set it locks The Town Hall down rather than publishing
+      # it, matching the fail-closed posture CRANBANIA_API_KEY already has above.
+      #
+      # ipallowlist evaluates the *immediate* peer unless told otherwise; Traefik
+      # is the only hop in front of this router, so no depth/excludedIPs setting
+      # is needed here. If a CDN or another proxy is ever put in front of
+      # Traefik, this must gain an ipstrategy.depth or it will see that proxy's
+      # address for every request and allow everyone.
+      - "traefik.http.routers.cranbania.middlewares=strip-townhall@docker,ratelimit-cranbania@docker,townhall-allowlist@docker"
       - "traefik.http.middlewares.strip-townhall.stripprefix.prefixes=/townhall"
       - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.average=100"
       - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.burst=50"
+      - "traefik.http.middlewares.townhall-allowlist.ipallowlist.sourcerange=${TOWNHALL_ALLOWED_CIDRS:-127.0.0.1/32}"
       - "traefik.http.services.cranbania.loadbalancer.server.port=8071"
 
   # ── Qdrant — High-performance vector database (Apache 2.0) ─────────────
@@ -1690,6 +1888,8 @@ services:
     build:
       context: ./workers/library-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: trancendos-library-service
     environment:
       LIBRARY_PORT: "8067"
@@ -2599,6 +2799,8 @@ services:
     build:
       context: ./workers/cryptex
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     image: trancendos/cryptex:latest
     container_name: cryptex-worker
     restart: unless-stopped
@@ -2641,6 +2843,8 @@ services:
     build:
       context: ./workers/observatory
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-observatory
     restart: unless-stopped
     environment:
@@ -2944,6 +3148,47 @@ services:
     labels:
       - "traefik.enable=false"
 
+  # ── ipmi-exporter — Physical host health via iDRAC → Prometheus ──────────
+  # Prometheus community, Apache 2.0.
+  #
+  # node-exporter above sees only what the OS sees. It cannot report a failed
+  # power supply, a fan RPM, an inlet temperature, or a chassis intrusion —
+  # those live on the baseboard management controller, below the OS entirely.
+  # On the Citadel's PowerEdge T610 that is iDRAC6.
+  #
+  # This matters concretely: the host arrived with a failed PSU and a failed
+  # drive, both logged in the SEL for some time, and both first noticed by ear
+  # rather than by alert. With this scrape in place they would have fired as
+  # Prometheus alerts long before.
+  #
+  # Runs in "remote" mode — it does not need to be on the monitored machine, it
+  # talks IPMI-over-LAN to the BMC. Target addresses and credentials live in
+  # monitoring/ipmi.yml; see deploy/CITADEL_OPERATIONS.md §2 for iDRAC setup.
+  #
+  # SECURITY: iDRAC6 is 2009-vintage with known vulnerabilities. It must sit on
+  # a management VLAN, must never be internet-facing, and must never be
+  # published through the Cloudflare tunnel. This container reaches it over the
+  # LAN; nothing here exposes it.
+  ipmi-exporter:
+    image: prometheuscommunity/ipmi-exporter:v1.9.0
+    container_name: tranc3-ipmi-exporter
+    restart: unless-stopped
+    command:
+      - "--config.file=/config/ipmi.yml"
+    volumes:
+      - ./monitoring/ipmi.yml:/config/ipmi.yml:ro
+    ports:
+      - "9290:9290"
+    networks:
+      - tranc3-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9290/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=false"
+
   # ═══════════════════════════════════════════════════════════════════════
   # EXTENDED WORKER LAYER — All platform entities
   # ═══════════════════════════════════════════════════════════════════════
@@ -2953,11 +3198,23 @@ services:
     build:
       context: ./workers/imaginarium
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-imaginarium
     <<: *worker-common
     environment:
       - PORT=8064
       - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
+      # Imaginarium (Voxx) fans a creative brief out to the five Locations it
+      # orchestrates. Set explicitly so the worker's in-code defaults are never
+      # the thing production depends on — same reasoning as infinity-void's
+      # PORT=8002. Service-name DNS, not localhost: inside a container
+      # localhost is the container itself.
+      - PHOTO_STUDIO_URL=http://sashas-photo-studio:8062
+      - WARP_RADIO_URL=http://warp-radio:8073
+      - THE_STUDIO_URL=http://the-studio:8069
+      - TATEKING_URL=http://tateking:8061
+      - TRANCEFLOW_URL=http://tranceflow:8059
     expose:
       - "8064"
     ports:
@@ -2980,6 +3237,8 @@ services:
     build:
       context: ./workers/tateking
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-tateking
     <<: *worker-common
     environment:
@@ -3137,6 +3396,8 @@ services:
     build:
       context: ./workers/sashas-photo-studio
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-sashas-photo-studio
     <<: *worker-common
     environment:
@@ -3163,9 +3424,17 @@ services:
     build:
       context: ./workers/the-lab
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-lab
     <<: *worker-common
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - OLLAMA_URL=http://ollama:11434
+      - LITELLM_URL=http://litellm:4000
       - PORT=8055
       - INTERNAL_SECRET=${INTERNAL_SECRET:?required}
     expose:
@@ -3188,6 +3457,9 @@ services:
     build:
       context: ./workers/deepagents-orchestrator-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: tranc3-deepagents-orchestrator-service
     <<: *worker-common
     environment:
@@ -3212,6 +3484,8 @@ services:
     build:
       context: ./workers/taimra
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-taimra
     <<: *worker-common
     environment:
@@ -3240,6 +3514,9 @@ services:
     build:
       context: ./workers/imind
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: tranc3-imind
     <<: *worker-common
     environment:
@@ -3259,6 +3536,13 @@ services:
       - "traefik.http.routers.imind.entrypoints=websecure"
       - "traefik.http.routers.imind.tls=true"
       - "traefik.http.routers.imind.tls.certresolver=letsencrypt"
+      # Was routing PathPrefix(/imind) straight to the worker with no
+      # prefix stripped, but every worker route (/health, /analyse,
+      # /status, /assess, ...) is bare — a request to /imind/assess
+      # 404'd. Same stripprefix pattern already used for
+      # cranbania/prefect/temporal/resonate/etc.
+      - "traefik.http.routers.imind.middlewares=strip-imind@docker"
+      - "traefik.http.middlewares.strip-imind.stripprefix.prefixes=/imind"
       - "traefik.http.services.imind.loadbalancer.server.port=8075"
 
   # ── Resonate — empathy engine (Port 8076) ──────────────────────────────────────────────
@@ -3266,6 +3550,9 @@ services:
     build:
       context: ./workers/resonate
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: tranc3-resonate
     <<: *worker-common
     environment:
@@ -3285,6 +3572,13 @@ services:
       - "traefik.http.routers.resonate.entrypoints=websecure"
       - "traefik.http.routers.resonate.tls=true"
       - "traefik.http.routers.resonate.tls.certresolver=letsencrypt"
+      # Was routing PathPrefix(/resonate) straight to the worker with no
+      # prefix stripped, but every worker route (/health, /score, /wrap,
+      # /status, /escalate/{user_id}, ...) is bare — a request to
+      # /resonate/score 404'd. Same stripprefix pattern already used for
+      # cranbania/prefect/temporal/etc. below.
+      - "traefik.http.routers.resonate.middlewares=strip-resonate@docker"
+      - "traefik.http.middlewares.strip-resonate.stripprefix.prefixes=/resonate"
       - "traefik.http.services.resonate.loadbalancer.server.port=8076"
 
   # ── Tranquility — wellbeing hub (Port 8058) ──────────────────────────────────────────────
@@ -3292,6 +3586,8 @@ services:
     build:
       context: ./workers/tranquility
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-tranquility
     <<: *worker-common
     environment:
@@ -3320,6 +3616,8 @@ services:
     build:
       context: ./workers/the-studio
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-studio
     <<: *worker-common
     environment:
@@ -3346,6 +3644,8 @@ services:
     build:
       context: ./workers/the-academy
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-academy
     <<: *worker-common
     environment:
@@ -3372,6 +3672,9 @@ services:
     build:
       context: ./workers/turings-hub-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: tranc3-turings-hub-service
     <<: *worker-common
     environment:
@@ -3396,6 +3699,8 @@ services:
     build:
       context: ./workers/warp-tunnel
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-warp-tunnel
     <<: *worker-common
     environment:
@@ -3422,6 +3727,8 @@ services:
     build:
       context: ./workers/warp-radio
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-warp-radio
     <<: *worker-common
     environment:
@@ -3448,6 +3755,8 @@ services:
     build:
       context: ./workers/the-dutchy
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-the-dutchy
     <<: *worker-common
     environment:
@@ -3474,6 +3783,8 @@ services:
     build:
       context: ./workers/devocity
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-devocity
     <<: *worker-common
     environment:
@@ -3500,9 +3811,17 @@ services:
     build:
       context: ./workers/chaos-party
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-chaos-party
     <<: *worker-common
     environment:
+      # The Chaos Party forwards recorded runs to The Observatory's audit
+      # trail with trend context attached, closing the first leg of the
+      # testing → evidence → learning pipeline. Fail-open: a telemetry
+      # outage never fails a test run.
+      - AUDIT_SERVICE_URL=http://audit-service:8025
+      - OBSERVATORY_FORWARD_ENABLED=true
       - PORT=8079
     expose:
       - "8079"
@@ -3526,6 +3845,8 @@ services:
     build:
       context: ./workers/basement
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-basement
     <<: *worker-common
     environment:
@@ -3576,6 +3897,9 @@ services:
     build:
       context: ./workers/langchain-integration-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: tranc3-langchain-integration-service
     <<: *worker-common
     environment:
@@ -3600,6 +3924,9 @@ services:
     build:
       context: ./workers/mlflow-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
+        observability: ./src/observability
     container_name: tranc3-mlflow-service
     <<: *worker-common
     environment:
@@ -3624,9 +3951,16 @@ services:
     build:
       context: ./workers/litellm-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-litellm-service
     <<: *worker-common
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - LITELLM_URL=http://litellm:4000
       - PORT=8049
     expose:
       - "8049"
@@ -3648,9 +3982,16 @@ services:
     build:
       context: ./workers/artifactory-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-artifactory-service
     <<: *worker-common
     environment:
+      # Cross-service addresses pinned to Compose service-name DNS. A container
+      # cannot reach a sibling via localhost, so the in-code localhost defaults
+      # must never be what production relies on. Guarded by
+      # scripts/check_service_urls.py.
+      - ZOT_URL=http://zot:5000
       - PORT=8047
     expose:
       - "8047"
@@ -3726,6 +4067,8 @@ services:
     build:
       context: ./workers/hive-service
       dockerfile: Dockerfile
+      additional_contexts:
+        observability: ./src/observability
     container_name: tranc3-hive-service
     <<: *worker-common
     environment:
@@ -3776,6 +4119,8 @@ services:
     build:
       context: ./workers/fabulousa-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-fabulousa-service
     <<: *worker-common
     environment:
@@ -3800,6 +4145,8 @@ services:
     build:
       context: ./workers/llamaindex-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-llamaindex-service
     <<: *worker-common
     environment:
@@ -3825,6 +4172,8 @@ services:
     build:
       context: ./workers/haystack-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-haystack-service
     <<: *worker-common
     environment:
@@ -3851,6 +4200,8 @@ services:
     build:
       context: ./workers/dspy-service
       dockerfile: Dockerfile
+      additional_contexts:
+        sharedcore: ./Dimensional
     container_name: tranc3-dspy-service
     <<: *worker-common
     environment:

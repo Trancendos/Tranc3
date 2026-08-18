@@ -40,6 +40,7 @@ from Dimensional.hive.hive_core import (  # noqa: E402
     create_hive_app,
     get_hive,
 )
+from Dimensional.service_auth import check_internal_secret  # noqa: E402
 
 WORKER_PORT = int(os.environ.get("HIVE_PORT", "8060"))
 WORKER_NAME = "hive"
@@ -57,10 +58,28 @@ app = create_hive_app()
 
 @app.middleware("http")
 async def _internal_auth(request: Request, call_next):
-    if _INTERNAL_SECRET and request.url.path != "/health":
-        token = request.headers.get("x-internal-secret", "")
-        if token != _INTERNAL_SECRET:
-            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    """Gate every route except /health. Fails closed.
+
+    Previously `if _INTERNAL_SECRET and ...`: a blank secret made the whole
+    condition falsy, so the refusal never ran and every request was served
+    unauthenticated — and `.env.example` ships INTERNAL_SECRET blank. It now
+    answers 503 in that case.
+
+    Middleware must *return* its refusal rather than raise it, since a raise
+    here escapes the middleware stack instead of becoming a response. That is
+    why this calls `check_internal_secret`, the non-raising form of the shared
+    verifier, rather than the HTTPException-raising dependency the route-level
+    gates use.
+    """
+    if request.url.path != "/health":
+        ok, code, detail = check_internal_secret(
+            request.headers.get("x-internal-secret", ""),
+            _INTERNAL_SECRET,
+            mismatch_status=401,
+            detail="Unauthorized",
+        )
+        if not ok:
+            return JSONResponse(status_code=code, content={"detail": detail})
     return await call_next(request)
 
 
@@ -105,7 +124,11 @@ async def _worker_startup():
     # Register default data sinks
     default_sinks = [
         {"name": "training-cluster", "data_type": "model_weights", "pillar": "ai"},
-        {"name": "config-distributor", "data_type": "config", "pillar": "infrastructure"},
+        {
+            "name": "config-distributor",
+            "data_type": "config",
+            "pillar": "infrastructure",
+        },
         {"name": "metrics-dashboard", "data_type": "metrics", "pillar": "monitoring"},
         {"name": "log-aggregator", "data_type": "logs", "pillar": "monitoring"},
     ]

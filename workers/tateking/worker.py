@@ -23,6 +23,8 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 WORKER_PORT = int(os.getenv("PORT") or "8066")
 WORKER_NAME = "tateking"
 DB_PATH = Path(__file__).parent / "data" / "tateking.db"
@@ -155,9 +157,13 @@ _router = APIRouter()
 def _auth(x_internal_secret: str = Header(default="")) -> None:
     global _req_count, _err_count
     _req_count += 1
-    if x_internal_secret != INTERNAL_SECRET:
+    try:
+        guard_internal_secret(
+            x_internal_secret, INTERNAL_SECRET, mismatch_status=401, detail="Unauthorized"
+        )
+    except HTTPException:
         _err_count += 1
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise
 
 
 class ProjectIn(BaseModel):
