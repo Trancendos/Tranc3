@@ -119,7 +119,13 @@ jobs:
         # there is deliberately no `npm install` fallback, so a missing or
         # out-of-sync lock fails loudly instead of silently resolving an
         # unpinned (possibly different) wrangler at deploy time.
-        run: npm ci
+        # --ignore-scripts: no dependency here declares a runtime dependency at
+        # all -- these workers install wrangler and nothing else -- so no install
+        # hook is needed to produce a working tree. Leaving hooks enabled would
+        # buy nothing and cost the Shai-Hulud / PhantomRaven execution vector,
+        # where the payload runs during `npm install` and harvests whatever
+        # credentials the job holds. This job holds CF_API_TOKEN.
+        run: npm ci --ignore-scripts
 
       - name: Deploy ${{ matrix.name }}
         working-directory: cloudflare/${{ matrix.dir }}
