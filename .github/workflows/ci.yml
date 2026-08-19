@@ -127,6 +127,15 @@ jobs:
       - name: Dependency override sync
         run: python scripts/check_override_sync.py
 
+      # Model identifiers are not dependencies any package manager understands --
+      # they are bare strings in adapters and env defaults, so dependency scanning
+      # walks straight past them. This fails when code references a model that is
+      # not declared in config/ai_models.yaml with a licence, an execution location
+      # and a data-egress answer. Fast and network-free, unlike the obsolescence
+      # census, so it belongs on every PR.
+      - name: AI model inventory drift
+        run: python scripts/ai_bom.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
