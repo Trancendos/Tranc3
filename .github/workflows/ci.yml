@@ -117,6 +117,16 @@ jobs:
       - name: Test timing profile freshness
         run: python scripts/test_intelligence.py --check
 
+      # web/ declares dependency overrides in three places, each read by a
+      # different installer (npm / pnpm 10 / pnpm 11+). Those entries exist to
+      # force transitive packages past published advisories, so drift between
+      # them does not break a build -- it silently un-patches whichever installer
+      # was left behind. Both halves of that have already happened here: a pnpm
+      # lockfile serving vulnerable dompurify while npm was patched, and an
+      # override declared only under the `pnpm` key that pnpm 11 ignores.
+      - name: Dependency override sync
+        run: python scripts/check_override_sync.py
+
   test:
     name: Pytest
     runs-on: ubuntu-latest

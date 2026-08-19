@@ -119,16 +119,32 @@ def _dependency_vulnerabilities() -> tuple[bool, str, int]:
         data = json.loads(CENSUS_PATH.read_text())
     except (json.JSONDecodeError, OSError) as exc:
         return False, f"census unreadable: {exc}", -1
-    if not data.get("scanned_ok", False):
+    # Every field is required and type-checked. `data.get("fixable_count", 0)`
+    # would read a truncated census -- or `{"scanned_ok": true}` -- as zero open
+    # vulnerabilities, passing the check and skipping the cap. That is a fail-open
+    # in the one control whose entire purpose is to fail closed.
+    if not isinstance(data, dict) or not isinstance(data.get("scanned_ok"), bool):
+        return False, "census invalid: scanned_ok missing or not a boolean", -1
+    for field in ("fixable_count", "accepted_count"):
+        value = data.get(field)
+        # bool is a subclass of int, and `True` must not read as a count of 1.
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            return False, f"census invalid: {field} is not a non-negative integer", -1
+    if not data["scanned_ok"]:
         errored = ", ".join(data.get("errored_surfaces", [])) or "unknown"
         return False, f"census incomplete (errored: {errored})", -1
-    fixable = int(data.get("fixable_count", 0))
-    accepted = int(data.get("accepted_count", 0))
+    fixable = data["fixable_count"]
+    accepted = data["accepted_count"]
     detail = f"{fixable} fixable, {accepted} accepted ({data.get('generated_at', '?')})"
     return fixable == 0, detail, fixable
 
 
 def compute_security_dimension() -> dict:
+    # Computed once: this reads and parses a JSON file, and calling it twice
+    # also risks the check and the reported detail disagreeing if the census is
+    # rewritten between the two reads.
+    vulns_ok, vuln_detail, fixable = _dependency_vulnerabilities()
+
     checks: list[tuple[str, float, bool]] = [
         ("security_alert_register", 12.0, _register_complete()),
         ("url_validation_tests", 20.0, _pytest_url_validation()[0]),
@@ -142,7 +158,7 @@ def compute_security_dimension() -> dict:
         ("bandit_gate_signal", 5.0, _bandit_clean_signal()),
         # Weighted heaviest of any single check: an open, fixable CVE is a
         # worse security state than any missing document on this list.
-        ("no_fixable_dependency_vulns", 30.0, _dependency_vulnerabilities()[0]),
+        ("no_fixable_dependency_vulns", 30.0, vulns_ok),
     ]
 
     score = sum(w for _, w, ok in checks if ok)
@@ -153,7 +169,6 @@ def compute_security_dimension() -> dict:
     _, pytest_detail = _pytest_url_validation()
     details["url_validation_tests_detail"] = pytest_detail
 
-    vulns_ok, vuln_detail, fixable = _dependency_vulnerabilities()
     details["dependency_vulnerabilities_detail"] = vuln_detail
 
     # Hard cap, not just a weight. With weighting alone a repo could still show
