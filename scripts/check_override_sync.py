@@ -89,6 +89,7 @@ def _load_sites(pkg_dir: Path) -> dict[str, dict[str, str]]:
 
 
 def check_package(rel_dir: str) -> list[str]:
+    """Return one message per override key whose sites disagree; empty if they agree."""
     pkg_dir = REPO / rel_dir
     sites = _load_sites(pkg_dir)
     if len(sites) < 2:
@@ -108,6 +109,7 @@ def check_package(rel_dir: str) -> list[str]:
 
 
 def main() -> int:
+    """Check every package for override drift; exit non-zero on the first findings."""
     ap = argparse.ArgumentParser(description="Check dependency override sites agree.")
     ap.add_argument("--check", action="store_true", help="accepted for symmetry; always checks")
     ap.parse_args()
