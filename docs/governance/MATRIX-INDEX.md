@@ -8,7 +8,7 @@
 > Traffic (real building blocks, no unified matrix), and the AI Relationship Matrix. This index is
 > the map; the docs it links to (existing or newly written) are the territory.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-08-07 (Security Posture Matrix row added)
+**Owner:** Platform Owner Trancendos · **Version:** 1.1.0 · **Last verified:** 2026-08-19 (Supply Chain Posture Matrix row added)
 
 ---
 
@@ -68,6 +68,7 @@
 | Association Matrix | Exists, thin | `src/cmdb/models.py` — CMDB-style associations between platform components, but this is infrastructure CMDB, not entity-to-entity association in the `PLATFORM_ENTITIES` sense | Noted here |
 | Swarm Coordination Matrix | Exists, newly documented | `workers/cache-service/worker.py`'s `ThresholdGuard` — real, tested ACO-pheromone backend selection (reinforce/decay, greedy max), reused across 12 workers total; `workers/hive-service/`'s `SwarmCoordinator` — real group-lifecycle registry, not emergent coordination. `src/distributed/swarm_intelligence.py`'s `DistributedIntelligenceSwarm` is scaffolding only (`ENABLE_SWARM` defaults `false`, unreferenced by any deployed service) | [SWARM-COORDINATION-MATRIX.md](SWARM-COORDINATION-MATRIX.md) |
 | Security Posture Matrix | Exists, newly documented — found and fixed two real gaps | A CrowdStrike 2026 Global Threat Report review against real code found `X-MFA-Verified` was read straight from client-supplied request headers with no server-side validation (fixed: now derived from a signed JWT claim), and `src/mcp/payload_scanner.py`'s tested prompt-injection scanner was never wired into `/mcp/rpc` (fixed, plus adaptive Cryptex auto-block on detection) | [SECURITY-POSTURE-MATRIX.md](SECURITY-POSTURE-MATRIX.md) |
+| Supply Chain Posture Matrix | Exists, newly documented — five new controls, one measured figure worse than the industry average | A 2026 OSSRA report review turned six of its themes into measurements against real code. Built: `scripts/obsolescence_census.py` (two-axis dormancy over 110 direct deps), `scripts/ai_bom.py` + `config/ai_models.yaml` (16 consumed model references that appeared in no manifest), `--ignore-scripts` on every CI npm install, and the CRA obligation mapping. Found: `web/` resolves 458 packages from 46 declared — 90% transitive against the report's 64% average, the estate's largest measured blind spot | [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) |
 
 ## 3. What this pass produced
 
@@ -104,6 +105,9 @@ that's a build task, not a documentation one.
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — the tier/governance system
   `AI-AGENT-BOT-TIER-MATRIX.md` cross-references rather than re-describes for the advancement-
   pipeline side of Trance-One/T2ance.
+- [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) — the OSSRA-report
+  counterpart to the CrowdStrike review above, and the map between the vulnerability census,
+  the obsolescence census, the AI-BOM and the CRA profile.
 - [BOM-MATRIX.md](BOM-MATRIX.md) — a later follow-up pass triaging the SBOM/CBOM/AI-BOM/HBOM/
   SaaSBOM/etc. taxonomy against this platform's real SBOM pipeline and existing docs, added after
   this index's original four-doc pass.

@@ -10,6 +10,8 @@
 > the same discipline as [SWARM-COORDINATION-MATRIX.md](SWARM-COORDINATION-MATRIX.md) and
 > [MATRIX-INDEX.md](MATRIX-INDEX.md): verify against real code, state plainly what was wrong, what's
 > fixed, and what's still an honest gap.
+>
+> **Sibling document:** [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) does the same exercise against Black Duck's 2026 OSSRA report, and picks up §5's supply-chain thread in depth.
 
 **Owner:** The Guardian (Marcus Magnolia) (Security pillar Steward AI, SUITE-SEC) · **Version:** 1.1.0 · **Last verified:** 2026-08-07 (v1.1.0: cubic-dev-ai review on Tranc3#493 caught 4 real bugs in v1.0.0's own fixes — 1 P0, 3 P1, all corrected same-day; see §2/§3 for the specifics. Documenting this here rather than silently editing it out, since a doc about honest verification undermines itself if it hides its own review round.)
 
