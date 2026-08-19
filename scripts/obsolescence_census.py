@@ -167,7 +167,11 @@ def _get_json(url: str) -> dict:
     for attempt in range(RETRIES):
         try:
             req = urllib.request.Request(
-                url, headers={"Accept": "application/json", "User-Agent": "trancendos-obsolescence-census"}
+                url,
+                headers={
+                    "Accept": "application/json",
+                    "User-Agent": "trancendos-obsolescence-census",
+                },
             )
             with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
                 return json.loads(resp.read().decode("utf-8"))
@@ -365,12 +369,19 @@ def build_census(dormant_days: int = DORMANT_DAYS) -> dict:
     def run(job):
         ecosystem, surface, name, spec = job
         try:
-            probe = _probe_pypi(name, spec, dormant_days) if ecosystem == "pip" else _probe_npm(name, spec, dormant_days)
+            probe = (
+                _probe_pypi(name, spec, dormant_days)
+                if ecosystem == "pip"
+                else _probe_npm(name, spec, dormant_days)
+            )
             probe["surface"] = surface
             probe["accepted"] = name.lower() in accepted
             return ("ok", probe)
         except Exception as exc:  # noqa: BLE001 - any failure means "unknown", never "fine"
-            return ("err", {"name": name, "ecosystem": ecosystem, "surface": surface, "reason": str(exc)})
+            return (
+                "err",
+                {"name": name, "ecosystem": ecosystem, "surface": surface, "reason": str(exc)},
+            )
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         for kind, payload in pool.map(run, jobs):
@@ -456,9 +467,15 @@ def main() -> int:
     failing = {ZOMBIE} if args.fail_on == "zombie" else {ZOMBIE, STRANDED}
     offenders = [f for f in census["findings"] if f["state"] in failing and not f["accepted"]]
     if offenders:
-        print(f"\n[FAIL] {len(offenders)} undocumented {args.fail_on}-or-worse component(s):", file=sys.stderr)
+        print(
+            f"\n[FAIL] {len(offenders)} undocumented {args.fail_on}-or-worse component(s):",
+            file=sys.stderr,
+        )
         for f in offenders:
-            print(f"        {f['name']} ({f['state']}) — last release {f['days_since_last_release']:.0f}d ago", file=sys.stderr)
+            print(
+                f"        {f['name']} ({f['state']}) — last release {f['days_since_last_release']:.0f}d ago",
+                file=sys.stderr,
+            )
         print(
             f"\n        Either update/replace them, or record the decision in\n"
             f"        {ACCEPT_FILE.relative_to(REPO)} with a reason.",
