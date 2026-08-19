@@ -97,6 +97,37 @@ def _bandit_clean_signal() -> bool:
     return True  # unknown — neutral
 
 
+CENSUS_PATH = ROOT / "logs" / "vulnerability_census.json"
+
+
+def _dependency_vulnerabilities() -> tuple[bool, str, int]:
+    """(ok, detail, fixable_count) from the vulnerability census.
+
+    Reads scripts/vulnerability_census.py's output rather than scanning here:
+    the scan takes minutes across six manifests and needs the network, and this
+    function is called every time anyone asks for a score.
+
+    A MISSING census is not a pass. Before this existed, every check in this file
+    was a presence check -- register exists, SSRF module exists, bandit signals --
+    so the dimension reported 100% while thirty-one vulnerabilities were open on
+    the default branch. Treating an absent census as "fine" would rebuild exactly
+    that blind spot one level up.
+    """
+    if not CENSUS_PATH.is_file():
+        return False, "no census — run scripts/vulnerability_census.py", -1
+    try:
+        data = json.loads(CENSUS_PATH.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        return False, f"census unreadable: {exc}", -1
+    if not data.get("scanned_ok", False):
+        errored = ", ".join(data.get("errored_surfaces", [])) or "unknown"
+        return False, f"census incomplete (errored: {errored})", -1
+    fixable = int(data.get("fixable_count", 0))
+    accepted = int(data.get("accepted_count", 0))
+    detail = f"{fixable} fixable, {accepted} accepted ({data.get('generated_at', '?')})"
+    return fixable == 0, detail, fixable
+
+
 def compute_security_dimension() -> dict:
     checks: list[tuple[str, float, bool]] = [
         ("security_alert_register", 12.0, _register_complete()),
@@ -109,6 +140,9 @@ def compute_security_dimension() -> dict:
         ("ssrf_module_present", 7.0, (ROOT / "Dimensional" / "url_validation.py").is_file()),
         ("trivyignore_documented", 5.0, (ROOT / ".trivyignore").is_file()),
         ("bandit_gate_signal", 5.0, _bandit_clean_signal()),
+        # Weighted heaviest of any single check: an open, fixable CVE is a
+        # worse security state than any missing document on this list.
+        ("no_fixable_dependency_vulns", 30.0, _dependency_vulnerabilities()[0]),
     ]
 
     score = sum(w for _, w, ok in checks if ok)
@@ -119,12 +153,31 @@ def compute_security_dimension() -> dict:
     _, pytest_detail = _pytest_url_validation()
     details["url_validation_tests_detail"] = pytest_detail
 
+    vulns_ok, vuln_detail, fixable = _dependency_vulnerabilities()
+    details["dependency_vulnerabilities_detail"] = vuln_detail
+
+    # Hard cap, not just a weight. With weighting alone a repo could still show
+    # ~90% -- a green status -- while shipping known-exploitable dependencies,
+    # because the other ten checks are easy to satisfy and never regress. The cap
+    # makes "green" mean what a reader assumes it means.
+    capped = False
+    if not vulns_ok:
+        percent = min(percent, 89.9)
+        capped = True
+
     return {
         "dimension": "Security",
         "score_percent": percent,
         "weight": 0.10,
         "checks": details,
-        "honest_note": "Derived from repo artifacts and local pytest; not a live Forgejo API sync.",
+        "score_capped_by_open_vulnerabilities": capped,
+        "fixable_vulnerability_count": fixable,
+        "honest_note": (
+            "Config checks derive from repo artifacts and local pytest; not a live Forgejo "
+            "API sync. The vulnerability figure comes from logs/vulnerability_census.json "
+            "and caps this score below green whenever a fixable CVE is open or the census "
+            "could not be read."
+        ),
     }
 
 
