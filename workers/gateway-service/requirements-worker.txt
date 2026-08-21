@@ -4,7 +4,7 @@ starlette==1.6.0
 uvicorn==0.52.3
 pydantic==2.13.4
 httpx==0.28.1
-sse-starlette==3.4.5
+sse-starlette==3.4.8
 python-jose[cryptography]==3.5.0
 # ecdsa explicit pin (previously unpinned/transitive via python-jose's
 # `Requires-Dist: ecdsa!=0.15`, violating this repo's exact-pinning policy).
