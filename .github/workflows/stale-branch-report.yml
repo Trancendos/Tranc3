@@ -1,0 +1,116 @@
+# Stale branch reporting — the GitHub-side twin of
+# .forgejo/workflows/stale-branch-cleanup.yml.
+#
+# WHY THIS EXISTS
+#
+# The Forgejo version is scheduled weekly, and has never once run: it targets
+# `runs-on: self-hosted`, and Forgejo is dormant. Even had it run, every step is
+# dry-run, so it would have reported and deleted nothing. On 2026-08-21 the four
+# repositories held 261 branches; 72 of them were fully merged with zero commits
+# ahead of main. A cleanup control that is disabled twice over is exactly how
+# that happens.
+#
+# This runs where CI actually runs today. It stays REPORT-ONLY on a schedule,
+# because a scheduled job that silently deletes refs is worse than a backlog.
+# Deletion is opt-in through workflow_dispatch, and only ever touches branches
+# that are fully merged into the default branch.
+
+name: Stale Branch Report
+
+on:
+  schedule:
+    # Mondays 07:00 UTC — before the working week, after the weekend's merges.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      delete_merged:
+        description: "Delete fully-merged branches (unmerged branches are never touched)"
+        type: boolean
+        default: false
+      min_age_days:
+        description: "Only consider branches with no commits for this many days"
+        type: string
+        default: "30"
+
+permissions:
+  contents: write
+
+jobs:
+  report:
+    name: Report (and optionally reap) stale branches
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify branches
+        id: classify
+        env:
+          MIN_AGE_DAYS: ${{ github.event.inputs.min_age_days || '30' }}
+        run: |
+          set -euo pipefail
+          DEFAULT="origin/${{ github.event.repository.default_branch }}"
+          CUTOFF=$(( $(date +%s) - MIN_AGE_DAYS * 86400 ))
+
+          : > merged.txt
+          : > unmerged.txt
+
+          # `--merged` is the safe question: has every commit on this branch
+          # already been reached by the default branch? Anything else is left
+          # alone regardless of age, because "old" and "worthless" are not the
+          # same property and only the first one is measurable here.
+          for b in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin \
+                     | grep -v 'HEAD' | grep -v "^${DEFAULT#origin/}$" | grep -v "^origin/HEAD$"); do
+            name="${b#origin/}"
+            [ "$name" = "${DEFAULT#origin/}" ] && continue
+            ts=$(git log -1 --format=%ct "$b" 2>/dev/null || echo 0)
+            [ "$ts" -gt "$CUTOFF" ] && continue
+            if git merge-base --is-ancestor "$b" "$DEFAULT" 2>/dev/null; then
+              echo "$name" >> merged.txt
+            else
+              echo "$name" >> unmerged.txt
+            fi
+          done
+
+          echo "merged=$(wc -l < merged.txt)" >> "$GITHUB_OUTPUT"
+          echo "unmerged=$(wc -l < unmerged.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Stale branch report"
+            echo
+            echo "Branches with no commits in the last ${{ github.event.inputs.min_age_days || '30' }} days:"
+            echo
+            echo "| Class | Count | Action |"
+            echo "|---|---|---|"
+            echo "| Fully merged into default | ${{ steps.classify.outputs.merged }} | safe to delete |"
+            echo "| Not merged | ${{ steps.classify.outputs.unmerged }} | needs a human |"
+            echo
+            echo "<details><summary>Fully merged</summary>"
+            echo
+            sed 's/^/- /' merged.txt || true
+            echo
+            echo "</details>"
+            echo
+            echo "<details><summary>Not merged — review before doing anything</summary>"
+            echo
+            sed 's/^/- /' unmerged.txt || true
+            echo
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Delete fully-merged branches
+        if: github.event_name == 'workflow_dispatch' && inputs.delete_merged
+        run: |
+          set -euo pipefail
+          # Deliberately reads merged.txt only. There is no code path in this
+          # workflow that can delete an unmerged branch.
+          count=0
+          while read -r name; do
+            [ -z "$name" ] && continue
+            git push origin --delete "$name" && count=$((count + 1)) || \
+              echo "::warning::could not delete $name (protected, or already gone)"
+          done < merged.txt
+          echo "Deleted $count fully-merged branches." >> "$GITHUB_STEP_SUMMARY"

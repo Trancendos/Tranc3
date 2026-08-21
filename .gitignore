@@ -121,3 +121,9 @@ workers/files-service/data/
 
 *storybook.log
 storybook-static
+
+# Action-version audit output. Written into the repo root by
+# scripts/audit_action_versions.py on every run, the same way ruff_check_out.txt
+# and ruff_errors.json were -- committed scan output that reads as source.
+ACTION_AUDIT.md
+action-audit.json

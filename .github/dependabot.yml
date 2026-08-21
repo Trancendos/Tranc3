@@ -3,6 +3,20 @@
 # Please see the documentation for all configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
+# Why grouping exists here (added 2026-08-21):
+#
+# This file declared twelve ecosystem entries, each with a five-PR limit and no
+# `groups:` key at all. Ungrouped, Dependabot opens one pull request per
+# dependency, so the estate accumulated 98 simultaneously-open dependency PRs --
+# a queue nobody could review, which meant none of them were reviewed. The
+# backlog was not a discipline failure; it was this configuration working as
+# written.
+#
+# Grouping collapses the safe majority into one PR per ecosystem per directory.
+# Majors stay ungrouped on purpose: a Python 3.11 -> 3.14 or Next 15 -> 16 bump
+# deserves to be looked at on its own, and burying it in a group of forty patch
+# bumps is how a runtime change gets merged by accident.
+
 version: 2
 updates:
   - package-ecosystem: "pip"
@@ -10,6 +24,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -18,6 +42,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -26,6 +60,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -34,6 +78,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -42,6 +96,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -50,6 +114,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -58,6 +132,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -66,6 +150,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -74,6 +168,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -82,6 +186,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -90,6 +204,16 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
 
@@ -98,5 +222,15 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps travel together: they are the high-volume, low-risk
+      # majority, and one reviewed PR per ecosystem is worth more than thirty
+      # unreviewed ones. Majors are deliberately NOT grouped -- anything that can
+      # change an interpreter, a framework or a runtime still gets its own PR and
+      # its own decision.
+      safe-updates:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
