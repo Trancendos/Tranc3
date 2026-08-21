@@ -62,34 +62,6 @@ jobs:
           output: sarif-results
           upload: false
 
-      - name: Filter false-positive path-injection alerts
-        if: matrix.language == 'python'
-        run: |
-          python3 - <<'PYEOF'
-          import json, pathlib
-          sarif_path = pathlib.Path("sarif-results/python.sarif")
-          if not sarif_path.exists():
-              exit(0)
-          sarif = json.loads(sarif_path.read_text())
-          SUPPRESSED_PATHS = {
-              "Dimensional/path_validation.py",
-              "Dimensional/orchestration/heartbeat_aggregator.py",
-              "src/agents/goal_manager.py",
-          }
-          for run in sarif.get("runs", []):
-              run["results"] = [
-                  r for r in run.get("results", [])
-                  if not any(
-                      loc.get("physicalLocation", {})
-                         .get("artifactLocation", {})
-                         .get("uri", "")
-                      in SUPPRESSED_PATHS
-                      for loc in r.get("locations", [])
-                  )
-              ]
-          sarif_path.write_text(json.dumps(sarif))
-          PYEOF
-
       - name: Upload SARIF results
         id: upload_sarif
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e
