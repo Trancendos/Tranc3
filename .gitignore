@@ -10,6 +10,20 @@
 sandbox-ca.crt
 
 
+# Static analysis / scan output artifacts
+ruff_errors.json
+ruff_check_out.txt
+ruff-check*.txt
+ruff*.json
+*.sarif
+bandit_*.json
+codeql_*.sarif
+trivy_*.json
+pylint_*.txt
+flake8_*.txt
+scan_*.out
+scan_*.json
+
 # Python
 __pycache__/
 *.py[cod]
