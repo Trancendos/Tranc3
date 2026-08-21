@@ -171,13 +171,46 @@ makes it near-perfectly cacheable — the cost is one cold run, not one run per 
 **The Artifactory** (`workers/artifactory-service/`, port 8047), which already fronts an OCI registry
 and is the only service in the estate whose job is already "hold artefact metadata durably".
 
-**2. Hash-pinned Python lockfiles.** All 59 direct pins in `requirements.txt` are exact (`==`), which
-is better than most estates manage — but **zero of the four requirements files carry a single
-`--hash=`**, and transitive versions are not pinned at all. That is precisely the gap `npm ci` closed
-on the JavaScript side in the work this document accompanies. `pip-compile --generate-hashes` (or
-`uv lock`) produces the equivalent, and `pip install --require-hashes` enforces it. This is a
-half-day of work with a large integrity return, and it is the most obviously *missing* thing in §2's
-table.
+**2. Hash-pinned Python lockfiles.** All 59 direct pins in `requirements.txt` are exact (`==`) —
+better than most estates manage — but across the four root requirements files **79 exact pins carry
+zero `--hash=` between them**, and transitive versions are not pinned at all. That is precisely the
+gap `npm ci` closed on the JavaScript side in the work this document accompanies: an exact version
+pin says *which release* to fetch, a hash says *which bytes*, and only the second survives a
+compromised or re-uploaded artefact.
+
+An earlier revision of this section costed this at "half a day". **That was wrong, and the correction
+matters**, because half a day reads as a quick win somebody should just do. Measured on 2026-08-21:
+
+| | Count |
+|---|---|
+| Root requirements files | 4 (79 exact pins, 0 hashes) |
+| Worker requirements files | 84 |
+| Install paths invoking `pip install -r` | 114 |
+| Resolved distributions behind those pins | ~266 |
+
+The reason those numbers bite is that **`--require-hashes` is all-or-nothing per invocation**: if a
+single requirement in the file lacks a hash, the install fails outright. So it cannot be applied
+incrementally *within* a file, and every one of the 88 requirements files needs its own compiled
+lockfile before the flag can be turned on anywhere that reads it. The transitive tree also has to be
+pinned as a side effect — which is a genuine improvement (§4's blind spot narrows) and a genuine
+increase in upgrade friction, since Renovate then has a lockfile to regenerate rather than a line to
+bump.
+
+The staged path that avoids a big-bang change:
+
+1. `pip-compile --generate-hashes` (or `uv lock`) on the **four root files only**, emitting
+   `requirements.lock` alongside rather than replacing the existing `.txt`. Nothing breaks, because
+   nothing reads the new file yet.
+2. Switch the **production gate** — one install path, the one that matters most — to the lock with
+   `--require-hashes`, and leave the other 113 alone. This is where the integrity return actually
+   lands, because it is the path that produces a release.
+3. Extend to workers **only if** step 2 holds through a full Renovate cycle without becoming a
+   maintenance tax. The per-worker return is much lower: workers install from pinned root-aligned
+   sets already (`scripts/align_framework_pins.py`), so they inherit most of the benefit.
+
+Steps 1–2 are a day or two, not half a day, and step 3 should be a separate decision taken with
+evidence from step 2 rather than committed to up front. **Not started** — the staging is the
+recommendation, not a completed plan.
 
 **3. Per-release SBOM retention.** SBOMs are generated today (syft, dual-format, in
 `security-scan.yml`) but retained as CI artefacts on a rolling window. MC-042 is partial for this
