@@ -239,3 +239,84 @@ class TestSuiteStewardshipRoutes:
         assert body["current_steward_ai"] == "Temp Steward"
         assert body["designed_steward_ai"] == "Renik"
         assert body["drifted"] is True
+
+
+class TestSeatsRoute:
+    """`GET /roles/{location}/seats` — every Job Description at one Location.
+
+    The question the single-row model could not answer. Without this route an
+    operator can see that The Chaos Party has a role, but not that it has two
+    with different holders and different work.
+    """
+
+    def test_a_multi_ai_location_returns_every_seat(self, client):
+        resp = client.get("/roles/The Chaos Party/seats")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert [s["seat_id"] for s in body] == ["primary", "alice-dream"]
+        assert {s["assigned_ai"] for s in body} == {"The Mad Hatter", "Alice Dream"}
+
+    def test_each_seat_carries_its_own_job_and_functions(self, client):
+        """Two seats sharing a title or a function list would mean the seat
+        model had been added without the roles actually being distinguished."""
+        body = client.get("/roles/The Chaos Party/seats").json()
+        assert len({s["job_description"] for s in body}) == 2
+        assert body[0]["functions"] and body[1]["functions"]
+        assert body[0]["functions"] != body[1]["functions"]
+
+    def test_designed_for_is_reported_alongside_the_current_holder(self, client):
+        """`designed_for` is who the seat was written for; `assigned_ai` is who
+        holds it now. They start equal and are allowed to diverge."""
+        body = client.get("/roles/Infinity/seats").json()
+        orb = next(s for s in body if s["seat_id"] == "the-orb-of-orisis")
+        assert orb["designed_for"] == "The Orb of Orisis"
+        assert orb["job_description"] == "Head of Architectural Foresight"
+
+    def test_a_single_ai_location_returns_exactly_one_seat(self, client):
+        body = client.get("/roles/The Spark/seats").json()
+        assert len(body) == 1 and body[0]["seat_id"] == "primary"
+
+    def test_an_unknown_location_is_404_not_an_empty_list(self, client):
+        """An empty list would read as "this Location has no roles", which is a
+        different and wrong answer to "there is no such Location"."""
+        assert client.get("/roles/Nowhere/seats").status_code == 404
+
+    def test_the_route_is_public_like_the_other_reads(self, client):
+        client.app.dependency_overrides.pop(get_current_user, None)
+        assert client.get("/roles/TateKing/seats").status_code == 200
+
+
+class TestSeatScopedMutation:
+    def test_assigning_names_the_seat(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
+        resp = client.post(
+            "/roles/TateKing/assign",
+            json={"ai_name": "Stand-In", "reason": "cover", "seat_id": "sam-king"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["seat_id"] == "sam-king"
+
+        seats = {s["seat_id"]: s["assigned_ai"] for s in client.get("/roles/TateKing/seats").json()}
+        assert seats["sam-king"] == "Stand-In"
+        assert seats["primary"] == "Benji Tate", "the sibling seat must not move"
+
+    def test_assign_defaults_to_the_primary_seat(self, client):
+        """A caller that predates seats keeps working unchanged."""
+        client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
+        resp = client.post("/roles/TateKing/assign", json={"ai_name": "Stand-In"})
+        assert resp.status_code == 200 and resp.json()["seat_id"] == "primary"
+
+    def test_unassigning_names_the_seat(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
+        resp = client.request(
+            "DELETE", "/roles/Infinity/assign", json={"seat_id": "the-orb-of-orisis"}
+        )
+        assert resp.status_code == 200
+        seats = {s["seat_id"]: s["assigned_ai"] for s in client.get("/roles/Infinity/seats").json()}
+        assert seats["the-orb-of-orisis"] is None
+        assert seats["primary"] == "The Guardian (Marcus Magnolia)"
+
+    def test_an_unknown_seat_is_404(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
+        resp = client.post("/roles/TateKing/assign", json={"ai_name": "X", "seat_id": "not-a-seat"})
+        assert resp.status_code == 404

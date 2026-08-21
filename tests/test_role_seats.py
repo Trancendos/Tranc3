@@ -86,6 +86,25 @@ class TestSeatDerivation:
         assert seat_id_for("Alice Dream") == "alice-dream"
         assert seat_id_for("The Dr. (Nikolai O'denhime)") == "the-dr-nikolai-o-denhime"
 
+    def test_an_unknown_name_yields_no_seats(self):
+        """Neither a Location nor a platform role. Returning [] rather than
+        raising keeps `all_seats()` composable, but it must be [] and not a
+        seat with empty fields, which would read as a real role."""
+        assert get_seats("Nowhere At All") == []
+
+    def test_a_non_location_platform_role_gets_one_primary_seat(self):
+        """The Shared Functional Services Core is seated in the same table so
+        "who holds what" has one answer, but it is not a Location: no pillar,
+        no agent team, no worker port."""
+        from src.entities.platform import PLATFORM_ROLES
+
+        role_id = next(iter(PLATFORM_ROLES))
+        seats = get_seats(role_id)
+        assert len(seats) == 1
+        assert seats[0].is_primary and seats[0].seat_id == "primary"
+        assert seats[0].designed_for == PLATFORM_ROLES[role_id].default_holder
+        assert seats[0].functions == ()
+
     def test_every_declared_co_lead_title_matches_a_real_roster_entry(self):
         """A title for an AI who is not on the Location's roster is a typo that
         would otherwise sit unnoticed, since nothing reads it."""
