@@ -242,12 +242,15 @@ rules:
       src/basement/promotion.py implements the whole promotion path -- clustering,
       regression detection, article rendering, DRAFT authoring into The Library --
       and until 2026-08-21 was called by nothing: no import, no route, no job.
-      It now has an admin-gated entry point at POST /basement/promote, and
-      ChronosSphere seeds a daily 03:15 job against that route, so patterns are
-      promoted on a clock rather than when somebody remembers to ask. Disabling
-      that job survives a restart; deleting it lets it return, because deletion
-      reads as "remove this row" rather than "the platform should stop doing
-      this".
+      It now has an entry point at POST /basement/promote -- admin bearer token,
+      or the shared internal secret for a service caller -- and ChronosSphere
+      seeds a daily 03:15 job against that route, so patterns are promoted on a
+      clock rather than when somebody remembers to ask. The job authenticates as
+      a service; a schedule that fires without a credential would be recorded as
+      a run and promote nothing. Disabling the job survives a restart; deleting
+      it lets it return, because deletion reads as "remove this row" rather than
+      "the platform should stop doing this". Scheduled, not event-driven: a
+      pattern confirmed at 09:00 waits for the next 03:15.
     probes:
       - kind: module_exists
         path: src/library
@@ -261,7 +264,16 @@ rules:
         pattern: "get_library\\s*\\("
       - kind: code_pattern
         path: workers/cron-service
-        pattern: "promote"
+        pattern: "basement-library-promotion"
+      - kind: code_pattern
+        path: workers/cron-service
+        pattern: "15 3 \\* \\* \\*"
+      - kind: code_pattern
+        path: workers/cron-service
+        pattern: "/basement/promote"
+      - kind: code_pattern
+        path: workers/cron-service
+        pattern: "X-Internal-Secret"
 
   - id: FLOW-023
     claim: "Library KB articles are scanned by The Academy and developed into training material"
@@ -425,14 +437,15 @@ rules:
       until 2026-08-21 nothing fed it: CI ran pytest directly and the platform's
       own test intelligence never saw the platform's own tests. The test
       workflow now runs scripts/report_tests_to_chaos_party.py, which posts the
-      run to /runs/batch (the same route that forwards to The Observatory). One
-      caveat the probes cannot see: on a GitHub-hosted runner the post only
-      happens once a CHAOS_PARTY_URL secret is set, because that runner cannot
-      reach a compose-internal worker. Unset, the reporter says so and exits 0;
-      set, a failed post fails the step. The probe deliberately matches the
-      script name rather than "chaos-party", so a passing mention in an
-      unrelated comment cannot satisfy it -- the earlier version of this rule
-      would have.
+      run to /runs/batch (the same route that forwards to The Observatory). The
+      destination is the part that is not finished: a GitHub-hosted runner
+      cannot reach a compose-internal worker, so the reporter posts only once a
+      CHAOS_PARTY_URL secret is set. Unset, it says so and exits 0; set, a
+      failed post fails the step. No environment in this repository sets it, so
+      no test run has yet reached The Chaos Party and the verdict is partial.
+      The probe deliberately matches the script name rather than "chaos-party",
+      so a passing mention in an unrelated comment cannot satisfy it -- the
+      earlier version of this rule would have.
     probes:
       - kind: worker_exists
         path: workers/chaos-party
@@ -444,6 +457,16 @@ rules:
         pattern: "report_tests_to_chaos_party"
       - kind: code_pattern
         path: .env.example
+        pattern: "CHAOS_PARTY_URL"
+      # Falsifiable, and false today on purpose. Everything above proves the
+      # reporter exists and CI invokes it; none of it proves a test run has ever
+      # reached The Chaos Party, because no environment defined in this
+      # repository gives the reporter a destination. While that is true the
+      # flow is partial, not enforced -- calling it enforced would be the same
+      # "runs, reports, changes nothing" claim this contract exists to catch.
+      # It flips the day a runner inside the compose network is configured.
+      - kind: code_pattern
+        path: docker-compose.production.yml
         pattern: "CHAOS_PARTY_URL"
 
   - id: FLOW-043

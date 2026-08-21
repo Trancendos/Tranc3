@@ -212,9 +212,69 @@ def test_promotion_job_is_seeded(cron_worker):
 
     assert job["enabled"] == 1
     assert job["method"] == "POST"
-    assert job["url"].endswith("/basement/promote")
+    assert "/basement/promote" in job["url"]
     # A schedule the parser cannot read is a job that never fires.
     assert len(job["schedule"].split()) == 5
+
+
+def test_the_seeded_request_matches_the_endpoint_contract(cron_worker):
+    """`/basement/promote` reads its arguments from the query string.
+
+    Sending them as a JSON body is not a loud failure -- FastAPI just applies
+    the defaults -- so a limit set here would silently not apply.
+    """
+    cron_worker.seed_default_jobs()
+    job = _jobs(cron_worker)["basement-library-promotion"]
+
+    assert "limit=500" in job["url"] and "dry_run=false" in job["url"]
+    assert json.loads(job["payload"]) == {}
+
+
+def test_the_job_carries_a_credential_reference_and_not_a_secret(cron_worker):
+    """The jobs table is an operator-readable schedule, not a secret store."""
+    cron_worker.seed_default_jobs()
+    headers = json.loads(_jobs(cron_worker)["basement-library-promotion"]["headers"])
+
+    assert headers["X-Internal-Secret"] == "${INTERNAL_SECRET}"
+
+
+def test_a_changed_deployment_address_reaches_an_already_seeded_row(cron_worker):
+    """`INSERT OR IGNORE` alone would freeze the URL at first-run values."""
+    cron_worker.seed_default_jobs()
+    with cron_worker.get_conn() as conn:
+        conn.execute(
+            "UPDATE jobs SET url='http://gone:8000/basement/promote', enabled=0 "
+            "WHERE id='basement-library-promotion'"
+        )
+        conn.commit()
+
+    cron_worker.seed_default_jobs()  # restart
+
+    job = _jobs(cron_worker)["basement-library-promotion"]
+    assert "gone" not in job["url"]
+    # The operator's decision to switch it off is not deployment-owned.
+    assert job["enabled"] == 0
+
+
+def test_an_unset_credential_raises_instead_of_posting_unauthenticated(cron_worker, monkeypatch):
+    """The failure mode this whole flow exists to avoid.
+
+    An unauthenticated POST would come back 401 and be recorded as an HTTP
+    failure, which reads like the Basement is broken. A missing environment
+    variable should say that it is missing.
+    """
+    monkeypatch.delenv("INTERNAL_SECRET", raising=False)
+    with pytest.raises(cron_worker.MissingCredential) as exc:
+        cron_worker._resolve_header_references({"X-Internal-Secret": "${INTERNAL_SECRET}"})
+    assert "INTERNAL_SECRET" in str(exc.value)
+
+
+def test_a_configured_credential_is_substituted(cron_worker, monkeypatch):
+    monkeypatch.setenv("INTERNAL_SECRET", "s3cret")
+    resolved = cron_worker._resolve_header_references(
+        {"X-Internal-Secret": "${INTERNAL_SECRET}", "Accept": "application/json"}
+    )
+    assert resolved == {"X-Internal-Secret": "s3cret", "Accept": "application/json"}
 
 
 def test_disabling_the_seeded_job_survives_a_restart(cron_worker):

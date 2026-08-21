@@ -108,6 +108,27 @@ class TestSeatDerivation:
         assert len(primaries) == 1
         assert primaries[0].designed_for == entity.lead_ai
 
+    def test_the_primary_seat_is_first_whatever_the_roster_order(self, monkeypatch):
+        """`get_seats` documents "primary first", so make that its own property.
+
+        Today it holds only because every roster happens to list the canonical
+        `lead_ai` first. A future roster edit that put a co-lead first would
+        quietly falsify the docstring, and the registry's SQL ordering would
+        paper over it for reads while `get_seats` callers saw the wrong head.
+        """
+        import copy
+
+        from src.entities import platform as plat
+
+        entity = copy.deepcopy(PLATFORM_ENTITIES["The Chaos Party"])
+        entity.lead_ais = ["Alice Dream", entity.lead_ai]  # co-lead listed first
+        monkeypatch.setitem(plat.PLATFORM_ENTITIES, "The Chaos Party", entity)
+
+        seats = get_seats("The Chaos Party")
+        assert seats[0].is_primary
+        assert seats[0].designed_for == entity.lead_ai
+        assert [s.designed_for for s in seats].count(entity.lead_ai) == 1
+
     def test_seat_id_is_stable_and_slugged(self):
         assert seat_id_for("Alice Dream") == "alice-dream"
         assert seat_id_for("The Dr. (Nikolai O'denhime)") == "the-dr-nikolai-o-denhime"

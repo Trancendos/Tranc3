@@ -2099,8 +2099,11 @@ def get_seats(location: str) -> List[RoleSeat]:
     # missing row: `get_role(location)` returns None, `assign_ai` and
     # `remove_ai` raise UnknownLocationError. Cheap to guarantee here, and
     # invisible until a roster edit makes it expensive.
-    if entity.lead_ai not in holders:
-        holders = [entity.lead_ai, *holders]
+    # Primary first regardless of roster order, so the documented ordering is a
+    # property of this function rather than of how `lead_ais` happens to be
+    # typed. Every current roster lists the canonical name first, which is
+    # exactly why a future edit that does not would be easy to miss.
+    holders = [entity.lead_ai, *(h for h in holders if h != entity.lead_ai)]
     primary_title = JOB_DESCRIPTIONS.get(location, entity.primary_function)
     teams = entity.agent_teams or {}
     seats: List[RoleSeat] = []

@@ -50,12 +50,12 @@ ever passes through. Fourteen flows sit there. That is the real finding.
 
 ## 3. The measurement
 
-As at 2026-08-21T18:20:00+00:00, across 39 declared flows:
+As at 2026-08-21T20:40:00+00:00, across 39 declared flows:
 
 | Verdict | Count |
 |---|---|
-| `enforced` | 23 |
-| `partial` | 3 |
+| `enforced` | 22 |
+| `partial` | 4 |
 | `unwired` | 12 |
 | `absent` | 1 |
 | `unknown` | 0 |
@@ -94,7 +94,7 @@ As at 2026-08-21T18:20:00+00:00, across 39 declared flows:
 | `FLOW-023` | The Academy | Library KB articles are scanned by The Academy and developed into training material | **unwired** |
 | `FLOW-031` | Fabulousa | All UX, UI and design-system work routes through Fabulousa | **enforced** |
 | `FLOW-041` | The Lab | All debugging routes through Slime | **unwired** |
-| `FLOW-042` | The Chaos Party | All testing routes through The Chaos Party | **enforced** |
+| `FLOW-042` | The Chaos Party | All testing routes through The Chaos Party | **partial** |
 | `FLOW-044` | The Artifactory | Produced artifacts are held and analysed by The Artifactory | **unwired** |
 | `FLOW-053` | Infinity | Infinity Bridge is the transport layer users navigate through | **unwired** |
 | `FLOW-054` | Arcadia | Arcadia is the post-login user entrance with forum, AI chat and email | **unwired** |
@@ -117,10 +117,14 @@ is a thin thread to hang a chain on, but it is a real one — and it is the only
 orchestration pattern in the estate that actually works, which makes it the template for the
 rest rather than an exception.
 
-**Fabulousa is the hole in that chain.** The Imaginarium's fan-out names five services and
-design is not among them. UX, UI and design-system work is the one creative discipline the
-orchestrator does not call, while the actual design system lives in a separate repository
-(InfinityStyles) with no link back to the worker that is supposed to own it.
+**Fabulousa was the hole in that chain, and is now the sixth call.** The Imaginarium's fan-out
+named five services and design was not among them: UX, UI and design-system work was the one
+creative discipline the orchestrator never called. It now calls Fabulousa for the project types
+where a design pass belongs — mixed, brand, video_image and game_assets — which is what moved
+FLOW-031 to `enforced`. What is still true is the second half of the original finding: the actual
+design system lives in a separate repository (InfinityStyles) with no link back to the worker
+that is supposed to own it, so the orchestrator reaches Fabulousa but Fabulousa does not reach
+the tokens.
 
 **The security chain terminates at stage one.** The Warp Tunnel scans and quarantines — to a
 local directory. It does not hand the offender to The Ice Box, and The Ice Box could not receive
@@ -149,20 +153,28 @@ implements the whole Basement → Library leg — clustering, regression detecti
 DRAFT authoring — and its own docstring describes closing "the fourth leg" of the learning
 pipeline. Until this pass it was called by nothing: no import, no route, no job. Evidence
 accumulated in the store and reached nobody. It now has an admin-gated entry point at
-`POST /basement/promote`, and ChronosSphere now seeds a daily job against it — reachable,
-but still not automatic. The next leg after that, Library KB → Academy curriculum, does not
-exist: `workers/the-academy/worker.py` contains no reference to the Library, to KB articles, or
-to any knowledge source.
+`POST /basement/promote`, and ChronosSphere seeds a daily 03:15 job against it. The job
+authenticates as a service — the route is admin-gated and a scheduler holds no user session, so
+without a credential it would fire every night, be recorded as a run, and promote nothing.
+Scheduled is not the same as event-driven: a pattern confirmed at 09:00 waits until 03:15. The
+next leg after that, Library KB → Academy curriculum, does not exist:
+`workers/the-academy/worker.py` contains no reference to the Library, to KB articles, or to any
+knowledge source.
 
-**The Chaos Party never sees the platform's own tests.** The worker is real — suites, runs, batch
-runs, chaos experiments — and CI runs `pytest` directly and posts nothing to it. The platform's
-test intelligence is blind to the platform's testing.
+**The Chaos Party has a reporter, and still no destination.** The worker is real — suites, runs,
+batch runs, chaos experiments — and CI now converts each pytest run into a `/runs/batch` post.
+What is missing is an address: a GitHub-hosted runner cannot reach a compose-internal worker, and
+no environment in this repository sets `CHAOS_PARTY_URL`, so no test run has yet arrived. That is
+why FLOW-042 is `partial` rather than `enforced`, and the contract carries a probe on
+`docker-compose.production.yml` that fails today and will pass when a runner inside the compose
+network is configured. Marking it `enforced` on the strength of the reporter alone would be the
+same "runs, reports, changes nothing" claim this whole exercise exists to catch.
 
 ## 5. What was fixed in this pass
 
 | Change | Effect |
 |---|---|
-| `POST /basement/promote`, admin-gated | FLOW-022 `unwired` → `partial`; the learning pipeline's fourth leg is reachable |
+| `POST /basement/promote`, admin- or service-authenticated | FLOW-022 `unwired` → `enforced`; the learning pipeline's fourth leg is reachable, scheduled, and able to authenticate |
 | Flow contract + checker + baseline | 39 previously unfalsifiable claims are now measured and re-runnable |
 | `tests/test_flow_conformance.py` | The classifier, the prose-stripping and the baseline comparison are pinned against regression |
 | Promotion keyed on pattern signature | `POST /basement/promote` is idempotent — a retry or a second admin cannot raise a duplicate draft from the same evidence |

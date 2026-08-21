@@ -13,7 +13,6 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from auth import get_current_user
 from src.basement import routes as basement_routes
 
 
@@ -26,29 +25,70 @@ def client():
     c.app.dependency_overrides.clear()
 
 
-def _as(role: str):
-    def _dep():
+def _authenticate_as(monkeypatch, role: str) -> None:
+    """Stand in for the bearer-token check with a caller of the given role.
+
+    The guard calls `get_current_user` as a module global rather than declaring
+    it as a FastAPI dependency, because the service-secret path has to be able
+    to answer before the bearer check runs and refuses. Patching the global is
+    therefore the equivalent of the usual `dependency_overrides` idiom, and it
+    leaves the guard's own branching under test rather than replaced.
+    """
+
+    async def _dep(credentials=None):
         return {"sub": "u1", "role": role}
 
-    return _dep
+    monkeypatch.setattr(basement_routes, "get_current_user", _dep)
 
 
 class TestPromoteGuard:
     def test_unauthenticated_is_refused(self, client):
-        client.app.dependency_overrides.pop(get_current_user, None)
         assert client.post("/basement/promote").status_code in (401, 403)
 
-    def test_ordinary_user_is_refused(self, client):
+    def test_ordinary_user_is_refused(self, client, monkeypatch):
         """Reading the evidence store is open to any authenticated caller;
         authoring Library articles from it is not."""
-        client.app.dependency_overrides[get_current_user] = _as("user")
+        _authenticate_as(monkeypatch, "user")
         resp = client.post("/basement/promote")
         assert resp.status_code == 403
         assert resp.json()["detail"] == "Admin role required"
 
-    def test_admin_is_allowed(self, client):
-        client.app.dependency_overrides[get_current_user] = _as("admin")
+    def test_admin_is_allowed(self, client, monkeypatch):
+        _authenticate_as(monkeypatch, "admin")
         assert client.post("/basement/promote", params={"dry_run": True}).status_code == 200
+
+    def test_the_internal_secret_authenticates_a_service_caller(self, client, monkeypatch):
+        """ChronosSphere has no user session, so without this it posts as nobody.
+
+        The seeded daily job would otherwise run, be recorded as a run, and
+        promote nothing -- a schedule that reports activity and produces none.
+        """
+        monkeypatch.setattr(basement_routes, "_INTERNAL_SECRET", "s3cret")
+        resp = client.post(
+            "/basement/promote",
+            params={"dry_run": True},
+            headers={"X-Internal-Secret": "s3cret"},
+        )
+        assert resp.status_code == 200
+
+    def test_a_wrong_internal_secret_is_refused(self, client, monkeypatch):
+        monkeypatch.setattr(basement_routes, "_INTERNAL_SECRET", "s3cret")
+        resp = client.post("/basement/promote", headers={"X-Internal-Secret": "wrong"})
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "Forbidden"
+
+    def test_an_unconfigured_secret_is_not_a_bypass(self, client, monkeypatch):
+        """The property that separates this guard from the estate's others.
+
+        Routes that check `if _INTERNAL_SECRET and ...` treat an unset secret as
+        "no check". Here the header is an alternative to an ADMIN credential, so
+        that reading would make an empty environment variable a password-less
+        admin bypass. Unset must mean the path is closed, not open.
+        """
+        monkeypatch.setattr(basement_routes, "_INTERNAL_SECRET", "")
+        resp = client.post("/basement/promote", headers={"X-Internal-Secret": ""})
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "Service authentication is not configured"
 
 
 class TestPromoteBehaviour:
@@ -60,7 +100,7 @@ class TestPromoteBehaviour:
             return {"scanned": 3, "patterns": 1, "promoted": 0, "skipped": 1, "details": []}
 
         monkeypatch.setattr(basement_routes, "promote_patterns", _fake)
-        client.app.dependency_overrides[get_current_user] = _as("admin")
+        _authenticate_as(monkeypatch, "admin")
 
         resp = client.post("/basement/promote", params={"dry_run": True, "limit": 42})
         assert resp.status_code == 200
@@ -74,24 +114,24 @@ class TestPromoteBehaviour:
             "promote_patterns",
             lambda limit, dry_run: seen.update(limit=limit, dry_run=dry_run) or {"promoted": 0},
         )
-        client.app.dependency_overrides[get_current_user] = _as("admin")
+        _authenticate_as(monkeypatch, "admin")
 
         assert client.post("/basement/promote").status_code == 200
         assert seen == {"limit": 500, "dry_run": False}
 
     @pytest.mark.parametrize("limit", [0, 5001])
-    def test_limit_is_bounded(self, client, limit):
+    def test_limit_is_bounded(self, client, monkeypatch, limit):
         """An unbounded scan over the evidence store is a denial-of-service
         against the Library, so the bound is validated rather than advisory."""
-        client.app.dependency_overrides[get_current_user] = _as("admin")
+        _authenticate_as(monkeypatch, "admin")
         assert client.post("/basement/promote", params={"limit": limit}).status_code == 422
 
-    def test_real_promotion_path_runs_end_to_end(self, client):
-        """No monkeypatching: proves the route reaches the actual module.
+    def test_real_promotion_path_runs_end_to_end(self, client, monkeypatch):
+        """Promotion itself is not stubbed: the route reaches the real module.
 
-        A test that only ever sees a stub would pass just as happily if the
+        A test that only ever saw a stub would pass just as happily if the
         import were wrong -- which is the failure being closed here."""
-        client.app.dependency_overrides[get_current_user] = _as("admin")
+        _authenticate_as(monkeypatch, "admin")
         body = client.post("/basement/promote", params={"dry_run": True}).json()
         assert {"scanned", "failures", "patterns", "promoted", "skipped"} <= set(body)
 

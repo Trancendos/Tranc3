@@ -23,7 +23,7 @@
   "FLOW-035": "enforced",
   "FLOW-040": "enforced",
   "FLOW-041": "unwired",
-  "FLOW-042": "enforced",
+  "FLOW-042": "partial",
   "FLOW-043": "partial",
   "FLOW-044": "unwired",
   "FLOW-050": "enforced",
