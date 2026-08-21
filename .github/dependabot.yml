@@ -11,27 +11,52 @@ updates:
       interval: "monthly"
 
   - package-ecosystem: "pip"
-    directories:
-      - "/tranc3-bots"
-      - "/workers/*"
+    directory: "/tranc3-bots"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "pip"
+    directory: "/workers"
     schedule:
       interval: "monthly"
 
   - package-ecosystem: "npm"
-    directories:
-      - "/"
-      - "/web"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "npm"
+    directory: "/web"
     schedule:
       interval: "monthly"
 
   - package-ecosystem: "docker"
-    directories:
-      - "/"
-      - "/docker"
-      - "/tranc3-bots"
-      - "/web"
-      - "/workers/*"
-      - "/deploy/*"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "docker"
+    directory: "/tranc3-bots"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "docker"
+    directory: "/web"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "docker"
+    directory: "/workers"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "docker"
+    directory: "/deploy"
     schedule:
       interval: "monthly"
 
