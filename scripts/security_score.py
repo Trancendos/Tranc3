@@ -140,8 +140,14 @@ def _dependency_vulnerabilities() -> tuple[bool, str, int]:
     # census, and demanding the field would turn an older artefact into an error.
     blocked = data.get("blocked_count", 0)
     blocked_note = f", {blocked} blocked upstream" if blocked else ""
+    # Name the scope. The production gate runs the census with --scope core (root
+    # manifests only); without this the Security dimension reads as a whole-estate
+    # result while measuring a subset. Absent on a census written before scopes
+    # existed, hence the default rather than a required field.
+    scope = data.get("scope", "unknown")
     detail = (
-        f"{fixable} fixable, {accepted} accepted{blocked_note} ({data.get('generated_at', '?')})"
+        f"{fixable} fixable, {accepted} accepted{blocked_note} "
+        f"(scope {scope}, {data.get('generated_at', '?')})"
     )
     return fixable == 0, detail, fixable
 

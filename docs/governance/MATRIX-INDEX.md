@@ -72,7 +72,9 @@
 
 ## 3. What this pass produced
 
-Four new docs, each grounded in real, already-running code found during this investigation:
+Four new docs from that pass, each grounded in real, already-running code found during
+that investigation. (The Supply Chain Posture Matrix listed in §2 came from a later,
+separate review and is deliberately not counted here.)
 
 1. **[ERROR-REMEDIATION-MATRIX.md](ERROR-REMEDIATION-MATRIX.md)** — Error Code Registry, CVE/Vulnerability tracking, Remediation, Self-Healing, and Diagnosis/Resolution, which all turned out to be genuinely interconnected (an error surfaces → gets classified against a CVE/pattern → triggers remediation → self-healing closes the loop) rather than five separate systems.
 2. **[PERMISSIONS-ACCESS-MATRIX.md](PERMISSIONS-ACCESS-MATRIX.md)** — the Role Registry (who holds a Job Description), the Access Registry (who's consented into which Location), and Zero Trust IAM (device/MFA/geo risk scoring), consolidated.

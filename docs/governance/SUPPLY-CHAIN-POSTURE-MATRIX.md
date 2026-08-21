@@ -14,7 +14,7 @@
 > what was built, and what is still an honest gap.
 
 **Owner:** The Guardian (Marcus Magnolia) (Security pillar Steward AI, SUITE-SEC) ·
-**Version:** 1.0.0 · **Last verified:** 2026-08-19
+**Version:** 1.1.0 · **Last verified:** 2026-08-21
 
 ---
 

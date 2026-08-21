@@ -53,9 +53,18 @@ on:
     - cron: '30 5 * * 1'   # Monday 05:30 UTC — obsolescence census
   workflow_dispatch:       # Manual trigger — runs both
 
+# Least privilege at the top; only the alert job is granted issues: write, below.
+# The two census jobs read the repository and talk to package registries -- they
+# have no reason to hold a token that can write to the issue tracker.
 permissions:
   contents: read
-  issues: write  # the alert path below files/updates one tracking issue
+
+# One run at a time. The `all` scope takes roughly nine minutes against two live
+# registries, so a manual dispatch overlapping the 05:00 schedule would run both
+# censuses twice and could comment on the tracking issue twice for one condition.
+concurrency:
+  group: supply-chain-watch
+  cancel-in-progress: false
 
 jobs:
   vulnerability:
@@ -63,8 +72,14 @@ jobs:
     # On a manual dispatch github.event.schedule is unset, so both jobs run.
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 5 * * *'
     runs-on: ubuntu-latest
+    # ~9 minutes of registry latency; the 360-minute default would let a hung
+    # connection sit for six hours before anyone noticed.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # A read-only audit has no need of a push token left in .git/config.
+          persist-credentials: false
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -79,7 +94,15 @@ jobs:
           node-version: '24'
 
       - name: Install pip-audit
-        run: pip install --quiet pip-audit
+        # The version this repository declares, not whatever released today. A
+        # floating scanner can change the census result with no commit here, and
+        # would then disagree with the merge gate, which installs from this file.
+        # cut/tr strips the trailing inline comment -- the raw grep line ends with
+        # "# Audit pip packages against OSV/NVD ..." and pip would choke on it.
+        run: |
+          pin=$(grep -m1 '^pip-audit==' requirements-security.txt | cut -d'#' -f1 | tr -d ' ')
+          echo "installing $pin"
+          pip install --quiet "$pin"
 
       - name: Measure open vulnerabilities
         # --check fails on any fixable finding or any surface that errored.
@@ -105,8 +128,11 @@ jobs:
     name: Obsolescence census (weekly)
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 5 * * 1'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -139,6 +165,10 @@ jobs:
     # `always()` is required because a skipped sibling job otherwise cancels it.
     if: always() && (needs.vulnerability.result == 'failure' || needs.obsolescence.result == 'failure')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Open or update the tracking issue
         env:
