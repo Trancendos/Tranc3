@@ -82,6 +82,32 @@ class TestSeatDerivation:
             ids = [s.seat_id for s in get_seats(location)]
             assert len(ids) == len(set(ids)), location
 
+    def test_every_location_has_exactly_one_primary_seat(self):
+        """`get_role(location)` and both mutations default to the `primary`
+        seat, so a Location without one is a Location whose default seat reads
+        as a missing row -- None from get_role, UnknownLocationError from
+        assign_ai. `is_primary` is `holder == lead_ai`, so a roster listing
+        co-leads without the canonical name would produce exactly that."""
+        for location in PLATFORM_ENTITIES:
+            primaries = [s for s in get_seats(location) if s.is_primary]
+            assert len(primaries) == 1, location
+
+    def test_a_roster_omitting_its_canonical_lead_still_gets_a_primary(self, monkeypatch):
+        """The guard, exercised rather than assumed. Simulates the roster edit
+        that would otherwise remove a Location's default seat."""
+        import copy
+
+        from src.entities import platform as plat
+
+        entity = copy.deepcopy(PLATFORM_ENTITIES["The Chaos Party"])
+        entity.lead_ais = ["Alice Dream"]  # canonical lead_ai dropped
+        monkeypatch.setitem(plat.PLATFORM_ENTITIES, "The Chaos Party", entity)
+
+        seats = get_seats("The Chaos Party")
+        primaries = [s for s in seats if s.is_primary]
+        assert len(primaries) == 1
+        assert primaries[0].designed_for == entity.lead_ai
+
     def test_seat_id_is_stable_and_slugged(self):
         assert seat_id_for("Alice Dream") == "alice-dream"
         assert seat_id_for("The Dr. (Nikolai O'denhime)") == "the-dr-nikolai-o-denhime"

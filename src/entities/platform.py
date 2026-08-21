@@ -2093,6 +2093,14 @@ def get_seats(location: str) -> List[RoleSeat]:
         ]
 
     holders = list(entity.lead_ais) or [entity.lead_ai]
+    # `lead_ai` is the primary in either shape. A roster that listed co-leads
+    # but omitted the canonical name would otherwise yield a Location with no
+    # `primary` seat at all -- and every default-seat caller reads that as a
+    # missing row: `get_role(location)` returns None, `assign_ai` and
+    # `remove_ai` raise UnknownLocationError. Cheap to guarantee here, and
+    # invisible until a roster edit makes it expensive.
+    if entity.lead_ai not in holders:
+        holders = [entity.lead_ai, *holders]
     primary_title = JOB_DESCRIPTIONS.get(location, entity.primary_function)
     teams = entity.agent_teams or {}
     seats: List[RoleSeat] = []

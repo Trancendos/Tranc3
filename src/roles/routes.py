@@ -157,14 +157,21 @@ def location_seats(location: str) -> List[Dict[str, Any]]:
 
 
 @router.get("/{location:path}/history")
-def role_history(location: str) -> List[Dict[str, Any]]:
+def role_history(location: str, seat_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Assignment history, optionally narrowed to one seat.
+
+    Without `seat_id` in the response a reader of TateKing's history sees two
+    interleaved seat moves with no way to tell which seat moved -- the model
+    became seat-aware and this endpoint was left behind.
+    """
     try:
-        history = get_registry().get_history(location)
+        history = get_registry().get_history(location, seat_id=seat_id)
     except UnknownLocationError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
     return [
         {
             "location": h.location,
+            "seat_id": h.seat_id,
             "previous_ai": h.previous_ai,
             "new_ai": h.new_ai,
             "changed_at": h.changed_at,

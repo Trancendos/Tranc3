@@ -320,3 +320,45 @@ class TestSeatScopedMutation:
         client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
         resp = client.post("/roles/TateKing/assign", json={"ai_name": "X", "seat_id": "not-a-seat"})
         assert resp.status_code == 404
+
+
+class TestSlashContainingLocationNames:
+    """`ChronosSphere / ArcStream` is a real Location whose name contains a
+    slash, and every /roles route uses the `{location:path}` converter. The
+    literal `/seats` and `/history` suffixes are matched by ordering, so a
+    name containing a slash is where that ordering either holds or breaks.
+    """
+
+    NAME = "ChronosSphere / ArcStream"
+
+    def test_seats_resolves_for_a_slash_containing_name(self, client):
+        resp = client.get(f"/roles/{self.NAME}/seats")
+        assert resp.status_code == 200
+        assert resp.json()[0]["location"] == self.NAME
+
+    def test_the_bare_location_route_still_resolves(self, client):
+        resp = client.get(f"/roles/{self.NAME}")
+        assert resp.status_code == 200
+        assert resp.json()["location"] == self.NAME
+
+    def test_history_resolves_for_a_slash_containing_name(self, client):
+        assert client.get(f"/roles/{self.NAME}/history").status_code == 200
+
+
+class TestHistoryIsSeatAware:
+    def test_history_reports_which_seat_moved(self, client):
+        client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
+        client.post("/roles/TateKing/assign", json={"ai_name": "A", "seat_id": "sam-king"})
+        entries = client.get("/roles/TateKing/history").json()
+        assert entries and entries[0]["seat_id"] == "sam-king"
+
+    def test_history_can_be_filtered_to_one_seat(self, client):
+        """Without the filter a reader sees two interleaved seat moves with no
+        way to separate them."""
+        client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
+        client.post("/roles/TateKing/assign", json={"ai_name": "A", "seat_id": "primary"})
+        client.post("/roles/TateKing/assign", json={"ai_name": "B", "seat_id": "sam-king"})
+
+        assert len(client.get("/roles/TateKing/history").json()) == 2
+        only = client.get("/roles/TateKing/history", params={"seat_id": "sam-king"}).json()
+        assert len(only) == 1 and only[0]["new_ai"] == "B"
