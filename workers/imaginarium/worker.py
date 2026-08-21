@@ -313,6 +313,40 @@ async def create_project(
     return {"project_id": project_id, "status": "pending", "created_at": now}
 
 
+# Both filters are optional, which is four possible queries. They are written out
+# in full rather than assembled from fragments: SQLite cannot bind a WHERE clause,
+# so any "build the clause then interpolate" version puts an f-string in front of
+# the database. Here the values are the only variable part and they are bound.
+_PROJECT_QUERIES: dict[tuple[bool, bool], tuple[str, str]] = {
+    (False, False): (
+        "SELECT COUNT(*) FROM projects",
+        "SELECT * FROM projects ORDER BY id DESC LIMIT ? OFFSET ?",
+    ),
+    (True, False): (
+        "SELECT COUNT(*) FROM projects WHERE status=?",
+        "SELECT * FROM projects WHERE status=? ORDER BY id DESC LIMIT ? OFFSET ?",
+    ),
+    (False, True): (
+        "SELECT COUNT(*) FROM projects WHERE project_type=?",
+        "SELECT * FROM projects WHERE project_type=? ORDER BY id DESC LIMIT ? OFFSET ?",
+    ),
+    (True, True): (
+        "SELECT COUNT(*) FROM projects WHERE status=? AND project_type=?",
+        "SELECT * FROM projects WHERE status=? AND project_type=? "
+        "ORDER BY id DESC LIMIT ? OFFSET ?",
+    ),
+}
+
+
+def _project_queries(
+    status: Optional[str], project_type: Optional[str]
+) -> tuple[str, str, list[str]]:
+    """Pick the count/rows query pair and the values to bind into it."""
+    count_sql, rows_sql = _PROJECT_QUERIES[(bool(status), bool(project_type))]
+    params = [value for value in (status, project_type) if value]
+    return count_sql, rows_sql, params
+
+
 @_router.get("/projects")
 async def list_projects(
     status: Optional[str] = None,
@@ -322,20 +356,10 @@ async def list_projects(
     x_internal_secret: str = Header(default=""),
 ):
     _auth(x_internal_secret)
-    clauses, params = [], []
-    if status:
-        clauses.append("status=?")
-        params.append(status)
-    if project_type:
-        clauses.append("project_type=?")
-        params.append(project_type)
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    count_sql, rows_sql, params = _project_queries(status, project_type)
     with get_conn() as conn:
-        total = conn.execute(f"SELECT COUNT(*) FROM projects {where}", params).fetchone()[0]
-        rows = conn.execute(
-            f"SELECT * FROM projects {where} ORDER BY id DESC LIMIT ? OFFSET ?",
-            params + [limit, offset],
-        ).fetchall()
+        total = conn.execute(count_sql, params).fetchone()[0]
+        rows = conn.execute(rows_sql, [*params, limit, offset]).fetchall()
     return {"total": total, "projects": [dict(r) for r in rows]}
 
 

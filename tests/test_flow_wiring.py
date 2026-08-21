@@ -250,3 +250,41 @@ def test_seeding_twice_does_not_duplicate(cron_worker):
             "SELECT COUNT(*) FROM jobs WHERE id='basement-library-promotion'"
         ).fetchone()[0]
     assert count == 1
+
+
+def test_imaginarium_project_queries_are_literal_and_filter_correctly():
+    """Four filter combinations, four literal queries, exercised against real SQLite.
+
+    Removing the f-string only matters if the replacement still filters. This
+    seeds a table and checks each combination returns the right rows, so a
+    mis-copied WHERE clause in the lookup fails here rather than silently
+    returning everything.
+    """
+    worker = import_worker("imaginarium_worker", REPO / "workers" / "imaginarium" / "worker.py")
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE projects (id INTEGER PRIMARY KEY, status TEXT, project_type TEXT)")
+    conn.executemany(
+        "INSERT INTO projects (status, project_type) VALUES (?,?)",
+        [
+            ("pending", "brand"),
+            ("completed", "brand"),
+            ("pending", "mixed"),
+        ],
+    )
+
+    cases = {
+        (None, None): 3,
+        ("pending", None): 2,
+        (None, "brand"): 2,
+        ("pending", "brand"): 1,
+    }
+    for (status, project_type), expected in cases.items():
+        count_sql, rows_sql, params = worker._project_queries(status, project_type)
+        assert "{" not in count_sql and "{" not in rows_sql
+        assert conn.execute(count_sql, params).fetchone()[0] == expected
+        rows = conn.execute(rows_sql, [*params, 50, 0]).fetchall()
+        assert len(rows) == expected
+
+    conn.close()
