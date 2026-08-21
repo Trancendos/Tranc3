@@ -10,13 +10,15 @@ import sqlite3
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
+
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.compliance.cab_gate")
 
@@ -41,6 +43,10 @@ def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    # Without this, SQLite's default busy_timeout is 0 — a second worker racing the
+    # migration below gets an immediate "database is locked" instead of waiting for
+    # the first worker's transaction to commit and retrying.
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
@@ -55,9 +61,33 @@ def _init_db(conn: sqlite3.Connection) -> None:
             status       TEXT NOT NULL DEFAULT 'pending',
             approver     TEXT,
             created_at   REAL NOT NULL,
-            approved_at  REAL
+            approved_at  REAL,
+            decided_at   REAL
         )
     """)
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(cab_changes)").fetchall()}
+    if "decided_at" not in existing_cols:
+        try:
+            conn.execute("ALTER TABLE cab_changes ADD COLUMN decided_at REAL")
+            # Backfill the new neutral decision-time column for rows that predate it —
+            # otherwise every historical decided change reads as decided_at=NULL, which
+            # audit/reporting queries keyed on decided_at would misread as
+            # still-unresolved. Covers 'rejected' rows too: an earlier revision of
+            # reject_change() (before decided_at existed) stored the rejection
+            # timestamp in approved_at despite the misleading name — that's still the
+            # only record of when those legacy rejections happened.
+            conn.execute(
+                "UPDATE cab_changes SET decided_at = approved_at "
+                "WHERE status IN ('approved', 'rejected') AND decided_at IS NULL"
+            )
+        except sqlite3.OperationalError as exc:
+            # Multiple Uvicorn workers can each observe the missing column and race
+            # through this ALTER on first startup against a pre-existing DB file —
+            # the loser isn't wrong, it just lost the race, so tolerate exactly that
+            # outcome rather than crashing API startup. (The winner already ran the
+            # backfill above, so the loser doesn't need to repeat it.)
+            if "duplicate column name: decided_at" not in str(exc):
+                raise
     conn.commit()
 
 
@@ -98,6 +128,32 @@ class CABGate:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
+    def get_status(self, change_id: str) -> Optional[str]:
+        """Return the raw `status` column ('pending'/'approved'/'rejected') for a
+        change, or None if it doesn't exist. Unlike check_change(), this doesn't need
+        change_type/requestor and doesn't compute cab_required — it's for callers
+        (e.g. EscalationFSM.resolve_cab()'s reconciliation path) that just need to
+        know what was actually persisted, not whether it satisfies a policy.
+        """
+        with _get_conn() as conn:
+            row = conn.execute(
+                "SELECT status FROM cab_changes WHERE change_id = ?",
+                (change_id,),
+            ).fetchone()
+        return row["status"] if row is not None else None
+
+    def get_approver(self, change_id: str) -> Optional[str]:
+        """Return the `approver` column for a change, or None if it doesn't exist
+        or hasn't been decided yet. Used by EscalationFSM.resolve_cab()'s
+        reconciliation path to attribute an already-persisted decision to whoever
+        actually made it, not to a later retry caller."""
+        with _get_conn() as conn:
+            row = conn.execute(
+                "SELECT approver FROM cab_changes WHERE change_id = ?",
+                (change_id,),
+            ).fetchone()
+        return row["approver"] if row is not None else None
+
     def check_change(self, change_type: str, change_id: str, requestor: str) -> dict[str, Any]:
         """
         Return whether a registered change has CAB approval.
@@ -119,8 +175,20 @@ class CABGate:
             }
 
         cab_required = self._cab_required_for(change_type, row["risk"])
-        approved = row["status"] == "approved"
+        status = row["status"]
 
+        # A rejected decision is authoritative regardless of cab_required — the
+        # `approved if cab_required else True` shortcut below only applies when the
+        # change was never explicitly decided, so a rejected-but-not-cab-required
+        # change can't be reported as approved:true.
+        if status == "rejected":
+            return {
+                "approved": False,
+                "reason": f"Change '{change_id}' was rejected",
+                "cab_required": cab_required,
+            }
+
+        approved = status == "approved"
         return {
             "approved": approved if cab_required else True,
             "reason": "approved" if approved else "pending CAB approval",
@@ -165,7 +233,44 @@ class CABGate:
             cur = conn.execute(
                 """
                 UPDATE cab_changes
-                SET status = 'approved', approver = ?, approved_at = ?
+                SET status = 'approved', approver = ?, approved_at = ?, decided_at = ?
+                WHERE change_id = ? AND status = 'pending'
+                """,
+                (approver, now, now, change_id),
+            )
+            conn.commit()
+            updated = cur.rowcount > 0
+
+        if updated:
+            logger.info(
+                "CAB change approved | change_id=%s | approver=%s",
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
+                sanitize_for_log(approver),  # codeql[py/log-injection]
+            )
+        else:
+            logger.warning(
+                "CAB approve failed — not found or already approved | change_id=%s",
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
+            )
+        return updated
+
+    def reject_change(self, change_id: str, approver: str) -> bool:
+        """Reject a change request. Returns True on success, False if not found.
+
+        Mirrors approve_change() — 'approver' is the deciding reviewer either way, not
+        implying approval. Persists the rejection (status='rejected') so callers (e.g.
+        src/compliance/escalation_fsm.py's EscalationFSM.resolve_cab()) can't report a
+        decision here without it surviving in cab_changes. Deliberately does NOT set
+        approved_at (that column means "the time this was approved" — a rejected
+        change was never approved); decided_at carries the neutral "when was this
+        resolved" timestamp for both outcomes.
+        """
+        now = time.time()
+        with _get_conn() as conn:
+            cur = conn.execute(
+                """
+                UPDATE cab_changes
+                SET status = 'rejected', approver = ?, decided_at = ?
                 WHERE change_id = ? AND status = 'pending'
                 """,
                 (approver, now, change_id),
@@ -175,14 +280,14 @@ class CABGate:
 
         if updated:
             logger.info(
-                "CAB change approved | change_id=%s | approver=%s",
-                change_id,
-                approver,
+                "CAB change rejected | change_id=%s | approver=%s",
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
+                sanitize_for_log(approver),  # codeql[py/log-injection]
             )
         else:
             logger.warning(
-                "CAB approve failed — not found or already approved | change_id=%s",
-                change_id,
+                "CAB reject failed — not found or already resolved | change_id=%s",
+                sanitize_for_log(change_id),  # codeql[py/log-injection]
             )
         return updated
 

@@ -1,0 +1,35 @@
+{
+  "charter_id": "bot-stateless-utility",
+  "version": "2.0.0",
+  "tier": 5,
+  "domain": "unassigned",
+  "mission": "Shared charter for the platform's 12 stateless Bot types (tranc3-bots/bots/types.py BotType enum, dispatched by tranc3-bots/bots/registry.py) \u2014 no autonomy, no decision-making, invoked only.",
+  "allowed_actions": [
+    "generate",
+    "embed",
+    "emotion",
+    "tokenize",
+    "consciousness",
+    "personality",
+    "predict",
+    "code",
+    "memory",
+    "monitor",
+    "search",
+    "summarise"
+  ],
+  "forbidden_actions": [
+    "make_autonomous_decision",
+    "retain_state_between_invocations",
+    "external_communication",
+    "production_change"
+  ],
+  "risk_tier": "minimal",
+  "approval_required": false,
+  "escalation_triggers": [
+    "audit_gap"
+  ],
+  "escalation_severity": "low",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate"
+}

@@ -1,0 +1,51 @@
+# .github/workflows/bot-health-watchdog.yml
+#
+# GitHub-hosted twin of .forgejo/workflows/bot-health-watchdog.yml. The two
+# are kept side by side deliberately, not as a migration — this one runs
+# today on GitHub's own runners; the Forgejo original will run too once The
+# Workshop is deployed, giving cross-verification rather than a single point
+# of failure. See the Forgejo file's header and scripts/bot_health_watchdog.py
+# for the detection design (Kilo Code Review's billing lapse is the concrete
+# case this was built for).
+#
+# Unlike the CranBania sync workflow, this one has no internal-network
+# dependency — it only calls GitHub's own public API for this repo's PR
+# checks — so it needs no custom secret. The default, auto-injected
+# GITHUB_TOKEN is sufficient for read-only PR/check-run access.
+
+name: Bot Health Watchdog
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Daily 08:00 UTC
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  watchdog:
+    name: Detect degraded review-bot integrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install httpx
+        run: pip install --quiet httpx
+
+      - name: Run bot health watchdog
+        run: python scripts/bot_health_watchdog.py Trancendos/Tranc3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify on degraded bot integration
+        if: failure()
+        run: |
+          echo "Bot health watchdog found a persistent degraded integration — check the job log above"

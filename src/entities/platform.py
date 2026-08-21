@@ -446,6 +446,14 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         ],
         primary_function="Central Testing Platform (Wonderland Theme)",
         primes=["The Dr. (Nikolai O'denhime)"],
+        # Two Lead AIs by design, covering the two halves of testing. The Mad
+        # Hatter runs adversarial work — fault injection, chaos, boundary abuse.
+        # Alice Dream runs the sane half — deterministic happy-path, acceptance
+        # and regression runs that must be repeatable to be worth anything.
+        # Chaos alone cannot tell you the system works; it can only tell you
+        # where it breaks. Both names are Carroll (1865, public domain), matching
+        # the Location's existing March Hare / Dormouse / Teapot-Bot naming.
+        lead_ais=["The Mad Hatter", "Alice Dream"],
         online_mode="Live mutation tests; real-time anomaly reporting.",
         offline_mode="Local test execution; offline review of test logs.",
         agent_alpha=Agent(
@@ -830,8 +838,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Padlock-Bot", "Instantly locks sensitive structures if a local breach is suspected."
         ),
-        worker_port=8024,
-        worker_path="workers/config-service/",
+        # Corrected: the infinity-void worker owns /vault/status, /secrets, /secrets/retrieve —
+        # the domain routes for this Location. Previously registered as
+        # workers/config-service/ (port 8024), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8002,
+        worker_path="workers/infinity-void/",
     ),
     "The Lighthouse": LocationEntity(
         location="The Lighthouse",
@@ -928,8 +940,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Honeypot-Bot",
             "Spins up virtual servers with decoy data to distract/evaluate attackers.",
         ),
-        worker_port=8026,
-        worker_path="workers/rate-limit-service/",
+        # Corrected: the cryptex worker owns /scan, /scans, /intel/ingest, /intel/lookup, /engines —
+        # the domain routes for this Location. Previously registered as
+        # workers/rate-limit-service/ (port 8026), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8053,
+        worker_path="workers/cryptex/",
     ),
     "The Ice Box": LocationEntity(
         location="The Ice Box",
@@ -1030,8 +1046,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Whisper-Bot", "Delivers summarized threat and trend alerts directly to strategic hubs."
         ),
-        worker_port=8027,
-        worker_path="workers/geo-service/",
+        # Corrected: the the-dutchy worker owns /status, /reports, /analyse —
+        # the domain routes for this Location. Previously registered as
+        # workers/geo-service/ (port 8027), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8057,
+        worker_path="workers/the-dutchy/",
     ),
     "The Citadel": LocationEntity(
         location="The Citadel",
@@ -1193,8 +1213,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Belt-Bot",
             "Manages continuous compilation pipelines, guiding code from start to finish.",
         ),
-        worker_port=8029,
-        worker_path="workers/health-aggregator/",
+        # Corrected: the devocity worker owns /status, /pipelines, /deploy —
+        # the domain routes for this Location. Previously registered as
+        # workers/health-aggregator/ (port 8029), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8110,
+        worker_path="workers/devocity/",
     ),
     "Tranquility": LocationEntity(
         location="Tranquility",
@@ -1673,6 +1697,28 @@ def _wire_multi_agent_teams() -> None:
         ),
     }
 
+    # The Chaos Party runs two testing disciplines that must not share a team:
+    # adversarial (The Mad Hatter) and deterministic (Alice Dream). A chaos agent
+    # and an acceptance agent want opposite things from a run — one seeks
+    # variance, the other requires none — so one pair cannot serve both without
+    # the sane suite inheriting non-determinism.
+    chaos = PLATFORM_ENTITIES["The Chaos Party"]
+    chaos.agent_teams = {
+        "The Mad Hatter": AgentPair(chaos.agent_alpha, chaos.agent_beta),
+        "Alice Dream": AgentPair(
+            Agent(
+                "The White Rabbit",
+                "Runs deterministic, schedule-bound suites — acceptance, regression "
+                "and smoke — where a repeatable result is the whole point.",
+            ),
+            Agent(
+                "The Looking-Glass",
+                "Reflects actual behaviour against expected, producing the pass/fail "
+                "assertions and diffs the Observatory trends on.",
+            ),
+        ),
+    }
+
 
 def _assign_ids() -> None:
     """Assign PID, AID, SID, and NID fields to all entities in PLATFORM_ENTITIES.
@@ -1875,3 +1921,65 @@ def get_all_ids() -> List[Dict]:
                 }
             )
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLATFORM ROLES — accountable ownership for things that are NOT Locations
+#
+# Every one of the 43 Locations has a Lead AI who notices when it breaks. The
+# Shared Functional Services Core (`Dimensional/`) had nobody, and the cost of
+# that showed up as a specific class of defect rather than as an abstraction:
+# 447 lines of point-of-authorship security scanning built and never wired to
+# anything; three duplicate CircuitState enums sitting inside the core while an
+# ADR consolidated the other four; eight files the shared_core -> Dimensional
+# rename left as stale copies; telemetry dead in 34 services. Each is the kind
+# of thing an owner would have caught.
+#
+# These roles are deliberately NOT added to PLATFORM_ENTITIES. A Dimensional is
+# not a Location — it has no pillar, no agent teams, no worker port — and
+# forcing one into the 43-entity registry would corrupt the entity model to
+# solve an ownership problem. They are a parallel, smaller concept: a named
+# responsibility with a default holder, seeded into the same Role Assignment
+# Registry so ownership stays mutable, audited, and reassignable at runtime
+# without a code change.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PlatformRole:
+    """A named responsibility that is not a Location."""
+
+    role_id: str
+    job_description: str
+    default_holder: str
+    scope: str
+    rationale: str
+
+
+PLATFORM_ROLES: Dict[str, PlatformRole] = {
+    "Dimensional": PlatformRole(
+        role_id="Dimensional",
+        job_description="Head of Data Transport & Swarm Operations",
+        default_holder="The Queen",
+        scope=(
+            "The Shared Functional Services Core (Dimensional/) — 101 modules "
+            "imported by 314 files: sanitisation, path/URL validation, security "
+            "automation, event bus, service registry, circuit state."
+        ),
+        rationale=(
+            "The Queen holds this because the registry already says so, not "
+            "because the metaphor is pleasing. Her Job Description at The HIVE "
+            "is literally 'Head of Data Transport & Swarm Operations', and a "
+            "shared core consumed by 314 files is data transport and swarm "
+            "operations. She also has the most capacity to take it: she owns "
+            "one Location, the fewest of any major Lead AI (Rocking Ricki 3, "
+            "Voxx 2, Trancendos 2), and is Prime for none, so nothing competes "
+            "for her attention. Her Prime is already Cornelius MacIntyre, the "
+            "highest in-degree Prime on the platform, so escalation needs no "
+            "new path. Norman Hawkins was the obvious alternative — he owns "
+            "The Observatory, where Dimensional health telemetry lands — but "
+            "he owns two Locations and is Prime for five, and giving one AI "
+            "both the producer and the sink removes the independent check."
+        ),
+    ),
+}

@@ -47,6 +47,7 @@ class AuthDatabase:
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
                 is_revoked INTEGER DEFAULT 0,
+                mfa_verified INTEGER DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             );
 
@@ -61,6 +62,21 @@ class AuthDatabase:
         """)
         self._conn.commit()
         self._ensure_auth_codes_table()
+        self._ensure_sessions_mfa_verified_column()
+
+    def _ensure_sessions_mfa_verified_column(self) -> None:
+        """Migration: add sessions.mfa_verified for DBs created before this column existed.
+
+        Persisting MFA state on the session (set once at login, carried forward unchanged
+        on refresh) rather than re-deriving it from the account's current mfa_enabled flag
+        matters: without this, refreshing a session created before a user turned MFA on
+        would silently start asserting mfa_verified=true, even though no MFA challenge
+        was ever completed in that session.
+        """
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(sessions)").fetchall()}
+        if "mfa_verified" not in columns:
+            self._conn.execute("ALTER TABLE sessions ADD COLUMN mfa_verified INTEGER DEFAULT 0")
+            self._conn.commit()
 
     def _ensure_auth_codes_table(self) -> None:
         self._conn.execute("""

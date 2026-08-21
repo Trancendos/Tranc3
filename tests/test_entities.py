@@ -94,7 +94,17 @@ class TestLocationEntity:
 
 # ── Per-name agent teams (TateKing, Arcadian Exchange, The Lab, Infinity) ──
 
-_MULTI_AGENT_TEAM_LOCATIONS = ("TateKing", "Arcadian Exchange", "The Lab", "Infinity")
+_MULTI_AGENT_TEAM_LOCATIONS = (
+    "TateKing",
+    "Arcadian Exchange",
+    "The Lab",
+    "Infinity",
+    # The Chaos Party gained a second Lead AI, Alice Dream, running the sane
+    # half of testing (deterministic acceptance/regression) opposite The Mad
+    # Hatter's adversarial half. The two disciplines want opposite things from
+    # a run, so they cannot share one agent pair.
+    "The Chaos Party",
+)
 
 
 class TestAgentTeams:
@@ -333,9 +343,10 @@ class TestGetAllIds:
         plus 10 extra SIDs for TateKing's and Arcadian Exchange's
         non-primary agent_teams pairs (Sam King; Ann/George/Edward/James
         Porter), plus 4 more for The Lab's Slime and Infinity's The Orb of
-        Orisis = 358."""
+        Orisis, plus 2 for The Chaos Party's Alice Dream (The White Rabbit,
+        The Looking-Glass) = 360."""
         ids = get_all_ids()
-        assert len(ids) == 358
+        assert len(ids) == 360
 
     def test_each_entry_has_id_field(self):
         ids = get_all_ids()

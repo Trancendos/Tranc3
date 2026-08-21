@@ -1,0 +1,36 @@
+# config/estate/duplication_baseline.yaml
+#
+# Known, already-investigated duplication findings for scripts/estate_lint.py's
+# check_orphaned_worker_dirs() and check_alt_language_duplicates(). Entries here
+# are reported as tracked findings (informational), not new CI-blocking warnings —
+# this is the same "accepted, documented, still open" pattern as a Waiver, scoped
+# to this one checker rather than the full compliance Waiver system.
+#
+# Adding an entry here is NOT the same as fixing the underlying issue — see
+# docs/governance/DUPLICATE-WORKER-FINDINGS.md for the actual remediation
+# decisions still pending on each of these. Removing an entry means it has been
+# resolved (deleted, consolidated, or documented as intentionally complementary)
+# and should re-surface as a fresh finding if it regresses.
+
+orphaned_worker_dirs:
+  # dimensional-nexus-service: CLAUDE.md's Worker Map claims it's deployed at
+  # port 8050, but no docker-compose.*.yml service references
+  # workers/dimensional-nexus-service — port 8050 is actually held by
+  # blender-worker. Documentation/reality drift, not a dead worker to delete
+  # outright; needs either wiring in or CLAUDE.md correcting.
+  - dimensional-nexus-service
+  # gateway-service: a complete, unwired FastAPI app (own tests/, router.py,
+  # Dimensional/ middleware) that duplicates api-gateway's role. Not
+  # referenced by CLAUDE.md or any compose file. Needs a delete-or-adopt
+  # decision, not silent removal.
+  - gateway-service
+
+alt_language_duplicates:
+  # All three: fully built, containerized, and Traefik-routed in
+  # docker-compose.production.yml alongside their Python originals — see
+  # docs/governance/DUPLICATE-WORKER-FINDINGS.md for the full writeup and
+  # remediation options. Baselined so CI doesn't re-flag a known, tracked
+  # decision point as if it were new.
+  - rate-limit-service-rs
+  - vault-service-rs
+  - nexus-ws-rs

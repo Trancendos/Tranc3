@@ -109,7 +109,7 @@ services:
   # Profile: documents
   # ──────────────────────────────────────────────────────────────
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:6c86cad803970ea782683a8e80e7403444c5bf3cf70de63b4d3c8e87500db92f
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:65a4cabf0169ea7fbd90ab7bb28ba3f8b5909613635acda1a03ad606f34b456b
     container_name: docutari
     <<: *default-restart
     profiles: ["documents", "all"]
@@ -395,7 +395,7 @@ services:
   # Profile: registry
   # ──────────────────────────────────────────────────────────────
   zot:
-    image: ghcr.io/project-zot/zot-linux-amd64:latest@sha256:34f18f783037f967dba10df02f9d4086c4d626f5643ef9f5e51e4a4547280a0b
+    image: ghcr.io/project-zot/zot-linux-amd64:latest@sha256:95a837a0afacf5b7edc0c92493f04beee6891989b8d2fd50a00cf65a1e6d4fd5
     container_name: the-artifactory
     <<: *default-restart
     profiles: ["registry", "all"]
