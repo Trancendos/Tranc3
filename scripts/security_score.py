@@ -141,8 +141,7 @@ def _dependency_vulnerabilities() -> tuple[bool, str, int]:
     blocked = data.get("blocked_count", 0)
     blocked_note = f", {blocked} blocked upstream" if blocked else ""
     detail = (
-        f"{fixable} fixable, {accepted} accepted{blocked_note} "
-        f"({data.get('generated_at', '?')})"
+        f"{fixable} fixable, {accepted} accepted{blocked_note} ({data.get('generated_at', '?')})"
     )
     return fixable == 0, detail, fixable
 
