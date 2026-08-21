@@ -1,0 +1,201 @@
+---
+# AI Model Inventory — the models this estate CONSUMES
+#
+# Scope note, because this is the distinction that matters:
+#
+#   This inventory covers models Trancendos *consumes* from third parties. It does
+#   NOT cover models Trancendos trains, because Trancendos trains none --
+#   `src/core/tranc3_inference.py` runs in bootstrap mode with no weights, falling
+#   back Ollama -> OpenRouter -> deterministic stub.
+#
+#   `docs/governance/BOM-MATRIX.md` assessed AI-BOM on 2026-07-31 and called it
+#   "a genuine gap -- and premature", reasoning that an AI-BOM cataloguing training
+#   data provenance and foundational-model lineage would describe a model that does
+#   not exist. That reasoning was correct about models we train and incomplete about
+#   models we consume: a consumed model still carries a licence, an origin, and --
+#   under the EU AI Act -- a provenance question, whether or not we ever fine-tune it.
+#   This file closes the second half without reversing the first.
+#
+# Why a declared inventory rather than pure detection:
+#
+#   Model identifiers are ordinary strings scattered across adapters, defaults and
+#   env fallbacks. Detection alone cannot tell a model we depend on from one named
+#   in a comment or a provider's capability list. So the inventory is declared and
+#   reviewed, and `scripts/ai_bom.py` checks the code against it -- flagging model
+#   references that appear in code but not here. That is the same reviewed-versus-
+#   unexamined split used by SECURITY_ALERT_REGISTER.md and OBSOLESCENCE-ACCEPTED.md.
+#
+# Licence values are the model publisher's own declaration, verified against the
+# Hugging Face model API on the date shown -- not inferred from the model's
+# reputation or from the permissiveness of its neighbours.
+
+meta:
+  version: "1.0.0"
+  last_verified: "2026-08-19"
+  owner: "Platform Owner Trancendos"
+  verification_method: "https://huggingface.co/api/models/{id} -> cardData.license"
+  related:
+    - docs/governance/AI-BOM.md
+    - docs/governance/BOM-MATRIX.md
+    - compliance/magna-carta/docs/compliance/EU-CRA-PROFILE.md
+
+models:
+  - id: "sentence-transformers/all-MiniLM-L6-v2"
+    aliases: ["all-MiniLM-L6-v2"]
+    role: "Text embeddings — semantic search, RAG, semantic cache, MCP tool selection"
+    licence: "apache-2.0"
+    licence_class: permissive
+    obligations: "Attribution and licence notice on redistribution."
+    execution: "In-process via sentence-transformers; weights downloaded to the host"
+    data_egress: "None at inference — runs locally once weights are cached"
+    used_by:
+      - src/vector/adapter.py
+      - src/search/semantic_cache.py
+      - src/skills/enhanced_registry.py
+    disposition: ACCEPT
+
+  - id: "nomic-ai/nomic-embed-text-v1.5"
+    aliases: ["nomic-embed-text"]
+    role: "Alternative embedding model served through Ollama"
+    licence: "apache-2.0"
+    licence_class: permissive
+    obligations: "Attribution and licence notice on redistribution."
+    execution: "Local, via Ollama"
+    data_egress: "None — local Ollama"
+    used_by:
+      - src/vector/adapter.py
+    disposition: ACCEPT
+
+  - id: "google-t5/t5-small"
+    aliases: ["t5-small"]
+    role: "Query expansion in semantic search"
+    licence: "apache-2.0"
+    licence_class: permissive
+    obligations: "Attribution and licence notice on redistribution."
+    execution: "In-process via transformers; revision pinned to 'main'"
+    data_egress: "None at inference"
+    used_by:
+      - src/search/query_expansion.py
+    disposition: ACCEPT
+
+  # ── Llama family ────────────────────────────────────────────────────────────
+  # Grouped by licence rather than listed per variant. Every Llama 3.x release
+  # carries a version-specific Community Licence (llama3, llama3.1, llama3.2,
+  # llama3.3) whose substantive terms are the same family of obligations, so
+  # eleven separate rows would repeat one decision eleven times and obscure that
+  # it is one decision. The variants are enumerated as aliases so the drift check
+  # still recognises each id it finds in code.
+  - id: "meta-llama/Llama-3.x (Community Licence family)"
+    aliases:
+      - "meta-llama/Llama-3.2-1B"
+      - "meta-llama/Llama-3.2-3B-Instruct"
+      - "meta-llama/Llama-3.2-1B-Instruct-Turbo"
+      - "meta-llama/Llama-3.2-3B-Instruct-Turbo"
+      - "meta-llama/llama-3.2-1b-instruct"
+      - "meta-llama/llama-3.2-3b-instruct"
+      - "meta-llama/llama-3.3-70b-instruct"
+      - "meta-llama/Meta-Llama-3-8B"
+      - "llama3.2:1b"
+      - "llama3.2"
+      - "llama3:8b"
+      - "llama3:70b"
+      - "llama3.1:8b"
+    role: >-
+      Primary generation models across every inference tier -- local (Ollama),
+      self-hosted (vLLM), and hosted (OpenRouter, Together, HuggingFace, Groq,
+      Cerebras). The most heavily depended-upon model family in the estate.
+    licence: "llama3.x-community"
+    licence_class: community          # NOT OSI-approved open source
+    licence_verified:
+      "meta-llama/Llama-3.2-1B": "llama3.2"
+      "meta-llama/Llama-3.3-70B-Instruct": "llama3.3"
+      "meta-llama/Meta-Llama-3.1-8B-Instruct": "llama3.1"
+      "meta-llama/Meta-Llama-3-8B": "llama3"
+    obligations: >-
+      Meta's Llama Community Licence is routinely described as open source and is
+      not: it is not OSI-approved and carries three obligations that Apache-2.0
+      habits do not prepare you for. (1) An Acceptable Use Policy restricting
+      certain applications. (2) A monthly-active-user threshold -- 700 million at
+      the time of writing -- above which a separate licence must be requested from
+      Meta. (3) Attribution: products using it must display "Built with Llama",
+      and derivative model names must begin with "Llama".
+    execution: "Mixed — local via Ollama, self-hosted via vLLM, and remote via hosted providers"
+    data_egress: "None for the local/self-hosted paths; prompt content leaves the estate on hosted tiers"
+    used_by:
+      - src/inference/llm_router.py
+      - src/inference/streaming.py
+      - src/core/ollama_adapter.py
+      - src/core/openrouter_adapter.py
+      - src/ai_gateway/providers/openrouter.py
+      - src/ai_gateway/providers/together.py
+      - src/ai_gateway/providers/huggingface.py
+      - src/ai_gateway/providers/vllm.py
+      - src/ai_gateway/zero_cost_config.py
+      - src/nanoservices/fmd_distiller/fmd_distiller.py
+      - workers/infinity-ai/service.py
+      - workers/model-router-service/worker.py
+    disposition: REVIEW
+    review_note: >-
+      Flagged rather than accepted, on the attribution obligation. The MAU
+      threshold is not a live concern for an undeployed platform and is unlikely
+      ever to be. The "Built with Llama" requirement is different: it applies from
+      first release, it is not satisfied anywhere in the product today, and it is
+      cheap to satisfy now and awkward to retrofit into a released UI. See
+      docs/governance/AI-BOM.md section 4.
+
+  - id: "mistralai/Mistral-7B-Instruct-v0.3"
+    aliases: ["mistral:7b"]
+    role: "Generation model in the SHI gateway nanoservice"
+    licence: "apache-2.0"
+    licence_class: permissive
+    obligations: "Attribution and licence notice on redistribution."
+    execution: "Local, via Ollama"
+    data_egress: "None — local Ollama"
+    used_by:
+      - src/nanoservices/shi_gateway/shi_gateway.py
+    disposition: ACCEPT
+
+  - id: "Qwen/Qwen2.5-0.5B-Instruct"
+    aliases: ["qwen2.5:0.5b"]
+    role: "Small local generation model, Ollama adapter fallback"
+    licence: "apache-2.0"
+    licence_class: permissive
+    obligations: >-
+      Attribution and licence notice on redistribution. Note that the Qwen family
+      is not uniformly Apache-2.0 across sizes -- larger variants have carried
+      different terms -- so a change of size is a change of licence question, not
+      a config tweak.
+    execution: "Local, via Ollama"
+    data_egress: "None — local Ollama"
+    used_by:
+      - src/core/ollama_adapter.py
+    disposition: ACCEPT
+
+# Hosted inference endpoints. These are services rather than downloaded artefacts,
+# so the licence question is the provider's terms, not a model file's LICENSE.
+# Recorded because the EU AI Act asks where a model executes and what leaves the
+# estate, and "we call someone's API" is a different answer from "we run it locally".
+hosted_providers:
+  - id: "openrouter:free"
+    role: "Cloud fallback tier — :free-suffixed models only"
+    terms: "OpenRouter terms plus each underlying model's own licence"
+    execution: "Remote — OpenRouter infrastructure"
+    data_egress: "Prompt content leaves the estate"
+    used_by:
+      - src/core/openrouter_adapter.py
+    disposition: REVIEW
+    review_note: >-
+      The model behind a :free route is chosen by OpenRouter and can change, so
+      the specific licence in force is not pinned by anything on our side. The
+      egress point matters more than the licence here: this is the tier where
+      prompt content leaves the estate, which is a data-protection question
+      before it is a licensing one.
+
+  - id: "huggingface:inference-api"
+    role: "Cloud fallback tier"
+    terms: "Hugging Face terms plus each model's own licence"
+    execution: "Remote"
+    data_egress: "Prompt content leaves the estate"
+    used_by:
+      - src/ai_gateway/
+    disposition: REVIEW
