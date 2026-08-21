@@ -135,7 +135,15 @@ def _dependency_vulnerabilities() -> tuple[bool, str, int]:
         return False, f"census incomplete (errored: {errored})", -1
     fixable = data["fixable_count"]
     accepted = data["accepted_count"]
-    detail = f"{fixable} fixable, {accepted} accepted ({data.get('generated_at', '?')})"
+    # Read with .get, and deliberately NOT added to the required-field check above:
+    # a census written before the blocked classification existed is still a valid
+    # census, and demanding the field would turn an older artefact into an error.
+    blocked = data.get("blocked_count", 0)
+    blocked_note = f", {blocked} blocked upstream" if blocked else ""
+    detail = (
+        f"{fixable} fixable, {accepted} accepted{blocked_note} "
+        f"({data.get('generated_at', '?')})"
+    )
     return fixable == 0, detail, fixable
 
 

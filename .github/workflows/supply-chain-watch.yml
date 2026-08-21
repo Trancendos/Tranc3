@@ -83,10 +83,15 @@ jobs:
 
       - name: Measure open vulnerabilities
         # --check fails on any fixable finding or any surface that errored.
-        # A documented accepted risk (SECURITY.md's accepted-risk table) passes;
-        # an unexamined one does not. Six surfaces: requirements.txt plus five
-        # npm trees.
-        run: python scripts/vulnerability_census.py --check
+        # A documented accepted risk passes; an unexamined one does not.
+        #
+        # --scope all is the whole estate: the census discovers every manifest in
+        # the repo rather than working from a hardcoded list, deduplicates the
+        # Python ones by dependency set (91 files collapse to ~40 distinct), and
+        # skips git submodules, which audit themselves. Roughly nine minutes,
+        # nearly all of it waiting on pypi.org and registry.npmjs.org — fine here,
+        # which is why the production merge gate uses --scope core instead.
+        run: python scripts/vulnerability_census.py --check --scope all
 
       - name: Upload vulnerability census
         if: always()
