@@ -38,6 +38,14 @@ FAIL_ON_OUTDATED = os.environ.get("FAIL_ON_OUTDATED", "false").lower() in ("1", 
 
 def github_get(path: str, token: str | None) -> tuple[int, dict]:
     url = f"{GITHUB_API}{path}"
+    # `urlopen` honours whatever scheme it is handed, including file: and ftp:.
+    # GITHUB_API is a module constant today, so this cannot currently be
+    # anything but https -- but the same call in the Chaos Party reporter was
+    # reachable from an environment variable, and this script is a plausible
+    # place for someone to add a GITHUB_API override later. Asserting the scheme
+    # here means that change cannot quietly turn an audit into a file read.
+    if not url.startswith("https://"):
+        raise ValueError(f"GitHub API URL must be https, got {url!r}")
     req = Request(
         url,
         headers={
@@ -49,14 +57,20 @@ def github_get(path: str, token: str | None) -> tuple[int, dict]:
     if token:
         req.add_header("Authorization", f"Bearer {token}")
     try:
-        with urlopen(req, timeout=20) as resp:
+        with urlopen(req, timeout=20) as resp:  # noqa: S310  # nosec B310
             return resp.status, json.loads(resp.read().decode())
     except HTTPError as exc:
         body = {}
         try:
             body = json.loads(exc.read().decode())
-        except Exception:
-            pass
+        except (ValueError, OSError):
+            # GitHub does not always return JSON on an error (rate-limit HTML,
+            # a proxy's plain-text 403). The status code is what the caller
+            # acts on, so an unparseable body is expected rather than
+            # exceptional -- but catch the two things that can actually happen
+            # rather than swallowing everything, which would hide a genuine
+            # decoding bug in here as "the API returned something odd".
+            body = {}
         return exc.code, body
     except URLError as exc:
         return 0, {"message": str(exc.reason)}
