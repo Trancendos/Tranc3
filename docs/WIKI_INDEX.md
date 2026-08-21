@@ -28,6 +28,7 @@ docs (referenced by automation, tests, or CI) stay in the repo under `docs/`.
 | `docs/compliance/` | Live compliance controls (ISO 27001, SOC2, GDPR, AI governance) |
 | `docs/architecture/` | As-built architecture, blueprints, infrastructure modes |
 | `docs/architecture/TOPOLOGY_MAP.md` | Single service topology map — ports, data flows, protocols, deployment |
+| `docs/PROJECT_COVERAGE_MAP.md` | Code → documentation coverage map; gaps and prioritized doc recommendations |
 | `docs/API_REFERENCE.md` | Developer API reference |
 | `docs/DESIGN_SYSTEM.md` | Frontend design tokens and component guidelines |
 | `docs/SECURITY-ASSESSMENT.md` | PyTorch CVE risk assessment and Bandit SAST results |
