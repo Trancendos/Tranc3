@@ -1,0 +1,45 @@
+# The Workshop — Bot Integration Health Watchdog
+#
+# Nothing previously detected a CI review-bot integration failing silently.
+# Kilo Code Review's billing lapse this session is the concrete example: a
+# dangling "action_required — could not run, out of credits" check on every
+# PR, with no alert distinguishing it from a one-off flake. See
+# scripts/bot_health_watchdog.py for the detection design.
+#
+# This workflow's own failure IS the alert — matches the repo's existing
+# "Notify The Citadel on failure" pattern (see ci.yml) rather than adding a
+# new notification channel. It queries GitHub's API (the bots run as GitHub
+# PR checks), so it needs a token with read access to the mirror even though
+# it runs on the self-hosted Forgejo runner.
+
+name: Bot Health Watchdog
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Daily 08:00 UTC
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  watchdog:
+    name: Detect degraded review-bot integrations
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install httpx
+        run: pip install --quiet httpx
+
+      - name: Run bot health watchdog
+        run: python scripts/bot_health_watchdog.py Trancendos/Tranc3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+
+      - name: Notify The Citadel on degraded bot integration
+        if: failure()
+        run: |
+          echo "Bot health watchdog found a persistent degraded integration — check the job log above"

@@ -40,6 +40,7 @@ git clone https://github.com/Trancendos/Tranc3.git
 cd Tranc3
 pip install -r requirements.txt
 pip install -r requirements-test.txt
+pip install -e aeonmind/python  # editable local package, not in requirements.txt
 ```
 
 ### 2. Configure Environment

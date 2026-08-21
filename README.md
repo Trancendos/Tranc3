@@ -63,6 +63,10 @@ The platform is designed to be **compassionate, capable, and honest**. The two i
 # Install Python dependencies
 pip install -r requirements.txt
 
+# Install AeonMind (editable local package — not in requirements.txt, see its
+# comment there for why)
+pip install -e aeonmind/python
+
 # Install pre-commit hooks
 pip install pre-commit && pre-commit install
 

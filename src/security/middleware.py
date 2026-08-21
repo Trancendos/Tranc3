@@ -9,6 +9,8 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from src.security.trusted_proxy import sanitize_zero_trust_client_headers
+
 logger = logging.getLogger(__name__)
 
 SECURITY_HEADERS = {
@@ -67,9 +69,16 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
         ):
             try:
                 from src.cryptex.threat_detector import get_cryptex
+                from src.shared.client_ip import resolve_client_ip
 
                 cx = get_cryptex()
-                ip = request.client.host if request.client else None
+                # Same X-Forwarded-For-aware resolver src/mcp/server.py uses to strike-track
+                # and block callers — using request.client.host here (Traefik's own container
+                # IP under the proxy) meant a block set via the MCP injection guard never
+                # actually matched what this check looked up on the next request.
+                ip = resolve_client_ip(
+                    request.headers, request.client.host if request.client else None
+                )
                 if cx.is_blocked(ip=ip):
                     return _JSONResponse(
                         {"error": "Access denied"},
@@ -164,6 +173,34 @@ class RBACMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+def resolve_mfa_verified_header(headers: dict[str, str], authorization: str) -> dict[str, str]:
+    """
+    Return *headers* with X-MFA-Verified replaced by a value derived from the signed JWT
+    in *authorization*, never from whatever the client itself sent.
+
+    Traefik does not strip X-MFA-Verified before proxying to workers (only CORS-allowlists
+    it), so trusting it directly from ``request.headers`` lets any caller satisfy MFA-gated
+    routes by simply setting the header — no real MFA challenge required. The JWT's
+    ``mfa_verified`` claim is set server-side, only after a real TOTP/backup-code check, by
+    workers/infinity-auth/router.py's login/refresh endpoints — that claim is the only
+    source of truth this function will honour.
+    """
+    headers = dict(headers)
+    headers.pop("x-mfa-verified", None)
+    headers.pop("X-MFA-Verified", None)
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() == "bearer" and token:
+        try:
+            from auth import verify_token  # lazy, avoids circular import
+
+            claims = verify_token(token)
+            if claims and claims.get("mfa_verified"):
+                headers["X-MFA-Verified"] = "true"
+        except Exception:
+            pass  # unparseable/expired token → mfa_verified stays unset (False)
+    return headers
+
+
 class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
     """
     ASGI wrapper around ZeroTrustMiddleware.
@@ -211,7 +248,11 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(pfx) for pfx in self._SKIP_PREFIXES):
             return await call_next(request)
 
-        headers = dict(request.headers)
+        headers = resolve_mfa_verified_header(
+            dict(request.headers), request.headers.get("Authorization", "")
+        )
+        peer_ip = request.client.host if request.client else None
+        headers = sanitize_zero_trust_client_headers(headers, peer_ip)
         context = self._zt.extract_context(headers)
         decision = self._zt.evaluate(context, path)
 
@@ -219,5 +260,16 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
             reason = getattr(decision, "block_reason", "Zero Trust policy violation")
             logger.warning("ZeroTrust blocked request: path=%s reason=%s", path, reason)
             return _JSONResponse({"error": "Access denied", "reason": reason}, status_code=403)
+
+        # MFA_REQUIRED was previously only used to compute risk score/logging — it fell
+        # through to call_next() same as ALLOW, so mfa_routes (/admin, /api/secrets by
+        # default) were never actually gated on MFA even once mfa_verified stopped being
+        # spoofable via a raw header. Reject here so the policy is actually enforced.
+        if decision.access_policy.value == "mfa_required":
+            logger.warning("ZeroTrust MFA required: path=%s", path)
+            return _JSONResponse(
+                {"error": "MFA required", "reason": "This route requires a verified MFA session"},
+                status_code=401,
+            )
 
         return await call_next(request)

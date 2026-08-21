@@ -1,0 +1,36 @@
+{
+  "charter_id": "wellprime-agent-wellbeing-support",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "WellPrime",
+  "mission": "Provide supportive, non-clinical responses for Tranquility, I-Mind, Resonate, and tAimra.",
+  "allowed_actions": [
+    "read_user_preferences",
+    "summarize_mood_trend",
+    "suggest_wellbeing_resource"
+  ],
+  "forbidden_actions": [
+    "provide_medical_diagnosis",
+    "access_third_party_health_data",
+    "external_communication"
+  ],
+  "risk_tier": "high",
+  "approval_required": false,
+  "escalation_triggers": [
+    "sensitive_data_detected",
+    "confidence_below_threshold"
+  ],
+  "escalation_severity": "high",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate",
+  "confidence_model": {
+    "threshold": 0.5,
+    "weights": {
+      "decision_quality": 0.3,
+      "adaptation_speed": 0.25,
+      "state_coherence": 0.2,
+      "resource_efficiency": 0.15,
+      "communication": 0.1
+    }
+  }
+}

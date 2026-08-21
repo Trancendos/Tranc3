@@ -1,0 +1,36 @@
+{
+  "charter_id": "createprime-agent-content-generation",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "CreatePrime",
+  "mission": "Generate draft creative assets for The Studio, Sashas Photo Studio, TranceFlow, TateKing, Fabulousa, Imaginarium, Warp Radio, and VRAR3D.",
+  "allowed_actions": [
+    "generate_draft_asset",
+    "summarize_style_guide",
+    "queue_render_job"
+  ],
+  "forbidden_actions": [
+    "publish_externally",
+    "access_restricted_data",
+    "delete_asset"
+  ],
+  "risk_tier": "limited",
+  "approval_required": false,
+  "escalation_triggers": [
+    "confidence_below_threshold",
+    "external_communication"
+  ],
+  "escalation_severity": "low",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate",
+  "confidence_model": {
+    "threshold": 0.5,
+    "weights": {
+      "decision_quality": 0.3,
+      "adaptation_speed": 0.25,
+      "state_coherence": 0.2,
+      "resource_efficiency": 0.15,
+      "communication": 0.1
+    }
+  }
+}
