@@ -181,6 +181,17 @@ class Observatory:
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
+            # Also durably persist to workers/basement/'s SQLite-backed
+            # archive so the event survives a process restart — the
+            # in-process Basement singleton above is memory-only. Fail-open:
+            # forward_event() never raises and never blocks this call.
+            try:
+                from src.basement.bridge import forward_event
+
+                forward_event(event)
+            except Exception:
+                pass  # nosec B110 — graceful degradation; error logged upstream
+
         # Forward SECURITY/CRITICAL events to The Library for KB article generation
         # — unrelated to retention/legal-hold, so kept on its own original
         # condition rather than widened along with the Basement forward above.

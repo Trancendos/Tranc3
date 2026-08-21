@@ -9,6 +9,7 @@ from service import TranceFlowRouter
 
 import config
 from database import TranceFlowDatabase
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from models import (
     ExportRequest,
     ExportResponse,
@@ -19,10 +20,9 @@ from models import (
 
 
 def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:
-    if not config.INTERNAL_SECRET:
-        raise HTTPException(status_code=503, detail="Service auth not configured")
-    if x_internal_secret != config.INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, config.INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 def _make_tranceflow_router(db: TranceFlowDatabase, tf: TranceFlowRouter) -> APIRouter:

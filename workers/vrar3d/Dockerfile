@@ -12,6 +12,15 @@ COPY static/ ./static/
 
 RUN mkdir -p /data/assets && chown vrar3d:vrar3d /data /data/assets
 
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context sharedcore=../../Dimensional .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=vrar3d:vrar3d . /app/Dimensional/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 USER vrar3d
 
 EXPOSE 8060

@@ -11,17 +11,16 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
+from Dimensional.circuit_state import CircuitState  # noqa: F401
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
 
-class CircuitState(str, Enum):
-    """Circuit breaker states."""
-
-    CLOSED = "closed"  # Normal — requests flow through
-    OPEN = "open"  # Tripped — requests are rejected
-    HALF_OPEN = "half_open"  # Testing — allowing probe requests
+# CircuitState is imported at the top of this module from its canonical home,
+# Dimensional/circuit_state.py. It was previously defined here as a (str, Enum)
+# with identical members and values — one of three such copies inside
+# Dimensional/, and of eight across the platform.
 
 
 class HealthStatus(str, Enum):
@@ -496,9 +495,11 @@ class AdaptiveHealthMonitor:
             config = self._monitored[name]
             circuit = self._circuits.get(name)
             summary[name] = {
-                "status": config.get("status", HealthStatus.UNKNOWN).value
-                if isinstance(config.get("status"), HealthStatus)
-                else str(config.get("status", "unknown")),
+                "status": (
+                    config.get("status", HealthStatus.UNKNOWN).value
+                    if isinstance(config.get("status"), HealthStatus)
+                    else str(config.get("status", "unknown"))
+                ),
                 "circuit": circuit.to_dict() if circuit else None,
                 "trend": self.get_health_trend(name),
                 "latency": self.get_latency_stats(name),
