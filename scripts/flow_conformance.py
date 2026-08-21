@@ -319,20 +319,53 @@ def build_report() -> dict[str, Any]:
 
 
 def check_against_baseline(report: dict[str, Any]) -> list[str]:
-    """Return regressions. Empty list means the gate passes."""
+    """Return contract/baseline disagreements. Empty list means the gate passes.
+
+    The comparison is EXACT in both directions, which is a correction. The first
+    implementation failed only on a *lower* verdict, and that quietly broke the
+    ratchet it was supposed to be: if a flow improved from `partial` to
+    `enforced` and nobody refreshed the baseline, the run passed -- and the
+    baseline still read `partial`, so a later slide back from `enforced` to
+    `partial` also passed, because it now matched. The gate would have been
+    green across the whole round trip, having recorded an improvement it then
+    silently gave back.
+
+    An improvement is therefore a failure too, with a message that says so and
+    names the fix. That is not pedantry: refreshing the baseline is the act that
+    makes the improvement real, and a gate that does not require it turns
+    `--write-baseline` into an optional courtesy.
+
+    IDs present only in the baseline fail as well, so deleting a rule from the
+    contract is a visible removal rather than a flow that stops being watched
+    without anyone noticing.
+    """
     if not BASELINE.exists():
         return ["no baseline recorded -- run --write-baseline and review the result"]
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
     failures: list[str] = []
+    seen: set[str] = set()
+
     for rule in report["rules"]:
+        seen.add(rule["id"])
         was = baseline.get(rule["id"])
         if was is None:
             failures.append(
                 f"{rule['id']}: not in the baseline (new rule needs a recorded verdict)"
             )
             continue
-        if VERDICT_RANK[rule["verdict"]] < VERDICT_RANK[was]:
-            failures.append(f"{rule['id']}: regressed {was} -> {rule['verdict']} ({rule['claim']})")
+        if rule["verdict"] == was:
+            continue
+        direction = "regressed" if VERDICT_RANK[rule["verdict"]] < VERDICT_RANK[was] else "improved"
+        failures.append(
+            f"{rule['id']}: {direction} {was} -> {rule['verdict']} ({rule['claim']})"
+            + ("" if direction == "regressed" else " -- refresh the baseline to record it")
+        )
+
+    for missing in sorted(set(baseline) - seen):
+        failures.append(
+            f"{missing}: in the baseline but not in the contract "
+            "(a deleted rule must be removed from the baseline deliberately)"
+        )
     return failures
 
 
@@ -382,7 +415,7 @@ def main() -> int:
             for f in failures:
                 print(f"  {f}", file=sys.stderr)
             return 1
-        print("flow conformance: no regression against the baseline")
+        print("flow conformance: contract matches the baseline exactly")
     return 0
 
 

@@ -164,7 +164,8 @@ test intelligence is blind to the platform's testing.
 |---|---|
 | `POST /basement/promote`, admin-gated | FLOW-022 `unwired` → `partial`; the learning pipeline's fourth leg is reachable |
 | Flow contract + checker + baseline | 39 previously unfalsifiable claims are now measured and re-runnable |
-| `tests/test_flow_conformance.py` | The classifier and the prose-stripping are pinned against regression |
+| `tests/test_flow_conformance.py` | The classifier, the prose-stripping and the baseline comparison are pinned against regression |
+| Promotion keyed on pattern signature | `POST /basement/promote` is idempotent — a retry or a second admin cannot raise a duplicate draft from the same evidence |
 
 Everything else in the `unwired` and `absent` columns is recorded, not repaired. Repairing them
 is real product work — a sandbox runtime, an alert state machine, a payments↔ledger contract —
@@ -208,11 +209,22 @@ python scripts/flow_conformance.py --check          # fail on regression against
 python scripts/flow_conformance.py --write-baseline # record current verdicts (reviewable act)
 ```
 
-`--check` fails only on **regression** — a rule that was `enforced` and is no longer, or a rule
-missing from the baseline. It deliberately does not fail on the standing backlog of 14 unwired
-flows: a gate that is red on day one for reasons nobody can fix that day trains people to wave it
-through, which is the failure mode the gate exists to prevent. Improving a rule requires
-refreshing the baseline, which is a visible, reviewable act rather than a silent one.
+`--check` compares the contract against the baseline **exactly**, in both directions. It
+deliberately does not fail on the standing backlog of 14 unwired flows: a gate that is red on day
+one for reasons nobody can fix that day trains people to wave it through, which is the failure mode
+the gate exists to prevent. What it fails on is any disagreement with the recorded state —
+a regression, an unrecorded improvement, a rule missing from the baseline, or a baseline entry
+whose rule has been deleted from the contract.
+
+> **Correction, 2026-08-21.** This section first said the gate failed *only* on regression, and the
+> code matched that description. Both were wrong, and wrong in a way that broke the ratchet they
+> were meant to be. If a flow improved from `partial` to `enforced` and nobody refreshed the
+> baseline, the run passed — leaving the baseline still reading `partial`, so a later slide back
+> from `enforced` to `partial` also passed, because it now *matched*. The gate would have stayed
+> green across the entire round trip, having recorded an improvement it then silently gave back.
+> Raised in review by CodeRabbit on PR #839 and fixed in the same pass: an unrecorded improvement
+> now fails with a message naming the fix, and `TestBaselineComparison` pins both directions plus
+> the baseline-only case.
 
 ## 8. Cross-references
 

@@ -44,6 +44,7 @@ positive become something the platform subsequently treats as established fact.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import re
@@ -278,8 +279,35 @@ def render_article(p: Pattern) -> tuple[str, str, list[str]]:
         "context — recent releases, known issues, published work bearing on the problem.",
     ]
 
-    tags = ["auto-promoted", "basement-evidence", p.kind, f"confidence-{p.confidence}"]
+    tags = [
+        "auto-promoted",
+        "basement-evidence",
+        p.kind,
+        f"confidence-{p.confidence}",
+        promotion_key(p.signature),
+    ]
     return title, "\n".join(lines), tags
+
+
+def promotion_key(signature: str) -> str:
+    """A stable per-pattern tag, so the same evidence promotes exactly once.
+
+    Promotion is now reachable over HTTP (`POST /basement/promote`), which makes
+    the write path retryable: a client retry, an impatient second click, or two
+    admins acting on the same alert would each raise another Library draft from
+    identical Basement evidence. Duplicate drafts are worse than none -- the
+    queue is a proposal list an admin reads, and a list that repeats itself is
+    one they stop reading.
+
+    Keyed on the pattern signature rather than the rendered title, because the
+    title carries occurrence counts and moves as more evidence arrives, while
+    the signature is the identity of the pattern itself. Hashed and truncated
+    only to keep it usable as a tag; collisions at 64 bits over a few hundred
+    patterns are not a real risk, and the cost of one would be a single skipped
+    draft, not a corrupted article.
+    """
+    digest = hashlib.sha256(signature.encode("utf-8", errors="replace")).hexdigest()
+    return f"promotion-{digest[:16]}"
 
 
 def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
@@ -296,6 +324,7 @@ def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
         "patterns": 0,
         "promoted": 0,
         "skipped": 0,
+        "duplicates": 0,
         "details": [],
     }
     try:
@@ -330,6 +359,20 @@ def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
 
     for p in patterns:
         title, body, tags = render_article(p)
+        key = promotion_key(p.signature)
+        try:
+            if library.by_tag(key, limit=1):
+                # Already raised from this evidence. Not an error and not a
+                # skip-for-failure: the requested end state already holds.
+                result["duplicates"] += 1
+                result["details"].append({"title": title, "kind": p.kind, "duplicate": True})
+                continue
+        except Exception as exc:  # noqa: BLE001 -- a lookup failure must not
+            # silently become a duplicate write, so it is recorded and skipped.
+            logger.warning("Duplicate check failed for %r: %s", p.signature[:60], exc)
+            result["skipped"] += 1
+            continue
+
         try:
             art = library.create(
                 title=title,

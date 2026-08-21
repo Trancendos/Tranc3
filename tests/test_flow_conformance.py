@@ -109,6 +109,18 @@ class TestContract:
             kinds = {p.get("kind") for p in rule.get("probes", [])}
             assert kinds & fc.COUPLING_KINDS, f"{rule['id']} asserts flow with no coupling probe"
 
+    def test_every_rule_has_at_least_one_existence_probe(self):
+        """Without one, `classify` cannot reach `absent`.
+
+        A rule carrying only coupling probes reports a deleted hub as `unwired`
+        -- built and unreached -- when the truth is that nothing is there at
+        all. It can also reach `enforced` on coupling alone, because `all([])`
+        is True for the empty existence list.
+        """
+        for rule in fc.load_contract():
+            kinds = {p.get("kind") for p in rule.get("probes", [])}
+            assert kinds & fc.EXISTENCE_KINDS, f"{rule['id']} cannot ever report `absent`"
+
     def test_rule_ids_are_unique(self):
         ids = [r["id"] for r in fc.load_contract()]
         assert len(ids) == len(set(ids))
@@ -117,3 +129,62 @@ class TestContract:
         """No rule may sit at `unknown` -- that is a broken probe, not a finding."""
         report = fc.build_report()
         assert report["counts"].get("unknown", 0) == 0
+
+
+class TestBaselineComparison:
+    """The baseline is a ratchet, and a ratchet that only catches one direction
+    is not a ratchet.
+
+    The first implementation failed only on a lower verdict. That let an
+    improvement pass unrecorded, which left the baseline stale -- and a later
+    slide back to the stale value then also passed, because it matched. The gate
+    stayed green across the entire round trip while silently giving back the
+    improvement it never recorded.
+    """
+
+    @staticmethod
+    def _report(**verdicts):
+        return {
+            "rules": [
+                {"id": rid, "verdict": v, "claim": f"claim for {rid}"}
+                for rid, v in verdicts.items()
+            ]
+        }
+
+    def _with_baseline(self, monkeypatch, tmp_path, mapping):
+        path = tmp_path / "flow_baseline.json"
+        path.write_text(__import__("json").dumps(mapping))
+        monkeypatch.setattr(fc, "BASELINE", path)
+
+    def test_exact_match_passes(self, monkeypatch, tmp_path):
+        self._with_baseline(monkeypatch, tmp_path, {"FLOW-001": "partial"})
+        assert fc.check_against_baseline(self._report(**{"FLOW-001": "partial"})) == []
+
+    def test_regression_fails(self, monkeypatch, tmp_path):
+        self._with_baseline(monkeypatch, tmp_path, {"FLOW-001": "enforced"})
+        failures = fc.check_against_baseline(self._report(**{"FLOW-001": "partial"}))
+        assert len(failures) == 1 and "regressed" in failures[0]
+
+    def test_improvement_also_fails(self, monkeypatch, tmp_path):
+        """Not pedantry: refreshing the baseline is the act that makes the
+        improvement real, and a gate that does not require it turns
+        --write-baseline into an optional courtesy."""
+        self._with_baseline(monkeypatch, tmp_path, {"FLOW-001": "unwired"})
+        failures = fc.check_against_baseline(self._report(**{"FLOW-001": "enforced"}))
+        assert len(failures) == 1
+        assert "improved" in failures[0] and "refresh the baseline" in failures[0]
+
+    def test_a_rule_missing_from_the_baseline_fails(self, monkeypatch, tmp_path):
+        self._with_baseline(monkeypatch, tmp_path, {})
+        failures = fc.check_against_baseline(self._report(**{"FLOW-001": "enforced"}))
+        assert len(failures) == 1 and "not in the baseline" in failures[0]
+
+    def test_a_rule_deleted_from_the_contract_fails(self, monkeypatch, tmp_path):
+        """Otherwise a flow stops being watched and nothing says so."""
+        self._with_baseline(monkeypatch, tmp_path, {"FLOW-001": "enforced", "FLOW-999": "partial"})
+        failures = fc.check_against_baseline(self._report(**{"FLOW-001": "enforced"}))
+        assert len(failures) == 1 and "not in the contract" in failures[0]
+
+    def test_a_missing_baseline_file_fails_rather_than_passes(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(fc, "BASELINE", tmp_path / "absent.json")
+        assert fc.check_against_baseline(self._report(**{"FLOW-001": "enforced"}))

@@ -439,6 +439,8 @@ rules:
       twin/sync topology described -- self-host, back up, or dual-locate -- is
       one quarter built and in the wrong direction for a backup.
     probes:
+      - kind: worker_exists
+        path: deploy/forgejo
       - kind: code_pattern
         path: deploy/forgejo
         glob: "*.sh"
