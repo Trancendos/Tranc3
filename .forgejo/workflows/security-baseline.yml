@@ -110,6 +110,35 @@ jobs:
             echo "✅ No regression (findings: $CURRENT)"
           fi
 
+      - name: Baseline drift check
+        run: |
+          # The ratchet only auto-refreshes the baseline on main pushes. On
+          # feature branches (and in any window between a remediation landing
+          # and the baseline being regenerated) the stored baseline can drift
+          # far from reality. A stale baseline that over-counts findings is
+          # silent: the gate keeps "passing" while providing no real
+          # protection. This step catches that drift and emits a CI warning so
+          # the baseline gets refreshed (see reset recipe in .security-baseline).
+          CURRENT=${{ steps.bandit.outputs.findings }}
+          BASELINE=${{ steps.baseline.outputs.count }}
+          DRIFT_THRESHOLD_PCT=10
+
+          if [ "$BASELINE" -le 0 ]; then
+            echo "Baseline is zero — skipping drift check."
+            exit 0
+          fi
+
+          DELTA=$(( BASELINE - CURRENT ))
+          DELTA_ABS=${DELTA#-}
+          DRIFT=$(( (DELTA_ABS * 100 + BASELINE / 2) / BASELINE ))
+          echo "Measured findings: $CURRENT  |  Stored baseline: $BASELINE  |  Drift: ${DRIFT}%"
+
+          if [ "$DRIFT" -gt "$DRIFT_THRESHOLD_PCT" ]; then
+            echo "::warning::Security baseline drift detected: stored baseline ($BASELINE) differs from measured count ($CURRENT) by ${DRIFT}%. A stale baseline means the ratchet is not providing meaningful protection. Regenerate it with the documented bandit command (see .security-baseline header)."
+          else
+            echo "✅ Baseline within drift tolerance (${DRIFT}% <= ${DRIFT_THRESHOLD_PCT}%)"
+          fi
+
   # ──────────────────────────────────────────────────────────────────────
   # Hard gate: no new HIGH/CRITICAL CVEs in runtime requirements
   # ──────────────────────────────────────────────────────────────────────

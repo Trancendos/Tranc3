@@ -10,6 +10,10 @@
 #     print('bandit_findings='+str(len(d.get('results',[]))))"
 #   >> .security-baseline
 #
-# Last updated: 2026-06-29 (post security-hardening PR)
+# Last updated: 2026-08-21 (re-measured via bandit 1.8.3; prior 364 was stale)
+#
+# NOTE: this value is verified for drift by .forgejo/workflows/security-baseline.yml.
+# If the measured count diverges from this baseline by more than the configured
+# drift threshold, the workflow logs a warning so the baseline can be refreshed.
 
-bandit_findings=364
+bandit_findings=307
