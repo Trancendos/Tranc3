@@ -1,0 +1,169 @@
+# Citadel physical host alerts — sourced from ipmi-exporter (iDRAC/BMC)
+#
+# The estate monitors ~90 services and, until now, nothing watched the metal
+# they run on. The host arrived with a failed power supply and a failed drive,
+# both logged in the SEL for an unknown length of time, and both first noticed
+# because the fans were loud. Every rule below would have fired long before
+# that point.
+#
+# Each alert carries a `runbook` annotation pointing at the matching section of
+# deploy/CITADEL_REMEDIATION.md. An alert that does not say what to do about it
+# is a notification, not an alert.
+
+groups:
+  - name: citadel-hardware-power
+    rules:
+      - alert: CitadelPowerSupplyFailed
+        # dcmi/ipmi power supply state; non-zero == fault asserted.
+        expr: ipmi_sensor_state{type=~"Power Supply|Power Unit"} > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: power
+        annotations:
+          summary: "Citadel PSU fault ({{ $labels.name }})"
+          description: >-
+            Power supply sensor {{ $labels.name }} on {{ $labels.instance }} has
+            reported a fault for 5 minutes. Redundancy is lost or degraded — the
+            host is running without a spare supply.
+          runbook: "deploy/CITADEL_REMEDIATION.md#psu-failure"
+
+      - alert: CitadelChassisPowerOff
+        expr: ipmi_chassis_power_state == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: power
+        annotations:
+          summary: "Citadel chassis is powered off"
+          description: >-
+            The BMC reports the chassis powered down. If this was not planned,
+            treat as an outage — the BMC answers even when the host does not,
+            so this is a real reading rather than a scrape failure.
+          runbook: "deploy/CITADEL_REMEDIATION.md#unexpected-power-off"
+
+  - name: citadel-hardware-thermal
+    rules:
+      - alert: CitadelInletTemperatureHigh
+        expr: ipmi_temperature_celsius{name=~".*Inlet.*|.*Ambient.*"} > 35
+        for: 10m
+        labels:
+          severity: warning
+          component: thermal
+        annotations:
+          summary: "Citadel inlet temperature {{ $value | printf \"%.1f\" }}C"
+          description: >-
+            Inlet air above 35C for 10 minutes. Dell rates this generation to
+            35C ambient; sustained operation above it shortens component life
+            and will eventually throttle the CPUs.
+          runbook: "deploy/CITADEL_REMEDIATION.md#thermal"
+
+      - alert: CitadelInletTemperatureCritical
+        expr: ipmi_temperature_celsius{name=~".*Inlet.*|.*Ambient.*"} > 40
+        for: 2m
+        labels:
+          severity: critical
+          component: thermal
+        annotations:
+          summary: "Citadel inlet temperature CRITICAL ({{ $value | printf \"%.1f\" }}C)"
+          description: >-
+            Inlet air above 40C. Investigate immediately — blocked airflow,
+            room cooling failure, or a fan control override left in manual mode.
+          runbook: "deploy/CITADEL_REMEDIATION.md#thermal"
+
+      - alert: CitadelFanStopped
+        # A fan reading zero while the chassis is powered on is a failed fan,
+        # not an idle one — these do not stop under normal operation.
+        expr: ipmi_fan_speed_rpm == 0 and on(instance) ipmi_chassis_power_state == 1
+        for: 2m
+        labels:
+          severity: critical
+          component: thermal
+        annotations:
+          summary: "Citadel fan stopped ({{ $labels.name }})"
+          description: >-
+            Fan {{ $labels.name }} reports 0 RPM while the chassis is powered
+            on. Remaining fans will ramp to compensate, which is both loud and
+            a sign the margin is gone.
+          runbook: "deploy/CITADEL_REMEDIATION.md#fan-failure"
+
+      - alert: CitadelFansRunningHot
+        # Sustained high RPM across the chassis usually means the firmware is
+        # compensating for an unresolved fault rather than for real heat.
+        expr: avg(ipmi_fan_speed_rpm) > 8000
+        for: 30m
+        labels:
+          severity: warning
+          component: thermal
+        annotations:
+          summary: "Citadel fans sustained high ({{ $value | printf \"%.0f\" }} RPM avg)"
+          description: >-
+            Average fan speed has been high for 30 minutes. On PowerEdge
+            hardware this is frequently the firmware reacting to an unresolved
+            hardware fault or a stale SEL entry rather than to actual heat —
+            check for asserted faults before assuming a cooling problem.
+          runbook: "deploy/CITADEL_REMEDIATION.md#fan-noise"
+
+  - name: citadel-hardware-storage
+    rules:
+      - alert: CitadelDriveFault
+        expr: ipmi_sensor_state{type=~"Drive Slot.*"} > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: storage
+        annotations:
+          summary: "Citadel drive fault ({{ $labels.name }})"
+          description: >-
+            Drive sensor {{ $labels.name }} reports a fault. If the array is
+            redundant it is now degraded and a second failure loses data; if it
+            is not, the datastore is at immediate risk.
+          runbook: "deploy/CITADEL_REMEDIATION.md#drive-failure"
+
+  - name: citadel-hardware-integrity
+    rules:
+      - alert: CitadelSELFillingUp
+        # A full SEL stops recording new events — you lose the log exactly when
+        # something is going wrong often enough to fill it.
+        expr: ipmi_sel_free_space_bytes < 1024
+        for: 15m
+        labels:
+          severity: warning
+          component: bmc
+        annotations:
+          summary: "Citadel System Event Log nearly full"
+          description: >-
+            Under 1 KB of SEL space free. Review the entries, resolve what they
+            report, then clear the log. A full SEL silently stops recording.
+          runbook: "deploy/CITADEL_REMEDIATION.md#sel-management"
+
+      - alert: CitadelChassisIntrusion
+        expr: ipmi_sensor_state{type=~".*Physical Security.*|.*Intrusion.*"} > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Citadel chassis intrusion detected"
+          description: >-
+            The chassis has been opened. Expected during maintenance; otherwise
+            treat as a physical security event and correlate with access to the
+            room.
+          runbook: "deploy/CITADEL_REMEDIATION.md#chassis-intrusion"
+
+      - alert: CitadelBMCUnreachable
+        # Distinct from the host being down: this means monitoring itself is
+        # blind, so every other rule here is silently not evaluating.
+        expr: up{job="ipmi-citadel"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          component: bmc
+        annotations:
+          summary: "Citadel BMC (iDRAC) unreachable"
+          description: >-
+            ipmi-exporter cannot reach the BMC. Hardware alerting is blind while
+            this persists — no PSU, thermal or drive alert can fire. Check the
+            iDRAC network, credentials, and that the BMC has not wedged (iDRAC6
+            occasionally needs a reset).
+          runbook: "deploy/CITADEL_REMEDIATION.md#bmc-unreachable"
