@@ -3,7 +3,7 @@
 
 import pytest
 
-from src.entities.platform import PLATFORM_ENTITIES, PLATFORM_ROLES
+from src.entities.platform import PLATFORM_ENTITIES, PLATFORM_ROLES, all_seats
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -43,7 +43,7 @@ class TestReadRoutes:
         # which tells you the count changed but not whether it changed
         # correctly. Comparing the actual key set does.
         assert {r["location"] for r in body} == set(PLATFORM_ENTITIES) | set(PLATFORM_ROLES)
-        assert len(body) == len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
+        assert len(body) == len(all_seats())
 
     def test_get_known_role(self, client):
         resp = client.get("/roles/Royal Bank of Arcadia")

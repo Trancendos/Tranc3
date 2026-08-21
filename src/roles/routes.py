@@ -38,10 +38,14 @@ logger = logging.getLogger("tranc3.roles.routes")
 class AssignRequest(BaseModel):
     ai_name: str
     reason: str = ""
+    # Which seat at this Location. Defaults to the headline role, so a caller
+    # unaware that co-lead seats exist still does exactly what it did before.
+    seat_id: str = "primary"
 
 
 class UnassignRequest(BaseModel):
     reason: str = ""
+    seat_id: str = "primary"
 
 
 def _require_admin(current_user: dict) -> None:
@@ -54,6 +58,9 @@ def _require_admin(current_user: dict) -> None:
 def _serialize(assignment: RoleAssignment) -> Dict[str, Any]:
     return {
         "location": assignment.location,
+        "seat_id": assignment.seat_id,
+        "designed_for": assignment.designed_for,
+        "functions": list(assignment.functions),
         "pillar": assignment.pillar,
         "primary_function": assignment.primary_function,
         "job_description": assignment.job_description,
@@ -134,6 +141,21 @@ def get_suite(suite_id: str) -> Dict[str, Any]:
 # would otherwise swallow "<location>/history" whole if tried first.
 
 
+@router.get("/{location:path}/seats")
+def location_seats(location: str) -> List[Dict[str, Any]]:
+    """Every Job Description seat at one Location, primary first.
+
+    The question the single-row model could not answer. At The Chaos Party this
+    returns The Mad Hatter's adversarial-testing seat and Alice Dream's
+    deterministic-assurance seat as separate roles with separate functions,
+    rather than one title standing in for both.
+    """
+    seats = get_registry().get_location_seats(location)
+    if not seats:
+        raise HTTPException(status_code=404, detail=f"Unknown location: {location}")
+    return [_serialize(s) for s in seats]
+
+
 @router.get("/{location:path}/history")
 def role_history(location: str) -> List[Dict[str, Any]]:
     try:
@@ -163,7 +185,11 @@ def assign_role(
     changed_by = current_user.get("sub") or current_user.get("id") or "operator"
     try:
         role = get_registry().assign_ai(
-            location, body.ai_name, changed_by=str(changed_by), reason=body.reason
+            location,
+            body.ai_name,
+            changed_by=str(changed_by),
+            reason=body.reason,
+            seat_id=body.seat_id,
         )
     except UnknownLocationError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
@@ -181,8 +207,11 @@ def unassign_role(
     _require_admin(current_user)
     changed_by = current_user.get("sub") or current_user.get("id") or "operator"
     reason = body.reason if body else ""
+    seat_id = body.seat_id if body else "primary"
     try:
-        role = get_registry().remove_ai(location, changed_by=str(changed_by), reason=reason)
+        role = get_registry().remove_ai(
+            location, changed_by=str(changed_by), reason=reason, seat_id=seat_id
+        )
     except UnknownLocationError as exc:
         raise HTTPException(status_code=404, detail=f"Unknown location: {location}") from exc
     return _serialize(role)
