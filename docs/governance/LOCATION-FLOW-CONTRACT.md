@@ -50,13 +50,13 @@ ever passes through. Fourteen flows sit there. That is the real finding.
 
 ## 3. The measurement
 
-As at 2026-08-21T13:37:19+00:00, across 39 declared flows:
+As at 2026-08-21T18:20:00+00:00, across 39 declared flows:
 
 | Verdict | Count |
 |---|---|
-| `enforced` | 20 |
-| `partial` | 4 |
-| `unwired` | 14 |
+| `enforced` | 23 |
+| `partial` | 3 |
+| `unwired` | 12 |
 | `absent` | 1 |
 | `unknown` | 0 |
 
@@ -83,7 +83,7 @@ As at 2026-08-21T13:37:19+00:00, across 39 declared flows:
 | `FLOW-065` | DocUtari | All user documents and files are stored in DocUtari | **enforced** |
 | `FLOW-066` | The Observatory | Diagnostic assessment is aggregated rather than per-service | **enforced** |
 | `FLOW-001` | The Digital Grid | Workflow and pipeline execution routes through The Digital Grid | partial |
-| `FLOW-022` | The Library | The Basement's confirmed patterns are promoted into The Library | partial |
+| `FLOW-022` | The Library | The Basement's confirmed patterns are promoted into The Library | **enforced** |
 | `FLOW-043` | The Workshop | The Workshop holds repositories and mirrors to GitHub, GitLab and Bitbucket | partial |
 | `FLOW-060` | Royal Bank of Arcadia | All financial regulation routes through Royal Bank of Arcadia | partial |
 | `FLOW-003` | API Marketplace | All external and internal APIs are catalogued by the API Marketplace | **unwired** |
@@ -92,9 +92,9 @@ As at 2026-08-21T13:37:19+00:00, across 39 declared flows:
 | `FLOW-014` | The Ice Box | The Ice Box spins up containers, VMs and sandboxes on demand | **unwired** |
 | `FLOW-015` | The HIVE | A Cryptex threat escalation raises a platform-wide alert state (Call to Arms) | **unwired** |
 | `FLOW-023` | The Academy | Library KB articles are scanned by The Academy and developed into training material | **unwired** |
-| `FLOW-031` | Fabulousa | All UX, UI and design-system work routes through Fabulousa | **unwired** |
+| `FLOW-031` | Fabulousa | All UX, UI and design-system work routes through Fabulousa | **enforced** |
 | `FLOW-041` | The Lab | All debugging routes through Slime | **unwired** |
-| `FLOW-042` | The Chaos Party | All testing routes through The Chaos Party | **unwired** |
+| `FLOW-042` | The Chaos Party | All testing routes through The Chaos Party | **enforced** |
 | `FLOW-044` | The Artifactory | Produced artifacts are held and analysed by The Artifactory | **unwired** |
 | `FLOW-053` | Infinity | Infinity Bridge is the transport layer users navigate through | **unwired** |
 | `FLOW-054` | Arcadia | Arcadia is the post-login user entrance with forum, AI chat and email | **unwired** |
@@ -149,7 +149,7 @@ implements the whole Basement → Library leg — clustering, regression detecti
 DRAFT authoring — and its own docstring describes closing "the fourth leg" of the learning
 pipeline. Until this pass it was called by nothing: no import, no route, no job. Evidence
 accumulated in the store and reached nobody. It now has an admin-gated entry point at
-`POST /basement/promote`, which is why FLOW-022 reads `partial` rather than `unwired` — reachable,
+`POST /basement/promote`, and ChronosSphere now seeds a daily job against it — reachable,
 but still not automatic. The next leg after that, Library KB → Academy curriculum, does not
 exist: `workers/the-academy/worker.py` contains no reference to the Library, to KB articles, or
 to any knowledge source.

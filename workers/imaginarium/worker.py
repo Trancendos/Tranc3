@@ -61,6 +61,7 @@ SERVICE_URLS = {
     "the_studio": os.getenv("THE_STUDIO_URL", "http://the-studio:8069"),
     "tateking": os.getenv("TATEKING_URL", "http://tateking:8061"),
     "tranceflow": os.getenv("TRANCEFLOW_URL", "http://tranceflow:8059"),
+    "fabulousa": os.getenv("FABULOUSA_URL", "http://fabulousa-service:8048"),
 }
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -172,6 +173,25 @@ async def _fan_out_creation(project_id: int, brief: str, project_type: str) -> N
                         results["image_job"] = resp.json()
                 except Exception as exc:
                     results["image_error"] = str(exc)
+
+            # Design is a creative discipline like the rest: a brand or mixed
+            # brief opens a Fabulousa design file alongside the imagery, rather
+            # than leaving the one design Location out of the fan-out.
+            if project_type in ("mixed", "brand", "video_image", "game_assets"):
+                try:
+                    resp = await client.post(
+                        f"{SERVICE_URLS['fabulousa']}/fabulousa/projects",
+                        json={"name": brief[:200], "description": brief},
+                        headers=headers,
+                    )
+                    if resp.status_code == 200:
+                        results["design_project"] = resp.json()
+                    else:
+                        results["design_error"] = f"HTTP {resp.status_code}"
+                except Exception as exc:
+                    # Fabulousa answers 503 when Penpot is down. That degrades
+                    # this project's design leg; it does not fail the project.
+                    results["design_error"] = str(exc)
     except ImportError:
         results["note"] = "httpx not installed — install for fan-out orchestration"
 

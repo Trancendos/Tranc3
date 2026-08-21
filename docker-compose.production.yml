@@ -862,6 +862,9 @@ services:
         observability: ./src/observability
     container_name: cron-service-worker
     ports: ["8021:8021"]
+    environment:
+      # Target for the seeded Basement -> Library promotion job.
+      - BASEMENT_URL=http://tranc3-backend:8000
     volumes:
       - cron-data:/data
     healthcheck:
@@ -3215,6 +3218,7 @@ services:
       - THE_STUDIO_URL=http://the-studio:8069
       - TATEKING_URL=http://tateking:8061
       - TRANCEFLOW_URL=http://tranceflow:8059
+      - FABULOUSA_URL=http://fabulousa-service:8048
     expose:
       - "8064"
     ports:

@@ -242,10 +242,12 @@ rules:
       src/basement/promotion.py implements the whole promotion path -- clustering,
       regression detection, article rendering, DRAFT authoring into The Library --
       and until 2026-08-21 was called by nothing: no import, no route, no job.
-      It now has an admin-gated entry point at POST /basement/promote, so the leg
-      is reachable. It is still not automatic: nothing schedules it, so patterns
-      are promoted when somebody asks, not when they are confirmed. `partial` is
-      the correct reading until the cron service runs it.
+      It now has an admin-gated entry point at POST /basement/promote, and
+      ChronosSphere seeds a daily 03:15 job against that route, so patterns are
+      promoted on a clock rather than when somebody remembers to ask. Disabling
+      that job survives a restart; deleting it lets it return, because deletion
+      reads as "remove this row" rather than "the platform should stop doing
+      this".
     probes:
       - kind: module_exists
         path: src/library
@@ -321,11 +323,14 @@ rules:
     claim: "All UX, UI and design-system work routes through Fabulousa"
     hub: "Fabulousa"
     note: >-
-      The worker exists and is composed, but the Imaginarium's creative fan-out
-      names five services and Fabulousa is not among them -- design is the one
-      creative discipline the orchestrator does not call. The InfinityStyles
-      repository holds the actual design system, with no link back to this
-      worker.
+      The worker exists and is composed. Until 2026-08-21 the Imaginarium's
+      creative fan-out named five services and Fabulousa was not among them --
+      design was the one creative discipline the orchestrator did not call. It
+      now opens a Fabulousa design file for brand and mixed briefs alongside the
+      imagery. Fabulousa answers 503 when Penpot is down, which degrades that
+      one leg of a project rather than failing the project. Still outstanding:
+      the InfinityStyles repository holds the actual design system and has no
+      link back to this worker.
     probes:
       - kind: worker_exists
         path: workers/fabulousa-service
@@ -417,9 +422,17 @@ rules:
     hub: "The Chaos Party"
     note: >-
       The worker is real -- suites, runs, batch runs, chaos experiments -- and
-      nothing feeds it. CI runs pytest directly; no workflow posts a run to the
-      Chaos Party, so the platform's own test intelligence never sees the
-      platform's own tests.
+      until 2026-08-21 nothing fed it: CI ran pytest directly and the platform's
+      own test intelligence never saw the platform's own tests. The test
+      workflow now runs scripts/report_tests_to_chaos_party.py, which posts the
+      run to /runs/batch (the same route that forwards to The Observatory). One
+      caveat the probes cannot see: on a GitHub-hosted runner the post only
+      happens once a CHAOS_PARTY_URL secret is set, because that runner cannot
+      reach a compose-internal worker. Unset, the reporter says so and exits 0;
+      set, a failed post fails the step. The probe deliberately matches the
+      script name rather than "chaos-party", so a passing mention in an
+      unrelated comment cannot satisfy it -- the earlier version of this rule
+      would have.
     probes:
       - kind: worker_exists
         path: workers/chaos-party
@@ -428,7 +441,10 @@ rules:
       - kind: code_pattern
         path: .github/workflows
         glob: "*.yml"
-        pattern: "chaos-party|chaos_party"
+        pattern: "report_tests_to_chaos_party"
+      - kind: code_pattern
+        path: .env.example
+        pattern: "CHAOS_PARTY_URL"
 
   - id: FLOW-043
     claim: "The Workshop holds repositories and mirrors to GitHub, GitLab and Bitbucket"

@@ -132,6 +132,7 @@ _FORGEJO_TOKEN = os.environ.get("FORGEJO_TOKEN", "")
 _FORGEJO_RPM = int(os.environ.get("FORGEJO_THRESHOLD_RPM", "30"))
 
 _NATS_URL = os.environ.get("NATS_URL", "http://nats:8222")
+_BASEMENT_URL = os.environ.get("BASEMENT_URL", "http://tranc3-backend:8000")
 _NATS_RPM = int(os.environ.get("NATS_JETSTREAM_THRESHOLD_RPM", "200"))
 
 _VALKEY_URL = os.environ.get("REDIS_URL", "redis://valkey:6379")
@@ -372,6 +373,57 @@ def init_db() -> None:
         conn.commit()
 
 
+# ChronosSphere is the platform's scheduler, so a flow that needs to happen on a
+# clock belongs here rather than in a README. The Basement -> Library promotion
+# is the first: src/basement/promotion.py finds confirmed patterns and drafts
+# Library articles from them, and POST /basement/promote makes that reachable --
+# but reachable is not scheduled. Without this job, patterns are promoted when
+# somebody remembers to ask.
+_SEEDED_JOBS: tuple[dict[str, object], ...] = (
+    {
+        "id": "basement-library-promotion",
+        "name": "Promote confirmed Basement patterns into The Library",
+        # 03:15 daily: after the nightly archive settles, before working hours.
+        "schedule": "15 3 * * *",
+        "url": f"{_BASEMENT_URL.rstrip('/')}/basement/promote",
+        "method": "POST",
+        "payload": {"limit": 500, "dry_run": False},
+    },
+)
+
+
+def seed_default_jobs() -> None:
+    """Insert the platform's standing jobs if they are not already present.
+
+    `INSERT OR IGNORE` on a stable id, which makes the two operator actions
+    behave differently on purpose: disabling a job (enabled=0) survives a
+    restart because the row still exists and the insert is ignored, while
+    deleting one lets it return. Disable is therefore the supported way to turn
+    a standing job off -- deletion reads as "remove this instance", not "the
+    platform should stop doing this".
+    """
+    with get_conn() as conn:
+        for job in _SEEDED_JOBS:
+            conn.execute(
+                "INSERT OR IGNORE INTO jobs "
+                "(id, name, schedule, url, method, payload, headers, enabled, backend, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    job["id"],
+                    job["name"],
+                    job["schedule"],
+                    job["url"],
+                    job["method"],
+                    json.dumps(job["payload"]),
+                    "{}",
+                    1,
+                    "apscheduler",
+                    time.time(),
+                ),
+            )
+        conn.commit()
+
+
 # ---------------------------------------------------------------------------
 # Cron expression parser (5-field: min hour dom mon dow)
 # ---------------------------------------------------------------------------
@@ -508,6 +560,7 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
     init_db()
+    seed_default_jobs()
     logger.info("cron-service DB ready at %s", DB_PATH)
     task = asyncio.create_task(_scheduler_loop())
     yield
