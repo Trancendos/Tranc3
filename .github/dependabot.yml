@@ -9,58 +9,94 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "pip"
     directory: "/tranc3-bots"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "pip"
     directory: "/workers"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "npm"
     directory: "/web"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "docker"
     directory: "/tranc3-bots"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "docker"
     directory: "/web"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "docker"
     directory: "/workers"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "docker"
     directory: "/deploy"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
