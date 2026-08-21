@@ -288,3 +288,41 @@ class TestConcurrentPromotion:
 
         assert len(library.created) == 1, "the race produced a duplicate Library draft"
         assert sum(r["promoted"] for r in results) == 1
+
+
+class TestTheLockIsNeverLeaked:
+    def test_a_failing_create_still_releases_the_lock(self, monkeypatch):
+        """The critical section became a `with` block precisely so a raise in
+        `create()` cannot strand the lock. If it did, every later promotion in
+        the process would block forever -- a deadlock that only appears after
+        an unrelated Library failure."""
+        from src.basement import promotion as promo
+
+        pattern = promo.Pattern(kind="cluster", signature="boom", occurrences=3, tests=["t"])
+
+        class FailingLibrary:
+            def by_tag(self, tag, limit=50):
+                return []
+
+            def create(self, **kw):
+                raise RuntimeError("library write failed")
+
+        monkeypatch.setattr(promo, "_failure_records", lambda records: ["r"])
+        monkeypatch.setattr(promo, "cluster_failures", lambda f: [pattern])
+        monkeypatch.setattr(promo, "regression_patterns", lambda f: [])
+
+        import src.library.knowledge_base as kb
+
+        monkeypatch.setattr(kb, "get_library", lambda: FailingLibrary())
+
+        import src.basement.archive as archive
+
+        monkeypatch.setattr(
+            archive, "get_basement", lambda: type("B", (), {"recent": lambda *a, **k: ["r"]})()
+        )
+
+        result = promo.promote()
+        assert result["skipped"] == 1 and result["promoted"] == 0
+        # The real assertion: the lock is free afterwards.
+        assert promo._PROMOTION_LOCK.acquire(timeout=2), "the lock was leaked by a failed create"
+        promo._PROMOTION_LOCK.release()

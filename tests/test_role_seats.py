@@ -365,3 +365,103 @@ class TestInterruptedMigrationRecovery:
             assert len(reg.list_roles()) == len(all_seats())
         finally:
             reg.close()
+
+
+class TestMigrationRollback:
+    """The transaction must actually roll back, or the fix is decorative.
+
+    A rebuild that fails mid-way and leaves the database half-converted is the
+    same data-loss shape the transaction was added to prevent -- the `except`
+    branch is the part that makes the guarantee real, so it is exercised rather
+    than trusted.
+    """
+
+    def test_a_failed_rebuild_leaves_the_legacy_table_intact(self, tmp_path, monkeypatch):
+        path = tmp_path / "fails.db"
+        TestMigrationFromTheLocationOnlySchema._write_pre_seat_db(path)
+
+        real_init = RoleRegistry._init_one_table
+
+        def _explode(self, table):
+            if table == "role_assignments":
+                raise RuntimeError("disk full mid-rebuild")
+            return real_init(self, table)
+
+        monkeypatch.setattr(RoleRegistry, "_init_one_table", _explode)
+        with pytest.raises(RuntimeError):
+            RoleRegistry(db_path=path)
+
+        # The rename is rolled back with everything else, so the original table
+        # is still there under its own name and nothing has been lost.
+        conn = sqlite3.connect(path)
+        try:
+            names = {
+                r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            }
+            assert "role_assignments" in names
+            row = conn.execute(
+                "SELECT assigned_ai FROM role_assignments WHERE location = 'The Chaos Party'"
+            ).fetchone()
+            assert row[0] == "A Human"
+        finally:
+            conn.close()
+
+    def test_a_failed_history_rebuild_also_rolls_back(self, tmp_path, monkeypatch):
+        """Both rebuilds carry the same guarantee, so both branches are tested.
+        Covering only the first would leave the second's rollback asserted by
+        symmetry rather than by execution."""
+        path = tmp_path / "history_fails.db"
+        TestMigrationFromTheLocationOnlySchema._write_pre_seat_db(path)
+
+        real_init = RoleRegistry._init_one_table
+
+        def _explode(self, table):
+            if table == "role_assignment_history":
+                raise RuntimeError("disk full mid-rebuild")
+            return real_init(self, table)
+
+        monkeypatch.setattr(RoleRegistry, "_init_one_table", _explode)
+        with pytest.raises(RuntimeError):
+            RoleRegistry(db_path=path)
+
+        conn = sqlite3.connect(path)
+        try:
+            row = conn.execute(
+                "SELECT previous_ai FROM role_assignment_history WHERE location = 'The Chaos Party'"
+            ).fetchone()
+            assert row[0] == "The Mad Hatter", "the history rollback lost a row"
+        finally:
+            conn.close()
+
+    def test_the_registry_recovers_on_the_next_open(self, tmp_path, monkeypatch):
+        """A failed attempt must not poison later ones."""
+        path = tmp_path / "retry.db"
+        TestMigrationFromTheLocationOnlySchema._write_pre_seat_db(path)
+
+        real_init = RoleRegistry._init_one_table
+        monkeypatch.setattr(
+            RoleRegistry,
+            "_init_one_table",
+            lambda self, table: (
+                (_ for _ in ()).throw(RuntimeError("boom"))
+                if table == "role_assignments"
+                else real_init(self, table)
+            ),
+        )
+        with pytest.raises(RuntimeError):
+            RoleRegistry(db_path=path)
+
+        monkeypatch.setattr(RoleRegistry, "_init_one_table", real_init)
+        reg = RoleRegistry(db_path=path)
+        try:
+            assert reg.get_role("The Chaos Party").assigned_ai == "A Human"
+        finally:
+            reg.close()
+
+
+class TestUnknownSeatOnRemoval:
+    def test_removing_an_unknown_seat_is_refused(self, registry):
+        """`assign_ai` already refuses one; `remove_ai` must too, or a typo'd
+        seat silently reports success having vacated nothing."""
+        with pytest.raises(UnknownLocationError):
+            registry.remove_ai("The Chaos Party", seat_id="not-a-seat")
