@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `26c80e7a`. Regenerate with 
+Generated from repo state at `0a6f8e79`. Regenerate with 
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -93,7 +93,7 @@ that none of them import.
 
 ### `cron-service`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/cron-service/worker.py:44 Dimensional.service_auth_fastapi`
+  - `workers/cron-service/worker.py:45 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `cryptex`

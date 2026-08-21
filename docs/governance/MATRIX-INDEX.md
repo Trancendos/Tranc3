@@ -8,7 +8,7 @@
 > Traffic (real building blocks, no unified matrix), and the AI Relationship Matrix. This index is
 > the map; the docs it links to (existing or newly written) are the territory.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-08-07 (Security Posture Matrix row added)
+**Owner:** Platform Owner Trancendos · **Version:** 1.3.0 · **Last verified:** 2026-08-21 (Location Flow Contract added; Supply Chain Posture Matrix at v1.1.0; §3 scoped to its own pass)
 
 ---
 
@@ -62,16 +62,20 @@
 | Prime AI to AI Matrix | Exists, newly documented | `t2ance/prime_registry.py`/`domain_authority.py` — `prime_for_entity()` maps every Tier-3 entity to its governing Domain Prime | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §5 |
 | Location (Application) Matrix | Exists + documented | `PLATFORM_ENTITIES` itself | `CLAUDE.md` entity table, `PLATFORM_ENTITIES.md` |
 | Location to Location Traffic Matrix | Done this session | — | `docs/governance/LOCATION-TRAFFIC-MATRIX.md` |
+| Location Flow Contract | Exists, newly built — 39 declared flows measured, 14 reached by nothing | Turns the platform's routing claims ("all MCP goes through The Spark", "all secrets flow into The Void") from unfalsifiable prose into probes. Built: `config/estate/flow_contract.yaml`, `scripts/flow_conformance.py`, a regression baseline and 17 tests. Found: 20 enforced, 4 partial, 14 **unwired** (built and reached by nothing — The Void, The Ice Box, Fabulousa, The Chaos Party, The Artifactory, Arcadian Exchange among them), 1 absent (The Lighthouse) | [LOCATION-FLOW-CONTRACT.md](LOCATION-FLOW-CONTRACT.md) |
 | Relationship Matrix | Exists + documented | `src/relations/registry.py` | `docs/governance/AI-RELATIONSHIP-MATRIX.md` |
 | Attribute Matrix | Exists + documented | `LocationEntity` dataclass fields themselves (`src/entities/platform.py`) | `PLATFORM_ENTITIES.md` |
 | Entity Matrix | Exists + documented | `PLATFORM_ENTITIES` | `PLATFORM_ENTITIES.md` |
 | Association Matrix | Exists, thin | `src/cmdb/models.py` — CMDB-style associations between platform components, but this is infrastructure CMDB, not entity-to-entity association in the `PLATFORM_ENTITIES` sense | Noted here |
 | Swarm Coordination Matrix | Exists, newly documented | `workers/cache-service/worker.py`'s `ThresholdGuard` — real, tested ACO-pheromone backend selection (reinforce/decay, greedy max), reused across 12 workers total; `workers/hive-service/`'s `SwarmCoordinator` — real group-lifecycle registry, not emergent coordination. `src/distributed/swarm_intelligence.py`'s `DistributedIntelligenceSwarm` is scaffolding only (`ENABLE_SWARM` defaults `false`, unreferenced by any deployed service) | [SWARM-COORDINATION-MATRIX.md](SWARM-COORDINATION-MATRIX.md) |
 | Security Posture Matrix | Exists, newly documented — found and fixed two real gaps | A CrowdStrike 2026 Global Threat Report review against real code found `X-MFA-Verified` was read straight from client-supplied request headers with no server-side validation (fixed: now derived from a signed JWT claim), and `src/mcp/payload_scanner.py`'s tested prompt-injection scanner was never wired into `/mcp/rpc` (fixed, plus adaptive Cryptex auto-block on detection) | [SECURITY-POSTURE-MATRIX.md](SECURITY-POSTURE-MATRIX.md) |
+| Supply Chain Posture Matrix | Exists, newly documented — five new controls, one measured figure worse than the industry average | A 2026 OSSRA report review turned six of its themes into measurements against real code. Built: `scripts/obsolescence_census.py` (two-axis dormancy over 110 direct deps), `scripts/ai_bom.py` + `config/ai_models.yaml` (16 consumed model references that appeared in no manifest), `--ignore-scripts` on every CI npm install, and the CRA obligation mapping. Found: `web/` resolves 458 packages from 46 declared — 90% transitive against the report's 64% average, the estate's largest measured blind spot | [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) |
 
 ## 3. What this pass produced
 
-Four new docs, each grounded in real, already-running code found during this investigation:
+Four new docs from that pass, each grounded in real, already-running code found during
+that investigation. (The Supply Chain Posture Matrix listed in §2 came from a later,
+separate review and is deliberately not counted here.)
 
 1. **[ERROR-REMEDIATION-MATRIX.md](ERROR-REMEDIATION-MATRIX.md)** — Error Code Registry, CVE/Vulnerability tracking, Remediation, Self-Healing, and Diagnosis/Resolution, which all turned out to be genuinely interconnected (an error surfaces → gets classified against a CVE/pattern → triggers remediation → self-healing closes the loop) rather than five separate systems.
 2. **[PERMISSIONS-ACCESS-MATRIX.md](PERMISSIONS-ACCESS-MATRIX.md)** — the Role Registry (who holds a Job Description), the Access Registry (who's consented into which Location), and Zero Trust IAM (device/MFA/geo risk scoring), consolidated.
@@ -104,6 +108,12 @@ that's a build task, not a documentation one.
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — the tier/governance system
   `AI-AGENT-BOT-TIER-MATRIX.md` cross-references rather than re-describes for the advancement-
   pipeline side of Trance-One/T2ance.
+- [LOCATION-FLOW-CONTRACT.md](LOCATION-FLOW-CONTRACT.md) — the 39 declared Location-to-Location
+  flows, each measured rather than asserted; the companion to `LOCATION-TRAFFIC-MATRIX.md`, which
+  recorded the gap this closes
+- [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) — the OSSRA-report
+  counterpart to the CrowdStrike review above, and the map between the vulnerability census,
+  the obsolescence census, the AI-BOM and the CRA profile.
 - [BOM-MATRIX.md](BOM-MATRIX.md) — a later follow-up pass triaging the SBOM/CBOM/AI-BOM/HBOM/
   SaaSBOM/etc. taxonomy against this platform's real SBOM pipeline and existing docs, added after
   this index's original four-doc pass.

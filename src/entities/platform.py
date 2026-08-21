@@ -20,9 +20,10 @@ Tier System:
   Tier 5 - Bots (task-specific micro-workers: 01-04)
 """
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
 
 class Pillar(str, Enum):
@@ -1983,3 +1984,177 @@ PLATFORM_ROLES: Dict[str, PlatformRole] = {
         ),
     ),
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Role seats — one Job Description per AI role, not per Location
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# THE GAP THIS CLOSES
+#
+# `JOB_DESCRIPTIONS` carries one title per Location, and `role_assignments` was
+# keyed by Location alone. That model holds for the 38 Locations with a single
+# Lead AI and breaks for the five that do not: 43 Job Descriptions were being
+# asked to cover 51 AI seats, so eight AIs held no Job Description at all.
+#
+# They are not spares. The Chaos Party is the clearest case: The Mad Hatter runs
+# adversarial testing — rapid mock payloads, memory-leak and performance
+# watching — while Alice Dream runs the deterministic half, acceptance and
+# regression and smoke, where a repeatable result is the whole point. One title
+# covering both describes neither, and an operator reassigning "The Chaos Party"
+# could not say which of the two jobs they were moving.
+#
+# HOW A SEAT IS DERIVED RATHER THAN DECLARED
+#
+# Seats are computed from what the entity table already holds -- `lead_ais` for
+# who, `agent_teams` for what they actually do -- so the seat list cannot drift
+# from the roster the way a hand-maintained parallel list would. Only the eight
+# co-lead *titles* are declared below, because a job title is an editorial
+# decision that no amount of introspection can derive.
+#
+# Each seat's `functions` come from its own Agent pair's descriptions. That is
+# deliberate: the agents are the concrete work, so a seat's stated function is
+# evidenced by the two things doing it rather than asserted independently and
+# left to rot.
+
+# The primary seat keeps the Location's existing headline title, so every caller
+# of `get_job_description(location)` is unchanged. Co-leads get their own.
+CO_LEAD_JOB_DESCRIPTIONS: Dict[Tuple[str, str], str] = {
+    # Benji Tate holds video production; Sam King's agents run logistics,
+    # scheduling, delivery pipelines and format finishing -- operations, not
+    # editorial.
+    ("TateKing", "Sam King"): "Head of Production Operations & Delivery",
+    # The Dr. authors and optimises; Slime's agents trace a failing test to its
+    # originating commit and draft the fix. Authoring and diagnosis are
+    # different disciplines and the estate already documents them separately
+    # (docs/governance/DEBUGGING-MATRIX.md).
+    ("The Lab", "Slime"): "Head of Diagnostics & Defect Remediation",
+    # The deterministic half of testing. A chaos agent seeks variance and an
+    # acceptance agent requires none, which is why these never shared a team.
+    ("The Chaos Party", "Alice Dream"): "Head of Deterministic Assurance",
+    # The Guardian holds identity and access; the Orb's agents project how
+    # today's architecture scales and map that into a forward roadmap.
+    ("Infinity", "The Orb of Orisis"): "Head of Architectural Foresight",
+    # Clarence Porter is Chief Procurement Officer and runs the compute desk.
+    # Each sibling runs a distinct market, per their own Speculator/Trader pair.
+    ("Arcadian Exchange", "Ann Porter"): "Head of Storage Procurement",
+    ("Arcadian Exchange", "George Porter"): "Head of Model & Inference Procurement",
+    ("Arcadian Exchange", "Edward Porter"): "Head of Workflow Tooling Procurement",
+    ("Arcadian Exchange", "James Porter"): "Head of API Credit Procurement",
+}
+
+
+def seat_id_for(ai_name: str) -> str:
+    """A stable slug key for one AI's seat.
+
+    Derived from the name rather than an incrementing id so the key survives a
+    reordering of `lead_ais`, and so a row in the registry can be read without
+    a join to work out whose seat it is.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", ai_name.lower()).strip("-")
+    return slug or "seat"
+
+
+@dataclass(frozen=True)
+class RoleSeat:
+    """One Job Description at one Location, and the AI it was designed for."""
+
+    location: str
+    seat_id: str
+    job_description: str
+    designed_for: str
+    is_primary: bool
+    functions: Tuple[str, ...] = ()
+
+    @property
+    def key(self) -> Tuple[str, str]:
+        return (self.location, self.seat_id)
+
+
+def get_seats(location: str) -> List[RoleSeat]:
+    """Every Job Description seat at one Location, primary first.
+
+    A single-Lead-AI Location returns exactly one seat, so callers that never
+    cared about co-leads see no change in shape beyond a list of one.
+    """
+    entity = PLATFORM_ENTITIES.get(location)
+    if entity is None:
+        role = PLATFORM_ROLES.get(location)
+        if role is None:
+            return []
+        return [
+            RoleSeat(
+                location=location,
+                seat_id="primary",
+                job_description=role.job_description,
+                designed_for=role.default_holder,
+                is_primary=True,
+            )
+        ]
+
+    holders = list(entity.lead_ais) or [entity.lead_ai]
+    # `lead_ai` is the primary in either shape. A roster that listed co-leads
+    # but omitted the canonical name would otherwise yield a Location with no
+    # `primary` seat at all -- and every default-seat caller reads that as a
+    # missing row: `get_role(location)` returns None, `assign_ai` and
+    # `remove_ai` raise UnknownLocationError. Cheap to guarantee here, and
+    # invisible until a roster edit makes it expensive.
+    # Primary first regardless of roster order, so the documented ordering is a
+    # property of this function rather than of how `lead_ais` happens to be
+    # typed. Every current roster lists the canonical name first, which is
+    # exactly why a future edit that does not would be easy to miss.
+    holders = [entity.lead_ai, *(h for h in holders if h != entity.lead_ai)]
+    primary_title = JOB_DESCRIPTIONS.get(location, entity.primary_function)
+    teams = entity.agent_teams or {}
+    seats: List[RoleSeat] = []
+
+    for holder in holders:
+        is_primary = holder == entity.lead_ai
+        title = (
+            primary_title
+            if is_primary
+            else CO_LEAD_JOB_DESCRIPTIONS.get((location, holder), primary_title)
+        )
+        pair = teams.get(holder)
+        functions: Tuple[str, ...] = ()
+        if pair is not None:
+            functions = (pair.alpha.description, pair.beta.description)
+        elif is_primary and entity.agent_alpha and entity.agent_beta:
+            functions = (entity.agent_alpha.description, entity.agent_beta.description)
+        seats.append(
+            RoleSeat(
+                location=location,
+                seat_id="primary" if is_primary else seat_id_for(holder),
+                job_description=title,
+                designed_for=holder,
+                is_primary=is_primary,
+                functions=functions,
+            )
+        )
+    return seats
+
+
+def all_seats() -> List[RoleSeat]:
+    """Every seat across every Location and platform role."""
+    seats: List[RoleSeat] = []
+    for location in PLATFORM_ENTITIES:
+        seats.extend(get_seats(location))
+    for role_id in PLATFORM_ROLES:
+        seats.extend(get_seats(role_id))
+    return seats
+
+
+def seats_without_a_distinct_title() -> List[RoleSeat]:
+    """Co-lead seats still falling back to their Location's headline title.
+
+    A co-lead sharing the primary's title is the exact condition this model was
+    built to remove, so it is reported rather than left to be noticed. Empty
+    today; non-empty the moment a sixth multi-AI Location is added without a
+    title for its co-lead.
+    """
+    return [
+        seat
+        for seat in all_seats()
+        if not seat.is_primary
+        and (seat.location, seat.designed_for) not in CO_LEAD_JOB_DESCRIPTIONS
+    ]
