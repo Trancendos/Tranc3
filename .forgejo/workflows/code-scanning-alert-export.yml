@@ -1,0 +1,38 @@
+name: Code Scanning Alert Export
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  code-scanning-alert-export:
+    name: Export Forgejo code-scanning alerts
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Export code-scanning alerts to register
+        env:
+          FORGEJO_URL: ${{ secrets.FORGEJO_URL }}
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          FORGEJO_REPO: ${{ secrets.FORGEJO_REPO }}
+        run: |
+          if [ -z "${FORGEJO_TOKEN:-}" ]; then
+            echo "SKIP: FORGEJO_TOKEN secret not configured — alert export requires Forgejo access"
+            mkdir -p logs
+            echo '{"skipped": true, "reason": "FORGEJO_TOKEN not available"}' > logs/forgejo-code-scanning-skipped.json
+            exit 0
+          fi
+          python3 scripts/export_forgejo_code_scan_alerts.py --merge
+
+      - name: Upload alert export artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: code-scanning-alert-export
+          path: |
+            SECURITY_ALERT_REGISTER.md
+            logs/forgejo-code-scanning-alerts-*.json
+            logs/forgejo-code-scanning-alerts-*.md
+            logs/forgejo-code-scanning-skipped.json
