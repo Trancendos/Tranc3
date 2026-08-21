@@ -4,5 +4,5 @@ starlette==1.6.0
 uvicorn==0.52.3
 pydantic==2.13.4
 duckdb==1.4.2
-polars==1.30.0
+polars==1.43.2
 pandas==3.0.3
