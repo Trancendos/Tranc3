@@ -46,6 +46,11 @@ RUN pip install --no-cache-dir onnxruntime==1.18.0
 # Copy application with correct ownership
 COPY --chown=tranc3:tranc3 . .
 
+# AeonMind is an editable local install (see requirements.txt) — its source
+# must exist in the build context first, so this can't run in the earlier
+# requirements.txt layer.
+RUN pip install --no-cache-dir -e aeonmind/python
+
 # Create runtime directories (model weights mounted from Fly.io persistent volume)
 RUN mkdir -p models/tranc3-v1 models/tokenizer data/vector_store cache logs \
     && chown -R tranc3:tranc3 /app

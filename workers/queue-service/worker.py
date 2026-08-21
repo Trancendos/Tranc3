@@ -25,6 +25,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 WORKER_PORT = int(os.getenv("PORT", "8027"))
 WORKER_NAME = "the-hive"
 DB_PATH = Path(__file__).parent / "data" / "hive.db"
@@ -141,9 +143,16 @@ class FailRequest(BaseModel):
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.the-hive")
+        instrument_worker(app, service_name="tranc3.the-hive")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     init_db()
     sweeper = asyncio.create_task(_stuck_task_sweeper())
     yield
@@ -191,8 +200,15 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # through the `sharedcore` named build context. It compares with
+    # compare_digest and refuses when the secret is unset.
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
@@ -365,8 +381,7 @@ async def list_queues():
     """List all queues with pending/processing/done/failed counts."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """
+        rows = conn.execute("""
             SELECT
                 queue_name,
                 COUNT(*) FILTER (WHERE status='pending')    AS pending,
@@ -377,8 +392,7 @@ async def list_queues():
             FROM tasks
             GROUP BY queue_name
             ORDER BY queue_name
-            """
-        ).fetchall()
+            """).fetchall()
         return {"queues": [dict(r) for r in rows]}
     finally:
         conn.close()

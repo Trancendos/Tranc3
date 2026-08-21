@@ -111,6 +111,9 @@ from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-leve
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
 )
+from src.monetisation.bridge import (
+    check_and_increment_durable,  # noqa: F401  # intentional top-level import
+)
 from src.observability.metrics import (  # noqa: F401  # intentional top-level import
     log,
     record_churn_risk,
@@ -511,6 +514,22 @@ async def lifespan(app: FastAPI):
     except Exception as _ab_exc:
         logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
 
+    try:
+        from src.cryptex.bridge import start_background_sync as _start_cryptex_sync
+
+        await _start_cryptex_sync()
+        logger.info("Cryptex IOC background sync started (fail-open, %ss interval)", 30)
+    except Exception as _cx_exc:
+        logger.warning("Cryptex IOC background sync unavailable: %s", sanitize_for_log(_cx_exc))
+
+    try:
+        from src.monetisation.bridge import ensure_tier_policies as _ensure_tier_policies
+
+        await _ensure_tier_policies()
+        logger.info("Billing tier rate-limit policies seeded on rate-limit-service (fail-open)")
+    except Exception as _bl_exc:
+        logger.warning("Billing tier policy seeding unavailable: %s", sanitize_for_log(_bl_exc))
+
     # Event Bus wiring — Observatory → EventBus → Library/ThinkTank/Search/Sentinel
     try:
         from src.event_bus import get_event_bus
@@ -863,11 +882,6 @@ from src.imind.routes import router as _imind_router  # noqa: F401  # intentiona
 
 app.include_router(_imind_router)
 
-# ── tAimra (digital twin — opt-in, OFFLINE by default) ────────────────────────
-from src.taimra.routes import router as _taimra_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_taimra_router)
-
 # ── Tranquility (wellbeing hub) ────────────────────────────────────────────────
 from src.tranquility.routes import (
     router as _tranquility_router,  # noqa: F401  # intentional top-level import
@@ -875,29 +889,34 @@ from src.tranquility.routes import (
 
 app.include_router(_tranquility_router)
 
-# ── Resonate (empathy + understanding services) ────────────────────────────────
+# ── Resonate (empathy engine — escalation workflow) ──────────────────────────
+# NOT removed like its siblings below: workers/resonate/worker.py exposes a
+# different API surface (/health, /score, /score/conversation,
+# /conversations/{id}, /history/{user_id}) than this router's
+# /resonate/status|wrap|escalate/{user_id} — it is not a behavioral drop-in
+# replacement, so the in-process mount stays until that gap is closed (see
+# docs/governance/MONOLITH-EXTRACTION-FINDINGS.md).
 from src.resonate.routes import (
     router as _resonate_router,  # noqa: F401  # intentional top-level import
 )
 
 app.include_router(_resonate_router)
 
-# ── The Studio (creativity hub — Sasha's Photo, TateKing, TranceFlow, Fabulousa)
-from src.studio.routes import router as _studio_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_studio_router)
-
-# ── The Lab (AI code creation platform) ──────────────────────────────────────
-from src.lab.routes import router as _lab_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_lab_router)
-
-# ── ChronosSphere / ArcStream (time + schedule management) ───────────────────
-from src.chronos.routes import (
-    router as _chronos_router,  # noqa: F401  # intentional top-level import
-)
-
-app.include_router(_chronos_router)
+# ── tAimra, The Studio, The Lab, ChronosSphere, DevOcity, The
+# Artifactory, VRAR3D: each already has a real, standalone, deployed worker
+# (workers/taimra, workers/the-studio, workers/the-lab +
+# workers/lab-service, workers/cron-service, workers/devocity,
+# workers/artifactory-service, workers/vrar3d — all in
+# docker-compose.production.yml) that supersedes the in-process src/<name>/
+# routers those used to mount here. This was a real extraction that just
+# never had its old in-process router mount cleaned up afterward — same
+# "two sources of truth" pattern flagged in
+# docs/governance/DUPLICATE-WORKER-FINDINGS.md for other services. Verified
+# zero other in-process callers of these routers (only api.py + tests, which
+# import the router/class objects directly and are unaffected by unmounting
+# them here) before removing. The underlying src/<name>/ modules are left in
+# place — tests still exercise them directly — only the live HTTP mount on
+# this shared process is removed.
 
 # ── Turing's Hub (AI personality creation centre) ────────────────────────────
 from src.personality.turingshub.routes import (
@@ -905,20 +924,6 @@ from src.personality.turingshub.routes import (
 )
 
 app.include_router(_turingshub_router)
-
-# ── DevOcity (developer centre — API keys, webhooks, guides) ─────────────────
-from src.devocity.routes import (
-    router as _devocity_router,  # noqa: F401  # intentional top-level import
-)
-
-app.include_router(_devocity_router)
-
-# ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
-from src.artifactory.routes import (
-    router as _artifactory_router,  # noqa: F401  # intentional top-level import
-)
-
-app.include_router(_artifactory_router)
 
 # ── API Marketplace (connector hub — Gravitee.io foundation) ─────────────────
 from src.apimarket.routes import (
@@ -969,10 +974,9 @@ from src.routers.search_api import (
 
 app.include_router(_search_router)
 
-# ── VRAR3D (AR/VR wellbeing centre — Three.js / A-Frame WebXR) ───────────────
-from src.vrar3d.routes import router as _vrar3d_router  # noqa: F401  # intentional top-level import
-
-app.include_router(_vrar3d_router)
+# ── VRAR3D: superseded by workers/vrar3d (real, deployed) — see the removal
+# note above the tAimra/Resonate/Studio/Lab/Chronos/DevOcity/Artifactory
+# cluster; same "old in-process mount never cleaned up" pattern.
 
 # ── The Citadel (DevOps hub — Forgejo + Fly.io + CF Workers) ─────────────────
 from src.citadel.routes import (
@@ -1670,7 +1674,7 @@ async def chat(
 
     # Rate limiting
     try:
-        tier_enforcer.check_and_increment(user_id, tier)
+        await check_and_increment_durable(user_id, tier)
     except ValueError as e:
         raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
 
@@ -1926,7 +1930,7 @@ async def chat_stream(
 
     try:
         InputSanitizer.sanitize(chat_req.message)
-        tier_enforcer.check_and_increment(user_id, tier)
+        await check_and_increment_durable(user_id, tier)
     except ValueError as e:
         raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
     except Exception as e:
