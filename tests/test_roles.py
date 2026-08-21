@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES
+from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES, PLATFORM_ROLES
 from src.roles.registry import RoleRegistry, UnknownLocationError
 
 
@@ -28,8 +28,13 @@ class TestJobDescriptions:
 
 class TestSeeding:
     def test_seeds_one_row_per_entity(self, registry):
+        # The registry now also seeds non-Location platform roles (the Shared
+        # Functional Services Core), so the expected count is Locations plus
+        # roles rather than Locations alone. Asserting the union rather than a
+        # literal keeps this honest if either set grows.
         roles = registry.list_roles()
-        assert len(roles) == len(PLATFORM_ENTITIES)
+        assert len(roles) == len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
+        assert {r.location for r in roles} == set(PLATFORM_ENTITIES) | set(PLATFORM_ROLES)
 
     def test_seed_assigns_canonical_lead_ai(self, registry):
         role = registry.get_role("Royal Bank of Arcadia")
@@ -42,7 +47,7 @@ class TestSeeding:
         reg1 = RoleRegistry(db_path=db_path)
         reg1.close()
         reg2 = RoleRegistry(db_path=db_path)
-        assert len(reg2.list_roles()) == len(PLATFORM_ENTITIES)
+        assert len(reg2.list_roles()) == len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
         reg2.close()
 
 

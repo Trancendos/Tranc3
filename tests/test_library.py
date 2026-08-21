@@ -9,6 +9,7 @@ from src.library.knowledge_base import (
     Article,
     ArticleStatus,
     DataClassification,
+    Jurisdiction,
     Library,
     get_library,
 )
@@ -307,3 +308,126 @@ class TestArticleClassificationAndRetention:
         assert stats["by_classification"].get("public", 0) >= 1
         # seeded platform articles all default to INTERNAL
         assert stats["by_classification"].get("internal", 0) >= 6
+
+
+# ── Jurisdiction + legal hold (2026-08-12 bridge follow-ups) ────────────────
+
+
+class TestJurisdictionAndLegalHold:
+    def test_article_defaults_are_unconstrained(self):
+        art = Article()
+        assert art.jurisdiction == Jurisdiction.GLOBAL
+        assert art.legal_hold is False
+
+    def test_to_dict_exposes_both_fields(self):
+        art = Article(jurisdiction=Jurisdiction.EU, legal_hold=True)
+        d = art.to_dict()
+        assert d["jurisdiction"] == "EU"
+        assert d["legal_hold"] is True
+
+    def test_create_passes_through(self):
+        lib = Library()
+        art = lib.create(
+            title="Residency-constrained",
+            body="Content",
+            jurisdiction=Jurisdiction.UK,
+            legal_hold=True,
+        )
+        assert art.jurisdiction == Jurisdiction.UK
+        assert art.legal_hold is True
+
+    def test_delete_still_works_for_held_article(self):
+        # The in-process delete is unaffected by the hold — only the bridge's
+        # delete *propagation* is suppressed (see bridge tests below).
+        lib = Library()
+        art = lib.create(title="Held", body="Content", legal_hold=True)
+        assert lib.delete(art.id) is True
+        assert lib.get(art.id) is None
+
+
+class TestBridgeForwardGates:
+    """_is_forwardable() is the single gate every forward passes through."""
+
+    def _article(self, **kwargs):
+        defaults = {
+            "title": "Ordinary title",
+            "body": "Ordinary body with nothing sensitive in it.",
+            "classification": DataClassification.INTERNAL,
+        }
+        defaults.update(kwargs)
+        return Article(**defaults)
+
+    def test_plain_internal_article_is_forwardable(self):
+        from src.library.bridge import _is_forwardable
+
+        assert _is_forwardable(self._article()) is True
+
+    def test_legal_hold_blocks_forward(self):
+        from src.library.bridge import _is_forwardable
+
+        assert _is_forwardable(self._article(legal_hold=True)) is False
+
+    def test_local_only_jurisdiction_blocks_forward(self):
+        from src.library.bridge import _is_forwardable
+
+        assert _is_forwardable(self._article(jurisdiction=Jurisdiction.LOCAL_ONLY)) is False
+
+    def test_global_deployment_accepts_regional_article(self):
+        # Default deployment jurisdiction is GLOBAL = unconstrained.
+        from src.library import bridge
+
+        assert bridge._DEPLOYMENT_JURISDICTION == "GLOBAL"
+        assert bridge._is_forwardable(self._article(jurisdiction=Jurisdiction.EU)) is True
+
+    def test_regional_deployment_rejects_mismatched_article(self, monkeypatch):
+        from src.library import bridge
+
+        monkeypatch.setattr(bridge, "_DEPLOYMENT_JURISDICTION", "US")
+        assert bridge._is_forwardable(self._article(jurisdiction=Jurisdiction.EU)) is False
+
+    def test_regional_deployment_accepts_matching_article(self, monkeypatch):
+        from src.library import bridge
+
+        monkeypatch.setattr(bridge, "_DEPLOYMENT_JURISDICTION", "EU")
+        assert bridge._is_forwardable(self._article(jurisdiction=Jurisdiction.EU)) is True
+
+    def test_regional_deployment_still_accepts_global_article(self, monkeypatch):
+        from src.library import bridge
+
+        monkeypatch.setattr(bridge, "_DEPLOYMENT_JURISDICTION", "EU")
+        assert bridge._is_forwardable(self._article(jurisdiction=Jurisdiction.GLOBAL)) is True
+
+    def test_restricted_classification_still_blocks(self):
+        from src.library.bridge import _is_forwardable
+
+        art = self._article(classification=DataClassification.RESTRICTED)
+        assert _is_forwardable(art) is False
+
+    def test_missing_jurisdiction_attribute_treated_as_global(self):
+        # Duck-typed / pre-jurisdiction objects must not crash the gate.
+        from src.library.bridge import _jurisdiction_value
+
+        class Bare:
+            pass
+
+        assert _jurisdiction_value(Bare()) == "GLOBAL"
+
+    def test_held_article_delete_is_not_propagated(self, monkeypatch):
+        from src.library import bridge
+
+        called = []
+        monkeypatch.setattr(bridge, "forward_delete", lambda aid: called.append(aid))
+        lib = Library()
+        art = lib.create(title="Held", body="Content", legal_hold=True)
+        lib.delete(art.id)
+        assert called == []
+
+    def test_unheld_article_delete_is_propagated(self, monkeypatch):
+        from src.library import bridge
+
+        called = []
+        monkeypatch.setattr(bridge, "forward_delete", lambda aid: called.append(aid))
+        lib = Library()
+        art = lib.create(title="Not held", body="Content")
+        lib.delete(art.id)
+        assert called == [art.id]
