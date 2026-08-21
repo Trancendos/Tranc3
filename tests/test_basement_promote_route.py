@@ -165,3 +165,49 @@ class TestPromotionIdempotency:
         assert second["promoted"] == 0
         assert second["duplicates"] == 1
         assert len(library.created) == 1
+
+    def test_a_failing_duplicate_check_does_not_fall_through_to_a_write(self, monkeypatch):
+        """The fail-safe branch, and the reason the dedup lookup is guarded.
+
+        If `by_tag` raises -- a corrupt index, a Library mid-restart -- the
+        answer to "has this already been promoted?" is unknown, not "no".
+        Treating unknown as no would create exactly the duplicate the check
+        exists to prevent, and it would do so precisely when the Library is
+        already unhealthy. The pattern is skipped and counted instead.
+        """
+        from src.basement import promotion as promo
+
+        pattern = promo.Pattern(kind="cluster", signature="boom", occurrences=3, tests=["t"])
+
+        class BrokenLookup:
+            def __init__(self):
+                self.created = []
+
+            def by_tag(self, tag, limit=50):
+                raise RuntimeError("tag index unavailable")
+
+            def create(self, **kw):  # pragma: no cover - must never be reached
+                self.created.append(kw)
+                raise AssertionError("wrote a draft despite an unknown duplicate state")
+
+        library = BrokenLookup()
+        monkeypatch.setattr(promo, "_failure_records", lambda records: ["r"])
+        monkeypatch.setattr(promo, "cluster_failures", lambda f: [pattern])
+        monkeypatch.setattr(promo, "regression_patterns", lambda f: [])
+
+        import src.library.knowledge_base as kb
+
+        monkeypatch.setattr(kb, "get_library", lambda: library)
+
+        import src.basement.archive as archive
+
+        monkeypatch.setattr(
+            archive, "get_basement", lambda: type("B", (), {"recent": lambda *a, **k: ["r"]})()
+        )
+
+        result = promo.promote()
+
+        assert result["promoted"] == 0
+        assert result["skipped"] == 1
+        assert result["duplicates"] == 0
+        assert library.created == []
