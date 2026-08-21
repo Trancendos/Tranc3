@@ -175,7 +175,7 @@ def collect_docs() -> list[tuple[str, str, str, str]]:
         for name in files:
             if not name.endswith(".md"):
                 continue
-            if name == "DOC_INDEX.md":
+            if name == "DOC_INDEX.md" or name.startswith("_"):
                 continue
             full = os.path.join(dirpath, name)
             rel = os.path.relpath(full, REPO_ROOT).replace(os.sep, "/")
@@ -250,7 +250,7 @@ def main() -> None:
     changed = 0
     for dirpath, _dirs, files in os.walk(DOCS_ROOT):
         for name in files:
-            if not name.endswith(".md") or name == "DOC_INDEX.md":
+            if not name.endswith(".md") or name == "DOC_INDEX.md" or name.startswith("_"):
                 continue
             full = os.path.join(dirpath, name)
             rel = os.path.relpath(full, REPO_ROOT).replace(os.sep, "/")
