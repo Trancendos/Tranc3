@@ -51,6 +51,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # The History integrity step needs real history. The default depth of 1
+          # gives a graft boundary that `rev-list --max-parents=0` reports as a
+          # root, and no origin/main at all — which is how the first version of
+          # that check silently verified nothing. The script also deepens `main`
+          # itself (so it works on Forgejo and locally); this makes it certain here.
+          fetch-depth: 0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -79,8 +86,55 @@ jobs:
       - name: Internal-auth delegation check
         run: python scripts/migrate_internal_auth.py --check
 
+      # The shared web-framework stack (fastapi/starlette/pydantic/uvicorn/redis)
+      # is restated in 86 requirements files. Left unguarded it drifts — the
+      # estate once held 5 different uvicorn pins at once — and drift on this
+      # stack is coupled: fastapi constrains starlette and pydantic, so a
+      # sliding pin can stop satisfying its own framework at image-build time.
+      # Pins main's root commit, so a real history rewrite (re-root, whole-graph
+      # squash, force push of an unrelated tree) fails on the commit that causes
+      # it rather than surfacing months later as "why is every branch
+      # unmergeable?". It deepens main itself first: on the shallow clone
+      # actions/checkout produces, `rev-list --max-parents=0` returns a graft
+      # boundary that is indistinguishable from a root, and `merge-base` reports
+      # perfectly related branches as unrelated — a trap that already produced
+      # one confident, wrong conclusion (see BRANCH-SALVAGE-ANALYSIS.md §3).
+      - name: History integrity
+        run: python scripts/check_history_integrity.py
+
+      - name: Framework pin alignment
+        run: python scripts/align_framework_pins.py --check
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
+
+      # Guards an ADOPTED timing profile against rot; a no-op until one is
+      # bootstrapped, because failing CI for a feature nobody has turned on yet
+      # is noise. Once `.test-timings.json` exists, a profile that has fallen
+      # below 80% coverage of the collected suite fails here -- below that the
+      # shard split degrades toward balancing test COUNTS, which is the wrong
+      # quantity and silently gives back the wall-clock win.
+      - name: Test timing profile freshness
+        run: python scripts/test_intelligence.py --check
+
+      # web/ declares dependency overrides in three places, each read by a
+      # different installer (npm / pnpm 10 / pnpm 11+). Those entries exist to
+      # force transitive packages past published advisories, so drift between
+      # them does not break a build -- it silently un-patches whichever installer
+      # was left behind. Both halves of that have already happened here: a pnpm
+      # lockfile serving vulnerable dompurify while npm was patched, and an
+      # override declared only under the `pnpm` key that pnpm 11 ignores.
+      - name: Dependency override sync
+        run: python scripts/check_override_sync.py
+
+      # Model identifiers are not dependencies any package manager understands --
+      # they are bare strings in adapters and env defaults, so dependency scanning
+      # walks straight past them. This fails when code references a model that is
+      # not declared in config/ai_models.yaml with a licence, an execution location
+      # and a data-egress answer. Fast and network-free, unlike the obsolescence
+      # census, so it belongs on every PR.
+      - name: AI model inventory drift
+        run: python scripts/ai_bom.py --check
 
   test:
     name: Pytest
