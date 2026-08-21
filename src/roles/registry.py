@@ -158,6 +158,21 @@ class RoleRegistry:
         self._migrate_to_seat_keyed_schema()
         self._conn.commit()
 
+    def _needs_seat_migration(self, table: str) -> bool:
+        """True when `table` exists and predates the `seat_id` column.
+
+        `table` is one of two literals chosen by the caller below, never
+        anything derived from input -- but PRAGMA takes no bind parameter for
+        an identifier, so the check is written as two explicit statements
+        rather than one interpolated one.
+        """
+        if table == "role_assignments":
+            cur = self._conn.execute("PRAGMA table_info(role_assignments)")
+        else:
+            cur = self._conn.execute("PRAGMA table_info(role_assignment_history)")
+        names = {row[1] for row in cur.fetchall()}
+        return bool(names) and "seat_id" not in names
+
     def _migrate_to_seat_keyed_schema(self) -> None:
         """Rebuild a pre-seat DB whose primary key was `location` alone.
 
@@ -168,33 +183,39 @@ class RoleRegistry:
         rebuilt; every existing row becomes that Location's `primary` seat,
         which is what it always was, so no operator's manual reassignment is
         disturbed.
+
+        Written as two fully literal blocks rather than one loop over
+        interpolated table names. The loop version was flagged by Bandit
+        (B608) and the flag was fair: SQLite cannot bind an identifier, so a
+        parameterised form does not exist, and the only way to be *structurally*
+        free of injection here is to have no interpolation at all. It also
+        reads better -- the SQL that runs is the SQL on the page.
         """
-        for table, columns in (
-            (
-                "role_assignments",
-                "location, 'primary', job_description, assigned_ai, assigned_at, assigned_by",
-            ),
-            (
-                "role_assignment_history",
-                "location, 'primary', previous_ai, new_ai, changed_at, changed_by, reason",
-            ),
-        ):
-            cur = self._conn.execute(f"PRAGMA table_info({table})")
-            names = {row[1] for row in cur.fetchall()}
-            if not names or "seat_id" in names:
-                continue  # fresh table created with the new schema, or already migrated
-            logger.info("Migrating %s to the seat-keyed schema", table)
-            self._conn.execute(f"ALTER TABLE {table} RENAME TO {table}_pre_seat")
-            self._init_one_table(table)
-            target = (
-                "location, seat_id, job_description, assigned_ai, assigned_at, assigned_by"
-                if table == "role_assignments"
-                else "location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason"
-            )
+        if self._needs_seat_migration("role_assignments"):
+            logger.info("Migrating role_assignments to the seat-keyed schema")
+            self._conn.execute("ALTER TABLE role_assignments RENAME TO role_assignments_pre_seat")
+            self._init_one_table("role_assignments")
             self._conn.execute(
-                f"INSERT INTO {table} ({target}) SELECT {columns} FROM {table}_pre_seat"
+                "INSERT INTO role_assignments "
+                "(location, seat_id, job_description, assigned_ai, assigned_at, assigned_by) "
+                "SELECT location, 'primary', job_description, assigned_ai, assigned_at, "
+                "assigned_by FROM role_assignments_pre_seat"
             )
-            self._conn.execute(f"DROP TABLE {table}_pre_seat")
+            self._conn.execute("DROP TABLE role_assignments_pre_seat")
+
+        if self._needs_seat_migration("role_assignment_history"):
+            logger.info("Migrating role_assignment_history to the seat-keyed schema")
+            self._conn.execute(
+                "ALTER TABLE role_assignment_history RENAME TO role_assignment_history_pre_seat"
+            )
+            self._init_one_table("role_assignment_history")
+            self._conn.execute(
+                "INSERT INTO role_assignment_history "
+                "(location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason) "
+                "SELECT location, 'primary', previous_ai, new_ai, changed_at, changed_by, "
+                "reason FROM role_assignment_history_pre_seat"
+            )
+            self._conn.execute("DROP TABLE role_assignment_history_pre_seat")
 
     def _init_one_table(self, table: str) -> None:
         """Create a single table from the current schema, used by the migration."""
