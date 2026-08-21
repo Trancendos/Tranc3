@@ -252,3 +252,90 @@ class TestMigrationFromTheLocationOnlySchema:
             assert len(reg.list_roles()) == len(all_seats())
         finally:
             reg.close()
+
+
+class TestInterruptedMigrationRecovery:
+    """A rebuild stopped part-way must resume, not silently reseed.
+
+    The failure this pins is the expensive kind: `sqlite3` autocommits DDL in
+    its default legacy mode, so a rebuild written as four bare statements is
+    four units of work. Killed between the rename and the copy, the next
+    startup would find a `role_assignments` that already had `seat_id`, decide
+    no migration was needed, leave the legacy rows stranded in
+    `role_assignments_pre_seat`, and let `_seed_defaults` fill the empty table
+    with defaults -- replacing every operator reassignment made before the
+    upgrade, with nothing anywhere reporting it.
+    """
+
+    @staticmethod
+    def _interrupted_db(path):
+        """A database left exactly as a crash between RENAME and INSERT would."""
+        conn = sqlite3.connect(path)
+        conn.execute(
+            "CREATE TABLE role_assignments_pre_seat ("
+            "location TEXT PRIMARY KEY, job_description TEXT NOT NULL, assigned_ai TEXT, "
+            "assigned_at REAL NOT NULL, assigned_by TEXT NOT NULL DEFAULT 'system')"
+        )
+        conn.execute(
+            "INSERT INTO role_assignments_pre_seat VALUES (?, ?, ?, ?, ?)",
+            ("The Lab", "Chief Engineering Officer", "A Human", time.time(), "operator"),
+        )
+        # The rebuilt table exists and is empty -- the crash point.
+        conn.execute(
+            "CREATE TABLE role_assignments ("
+            "location TEXT NOT NULL, seat_id TEXT NOT NULL DEFAULT 'primary', "
+            "job_description TEXT NOT NULL, assigned_ai TEXT, assigned_at REAL NOT NULL, "
+            "assigned_by TEXT NOT NULL DEFAULT 'system', PRIMARY KEY (location, seat_id))"
+        )
+        conn.commit()
+        conn.close()
+
+    def test_a_stranded_operator_assignment_is_recovered(self, tmp_path):
+        path = tmp_path / "interrupted.db"
+        self._interrupted_db(path)
+        reg = RoleRegistry(db_path=path)
+        try:
+            assert reg.get_role("The Lab").assigned_ai == "A Human", (
+                "the pre-crash assignment was replaced by a seeded default"
+            )
+        finally:
+            reg.close()
+
+    def test_the_leftover_table_is_cleaned_up(self, tmp_path):
+        path = tmp_path / "interrupted.db"
+        self._interrupted_db(path)
+        reg = RoleRegistry(db_path=path)
+        try:
+            assert not reg._has_table("role_assignments_pre_seat")
+        finally:
+            reg.close()
+
+    def test_recovery_does_not_overwrite_a_newer_row(self, tmp_path):
+        """On a resumed rebuild the new table may already hold copied rows. A
+        legacy row must not clobber one that was already written."""
+        path = tmp_path / "partial.db"
+        self._interrupted_db(path)
+        conn = sqlite3.connect(path)
+        conn.execute(
+            "INSERT INTO role_assignments VALUES (?, ?, ?, ?, ?, ?)",
+            ("The Lab", "primary", "Chief Engineering Officer", "Newer", time.time(), "operator"),
+        )
+        conn.commit()
+        conn.close()
+
+        reg = RoleRegistry(db_path=path)
+        try:
+            assert reg.get_role("The Lab").assigned_ai == "Newer"
+        finally:
+            reg.close()
+
+    def test_recovery_is_idempotent(self, tmp_path):
+        path = tmp_path / "interrupted.db"
+        self._interrupted_db(path)
+        RoleRegistry(db_path=path).close()
+        reg = RoleRegistry(db_path=path)
+        try:
+            assert reg.get_role("The Lab").assigned_ai == "A Human"
+            assert len(reg.list_roles()) == len(all_seats())
+        finally:
+            reg.close()

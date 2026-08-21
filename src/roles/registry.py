@@ -173,6 +173,12 @@ class RoleRegistry:
         names = {row[1] for row in cur.fetchall()}
         return bool(names) and "seat_id" not in names
 
+    def _has_table(self, name: str) -> bool:
+        cur = self._conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)
+        )
+        return cur.fetchone() is not None
+
     def _migrate_to_seat_keyed_schema(self) -> None:
         """Rebuild a pre-seat DB whose primary key was `location` alone.
 
@@ -184,38 +190,75 @@ class RoleRegistry:
         which is what it always was, so no operator's manual reassignment is
         disturbed.
 
-        Written as two fully literal blocks rather than one loop over
-        interpolated table names. The loop version was flagged by Bandit
-        (B608) and the flag was fair: SQLite cannot bind an identifier, so a
-        parameterised form does not exist, and the only way to be *structurally*
-        free of injection here is to have no interpolation at all. It also
-        reads better -- the SQL that runs is the SQL on the page.
-        """
-        if self._needs_seat_migration("role_assignments"):
-            logger.info("Migrating role_assignments to the seat-keyed schema")
-            self._conn.execute("ALTER TABLE role_assignments RENAME TO role_assignments_pre_seat")
-            self._init_one_table("role_assignments")
-            self._conn.execute(
-                "INSERT INTO role_assignments "
-                "(location, seat_id, job_description, assigned_ai, assigned_at, assigned_by) "
-                "SELECT location, 'primary', job_description, assigned_ai, assigned_at, "
-                "assigned_by FROM role_assignments_pre_seat"
-            )
-            self._conn.execute("DROP TABLE role_assignments_pre_seat")
+        ATOMICITY, AND WHY IT IS NOT OPTIONAL HERE
 
-        if self._needs_seat_migration("role_assignment_history"):
+        The first version ran RENAME, CREATE, INSERT and DROP as four bare
+        statements. `sqlite3` autocommits DDL in its default legacy transaction
+        mode, so those were four units of work, not one -- and the failure that
+        opens is silent data loss. Stop the process between the rename and the
+        copy and the next startup finds a `role_assignments` that already has
+        `seat_id`, so `_needs_seat_migration` says False, the legacy rows sit
+        stranded in `role_assignments_pre_seat`, and `_seed_defaults` fills the
+        empty table with seeded defaults. Every operator reassignment made
+        before the upgrade is quietly replaced, and nothing anywhere reports it.
+
+        So each rebuild runs inside an explicit transaction, and a leftover
+        `*_pre_seat` table is treated as unfinished work to be resumed rather
+        than as debris to ignore. Raised in review by CodeRabbit on PR #839.
+
+        Written as two literal blocks rather than a loop over interpolated
+        table names: SQLite cannot bind an identifier, so the only way to be
+        structurally free of injection is to have no interpolation at all.
+        """
+        if self._needs_seat_migration("role_assignments") or self._has_table(
+            "role_assignments_pre_seat"
+        ):
+            logger.info("Migrating role_assignments to the seat-keyed schema")
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                if self._needs_seat_migration("role_assignments"):
+                    self._conn.execute(
+                        "ALTER TABLE role_assignments RENAME TO role_assignments_pre_seat"
+                    )
+                self._init_one_table("role_assignments")
+                # OR IGNORE: on a resumed rebuild the new table may already
+                # hold some copied rows, and a legacy row must never overwrite
+                # a newer one.
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO role_assignments "
+                    "(location, seat_id, job_description, assigned_ai, assigned_at, assigned_by) "
+                    "SELECT location, 'primary', job_description, assigned_ai, assigned_at, "
+                    "assigned_by FROM role_assignments_pre_seat"
+                )
+                self._conn.execute("DROP TABLE role_assignments_pre_seat")
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
+
+        if self._needs_seat_migration("role_assignment_history") or self._has_table(
+            "role_assignment_history_pre_seat"
+        ):
             logger.info("Migrating role_assignment_history to the seat-keyed schema")
-            self._conn.execute(
-                "ALTER TABLE role_assignment_history RENAME TO role_assignment_history_pre_seat"
-            )
-            self._init_one_table("role_assignment_history")
-            self._conn.execute(
-                "INSERT INTO role_assignment_history "
-                "(location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason) "
-                "SELECT location, 'primary', previous_ai, new_ai, changed_at, changed_by, "
-                "reason FROM role_assignment_history_pre_seat"
-            )
-            self._conn.execute("DROP TABLE role_assignment_history_pre_seat")
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                if self._needs_seat_migration("role_assignment_history"):
+                    self._conn.execute(
+                        "ALTER TABLE role_assignment_history "
+                        "RENAME TO role_assignment_history_pre_seat"
+                    )
+                self._init_one_table("role_assignment_history")
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO role_assignment_history "
+                    "(location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason) "
+                    "SELECT location, 'primary', previous_ai, new_ai, changed_at, changed_by, "
+                    "reason FROM role_assignment_history_pre_seat"
+                )
+                self._conn.execute("DROP TABLE role_assignment_history_pre_seat")
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
 
     def _init_one_table(self, table: str) -> None:
         """Create a single table from the current schema, used by the migration."""

@@ -211,3 +211,80 @@ class TestPromotionIdempotency:
         assert result["skipped"] == 1
         assert result["duplicates"] == 0
         assert library.created == []
+
+
+class TestConcurrentPromotion:
+    """Two callers racing on the same evidence must produce one draft.
+
+    The earlier dedup made promotion idempotent for a *retry* -- a second call
+    after the first finished. It did not make it safe for a *race*: check and
+    create were separate steps, so two admins clicking at the same moment could
+    both find no matching tag and both author a draft. The commit that added
+    the dedup claimed "a retry or a second admin cannot raise a duplicate";
+    the second half of that was not true, and this is what makes it true.
+
+    The barrier is the point of the test: it forces both threads to complete
+    their duplicate check before either is allowed to write, which is precisely
+    the interleaving that defeats an unlocked check-then-create. Without the
+    lock this test fails, deterministically rather than flakily.
+    """
+
+    def test_two_racing_promotions_create_one_draft(self, monkeypatch):
+        import threading
+
+        from src.basement import promotion as promo
+
+        pattern = promo.Pattern(kind="cluster", signature="boom", occurrences=3, tests=["t"])
+
+        class RacingLibrary:
+            def __init__(self):
+                self.created = []
+                self._tags = set()
+                self._guard = threading.Lock()
+                # Released once both threads have run their duplicate check.
+                self.both_checked = threading.Barrier(2, timeout=5)
+
+            def by_tag(self, tag, limit=50):
+                present = tag in self._tags
+                try:
+                    self.both_checked.wait()
+                except threading.BrokenBarrierError:  # pragma: no cover - timing guard
+                    pass
+                return [object()] if present else []
+
+            def create(self, **kw):
+                with self._guard:
+                    self.created.append(kw)
+                    self._tags.update(kw.get("tags", []))
+                return type("A", (), {"id": f"art-{len(self.created)}"})()
+
+        library = RacingLibrary()
+        monkeypatch.setattr(promo, "_failure_records", lambda records: ["r"])
+        monkeypatch.setattr(promo, "cluster_failures", lambda f: [pattern])
+        monkeypatch.setattr(promo, "regression_patterns", lambda f: [])
+
+        import src.library.knowledge_base as kb
+
+        monkeypatch.setattr(kb, "get_library", lambda: library)
+
+        import src.basement.archive as archive
+
+        monkeypatch.setattr(
+            archive, "get_basement", lambda: type("B", (), {"recent": lambda *a, **k: ["r"]})()
+        )
+
+        # The barrier requires both duplicate checks to happen before either
+        # write. Under the lock the second thread cannot reach its check until
+        # the first has finished writing, so the barrier would deadlock -- the
+        # timeout breaks it and the second caller then sees the existing tag.
+        results: list = []
+        threads = [
+            threading.Thread(target=lambda: results.append(promo.promote())) for _ in range(2)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=15)
+
+        assert len(library.created) == 1, "the race produced a duplicate Library draft"
+        assert sum(r["promoted"] for r in results) == 1
