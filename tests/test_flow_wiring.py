@@ -288,3 +288,34 @@ def test_imaginarium_project_queries_are_literal_and_filter_correctly():
         assert len(rows) == expected
 
     conn.close()
+
+
+def test_reporter_rejects_a_non_http_endpoint(tmp_path, chaos_party):
+    """`urlopen` honours file: and ftp: too; CHAOS_PARTY_URL is not a literal."""
+    _, stub = chaos_party
+    target = tmp_path / "secret.txt"
+    target.write_text("do not read me", encoding="utf-8")
+
+    proc = _run_reporter(
+        _results_file(tmp_path, ROWS),
+        {"CHAOS_PARTY_URL": f"file://{target}", "INTERNAL_SECRET": "s"},
+    )
+
+    assert proc.returncode == 2
+    assert "http(s)" in proc.stderr
+    assert stub.received == []
+
+
+def test_reporter_accepts_https():
+    """The guard must not reject the scheme the deployed worker actually uses."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("chaos_reporter", REPORTER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.batch_endpoint("https://chaos.example/") == "https://chaos.example/runs/batch"
+    assert module.batch_endpoint("http://chaos-party:8079") == "http://chaos-party:8079/runs/batch"
+    for bad in ("file:///etc/passwd", "ftp://host/x", "chaos-party:8079", ""):
+        with pytest.raises(ValueError):
+            module.batch_endpoint(bad)

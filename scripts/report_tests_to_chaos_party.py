@@ -33,6 +33,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any, Iterator
@@ -98,20 +99,37 @@ def chunked(runs: list[dict[str, Any]], size: int) -> Iterator[list[dict[str, An
         yield runs[start : start + size]
 
 
+def batch_endpoint(base_url: str) -> str:
+    """Resolve the /runs/batch URL, rejecting anything that is not HTTP(S).
+
+    `urlopen` honours whatever scheme it is handed, including `file:` and
+    `ftp:`. `CHAOS_PARTY_URL` arrives from the environment -- a CI secret or a
+    compose variable -- so it is not a literal, and a typo or a tampered value
+    should not be able to point this at the filesystem. Checking here means the
+    scheme is settled once, before any request is built.
+    """
+    parsed = urllib.parse.urlsplit(base_url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError(f"CHAOS_PARTY_URL must be an http(s) URL, got {base_url!r}")
+    return f"{base_url.rstrip('/')}/runs/batch"
+
+
 def post_batch(
-    base_url: str, secret: str, batch: list[dict[str, Any]], suite_id: int | None, timeout: float
+    endpoint: str, secret: str, batch: list[dict[str, Any]], suite_id: int | None, timeout: float
 ) -> dict[str, Any]:
     """POST one batch. Raises on any non-201 response or transport failure."""
     payload = {"runs": batch}
     if suite_id is not None:
         payload["suite_id"] = suite_id
     request = urllib.request.Request(
-        f"{base_url.rstrip('/')}/runs/batch",
+        endpoint,
         data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json", "X-Internal-Secret": secret},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+    # The scheme is restricted to http(s) by batch_endpoint(), which is what
+    # B310 asks to be audited; the marker has to sit on the flagged line itself.
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310  # nosec B310
         if response.status != 201:
             raise RuntimeError(f"expected 201, got {response.status}")
         return json.loads(response.read().decode("utf-8"))
@@ -140,6 +158,12 @@ def main() -> int:
         )
         return 2
 
+    try:
+        endpoint = batch_endpoint(base_url)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+
     rows = read_results(Path(args.results))
     if not rows:
         print(f"No test results found at {args.results} -- nothing to report.")
@@ -149,7 +173,7 @@ def main() -> int:
     reported = 0
     for batch in chunked(runs, max(1, args.batch_size)):
         try:
-            result = post_batch(base_url, secret, batch, args.suite_id, args.timeout)
+            result = post_batch(endpoint, secret, batch, args.suite_id, args.timeout)
         except (urllib.error.URLError, OSError, RuntimeError, ValueError) as exc:
             print(
                 f"Failed to report {len(batch)} runs to The Chaos Party at {base_url}: {exc}",
