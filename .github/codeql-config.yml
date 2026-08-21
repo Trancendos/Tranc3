@@ -12,6 +12,12 @@ name: "Tranc3 CodeQL Config"
 #   - deepmind/planning.py: uses MD5 with usedforsecurity=False for deterministic seeding
 #   - workers/: self-hosted service workers (separate scan via Trivy/Semgrep)
 #   - Known validator/security modules that intentionally handle untrusted input
+#
+# NOTE: Path-injection (CWE-022) results for the validator/safety modules below
+# are treated as accepted/false-positive and are excluded here rather than
+# filtered by an inline SARIF post-processor. Add new suppression targets to
+# paths-ignore (or the AlertSuppression.ql model) rather than re-introducing a
+# hardcoded Python filter step in codeql.yml.
 paths-ignore:
   - tests
   - scripts
