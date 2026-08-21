@@ -10,6 +10,7 @@ from service import VRARRouter
 
 import config
 from database import VRARDatabase
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from models import (
     AssetProcessRequest,
     AssetProcessResponse,
@@ -20,10 +21,9 @@ from models import (
 
 
 def _auth(x_internal_secret: Optional[str] = Header(default=None)) -> None:
-    if not config.INTERNAL_SECRET:
-        raise HTTPException(status_code=503, detail="Service auth not configured")
-    if x_internal_secret != config.INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, config.INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 def _make_vrar3d_router(db: VRARDatabase, vrar: VRARRouter) -> APIRouter:

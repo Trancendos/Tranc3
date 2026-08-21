@@ -37,7 +37,6 @@ Zero-cost: FastAPI + SQLite. No external deps beyond core platform.
 
 from __future__ import annotations
 
-import hmac
 import json
 import logging
 import os
@@ -52,6 +51,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger(__name__)
@@ -74,8 +74,9 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 # ── Shard Catalogue ──────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES
+from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES, PLATFORM_ROLES
 from src.validation.validators import validate_non_empty, validate_safe_string
 
 DEFAULT_DB_PATH = Path("data/role_registry.db")
@@ -159,6 +159,15 @@ class RoleRegistry:
             )
             for location, entity in PLATFORM_ENTITIES.items()
         ]
+        # Non-Location platform roles (the Shared Functional Services Core and
+        # anything later added beside it). Seeded into the same table so "who
+        # holds what" has one answer, not two — but kept out of
+        # PLATFORM_ENTITIES, because a Dimensional has no pillar, agent team or
+        # worker port and is not a Location.
+        rows += [
+            (role.role_id, role.job_description, role.default_holder, now, "system:seed")
+            for role in PLATFORM_ROLES.values()
+        ]
         self._conn.executemany(
             "INSERT OR IGNORE INTO role_assignments "
             "(location, job_description, assigned_ai, assigned_at, assigned_by) "
@@ -223,10 +232,15 @@ class RoleRegistry:
 
     def _row_to_assignment(self, row: sqlite3.Row) -> RoleAssignment:
         entity = PLATFORM_ENTITIES.get(row["location"])
+        # A non-Location platform role has no pillar and no LocationEntity, so
+        # its scope stands in for primary_function. Without this the SFSC row
+        # would come back from /roles with two empty fields and read as broken
+        # data rather than as a different kind of row.
+        role = None if entity else PLATFORM_ROLES.get(row["location"])
         return RoleAssignment(
             location=row["location"],
             pillar=entity.pillar.value if entity else "",
-            primary_function=entity.primary_function if entity else "",
+            primary_function=(entity.primary_function if entity else (role.scope if role else "")),
             job_description=row["job_description"],
             assigned_ai=row["assigned_ai"],
             assigned_at=row["assigned_at"],
@@ -259,7 +273,7 @@ class RoleRegistry:
         reason: str = "",
     ) -> RoleAssignment:
         """Assign (or reassign) an AI to a location's Job Description."""
-        if location not in PLATFORM_ENTITIES:
+        if location not in PLATFORM_ENTITIES and location not in PLATFORM_ROLES:
             raise UnknownLocationError(location)
         ai_name = validate_non_empty(ai_name, "ai_name")
         ai_name = validate_safe_string(ai_name, "ai_name", max_length=256)
@@ -297,7 +311,7 @@ class RoleRegistry:
         reason: str = "",
     ) -> RoleAssignment:
         """Vacate a location's Job Description — leaves the role unassigned."""
-        if location not in PLATFORM_ENTITIES:
+        if location not in PLATFORM_ENTITIES and location not in PLATFORM_ROLES:
             raise UnknownLocationError(location)
         with self._lock:
             current = self.get_role(location)
@@ -328,7 +342,7 @@ class RoleRegistry:
         return result
 
     def get_history(self, location: str) -> List[AssignmentHistoryEntry]:
-        if location not in PLATFORM_ENTITIES:
+        if location not in PLATFORM_ENTITIES and location not in PLATFORM_ROLES:
             raise UnknownLocationError(location)
         with self._lock:
             cur = self._conn.execute(

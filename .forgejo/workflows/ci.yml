@@ -148,6 +148,13 @@ jobs:
       - name: Create logs dir
         run: mkdir -p logs
 
+      - name: Check topology map freshness
+        # Needs the real compliance/magna-carta submodule content (Matrix
+        # Suites registry) this job already checks out above — the smoke
+        # job's checkout doesn't have it, which is why this lives here and
+        # not next to the master-matrix freshness check.
+        run: python scripts/check_topology_map_freshness.py
+
       - name: Run full test suite
         run: |
           python -m pytest tests/ \

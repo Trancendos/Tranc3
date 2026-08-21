@@ -44,6 +44,8 @@ from urllib.parse import quote, urlencode, urlparse
 
 import aiohttp
 
+from Dimensional.circuit_state import CircuitState  # noqa: F401
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -83,10 +85,10 @@ class StorageTier(str, Enum):
     AWS = "aws_free"
 
 
-class CircuitState(str, Enum):
-    CLOSED = "closed"  # healthy — requests flow normally
-    OPEN = "open"  # failed — requests are rejected immediately
-    HALF_OPEN = "half_open"  # recovery probe in progress
+# CircuitState is imported at the top of this module from its canonical home,
+# Dimensional/circuit_state.py. It was previously defined here as a (str, Enum)
+# with identical members and values — one of three such copies inside
+# Dimensional/, and of eight across the platform.
 
 
 class SystemMode(str, Enum):
@@ -743,28 +745,32 @@ class OciAdaptiveProvider:
         """Construct from environment variables."""
         config = AdaptiveProviderConfig(
             system_mode=SystemMode(os.getenv("SYSTEM_MODE", "HYBRID")),
-            oci=OciConfig(
-                namespace=os.environ["OCI_NAMESPACE"],
-                bucket=os.getenv("OCI_BUCKET", "tranc3-primary"),
-                region=os.getenv("OCI_REGION", "us-ashburn-1"),
-                tenancy_ocid=os.environ["OCI_TENANCY_OCID"],
-                user_ocid=os.environ["OCI_USER_OCID"],
-                fingerprint=os.environ["OCI_FINGERPRINT"],
-                private_key_pem=os.environ["OCI_PRIVATE_KEY_PEM"].replace(
-                    "\\n", "\n"
-                ),  # pragma: allowlist secret
-                compartment_id=os.environ["OCI_COMPARTMENT_ID"],
-            )
-            if os.getenv("OCI_NAMESPACE")
-            else None,
-            r2=R2Config(
-                account_id=os.environ["CF_ACCOUNT_ID"],
-                access_key=os.environ["CF_R2_ACCESS_KEY"],
-                secret_key=os.environ["CF_R2_SECRET_KEY"],  # pragma: allowlist secret
-                bucket=os.getenv("CF_R2_BUCKET", "tranc3-fallback"),
-            )
-            if os.getenv("CF_ACCOUNT_ID")
-            else None,
+            oci=(
+                OciConfig(
+                    namespace=os.environ["OCI_NAMESPACE"],
+                    bucket=os.getenv("OCI_BUCKET", "tranc3-primary"),
+                    region=os.getenv("OCI_REGION", "us-ashburn-1"),
+                    tenancy_ocid=os.environ["OCI_TENANCY_OCID"],
+                    user_ocid=os.environ["OCI_USER_OCID"],
+                    fingerprint=os.environ["OCI_FINGERPRINT"],
+                    private_key_pem=os.environ["OCI_PRIVATE_KEY_PEM"].replace(
+                        "\\n", "\n"
+                    ),  # pragma: allowlist secret
+                    compartment_id=os.environ["OCI_COMPARTMENT_ID"],
+                )
+                if os.getenv("OCI_NAMESPACE")
+                else None
+            ),
+            r2=(
+                R2Config(
+                    account_id=os.environ["CF_ACCOUNT_ID"],
+                    access_key=os.environ["CF_R2_ACCESS_KEY"],
+                    secret_key=os.environ["CF_R2_SECRET_KEY"],  # pragma: allowlist secret
+                    bucket=os.getenv("CF_R2_BUCKET", "tranc3-fallback"),
+                )
+                if os.getenv("CF_ACCOUNT_ID")
+                else None
+            ),
             minio=MinioConfig(
                 endpoint=os.getenv("MINIO_ENDPOINT", "http://localhost:9000"),
                 access_key=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),

@@ -123,26 +123,26 @@ jobs:
       - name: npm audit — tranc3-ai
         working-directory: cloudflare/tranc3-ai
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=moderate || true
 
       - name: npm audit — infinity-void
         working-directory: cloudflare/infinity-void
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=moderate || true
 
       - name: npm audit — api-gateway
         working-directory: cloudflare/trancendos-api-gateway
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=high || true
         continue-on-error: true
 
       - name: npm audit — tranc3-bots
         working-directory: tranc3-bots
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=moderate || true
         continue-on-error: true
 
