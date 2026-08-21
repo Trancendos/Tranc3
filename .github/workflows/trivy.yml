@@ -57,7 +57,7 @@ jobs:
           output: "trivy-config.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
           exit-code: "0"
-          ignorefile: ".trivyignore"
+          trivyignores: ".trivyignore"
 
       - name: Upload Trivy config SARIF to Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -90,7 +90,7 @@ jobs:
           output: "trivy-fs.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
           exit-code: "0"
-          ignorefile: ".trivyignore"
+          trivyignores: ".trivyignore"
 
       - name: Upload Trivy fs SARIF to Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -117,12 +117,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # `load: true` is what makes this job a scan rather than a build.
+      # setup-buildx-action installs the `docker-container` driver, whose
+      # output stays in the builder's own cache; with `push: false` and no
+      # `load`, nothing is ever written to the local docker daemon. Trivy then
+      # failed to find `tranc3:<sha>` locally, fell through to its `remote`
+      # resolver, and asked docker.io for `library/tranc3` -- which answered
+      # UNAUTHORIZED. The image scan had never scanned an image.
       - name: Build Docker image
         id: build
         uses: docker/build-push-action@v4
         with:
           context: .
           push: false
+          load: true
           tags: tranc3:${{ github.sha }}
 
       - name: Run Trivy image scan (local image)
@@ -134,7 +142,7 @@ jobs:
           output: "trivy-image.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
           exit-code: "0"
-          ignorefile: ".trivyignore"
+          trivyignores: ".trivyignore"
 
       - name: Upload Trivy image SARIF to Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -169,7 +177,7 @@ jobs:
           output: "trivy-fs-enforce.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
           exit-code: "1"
-          ignorefile: ".trivyignore"
+          trivyignores: ".trivyignore"
 
       - name: Run Trivy image scan (enforce) - optional if you build images in CI
         uses: aquasecurity/trivy-action@v0.36.0
@@ -180,7 +188,7 @@ jobs:
           output: "trivy-image-enforce.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
           exit-code: "1"
-          ignorefile: ".trivyignore"
+          trivyignores: ".trivyignore"
 
       - name: Upload enforcement SARIF to Security tab
         uses: github/codeql-action/upload-sarif@v3
