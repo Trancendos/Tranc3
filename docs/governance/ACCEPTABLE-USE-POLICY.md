@@ -1,3 +1,10 @@
+---
+title: "Trancendos Platform — Acceptable Use Policy & Location Subscription Terms"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Trancendos Platform — Acceptable Use Policy & Location Subscription Terms
 
 | Field | Value |

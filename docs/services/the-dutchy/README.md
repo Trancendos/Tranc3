@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Dutchy"
+category: Reference
+last-reviewed: 2026-08-01
+status: needs-update
+---
+
 # Service Doc-Pack — The Dutchy
 
 | Field | Value |

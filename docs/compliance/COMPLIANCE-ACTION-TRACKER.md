@@ -1,3 +1,10 @@
+---
+title: "Compliance Action Tracker"
+category: Security
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Compliance Action Tracker
 
 **Version:** 1.0.0 | **Date:** 2026-06-12 | **Review Cycle:** Monthly

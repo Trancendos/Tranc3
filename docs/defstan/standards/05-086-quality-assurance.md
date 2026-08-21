@@ -1,3 +1,10 @@
+---
+title: "DEF STAN 05-086 — Quality Assurance"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # DEF STAN 05-086 — Quality Assurance
 
 **Standard:** DEF STAN 05-086 (adapted)  

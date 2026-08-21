@@ -1,3 +1,10 @@
+---
+title: "Proactive Systems Architecture"
+category: Architecture
+last-reviewed: 2026-05-26
+status: needs-update
+---
+
 # Proactive Systems Architecture
 
 **Module:** `Dimensional/architecture/` + `src/adaptive/`

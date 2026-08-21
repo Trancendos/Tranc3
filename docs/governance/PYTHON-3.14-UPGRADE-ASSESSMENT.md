@@ -1,3 +1,10 @@
+---
+title: "Python 3.11 → 3.14 Upgrade Feasibility Assessment"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Python 3.11 → 3.14 Upgrade Feasibility Assessment
 
 **Type:** Research/assessment only. No code, Dockerfile, CI, or dependency file in this repo was

@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Architecture Blueprint"
+category: Architecture
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Tranc3 Architecture Blueprint
 
 **Version:** 1.0.0 | **Date:** 2026-06-12 | **Classification:** UNCLASSIFIED — INTERNAL

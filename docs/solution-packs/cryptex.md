@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Cryptex"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Cryptex
 
 > **PID-CRX · AID-CRX-01 · Security pillar**  

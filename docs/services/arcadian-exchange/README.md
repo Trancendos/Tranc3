@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Arcadian Exchange"
+category: Reference
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Service Doc-Pack — Arcadian Exchange
 
 | Field | Value |

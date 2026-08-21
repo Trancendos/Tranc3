@@ -1,3 +1,10 @@
+---
+title: "Cost and Revenue Governance"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Cost and Revenue Governance
 
 > **What this is.** The escalation policy for two related questions every service on this platform

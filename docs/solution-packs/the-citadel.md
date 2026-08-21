@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Citadel"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Citadel
 
 > **PID-CTL · AID-CTL-01 · DevOps pillar**  

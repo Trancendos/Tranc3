@@ -1,3 +1,10 @@
+---
+title: "DEF STAN 00-056 — Software Development"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # DEF STAN 00-056 — Software Development
 
 **Standard:** DEF STAN 00-056 (adapted)  

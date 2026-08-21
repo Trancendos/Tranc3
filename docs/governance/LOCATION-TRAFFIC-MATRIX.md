@@ -1,3 +1,10 @@
+---
+title: "Location-to-Location Traffic Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Location-to-Location Traffic Matrix
 
 > **What this is.** An honest map of what actually exists today for understanding which Locations

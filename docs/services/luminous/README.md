@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Luminous (Core Platform Brain)"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Service Doc-Pack — Luminous (Core Platform Brain)
 
 | Field | Value |

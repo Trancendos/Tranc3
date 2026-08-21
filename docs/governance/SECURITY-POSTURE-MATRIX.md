@@ -1,3 +1,10 @@
+---
+title: "Security Posture Matrix"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Security Posture Matrix
 
 > **What this is.** The user pasted CrowdStrike's 2026 Global Threat Report and asked, plainly: does

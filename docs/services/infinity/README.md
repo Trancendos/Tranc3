@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Infinity (OAuth2/OIDC + SSO + MFA Auth)"
+category: Reference
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Service Doc-Pack — Infinity (OAuth2/OIDC + SSO + MFA Auth)
 
 > Code-grounded Doc Pack per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.

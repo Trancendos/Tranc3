@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Lab"
+category: Reference
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Service Doc-Pack — The Lab
 
 | Field | Value |

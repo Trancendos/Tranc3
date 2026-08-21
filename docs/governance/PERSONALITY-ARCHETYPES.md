@@ -1,3 +1,10 @@
+---
+title: "Personality Archetypes — Research Basis for Job-Description Trait Vectors"
+category: Reference
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Personality Archetypes — Research Basis for Job-Description Trait Vectors
 
 > **What this is.** A grounding pass over `src/personality/profiles/*.json`'s trait vectors

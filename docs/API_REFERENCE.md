@@ -1,3 +1,10 @@
+---
+title: "Tranc3 API Reference"
+category: Reference
+last-reviewed: 2026-05-23
+status: complete
+---
+
 # Tranc3 API Reference
 
 > **Version:** 0.1.0  

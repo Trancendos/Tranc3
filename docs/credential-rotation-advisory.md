@@ -1,3 +1,10 @@
+---
+title: "Credential Rotation Advisory"
+category: Security
+last-reviewed: 2026-05-23
+status: needs-update
+---
+
 # Credential Rotation Advisory
 
 **Date:** 2026-05-22  

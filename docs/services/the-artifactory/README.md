@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Artifactory"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Service Doc-Pack — The Artifactory
 
 | Field | Value |

@@ -1,3 +1,10 @@
+---
+title: "DEF STAN 00-055 — Safety-Related Software"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # DEF STAN 00-055 — Safety-Related Software
 
 **Standard:** DEF STAN 00-055 (adapted for AI platform safety)  

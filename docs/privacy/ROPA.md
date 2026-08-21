@@ -1,3 +1,10 @@
+---
+title: "Record of Processing Activities (ROPA)"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # Record of Processing Activities (ROPA)
 
 > **Document ID:** ROPA-001  

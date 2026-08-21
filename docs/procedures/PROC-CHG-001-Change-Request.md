@@ -1,3 +1,10 @@
+---
+title: "PROC-CHG-001 — Change Request Procedure"
+category: Operations
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # PROC-CHG-001 — Change Request Procedure
 **Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Parent Policy:** POL-OPS-002
 

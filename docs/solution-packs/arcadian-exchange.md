@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Arcadian Exchange"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Arcadian Exchange
 
 > **PID-AEX · AID-AEX-01 · Commercial / Financial pillar**  

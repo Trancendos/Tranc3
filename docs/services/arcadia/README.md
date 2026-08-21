@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Arcadia (Post-Login Front-End Hub)"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Service Doc-Pack — Arcadia (Post-Login Front-End Hub)
 
 | Field | Value |

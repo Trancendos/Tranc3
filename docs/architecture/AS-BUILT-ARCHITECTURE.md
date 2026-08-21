@@ -1,3 +1,10 @@
+---
+title: "Tranc3 — As-Built Architecture"
+category: Architecture
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Tranc3 — As-Built Architecture
 
 **Version:** 1.0.0 | **Classification:** UNCLASSIFIED — INTERNAL | **Date:** 2026-06-12

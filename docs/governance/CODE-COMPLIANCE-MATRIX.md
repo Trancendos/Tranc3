@@ -1,3 +1,10 @@
+---
+title: "Code Compliance Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Code Compliance Matrix
 
 > **What this is.** Every mechanism below already exists and already runs — this document ties

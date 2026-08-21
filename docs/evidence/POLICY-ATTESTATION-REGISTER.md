@@ -1,3 +1,10 @@
+---
+title: "Policy Attestation Register"
+category: Reference
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Policy Attestation Register
 
 **Version:** 1.0.0 | **Date:** 2026-06-12

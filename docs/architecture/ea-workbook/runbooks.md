@@ -1,3 +1,10 @@
+---
+title: "Operational Runbooks — Anchor Services"
+category: Architecture
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Operational Runbooks — Anchor Services
 
 Incident-response and operational procedures for the six anchor services seeded in this

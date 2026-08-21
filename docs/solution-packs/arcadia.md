@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Arcadia"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Arcadia
 
 > **PID-ARC · AID-ARC-01 · Commercial / Financial pillar**  

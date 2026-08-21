@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — DocUtari"
+category: Reference
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Service Doc-Pack — DocUtari
 
 | Field | Value |

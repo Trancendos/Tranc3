@@ -1,3 +1,10 @@
+---
+title: "Change Advisory Board — Charter"
+category: Reference
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # Change Advisory Board — Charter
 
 **Document ID:** CAB-001  

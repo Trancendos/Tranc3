@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — TateKing"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — TateKing
 
 > **PID-TKG · AID-TKG-01 · Creativity pillar**  

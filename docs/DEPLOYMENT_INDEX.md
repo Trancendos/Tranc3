@@ -1,3 +1,10 @@
+---
+title: "Deployment Documentation Index"
+category: Deployment
+last-reviewed: 2026-07-04
+status: needs-update
+---
+
 # Deployment Documentation Index
 
 Tranc3's deployment docs are split across `docs/`, `deploy/`, and `docs/runbooks/`

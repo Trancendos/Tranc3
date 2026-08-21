@@ -1,3 +1,10 @@
+---
+title: "Error, Vulnerability, Remediation & Self-Healing Matrix"
+category: Reference
+last-reviewed: 2026-07-31
+status: needs-update
+---
+
 # Error, Vulnerability, Remediation & Self-Healing Matrix
 
 > **What this is.** Five items from the matrix brainstorm — Error Code Registry, CVE Matrix,

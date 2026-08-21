@@ -1,3 +1,10 @@
+---
+title: "Observability and Automation Governance"
+category: Reference
+last-reviewed: 2026-07-18
+status: needs-update
+---
+
 # Observability and Automation Governance
 
 > **What this is.** An honest accounting of what proactive/automated monitoring already exists on

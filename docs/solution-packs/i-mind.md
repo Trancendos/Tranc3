@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — I-Mind"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — I-Mind
 
 > **PID-IMD · AID-IMD-01 · Wellbeing pillar**  

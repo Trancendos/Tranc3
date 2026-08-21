@@ -1,3 +1,10 @@
+---
+title: "Privacy Impact Assessment (PIA)"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # Privacy Impact Assessment (PIA)
 
 > **Document ID:** PIA-001  

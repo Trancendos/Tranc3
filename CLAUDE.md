@@ -1,3 +1,10 @@
+---
+title: "CLAUDE.md"
+category: Reference
+last-reviewed: 2026-08-18
+status: complete
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.

@@ -1,3 +1,10 @@
+---
+title: "Test intelligence — the CircleCI question, answered in-platform"
+category: Architecture
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Test intelligence — the CircleCI question, answered in-platform
 
 **Date:** 2026-08-18. **Decision:** do not adopt CircleCI. Build the two features

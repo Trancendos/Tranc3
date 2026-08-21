@@ -1,3 +1,10 @@
+---
+title: "DEF STAN 00-600 — Supportability (ILS)"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # DEF STAN 00-600 — Supportability (ILS)
 
 **Standard:** DEF STAN 00-600 (adapted for software platform)  

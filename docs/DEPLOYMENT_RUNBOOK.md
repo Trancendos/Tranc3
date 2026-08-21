@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Production Deployment Runbook"
+category: Operations
+last-reviewed: 2026-05-21
+status: needs-update
+---
+
 # Tranc3 Production Deployment Runbook
 
 ## Architecture Overview

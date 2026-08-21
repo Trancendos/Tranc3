@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Workshop"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Workshop
 
 > **PID-WRK · AID-WRK-01 · Development (Code) pillar**  

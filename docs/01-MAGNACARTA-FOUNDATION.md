@@ -1,3 +1,10 @@
+---
+title: "Magna Carta Foundation — Zero-Cost Sovereignty Principle"
+category: Reference
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Magna Carta Foundation — Zero-Cost Sovereignty Principle
 
 **Version:** 1.0.0 | **Classification:** UNCLASSIFIED — PUBLIC | **Review:** Quarterly

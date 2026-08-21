@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Sashas Photo Studio"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Sashas Photo Studio
 
 > **PID-SPS · AID-SPS-01 · Creativity pillar**  

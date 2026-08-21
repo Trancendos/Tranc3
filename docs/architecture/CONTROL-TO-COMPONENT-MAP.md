@@ -1,3 +1,10 @@
+---
+title: "Control-to-Component Mapping"
+category: Architecture
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Control-to-Component Mapping
 
 **Version:** 1.0.0 | **Date:** 2026-06-12 | **Owner:** Trancendos Platform Engineering

@@ -1,3 +1,10 @@
+---
+title: "Production Readiness Roadmap"
+category: Deployment
+last-reviewed: 2026-05-31
+status: needs-update
+---
+
 # Production Readiness Roadmap
 
 **Target:** Self-hosted, zero-cost Trancendos stack with editable governance names and merge-clean `main`.

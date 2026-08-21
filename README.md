@@ -247,13 +247,18 @@ It will be available immediately — no restart, no retraining.
 
 ## Documentation
 
+**All documentation is indexed in [`docs/DOC_INDEX.md`](docs/DOC_INDEX.md)** — the
+canonical navigation hub. It organizes every doc into the logical hierarchy
+(Getting Started, Architecture, Development, Deployment, Security, Operations,
+Reference) with status indicators and quick links for deploy/develop/debug/secure.
+
 | Document | Description |
 |----------|-------------|
-| [Deployment Runbook](docs/DEPLOYMENT_RUNBOOK.md) | Full deployment guide |
+| [Documentation Index](docs/DOC_INDEX.md) | Central hub — browse all docs by category |
 | [Architecture Threat Model](ARCHITECTURE_THREAT_MODEL.md) | Security architecture |
-| [CF Worker Migration Roadmap](CF_WORKER_MIGRATION_ROADMAP.md) | Cloudflare → self-hosted plan |
+| [CF Worker Migration Roadmap](wiki-content/Architecture-CF_WORKER_MIGRATION_ROADMAP.md) | Cloudflare → self-hosted plan |
 | [Security Assessment](SECURITY-ASSESSMENT.md) | Vulnerability analysis |
-| [Project Pulse](PROJECT_PULSE.md) | Current status + metrics |
+| [Deployment Runbook](docs/DEPLOYMENT_RUNBOOK.md) | Full deployment guide |
 
 ---
 

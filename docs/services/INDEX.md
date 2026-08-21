@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack Coverage Index"
+category: Reference
+last-reviewed: 2026-08-01
+status: needs-update
+---
+
 # Service Doc-Pack Coverage Index
 
 Tracks per-service design/architecture/governance documentation across all Trancendos

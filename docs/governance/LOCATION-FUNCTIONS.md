@@ -1,3 +1,10 @@
+---
+title: "Location Functions & Job Descriptions Registry"
+category: Reference
+last-reviewed: 2026-08-01
+status: needs-update
+---
+
 # Location Functions & Job Descriptions Registry
 
 > **What this is.** A report on every one of the platform's 43 named Locations (`PLATFORM_ENTITIES.md`)

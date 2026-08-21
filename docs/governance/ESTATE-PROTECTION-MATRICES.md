@@ -1,3 +1,10 @@
+---
+title: "Estate Protection Matrices — Tranc3 Cross-Link"
+category: Reference
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Estate Protection Matrices — Tranc3 Cross-Link
 
 **Source of truth:** [Trancendos/magna-carta](https://github.com/Trancendos/magna-carta) repository, `docs/compliance/`

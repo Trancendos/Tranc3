@@ -1,3 +1,10 @@
+---
+title: "Runbook: Zero-Downtime Deployment Procedure"
+category: Operations
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # Runbook: Zero-Downtime Deployment Procedure
 
 | Field | Value |

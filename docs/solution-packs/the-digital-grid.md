@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Digital Grid"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Digital Grid
 
 > **PID-DGR · AID-DGR-01 · Development (Code) pillar**  

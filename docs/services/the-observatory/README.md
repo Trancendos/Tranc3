@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Observatory (Audit, Tracing, Health)"
+category: Reference
+last-reviewed: 2026-07-18
+status: needs-update
+---
+
 # Service Doc-Pack — The Observatory (Audit, Tracing, Health)
 
 > Code-grounded Doc Pack per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.

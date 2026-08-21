@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Turing's Hub"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Turing's Hub
 
 > **PID-THB · AID-THB-01 · DevOps pillar**  

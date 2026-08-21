@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Royal Bank of Arcadia"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Royal Bank of Arcadia
 
 > **PID-RBA · AID-RBA-01 · Commercial / Financial pillar**  

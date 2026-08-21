@@ -1,3 +1,10 @@
+---
+title: "Duplicate Worker Findings — 2026-08-07 systematic sweep"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Duplicate Worker Findings — 2026-08-07 systematic sweep
 
 **Status:** Open — decisions below need a human owner call, not a code fix. Nothing in this

@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Security Policy"
+category: Reference
+last-reviewed: 2026-08-07
+status: complete
+---
+
 # Tranc3 Security Policy
 
 ## Supported Versions

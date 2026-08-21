@@ -1,3 +1,10 @@
+---
+title: "Platform Service Review"
+category: Architecture
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Platform Service Review
 
 Generated from repo state at `26c80e7a`. Regenerate with 

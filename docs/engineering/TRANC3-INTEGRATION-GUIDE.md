@@ -1,3 +1,10 @@
+---
+title: "Tranc3 — Magna Carta Integration Guide"
+category: Development
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Tranc3 — Magna Carta Integration Guide
 
 **Version:** 1.0.0 | **Date:** 2026-06-12

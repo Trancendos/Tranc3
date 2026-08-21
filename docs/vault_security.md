@@ -1,3 +1,10 @@
+---
+title: "Vault Security Implementation — Tranc3 Ecosystem"
+category: Security
+last-reviewed: 2026-05-26
+status: needs-update
+---
+
 # Vault Security Implementation — Tranc3 Ecosystem
 
 ## Overview

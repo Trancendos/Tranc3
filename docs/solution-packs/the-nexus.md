@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Nexus"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Nexus
 
 > **PID-NXS · AID-NXS-01 · Architectural pillar**  

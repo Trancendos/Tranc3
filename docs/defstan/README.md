@@ -1,3 +1,10 @@
+---
+title: "DEFSTAN Compliance Framework — Tranc3 / Trancendos Platform"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # DEFSTAN Compliance Framework — Tranc3 / Trancendos Platform
 
 ## Scope

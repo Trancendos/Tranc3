@@ -1,3 +1,10 @@
+---
+title: "UX/UI Design Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # UX/UI Design Matrix
 
 > **What this is.** Consolidates three separately-requested documents — a UX Standards Matrix, a

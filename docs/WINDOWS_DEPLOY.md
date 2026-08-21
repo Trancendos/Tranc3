@@ -1,3 +1,10 @@
+---
+title: "Windows deploy (CLOUD_ONLY / Fly.io)"
+category: Reference
+last-reviewed: 2026-05-31
+status: needs-update
+---
+
 # Windows deploy (CLOUD_ONLY / Fly.io)
 
 Use this guide from **Command Prompt** on Windows. You do not need `make` or Docker for cloud deploy.

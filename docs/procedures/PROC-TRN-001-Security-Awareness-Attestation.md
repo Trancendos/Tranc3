@@ -1,3 +1,10 @@
+---
+title: "PROC-TRN-001 — Security Awareness and Policy Attestation"
+category: Operations
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # PROC-TRN-001 — Security Awareness and Policy Attestation
 
 **Version:** 1.0.0 | **Date:** 2026-06-12

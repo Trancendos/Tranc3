@@ -1,3 +1,10 @@
+---
+title: "Continuous Improvement Programme"
+category: Reference
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Continuous Improvement Programme
 
 **Version:** 1.0.0 | **Date:** 2026-06-12

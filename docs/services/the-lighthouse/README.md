@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Lighthouse"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Service Doc-Pack — The Lighthouse
 
 | Field | Value |

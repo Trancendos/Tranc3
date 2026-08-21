@@ -1,3 +1,10 @@
+---
+title: "AI Governance Constitution"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # AI Governance Constitution
 
 > **What this is.** A response to a real, owner-raised question: should Trancendos have a formal

@@ -1,3 +1,10 @@
+---
+title: "Privacy Matrix"
+category: Reference
+last-reviewed: 2026-07-31
+status: needs-update
+---
+
 # Privacy Matrix
 
 > **What this is.** "Privacy Matrix" from the brainstorm maps to one real, tested, tagged

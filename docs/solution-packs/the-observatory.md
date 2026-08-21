@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Observatory"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Observatory
 
 > **PID-OBS · AID-OBS-01 · Knowledge pillar**  

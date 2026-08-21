@@ -1,3 +1,10 @@
+---
+title: "POL-PRI-001 — Data Protection & Privacy Policy"
+category: Security
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # POL-PRI-001 — Data Protection & Privacy Policy
 **Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC  
 **Effective:** 2026-06-12 | **Review Cycle:** Annual | **Approver:** Platform Owner

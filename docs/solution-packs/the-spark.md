@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Spark"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Spark
 
 > **PID-SPK · AID-SPK-01 · Knowledge pillar**  

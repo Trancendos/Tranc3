@@ -1,3 +1,10 @@
+---
+title: "TASD-001 — Circuit Breaker Consolidation"
+category: Architecture
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # TASD-001 — Circuit Breaker Consolidation
 
 **Type:** Technical Architecture Solutions Design (TASD) / ADR

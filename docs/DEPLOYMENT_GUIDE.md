@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Deployment Guide — Zero-Cost Infrastructure"
+category: Deployment
+last-reviewed: 2026-08-07
+status: complete
+---
+
 # Tranc3 Deployment Guide — Zero-Cost Infrastructure
 
 > **Version:** 0.1.0  

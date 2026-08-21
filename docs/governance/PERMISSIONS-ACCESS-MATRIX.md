@@ -1,3 +1,10 @@
+---
+title: "Permissions & Access Matrix"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Permissions & Access Matrix
 
 > **What this is.** "Permissions Matrix" from the brainstorm maps to three distinct, already-real

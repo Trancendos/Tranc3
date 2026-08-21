@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Studio"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Studio
 
 > **PID-STD · AID-STD-01 · Creativity pillar**  

@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Academy"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Academy
 
 > **PID-ACA · AID-ACA-01 · Knowledge pillar**  

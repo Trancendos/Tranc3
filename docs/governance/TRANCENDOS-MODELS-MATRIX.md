@@ -1,3 +1,10 @@
+---
+title: "Trancendos Models Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Trancendos Models Matrix
 
 > **What this is.** A governance framework, not just a naming scheme: it tracks which base AI

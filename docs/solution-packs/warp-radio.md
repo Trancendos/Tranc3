@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Warp Radio"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Warp Radio
 
 > **PID-WRA · AID-WRA-01 · Commercial / Financial pillar**  

@@ -1,3 +1,10 @@
+---
+title: "Access Control Governance"
+category: Reference
+last-reviewed: 2026-07-18
+status: needs-update
+---
+
 # Access Control Governance
 
 > **What this is.** An honest accounting of who — and what — can currently do what on this

@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Infinity"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Infinity
 
 > **PID-INF · AID-INF-01 · Security pillar**  

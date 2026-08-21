@@ -1,3 +1,10 @@
+---
+title: "Trancendos Platform Entity Hierarchy"
+category: Reference
+last-reviewed: 2026-08-01
+status: complete
+---
+
 # Trancendos Platform Entity Hierarchy
 
 Canonical reference for all 43 platform locations and their entity hierarchies.

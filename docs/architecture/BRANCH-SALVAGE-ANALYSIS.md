@@ -1,3 +1,10 @@
+---
+title: "Branch salvage analysis — what is actually left in 78 stale branches"
+category: Architecture
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Branch salvage analysis — what is actually left in 78 stale branches
 
 **Date:** 2026-08-18. **Verdict:** two files of unique content across all of them.

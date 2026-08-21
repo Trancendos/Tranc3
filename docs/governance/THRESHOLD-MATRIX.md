@@ -1,3 +1,10 @@
+---
+title: "Threshold Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Threshold Matrix
 
 > **What this is.** A single rollup of every numeric threshold enforced anywhere on the platform —

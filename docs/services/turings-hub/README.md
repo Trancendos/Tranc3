@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Turing's Hub (AI Personality Creation Centre)"
+category: Reference
+last-reviewed: 2026-07-18
+status: needs-update
+---
+
 # Service Doc-Pack — Turing's Hub (AI Personality Creation Centre)
 
 | Field | Value |

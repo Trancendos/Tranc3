@@ -1,3 +1,10 @@
+---
+title: "GPU Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # GPU Matrix
 
 > **What this is.** A map of which platform services genuinely need a GPU, which are CPU-first by
