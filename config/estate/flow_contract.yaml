@@ -1,0 +1,643 @@
+# Trancendos Location-to-Location Flow Contract
+#
+# WHAT THIS IS
+#
+# The platform's architecture is stated almost entirely as flow: "all MCP goes
+# through The Spark", "all secrets flow into The Void", "all testing goes through
+# The Chaos Party". Until this file existed, none of those sentences was
+# checkable. `docs/governance/LOCATION-TRAFFIC-MATRIX.md` said so plainly -- no
+# file in the repository instruments or declares inter-Location flow, and the one
+# mechanism built for it (`ServiceMesh.get_dependency_graph()`) returns an empty
+# graph because no call site has ever passed `dependencies=`.
+#
+# Each rule below pairs an intended flow with the evidence that would prove it.
+# `scripts/flow_conformance.py` runs the probes and DERIVES the verdict. A rule
+# cannot declare its own health -- that is the same discipline the vulnerability
+# census learned when its `blocked` classifier was inferring suppression from
+# register membership and would have started passing at the moment it should
+# have started failing.
+#
+# PROBE KINDS
+#
+#   existence  module_exists, worker_exists, router_mounted, compose_service
+#   coupling   inbound_imports, http_dependency, symbol_called, code_pattern
+#
+# The split is what makes `unwired` a distinct verdict from `absent`: a hub that
+# exists and that nothing reaches is a more expensive failure than one that was
+# never built, because it reads as done in every review.
+#
+# WRITING A RULE
+#
+# Probes assert reachability, not quality. `router_mounted` asks whether api.py
+# includes the router, not whether the router is any good -- because the failure
+# this estate keeps repeating is the unmounted duplicate (src/studio, src/lab,
+# src/artifactory, src/devocity, src/taimra, src/vrar3d all sat mounted-and-dead
+# until the duplication sweep), not the badly written handler.
+#
+# Version: 1.0.0 · First measured: 2026-08-21
+
+schema_version: "1.0.0"
+
+rules:
+
+  # ── Core routing hubs ──────────────────────────────────────────────────────
+
+  - id: FLOW-001
+    claim: "Workflow and pipeline execution routes through The Digital Grid"
+    hub: "The Digital Grid"
+    note: >-
+      In-process routing is real: the MCP server and the agent tool bridge both
+      build and execute Grid DAGs. The estate-wide claim is not -- no worker in
+      the 90-worker fleet names a Grid URL, so worker-to-worker pipelines do not
+      pass through it. The http_dependency probe is what holds that distinction.
+    probes:
+      - kind: module_exists
+        path: src/workflow
+      - kind: router_mounted
+        token: _grid_router
+      - kind: inbound_imports
+        module: src.workflow
+        min: 3
+      - kind: http_dependency
+        path: workers
+        env: WORKFLOW_ENGINE_URL
+
+  - id: FLOW-002
+    claim: "All MCP tool traffic routes through The Spark"
+    hub: "The Spark"
+    probes:
+      - kind: module_exists
+        path: src/mcp
+      - kind: router_mounted
+        token: _mcp_router
+      - kind: inbound_imports
+        module: src.mcp
+        min: 3
+
+  - id: FLOW-003
+    claim: "All external and internal APIs are catalogued by the API Marketplace"
+    hub: "API Marketplace"
+    note: >-
+      The Marketplace is a catalogue, not a data plane. Live API traffic is
+      carried by workers/api-gateway and workers/gateway-service, neither of
+      which consults it. Cataloguing and routing are different claims and this
+      rule measures only the first.
+    probes:
+      - kind: module_exists
+        path: src/apimarket
+      - kind: router_mounted
+        token: _apimarket_router
+      - kind: inbound_imports
+        module: src.apimarket
+        min: 2
+
+  - id: FLOW-004
+    claim: "All AI-to-AI communication routes through The Nexus"
+    hub: "The Nexus"
+    probes:
+      - kind: module_exists
+        path: src/nexus
+      - kind: router_mounted
+        token: _nexus_router
+      - kind: worker_exists
+        path: workers/infinity-ws
+      - kind: compose_service
+        name: infinity-ws
+      - kind: inbound_imports
+        module: src.nexus
+        min: 2
+
+  # ── Security chain ─────────────────────────────────────────────────────────
+
+  - id: FLOW-010
+    claim: "All cyber-defence signal routes through Cryptex"
+    hub: "Cryptex"
+    probes:
+      - kind: module_exists
+        path: src/cryptex
+      - kind: router_mounted
+        token: _cryptex_router
+      - kind: compose_service
+        name: cryptex
+      - kind: inbound_imports
+        module: src.cryptex
+        min: 3
+
+  - id: FLOW-011
+    claim: "All secrets and confidential material flow into The Void"
+    hub: "The Void"
+    note: >-
+      The vault worker is built, composed and routed. Nothing sends it anything:
+      no worker names a Void or vault URL, so secrets today live in environment
+      variables read directly by each service. Built, and reached by nothing.
+    probes:
+      - kind: worker_exists
+        path: workers/infinity-void
+      - kind: compose_service
+        name: infinity-void
+      - kind: http_dependency
+        path: workers
+        env: VAULT_SERVICE_URL
+
+  - id: FLOW-012
+    claim: "The Lighthouse cryptographically tags and scans all inbound and outbound traffic"
+    hub: "The Lighthouse"
+    note: >-
+      Named in PLATFORM_ENTITIES.md and the CF worker list; no self-hosted
+      implementation exists in this repository. Traffic tagging as described --
+      every item tagged, monitored and proactively flagged -- is a design, not a
+      control. Recorded here so the gap is visible rather than assumed covered.
+    probes:
+      - kind: worker_exists
+        path: workers/lighthouse-service
+      - kind: code_pattern
+        path: src/security
+        pattern: "lighthouse"
+
+  - id: FLOW-013
+    claim: "The Warp Tunnel isolates anomalous entities and transports them to The Ice Box"
+    hub: "The Warp Tunnel"
+    note: >-
+      The tunnel scans and quarantines to a LOCAL directory
+      (workers/warp-tunnel/data/quarantine). It does not hand the offender to
+      The Ice Box and does not notify Cryptex, so the three-stage chain in the
+      architecture -- isolate, detonate, assess -- terminates at stage one.
+    probes:
+      - kind: module_exists
+        path: src/security/warp_tunnel
+      - kind: worker_exists
+        path: workers/warp-tunnel
+      - kind: compose_service
+        name: warp-tunnel
+      - kind: http_dependency
+        path: workers/warp-tunnel
+        env: ICE_BOX_URL
+
+  - id: FLOW-014
+    claim: "The Ice Box spins up containers, VMs and sandboxes on demand"
+    hub: "The Ice Box"
+    note: >-
+      The worker is a quarantine REGISTER -- scan, list, release, stats over
+      SQLite. It has no execution surface at all: no container runtime, no VM
+      lifecycle, no sandbox detonation. Bounty hunting, isolated development and
+      sensitive-workload sandboxes are unbuilt, not partially built.
+    probes:
+      - kind: worker_exists
+        path: workers/ice-box-service
+      - kind: compose_service
+        name: ice-box-service
+      - kind: code_pattern
+        path: workers/ice-box-service
+        pattern: "docker|firecracker|containers\\.run|sandbox_exec"
+
+  - id: FLOW-015
+    claim: "A Cryptex threat escalation raises a platform-wide alert state (Call to Arms)"
+    hub: "The HIVE"
+    note: >-
+      No implementation of any kind. The escalation described -- Cryptex detects,
+      Renik and The Guardian raise alert state, Cornelius requests HIVE support,
+      the Queen enables her hives, swarms mobilise -- has no code, no state
+      machine and no vocabulary anywhere in the repository. Nearest existing
+      machinery is the governance EscalationFSM, which escalates decisions, not
+      defence.
+    probes:
+      - kind: worker_exists
+        path: workers/hive-service
+      - kind: compose_service
+        name: hive-service
+      - kind: code_pattern
+        path: src
+        pattern: "call_to_arms|alert_state|defcon"
+
+  # ── Observation, memory and learning chain ─────────────────────────────────
+
+  - id: FLOW-020
+    claim: "Every action and change is observed and logged by The Observatory"
+    hub: "The Observatory"
+    probes:
+      - kind: module_exists
+        path: src/observability
+      - kind: router_mounted
+        token: _observatory_router
+      - kind: inbound_imports
+        module: src.observability
+        min: 20
+
+  - id: FLOW-021
+    claim: "Observatory records age out into The Basement"
+    hub: "The Basement"
+    probes:
+      - kind: module_exists
+        path: src/basement
+      - kind: router_mounted
+        token: _basement_router
+      - kind: symbol_called
+        module: src.basement
+        symbol: ingest_observatory_event
+
+  - id: FLOW-022
+    claim: "The Basement's confirmed patterns are promoted into The Library"
+    hub: "The Library"
+    note: >-
+      src/basement/promotion.py implements the whole promotion path -- clustering,
+      regression detection, article rendering, DRAFT authoring into The Library --
+      and until 2026-08-21 was called by nothing: no import, no route, no job.
+      It now has an admin-gated entry point at POST /basement/promote, so the leg
+      is reachable. It is still not automatic: nothing schedules it, so patterns
+      are promoted when somebody asks, not when they are confirmed. `partial` is
+      the correct reading until the cron service runs it.
+    probes:
+      - kind: module_exists
+        path: src/library
+      - kind: router_mounted
+        token: _basement_router
+      - kind: code_pattern
+        path: src/basement
+        pattern: "post\\(\"/promote\""
+      - kind: code_pattern
+        path: src/basement/promotion.py
+        pattern: "get_library\\s*\\("
+      - kind: code_pattern
+        path: workers/cron-service
+        pattern: "promote"
+
+  - id: FLOW-023
+    claim: "Library KB articles are scanned by The Academy and developed into training material"
+    hub: "The Academy"
+    note: >-
+      workers/the-academy/worker.py contains no reference to the Library, to KB
+      articles, or to any knowledge source. Courses are authored directly. The
+      KB-to-curriculum pipeline does not exist.
+    probes:
+      - kind: worker_exists
+        path: workers/the-academy
+      - kind: compose_service
+        name: the-academy
+      - kind: code_pattern
+        path: workers/the-academy
+        pattern: "library|kb_article|knowledge_base"
+
+  - id: FLOW-024
+    claim: "Section 7 research findings are handed to Think Tank for solution assessment"
+    hub: "Think Tank"
+    probes:
+      - kind: module_exists
+        path: src/section7
+      - kind: router_mounted
+        token: _section7_router
+      - kind: module_exists
+        path: src/quantum
+      - kind: code_pattern
+        path: src/section7
+        pattern: "_dispatch_to_think_tank\\s*\\("
+
+  - id: FLOW-025
+    claim: "Luminous orchestrates and coordinates the platform on Cornelius's behalf"
+    hub: "Luminous"
+    probes:
+      - kind: module_exists
+        path: src/bio_neural
+      - kind: router_mounted
+        token: _luminous_router
+      - kind: inbound_imports
+        module: src.bio_neural
+        min: 3
+
+  # ── Creative chain ─────────────────────────────────────────────────────────
+
+  - id: FLOW-030
+    claim: "All photo and image generation routes through Sashas Photo Studio"
+    hub: "Sashas Photo Studio"
+    probes:
+      - kind: worker_exists
+        path: workers/sashas-photo-studio
+      - kind: compose_service
+        name: sashas-photo-studio
+      - kind: http_dependency
+        path: workers/imaginarium
+        env: PHOTO_STUDIO_URL
+
+  - id: FLOW-031
+    claim: "All UX, UI and design-system work routes through Fabulousa"
+    hub: "Fabulousa"
+    note: >-
+      The worker exists and is composed, but the Imaginarium's creative fan-out
+      names five services and Fabulousa is not among them -- design is the one
+      creative discipline the orchestrator does not call. The InfinityStyles
+      repository holds the actual design system, with no link back to this
+      worker.
+    probes:
+      - kind: worker_exists
+        path: workers/fabulousa-service
+      - kind: compose_service
+        name: fabulousa-service
+      - kind: http_dependency
+        path: workers/imaginarium
+        env: FABULOUSA_URL
+
+  - id: FLOW-032
+    claim: "All video creation and editing routes through TateKing"
+    hub: "TateKing"
+    probes:
+      - kind: worker_exists
+        path: workers/tateking
+      - kind: compose_service
+        name: tateking
+      - kind: http_dependency
+        path: workers/imaginarium
+        env: TATEKING_URL
+
+  - id: FLOW-033
+    claim: "All game and 3D development routes through TranceFlow"
+    hub: "TranceFlow"
+    probes:
+      - kind: worker_exists
+        path: workers/tranceflow
+      - kind: compose_service
+        name: tranceflow
+      - kind: http_dependency
+        path: workers/imaginarium
+        env: TRANCEFLOW_URL
+
+  - id: FLOW-034
+    claim: "The Imaginarium orchestrates the creative Locations rather than duplicating them"
+    hub: "Imaginarium"
+    probes:
+      - kind: worker_exists
+        path: workers/imaginarium
+      - kind: compose_service
+        name: imaginarium
+      - kind: http_dependency
+        path: workers/imaginarium
+        env: THE_STUDIO_URL
+
+  - id: FLOW-035
+    claim: "Warp Radio connects users to music on demand"
+    hub: "Warp Radio"
+    probes:
+      - kind: worker_exists
+        path: workers/warp-radio
+      - kind: compose_service
+        name: warp-radio
+      - kind: code_pattern
+        path: workers/warp-radio
+        pattern: "post\\(\"/play\""
+
+  # ── Build, test and release chain ──────────────────────────────────────────
+
+  - id: FLOW-040
+    claim: "All coding and development work routes through The Lab"
+    hub: "The Lab"
+    probes:
+      - kind: worker_exists
+        path: workers/the-lab
+      - kind: compose_service
+        name: the-lab
+      - kind: code_pattern
+        path: workers/the-lab
+        pattern: "(TABBY|OLLAMA|LITELLM)_URL"
+
+  - id: FLOW-041
+    claim: "All debugging routes through Slime"
+    hub: "The Lab"
+    note: >-
+      Slime is a persona with a personality profile and a Job Description, and
+      docs/governance/DEBUGGING-MATRIX.md describes the discipline. Neither is a
+      route: no endpoint, queue or handler accepts a debugging request, so
+      nothing can be said to flow to Slime.
+    probes:
+      - kind: worker_exists
+        path: workers/lab-service
+      - kind: code_pattern
+        path: workers
+        pattern: "(get|post)\\(\"/debug"
+
+  - id: FLOW-042
+    claim: "All testing routes through The Chaos Party"
+    hub: "The Chaos Party"
+    note: >-
+      The worker is real -- suites, runs, batch runs, chaos experiments -- and
+      nothing feeds it. CI runs pytest directly; no workflow posts a run to the
+      Chaos Party, so the platform's own test intelligence never sees the
+      platform's own tests.
+    probes:
+      - kind: worker_exists
+        path: workers/chaos-party
+      - kind: compose_service
+        name: chaos-party
+      - kind: code_pattern
+        path: .github/workflows
+        glob: "*.yml"
+        pattern: "chaos-party|chaos_party"
+
+  - id: FLOW-043
+    claim: "The Workshop holds repositories and mirrors to GitHub, GitLab and Bitbucket"
+    hub: "The Workshop"
+    note: >-
+      deploy/forgejo/bootstrap.sh offers a one-way, optional GitHub-to-Forgejo
+      pull mirror. There is no push mirror, no GitLab and no Bitbucket, so the
+      twin/sync topology described -- self-host, back up, or dual-locate -- is
+      one quarter built and in the wrong direction for a backup.
+    probes:
+      - kind: code_pattern
+        path: deploy/forgejo
+        glob: "*.sh"
+        pattern: "mirror"
+      - kind: code_pattern
+        path: deploy/forgejo
+        glob: "*"
+        pattern: "gitlab|bitbucket"
+
+  - id: FLOW-044
+    claim: "Produced artifacts are held and analysed by The Artifactory"
+    hub: "The Artifactory"
+    note: >-
+      The worker is a Zot OCI registry bridge. It has no notion of the
+      three-sided store described -- Internal (platform-produced, linked to
+      users, categories and DocUtari), Meta (value-assessed copies for Think
+      Tank), External (three-gate intake through Ice Box quarantine). Those are
+      an unbuilt design, not an under-populated store.
+    probes:
+      - kind: worker_exists
+        path: workers/artifactory-service
+      - kind: compose_service
+        name: artifactory-service
+      - kind: code_pattern
+        path: workers/artifactory-service
+        pattern: "meta_store|external_gate|gate_2|gate_3"
+
+  # ── Identity and entry chain ───────────────────────────────────────────────
+
+  - id: FLOW-050
+    claim: "Infinity Portal is the single login entrance"
+    hub: "Infinity"
+    probes:
+      - kind: worker_exists
+        path: workers/infinity-portal-service
+      - kind: compose_service
+        name: infinity-portal
+      - kind: code_pattern
+        path: workers/infinity-portal-service
+        pattern: "gate_routing_log"
+
+  - id: FLOW-051
+    claim: "Infinity Gate routes a multi-role user to the right platform entrance"
+    hub: "Infinity"
+    probes:
+      - kind: worker_exists
+        path: workers/infinity-portal-service
+      - kind: code_pattern
+        path: workers/infinity-portal-service
+        pattern: "gate-info|gate_router"
+
+  - id: FLOW-052
+    claim: "Infinity-One is the central user account and profile hub"
+    hub: "Infinity"
+    probes:
+      - kind: worker_exists
+        path: workers/infinity-one-service
+      - kind: compose_service
+        name: infinity-one
+      - kind: http_dependency
+        path: workers
+        env: INFINITY_ONE_URL
+
+  - id: FLOW-053
+    claim: "Infinity Bridge is the transport layer users navigate through"
+    hub: "Infinity"
+    probes:
+      - kind: worker_exists
+        path: workers/infinity-bridge-service
+      - kind: compose_service
+        name: infinity-bridge
+      - kind: http_dependency
+        path: workers
+        env: INFINITY_BRIDGE_URL
+
+  - id: FLOW-054
+    claim: "Arcadia is the post-login user entrance with forum, AI chat and email"
+    hub: "Arcadia"
+    note: >-
+      web/ is a real frontend and workers/email-service is real, but no forum
+      exists anywhere in the estate, and no chat surface offers the one-to-one
+      versus one-to-all AI selection described. Two of three components are
+      missing.
+    probes:
+      - kind: worker_exists
+        path: web/src
+      - kind: code_pattern
+        path: src
+        pattern: "(get|post)\\(\"/forum"
+
+  # ── Governance, finance and records chain ──────────────────────────────────
+
+  - id: FLOW-060
+    claim: "All financial regulation routes through Royal Bank of Arcadia"
+    hub: "Royal Bank of Arcadia"
+    note: >-
+      There are two financial surfaces and they do not know about each other.
+      src/monetisation carries billing tiers, the Arcadian Exchange fee
+      calculation and revenue modelling in-process; workers/payments-service
+      carries accounts, transfers, deposits and a ledger summary as a separate
+      worker. Neither imports or calls the other, so "all financial regulation"
+      routes through whichever one the caller happened to reach.
+    probes:
+      - kind: module_exists
+        path: src/monetisation
+      - kind: router_mounted
+        token: _billing_router
+      - kind: worker_exists
+        path: workers/payments-service
+      - kind: compose_service
+        name: payments-service
+      - kind: inbound_imports
+        module: src.monetisation
+        min: 1
+      - kind: http_dependency
+        path: workers/payments-service
+        env: BILLING_SERVICE_URL
+
+  - id: FLOW-061
+    claim: "Transactions are executed by Arcadian Exchange and regulated by Royal Bank of Arcadia"
+    hub: "Arcadian Exchange"
+    note: >-
+      orders-service, payments-service and ledger-service all exist and none
+      calls another. The 2.5% marketplace fee lives in src/monetisation/billing.py
+      as a calculation with no transaction to attach to. The regulate-after-execute
+      relationship is asserted in documentation and implemented nowhere.
+    probes:
+      - kind: worker_exists
+        path: workers/orders-service
+      - kind: compose_service
+        name: orders-service
+      - kind: http_dependency
+        path: workers/orders-service
+        env: PAYMENTS_SERVICE_URL
+
+  - id: FLOW-062
+    claim: "The Town Hall carries ITIL/ITSM, the CI register and CMDB"
+    hub: "The Town Hall"
+    probes:
+      - kind: module_exists
+        path: src/townhall
+      - kind: router_mounted
+        token: _townhall_router
+      - kind: module_exists
+        path: src/cmdb
+      - kind: code_pattern
+        path: src/townhall
+        pattern: "class (Incident|ChangeRequest|ServiceRequest)"
+
+  - id: FLOW-063
+    claim: "The Town Hall carries the War Room and Governance Board Room"
+    hub: "The Town Hall"
+    probes:
+      - kind: module_exists
+        path: src/townhall
+      - kind: code_pattern
+        path: src/townhall
+        pattern: "WAR_ROOM"
+      - kind: code_pattern
+        path: src/townhall
+        pattern: "BOARD_ROOM"
+
+  - id: FLOW-064
+    claim: "User-requested work passes a PLM gate review before it is signed off"
+    hub: "The Town Hall"
+    note: >-
+      No PLM concept exists in src/townhall or anywhere else. The estate registry
+      calls itself "PLM-style" for its immutable TRC- reference IDs, which is an
+      identifier scheme, not a stage gate. Nothing prevents work being called done
+      without review.
+    probes:
+      - kind: module_exists
+        path: src/townhall
+      - kind: code_pattern
+        path: src/townhall
+        pattern: "plm|gate_review|product_review"
+
+  - id: FLOW-065
+    claim: "All user documents and files are stored in DocUtari"
+    hub: "DocUtari"
+    probes:
+      - kind: worker_exists
+        path: workers/files-service
+      - kind: compose_service
+        name: files-service
+      - kind: worker_exists
+        path: workers/storage-service
+      - kind: code_pattern
+        path: workers/files-service
+        pattern: "(post)\\(\"/(upload|files|documents)"
+
+  - id: FLOW-066
+    claim: "Diagnostic assessment is aggregated rather than per-service"
+    hub: "The Observatory"
+    probes:
+      - kind: worker_exists
+        path: workers/health-aggregator
+      - kind: compose_service
+        name: health-aggregator
+      - kind: code_pattern
+        path: workers/health-aggregator
+        pattern: "SERVICES|TARGETS|_URL"

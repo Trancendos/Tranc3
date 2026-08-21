@@ -8,7 +8,7 @@
 > Traffic (real building blocks, no unified matrix), and the AI Relationship Matrix. This index is
 > the map; the docs it links to (existing or newly written) are the territory.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.2.0 · **Last verified:** 2026-08-21 (Supply Chain Posture Matrix re-verified at v1.1.0; §3 scoped to its own pass)
+**Owner:** Platform Owner Trancendos · **Version:** 1.3.0 · **Last verified:** 2026-08-21 (Location Flow Contract added; Supply Chain Posture Matrix at v1.1.0; §3 scoped to its own pass)
 
 ---
 
@@ -62,6 +62,7 @@
 | Prime AI to AI Matrix | Exists, newly documented | `t2ance/prime_registry.py`/`domain_authority.py` — `prime_for_entity()` maps every Tier-3 entity to its governing Domain Prime | [AI-AGENT-BOT-TIER-MATRIX.md](AI-AGENT-BOT-TIER-MATRIX.md) §5 |
 | Location (Application) Matrix | Exists + documented | `PLATFORM_ENTITIES` itself | `CLAUDE.md` entity table, `PLATFORM_ENTITIES.md` |
 | Location to Location Traffic Matrix | Done this session | — | `docs/governance/LOCATION-TRAFFIC-MATRIX.md` |
+| Location Flow Contract | Exists, newly built — 39 declared flows measured, 14 reached by nothing | Turns the platform's routing claims ("all MCP goes through The Spark", "all secrets flow into The Void") from unfalsifiable prose into probes. Built: `config/estate/flow_contract.yaml`, `scripts/flow_conformance.py`, a regression baseline and 17 tests. Found: 20 enforced, 4 partial, 14 **unwired** (built and reached by nothing — The Void, The Ice Box, Fabulousa, The Chaos Party, The Artifactory, Arcadian Exchange among them), 1 absent (The Lighthouse) | [LOCATION-FLOW-CONTRACT.md](LOCATION-FLOW-CONTRACT.md) |
 | Relationship Matrix | Exists + documented | `src/relations/registry.py` | `docs/governance/AI-RELATIONSHIP-MATRIX.md` |
 | Attribute Matrix | Exists + documented | `LocationEntity` dataclass fields themselves (`src/entities/platform.py`) | `PLATFORM_ENTITIES.md` |
 | Entity Matrix | Exists + documented | `PLATFORM_ENTITIES` | `PLATFORM_ENTITIES.md` |
@@ -107,6 +108,9 @@ that's a build task, not a documentation one.
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — the tier/governance system
   `AI-AGENT-BOT-TIER-MATRIX.md` cross-references rather than re-describes for the advancement-
   pipeline side of Trance-One/T2ance.
+- [LOCATION-FLOW-CONTRACT.md](LOCATION-FLOW-CONTRACT.md) — the 39 declared Location-to-Location
+  flows, each measured rather than asserted; the companion to `LOCATION-TRAFFIC-MATRIX.md`, which
+  recorded the gap this closes
 - [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) — the OSSRA-report
   counterpart to the CrowdStrike review above, and the map between the vulnerability census,
   the obsolescence census, the AI-BOM and the CRA profile.

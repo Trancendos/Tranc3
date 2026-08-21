@@ -136,6 +136,22 @@ jobs:
       - name: AI model inventory drift
         run: python scripts/ai_bom.py --check
 
+      # The estate states its architecture as flow -- "all MCP routes through The
+      # Spark", "all secrets flow into The Void" -- and until the flow contract
+      # existed, none of those claims could be checked, so none could be
+      # maintained. This measures each declared flow against the working tree.
+      #
+      # It fails on REGRESSION only, against config/estate/flow_baseline.json --
+      # not on the standing backlog of flows that are built and reached by
+      # nothing. A gate that is red on day one for reasons nobody can fix that
+      # day teaches people to wave it through, which is the failure it exists to
+      # prevent. Improving a flow means refreshing the baseline, which is a
+      # visible act in the diff rather than a silent one.
+      #
+      # Pure filesystem and grep work, no network: it belongs on every PR.
+      - name: Location flow conformance
+        run: python scripts/flow_conformance.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest

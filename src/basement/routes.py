@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
+from auth import get_current_user
 from src.basement.archive import ArchiveSource, get_basement
+from src.basement.promotion import promote as promote_patterns
 
 router = APIRouter(prefix="/basement", tags=["basement"])
 
@@ -45,3 +47,34 @@ async def get_record(record_id: str):
     if not r:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return {**r.to_dict(), "content": r.content}
+
+
+def _require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """Promotion writes into The Library, so it is an admin action.
+
+    Matching the guard on `/admin-os`: a read of the evidence store is open to
+    any authenticated caller, but authoring knowledge from it is not.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return current_user
+
+
+@router.post("/promote", dependencies=[Depends(_require_admin)])
+def run_promotion(
+    limit: int = Query(default=500, ge=1, le=5000),
+    dry_run: bool = Query(default=False),
+):
+    """Scan Basement evidence and raise a Library draft per confirmed pattern.
+
+    `src/basement/promotion.py` has implemented this whole path -- clustering,
+    regression detection, article rendering -- since it was written, and until
+    now nothing called it. The module's own docstring describes closing "the
+    fourth leg" of Chaos Party -> Observatory -> Basement -> Library; the leg
+    was built and left with no entry point, so evidence accumulated in the
+    store and reached nobody.
+
+    `dry_run=true` reports the patterns it would raise without writing, which is
+    the mode to use when tuning thresholds against real evidence.
+    """
+    return promote_patterns(limit=limit, dry_run=dry_run)
