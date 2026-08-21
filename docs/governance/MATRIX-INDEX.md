@@ -8,7 +8,7 @@
 > Traffic (real building blocks, no unified matrix), and the AI Relationship Matrix. This index is
 > the map; the docs it links to (existing or newly written) are the territory.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.1.0 · **Last verified:** 2026-08-19 (Supply Chain Posture Matrix row added)
+**Owner:** Platform Owner Trancendos · **Version:** 1.2.0 · **Last verified:** 2026-08-21 (Supply Chain Posture Matrix re-verified at v1.1.0; §3 scoped to its own pass)
 
 ---
 
