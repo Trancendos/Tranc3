@@ -219,22 +219,58 @@ This is the honest state of that, including where the connection is a plan rathe
 |---|---|---|---|---|
 | Vulnerability census | PR + production gate | every PR | blocks green | fail-closed (unreadable census caps the score) |
 | Security score | production gate | every PR | blocks release | fail-closed |
-| Obsolescence census | `dependency-audit.yml` | weekly + on manifest change | `--fail-on stranded` | fail-closed on errored packages |
+| Vulnerability census (scheduled) | `supply-chain-watch.yml` (GitHub) | daily 05:00 UTC | alerts, does not gate | fail-closed; failure opens a tracking issue |
+| Obsolescence census | `supply-chain-watch.yml` (GitHub) | weekly Mon 05:30 UTC | `--fail-on stranded` | fail-closed on errored packages |
+| Obsolescence census (twin) | `dependency-audit.yml` (Forgejo) | weekly + on manifest change | `--fail-on stranded` | **dormant — see below** |
 | AI model drift | `ci.yml` topology job | every PR | blocks merge | fail-closed (code-only model fails) |
 | Dependency override sync | `ci.yml` topology job | every PR | blocks merge | fail-closed |
 | Install-hook blocking | all CI npm installs | every run | n/a — preventive | n/a |
 | CRA obligation review | `legislation_register.yaml` | scheduled review + go-live gate | go-live gate | manual |
 
-Two deliberate placements worth stating:
+Three deliberate placements worth stating:
 
 - **The obsolescence census is weekly and manifest-triggered, not per-PR.** It is network-dependent
   and fail-closed, which is the right combination for a scheduled job and the wrong one for a PR
   gate: a transient npm outage must not redden an unrelated pull request. Obsolescence also arrives
   *without a commit* — a component crosses the dormancy line while nobody touches the repo — so a
   commit-triggered check would structurally miss the thing it exists to catch.
+- **The scheduled scans run on GitHub, against standing policy, because the alternative was not
+  running at all.** This is stated plainly in §9.1 rather than buried, because it is a deliberate
+  exception to the avoid-GitHub-Actions rule and should be revisited when The Workshop returns.
 - **The AI-BOM lands inside the existing SBOM pipeline**, as CycloneDX 1.6 `machine-learning-model`
   components feeding the same Dependency-Track upload, rather than beside it. One supply-chain
   inventory, not two.
+
+### 9.1 Built, running, and not running — the runner dependency
+
+There is a third category between *built* and *planned*, and this estate sat in it: **built, wired,
+and dormant**. It is worth separating out because it reads as coverage on paper and provides none.
+
+GitHub reads only `.github/workflows/`; it never reads `.forgejo/workflows/`. Measured on
+2026-08-21:
+
+| | Workflow files | Scheduled | Observed firing |
+|---|---|---|---|
+| `.github/workflows/` | 17 | 5 | yes — 74 scheduled runs in the visible window |
+| `.forgejo/workflows/` | 33 | 16 (14 needing `runs-on: self-hosted`) | no — The Workshop is awaiting server funding |
+
+Every scheduled supply-chain control lived in the second row. The scans were correct, fail-closed,
+well-triggered — and had no runner. That is the same defect class §7 describes: a control that
+exists, reports, and does not fire. It is easier to miss here than in code, because a workflow file
+looks identical whether or not anything executes it.
+
+`supply-chain-watch.yml` is the narrow correction: the two measurements whose answer changes with
+the passage of time rather than with a commit, on GitHub's runners, alerting rather than gating. The
+Forgejo originals keep their broader job set and are left in place, so that when The Workshop is
+deployed the two run side by side as cross-verification — the pattern `bot-health-watchdog.yml`
+already established — rather than one silently replacing the other.
+
+**This was not hypothetical.** The first live run of the new daily census found a fixable
+vulnerability (`datasets` PYSEC-2026-3716) that the 19 August census had not seen, because it was
+disclosed after that run. Renovate — a GitHub App, and therefore one of the few proactive controls
+actually executing — had already patched it on `main` in #840. The lesson is not that the estate was
+exposed; it is that between two commits on a branch, the *only* thing that noticed was a control
+running on infrastructure that happened to be up.
 
 **Connectivity that is planned, not built** — named here so it is not mistaken for existing: Cryptex
 advisory intake → inventory lookup (§8.4); The Artifactory as the transitive metadata cache (§8.1);
