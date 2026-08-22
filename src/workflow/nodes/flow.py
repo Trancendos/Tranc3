@@ -122,13 +122,13 @@ class LoopNode(BaseNode):
         ]
 
         semaphore = asyncio.Semaphore(max(max_concurrency, 1))
+        inner_nodes = [create_node(nc) for nc in inner_configs]
 
         async def _run_item(item: Any, idx: int) -> Any:
             async with semaphore:
                 item_inputs = {**inputs, "item": item, "index": idx}
                 item_result: Any = item
-                for nc in inner_configs:
-                    node = create_node(nc)
+                for node in inner_nodes:
                     res = await node.execute(item_inputs, context)
                     if res.success:
                         item_inputs.update({"previous": res.output})
