@@ -253,7 +253,9 @@ class HealthChecker:
         self.registry = registry or SERVICE_REGISTRY
         self._cache: Dict[str, Dict[str, Any]] = {}
 
-    async def check_service(self, name: str, timeout: float = 5.0, session: Optional[aiohttp.ClientSession] = None) -> Dict[str, Any]:
+    async def check_service(
+        self, name: str, timeout: float = 5.0, session: Optional[aiohttp.ClientSession] = None
+    ) -> Dict[str, Any]:
         """Check health of a single service."""
         svc = self.registry.get(name)
         if not svc:
@@ -264,7 +266,9 @@ class HealthChecker:
         async def fetch(sess: aiohttp.ClientSession):
             try:
                 client_timeout = aiohttp.ClientTimeout(total=timeout)
-                async with sess.get(url, headers={"Accept": "application/json"}, timeout=client_timeout) as resp:
+                async with sess.get(
+                    url, headers={"Accept": "application/json"}, timeout=client_timeout
+                ) as resp:
                     if resp.status >= 400:
                         result = {
                             "service": name,
@@ -321,10 +325,7 @@ class HealthChecker:
         """Check health of all registered services and compute overall status."""
         results = {}
         async with aiohttp.ClientSession() as session:
-            tasks = [
-                self.check_service(name, session=session)
-                for name in self.registry
-            ]
+            tasks = [self.check_service(name, session=session) for name in self.registry]
             completed = await asyncio.gather(*tasks)
             for res in completed:
                 results[res["service"]] = res
