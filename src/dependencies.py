@@ -24,11 +24,11 @@ class ServiceContainer:
         self._singletons: Dict[str, Any] = {}
         self._initialized = False
 
-    def register_factory(self, name: str, factory: Callable, singleton: bool = True) -> None:
-        """Register a service factory. If singleton=True, the factory is called once."""
+    def register_factory(self, name: str, factory: Callable) -> None:
+        """Register a factory function that will be called on first get()"""
         self._factories[name] = factory
-        if not singleton:
-            self._singletons.pop(name, None)
+        if name in self._singletons:
+            del self._singletons[name]
 
     def register_instance(self, name: str, instance: Any) -> None:
         """Register a pre-built instance directly"""
