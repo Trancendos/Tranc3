@@ -159,6 +159,16 @@ jobs:
       - name: Location flow conformance
         run: python scripts/flow_conformance.py --check
 
+      # MATRIX-INDEX.md's inventory is generated, so it cannot silently fall
+      # behind the filesystem the way the hand-written list did -- 51 of 68
+      # matrix documents were absent from it when this was measured. The
+      # editorial judgement above the generated block stays hand-written.
+      # Deliberately submodule-independent: the check returns the same answer
+      # with compliance/magna-carta/ present or absent, so it cannot fail here
+      # for an environmental reason.
+      - name: Matrix index freshness
+        run: python scripts/build_matrix_index.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
