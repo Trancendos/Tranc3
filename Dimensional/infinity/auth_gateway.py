@@ -23,7 +23,8 @@ Features:
 Usage:
     from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 
-    app.add_middleware(AuthGatewayMiddleware, jwt_secret="your-secret")
+    # Uses the JWT_SECRET environment variable by default
+    app.add_middleware(AuthGatewayMiddleware)
 """
 
 from __future__ import annotations
