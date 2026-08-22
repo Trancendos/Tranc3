@@ -44,6 +44,7 @@ Architecture
 
 Usage
 -----
+    import os
     from Dimensional.infinity.zkp import ZKPProver, ZKPVerifier, ZKPRegistry
 
     # Setup
@@ -63,7 +64,7 @@ Usage
     assert result.valid is True
 
     # Tier membership proof (prove you're Tier.AI without revealing which AI)
-    tier_proof = prover.prove_tier_membership(tier=Tier.AI, shared_secret="tier-ai-secret")
+    tier_proof = prover.prove_tier_membership(tier=Tier.AI, shared_secret=os.getenv("TIER_AI_SECRET", "fallback"))
     tier_result = verifier.verify_tier_membership(tier_proof, expected_tier=Tier.AI)
 """
 
