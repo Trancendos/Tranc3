@@ -210,3 +210,35 @@ def test_exempt_locations_may_still_declare_nothing():
             assert not offenders, f"{pid} is exempt and must not be required to declare a path"
         finally:
             object.__setattr__(entity, "worker_path", original)
+
+
+def test_a_worker_path_outside_the_repository_is_rejected():
+    """`REPO / "/tmp"` is `/tmp`, and `/tmp` exists.
+
+    pathlib's `/` operator discards the left operand entirely when the right
+    one is absolute, so the on-disk existence check cannot catch an absolute
+    worker_path -- it happily confirms that some unrelated directory exists
+    and certifies the Location as conformant. A `..` component escapes the
+    same way. Containment therefore has to be asserted on the raw string,
+    before the path ever reaches the filesystem.
+    """
+    import entity_registry_conformance as guard
+
+    for bad, why in (
+        ("/tmp", "absolute"),
+        ("/", "filesystem root"),
+        ("../outside", "leading traversal"),
+        ("workers/../../outside", "embedded traversal"),
+    ):
+        entity = guard.PLATFORM_ENTITIES["The Studio"]
+        original = entity.worker_path
+        try:
+            entity.worker_path = bad
+            rules = {v["rule"] for v in guard.collect_violations() if v["pid"] == "PID-STD"}
+            assert "path-escapes-repo" in rules, (
+                f"{why} worker_path {bad!r} was accepted; rules seen: {rules or 'none'}"
+            )
+        finally:
+            entity.worker_path = original
+
+    assert not guard.collect_violations(), "the registry must be clean again after the probe"

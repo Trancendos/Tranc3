@@ -43,10 +43,8 @@ def score(tmp_path):
     return _load_module(tmp_path, logs)
 
 
-def _write_report(logs: Path, findings: int) -> None:
-    (logs / "bandit-full.json").write_text(
-        json.dumps({"results": [{"issue": i} for i in range(findings)]})
-    )
+def _write_report(logs: Path, findings: int, name: str = "bandit-full.json") -> None:
+    (logs / name).write_text(json.dumps({"results": [{"issue": i} for i in range(findings)]}))
 
 
 def test_non_ascii_numeral_baseline_is_rejected_not_crashed(score, tmp_path):
@@ -111,3 +109,50 @@ def test_a_baseline_far_from_the_scan_fails(score, tmp_path):
 
     assert ok is False
     assert "drift 50%" in detail
+
+
+def test_the_other_workflows_report_filename_is_also_read(score, tmp_path):
+    """security-baseline.yml writes bandit-full.json; security-scan.yml writes
+    bandit-results.json -- and security-scan.yml runs this script too.
+
+    Reading only one name made the drift check silently neutral in the other
+    workflow. The alternate name was handled in code and never exercised by a
+    test, which is the same gap in miniature: the behaviour existed, nothing
+    proved it.
+    """
+    (tmp_path / ".security-baseline").write_text("bandit_findings=100\n")
+    _write_report(tmp_path / "logs", 95, name="bandit-results.json")
+
+    ok, detail = score._bandit_baseline_drift()
+
+    assert ok is True
+    assert "drift 5%" in detail
+
+
+def test_the_tolerance_boundary_agrees_with_the_workflow(score, tmp_path):
+    """baseline 201 / measured 180 is the case the two controls disagreed on.
+
+    Rounding to one decimal here gave 10.4% (stale) while the workflow's
+    integer arithmetic gave 10% (pass). Two security controls returning
+    different verdicts from identical input is worse than either being coarse,
+    so this pins the workflow's own half-up whole-percent rule:
+    (21*100 + 100) // 201 == 10.
+    """
+    (tmp_path / ".security-baseline").write_text("bandit_findings=201\n")
+    _write_report(tmp_path / "logs", 180)
+
+    ok, detail = score._bandit_baseline_drift()
+
+    assert "drift 10%" in detail
+    assert ok is True, "10% is within the <=10 tolerance, not outside it"
+
+
+def test_one_finding_past_the_boundary_fails(score, tmp_path):
+    """The boundary must be a boundary, not a ceiling nothing reaches."""
+    (tmp_path / ".security-baseline").write_text("bandit_findings=201\n")
+    _write_report(tmp_path / "logs", 178)  # (23*100 + 100) // 201 == 11
+
+    ok, detail = score._bandit_baseline_drift()
+
+    assert "drift 11%" in detail
+    assert ok is False

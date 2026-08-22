@@ -40,7 +40,7 @@ import re
 import sys
 from collections import defaultdict
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 
@@ -198,6 +198,34 @@ def collect_violations() -> list[dict]:
 
         if wp:
             by_path[wp.rstrip("/")].append(f"{pid} ({loc})")
+
+            # 0. the path must be INSIDE the repository.
+            #
+            # This has to come before the disk check, because the disk check
+            # cannot catch it: `REPO / "/tmp"` is `/tmp`, not
+            # `<repo>/tmp` -- pathlib's `/` discards the left side entirely
+            # when the right side is absolute -- and `/tmp` exists, so an
+            # absolute worker_path would be certified valid while naming
+            # something that has nothing to do with this repository. A `..`
+            # component escapes the same way, just more slowly.
+            escape = None
+            if PurePosixPath(wp).is_absolute():
+                escape = "is absolute"
+            elif ".." in PurePosixPath(wp).parts:
+                escape = "contains a '..' component"
+            if escape:
+                violations.append(
+                    {
+                        "rule": "path-escapes-repo",
+                        "pid": pid,
+                        "location": loc,
+                        "detail": (
+                            f"worker_path {wp!r} {escape}; a Location must live "
+                            "inside this repository"
+                        ),
+                    }
+                )
+                continue
 
             # 1. the path must exist on disk
             try:
