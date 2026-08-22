@@ -107,7 +107,10 @@ class TestUsersService:
     """Test users-service: health check, user creation, and retrieval."""
 
     @pytest.fixture(scope="class")
-    def mod(self):
+    def mod(self, tmp_path_factory):
+        import os
+        db_path = str(tmp_path_factory.mktemp("data") / "users.db")
+        os.environ["USERS_DB_PATH"] = db_path
         return _load_users_service()
 
     @pytest.fixture

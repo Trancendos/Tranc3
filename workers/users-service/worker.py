@@ -335,11 +335,11 @@ async def list_users(
     if active_only:
         conditions.append("is_active = 1")
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    total = db.execute(f"SELECT COUNT(*) as c FROM users {where}", tuple(params)).fetchone()["c"]
-    rows = db.execute(
-        f"SELECT * FROM users {where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        tuple(params) + (per_page, offset),
-    ).fetchall()
+    count_query = "SELECT COUNT(*) as c FROM users " + where
+    total = db.execute(count_query, tuple(params)).fetchone()["c"]
+
+    select_query = "SELECT * FROM users " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    rows = db.execute(select_query, tuple(params) + (per_page, offset)).fetchall()
     return UserListResponse(
         users=[_row_to_response(r) for r in rows],
         total=total,
