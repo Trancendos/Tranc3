@@ -18,12 +18,16 @@ from .base import BaseNode, NodeConfig, NodeResult, NodeType
 class ConditionNode(BaseNode):
     """Evaluates a Python expression against inputs; branches on true/false."""
 
-    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
+    async def execute(
+        self, inputs: Dict[str, Any], context: Dict[str, Any]
+    ) -> NodeResult:
         t0 = time.monotonic()
         expression = self.config.config.get("expression", "True")
         local_ns: Dict[str, Any] = {"inputs": inputs, "context": context, **inputs}
         try:
-            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307
+            result = bool(
+                eval(expression, {"__builtins__": {}}, local_ns)
+            )  # noqa: S307  # nosec B307
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
                 {"condition": result, "branch": "true" if result else "false"},
@@ -43,7 +47,9 @@ class ConditionNode(BaseNode):
 class ParallelNode(BaseNode):
     """Runs a list of child NodeConfigs concurrently and merges their results."""
 
-    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
+    async def execute(
+        self, inputs: Dict[str, Any], context: Dict[str, Any]
+    ) -> NodeResult:
         import importlib  # dynamic import avoids static cyclic-import with registry
 
         create_node = importlib.import_module("src.workflow.nodes.registry").create_node
@@ -52,7 +58,9 @@ class ParallelNode(BaseNode):
         child_configs_raw: List[Dict] = self.config.config.get("nodes", [])
         if not child_configs_raw:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result({"results": []}, duration_ms, metadata={"parallel_count": 0})
+            return self._make_result(
+                {"results": []}, duration_ms, metadata={"parallel_count": 0}
+            )
 
         child_configs = [
             NodeConfig(
@@ -69,7 +77,9 @@ class ParallelNode(BaseNode):
         ]
 
         tasks = [create_node(cc).execute(inputs, context) for cc in child_configs]
-        results: List[NodeResult] = await asyncio.gather(*tasks, return_exceptions=False)
+        results: List[NodeResult] = await asyncio.gather(
+            *tasks, return_exceptions=False
+        )
 
         merged: Dict[str, Any] = {}
         errors: List[str] = []
@@ -93,7 +103,9 @@ class ParallelNode(BaseNode):
 class LoopNode(BaseNode):
     """Iterates over inputs['items'], running inner node configs for each element."""
 
-    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
+    async def execute(
+        self, inputs: Dict[str, Any], context: Dict[str, Any]
+    ) -> NodeResult:
         import importlib  # dynamic import avoids static cyclic-import with registry
 
         create_node = importlib.import_module("src.workflow.nodes.registry").create_node
@@ -105,7 +117,9 @@ class LoopNode(BaseNode):
 
         if not inner_configs_raw:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result({"loop_results": []}, duration_ms, metadata={"item_count": 0})
+            return self._make_result(
+                {"loop_results": []}, duration_ms, metadata={"item_count": 0}
+            )
 
         inner_configs = [
             NodeConfig(
@@ -122,13 +136,13 @@ class LoopNode(BaseNode):
         ]
 
         semaphore = asyncio.Semaphore(max(max_concurrency, 1))
+        inner_nodes = [create_node(nc) for nc in inner_configs]
 
         async def _run_item(item: Any, idx: int) -> Any:
             async with semaphore:
                 item_inputs = {**inputs, "item": item, "index": idx}
                 item_result: Any = item
-                for nc in inner_configs:
-                    node = create_node(nc)
+                for node in inner_nodes:
                     res = await node.execute(item_inputs, context)
                     if res.success:
                         item_inputs.update({"previous": res.output})
@@ -152,7 +166,9 @@ class LoopNode(BaseNode):
 class MergeNode(BaseNode):
     """Merges all incoming inputs into a single dict output."""
 
-    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
+    async def execute(
+        self, inputs: Dict[str, Any], context: Dict[str, Any]
+    ) -> NodeResult:
         t0 = time.monotonic()
         strategy = self.config.config.get("strategy", "merge")
         if strategy == "first":
