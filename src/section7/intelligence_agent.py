@@ -174,15 +174,21 @@ class IntelligenceAgent:
             ingestors = []
 
         cycle_stats = {"fetched": 0, "routed": 0, "errors": 0}
+        all_items = []
         for ingestor in ingestors:
             try:
                 items = ingestor.fetch()
                 cycle_stats["fetched"] += len(items)
-                routed = self.ingest_many(items)
-                cycle_stats["routed"] += len(routed)
+                all_items.extend(items)
             except Exception as exc:
                 cycle_stats["errors"] += 1
-                logger.warning("section7: ingestor %s failed: %s", type(ingestor).__name__, exc)
+                logger.warning(
+                    "section7: ingestor %s failed: %s", type(ingestor).__name__, exc
+                )
+
+        if all_items:
+            routed = self.ingest_many(all_items)
+            cycle_stats["routed"] += len(routed)
 
         logger.info("section7: cycle complete — %s", cycle_stats)
         return cycle_stats
