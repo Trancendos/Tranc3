@@ -34,9 +34,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 STUCK_TIMEOUT_SECONDS = 300  # 5 minutes
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
 
@@ -101,9 +99,7 @@ async def _stuck_task_sweeper() -> None:
             requeued_ids = []
             for row in rows:
                 if row["retries"] + 1 >= row["max_retries"]:
-                    failed_ids.append(
-                        (now_iso, "max_retries_exceeded_on_stuck", row["id"])
-                    )
+                    failed_ids.append((now_iso, "max_retries_exceeded_on_stuck", row["id"]))
                 else:
                     requeued_ids.append((row["id"],))
 
@@ -123,9 +119,7 @@ async def _stuck_task_sweeper() -> None:
 
             if rows:
                 conn.commit()
-                logger.info(
-                    "Stuck-task sweep: requeued=%d, failed=%d", requeued, failed
-                )
+                logger.info("Stuck-task sweep: requeued=%d, failed=%d", requeued, failed)
             conn.close()
         except Exception:
             logger.exception("Stuck-task sweeper error")
@@ -228,16 +222,10 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     conn = _get_conn()
-    pending = conn.execute(
-        "SELECT COUNT(*) FROM tasks WHERE status='pending'"
-    ).fetchone()[0]
-    processing = conn.execute(
-        "SELECT COUNT(*) FROM tasks WHERE status='processing'"
-    ).fetchone()[0]
+    pending = conn.execute("SELECT COUNT(*) FROM tasks WHERE status='pending'").fetchone()[0]
+    processing = conn.execute("SELECT COUNT(*) FROM tasks WHERE status='processing'").fetchone()[0]
     done = conn.execute("SELECT COUNT(*) FROM tasks WHERE status='done'").fetchone()[0]
-    failed = conn.execute(
-        "SELECT COUNT(*) FROM tasks WHERE status='failed'"
-    ).fetchone()[0]
+    failed = conn.execute("SELECT COUNT(*) FROM tasks WHERE status='failed'").fetchone()[0]
     conn.close()
     return {
         "status": "healthy",
@@ -346,12 +334,8 @@ async def complete_task(task_id: str, req: CompleteRequest = CompleteRequest()):
         if not row:
             raise HTTPException(404, "Task not found")
         if row["status"] not in ("processing", "pending"):
-            raise HTTPException(
-                409, f"Cannot complete task with status '{row['status']}'"
-            )
-        conn.execute(
-            "UPDATE tasks SET status='done', completed_at=? WHERE id=?", (now, task_id)
-        )
+            raise HTTPException(409, f"Cannot complete task with status '{row['status']}'")
+        conn.execute("UPDATE tasks SET status='done', completed_at=? WHERE id=?", (now, task_id))
         conn.commit()
     finally:
         conn.close()
@@ -370,9 +354,7 @@ async def fail_task(task_id: str, req: FailRequest = FailRequest()):
         if not row:
             raise HTTPException(404, "Task not found")
         if row["status"] not in ("processing",):
-            raise HTTPException(
-                409, f"Task status is '{row['status']}', not 'processing'"
-            )
+            raise HTTPException(409, f"Task status is '{row['status']}', not 'processing'")
 
         new_retries = row["retries"] + 1
         if new_retries >= row["max_retries"]:
@@ -439,5 +421,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        app, host="0.0.0.0", port=WORKER_PORT  # nosec B104
+        app,
+        host="0.0.0.0",
+        port=WORKER_PORT,  # nosec B104
     )  # nosec B104 — containerised service
