@@ -13,7 +13,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import aiohttp
+try:
+    import aiohttp
+except ImportError:
+    aiohttp = None
 
 logger = logging.getLogger("tranc3.health")
 
@@ -260,10 +263,55 @@ class HealthChecker:
             return {"service": name, "status": "unknown", "error": "Not registered"}
 
         url = svc["url"]
+        if aiohttp is None:
+            # Fallback to urllib if aiohttp is not installed
+            import urllib.error
+            import urllib.request
+
+            try:
+                req = urllib.request.Request(url, method="GET")
+                req.add_header("Accept", "application/json")
+                with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 — static localhost SERVICE_REGISTRY URLs
+                    import json
+
+                    body = json.loads(resp.read().decode())
+                    result = {
+                        "service": name,
+                        "named": svc.get("named", ""),
+                        "priority": svc.get("priority", ""),
+                        "status": "healthy",
+                        "details": body,
+                        "checked_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    self._cache[name] = result
+                    return result
+            except urllib.error.HTTPError as e:
+                result = {
+                    "service": name,
+                    "named": svc.get("named", ""),
+                    "priority": svc.get("priority", ""),
+                    "status": "degraded" if e.code < 500 else "unhealthy",
+                    "error": f"HTTP {e.code}",
+                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                }
+                self._cache[name] = result
+                return result
+            except Exception as e:
+                result = {
+                    "service": name,
+                    "named": svc.get("named", ""),
+                    "priority": svc.get("priority", ""),
+                    "status": "unhealthy",
+                    "error": str(e),
+                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                }
+                self._cache[name] = result
+                return result
+
         try:
             client_timeout = aiohttp.ClientTimeout(total=timeout)
             async with aiohttp.ClientSession(timeout=client_timeout) as session:
-                async with session.get(url, headers={"Accept": "application/json"}) as resp:
+                async with session.get(url, headers={"Accept": "application/json"}) as resp:  # nosec B310 — static localhost SERVICE_REGISTRY URLs
                     resp.raise_for_status()
                     body = await resp.json()
                     result = {
