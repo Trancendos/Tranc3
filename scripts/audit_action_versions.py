@@ -126,82 +126,122 @@ def parse_uses(value: str) -> dict | None:
     }
 
 
-def main() -> int:
-    root = Path(os.environ.get("GITHUB_WORKSPACE", os.getcwd()))
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("INPUT_GITHUB_TOKEN")
-    findings = []
-    repo_cache: "OrderedDict[str, tuple[str, str, str]]" = OrderedDict()
-    external = []
+def _scan_workflow_file(path: Path, rel: str, token, repo_cache) -> tuple[list, list]:
+    """Every pinned `uses:` in one workflow file, classified."""
+    findings: list = []
+    external: list = []
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError as exc:
+        print(f"::warning::Could not read {rel}: {exc}")
+        return findings, external
 
+    for idx, line in enumerate(lines, start=1):
+        m = USES_RE.match(line)
+        if not m:
+            continue
+        parsed = parse_uses(m.group(1))
+        if parsed is None:
+            continue
+        if parsed["kind"] == "external":
+            external.append({"file": rel, "line": idx, **parsed})
+            continue
+
+        key = f"{parsed['owner']}/{parsed['repo']}"
+        if key not in repo_cache:
+            repo_cache[key] = resolve_latest_commit(parsed["owner"], parsed["repo"], token)
+        tag, commit, err = repo_cache[key]
+
+        base = {"file": rel, "line": idx, "ref": parsed["ref"], "pinned": parsed["sha"]}
+        if err:
+            findings.append({**base, "status": "unknown", "detail": err})
+        else:
+            findings.append(
+                {
+                    **base,
+                    "latest_tag": tag,
+                    "latest_commit": commit,
+                    "status": "current" if parsed["sha"] == commit else "outdated",
+                }
+            )
+    return findings, external
+
+
+def _scan_workflows(root: Path, token) -> tuple[list, list]:
+    """Walk every workflow directory once, sharing one release-lookup cache."""
+    findings: list = []
+    external: list = []
+    repo_cache: "OrderedDict[str, tuple[str, str, str]]" = OrderedDict()
     for wf_dir in WORKFLOW_DIRS:
         base = root / wf_dir
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.yml")) + sorted(base.rglob("*.yaml")):
-            rel = path.relative_to(root).as_posix()
-            try:
-                lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-            except OSError as exc:
-                print(f"::warning::Could not read {rel}: {exc}")
-                continue
-            for idx, line in enumerate(lines, start=1):
-                m = USES_RE.match(line)
-                if not m:
-                    continue
-                parsed = parse_uses(m.group(1))
-                if parsed is None:
-                    continue
-                if parsed["kind"] == "external":
-                    external.append({"file": rel, "line": idx, **parsed})
-                    continue
-                owner, repo = parsed["owner"], parsed["repo"]
-                key = f"{owner}/{repo}"
-                if key not in repo_cache:
-                    tag, commit, err = resolve_latest_commit(owner, repo, token)
-                    repo_cache[key] = (tag, commit, err)
-                tag, commit, err = repo_cache[key]
-                if err:
-                    findings.append(
-                        {
-                            "file": rel,
-                            "line": idx,
-                            "ref": parsed["ref"],
-                            "pinned": parsed["sha"],
-                            "status": "unknown",
-                            "detail": err,
-                        }
-                    )
-                    continue
-                if parsed["sha"] == commit:
-                    status = "current"
-                else:
-                    status = "outdated"
-                findings.append(
-                    {
-                        "file": rel,
-                        "line": idx,
-                        "ref": parsed["ref"],
-                        "pinned": parsed["sha"],
-                        "latest_tag": tag,
-                        "latest_commit": commit,
-                        "status": status,
-                    }
-                )
+            f, e = _scan_workflow_file(path, path.relative_to(root).as_posix(), token, repo_cache)
+            findings += f
+            external += e
+    return findings, external
 
-    outdated = [f for f in findings if f["status"] == "outdated"]
-    unknown = [f for f in findings if f["status"] == "unknown"]
 
+def _emit_annotations(outdated: list, unknown: list) -> None:
+    """GitHub-annotation lines, so a finding lands on the offending line."""
     for f in outdated:
-        msg = (
+        print(
+            f"::warning file={f['file']},line={f['line']}::"
             f"Outdated action {f['ref']} pinned at {f['pinned'][:12]} "
             f"but latest ({f['latest_tag']}) is {f['latest_commit'][:12]}"
         )
-        print(f"::warning file={f['file']},line={f['line']}::{msg}")
     for f in unknown:
         print(
             f"::warning file={f['file']},line={f['line']}::"
             f"Could not verify {f['ref']}: {f['detail']}"
         )
+
+
+def _render_markdown(report: dict, outdated: list, unknown: list, external: list) -> str:
+    def section(title: str, rows: list, empty: str) -> list:
+        return [f"## {title}", *(rows or [f"- {empty}"]), ""]
+
+    md = [
+        "# GitHub Action Version Audit",
+        "",
+        f"- Total pinned references: **{report['total_references']}**",
+        f"- GitHub-hosted audited: **{report['github_references']}** "
+        f"(outdated: **{len(outdated)}**, unverifiable: **{len(unknown)}**)",
+        f"- External-host references (not audited): **{len(external)}**",
+        "",
+    ]
+    md += section(
+        "Outdated references",
+        [
+            f"- `{f['ref']}` in `{f['file']}:{f['line']}` — "
+            f"pinned `{f['pinned'][:12]}` vs latest `{f['latest_tag']}` "
+            f"(`{f['latest_commit'][:12]}`)"
+            for f in outdated
+        ],
+        "None — all pinned SHAs match the latest released commit.",
+    )
+    md += section(
+        "Unverifiable references",
+        [f"- `{f['ref']}` in `{f['file']}:{f['line']}` — {f['detail']}" for f in unknown],
+        "None.",
+    )
+    md += section(
+        "External-host references (skipped)",
+        [f"- `{f['ref']}` in `{f['file']}:{f['line']}` (host: {f['host']})" for f in external],
+        "None.",
+    )
+    return "\n".join(md).rstrip() + "\n"
+
+
+def main() -> int:
+    root = Path(os.environ.get("GITHUB_WORKSPACE", os.getcwd()))
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("INPUT_GITHUB_TOKEN")
+
+    findings, external = _scan_workflows(root, token)
+    outdated = [f for f in findings if f["status"] == "outdated"]
+    unknown = [f for f in findings if f["status"] == "unknown"]
+    _emit_annotations(outdated, unknown)
 
     report = {
         "total_references": len(findings) + len(external),
@@ -213,49 +253,15 @@ def main() -> int:
         "external": external,
     }
     (root / "action-audit.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-
-    md = [
-        "# GitHub Action Version Audit",
-        "",
-        f"- Total pinned references: **{report['total_references']}**",
-        f"- GitHub-hosted audited: **{report['github_references']}** "
-        f"(outdated: **{len(outdated)}**, unverifiable: **{len(unknown)}**)",
-        f"- External-host references (not audited): **{len(external)}**",
-        "",
-        "## Outdated references",
-    ]
-    if outdated:
-        for f in outdated:
-            md.append(
-                f"- `{f['ref']}` in `{f['file']}:{f['line']}` — "
-                f"pinned `{f['pinned'][:12]}` vs latest `{f['latest_tag']}` "
-                f"(`{f['latest_commit'][:12]}`)"
-            )
-    else:
-        md.append("- None — all pinned SHAs match the latest released commit.")
-    md.append("")
-    md.append("## Unverifiable references")
-    if unknown:
-        for f in unknown:
-            md.append(f"- `{f['ref']}` in `{f['file']}:{f['line']}` — {f['detail']}")
-    else:
-        md.append("- None.")
-    md.append("")
-    md.append("## External-host references (skipped)")
-    if external:
-        for f in external:
-            md.append(f"- `{f['ref']}` in `{f['file']}:{f['line']}` (host: {f['host']})")
-    else:
-        md.append("- None.")
-    (root / "ACTION_AUDIT.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    (root / "ACTION_AUDIT.md").write_text(
+        _render_markdown(report, outdated, unknown, external), encoding="utf-8"
+    )
 
     print(
         f"\nAudit complete: {len(outdated)} outdated, {len(unknown)} unverifiable "
         f"of {report['total_references']} pinned references."
     )
-    if outdated and FAIL_ON_OUTDATED:
-        return 1
-    return 0
+    return 1 if (outdated and FAIL_ON_OUTDATED) else 0
 
 
 if __name__ == "__main__":
