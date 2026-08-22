@@ -114,7 +114,8 @@ class BM25Index:
             for tok in set(tokens):
                 df[tok] = df.get(tok, 0) + 1
         self._idf = {
-            tok: math.log((N - freq + 0.5) / (freq + 0.5) + 1.0) for tok, freq in df.items()
+            tok: math.log((N - freq + 0.5) / (freq + 0.5) + 1.0)
+            for tok, freq in df.items()
         }
         self._dirty = False
 
@@ -179,7 +180,9 @@ class KnowledgeBrain:
         brain = KnowledgeBrain("data/knowledge.db", markdown_dir=...) # with markdown import dir
     """
 
-    def __init__(self, db_path: str = ":memory:", markdown_dir: Optional[str] = None) -> None:
+    def __init__(
+        self, db_path: str = ":memory:", markdown_dir: Optional[str] = None
+    ) -> None:
         self._db_path = db_path
         self._markdown_dir = Path(markdown_dir) if markdown_dir else None
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
@@ -216,7 +219,9 @@ class KnowledgeBrain:
     def _rebuild_index(self) -> None:
         rows = self._conn.execute("SELECT id, title, content FROM pages").fetchall()
         for row in rows:
-            self._bm25._docs[row["id"]] = BM25Index._tokenize(f"{row['title']} {row['content']}")
+            self._bm25._docs[row["id"]] = BM25Index._tokenize(
+                f"{row['title']} {row['content']}"
+            )
         if rows:
             self._bm25._dirty = True
 
@@ -267,17 +272,35 @@ class KnowledgeBrain:
             self._conn.execute(
                 """INSERT OR IGNORE INTO links(source_id, target_id, alias, relation, weight)
                    VALUES (?, ?, ?, ?, ?)""",
-                (link.source_id, link.target_id, link.alias, link.relation, link.weight),
+                (
+                    link.source_id,
+                    link.target_id,
+                    link.alias,
+                    link.relation,
+                    link.weight,
+                ),
             )
         self._conn.commit()
         return page.id
 
     async def get_page(self, page_id: str) -> Optional[KBPage]:
         """Retrieve a page by id; returns None if not found."""
-        row = self._conn.execute("SELECT * FROM pages WHERE id = ?", (page_id,)).fetchone()
+        row = self._conn.execute(
+            "SELECT * FROM pages WHERE id = ?", (page_id,)
+        ).fetchone()
         if row is None:
             return None
         return self._row_to_page(row)
+
+    async def get_pages(self, page_ids: list[str]) -> dict[str, KBPage]:
+        """Retrieve multiple pages by ids; returns a dict mapping id to KBPage."""
+        if not page_ids:
+            return {}
+        placeholders = ",".join("?" for _ in page_ids)
+        rows = self._conn.execute(
+            f"SELECT * FROM pages WHERE id IN ({placeholders})", tuple(page_ids)
+        ).fetchall()
+        return {row["id"]: self._row_to_page(row) for row in rows}
 
     async def delete_page(self, page_id: str) -> bool:
         """Delete a page; returns True if a row was deleted."""
@@ -286,7 +309,8 @@ class KnowledgeBrain:
         if cursor.rowcount > 0:
             self._bm25.remove(page_id)
             self._conn.execute(
-                "DELETE FROM links WHERE source_id = ? OR target_id = ?", (page_id, page_id)
+                "DELETE FROM links WHERE source_id = ? OR target_id = ?",
+                (page_id, page_id),
             )
             self._conn.commit()
             return True
@@ -296,10 +320,13 @@ class KnowledgeBrain:
         """List all pages, optionally filtered by source."""
         if source is not None:
             rows = self._conn.execute(
-                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC", (source,)
+                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC",
+                (source,),
             ).fetchall()
         else:
-            rows = self._conn.execute("SELECT * FROM pages ORDER BY updated_at DESC").fetchall()
+            rows = self._conn.execute(
+                "SELECT * FROM pages ORDER BY updated_at DESC"
+            ).fetchall()
         return [self._row_to_page(r) for r in rows]
 
     # ── Async Search ──────────────────────────────────────────────────────────
@@ -313,8 +340,12 @@ class KnowledgeBrain:
         """Search pages; use_vector=False forces BM25-only (no FAISS required)."""
         hits = self._bm25.query(query, top_k=top_k)
         results: list[SearchResult] = []
+        if not hits:
+            return results
+        doc_ids = [doc_id for doc_id, _ in hits]
+        pages_dict = await self.get_pages(doc_ids)
         for doc_id, score in hits:
-            page = await self.get_page(doc_id)
+            page = pages_dict.get(doc_id)
             if page is None:
                 continue
             excerpt = _make_excerpt(page.content, query)
@@ -350,9 +381,13 @@ class KnowledgeBrain:
         """Retrieve memories for an agent scoped by agent_id tag."""
         hits = self._bm25.query(query, top_k=top_k * 3)
         results: list[SearchResult] = []
+        if not hits:
+            return results
         agent_tag = f"agent:{agent_id}"
+        doc_ids = [doc_id for doc_id, _ in hits]
+        pages_dict = await self.get_pages(doc_ids)
         for doc_id, score in hits:
-            page = await self.get_page(doc_id)
+            page = pages_dict.get(doc_id)
             if page is None:
                 continue
             if agent_tag not in page.tags:
@@ -427,7 +462,9 @@ def _parse_wikilinks(source_id: str, content: str) -> list[KBLink]:
             target, alias = raw, ""
         target = target.strip().lower().replace(" ", "-")
         if target and target != source_id:
-            links.append(KBLink(source_id=source_id, target_id=target, alias=alias.strip()))
+            links.append(
+                KBLink(source_id=source_id, target_id=target, alias=alias.strip())
+            )
     return links
 
 
