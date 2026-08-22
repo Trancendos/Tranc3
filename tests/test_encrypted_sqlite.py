@@ -10,7 +10,7 @@ import sqlite3
 import pytest
 
 os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
-os.environ["SECRET_KEY"] = "test-secret-key-for-encrypted-sqlite-unit-tests-32chars"
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-encrypted-sqlite-unit-tests-32chars")
 
 from src.database.encrypted_sqlite import (  # noqa: E402
     EncryptedKVStore,
