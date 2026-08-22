@@ -149,6 +149,9 @@ jobs:
       # visible act in the diff rather than a silent one.
       #
       # Pure filesystem and grep work, no network: it belongs on every PR.
+      - name: Entity registry conformance
+        run: python scripts/entity_registry_conformance.py --check
+
       - name: Location flow conformance
         run: python scripts/flow_conformance.py --check
 
