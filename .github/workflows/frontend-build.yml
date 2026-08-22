@@ -50,14 +50,14 @@ jobs:
         working-directory: web
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@v4 # v4
         with:
           # npm ci, the production build and the Storybook/Playwright run all
           # execute third-party code; none of them need to push, so don't leave
           # GITHUB_TOKEN readable in .git/config while they run.
           persist-credentials: false
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@v4 # v4
         with:
           node-version: '24'
           cache: 'npm'
@@ -98,7 +98,7 @@ jobs:
           ls -lh dist/assets/
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@v4 # v7
         with:
           name: tranc3-web-dist
           path: web/dist/
@@ -115,7 +115,7 @@ jobs:
 
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v4 # v8
         with:
           name: tranc3-web-dist
           path: web/dist
@@ -184,7 +184,7 @@ jobs:
     # deploy-pages this job has no external side effect, so it is safe on PRs.
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@v4 # v4
         with:
           persist-credentials: false
 

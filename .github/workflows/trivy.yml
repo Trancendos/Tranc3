@@ -33,7 +33,7 @@ jobs:
 
       - name: Cache Trivy DB
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v4v4
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-v1
@@ -67,7 +67,7 @@ jobs:
           category: "trivy-config"
 
       - name: Upload Trivy config SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4v4
         if: always()
         with:
           name: trivy-config-sarif
@@ -100,7 +100,7 @@ jobs:
           category: "trivy-fs"
 
       - name: Upload Trivy fs SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4v4
         if: always()
         with:
           name: trivy-fs-sarif
@@ -152,7 +152,7 @@ jobs:
           category: "trivy-image"
 
       - name: Upload Trivy image SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4v4
         if: always()
         with:
           name: trivy-image-sarif
@@ -198,7 +198,7 @@ jobs:
           category: "trivy-fs-enforce"
 
       - name: Upload enforcement SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4v4
         if: always()
         with:
           name: trivy-enforce-sarif

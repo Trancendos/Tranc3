@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@v4 # v4
         with:
           # Do NOT init submodules — that is the very operation under test, and
           # letting it run here would fail the job with a confusing checkout
@@ -53,7 +53,7 @@ jobs:
           # its exposure for no benefit.
           persist-credentials: false
 
-      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
+      - uses: actions/setup-python@v5 # v5
         with:
           python-version: '3.11'
 
