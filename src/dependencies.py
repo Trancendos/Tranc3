@@ -33,6 +33,7 @@ class ServiceContainer:
     def register_instance(self, name: str, instance: Any) -> None:
         """Register a pre-built instance directly"""
         self._singletons[name] = instance
+        self._factories.pop(name, None)
 
     def get(self, name: str) -> Any:
         """Resolve a service by name"""
