@@ -673,6 +673,7 @@ class AdvancedCodeGenerator:
         # Default: generic async Python function
         return textwrap.dedent(f"""\
             import asyncio
+            import json
             import logging
             from typing import Any, Dict, Optional
 
@@ -683,8 +684,27 @@ class AdvancedCodeGenerator:
                 \"\"\"
                 {request.description}
                 \"\"\"
-                # TODO: implement
-                raise NotImplementedError
+                try:
+                    from src.core.tranc3_inference import get_engine
+
+                    engine = get_engine()
+                    context_str = json.dumps(context, indent=2) if context else "None"
+
+                    prompt = (
+                        f"Task: {{run.__doc__.strip()}}\n\n"
+                        f"Context data:\n{{context_str}}\n\n"
+                        "Please perform the task and return the result."
+                    )
+
+                    result = await engine.generate(
+                        prompt=prompt,
+                        max_new_tokens=1024,
+                        temperature=0.4,
+                    )
+                    return {{"result": result.get("response", "")}}
+                except Exception as e:
+                    logger.error("Error executing generic fallback: %s", e)
+                    return {{"error": str(e)}}
             """)
 
     def _apply_substitutions(self, template: str, request: CodeGenerationRequest) -> str:
