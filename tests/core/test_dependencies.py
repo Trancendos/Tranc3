@@ -6,6 +6,7 @@ def test_list_services_empty():
     container = ServiceContainer()
     assert container.list_services() == {}
 
+
 def test_list_services_with_factories_and_singletons():
     """Test list_services correctly identifies lazy, initialized and direct services"""
     container = ServiceContainer()
@@ -30,6 +31,7 @@ def test_list_services_with_factories_and_singletons():
     services = container.list_services()
     assert services["db"] == "initialized"
 
+
 def test_list_services_return_type():
     """Test list_services returns a dictionary mapping strings to strings"""
     container = ServiceContainer()
@@ -37,6 +39,7 @@ def test_list_services_return_type():
     result = container.list_services()
     assert isinstance(result, dict)
     assert all(isinstance(k, str) and isinstance(v, str) for k, v in result.items())
+
 
 def test_list_services_sorted_keys():
     """Test if list_services or keys of returned dict are in expected order (if any)"""
