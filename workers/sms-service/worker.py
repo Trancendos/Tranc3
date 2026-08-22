@@ -42,9 +42,7 @@ TEXTBELT_KEY = os.getenv("TEXTBELT_KEY", "textbelt")  # "textbelt" = free (1/day
 DRAIN_INTERVAL = int(os.getenv("SMS_DRAIN_INTERVAL", "15"))
 MAX_RETRIES = 3
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
 
@@ -76,9 +74,7 @@ def init_db() -> None:
                 sent_at     REAL
             )
         """)
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_sms_status ON outbox(status, queued_at)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sms_status ON outbox(status, queued_at)")
         conn.commit()
 
 
@@ -129,9 +125,7 @@ async def _drain_loop() -> None:
         for row in rows:
             row = dict(row)
             try:
-                provider_id = await _dispatch(
-                    row["to_number"], row["message"], row["provider"]
-                )
+                provider_id = await _dispatch(row["to_number"], row["message"], row["provider"])
                 successes.append((time.time(), provider_id, row["id"]))
             except Exception as exc:
                 retry = row["retry_count"] + 1
@@ -250,15 +244,9 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     with get_conn() as conn:
-        pending = conn.execute(
-            "SELECT COUNT(*) FROM outbox WHERE status='pending'"
-        ).fetchone()[0]
-        sent = conn.execute(
-            "SELECT COUNT(*) FROM outbox WHERE status='sent'"
-        ).fetchone()[0]
-        failed = conn.execute(
-            "SELECT COUNT(*) FROM outbox WHERE status='failed'"
-        ).fetchone()[0]
+        pending = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='pending'").fetchone()[0]
+        sent = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='sent'").fetchone()[0]
+        failed = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='failed'").fetchone()[0]
     return {
         "status": "healthy",
         "service": WORKER_NAME,
@@ -317,9 +305,7 @@ async def list_outbox(
         params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
-        total = conn.execute(f"SELECT COUNT(*) FROM outbox {where}", params).fetchone()[
-            0
-        ]
+        total = conn.execute(f"SELECT COUNT(*) FROM outbox {where}", params).fetchone()[0]
         rows = conn.execute(
             f"SELECT id, to_number, message, status, provider, retry_count, queued_at, sent_at, error FROM outbox {where} ORDER BY queued_at DESC LIMIT ? OFFSET ?",
             params + [limit, offset],
