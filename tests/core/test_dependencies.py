@@ -1,5 +1,5 @@
-import pytest
 from src.dependencies import ServiceContainer
+
 
 def test_list_services_empty():
     """Test list_services returns empty dict for empty container"""
