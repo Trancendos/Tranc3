@@ -8,7 +8,11 @@
 #     -f json | python3 -c "
 #     import json,sys; d=json.load(sys.stdin)
 #     print('bandit_findings='+str(len(d.get('results',[]))))"
-#   >> .security-baseline
+#   > .security-baseline.new && mv .security-baseline.new .security-baseline
+#
+# Use `>` (replace), never `>>`. Appending leaves TWO bandit_findings= lines;
+# the drift check reads the first (stale) one while the workflow's grep reads
+# both, and its numeric comparison then fails into the non-regression path.
 #
 # Last updated: 2026-08-21 (re-measured via bandit 1.8.3; prior 364 was stale)
 #

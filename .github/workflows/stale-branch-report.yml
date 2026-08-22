@@ -70,6 +70,7 @@ jobs:
 
           : > merged.txt
           : > unmerged.txt
+          : > protected.txt
 
           # `--merged` is the safe question: has every commit on this branch
           # already been reached by the default branch? Anything else is left
@@ -79,6 +80,15 @@ jobs:
                      | grep -v 'HEAD' | grep -v "^origin/HEAD$"); do
             name="${b#origin/}"
             [ "$name" = "${DEFAULT#origin/}" ] && continue
+            # Same protected prefixes as scripts/stale_branch_cleanup.py. Two
+            # cleanup controls that disagree about what is protected is how a
+            # branch gets reaped by the one that never heard of it.
+            case "$name" in
+              main|cursor/production-integration-*|claude/loving-mendel-*|\
+              phase-24/*|refactor/shared-core-to-dimensional|\
+              infra/phase16-adaptive-storage*)
+                echo "$name" >> protected.txt; continue ;;
+            esac
             ts=$(git log -1 --format=%ct "$b" 2>/dev/null || echo 0)
             [ "$ts" -gt "$CUTOFF" ] && continue
             if git merge-base --is-ancestor "$b" "$DEFAULT" 2>/dev/null; then
@@ -106,6 +116,7 @@ jobs:
             echo "|---|---|---|"
             echo "| Fully merged into default | ${{ steps.classify.outputs.merged }} | safe to delete |"
             echo "| Not merged | ${{ steps.classify.outputs.unmerged }} | needs a human |"
+            echo "| Protected prefix | $(wc -l < protected.txt) | never touched |"
             echo
             echo "<details><summary>Fully merged</summary>"
             echo
@@ -154,7 +165,11 @@ jobs:
               echo "::warning::$name is no longer merged into the default branch — skipping"
               skipped=$((skipped + 1)); continue
             fi
-            git push origin --delete "$name" && count=$((count + 1)) || {
+            # --force-with-lease makes the server itself refuse the delete if
+            # the tip is no longer $sha. The checks above give better messages,
+            # but they are still time-of-check; this is time-of-use and atomic.
+            git push --force-with-lease="refs/heads/$name:$sha" \
+                     origin ":refs/heads/$name" && count=$((count + 1)) || {
               echo "::warning::could not delete $name (protected, or already gone)"
               skipped=$((skipped + 1))
             }

@@ -135,7 +135,14 @@ def _bandit_baseline_drift() -> tuple[bool | None, str]:
     if baseline <= 0:
         return True, f"baseline zero (measured {measured})"
     delta = baseline - measured
-    drift = round(100.0 * abs(delta) / baseline, 1)
+    # Whole-percent, half-up -- byte-for-byte the arithmetic in
+    # .forgejo/workflows/security-baseline.yml:
+    #   DRIFT=$(( (DELTA_ABS * 100 + BASELINE / 2) / BASELINE ))
+    # Rounding to one decimal here made the two controls disagree on the same
+    # scan: baseline 201 / measured 180 is 10% to the workflow (pass) and 10.4%
+    # to this script (stale). Two security controls reporting different verdicts
+    # from identical input is worse than either verdict being slightly coarse.
+    drift = (abs(delta) * 100 + baseline // 2) // baseline
     within = drift <= 10
     return within, f"baseline {baseline}, measured {measured}, drift {drift}%"
 

@@ -66,3 +66,30 @@ def test_exemptions_stay_bounded():
         f"exemption list changed to {sorted(NON_WORKER_LOCATIONS)}; "
         f"widening it weakens the guard -- confirm this is intended"
     )
+
+
+def test_the_guard_can_actually_fail():
+    """The test that keeps the other four honest.
+
+    Every assertion above expects an empty result. If `collect_violations`
+    broke -- a path constant that stopped resolving, a rule that silently
+    stopped firing -- all four would still pass, and the guard would be inert
+    while reporting success. That is precisely the failure this module was
+    written to remove, so it is worth proving the guard detects drift and not
+    merely that it reports none.
+    """
+    import entity_registry_conformance as guard
+
+    entity = next(iter(guard.PLATFORM_ENTITIES.values()))
+    original = entity.worker_path
+    try:
+        object.__setattr__(entity, "worker_path", "src/does_not_exist_9f3a/")
+        rules = {v["rule"] for v in guard.collect_violations()}
+        assert "path-missing" in rules, (
+            "the guard did not report a worker_path that does not exist; "
+            "it is no longer detecting the drift it was built for"
+        )
+    finally:
+        object.__setattr__(entity, "worker_path", original)
+
+    assert collect_violations() == [], "the probe leaked state into the registry"

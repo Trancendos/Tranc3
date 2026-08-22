@@ -38,6 +38,7 @@ import json
 import re
 import sys
 from collections import defaultdict
+from datetime import date
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -99,7 +100,17 @@ def _live_worker_dir(worker_path: str) -> str | None:
 
 
 def _compose_routes_port(port: int, compose: str) -> bool:
-    return bool(port) and str(port) in compose
+    """True if compose mentions this port as a whole number.
+
+    A substring test is not good enough: `8055 in compose` also matches inside
+    18055, inside an image digest, and inside any unrelated numeric field. The
+    port-unrouted rule would then pass for a port compose never routes -- a
+    check reporting confidently and wrongly, which is the failure this guard
+    exists to catch.
+    """
+    if not port:
+        return False
+    return bool(re.search(rf"(?<!\d){port}(?!\d)", compose))
 
 
 def collect_violations() -> list[dict]:
@@ -214,7 +225,7 @@ def write_baseline(violations: list[dict]) -> None:
     BASELINE.write_text(
         json.dumps(
             {
-                "recorded": "2026-08-22",
+                "recorded": date.today().isoformat(),
                 "why": (
                     "Pre-existing registry drift, measured before the conformance guard "
                     "existed. CI fails on anything NEW; these are the known set the "

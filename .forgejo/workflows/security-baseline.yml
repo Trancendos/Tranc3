@@ -88,7 +88,16 @@ jobs:
             echo "::error::Restore it, or seed it from a known-good run."
             exit 1
           fi
-          BASELINE=$(grep 'bandit_findings=' .security-baseline | cut -d= -f2)
+          # grep returns every match. A file with two bandit_findings= lines
+          # yields two values, and "$BASELINE" then fails every numeric test
+          # below -- which used to mean the ratchet quietly took the pass path.
+          MATCHES=$(grep -c '^bandit_findings=' .security-baseline || true)
+          if [ "$MATCHES" != "1" ]; then
+            echo "::error::.security-baseline has $MATCHES bandit_findings= lines;"
+            echo "::error::exactly one is required. Regenerate it with '>' not '>>'."
+            exit 1
+          fi
+          BASELINE=$(grep '^bandit_findings=' .security-baseline | cut -d= -f2)
           case "$BASELINE" in
             ''|*[!0-9]*)
               echo "::error::.security-baseline has no usable bandit_findings= value"

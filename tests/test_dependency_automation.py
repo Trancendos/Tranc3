@@ -25,6 +25,12 @@ DEPENDABOT = REPO / ".github" / "dependabot.yml"
 
 SAFE_TYPES = {"minor", "patch"}
 
+# The exact set this config is supposed to cover. Asserting membership rather
+# than just "every entry that exists is well-formed" is what stops the file
+# being emptied -- a template regeneration that dropped all twelve entries
+# would otherwise satisfy every per-entry check by having nothing to check.
+EXPECTED_ENTRIES = 12
+
 
 @pytest.fixture(scope="module")
 def config() -> dict:
@@ -33,6 +39,16 @@ def config() -> dict:
 
 def _entry_id(entry: dict) -> str:
     return f"{entry.get('package-ecosystem')}:{entry.get('directory')}"
+
+
+def test_the_config_still_covers_every_ecosystem(config):
+    """Fail closed: an empty `updates:` list must not pass as "all grouped"."""
+    entries = config.get("updates") or []
+    assert len(entries) == EXPECTED_ENTRIES, (
+        f"expected {EXPECTED_ENTRIES} ecosystem entries, found {len(entries)}; "
+        f"a regenerated dependabot.yml that drops entries would otherwise pass "
+        f"every other test in this file by having nothing left to check"
+    )
 
 
 def test_every_ecosystem_groups_its_safe_updates(config):
@@ -67,7 +83,15 @@ def test_major_updates_are_never_grouped(config):
     """
     for entry in config["updates"]:
         for name, group in entry["groups"].items():
-            types = group.get("update-types", [])
+            # An omitted `update-types` is NOT an empty list to Dependabot: the
+            # group then matches major, minor and patch. Defaulting to [] here
+            # would let the assertion below pass on exactly the configuration it
+            # exists to forbid, so the key must be present before it is read.
+            assert "update-types" in group, (
+                f"{_entry_id(entry)} group '{name}' omits update-types; "
+                f"Dependabot reads that as 'all types', majors included"
+            )
+            types = group["update-types"]
             assert "major" not in types, (
                 f"{_entry_id(entry)} group '{name}' includes major updates; "
                 f"a runtime change must not ride along with patch bumps"
@@ -78,7 +102,9 @@ def test_open_pr_limit_is_bounded(config):
     """Grouping reduces PR count; it does not remove the need for a ceiling."""
     for entry in config["updates"]:
         limit = entry.get("open-pull-requests-limit")
-        assert isinstance(limit, int) and 0 < limit <= 10, (
+        # `bool` subclasses `int`, so isinstance(True, int) is True and a stray
+        # `open-pull-requests-limit: true` would satisfy a naive check.
+        assert type(limit) is int and 0 < limit <= 10, (
             f"{_entry_id(entry)} has open-pull-requests-limit={limit!r}; "
             f"an unbounded or missing limit is how 98 PRs happened"
         )

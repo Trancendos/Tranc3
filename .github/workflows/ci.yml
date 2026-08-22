@@ -149,6 +149,10 @@ jobs:
       # visible act in the diff rather than a silent one.
       #
       # Pure filesystem and grep work, no network: it belongs on every PR.
+      # Fails when a Location's worker_path is missing, unserved, shared with
+      # another Location, or when its worker_port disagrees with compose. The
+      # registry is the platform's identity source of truth; when it drifts,
+      # the Admin OS worker map goes blind without saying so.
       - name: Entity registry conformance
         run: python scripts/entity_registry_conformance.py --check
 
