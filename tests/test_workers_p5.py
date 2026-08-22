@@ -201,8 +201,13 @@ class TestApiGateway:
 
 
 class TestBackupService:
+
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup_env_vars(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BACKUP_ROOT", str(tmp_path / "backups"))
+    @pytest.fixture(autouse=True)
+    def setup_env_vars(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BACKUP_ROOT", str(tmp_path / "backups"))
         self.mod = _import_worker("workers/backup-service/worker.py")
         self.client = _client_for(self.mod)
 
