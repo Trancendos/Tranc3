@@ -422,6 +422,6 @@ if __name__ == "__main__":
 
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=WORKER_PORT,  # nosec B104
+        host="0.0.0.0",  # nosec B104
+        port=WORKER_PORT,
     )  # nosec B104 — containerised service
