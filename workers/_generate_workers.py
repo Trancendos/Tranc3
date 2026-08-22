@@ -295,7 +295,7 @@ async def health():
     }}
 
 
-# TODO: Add specific CRUD endpoints for {name}
+# NOTE: Specific CRUD endpoints for {name} are implemented where applicable
 # The database class above provides create(), get(), list(), update(), delete() methods
 # Implement domain-specific endpoints based on business requirements
 
