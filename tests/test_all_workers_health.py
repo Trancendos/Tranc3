@@ -88,7 +88,10 @@ ALL_WORKERS = [
     ("health_aggregator", _TRANC3_ROOT / "workers" / "health-aggregator" / "worker.py"),
     ("infinity_void", _TRANC3_ROOT / "workers" / "infinity-void" / "worker.py"),
     ("queue_service", _TRANC3_ROOT / "workers" / "queue-service" / "worker.py"),
-    ("rate_limit_service", _TRANC3_ROOT / "workers" / "rate-limit-service" / "worker.py"),
+    (
+        "rate_limit_service",
+        _TRANC3_ROOT / "workers" / "rate-limit-service" / "worker.py",
+    ),
     ("search_service", _TRANC3_ROOT / "workers" / "search-service" / "worker.py"),
     ("sms_service", _TRANC3_ROOT / "workers" / "sms-service" / "worker.py"),
     ("storage_service", _TRANC3_ROOT / "workers" / "storage-service" / "worker.py"),
@@ -96,19 +99,29 @@ ALL_WORKERS = [
 ]
 
 
-
-
-
 def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
     """Import a worker and verify its /health endpoint."""
     import os
+
     for env_var in [
-        "CACHE_DB_PATH", "CACHE_DUCKDB_PATH", "STORAGE_DB_PATH",
-        "STORAGE_DUCKDB_PATH", "CRON_DB_PATH", "ANALYTICS_DB_PATH",
-        "ANALYTICS_DUCKDB_PATH", "INFINITY_AUTH_DB_PATH", "USERS_DB_PATH",
-        "INFINITY_AI_DB_PATH", "AUDIT_DB_PATH", "DB_PATH", "LOCAL_ROOT",
-        "STORAGE_LOCAL_ROOT", "OBSERVATORY_DB_PATH", "HIVE_DB_PATH",
-        "CRYPTO_DB_PATH", "CRYPTEX_DB_PATH"
+        "CACHE_DB_PATH",
+        "CACHE_DUCKDB_PATH",
+        "STORAGE_DB_PATH",
+        "STORAGE_DUCKDB_PATH",
+        "CRON_DB_PATH",
+        "ANALYTICS_DB_PATH",
+        "ANALYTICS_DUCKDB_PATH",
+        "INFINITY_AUTH_DB_PATH",
+        "USERS_DB_PATH",
+        "INFINITY_AI_DB_PATH",
+        "AUDIT_DB_PATH",
+        "DB_PATH",
+        "LOCAL_ROOT",
+        "STORAGE_LOCAL_ROOT",
+        "OBSERVATORY_DB_PATH",
+        "HIVE_DB_PATH",
+        "CRYPTO_DB_PATH",
+        "CRYPTEX_DB_PATH",
     ]:
         os.environ[env_var] = str(tmp_path / f"{env_var.lower()}.db")
 
@@ -131,7 +144,6 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
         routes = [route.path for route in app.routes if hasattr(route, "path")]
     else:
         assert False, f"Worker {module_name} missing 'app' attribute"
-
 
     # Set up test client with patched database if needed
     patches = []
@@ -168,11 +180,13 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
                 mod.init_schema()
                 client = TestClient(mod.app)
                 response = client.get("/health")
-                assert response.status_code == 200, (
-                    f"Worker {module_name} /health returned {response.status_code}"
-                )
+                assert (
+                    response.status_code == 200
+                ), f"Worker {module_name} /health returned {response.status_code}"
                 data = response.json()
-                assert "status" in data, f"Worker {module_name} /health missing 'status' field"
+                assert (
+                    "status" in data
+                ), f"Worker {module_name} /health missing 'status' field"
             return
 
     # Workers that use module-level DB_PATH + init_db() + lifespan pattern.
@@ -187,11 +201,13 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
             mod.init_db()
             client = TestClient(mod.app)
             response = client.get("/health")
-            assert response.status_code == 200, (
-                f"Worker {module_name} /health returned {response.status_code}"
-            )
+            assert (
+                response.status_code == 200
+            ), f"Worker {module_name} /health returned {response.status_code}"
             data = response.json()
-            assert "status" in data, f"Worker {module_name} /health missing 'status' field"
+            assert (
+                "status" in data
+            ), f"Worker {module_name} /health missing 'status' field"
         return
 
     import contextlib
@@ -202,9 +218,9 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
 
         client = TestClient(mod.app)
         response = client.get("/health")
-        assert response.status_code == 200, (
-            f"Worker {module_name} /health returned {response.status_code}"
-        )
+        assert (
+            response.status_code == 200
+        ), f"Worker {module_name} /health returned {response.status_code}"
 
         data = response.json()
         assert "status" in data, f"Worker {module_name} /health missing 'status' field"
@@ -216,7 +232,11 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
                 test_db._conn.close()
             except Exception:
                 pass  # nosec B110 — graceful degradation
-        if hasattr(test_db, "_local") and hasattr(test_db._local, "conn") and test_db._local.conn:
+        if (
+            hasattr(test_db, "_local")
+            and hasattr(test_db._local, "conn")
+            and test_db._local.conn
+        ):
             try:
                 test_db._local.conn.close()
             except Exception:
@@ -245,7 +265,9 @@ class TestWorkerCounts:
 
     def test_p0_worker_count(self):
         """Verify P0 workers (infinity-ws, infinity-auth)."""
-        p0_workers = [w for w in ALL_WORKERS if w[0] in ("infinity_ws", "infinity_auth")]
+        p0_workers = [
+            w for w in ALL_WORKERS if w[0] in ("infinity_ws", "infinity_auth")
+        ]
         assert len(p0_workers) == 2
 
     def test_p1_worker_count(self):
