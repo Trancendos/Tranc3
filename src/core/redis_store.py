@@ -1,15 +1,6 @@
-"""
-Shared async Redis persistence layer — backed by Upstash (REDIS_URL env var).
-Falls back to an in-memory dict when Redis is unavailable so dev/test never breaks.
-
-Usage:
-  from src.core.redis_store import get_store
-  store = await get_store()
-  await store.set("citadel:deploy:abc", deploy_dict, ttl=86400)
-  data = await store.get("citadel:deploy:abc")
-  keys = await store.keys("citadel:deploy:*")
-  await store.delete("citadel:deploy:abc")
-"""
+# src/core/redis_store.py
+# Shared async Redis persistence layer — backed by Upstash (REDIS_URL env var).
+# Falls back to an in-memory dict when Redis is unavailable so dev/test never breaks.
 
 from __future__ import annotations
 
