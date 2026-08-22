@@ -75,7 +75,9 @@ class TestEffectiveEntity:
 
     def test_list_all_effective_without_overrides(self):
         all_eff = list_all_effective()
-        assert len(all_eff) == len(set(e.pid for e in PLATFORM_ENTITIES.values() if hasattr(e, "pid")))
+        assert len(all_eff) == len(
+            set(e.pid for e in PLATFORM_ENTITIES.values() if hasattr(e, "pid"))
+        )
         assert all(e is not None for e in all_eff)
         # Should be sorted by pid
         assert all_eff == sorted(all_eff, key=lambda x: x.pid)
