@@ -479,8 +479,13 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
 
             async def extract(source: str) -> AsyncIterator[dict]:
                 \"\"\"Yield records from *source*.\"\"\"
-                # TODO: implement extraction
-                yield {}
+                # Generic mock implementation simulating asynchronous extraction
+
+                # Simulate reading a batch of records from the source
+                print(f"Starting extraction from {source}")
+                for i in range(1, 11):
+                    await asyncio.sleep(0.01)  # Simulate I/O delay
+                    yield {"id": i, "source": source, "status": "extracted"}
 
 
             async def transform(record: dict) -> dict:
