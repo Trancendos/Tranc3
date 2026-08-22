@@ -243,11 +243,56 @@ class WorkflowExecutor:
         initial_inputs are injected into the first (root) nodes.
         context is passed through to every node's execute() call.
         """
-        if initial_inputs is None:
-            initial_inputs = {}
-        if context is None:
-            context = {}
+        initial_inputs = initial_inputs or {}
+        context = context or {}
 
+        execution_id, cancel_flag, state = await self._initialize_execution(workflow)
+
+        try:
+            layers = _topological_sort(workflow.nodes, workflow.edges)
+        except ValueError as exc:
+            return await self._handle_sort_failure(state, execution_id, exc)
+
+        # Seed initial outputs — root nodes will use initial_inputs
+        node_outputs: Dict[str, Any] = {}
+
+        try:
+            for layer in layers:
+                if cancel_flag.is_set():
+                    return await self._mark_cancelled(state, execution_id)
+
+                await self._execute_layer(
+                    layer=layer,
+                    workflow=workflow,
+                    node_outputs=node_outputs,
+                    initial_inputs=initial_inputs,
+                    context={
+                        **context,
+                        "execution_id": execution_id,
+                        "workflow_id": workflow.id,
+                    },
+                    state=state,
+                    cancel_flag=cancel_flag,
+                )
+
+                # Stop on first node failure (fail-fast)
+                if any(state.node_statuses.get(nid) == "failed" for nid in layer):
+                    raise RuntimeError(f"Layer {layer} had a node failure; aborting workflow.")
+
+            return await self._mark_completed(state, workflow, node_outputs)
+
+        except asyncio.CancelledError:
+            return await self._mark_cancelled(state, execution_id, via_exception=True)
+
+        except Exception as exc:  # noqa: BLE001
+            return await self._handle_execution_failure(state, workflow, exc, node_outputs)
+
+        finally:
+            self._cancel_flags.pop(execution_id, None)
+
+    async def _initialize_execution(
+        self, workflow: WorkflowDefinition
+    ) -> tuple[str, asyncio.Event, ExecutionState]:
         execution_id = str(uuid.uuid4())
         cancel_flag = asyncio.Event()
         self._cancel_flags[execution_id] = cancel_flag
@@ -274,98 +319,82 @@ class WorkflowExecutor:
             sanitize_for_log(workflow.name),
             sanitize_for_log(execution_id),
         )
+        return execution_id, cancel_flag, state
 
-        try:
-            layers = _topological_sort(workflow.nodes, workflow.edges)
-        except ValueError as exc:
-            state.status = "failed"
-            state.error = str(exc)
-            state.finished_at = time.monotonic()
-            await event_bus.publish(
-                "workflow.failed",
-                {
-                    "execution_id": execution_id,
-                    "error": state.error,
-                },
-            )
-            logger.error(
-                "Topological sort failed: %s", sanitize_for_log(exc)
-            )  # codeql[py/cleartext-logging]
-            return state
+    async def _handle_sort_failure(
+        self, state: ExecutionState, execution_id: str, exc: ValueError
+    ) -> ExecutionState:
+        state.status = "failed"
+        state.error = str(exc)
+        state.finished_at = time.monotonic()
+        await event_bus.publish(
+            "workflow.failed",
+            {
+                "execution_id": execution_id,
+                "error": state.error,
+            },
+        )
+        logger.error(
+            "Topological sort failed: %s", sanitize_for_log(exc)
+        )  # codeql[py/cleartext-logging]
+        return state
 
-        # Seed initial outputs — root nodes will use initial_inputs
-        node_outputs: Dict[str, Any] = {}
-
-        try:
-            for layer in layers:
-                if cancel_flag.is_set():
-                    state.status = "cancelled"
-                    state.finished_at = time.monotonic()
-                    logger.info(
-                        "Execution %s cancelled.", sanitize_for_log(execution_id)
-                    )  # codeql[py/cleartext-logging]
-                    return state
-
-                await self._execute_layer(
-                    layer=layer,
-                    workflow=workflow,
-                    node_outputs=node_outputs,
-                    initial_inputs=initial_inputs,
-                    context={
-                        **context,
-                        "execution_id": execution_id,
-                        "workflow_id": workflow.id,
-                    },
-                    state=state,
-                    cancel_flag=cancel_flag,
-                )
-
-                # Stop on first node failure (fail-fast)
-                if any(state.node_statuses.get(nid) == "failed" for nid in layer):
-                    raise RuntimeError(f"Layer {layer} had a node failure; aborting workflow.")
-
-            state.status = "completed"
-            state.finished_at = time.monotonic()
-            state.node_outputs = node_outputs
-
-            await event_bus.publish(
-                "workflow.completed",
-                {
-                    "execution_id": execution_id,
-                    "workflow_id": workflow.id,
-                    "elapsed_ms": state.elapsed_ms,
-                },
-            )
-            logger.info("Workflow '%s' completed in %.1fms.", workflow.name, state.elapsed_ms)
-
-        except asyncio.CancelledError:
-            state.status = "cancelled"
-            state.finished_at = time.monotonic()
+    async def _mark_cancelled(
+        self, state: ExecutionState, execution_id: str, via_exception: bool = False
+    ) -> ExecutionState:
+        state.status = "cancelled"
+        state.finished_at = time.monotonic()
+        if via_exception:
             logger.info("Execution %s cancelled via CancelledError.", execution_id)
-
-        except Exception as exc:  # noqa: BLE001
-            state.status = "failed"
-            state.error = str(exc)
-            state.finished_at = time.monotonic()
-            state.node_outputs = node_outputs
-            await event_bus.publish(
-                "workflow.failed",
-                {
-                    "execution_id": execution_id,
-                    "error": state.error,
-                    "elapsed_ms": state.elapsed_ms,
-                },
-            )
-            logger.error(
-                "Workflow '%s' failed: %s",
-                sanitize_for_log(workflow.name),
-                sanitize_for_log(exc),
-                exc_info=True,
+        else:
+            logger.info(
+                "Execution %s cancelled.", sanitize_for_log(execution_id)
             )  # codeql[py/cleartext-logging]
+        return state
 
-        finally:
-            self._cancel_flags.pop(execution_id, None)
+    async def _mark_completed(
+        self, state: ExecutionState, workflow: WorkflowDefinition, node_outputs: Dict[str, Any]
+    ) -> ExecutionState:
+        state.status = "completed"
+        state.finished_at = time.monotonic()
+        state.node_outputs = node_outputs
 
+        await event_bus.publish(
+            "workflow.completed",
+            {
+                "execution_id": state.execution_id,
+                "workflow_id": workflow.id,
+                "elapsed_ms": state.elapsed_ms,
+            },
+        )
+        logger.info("Workflow '%s' completed in %.1fms.", workflow.name, state.elapsed_ms)
+        return state
+
+    async def _handle_execution_failure(
+        self,
+        state: ExecutionState,
+        workflow: WorkflowDefinition,
+        exc: Exception,
+        node_outputs: Dict[str, Any],
+    ) -> ExecutionState:
+        state.status = "failed"
+        state.error = str(exc)
+        state.finished_at = time.monotonic()
+        state.node_outputs = node_outputs
+        await event_bus.publish(
+            "workflow.failed",
+            {
+                "execution_id": state.execution_id,
+                "error": state.error,
+                "elapsed_ms": state.elapsed_ms,
+            },
+        )
+        logger.error(
+            "Workflow '%s' failed: %s",
+            sanitize_for_log(workflow.name),
+            sanitize_for_log(exc),
+            exc_info=True,
+        )  # codeql[py/cleartext-logging]
         return state
 
     async def get_status(self, execution_id: str) -> Optional[ExecutionState]:
