@@ -102,6 +102,54 @@ def _live_worker_dir(worker_path: str) -> str | None:
     return None
 
 
+def _pairs(value) -> list[tuple[str, str]]:
+    """compose accepts a mapping OR a list of "KEY=VALUE" strings for both
+    `labels:` and `environment:`. Normalise once instead of twice."""
+    if isinstance(value, dict):
+        return [(str(k), str(v)) for k, v in value.items()]
+    if isinstance(value, list):
+        return [
+            ((x.split("=", 1) + [""])[0], (x.split("=", 1) + [""])[1])
+            for x in value
+            if isinstance(x, str)
+        ]
+    return []
+
+
+def _ports_from_mapping(svc: dict) -> set[int]:
+    """Published `ports:` -- "8069:8069", "127.0.0.1:8069:8069", {published: 8069}."""
+    found: set[int] = set()
+    entries = svc.get("ports")
+    for entry in entries if isinstance(entries, list) else []:
+        if isinstance(entry, dict):
+            for key in ("published", "target"):
+                with contextlib.suppress(KeyError, TypeError, ValueError):
+                    found.add(int(entry[key]))
+        else:
+            for part in str(entry).split("/")[0].split(":"):
+                if part.isascii() and part.isdigit():
+                    found.add(int(part))
+    return found
+
+
+def _ports_from_traefik_labels(svc: dict) -> set[int]:
+    """Traefik's `loadbalancer.server.port` -- how most workers are actually routed."""
+    return {
+        int(value.strip())
+        for key, value in _pairs(svc.get("labels"))
+        if "loadbalancer.server.port" in key and value.strip().isascii() and value.strip().isdigit()
+    }
+
+
+def _ports_from_environment(svc: dict) -> set[int]:
+    """PORT-suffixed env values -- PORT, HIVE_PORT, CACHE_PORT and friends."""
+    return {
+        int(value.strip())
+        for key, value in _pairs(svc.get("environment"))
+        if key.upper().endswith("PORT") and value.strip().isascii() and value.strip().isdigit()
+    }
+
+
 def _routed_ports(compose_text: str) -> set[int]:
     """Every port compose actually routes, parsed rather than grepped.
 
@@ -110,56 +158,125 @@ def _routed_ports(compose_text: str) -> set[int]:
     field, so `port-unrouted` could pass for a port compose never routes. That
     is the failure this guard exists to catch, so the guard must not commit it.
 
-    Three places genuinely route a port: a published `ports:` mapping, a
-    Traefik `loadbalancer.server.port` label, and a PORT-ish environment value.
+    Three places genuinely route a port, and each is its own extractor above: a
+    published `ports:` mapping, a Traefik `loadbalancer.server.port` label, and
+    a PORT-ish environment value.
     """
-    routed: set[int] = set()
     try:
         doc = yaml.safe_load(compose_text)
     except yaml.YAMLError:
-        return routed
+        return set()
     # `or {}` only rescues the FALSY non-mappings. A truthy scalar or list root
     # -- a compose file that is one string, or a YAML list -- reaches .get() and
     # raises AttributeError, and the same holds for a truthy non-mapping
     # `services:` value reaching .values(). An unparseable compose must make
     # this guard measure nothing, never crash it.
     if not isinstance(doc, dict):
-        return routed
+        return set()
     services = doc.get("services")
     if not isinstance(services, dict):
-        return routed
+        return set()
+
+    routed: set[int] = set()
     for svc in services.values():
         if not isinstance(svc, dict):
             continue
-        for entry in svc.get("ports") or []:
-            # "8069:8069", "127.0.0.1:8069:8069", or {published: 8069}
-            if isinstance(entry, dict):
-                for key in ("published", "target"):
-                    with contextlib.suppress(TypeError, ValueError):
-                        routed.add(int(entry[key]))
-            else:
-                for part in str(entry).split("/")[0].split(":"):
-                    if part.isdigit():
-                        routed.add(int(part))
-        labels = svc.get("labels") or []
-        label_items = (
-            labels.items()
-            if isinstance(labels, dict)
-            else ((x.split("=", 1) + [""])[:2] for x in labels if isinstance(x, str))
-        )
-        for key, value in label_items:
-            if "loadbalancer.server.port" in str(key) and str(value).strip().isdigit():
-                routed.add(int(str(value).strip()))
-        env = svc.get("environment") or {}
-        env_items = (
-            env.items()
-            if isinstance(env, dict)
-            else ((x.split("=", 1) + [""])[:2] for x in env if isinstance(x, str))
-        )
-        for key, value in env_items:
-            if str(key).upper().endswith("PORT") and str(value).strip().isdigit():
-                routed.add(int(str(value).strip()))
+        routed |= _ports_from_mapping(svc)
+        routed |= _ports_from_traefik_labels(svc)
+        routed |= _ports_from_environment(svc)
     return routed
+
+
+def _violation(rule: str, pid: str, loc: str, detail: str) -> dict:
+    return {"rule": rule, "pid": pid, "location": loc, "detail": detail}
+
+
+def _path_violations(pid: str, loc: str, wp: str, api: str) -> list[dict]:
+    """Everything that can be wrong with a Location's worker_path."""
+    # Containment first, because the on-disk check CANNOT catch it:
+    # `REPO / "/tmp"` is `/tmp`, not `<repo>/tmp` -- pathlib's `/` discards the
+    # left side entirely when the right side is absolute -- and `/tmp` exists,
+    # so an absolute worker_path would be certified valid while naming
+    # something unrelated to this repository. `..` escapes the same way.
+    escape = None
+    if PurePosixPath(wp).is_absolute():
+        escape = "is absolute"
+    elif ".." in PurePosixPath(wp).parts:
+        escape = "contains a '..' component"
+    if escape:
+        return [
+            _violation(
+                "path-escapes-repo",
+                pid,
+                loc,
+                f"worker_path {wp!r} {escape}; a Location must live inside this repository",
+            )
+        ]
+
+    try:
+        exists = (REPO / wp.rstrip("/")).exists()
+    except (OSError, ValueError):
+        # An embedded null byte or an over-long name raises rather than
+        # returning False. Unreadable is not the same as fine.
+        exists = False
+    if not exists:
+        return [_violation("path-missing", pid, loc, f"worker_path {wp!r} does not exist on disk")]
+
+    if pid in NON_WORKER_LOCATIONS:
+        return []  # correct by design -- see NON_WORKER_LOCATIONS
+
+    mounted = _router_is_mounted(wp, api)
+    if not mounted and not _live_worker_dir(wp):
+        return [
+            _violation(
+                "path-unserved",
+                pid,
+                loc,
+                f"worker_path {wp!r} is neither mounted in api.py nor backed by a "
+                f"workers/ directory",
+            )
+        ]
+    if wp.startswith("src/") and not mounted:
+        # Only a src/ path api.py does not mount is stale. A path already
+        # pointing at workers/ is correct BY DESIGN -- a standalone worker is
+        # not supposed to be mounted in api.py, and flagging it would make this
+        # gate the very thing it exists to catch: a check that reports
+        # confidently and wrongly.
+        return [
+            _violation(
+                "path-superseded",
+                pid,
+                loc,
+                f"worker_path {wp!r} is a src/ router api.py does not mount; "
+                f"workers/{_live_worker_dir(wp)}/ is the live service",
+            )
+        ]
+    return []
+
+
+def _port_violations(pid, loc, wp, port, compose: str, routed: set[int]) -> list[dict]:
+    """A port must be set wherever compose routes one, and must be one it routes."""
+    if pid in NON_WORKER_LOCATIONS:
+        return []
+    if not port:
+        leaf = _live_worker_dir(wp) if wp else None
+        if leaf and re.search(rf"^  {re.escape(leaf)}:", compose, re.M):
+            return [
+                _violation(
+                    "port-unset",
+                    pid,
+                    loc,
+                    f"no worker_port, but compose routes service {leaf!r} -- this "
+                    f"Location is invisible to the Admin OS worker map and to "
+                    f"health metadata",
+                )
+            ]
+        return []
+    if port not in routed:
+        return [
+            _violation("port-unrouted", pid, loc, f"worker_port {port} appears nowhere in compose")
+        ]
+    return []
 
 
 def collect_violations() -> list[dict]:
@@ -169,148 +286,48 @@ def collect_violations() -> list[dict]:
     by_path: dict[str, list[str]] = defaultdict(list)
 
     for entity in PLATFORM_ENTITIES.values():
-        pid = entity.pid
-        loc = entity.location
+        pid, loc = entity.pid, entity.location
         wp = (getattr(entity, "worker_path", None) or "").strip()
         port = getattr(entity, "worker_port", None)
 
         if not wp:
             # A Location that declares NOTHING must not pass by declaring
-            # nothing. Every check below is guarded by `if wp:`, so an absent
-            # worker_path used to mean an absent verdict -- the guard built to
-            # catch a registry describing less than it should, silently
-            # accepting the emptiest possible description. That is exactly how
-            # the original drift went unseen: 27 of 43 Locations carried no
-            # port, and no output said so.
+            # nothing. Every path rule needs a worker_path, so an absent one
+            # used to mean an absent verdict -- the guard built to catch a
+            # registry describing less than it should, silently accepting the
+            # emptiest possible description. That is exactly how the original
+            # drift went unseen: 27 of 43 Locations carried no port, and no
+            # output said so.
             if pid not in NON_WORKER_LOCATIONS:
                 violations.append(
-                    {
-                        "rule": "metadata-missing",
-                        "pid": pid,
-                        "location": loc,
-                        "detail": (
-                            "no worker_path; a Location that is not in "
-                            "NON_WORKER_LOCATIONS must say where it lives"
-                        ),
-                    }
+                    _violation(
+                        "metadata-missing",
+                        pid,
+                        loc,
+                        "no worker_path; a Location that is not in "
+                        "NON_WORKER_LOCATIONS must say where it lives",
+                    )
                 )
             continue
 
-        if wp:
-            by_path[wp.rstrip("/")].append(f"{pid} ({loc})")
+        by_path[wp.rstrip("/")].append(f"{pid} ({loc})")
+        path_problems = _path_violations(pid, loc, wp, api)
+        violations += path_problems
+        # A path that escapes the repo is not a base to judge a port against.
+        if not any(v["rule"] == "path-escapes-repo" for v in path_problems):
+            violations += _port_violations(pid, loc, wp, port, compose, routed)
 
-            # 0. the path must be INSIDE the repository.
-            #
-            # This has to come before the disk check, because the disk check
-            # cannot catch it: `REPO / "/tmp"` is `/tmp`, not
-            # `<repo>/tmp` -- pathlib's `/` discards the left side entirely
-            # when the right side is absolute -- and `/tmp` exists, so an
-            # absolute worker_path would be certified valid while naming
-            # something that has nothing to do with this repository. A `..`
-            # component escapes the same way, just more slowly.
-            escape = None
-            if PurePosixPath(wp).is_absolute():
-                escape = "is absolute"
-            elif ".." in PurePosixPath(wp).parts:
-                escape = "contains a '..' component"
-            if escape:
-                violations.append(
-                    {
-                        "rule": "path-escapes-repo",
-                        "pid": pid,
-                        "location": loc,
-                        "detail": (
-                            f"worker_path {wp!r} {escape}; a Location must live "
-                            "inside this repository"
-                        ),
-                    }
-                )
-                continue
-
-            # 1. the path must exist on disk
-            try:
-                path_exists = (REPO / wp.rstrip("/")).exists()
-            except (OSError, ValueError):
-                # An embedded null byte or an over-long name raises instead of
-                # returning False. Treat it as missing -- unreadable is not
-                # the same as fine.
-                path_exists = False
-            if not path_exists:
-                violations.append(
-                    {
-                        "rule": "path-missing",
-                        "pid": pid,
-                        "location": loc,
-                        "detail": f"worker_path {wp!r} does not exist on disk",
-                    }
-                )
-            # 2. it must be served -- mounted in api.py, or a live workers/ dir
-            elif pid in NON_WORKER_LOCATIONS:
-                pass  # correct by design -- see NON_WORKER_LOCATIONS
-            elif not _router_is_mounted(wp, api) and not _live_worker_dir(wp):
-                violations.append(
-                    {
-                        "rule": "path-unserved",
-                        "pid": pid,
-                        "location": loc,
-                        "detail": f"worker_path {wp!r} is neither mounted in api.py "
-                        f"nor backed by a workers/ directory",
-                    }
-                )
-            elif wp.startswith("src/") and not _router_is_mounted(wp, api):
-                # Only a src/ path that api.py does not mount is stale. A path
-                # already pointing at workers/ is correct BY DESIGN -- a
-                # standalone worker is not supposed to be mounted in api.py,
-                # and flagging it would make this gate the very thing it
-                # exists to catch: a check that reports confidently and wrongly.
-                live = _live_worker_dir(wp)
-                violations.append(
-                    {
-                        "rule": "path-superseded",
-                        "pid": pid,
-                        "location": loc,
-                        "detail": f"worker_path {wp!r} is a src/ router api.py does "
-                        f"not mount; workers/{live}/ is the live service",
-                    }
-                )
-
-        # 4. a port must be set wherever compose routes one
-        if pid in NON_WORKER_LOCATIONS:
-            pass
-        elif not port:
-            leaf = _live_worker_dir(wp) if wp else None
-            if leaf and re.search(rf"^  {re.escape(leaf)}:", compose, re.M):
-                violations.append(
-                    {
-                        "rule": "port-unset",
-                        "pid": pid,
-                        "location": loc,
-                        "detail": f"no worker_port, but compose routes service {leaf!r} "
-                        f"-- this Location is invisible to the Admin OS "
-                        f"worker map and to health metadata",
-                    }
-                )
-        elif port not in routed:
-            violations.append(
-                {
-                    "rule": "port-unrouted",
-                    "pid": pid,
-                    "location": loc,
-                    "detail": f"worker_port {port} appears nowhere in compose",
-                }
-            )
-
-    # 3. no two Locations may share a path -- a shared path cannot identify either
+    # No two Locations may share a path -- a shared path identifies neither.
     for path, holders in sorted(by_path.items()):
         if len(holders) > 1:
             violations.append(
-                {
-                    "rule": "path-shared",
-                    "pid": "-",
-                    "location": ", ".join(holders),
-                    "detail": f"{len(holders)} Locations share worker_path {path!r}; "
+                _violation(
+                    "path-shared",
+                    "-",
+                    ", ".join(holders),
+                    f"{len(holders)} Locations share worker_path {path!r}; "
                     f"the registry cannot tell them apart",
-                }
+                )
             )
 
     return violations

@@ -147,9 +147,9 @@ def _relative_link(rel: str) -> str:
 
 def apply(text: str, block: str) -> str:
     if BEGIN in text and END in text:
-        head = text[: text.index(BEGIN)]
-        tail = text[text.index(END) + len(END) :]
-        return head + block + tail
+        head_end = text.index(BEGIN)
+        tail_start = text.index(END) + len(END)
+        return text[:head_end] + block + text[tail_start:]
     return text.rstrip() + "\n\n---\n\n" + block + "\n"
 
 
