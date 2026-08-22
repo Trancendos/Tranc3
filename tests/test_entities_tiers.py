@@ -1,6 +1,7 @@
-import pytest
 import asyncio
-from src.entities.tiers import Sovereign, Prime, HILAApproval
+
+from src.entities.tiers import Prime, Sovereign
+
 
 def test_emergency_stop_logging(caplog):
     import logging
