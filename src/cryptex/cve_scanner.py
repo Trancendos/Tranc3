@@ -21,6 +21,7 @@ and Cryptex's threat analysis engine.
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import os
 from dataclasses import dataclass, field
@@ -98,12 +99,11 @@ class CveScanner:
         )
 
         all_items: List[Any] = []
-        import concurrent.futures
 
         if ingestors:
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(ingestors)) as executor:
                 futures = [executor.submit(ingestor.fetch) for ingestor in ingestors]
-                for ingestor, future in zip(ingestors, futures, strict=False):
+                for ingestor, future in zip(ingestors, futures, strict=True):
                     try:
                         items = future.result()
                         all_items.extend(items)
