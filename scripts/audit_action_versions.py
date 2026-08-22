@@ -96,6 +96,10 @@ def resolve_latest_commit(owner: str, repo: str, token: str | None) -> tuple[str
 
 def parse_uses(value: str) -> dict | None:
     """Normalise a `uses:` value into owner/repo + pinned sha, or None if unpinned."""
+    # YAML permits `uses: "owner/repo@sha"`. Nothing in this estate quotes it
+    # today, but an unstripped quote would parse the owner as '"owner' and the
+    # audit would report a real pin as unresolvable.
+    value = value.strip().strip("\"'")
     if "@" not in value:
         return None
     ref, _, sha = value.rpartition("@")

@@ -76,13 +76,26 @@ jobs:
       - name: Read baseline
         id: baseline
         run: |
-          if [ -f .security-baseline ]; then
-            BASELINE=$(grep 'bandit_findings=' .security-baseline | cut -d= -f2)
-            BASELINE=${BASELINE:-9999}
-          else
-            BASELINE=9999
-            echo "bandit_findings=9999" > .security-baseline
+          # A missing or unparseable baseline used to become 9999, which no
+          # realistic finding count can exceed -- so the ratchet below passed
+          # unconditionally and the gate silently stopped protecting anything.
+          # A security control that cannot fail is not a control. Fail closed
+          # and say why, so the fix is to restore the baseline rather than to
+          # never notice it went.
+          if [ ! -f .security-baseline ]; then
+            echo "::error::.security-baseline is missing -- the bandit ratchet has"
+            echo "::error::no reference point and cannot detect a regression."
+            echo "::error::Restore it, or seed it from a known-good run."
+            exit 1
           fi
+          BASELINE=$(grep 'bandit_findings=' .security-baseline | cut -d= -f2)
+          case "$BASELINE" in
+            ''|*[!0-9]*)
+              echo "::error::.security-baseline has no usable bandit_findings= value"
+              echo "::error::(read: '${BASELINE}'). Refusing to pass a ratchet that"
+              echo "::error::has nothing to ratchet against."
+              exit 1 ;;
+          esac
           echo "count=$BASELINE" >> $GITHUB_OUTPUT
           echo "Baseline: $BASELINE"
 

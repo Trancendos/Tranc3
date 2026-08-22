@@ -76,7 +76,7 @@ jobs:
           # alone regardless of age, because "old" and "worthless" are not the
           # same property and only the first one is measurable here.
           for b in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin \
-                     | grep -v 'HEAD' | grep -v "^${DEFAULT#origin/}$" | grep -v "^origin/HEAD$"); do
+                     | grep -v 'HEAD' | grep -v "^origin/HEAD$"); do
             name="${b#origin/}"
             [ "$name" = "${DEFAULT#origin/}" ] && continue
             ts=$(git log -1 --format=%ct "$b" 2>/dev/null || echo 0)
