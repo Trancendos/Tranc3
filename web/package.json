@@ -40,7 +40,7 @@
         "@storybook/addon-vitest": "10.4.6",
         "@storybook/react-vite": "10.4.6",
         "@tailwindcss/postcss": "4.3.2",
-        "@types/node": "25.9.3",
+        "@types/node": "26.2.0",
         "@types/react": "18.3.29",
         "@types/react-dom": "18.3.7",
         "@vitejs/plugin-react": "5.2.0",
