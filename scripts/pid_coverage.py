@@ -126,49 +126,73 @@ def _location_from_stem(service_id: str, by_location: dict[str, str]) -> str:
     return ""
 
 
+def _resolve_pid(sid: str, service_name: str, lead: str, idx: dict) -> tuple[str, str]:
+    """(PID, basis) for one service, trying each basis strongest-first.
+
+    Ordering is load-bearing, not stylistic. SRV-SPARK-001's recorded Tier3AI
+    was "Norman Hawkins", who resolves uniquely to The Observatory -- so
+    ranking the free-text AI name above the ID stem attached The Spark's own
+    service to a different Location. The stem is stable; the free text is the
+    field that drifted, which is the whole reason a key was needed.
+    """
+    if sid in REVIEWED:
+        return REVIEWED[sid][0], "reviewed"
+
+    by_location = idx["by_location"]
+    if _norm(service_name) in by_location:
+        return by_location[_norm(service_name)], "location-name"
+
+    from_stem = _location_from_stem(sid, by_location)
+    if from_stem:
+        return from_stem, "service-id-stem"
+
+    stem = _norm(sid.rsplit("-", 1)[0].removeprefix("SRV-"))
+    hits = {
+        pid
+        for worker, pid in idx["workers"].items()
+        if _norm(worker) == stem or _norm(worker).replace("service", "") == stem
+    }
+    if len(hits) == 1:
+        return hits.pop(), "worker-table"
+
+    by_lead = idx["by_lead"].get(_norm(lead), [])
+    if len(by_lead) == 1:
+        return by_lead[0], "lead-ai-unique"
+
+    return "", ""
+
+
+def _corrected_lead(pid: str, lead: str, leads_by_pid: dict) -> str:
+    """The Lead AI the registry says this Location has, when the CSV disagrees.
+
+    With a PID in hand the free text becomes checkable rather than
+    authoritative. Ambiguity is left uncorrected: a Location with several Lead
+    AIs cannot say which one a given service belongs to, and guessing there
+    would replace a visible disagreement with an invisible wrong answer.
+    """
+    if not pid or not lead:
+        return ""
+    leads = leads_by_pid.get(pid, [])
+    if not leads or lead in leads:
+        return ""
+    return leads[0] if len(leads) == 1 else ""
+
+
 def resolve() -> list[dict[str, str]]:
     """One record per service: its PID, the basis, and any drift found."""
     by_location, by_lead = _registry_indexes()
-    workers = _worker_table()
+    idx = {"by_location": by_location, "by_lead": by_lead, "workers": _worker_table()}
     leads_by_pid = _leads_by_pid()
-    rows = list(csv.DictReader(INVENTORY.open(encoding="utf-8")))
 
     out: list[dict[str, str]] = []
-    for row in rows:
+    for row in csv.DictReader(INVENTORY.open(encoding="utf-8")):
         sid = row["ServiceID"]
         lead_raw = (row.get("Tier3AI") or "").strip()
         # A retired name is drift to report, not a lookup to fail on.
         drift = RETIRED_AI_NAMES.get(lead_raw, "")
         lead = drift or lead_raw
 
-        pid = basis = ""
-        if sid in REVIEWED:
-            pid, basis = REVIEWED[sid][0], "reviewed"
-        elif _norm(row["ServiceName"]) in by_location:
-            pid, basis = by_location[_norm(row["ServiceName"])], "location-name"
-        elif _location_from_stem(sid, by_location):
-            pid, basis = _location_from_stem(sid, by_location), "service-id-stem"
-        else:
-            stem = sid.rsplit("-", 1)[0].removeprefix("SRV-")
-            hits = {
-                p
-                for w, p in workers.items()
-                if _norm(w) == _norm(stem) or _norm(w).replace("service", "") == _norm(stem)
-            }
-            if len(hits) == 1:
-                pid, basis = hits.pop(), "worker-table"
-            elif len(by_lead.get(_norm(lead), [])) == 1:
-                pid, basis = by_lead[_norm(lead)][0], "lead-ai-unique"
-
-        # With a PID in hand the free text becomes checkable rather than
-        # authoritative. A Location's Lead AI set is the registry's answer; a
-        # recorded name outside that set is drift, whatever it says.
-        correct = ""
-        if pid and lead:
-            leads = leads_by_pid.get(pid, [])
-            if leads and lead not in leads:
-                correct = leads[0] if len(leads) == 1 else ""
-
+        pid, basis = _resolve_pid(sid, row["ServiceName"], lead, idx)
         out.append(
             {
                 "ServiceID": sid,
@@ -177,45 +201,55 @@ def resolve() -> list[dict[str, str]]:
                 "Basis": basis or "unresolved",
                 "RecordedTier3AI": lead_raw,
                 "RetiredNameShouldBe": drift,
-                "Tier3AIShouldBe": correct,
+                "Tier3AIShouldBe": _corrected_lead(pid, lead, leads_by_pid),
             }
         )
     return out
 
 
+def _block(heading: str, rows: list[str]) -> list[str]:
+    """A named group of report lines, or nothing when the group is empty.
+
+    Printing an empty heading would read as a category with no members, which
+    is a different claim from the category not applying.
+    """
+    return [f"\n  {heading}", *rows] if rows else []
+
+
 def report(records: list[dict[str, str]]) -> str:
     resolved = [r for r in records if r["PID"]]
-    unresolved = [r for r in records if not r["PID"]]
     retired = [r for r in records if r["RetiredNameShouldBe"]]
+    wrong = [r for r in records if r.get("Tier3AIShouldBe")]
+    unresolved = [r for r in records if not r["PID"]]
     bases = Counter(r["Basis"] for r in resolved)
 
     lines = [
         f"PID coverage: {len(resolved)}/{len(records)} services carry a PID",
         "  by basis: " + ", ".join(f"{k}={v}" for k, v in sorted(bases.items())),
     ]
-    if retired:
-        lines.append(f"\n  {len(retired)} rows use a retired AI name (drift, not a gap):")
-        for r in retired:
-            lines.append(
-                f"    {r['ServiceID']:22} {r['RecordedTier3AI']} -> {r['RetiredNameShouldBe']}"
-            )
-    wrong = [r for r in records if r.get("Tier3AIShouldBe")]
-    if wrong:
-        lines.append(
-            f"\n  {len(wrong)} rows name an AI the registry says does not lead that Location:"
-        )
-        for r in wrong:
-            lines.append(
-                f"    {r['ServiceID']:22} {r['PID']:10} "
-                f"{r['RecordedTier3AI']} -> {r['Tier3AIShouldBe']}"
-            )
-    if unresolved:
-        lines.append(f"\n  {len(unresolved)} services own no Location -- the discovery list:")
-        for r in unresolved:
-            lines.append(
-                f"    {r['ServiceID']:22} {r['ServiceName'][:40]:40} "
-                f"Tier3AI={r['RecordedTier3AI'] or '(blank)'}"
-            )
+    lines += _block(
+        f"{len(retired)} rows use a retired AI name (drift, not a gap):",
+        [
+            f"    {r['ServiceID']:22} {r['RecordedTier3AI']} -> {r['RetiredNameShouldBe']}"
+            for r in retired
+        ],
+    )
+    lines += _block(
+        f"{len(wrong)} rows name an AI the registry says does not lead that Location:",
+        [
+            f"    {r['ServiceID']:22} {r['PID']:10} "
+            f"{r['RecordedTier3AI']} -> {r['Tier3AIShouldBe']}"
+            for r in wrong
+        ],
+    )
+    lines += _block(
+        f"{len(unresolved)} services own no Location -- the discovery list:",
+        [
+            f"    {r['ServiceID']:22} {r['ServiceName'][:40]:40} "
+            f"Tier3AI={r['RecordedTier3AI'] or '(blank)'}"
+            for r in unresolved
+        ],
+    )
     return "\n".join(lines)
 
 
