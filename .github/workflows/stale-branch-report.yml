@@ -51,6 +51,21 @@ jobs:
         run: |
           set -euo pipefail
           DEFAULT="origin/${{ github.event.repository.default_branch }}"
+
+          # MIN_AGE_DAYS reaches shell arithmetic, and workflow_dispatch inputs
+          # are free text. A non-numeric value would abort the run with an
+          # arithmetic syntax error instead of producing a report, and a wild
+          # numeric value would silently widen the selection. Validate first.
+          case "$MIN_AGE_DAYS" in
+            ''|*[!0-9]*)
+              echo "::error::min_age_days must be a non-negative integer, got '$MIN_AGE_DAYS'"
+              exit 1 ;;
+          esac
+          if [ "$MIN_AGE_DAYS" -gt 3650 ]; then
+            echo "::error::min_age_days $MIN_AGE_DAYS exceeds the 3650-day ceiling"
+            exit 1
+          fi
+
           CUTOFF=$(( $(date +%s) - MIN_AGE_DAYS * 86400 ))
 
           : > merged.txt
@@ -67,7 +82,11 @@ jobs:
             ts=$(git log -1 --format=%ct "$b" 2>/dev/null || echo 0)
             [ "$ts" -gt "$CUTOFF" ] && continue
             if git merge-base --is-ancestor "$b" "$DEFAULT" 2>/dev/null; then
-              echo "$name" >> merged.txt
+              # Record the tip observed at classification time. Deletion happens
+              # in a later step (and, via workflow_dispatch, potentially much
+              # later), so the SHA is what lets that step prove the branch has
+              # not moved since.
+              echo "$name $(git rev-parse "$b")" >> merged.txt
             else
               echo "$name" >> unmerged.txt
             fi
@@ -90,7 +109,7 @@ jobs:
             echo
             echo "<details><summary>Fully merged</summary>"
             echo
-            sed 's/^/- /' merged.txt || true
+            awk '{print "- " $1}' merged.txt || true
             echo
             echo "</details>"
             echo
@@ -105,12 +124,39 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.delete_merged
         run: |
           set -euo pipefail
-          # Deliberately reads merged.txt only. There is no code path in this
-          # workflow that can delete an unmerged branch.
+          DEFAULT="origin/${{ github.event.repository.default_branch }}"
+
+          # Reading merged.txt is necessary but NOT sufficient. Classification
+          # happened in an earlier step; with workflow_dispatch it may have
+          # happened minutes ago. A push landing in that window would leave this
+          # step deleting a branch that is no longer merged, destroying the new
+          # commit -- the classification is a time-of-check, the delete is a
+          # time-of-use, and the gap between them is real.
+          #
+          # So each branch is re-verified against the live remote immediately
+          # before its deletion: the tip must still be the SHA that was
+          # classified, AND still be an ancestor of the default branch. Anything
+          # that moved is skipped and reported.
           count=0
-          while read -r name; do
+          skipped=0
+          while read -r name sha; do
             [ -z "$name" ] && continue
-            git push origin --delete "$name" && count=$((count + 1)) || \
+            live=$(git ls-remote origin "refs/heads/$name" | cut -f1)
+            if [ -z "$live" ]; then
+              echo "::warning::$name no longer exists on the remote — skipping"
+              skipped=$((skipped + 1)); continue
+            fi
+            if [ "$live" != "$sha" ]; then
+              echo "::warning::$name moved since classification ($sha -> $live) — skipping"
+              skipped=$((skipped + 1)); continue
+            fi
+            if ! git merge-base --is-ancestor "$sha" "$DEFAULT" 2>/dev/null; then
+              echo "::warning::$name is no longer merged into the default branch — skipping"
+              skipped=$((skipped + 1)); continue
+            fi
+            git push origin --delete "$name" && count=$((count + 1)) || {
               echo "::warning::could not delete $name (protected, or already gone)"
+              skipped=$((skipped + 1))
+            }
           done < merged.txt
-          echo "Deleted $count fully-merged branches." >> "$GITHUB_STEP_SUMMARY"
+          echo "Deleted $count fully-merged branches; skipped $skipped." >> "$GITHUB_STEP_SUMMARY"
