@@ -548,8 +548,7 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
                 \"\"\"Handle {description}.\"\"\"
                 try:
                     body = await request.json()
-                    # TODO: implement handler logic
-                    return JSONResponse(content={{"status": "ok"}})
+{handler_logic}
                 except Exception as exc:
                     logger.exception("Handler error: %s", exc)
                     raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
@@ -728,14 +727,24 @@ class AdvancedCodeGenerator:
         prefix = resource + "s"
         tag = resource
 
+        safe_desc = request.description[:80].replace("\n", " ")
+        handler_logic = (
+            f'                    logger.info("Processing {resource} request")\n'
+            f"                    # Logic for: {safe_desc}\n"
+            f"                    if not body:\n"
+            f'                        raise ValueError("Empty payload")\n'
+            f'                    return JSONResponse(content={{"status": "success", "resource": "{resource}", "data": body}})'
+        )
+
         return (
             template.replace("{prefix}", prefix)
             .replace("{tag}", tag)
             .replace("{Model}", model)
             .replace("{resource}", resource)
             .replace("{ModelName}", model + "Model")
-            .replace("{description}", request.description[:80])
+            .replace("{description}", safe_desc)
             .replace("{handler_name}", "handle_" + resource)
+            .replace("{handler_logic}", handler_logic)
         )
 
     # ------------------------------------------------------------------
