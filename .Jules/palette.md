@@ -27,3 +27,6 @@
 ## 2026-05-18 - [Fix python ruff lint formatting]
 **Learning:** Adding longer lines in python can trigger `ruff format` to fail in CI.
 **Action:** Used `python3 -m ruff format src/entities/lifecycle.py` to fix formatting and allow CI to pass.
+## 2026-05-18 - [Fix transient Kilo Code Review CI failure]
+**Learning:** CI step "Kilo Code Review" occasionally fails with "Assistant request failed".
+**Action:** Created an empty commit to trigger a retry of the CI pipeline.
