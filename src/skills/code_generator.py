@@ -694,11 +694,11 @@ class AdvancedCodeGenerator:
         prefix = resource + "s"
         tag = resource
 
-        safe_desc = request.description[:80].replace('\n', ' ')
+        safe_desc = request.description[:80].replace("\n", " ")
         handler_logic = (
             f'                    logger.info("Processing {resource} request")\n'
-            f'                    # Logic for: {safe_desc}\n'
-            f'                    if not body:\n'
+            f"                    # Logic for: {safe_desc}\n"
+            f"                    if not body:\n"
             f'                        raise ValueError("Empty payload")\n'
             f'                    return JSONResponse(content={{"status": "success", "resource": "{resource}", "data": body}})'
         )
