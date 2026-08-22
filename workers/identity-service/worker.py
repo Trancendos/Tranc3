@@ -39,6 +39,8 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
+
 class IdentitiesDatabase:
     """SQLite-backed storage for identities."""
 

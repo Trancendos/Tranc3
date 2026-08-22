@@ -39,6 +39,8 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
+
 class ProductsDatabase:
     """SQLite-backed storage for products."""
 
