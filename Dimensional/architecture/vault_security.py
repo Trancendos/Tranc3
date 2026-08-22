@@ -58,7 +58,7 @@ Usage:
     # secret memory is now zeroized
 
     # HSM key operations
-    hsm = SoftHSM2Provider(token="tranc3", pin="123456")
+    hsm = SoftHSM2Provider(token="tranc3", pin=os.environ.get("SOFTHSM2_PIN"))
     key_handle = hsm.generate_key(key_type="AES", key_size=256)
     ciphertext = hsm.encrypt(key_handle, plaintext)
     plaintext = hsm.decrypt(key_handle, ciphertext)
@@ -511,7 +511,7 @@ class SoftHSM2Provider(HSMProvider):
         softhsm2-util --init-token --slot 0 --label "tranc3" --pin 123456 --so-pin 12345678
 
     Usage:
-        hsm = SoftHSM2Provider(token="tranc3", pin="123456")
+        hsm = SoftHSM2Provider(token="tranc3", pin=os.environ.get("SOFTHSM2_PIN"))
         hsm.initialize()
         key = hsm.generate_key(HSMKeyType.AES, 256, label="master-key")
         ciphertext = hsm.encrypt(key, b"secret data")
@@ -522,13 +522,20 @@ class SoftHSM2Provider(HSMProvider):
     def __init__(
         self,
         token: str = "tranc3",
-        pin: str = "123456",
+        pin: Optional[str] = None,
         library_path: Optional[str] = None,
         slot: Optional[int] = None,
         audit_logger: Optional[VaultAuditLogger] = None,
     ) -> None:
         self._token = token
-        self._pin = SecureBytes(pin.encode("utf-8"))
+
+        actual_pin = pin if pin is not None else os.environ.get("SOFTHSM2_PIN", "")
+        if not actual_pin:
+            raise ValueError(
+                "No PIN provided and SOFTHSM2_PIN environment variable is not set"
+            )
+
+        self._pin = SecureBytes(actual_pin.encode("utf-8"))
         self._library_path = library_path or self._find_library()
         self._slot = slot
         self._session = None
@@ -571,7 +578,9 @@ class SoftHSM2Provider(HSMProvider):
                 ) from None
 
             if self._slot is not None:
-                self._session = self._token_obj.open(self._slot, pin=self._pin.reveal().decode())
+                self._session = self._token_obj.open(
+                    self._slot, pin=self._pin.reveal().decode()
+                )
             else:
                 self._session = self._token_obj.open(pin=self._pin.reveal().decode())
 
@@ -589,7 +598,9 @@ class SoftHSM2Provider(HSMProvider):
             logger.info("SoftHSM2 initialized: token=%s", self._token)
 
         except ImportError:
-            logger.warning("python-pkcs11 not installed. Install with: pip install python-pkcs11")
+            logger.warning(
+                "python-pkcs11 not installed. Install with: pip install python-pkcs11"
+            )
             raise
         except Exception as e:
             self._audit.log(
@@ -698,7 +709,9 @@ class SoftHSM2Provider(HSMProvider):
 
         import pkcs11  # type: ignore
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
+        key = self._session.get_key(
+            label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY
+        )
         iv = self._session.generate_random(16)
         ciphertext = key.encrypt(plaintext, mechanism_param=iv)
 
@@ -722,7 +735,9 @@ class SoftHSM2Provider(HSMProvider):
 
         import pkcs11  # type: ignore
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
+        key = self._session.get_key(
+            label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY
+        )
         iv = ciphertext[:16]
         actual_ciphertext = ciphertext[16:]
         plaintext = key.decrypt(actual_ciphertext, mechanism_param=iv)
@@ -966,7 +981,9 @@ class YubiHSM2Provider(HSMProvider):
             logger.info("YubiHSM 2 initialized: connector=%s", self._connector_url)
 
         except ImportError:
-            logger.warning("python-pkcs11 not installed. Install with: pip install python-pkcs11")
+            logger.warning(
+                "python-pkcs11 not installed. Install with: pip install python-pkcs11"
+            )
             raise
         except Exception as e:
             self._audit.log(
@@ -1056,7 +1073,9 @@ class YubiHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
+        key = self._session.get_key(
+            label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY
+        )
         iv = self._session.generate_random(16)
         ciphertext = key.encrypt(plaintext, mechanism_param=iv)
 
@@ -1076,7 +1095,9 @@ class YubiHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
+        key = self._session.get_key(
+            label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY
+        )
         iv = ciphertext[:16]
         actual_ciphertext = ciphertext[16:]
         plaintext = key.decrypt(actual_ciphertext, mechanism_param=iv)
@@ -1257,7 +1278,9 @@ class VaultSecretLoader:
                     del self._cache[key]
 
     @asynccontextmanager
-    async def secrets(self, keys: List[str]) -> Generator[Dict[str, SecureBytes], None, None]:
+    async def secrets(
+        self, keys: List[str]
+    ) -> Generator[Dict[str, SecureBytes], None, None]:
         """Load multiple secrets as SecureBytes with automatic zeroization."""
         loaded: Dict[str, SecureBytes] = {}
         try:
@@ -1492,7 +1515,9 @@ class VaultSecretLoader:
             # Format: key_handle\nbase64_ciphertext
             import base64
 
-            file_content = key_handle.encode("utf-8") + b"\n" + base64.b64encode(ciphertext)
+            file_content = (
+                key_handle.encode("utf-8") + b"\n" + base64.b64encode(ciphertext)
+            )
             encrypted_path.write_bytes(file_content)
 
             self._audit.log(
@@ -1548,7 +1573,9 @@ class VaultSecretLoader:
                 )
                 raise
         else:
-            raise ValueError(f"Cannot store secret with source '{source}' — no backend available")
+            raise ValueError(
+                f"Cannot store secret with source '{source}' — no backend available"
+            )
 
     def rotate_secret(self, key: str, new_value: bytes) -> None:
         """Rotate a secret — replaces the old value with a new one.
@@ -1627,7 +1654,7 @@ def create_vault_security(
     if hsm_type == "softhsm2":
         hsm = SoftHSM2Provider(
             token=hsm_config.get("token", "tranc3"),
-            pin=hsm_config.get("pin", "123456"),
+            pin=hsm_config.get("pin"),
             library_path=hsm_config.get("library_path"),
             slot=hsm_config.get("slot"),
             audit_logger=audit_logger,
