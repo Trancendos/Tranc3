@@ -17,7 +17,9 @@ async def test_start_background_services_all_enabled():
     app._subsystems["config_tuner"] = mock_tuner
 
     with patch("src.main_enhanced.asyncio.create_task") as mock_create_task:
-        with patch.object(app, "_tuning_loop", MagicMock(return_value="mock_coro_tuning")) as mock_tuning_loop:
+        with patch.object(
+            app, "_tuning_loop", MagicMock(return_value="mock_coro_tuning")
+        ) as mock_tuning_loop:
             mock_monitor.run_continuous.return_value = "mock_coro_monitor"
 
             await app.start_background_services()
@@ -28,6 +30,7 @@ async def test_start_background_services_all_enabled():
 
             mock_create_task.assert_any_call("mock_coro_monitor")
             mock_create_task.assert_any_call("mock_coro_tuning")
+
 
 @pytest.mark.asyncio
 async def test_start_background_services_auto_repair_false():
@@ -41,13 +44,16 @@ async def test_start_background_services_auto_repair_false():
     app._subsystems["config_tuner"] = mock_tuner
 
     with patch("src.main_enhanced.asyncio.create_task") as mock_create_task:
-        with patch.object(app, "_tuning_loop", MagicMock(return_value="mock_coro_tuning")) as mock_tuning_loop:
+        with patch.object(
+            app, "_tuning_loop", MagicMock(return_value="mock_coro_tuning")
+        ) as mock_tuning_loop:
             await app.start_background_services()
 
             assert mock_create_task.call_count == 1
             mock_monitor.run_continuous.assert_not_called()
             mock_tuning_loop.assert_called_once_with(mock_tuner)
             mock_create_task.assert_any_call("mock_coro_tuning")
+
 
 @pytest.mark.asyncio
 async def test_start_background_services_missing_subsystems():
