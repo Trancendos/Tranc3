@@ -107,7 +107,7 @@ class QuantumDecisionCircuit:
 
     def _execute_pennylane(self) -> np.ndarray:
         """Execute using PennyLane for hardware/simulator support."""
-        import pennylane as qml
+        import pennylane as qml  # noqa: F401
 
         n_qubits = self.config.n_qubits
         dev = qml.device("default.qubit", wires=n_qubits)
@@ -142,6 +142,121 @@ class QuantumDecisionCircuit:
 
         self._probabilities = np.array(circuit(params))
         return self._probabilities
+
+    def _apply_ry_batch(
+        self, state: np.ndarray, qubit: int, n: int, angle: np.ndarray
+    ) -> np.ndarray:
+        dim = 2**n
+        cos_a = np.cos(angle / 2)[:, np.newaxis]
+        sin_a = np.sin(angle / 2)[:, np.newaxis]
+        new_state = np.zeros_like(state)
+        for i in range(dim):
+            bit = (i >> (n - 1 - qubit)) & 1
+            j = i ^ (1 << (n - 1 - qubit))
+            if bit == 0:
+                new_state[:, i] = cos_a[:, 0] * state[:, i] - sin_a[:, 0] * state[:, j]
+                new_state[:, j] = sin_a[:, 0] * state[:, i] + cos_a[:, 0] * state[:, j]
+        return new_state
+
+    def _apply_rz_batch(
+        self, state: np.ndarray, qubit: int, n: int, angle: np.ndarray
+    ) -> np.ndarray:
+        dim = 2**n
+        exp_minus = np.exp(-1j * angle / 2)[:, np.newaxis]
+        exp_plus = np.exp(1j * angle / 2)[:, np.newaxis]
+        new_state = state.copy()
+        for i in range(dim):
+            bit = (i >> (n - 1 - qubit)) & 1
+            if bit == 1:
+                new_state[:, i] *= exp_minus[:, 0]
+            else:
+                new_state[:, i] *= exp_plus[:, 0]
+        return new_state
+
+    def _apply_rot_batch(
+        self,
+        state: np.ndarray,
+        qubit: int,
+        n: int,
+        phi: np.ndarray,
+        theta: np.ndarray,
+        omega: np.ndarray,
+    ) -> np.ndarray:
+        state = self._apply_rz_batch(state, qubit, n, phi)
+        state = self._apply_ry_batch(state, qubit, n, theta)
+        state = self._apply_rz_batch(state, qubit, n, omega)
+        return state
+
+    def _apply_cnot_batch(self, state: np.ndarray, control: int, target: int, n: int) -> np.ndarray:
+        dim = 2**n
+        new_state = state.copy()
+        for i in range(dim):
+            control_bit = (i >> (n - 1 - control)) & 1
+            if control_bit == 1:
+                j = i ^ (1 << (n - 1 - target))
+                new_state[:, j] = state[:, i]
+                new_state[:, i] = state[:, j]
+        return new_state
+
+    def _apply_entangling_numpy_batch(self, state: np.ndarray, n: int) -> np.ndarray:
+        new_state = state.copy()
+        if self.config.entangling_strategy == EntanglingStrategy.LINEAR:
+            pairs = [(i, i + 1) for i in range(n - 1)]
+        elif self.config.entangling_strategy == EntanglingStrategy.CIRCULAR:
+            pairs = [(i, (i + 1) % n) for i in range(n)]
+        elif self.config.entangling_strategy == EntanglingStrategy.FULL:
+            pairs = [(i, j) for i in range(n) for j in range(i + 1, n)]
+        else:
+            pairs = [(i, i + 1) for i in range(n - 1)]
+
+        for control, target in pairs:
+            if control >= n or target >= n:
+                continue
+            new_state = self._apply_cnot_batch(new_state, control, target, n)
+        return new_state
+
+    def _execute_numpy_batch(self, param_sets: np.ndarray) -> np.ndarray:
+        """Execute using pure NumPy state-vector simulation for a batch of parameters.
+
+        Args:
+            param_sets: Array of shape (B, n_params)
+
+        Returns:
+            Array of shape (B, 2**n_qubits) containing measurement probabilities.
+        """
+        n = self.config.n_qubits
+        dim = 2**n
+        B = param_sets.shape[0]
+
+        # Initialize to |0...0⟩
+        state = np.zeros((B, dim), dtype=complex)
+        state[:, 0] = 1.0 + 0j
+
+        # Apply parameterized layers
+        idx = 0
+        for _layer in range(self.config.n_layers):
+            for qubit in range(n):
+                for r in range(self.config.rotations_per_layer):
+                    if idx >= self._n_params:
+                        break
+                    angle = param_sets[:, idx]
+                    if r % 3 == 0:
+                        state = self._apply_rot_batch(
+                            state, qubit, n, angle, angle * 0.5, angle * 0.3
+                        )
+                    elif r % 3 == 1:
+                        state = self._apply_ry_batch(state, qubit, n, angle)
+                    else:
+                        state = self._apply_rz_batch(state, qubit, n, angle)
+                    idx += 1
+            # Entangling
+            state = self._apply_entangling_numpy_batch(state, n)
+
+        # Measurement probabilities
+        probs = np.abs(state) ** 2
+        probs = probs / np.sum(probs, axis=1, keepdims=True)  # Normalize
+
+        return probs
 
     def _execute_numpy(self) -> np.ndarray:
         """Execute using pure NumPy state-vector simulation."""
@@ -306,24 +421,55 @@ class QuantumDecisionCircuit:
         For each parameter θᵢ:
           ∂f/∂θᵢ = [f(θᵢ + π/2) - f(θᵢ - π/2)] / 2
         """
+        if use_pennylane:
+            try:
+                import pennylane as qml  # noqa: F401
+
+                # For pennylane, stick with the sequential loop, but fix the bug
+                gradients = np.zeros(self._n_params)
+                shift = math.pi / 2
+                original_params = self._parameters.copy()
+
+                for i in range(self._n_params):
+                    self._parameters[i] = original_params[i] + shift
+                    self._probabilities = None
+                    cost_plus = self.compute_cost()
+
+                    self._parameters[i] = original_params[i] - shift
+                    self._probabilities = None
+                    cost_minus = self.compute_cost()
+
+                    gradients[i] = (cost_plus - cost_minus) / 2.0
+                    self._parameters[i] = original_params[i]
+
+                self._probabilities = None
+                return gradients
+            except ImportError:
+                pass
+
+        # Bulk fetch data using NumPy batch processing to avoid N+1 queries
         gradients = np.zeros(self._n_params)
         shift = math.pi / 2
 
+        # Pre-generate all shifted parameter sets: shape (2 * n_params, n_params)
+        param_sets = np.tile(self._parameters, (2 * self._n_params, 1))
         for i in range(self._n_params):
-            # Positive shift
-            original = self._parameters[i]
-            self._parameters[i] = original + shift
-            cost_plus = self.compute_cost()
+            param_sets[2 * i, i] += shift
+            param_sets[2 * i + 1, i] -= shift
 
-            # Negative shift
-            self._parameters[i] = original - shift
-            cost_minus = self.compute_cost()
+        # Execute all circuits in a single batch
+        probs_batch = self._execute_numpy_batch(param_sets)
 
-            # Gradient via parameter shift rule
+        # Compute cost for each parameter set.
+        # Default cost_type used by optimize() is "entropy"
+        # We need to manually calculate entropy for the batch
+        probs_batch = probs_batch + 1e-10
+        entropy = -np.sum(probs_batch * np.log(probs_batch), axis=1)
+
+        for i in range(self._n_params):
+            cost_plus = float(entropy[2 * i])
+            cost_minus = float(entropy[2 * i + 1])
             gradients[i] = (cost_plus - cost_minus) / 2.0
-
-            # Restore original parameter
-            self._parameters[i] = original
 
         return gradients
 
@@ -339,16 +485,16 @@ class QuantumDecisionCircuit:
         Uses the parameter shift rule for gradients with adaptive
         learning rate and gradient clipping.
         """
-        for _step in range(n_steps):
-            # Execute circuit
-            self.execute(use_pennylane=False)
+        # Initial execution
+        self.execute(use_pennylane=use_pennylane)
 
-            # Compute cost
+        for _step in range(n_steps):
+            # Compute cost (uses existing self._probabilities)
             cost = self.compute_cost()
             self._cost_history.append(cost)
 
-            # Compute gradients
-            gradients = self.compute_gradients(use_pennylane=False)
+            # Compute gradients (this now uses bulk fetching and preserves state)
+            gradients = self.compute_gradients(use_pennylane=use_pennylane)
 
             # Gradient clipping
             grad_norm = np.linalg.norm(gradients)
@@ -364,8 +510,11 @@ class QuantumDecisionCircuit:
 
             # Update parameters
             self._parameters -= learning_rate * gradients
-
             self._optimization_steps += 1
+
+            # Execute circuit with new parameters for the next iteration
+            self._probabilities = None
+            self.execute(use_pennylane=use_pennylane)
 
         self._current_cost = self._cost_history[-1] if self._cost_history else None
         return self._optimization_steps
