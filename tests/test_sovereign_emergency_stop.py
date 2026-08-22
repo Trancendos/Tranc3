@@ -1,8 +1,10 @@
-import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from src.entities.tiers import Sovereign
+
 
 class MockPrime:
     def __init__(self, id_val, should_fail=False):
@@ -11,6 +13,7 @@ class MockPrime:
         if should_fail:
             self.stop.side_effect = Exception("Mocked Prime stop error")
 
+
 class MockAI:
     def __init__(self, id_val, should_fail=False):
         self.id = id_val
@@ -18,11 +21,13 @@ class MockAI:
         if should_fail:
             self.stop.side_effect = Exception("Mocked AI stop error")
 
+
 @pytest.fixture
 def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
 
 def test_sovereign_emergency_stop_logs_exceptions(event_loop):
     sov = Sovereign(sovereign_id="sov-1")
@@ -48,5 +53,9 @@ def test_sovereign_emergency_stop_logs_exceptions(event_loop):
         ai_2.stop.assert_called_once()
 
         assert mock_logger.error.call_count == 2
-        mock_logger.error.assert_any_call("Failed to stop Prime %s during emergency stop: %s", "p1", prime_1.stop.side_effect)
-        mock_logger.error.assert_any_call("Failed to stop AI %s during emergency stop: %s", "a1", ai_1.stop.side_effect)
+        mock_logger.error.assert_any_call(
+            "Failed to stop Prime %s during emergency stop: %s", "p1", prime_1.stop.side_effect
+        )
+        mock_logger.error.assert_any_call(
+            "Failed to stop AI %s during emergency stop: %s", "a1", ai_1.stop.side_effect
+        )
