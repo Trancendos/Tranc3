@@ -42,6 +42,20 @@ logger = logging.getLogger(WORKER_NAME)
 class ProductsDatabase:
     """SQLite-backed storage for products."""
 
+    VALID_COLUMNS = {
+        "product_id",
+        "name",
+        "description",
+        "price",
+        "category",
+        "sku",
+        "tags",
+        "metadata",
+        "is_active",
+        "created_at",
+        "updated_at",
+    }
+
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._local = threading.local()
@@ -93,14 +107,26 @@ class ProductsDatabase:
     def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         data.setdefault("created_at", now)
-        cols = list(data.keys())
-        vals = list(data.values())
+
+        filtered_data = {k: v for k, v in data.items() if k in self.VALID_COLUMNS}
+        if not filtered_data:
+            raise ValueError("No valid columns provided")
+
+        cols = list(filtered_data.keys())
+        vals = list(filtered_data.values())
         placeholders = ", ".join("?" for _ in cols)
         with self._cursor() as cur:
             cur.execute(f"INSERT INTO products ({', '.join(cols)}) VALUES ({placeholders})", vals)
-        return data
+
+        # Ensure we only return the filtered data that was actually inserted
+        filtered_data["product_id"] = data.get(
+            "product_id"
+        )  # retain the product_id if not in filtered data initially
+        return filtered_data
 
     def get(self, id_field: str, id_value: str) -> Optional[Dict[str, Any]]:
+        if id_field not in self.VALID_COLUMNS:
+            raise ValueError(f"Invalid column name: {id_field}")
         conn = self._get_conn()
         row = conn.execute(f"SELECT * FROM products WHERE {id_field}=?", (id_value,)).fetchone()
         return dict(row) if row else None
@@ -110,6 +136,8 @@ class ProductsDatabase:
         query = "SELECT * FROM products WHERE 1=1"
         params: list = []
         for key, val in filters.items():
+            if key not in self.VALID_COLUMNS:
+                raise ValueError(f"Invalid column name: {key}")
             query += f" AND {key}=?"
             params.append(val)
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
@@ -118,14 +146,24 @@ class ProductsDatabase:
         return [dict(r) for r in rows]
 
     def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
+        if id_field not in self.VALID_COLUMNS:
+            raise ValueError(f"Invalid column name: {id_field}")
+
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        sets = ", ".join(f"{k}=?" for k in data.keys())
-        vals = list(data.values()) + [id_value]
+        filtered_data = {k: v for k, v in data.items() if k in self.VALID_COLUMNS}
+        if not filtered_data:
+            return False
+
+        sets = ", ".join(f"{k}=?" for k in filtered_data.keys())
+        vals = list(filtered_data.values()) + [id_value]
         with self._cursor() as cur:
             cur.execute(f"UPDATE products SET {sets} WHERE {id_field}=?", vals)
             return cur.rowcount > 0
 
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
+        if id_field not in self.VALID_COLUMNS:
+            raise ValueError(f"Invalid column name: {id_field}")
+
         if soft:
             with self._cursor() as cur:
                 cur.execute(
