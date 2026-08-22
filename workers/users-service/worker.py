@@ -274,10 +274,7 @@ async def create_user(user: UserCreate):
     prefs_json = json.dumps(user.preferences)
     try:
         db.execute(
-            """INSERT INTO users
-               (user_id, username, email, display_name, role, preferences,
-                bio, avatar_url, timezone, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            "INSERT INTO users (user_id, username, email, display_name, role, preferences, bio, avatar_url, timezone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 user_id,
                 user.username,
