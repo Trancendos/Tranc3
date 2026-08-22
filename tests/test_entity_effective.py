@@ -73,9 +73,7 @@ class TestEffectiveEntity:
                 f"{entity.lead_ai!r} not present in its own lead_ais {entity.lead_ais!r}"
             )
 
-
     def test_build_overrides_map_mocking(self):
-
         # We mock fetching overrides from a store by just providing the expected row format directly
         rows = [
             {"entity_type": "lead_ai", "slot": "", "override_name": "Mocked Prime"},
