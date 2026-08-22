@@ -120,26 +120,32 @@ async def _drain_loop() -> None:
                 "SELECT * FROM outbox WHERE status='pending' AND retry_count < ? ORDER BY queued_at LIMIT 20",
                 (MAX_RETRIES,),
             ).fetchall()
+        successes = []
+        failures = []
         for row in rows:
             row = dict(row)
             try:
                 provider_id = await _dispatch(row["to_number"], row["message"], row["provider"])
-                with get_conn() as conn:
-                    conn.execute(
-                        "UPDATE outbox SET status='sent', sent_at=?, provider_id=? WHERE id=?",
-                        (time.time(), provider_id, row["id"]),
-                    )
-                    conn.commit()
+                successes.append((time.time(), provider_id, row["id"]))
             except Exception as exc:
                 retry = row["retry_count"] + 1
                 status = "failed" if retry >= MAX_RETRIES else "pending"
-                with get_conn() as conn:
-                    conn.execute(
-                        "UPDATE outbox SET status=?, retry_count=?, error=? WHERE id=?",
-                        (status, retry, str(exc), row["id"]),
-                    )
-                    conn.commit()
+                failures.append((status, retry, str(exc), row["id"]))
                 logger.warning("SMS %d send error: %s", row["id"], exc)
+
+        if successes or failures:
+            with get_conn() as conn:
+                if successes:
+                    conn.executemany(
+                        "UPDATE outbox SET status='sent', sent_at=?, provider_id=? WHERE id=?",
+                        successes,
+                    )
+                if failures:
+                    conn.executemany(
+                        "UPDATE outbox SET status=?, retry_count=?, error=? WHERE id=?",
+                        failures,
+                    )
+                conn.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +319,8 @@ async def retry_sms(sms_id: int):
         if not conn.execute("SELECT id FROM outbox WHERE id = ?", (sms_id,)).fetchone():
             raise HTTPException(status_code=404, detail="SMS not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,)
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
+            (sms_id,),
         )
         conn.commit()
     return {"retrying": sms_id}
@@ -340,4 +347,4 @@ app.include_router(_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)  # nosec B104 — containerised service
+    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)  # nosec B104
