@@ -9,10 +9,13 @@ Provides lifecycle event emission for all tier classes:
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class LifecycleEvent(str, Enum):
@@ -111,8 +114,8 @@ class LifecycleEmitter:
                 result = listener(ctx)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception:
-                pass  # listeners should not crash the emitter
+            except Exception as e:
+                logger.error(f"Error in lifecycle listener for event {key}: {e}", exc_info=True)  # listeners should not crash the emitter
 
         # Fire catch-all listeners
         for listener in self._any_listeners:
@@ -120,8 +123,8 @@ class LifecycleEmitter:
                 result = listener(key, ctx)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Error in lifecycle listener for event {key}: {e}", exc_info=True)
 
     def emit_lifecycle_sync(
         self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None
@@ -138,11 +141,11 @@ class LifecycleEmitter:
         for listener in self._listeners.get(key, []):
             try:
                 listener(ctx)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Error in lifecycle listener for event {key}: {e}", exc_info=True)
 
         for listener in self._any_listeners:
             try:
                 listener(key, ctx)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Error in lifecycle listener for event {key}: {e}", exc_info=True)
