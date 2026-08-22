@@ -692,6 +692,7 @@ async def scan_for_leaks():
     conn = _get_db()
     patterns = ["SECRET", "PASSWORD", "API_KEY", "TOKEN", "PRIVATE_KEY"]
     leaks = []
+    insert_data = []
     for key, value in os.environ.items():
         for pattern in patterns:
             if pattern in key.upper() and value:
@@ -699,13 +700,12 @@ async def scan_for_leaks():
                 leaks.append({"variable_name": key, "preview": preview, "severity": "high"})
                 lid = _new_id()
                 now = _now()
-                try:
-                    conn.execute(
-                        "INSERT INTO leak_detections (id, variable_name, variable_value_preview, severity, created_at) VALUES (?,?,?,?,?)",
-                        (lid, key, preview, "high", now),
-                    )
-                except sqlite3.IntegrityError:
-                    pass
+                insert_data.append((lid, key, preview, "high", now))
+    if insert_data:
+        conn.executemany(
+            "INSERT OR IGNORE INTO leak_detections (id, variable_name, variable_value_preview, severity, created_at) VALUES (?,?,?,?,?)",
+            insert_data
+        )
     conn.commit()
     conn.close()
     return {"leaks_found": len(leaks), "leaks": leaks}
