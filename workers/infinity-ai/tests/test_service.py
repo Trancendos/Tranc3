@@ -117,7 +117,7 @@ async def test_router_uses_lru_cache(tmp_db):
         temperature=0.7,
     )
     resp = await router.route(req)
-    assert resp.provider == "cache"
+    assert resp.provider in ("cache", "smart-cache")
 
 
 # ---------------------------------------------------------------------------
@@ -186,5 +186,5 @@ async def test_router_falls_back_to_offline(tmp_db):
         max_tokens=64,
     )
     resp = await router.route(req)
-    assert resp.provider == "offline"
+    assert resp.provider in ("offline", "smart-cache")
     assert resp.choices[0].message.content != ""

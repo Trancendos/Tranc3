@@ -177,8 +177,7 @@ class OpenRouterClient:
         max_tokens: int,
         temperature: float,
     ) -> Optional[Dict[str, Any]]:
-        import urllib.error
-        import urllib.request
+        import httpx
 
         try:
             actual_model = model
@@ -191,21 +190,29 @@ class OpenRouterClient:
                 "max_tokens": max_tokens,
                 "temperature": temperature,
             }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                f"{self.base_url}/chat/completions",
-                data=data,
-                method="POST",
-            )
-            req.add_header("Content-Type", "application/json")
-            req.add_header("HTTP-Referer", "https://trancendos.com")
-            req.add_header("X-Title", "Tranc3 AI Gateway")
+            headers = {
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://trancendos.com",
+                "X-Title": "Tranc3 AI Gateway",
+            }
             if self.api_key:
-                req.add_header("Authorization", f"Bearer {self.api_key}")
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                return json.loads(resp.read().decode())
-        except urllib.error.HTTPError as e:
-            logger.warning("OpenRouter HTTP error: %s %s", e.code, e.reason)
+                headers["Authorization"] = f"Bearer {self.api_key}"
+
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=60.0,
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except httpx.HTTPStatusError as e:
+            logger.warning(
+                "OpenRouter HTTP error: %s %s",
+                e.response.status_code,
+                e.response.reason_phrase,
+            )
             return None
         except Exception as e:
             logger.warning("OpenRouter request failed: %s", e)
@@ -239,7 +246,10 @@ class HuggingFaceClient:
             prompt = "\n".join(f"{m.role}: {m.content}" for m in messages) + "\nassistant:"
             payload = {
                 "inputs": prompt,
-                "parameters": {"max_new_tokens": max_tokens, "temperature": temperature},
+                "parameters": {
+                    "max_new_tokens": max_tokens,
+                    "temperature": temperature,
+                },
             }
             data = json.dumps(payload).encode()
             actual_model = model if "/" in model else self.FREE_MODELS[0]
@@ -294,8 +304,7 @@ class GroqClient:
     ) -> Optional[Dict[str, Any]]:
         if not self.api_key:
             return None
-        import urllib.error
-        import urllib.request
+        import httpx
 
         try:
             actual_model = model if model in self.FREE_MODELS else self.FREE_MODELS[0]
@@ -305,16 +314,21 @@ class GroqClient:
                 "max_tokens": max_tokens,
                 "temperature": temperature,
             }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                f"{self.base_url}/chat/completions", data=data, method="POST"
-            )
-            req.add_header("Content-Type", "application/json")
-            req.add_header("Authorization", f"Bearer {self.api_key}")
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read().decode())
-        except urllib.error.HTTPError as e:
-            logger.warning("Groq HTTP %s: %s", e.code, e.reason)
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except httpx.HTTPStatusError as e:
+            logger.warning("Groq HTTP %s: %s", e.response.status_code, e.response.reason_phrase)
             return None
         except Exception as e:
             logger.warning("Groq request failed: %s", sanitize_for_log(e))
@@ -339,8 +353,7 @@ class CerebrasClient:
     ) -> Optional[Dict[str, Any]]:
         if not self.api_key:
             return None
-        import urllib.error
-        import urllib.request
+        import httpx
 
         try:
             actual_model = model if model in self.FREE_MODELS else self.FREE_MODELS[0]
@@ -350,16 +363,21 @@ class CerebrasClient:
                 "max_tokens": max_tokens,
                 "temperature": temperature,
             }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                f"{self.base_url}/chat/completions", data=data, method="POST"
-            )
-            req.add_header("Content-Type", "application/json")
-            req.add_header("Authorization", f"Bearer {self.api_key}")
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read().decode())
-        except urllib.error.HTTPError as e:
-            logger.warning("Cerebras HTTP %s: %s", e.code, e.reason)
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except httpx.HTTPStatusError as e:
+            logger.warning("Cerebras HTTP %s: %s", e.response.status_code, e.response.reason_phrase)
             return None
         except Exception as e:
             logger.warning("Cerebras request failed: %s", sanitize_for_log(e))
@@ -388,8 +406,7 @@ class TogetherClient:
     ) -> Optional[Dict[str, Any]]:
         if not self.api_key:
             return None
-        import urllib.error
-        import urllib.request
+        import httpx
 
         try:
             actual_model = model if "/" in model else self.FREE_MODELS[0]
@@ -399,16 +416,32 @@ class TogetherClient:
                 "max_tokens": max_tokens,
                 "temperature": temperature,
             }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                f"{self.base_url}/chat/completions", data=data, method="POST"
-            )
-            req.add_header("Content-Type", "application/json")
-            req.add_header("Authorization", f"Bearer {self.api_key}")
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                result = json.loads(resp.read().decode())
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                resp.raise_for_status()
+                result = resp.json()
                 content = result["choices"][0]["message"]["content"]
-                return {"content": content, "model": actual_model, "provider": "together"}
+                return {
+                    "content": content,
+                    "model": actual_model,
+                    "provider": "together",
+                }
+        except httpx.HTTPStatusError as e:
+            logger.warning(
+                "Together HTTP error: %s %s",
+                e.response.status_code,
+                e.response.reason_phrase,
+            )
+            return None
         except Exception as e:
             logger.warning("Together request failed: %s", sanitize_for_log(e))
             return None
@@ -432,8 +465,7 @@ class DeepSeekClient:
     ) -> Optional[Dict[str, Any]]:
         if not self.api_key:
             return None
-        import urllib.error
-        import urllib.request
+        import httpx
 
         try:
             payload = {
@@ -442,16 +474,32 @@ class DeepSeekClient:
                 "max_tokens": max_tokens,
                 "temperature": temperature,
             }
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                f"{self.base_url}/chat/completions", data=data, method="POST"
-            )
-            req.add_header("Content-Type", "application/json")
-            req.add_header("Authorization", f"Bearer {self.api_key}")
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                result = json.loads(resp.read().decode())
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                resp.raise_for_status()
+                result = resp.json()
                 content = result["choices"][0]["message"]["content"]
-                return {"content": content, "model": self.FREE_MODEL, "provider": "deepseek"}
+                return {
+                    "content": content,
+                    "model": self.FREE_MODEL,
+                    "provider": "deepseek",
+                }
+        except httpx.HTTPStatusError as e:
+            logger.warning(
+                "DeepSeek HTTP error: %s %s",
+                e.response.status_code,
+                e.response.reason_phrase,
+            )
+            return None
         except Exception as e:
             logger.warning("DeepSeek request failed: %s", sanitize_for_log(e))
             return None
@@ -701,7 +749,7 @@ class AIGatewayRouter:
                     rate_limited = "429" in str(e) or "rate" in str(e).lower()
                     get_provider_rotator().record_failure(
                         provider_name.value,
-                        rate_limited=rate_limited,
+                        reason="rate_limit" if rate_limited else "provider_error",
                     )
                 except Exception:
                     pass
