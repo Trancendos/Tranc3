@@ -1,6 +1,7 @@
 import pytest
 from src.main_enhanced import TRANC3Enhanced
 
+
 @pytest.mark.asyncio
 async def test_get_system_health():
     # Setup mock subsystems
@@ -25,7 +26,7 @@ async def test_get_system_health():
         "health_monitor": MockMonitor(),
         "evolution": MockEvolution(),
         "skill_registry": MockSkillRegistry(),
-        "bot_dispatcher": MockBotDispatcher()
+        "bot_dispatcher": MockBotDispatcher(),
     }
     system._initialized = True
 
@@ -37,6 +38,7 @@ async def test_get_system_health():
     assert health["bots"] == {"active_bots": 3}
     assert "health_monitor" in health["subsystems_active"]
     assert health["initialized"] is True
+
 
 @pytest.mark.asyncio
 async def test_get_system_health_empty():
