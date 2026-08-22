@@ -691,7 +691,7 @@ class AdvancedCodeGenerator:
                     context_str = json.dumps(context, indent=2) if context else "None"
 
                     prompt = (
-                        f"Task: {{run.__doc__.strip()}}\n\n"
+                        f"Task: {request.description}\n\n"
                         f"Context data:\n{{context_str}}\n\n"
                         "Please perform the task and return the result."
                     )
