@@ -182,9 +182,7 @@ class IntelligenceAgent:
                 all_items.extend(items)
             except Exception as exc:
                 cycle_stats["errors"] += 1
-                logger.warning(
-                    "section7: ingestor %s failed: %s", type(ingestor).__name__, exc
-                )
+                logger.warning("section7: ingestor %s failed: %s", type(ingestor).__name__, exc)
 
         if all_items:
             routed = self.ingest_many(all_items)
