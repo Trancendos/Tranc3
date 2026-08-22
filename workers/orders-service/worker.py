@@ -313,8 +313,100 @@ async def browse_listings(
         conn.close()
 
 
+class UpdateListingRequest(BaseModel):
+    quantity: Optional[float] = Field(None, gt=0)
+    price_per_unit: Optional[float] = Field(None, ge=0)
+    description: Optional[str] = None
+    status: Optional[str] = None
+
+
+@_router.get("/listings/{listing_id}")
+async def get_listing(listing_id: str):
+    """Retrieve a specific listing."""
+    conn = _get_conn()
+    try:
+        row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Listing not found")
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@_router.patch("/listings/{listing_id}")
+async def update_listing(listing_id: str, req: UpdateListingRequest):
+    """Update a specific listing."""
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN EXCLUSIVE")
+        row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
+        if not row:
+            conn.rollback()
+            raise HTTPException(404, "Listing not found")
+
+        updates = []
+        params = []
+
+        if req.quantity is not None:
+            updates.append("quantity=?")
+            params.append(req.quantity)
+        if req.price_per_unit is not None:
+            updates.append("price_per_unit=?")
+            params.append(req.price_per_unit)
+        if req.description is not None:
+            updates.append("description=?")
+            params.append(req.description)
+        if req.status is not None:
+            updates.append("status=?")
+            params.append(req.status)
+
+        if not updates:
+            conn.rollback()
+            return dict(row)
+
+        updates.append("updated_at=?")
+        params.append(now)
+
+        params.append(listing_id)
+
+        update_sql = f"UPDATE listings SET {', '.join(updates)} WHERE id=?"  # noqa: S608
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query
+        # The 'updates' list contains hardcoded column assignments appended directly by the server,
+        # with user inputs passed as parameterized placeholders.
+        conn.execute(update_sql, params)  # nosec B608
+        conn.commit()
+
+        updated_row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
+        return dict(updated_row)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Update listing failed")
+        raise HTTPException(500, f"Update listing failed: {exc}") from exc
+    finally:
+        conn.close()
+
+
+@_router.delete("/listings/{listing_id}", status_code=204)
+async def delete_listing(listing_id: str):
+    """Delete a specific listing."""
+    conn = _get_conn()
+    try:
+        with _cursor(conn) as cur:
+            row = cur.execute("SELECT id FROM listings WHERE id=?", (listing_id,)).fetchone()
+            if not row:
+                raise HTTPException(404, "Listing not found")
+            cur.execute("DELETE FROM listings WHERE id=?", (listing_id,))
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Orders
+
+
 # ---------------------------------------------------------------------------
 @_router.post("/orders", status_code=201)
 async def purchase(req: PurchaseRequest):
@@ -405,8 +497,85 @@ async def buyer_orders(
         conn.close()
 
 
+class UpdateOrderRequest(BaseModel):
+    status: Optional[str] = None
+
+
+@_router.get("/orders")
+async def list_orders(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """List all orders."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        ).fetchall()
+        total = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+        return {"total": total, "orders": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+@_router.get("/orders/id/{order_id}")
+async def get_order(order_id: str):
+    """Retrieve a specific order."""
+    conn = _get_conn()
+    try:
+        row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Order not found")
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@_router.patch("/orders/id/{order_id}")
+async def update_order(order_id: str, req: UpdateOrderRequest):
+    """Update a specific order."""
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN EXCLUSIVE")
+        row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        if not row:
+            conn.rollback()
+            raise HTTPException(404, "Order not found")
+
+        if req.status is not None:
+            conn.execute("UPDATE orders SET status=? WHERE id=?", (req.status, order_id))
+            conn.commit()
+
+        updated_row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        return dict(updated_row)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Update order failed")
+        raise HTTPException(500, f"Update order failed: {exc}") from exc
+    finally:
+        conn.close()
+
+
+@_router.delete("/orders/id/{order_id}", status_code=204)
+async def delete_order(order_id: str):
+    """Delete a specific order."""
+    conn = _get_conn()
+    try:
+        with _cursor(conn) as cur:
+            row = cur.execute("SELECT id FROM orders WHERE id=?", (order_id,)).fetchone()
+            if not row:
+                raise HTTPException(404, "Order not found")
+            cur.execute("DELETE FROM orders WHERE id=?", (order_id,))
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Exchange Stats
+
+
 # ---------------------------------------------------------------------------
 @_router.get("/exchange/stats")
 async def exchange_stats():
