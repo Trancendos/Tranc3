@@ -3,7 +3,11 @@
 Combined from four PRs that each created this file from scratch to test a
 different method, with no overlapping test names: #902 (initialize, after the
 split into _init_* methods), #905 (start_background_services), #906
-(get_system_health) and #874 (call_mcp_tool).
+(get_system_health), #874 (call_mcp_tool) and #904 (execute_workflow).
+
+#904 originally created tests/unit/test_main_enhanced.py. tests/ is a
+package but tests/unit/ would not have been one, so that path collides with
+this file's basename at collection time; its tests live here instead.
 
 A fifth, #879, is deliberately not carried over. It assigned
 sys.modules["torch"] = MagicMock() at module import time, which leaks into every
@@ -242,3 +246,69 @@ async def test_call_mcp_tool_default_params():
     assert result == {"status": "success"}
     mock_registry.get.assert_called_once_with("working_tool")
     mock_tool.handler.assert_called_once_with({})
+
+
+# ── execute_workflow (#904) ──────────────────────────────────────────────────
+
+
+class _StubWorkflowState:
+    def __init__(self, execution_id, status, node_outputs, error=None):
+        self.execution_id = execution_id
+        self.status = status
+        self.node_outputs = node_outputs
+        self.error = error
+
+
+class _StubWorkflowExecutor:
+    def __init__(self):
+        self.last_workflow = None
+        self.last_inputs = None
+
+    async def execute(self, workflow, inputs):
+        self.last_workflow = workflow
+        self.last_inputs = inputs
+        return _StubWorkflowState("exec-123", "completed", {"node1": "output1"})
+
+
+_WORKFLOW_DEF = {
+    "name": "test_workflow",
+    "steps": [{"step_id": "step1", "name": "Step 1", "action": "test_action"}],
+}
+
+
+@pytest.mark.asyncio
+async def test_execute_workflow_missing_executor():
+    app = TRANC3Enhanced()
+    result = await app.execute_workflow({"test": "definition"}, {"test": "input"})
+    assert result == {"error": "Workflow executor not available"}
+
+
+@pytest.mark.asyncio
+async def test_execute_workflow_success():
+    app = TRANC3Enhanced()
+    executor = _StubWorkflowExecutor()
+    app._subsystems["workflow_executor"] = executor
+
+    result = await app.execute_workflow(_WORKFLOW_DEF, {"test": "input"})
+
+    assert result == {
+        "execution_id": "exec-123",
+        "status": "completed",
+        "outputs": {"node1": "output1"},
+        "error": None,
+    }
+    assert executor.last_inputs == {"test": "input"}
+    # The dict is parsed into a WorkflowDefinition before it reaches the executor.
+    assert executor.last_workflow.name == "test_workflow"
+
+
+@pytest.mark.asyncio
+async def test_execute_workflow_defaults_inputs_to_empty_dict():
+    app = TRANC3Enhanced()
+    executor = _StubWorkflowExecutor()
+    app._subsystems["workflow_executor"] = executor
+
+    result = await app.execute_workflow(_WORKFLOW_DEF)
+
+    assert result["status"] == "completed"
+    assert executor.last_inputs == {}
