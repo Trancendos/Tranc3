@@ -59,7 +59,7 @@ bcrypt==5.0.0
 
 # === MFA / TOTP ===
 # pyotp: TOTP/HOTP one-time passwords — powers MFA in workers/infinity-auth.
-pyotp==2.9.0
+pyotp==2.10.0
 
 # === Database / ORM / Migrations ===
 # SQLAlchemy: ORM models in src/database/schema.py + src/auth/db_user_manager.py.
