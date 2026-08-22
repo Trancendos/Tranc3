@@ -270,7 +270,7 @@ class HealthChecker:
                             history=resp.history,
                             status=resp.status,
                             message=resp.reason,
-                            headers=resp.headers
+                            headers=resp.headers,
                         )
                     body = await resp.json()
                     result = {
