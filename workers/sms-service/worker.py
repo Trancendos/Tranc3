@@ -120,26 +120,37 @@ async def _drain_loop() -> None:
                 "SELECT * FROM outbox WHERE status='pending' AND retry_count < ? ORDER BY queued_at LIMIT 20",
                 (MAX_RETRIES,),
             ).fetchall()
+
+        if not rows:
+            continue
+
+        success_updates = []
+        fail_updates = []
+
         for row in rows:
             row = dict(row)
             try:
                 provider_id = await _dispatch(row["to_number"], row["message"], row["provider"])
-                with get_conn() as conn:
-                    conn.execute(
-                        "UPDATE outbox SET status='sent', sent_at=?, provider_id=? WHERE id=?",
-                        (time.time(), provider_id, row["id"]),
-                    )
-                    conn.commit()
+                success_updates.append((time.time(), provider_id, row["id"]))
             except Exception as exc:
                 retry = row["retry_count"] + 1
                 status = "failed" if retry >= MAX_RETRIES else "pending"
-                with get_conn() as conn:
-                    conn.execute(
-                        "UPDATE outbox SET status=?, retry_count=?, error=? WHERE id=?",
-                        (status, retry, str(exc), row["id"]),
-                    )
-                    conn.commit()
+                fail_updates.append((status, retry, str(exc), row["id"]))
                 logger.warning("SMS %d send error: %s", row["id"], exc)
+
+        if success_updates or fail_updates:
+            with get_conn() as conn:
+                if success_updates:
+                    conn.executemany(
+                        "UPDATE outbox SET status='sent', sent_at=?, provider_id=? WHERE id=?",
+                        success_updates,
+                    )
+                if fail_updates:
+                    conn.executemany(
+                        "UPDATE outbox SET status=?, retry_count=?, error=? WHERE id=?",
+                        fail_updates,
+                    )
+                conn.commit()
 
 
 # ---------------------------------------------------------------------------
