@@ -1,5 +1,7 @@
 import pytest
+
 from src.dependencies import ServiceContainer
+
 
 def test_get_registered_singleton():
     """Test that get returns a previously registered singleton."""
@@ -9,6 +11,7 @@ def test_get_registered_singleton():
 
     assert container.get("my_service") is instance
 
+
 def test_get_unregistered_service_raises_key_error():
     """Test that get raises KeyError for an unregistered service."""
     container = ServiceContainer()
@@ -16,11 +19,13 @@ def test_get_unregistered_service_raises_key_error():
     with pytest.raises(KeyError, match="Service 'unregistered' not registered"):
         container.get("unregistered")
 
+
 def test_get_invokes_factory_and_caches_instance():
     """Test that get invokes the factory, caches the result, and returns it."""
     container = ServiceContainer()
 
     factory_calls = 0
+
     def my_factory():
         nonlocal factory_calls
         factory_calls += 1
