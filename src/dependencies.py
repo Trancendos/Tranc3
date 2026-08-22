@@ -64,7 +64,8 @@ class ServiceContainer:
         return result
 
     def reset(self) -> None:
-        """Clear all singletons (useful for testing)"""
+        """Clear all registrations. Use primarily for testing."""
+        self._factories.clear()
         self._singletons.clear()
         self._initialized = False
 
