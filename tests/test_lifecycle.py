@@ -1,10 +1,12 @@
 import pytest
-import asyncio
-from src.entities.lifecycle import LifecycleEmitter, LifecycleEvent, LifecycleContext
+
+from src.entities.lifecycle import LifecycleEmitter, LifecycleEvent
+
 
 @pytest.mark.asyncio
 async def test_emit_lifecycle_exceptions_logged(caplog):
     import logging
+
     caplog.set_level(logging.ERROR)
 
     emitter = LifecycleEmitter("test_emitter")
@@ -23,8 +25,10 @@ async def test_emit_lifecycle_exceptions_logged(caplog):
     assert "Error in specific lifecycle listener for start" in caplog.text
     assert "Error in catch-all lifecycle listener for start" in caplog.text
 
+
 def test_emit_lifecycle_sync_exceptions_logged(caplog):
     import logging
+
     caplog.set_level(logging.ERROR)
 
     emitter = LifecycleEmitter("test_emitter_sync")
