@@ -74,10 +74,19 @@ class TestEffectiveEntity:
             )
 
     def test_build_overrides_map_mocking(self):
-        # We mock fetching overrides from a store by just providing the expected row format directly
+        # The prompt asked for: Requires mocking OverrideStore and fetching a list of overrides.
+        # But this codebase uses SQLite dict-like rows. Let's create an object that mimics a sqlite3.Row for build_overrides_map
+
+        class MockRow:
+            def __init__(self, data):
+                self.data = data
+
+            def __getitem__(self, item):
+                return self.data[item]
+
         rows = [
-            {"entity_type": "lead_ai", "slot": "", "override_name": "Mocked Prime"},
-            {"entity_type": "tier", "slot": "agent_alpha", "override_name": "8"},
+            MockRow({"entity_type": "lead_ai", "slot": "", "override_name": "Mocked Prime"}),
+            MockRow({"entity_type": "tier", "slot": "agent_alpha", "override_name": "8"}),
         ]
 
         m = build_overrides_map(rows)
