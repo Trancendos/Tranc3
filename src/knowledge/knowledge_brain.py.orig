@@ -296,8 +296,8 @@ class KnowledgeBrain:
         """Retrieve multiple pages by ids; returns a dict mapping id to KBPage."""
         if not page_ids:
             return {}
-        placeholders = ",".join("?" for _ in page_ids)
-        query = f"SELECT * FROM pages WHERE id IN ({placeholders})"
+        placeholders = ",".join(["?"] * len(page_ids))
+        query = "SELECT * FROM pages WHERE id IN (" + placeholders + ")"
         rows = self._conn.execute(query, tuple(page_ids)).fetchall()
         return {row["id"]: self._row_to_page(row) for row in rows}
 

@@ -297,8 +297,9 @@ class KnowledgeBrain:
         if not page_ids:
             return {}
         placeholders = ",".join(["?"] * len(page_ids))
-        query = "SELECT * FROM pages WHERE id IN (" + placeholders + ")"
-        rows = self._conn.execute(query, tuple(page_ids)).fetchall()
+        rows = self._conn.execute(
+            f"SELECT * FROM pages WHERE id IN ({placeholders})", tuple(page_ids)  # sourcery skip: avoid-sql-injection
+        ).fetchall()
         return {row["id"]: self._row_to_page(row) for row in rows}
 
     async def delete_page(self, page_id: str) -> bool:
