@@ -320,6 +320,14 @@ class TestLookupFunctions:
     def test_get_entity_by_pid_unknown(self):
         assert get_entity_by_pid("PID-XXX") is None
 
+    def test_get_entity_by_pid_case_insensitivity(self):
+        entity = get_entity_by_pid("pid-nxs")
+        assert entity is not None
+        assert entity.location == "The Nexus"
+
+    def test_get_entity_by_pid_none(self):
+        assert get_entity_by_pid(None) is None
+
     def test_get_entity_by_aid(self):
         entity = get_entity_by_aid("AID-NXS-01")
         assert entity is not None
