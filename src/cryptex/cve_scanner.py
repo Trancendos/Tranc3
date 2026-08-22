@@ -99,6 +99,7 @@ class CveScanner:
 
         all_items: List[Any] = []
         import concurrent.futures
+
         if ingestors:
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(ingestors)) as executor:
                 futures = [executor.submit(ingestor.fetch) for ingestor in ingestors]
