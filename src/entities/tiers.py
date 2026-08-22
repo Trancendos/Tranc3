@@ -28,6 +28,7 @@ from .lifecycle import LifecycleEmitter, LifecycleEvent
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class HILAApproval:
     """HIL-A approval decision from a tier authority."""
