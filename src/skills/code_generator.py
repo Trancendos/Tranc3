@@ -690,9 +690,9 @@ class AdvancedCodeGenerator:
                     engine = get_engine()
                     context_str = json.dumps(context, indent=2) if context else "None"
 
-                    prompt = (
-                        f"Task: {request.description}\n\n"
-                        f"Context data:\n{{context_str}}\n\n"
+                                                                                prompt = (
+                        f"Task: {request.description}\\n\\n"
+                        f"Context data:\\n{{context_str}}\\n\\n"
                         "Please perform the task and return the result."
                     )
 
