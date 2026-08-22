@@ -124,13 +124,16 @@ def _bandit_baseline_drift() -> tuple[bool | None, str]:
             for line in baseline_path.read_text().splitlines()
             if line.startswith("bandit_findings=")
         ]
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None, "unreadable .security-baseline"
     if not values:
         return None, ".security-baseline missing bandit_findings="
     if len(values) > 1:
         return None, f".security-baseline has {len(values)} bandit_findings= lines (need exactly 1)"
-    if not values[0].isdigit():
+    # `str.isdigit()` is TRUE for characters `int()` refuses: "\u00b2".isdigit()
+    # is True but int("\u00b2") raises ValueError. Requiring ASCII first keeps the
+    # rejection of "-1" that isdigit() was chosen for, without the crash.
+    if not (values[0].isascii() and values[0].isdigit()):
         return (
             None,
             f".security-baseline bandit_findings={values[0]!r} is not a non-negative integer",
@@ -150,7 +153,7 @@ def _bandit_baseline_drift() -> tuple[bool | None, str]:
         return None, "no bandit report in logs/ (run bandit to compare)"
     try:
         payload = json.loads(bandit_log.read_text())
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return None, f"unreadable {bandit_log.name}"
     # A JSON list or scalar would raise AttributeError on .get, and
     # `"results": null` would raise TypeError in len(). Neither should crash a

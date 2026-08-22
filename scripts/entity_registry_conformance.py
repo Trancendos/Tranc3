@@ -115,10 +115,20 @@ def _routed_ports(compose_text: str) -> set[int]:
     """
     routed: set[int] = set()
     try:
-        doc = yaml.safe_load(compose_text) or {}
+        doc = yaml.safe_load(compose_text)
     except yaml.YAMLError:
         return routed
-    for svc in (doc.get("services") or {}).values():
+    # `or {}` only rescues the FALSY non-mappings. A truthy scalar or list root
+    # -- a compose file that is one string, or a YAML list -- reaches .get() and
+    # raises AttributeError, and the same holds for a truthy non-mapping
+    # `services:` value reaching .values(). An unparseable compose must make
+    # this guard measure nothing, never crash it.
+    if not isinstance(doc, dict):
+        return routed
+    services = doc.get("services")
+    if not isinstance(services, dict):
+        return routed
+    for svc in services.values():
         if not isinstance(svc, dict):
             continue
         for entry in svc.get("ports") or []:

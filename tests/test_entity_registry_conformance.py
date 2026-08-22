@@ -140,6 +140,25 @@ def test_routed_ports_survives_unparseable_compose():
     assert guard._routed_ports("") == set()
 
 
+def test_routed_ports_survives_a_non_mapping_compose():
+    """`or {}` rescues only the falsy non-mappings, and that is the trap.
+
+    A compose file that parses to a truthy scalar or a list still reaches
+    ``.get()``; a truthy non-mapping ``services:`` still reaches ``.values()``.
+    Both raise AttributeError, which would turn a malformed input into a crashed
+    gate rather than a gate that measured nothing.
+    """
+    import entity_registry_conformance as guard
+
+    assert guard._routed_ports("just a string") == set()
+    assert guard._routed_ports("- one\n- two\n") == set()
+    assert guard._routed_ports("services: a-string-not-a-mapping\n") == set()
+    assert guard._routed_ports("services:\n  - a\n  - list\n") == set()
+    # The falsy cases the old `or {}` did cover must keep working.
+    assert guard._routed_ports("services:\n") == set()
+    assert guard._routed_ports("[]\n") == set()
+
+
 def test_a_location_that_declares_nothing_does_not_pass():
     """The emptiest possible description must not be the safest one.
 
