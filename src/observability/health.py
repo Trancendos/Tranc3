@@ -313,7 +313,7 @@ class HealthChecker:
             async with aiohttp.ClientSession(timeout=client_timeout) as session:
                 async with session.get(url, headers={"Accept": "application/json"}) as resp:  # nosec B310 — static localhost SERVICE_REGISTRY URLs
                     resp.raise_for_status()
-                    body = await resp.json()
+                    body = await resp.json(content_type=None)
                     result = {
                         "service": name,
                         "named": svc.get("named", ""),
@@ -331,6 +331,17 @@ class HealthChecker:
                 "priority": svc.get("priority", ""),
                 "status": "degraded" if e.status < 500 else "unhealthy",
                 "error": f"HTTP {e.status}",
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+            }
+            self._cache[name] = result
+            return result
+        except aiohttp.ClientError as e:
+            result = {
+                "service": name,
+                "named": svc.get("named", ""),
+                "priority": svc.get("priority", ""),
+                "status": "unhealthy",
+                "error": str(e) if str(e) else e.__class__.__name__,
                 "checked_at": datetime.now(timezone.utc).isoformat(),
             }
             self._cache[name] = result

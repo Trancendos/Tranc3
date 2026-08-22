@@ -326,6 +326,88 @@ class TestHealthCheckerWithServer:
         assert result["overall"] == "unhealthy"
 
     @pytest.mark.asyncio
+    async def test_check_exception_with_aiohttp(self, monkeypatch):
+        import src.observability.health as health_module
+
+        # We need to simulate a general exception during aiohttp session request
+        async def mock_get(*args, **kwargs):
+            raise RuntimeError("Mock general exception")
+
+        class MockSession:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            def get(self, *args, **kwargs):
+                class MockContextManager:
+                    async def __aenter__(self):
+                        await mock_get(*args, **kwargs)
+
+                    async def __aexit__(self, exc_type, exc_val, exc_tb):
+                        pass
+
+                return MockContextManager()
+
+        monkeypatch.setattr(health_module.aiohttp, "ClientSession", MockSession)
+
+        custom = {
+            "error-svc": {
+                "url": "http://127.0.0.1:0/health",
+                "priority": "P0",
+                "named": "Error",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("error-svc")
+        assert result["status"] == "unhealthy"
+
+    @pytest.mark.asyncio
+    async def test_check_client_error_with_aiohttp(self, monkeypatch):
+        import src.observability.health as health_module
+
+        # We need to simulate a ClientError during aiohttp session request
+        async def mock_get(*args, **kwargs):
+            raise health_module.aiohttp.ClientError("Mock client error")
+
+        class MockSession:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            def get(self, *args, **kwargs):
+                class MockContextManager:
+                    async def __aenter__(self):
+                        await mock_get(*args, **kwargs)
+
+                    async def __aexit__(self, exc_type, exc_val, exc_tb):
+                        pass
+
+                return MockContextManager()
+
+        monkeypatch.setattr(health_module.aiohttp, "ClientSession", MockSession)
+
+        custom = {
+            "error-svc": {
+                "url": "http://127.0.0.1:0/health",
+                "priority": "P0",
+                "named": "Error",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("error-svc")
+        assert result["status"] == "unhealthy"
+
+    @pytest.mark.asyncio
     async def test_check_healthy_service_with_aiohttp(self, healthy_server):
         import src.observability.health as health_module
 
@@ -365,21 +447,6 @@ class TestHealthCheckerWithServer:
         custom = {
             "error-svc": {
                 "url": f"http://127.0.0.1:{port}/health",
-                "priority": "P0",
-                "named": "Error",
-            },
-        }
-        checker = health_module.HealthChecker(registry=custom)
-        result = await checker.check_service("error-svc")
-        assert result["status"] == "unhealthy"
-
-    @pytest.mark.asyncio
-    async def test_check_exception_with_aiohttp(self):
-        import src.observability.health as health_module
-
-        custom = {
-            "error-svc": {
-                "url": "http://127.0.0.1:0/health",
                 "priority": "P0",
                 "named": "Error",
             },
