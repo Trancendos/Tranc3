@@ -93,3 +93,48 @@ def test_the_guard_can_actually_fail():
         object.__setattr__(entity, "worker_path", original)
 
     assert collect_violations() == [], "the probe leaked state into the registry"
+
+
+def test_a_port_in_an_image_tag_is_not_a_routed_port():
+    """Ports must come from where compose routes them, not from anywhere.
+
+    The first version of this check asked `str(port) in compose`, and the
+    second anchored on non-digit boundaries. Both still matched a port sitting
+    in an image tag, a digest, or an unrelated numeric field -- so
+    `port-unrouted` could pass for a port compose never routes. A guard built
+    to catch checks that answer confidently and wrongly must not be one.
+    """
+    import entity_registry_conformance as guard
+
+    compose = """
+services:
+  decoy:
+    image: registry.example/thing:8069
+    environment:
+      SOME_TIMEOUT: 8055
+  real:
+    image: registry.example/other:latest
+    ports:
+      - "8074:8074"
+    labels:
+      - traefik.http.services.x.loadbalancer.server.port=8060
+  enved:
+    image: registry.example/third:latest
+    environment:
+      PORT: 8077
+"""
+    routed = guard._routed_ports(compose)
+
+    assert 8074 in routed, "a published ports: mapping is a routed port"
+    assert 8060 in routed, "a Traefik loadbalancer port label is a routed port"
+    assert 8077 in routed, "a PORT environment value is a routed port"
+    assert 8069 not in routed, "an image tag is not a port mapping"
+    assert 8055 not in routed, "an unrelated numeric env value is not a port"
+
+
+def test_routed_ports_survives_unparseable_compose():
+    """A broken compose file must not crash the gate that reads it."""
+    import entity_registry_conformance as guard
+
+    assert guard._routed_ports("{[not: valid: yaml") == set()
+    assert guard._routed_ports("") == set()

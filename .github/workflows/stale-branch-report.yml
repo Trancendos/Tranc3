@@ -77,15 +77,16 @@ jobs:
           # alone regardless of age, because "old" and "worthless" are not the
           # same property and only the first one is measurable here.
           for b in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin \
-                     | grep -v 'HEAD' | grep -v "^origin/HEAD$"); do
+                     | grep -v '^origin/HEAD$'); do
             name="${b#origin/}"
             [ "$name" = "${DEFAULT#origin/}" ] && continue
             # Same protected prefixes as scripts/stale_branch_cleanup.py. Two
             # cleanup controls that disagree about what is protected is how a
             # branch gets reaped by the one that never heard of it.
             case "$name" in
-              main|cursor/production-integration-*|claude/loving-mendel-*|\
-              phase-24/*|refactor/shared-core-to-dimensional|\
+              main|main/*|main-*|cursor/production-integration-*|\
+              claude/loving-mendel-*|phase-24/*|\
+              refactor/shared-core-to-dimensional*|\
               infra/phase16-adaptive-storage*)
                 echo "$name" >> protected.txt; continue ;;
             esac
@@ -159,6 +160,17 @@ jobs:
             fi
             if [ "$live" != "$sha" ]; then
               echo "::warning::$name moved since classification ($sha -> $live) — skipping"
+              skipped=$((skipped + 1)); continue
+            fi
+            # The lease below protects the CANDIDATE tip, not the default
+            # branch. Ancestry is still measured against the ref as it was at
+            # checkout, so a force-push to the default branch after
+            # classification would let a no-longer-merged branch pass. Refresh
+            # it here, and refuse to delete if the refresh fails rather than
+            # falling back to a ref we know may be stale.
+            if ! git fetch --no-tags --quiet origin \
+                 "+refs/heads/${DEFAULT#origin/}:refs/remotes/$DEFAULT"; then
+              echo "::warning::could not refresh $DEFAULT — skipping $name"
               skipped=$((skipped + 1)); continue
             fi
             if ! git merge-base --is-ancestor "$sha" "$DEFAULT" 2>/dev/null; then

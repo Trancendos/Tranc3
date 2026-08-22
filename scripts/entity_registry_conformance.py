@@ -34,12 +34,15 @@ Run `--write-baseline` to record the current state, `--check` to enforce.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import re
 import sys
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
+
+import yaml
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
@@ -99,22 +102,59 @@ def _live_worker_dir(worker_path: str) -> str | None:
     return None
 
 
-def _compose_routes_port(port: int, compose: str) -> bool:
-    """True if compose mentions this port as a whole number.
+def _routed_ports(compose_text: str) -> set[int]:
+    """Every port compose actually routes, parsed rather than grepped.
 
-    A substring test is not good enough: `8055 in compose` also matches inside
-    18055, inside an image digest, and inside any unrelated numeric field. The
-    port-unrouted rule would then pass for a port compose never routes -- a
-    check reporting confidently and wrongly, which is the failure this guard
-    exists to catch.
+    A regex over the whole file -- even one anchored on non-digit boundaries --
+    still matches a port inside an image tag, a digest, or an unrelated numeric
+    field, so `port-unrouted` could pass for a port compose never routes. That
+    is the failure this guard exists to catch, so the guard must not commit it.
+
+    Three places genuinely route a port: a published `ports:` mapping, a
+    Traefik `loadbalancer.server.port` label, and a PORT-ish environment value.
     """
-    if not port:
-        return False
-    return bool(re.search(rf"(?<!\d){port}(?!\d)", compose))
+    routed: set[int] = set()
+    try:
+        doc = yaml.safe_load(compose_text) or {}
+    except yaml.YAMLError:
+        return routed
+    for svc in (doc.get("services") or {}).values():
+        if not isinstance(svc, dict):
+            continue
+        for entry in svc.get("ports") or []:
+            # "8069:8069", "127.0.0.1:8069:8069", or {published: 8069}
+            if isinstance(entry, dict):
+                for key in ("published", "target"):
+                    with contextlib.suppress(TypeError, ValueError):
+                        routed.add(int(entry[key]))
+            else:
+                for part in str(entry).split("/")[0].split(":"):
+                    if part.isdigit():
+                        routed.add(int(part))
+        labels = svc.get("labels") or []
+        label_items = (
+            labels.items()
+            if isinstance(labels, dict)
+            else ((x.split("=", 1) + [""])[:2] for x in labels if isinstance(x, str))
+        )
+        for key, value in label_items:
+            if "loadbalancer.server.port" in str(key) and str(value).strip().isdigit():
+                routed.add(int(str(value).strip()))
+        env = svc.get("environment") or {}
+        env_items = (
+            env.items()
+            if isinstance(env, dict)
+            else ((x.split("=", 1) + [""])[:2] for x in env if isinstance(x, str))
+        )
+        for key, value in env_items:
+            if str(key).upper().endswith("PORT") and str(value).strip().isdigit():
+                routed.add(int(str(value).strip()))
+    return routed
 
 
 def collect_violations() -> list[dict]:
     api, compose = _api_text(), _compose_text()
+    routed = _routed_ports(compose)
     violations: list[dict] = []
     by_path: dict[str, list[str]] = defaultdict(list)
 
@@ -183,7 +223,7 @@ def collect_violations() -> list[dict]:
                         f"worker map and to health metadata",
                     }
                 )
-        elif not _compose_routes_port(port, compose):
+        elif port not in routed:
             violations.append(
                 {
                     "rule": "port-unrouted",

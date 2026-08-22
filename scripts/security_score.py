@@ -114,23 +114,50 @@ def _bandit_baseline_drift() -> tuple[bool | None, str]:
     if not baseline_path.is_file():
         return None, "no .security-baseline"
     try:
-        baseline: int | None = None
-        for line in baseline_path.read_text().splitlines():
-            if line.startswith("bandit_findings="):
-                baseline = int(line.split("=", 1)[1])
-                break
-    except (OSError, ValueError):
+        # Read EVERY assignment, not just the first. A file with two of them is
+        # rejected by .forgejo/workflows/security-baseline.yml, and a parser
+        # here that silently took the first would let the two controls disagree
+        # about the same file. `int()` also accepts "-1", which would then be
+        # treated as a zero baseline, so require digits only.
+        values = [
+            line.split("=", 1)[1].strip()
+            for line in baseline_path.read_text().splitlines()
+            if line.startswith("bandit_findings=")
+        ]
+    except OSError:
         return None, "unreadable .security-baseline"
-    if baseline is None:
+    if not values:
         return None, ".security-baseline missing bandit_findings="
+    if len(values) > 1:
+        return None, f".security-baseline has {len(values)} bandit_findings= lines (need exactly 1)"
+    if not values[0].isdigit():
+        return (
+            None,
+            f".security-baseline bandit_findings={values[0]!r} is not a non-negative integer",
+        )
+    baseline = int(values[0])
 
-    bandit_log = LOGS / "bandit-full.json"
-    if not bandit_log.is_file():
-        return None, "no logs/bandit-full.json (run bandit to compare)"
+    # Two workflows produce this report under different names:
+    # security-baseline.yml writes bandit-full.json, security-scan.yml writes
+    # bandit-results.json -- and security-scan.yml also runs this script.
+    # Reading only one name made the drift check silently neutral in the other
+    # workflow: a control that runs, reports, and measures nothing.
+    bandit_log = next(
+        (p for p in (LOGS / "bandit-full.json", LOGS / "bandit-results.json") if p.is_file()),
+        None,
+    )
+    if bandit_log is None:
+        return None, "no bandit report in logs/ (run bandit to compare)"
     try:
-        measured = len(json.loads(bandit_log.read_text()).get("results", []))
+        payload = json.loads(bandit_log.read_text())
     except (json.JSONDecodeError, OSError):
-        return None, "unreadable logs/bandit-full.json"
+        return None, f"unreadable {bandit_log.name}"
+    # A JSON list or scalar would raise AttributeError on .get, and
+    # `"results": null` would raise TypeError in len(). Neither should crash a
+    # scorecard; both mean "cannot measure", which is already a neutral answer.
+    if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
+        return None, f"{bandit_log.name} is not a bandit report (no results list)"
+    measured = len(payload["results"])
 
     if baseline <= 0:
         return True, f"baseline zero (measured {measured})"
