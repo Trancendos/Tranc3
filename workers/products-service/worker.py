@@ -118,7 +118,7 @@ class ProductsDatabase:
         with self._cursor() as cur:
             cur.execute(f"INSERT INTO products ({', '.join(cols)}) VALUES ({placeholders})", vals)
 
-        # Ensure we only return the filtered data we actually inserted
+        # Ensure we only return the filtered data that was actually inserted
         filtered_data["product_id"] = data.get(
             "product_id"
         )  # retain the product_id if not in filtered data initially
