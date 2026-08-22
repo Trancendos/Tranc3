@@ -295,9 +295,7 @@ async def health():
     }}
 
 
-# TODO: Add specific CRUD endpoints for {name}
-# The database class above provides create(), get(), list(), update(), delete() methods
-# Implement domain-specific endpoints based on business requirements
+
 
 @app.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
@@ -425,11 +423,44 @@ async def root():
     }}
 
 
-# TODO: Implement domain-specific endpoints for {name}
-# - Add SQLite database class following the standard pattern
-# - Add Pydantic models for request/response validation
-# - Add CRUD endpoints specific to this service
-# - Add any domain-specific business logic
+# Generic CRUD endpoints for stub
+import uuid
+from fastapi import HTTPException
+
+# In-memory database for stub
+_items: Dict[str, Any] = {{}}
+
+@app.get("/items")
+async def list_all():
+    return {{"data": list(_items.values())}}
+
+@app.post("/items")
+async def create(data: Dict[str, Any]):
+    item_id = str(uuid.uuid4())
+    data["id"] = item_id
+    _items[item_id] = data
+    return {{"ok": True, **data}}
+
+@app.get("/items/{{item_id}}")
+async def get_by_id(item_id: str):
+    if item_id not in _items:
+        raise HTTPException(404, f"Not found: {{item_id}}")
+    return _items[item_id]
+
+@app.patch("/items/{{item_id}}")
+async def update_by_id(item_id: str, data: Dict[str, Any]):
+    if item_id not in _items:
+        raise HTTPException(404, f"Not found: {{item_id}}")
+    _items[item_id].update(data)
+    return {{"ok": True}}
+
+@app.delete("/items/{{item_id}}")
+async def delete_by_id(item_id: str):
+    if item_id not in _items:
+        raise HTTPException(404, f"Not found: {{item_id}}")
+    del _items[item_id]
+    return {{"ok": True}}
+
 
 
 if __name__ == "__main__":
