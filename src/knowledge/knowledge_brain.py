@@ -267,7 +267,13 @@ class KnowledgeBrain:
             self._conn.execute(
                 """INSERT OR IGNORE INTO links(source_id, target_id, alias, relation, weight)
                    VALUES (?, ?, ?, ?, ?)""",
-                (link.source_id, link.target_id, link.alias, link.relation, link.weight),
+                (
+                    link.source_id,
+                    link.target_id,
+                    link.alias,
+                    link.relation,
+                    link.weight,
+                ),
             )
         self._conn.commit()
         return page.id
@@ -279,6 +285,18 @@ class KnowledgeBrain:
             return None
         return self._row_to_page(row)
 
+    async def get_pages(self, page_ids: list[str]) -> dict[str, KBPage]:
+        """Retrieve multiple pages by ids; returns a dict mapping id to KBPage."""
+        if not page_ids:
+            return {}
+        placeholders = ",".join(["?"] * len(page_ids))
+        # sourcery skip: avoid-sql-injection
+        rows = self._conn.execute(
+            f"SELECT * FROM pages WHERE id IN ({placeholders})",  # nosec B608
+            tuple(page_ids),
+        ).fetchall()
+        return {row["id"]: self._row_to_page(row) for row in rows}
+
     async def delete_page(self, page_id: str) -> bool:
         """Delete a page; returns True if a row was deleted."""
         cursor = self._conn.execute("DELETE FROM pages WHERE id = ?", (page_id,))
@@ -286,7 +304,8 @@ class KnowledgeBrain:
         if cursor.rowcount > 0:
             self._bm25.remove(page_id)
             self._conn.execute(
-                "DELETE FROM links WHERE source_id = ? OR target_id = ?", (page_id, page_id)
+                "DELETE FROM links WHERE source_id = ? OR target_id = ?",
+                (page_id, page_id),
             )
             self._conn.commit()
             return True
@@ -296,7 +315,8 @@ class KnowledgeBrain:
         """List all pages, optionally filtered by source."""
         if source is not None:
             rows = self._conn.execute(
-                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC", (source,)
+                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC",
+                (source,),
             ).fetchall()
         else:
             rows = self._conn.execute("SELECT * FROM pages ORDER BY updated_at DESC").fetchall()
@@ -313,8 +333,12 @@ class KnowledgeBrain:
         """Search pages; use_vector=False forces BM25-only (no FAISS required)."""
         hits = self._bm25.query(query, top_k=top_k)
         results: list[SearchResult] = []
+        if not hits:
+            return results
+        doc_ids = [doc_id for doc_id, _ in hits]
+        pages_dict = await self.get_pages(doc_ids)
         for doc_id, score in hits:
-            page = await self.get_page(doc_id)
+            page = pages_dict.get(doc_id)
             if page is None:
                 continue
             excerpt = _make_excerpt(page.content, query)
@@ -350,9 +374,13 @@ class KnowledgeBrain:
         """Retrieve memories for an agent scoped by agent_id tag."""
         hits = self._bm25.query(query, top_k=top_k * 3)
         results: list[SearchResult] = []
+        if not hits:
+            return results
         agent_tag = f"agent:{agent_id}"
+        doc_ids = [doc_id for doc_id, _ in hits]
+        pages_dict = await self.get_pages(doc_ids)
         for doc_id, score in hits:
-            page = await self.get_page(doc_id)
+            page = pages_dict.get(doc_id)
             if page is None:
                 continue
             if agent_tag not in page.tags:
