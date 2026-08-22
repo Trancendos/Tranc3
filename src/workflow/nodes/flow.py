@@ -123,12 +123,19 @@ class LoopNode(BaseNode):
 
         semaphore = asyncio.Semaphore(max(max_concurrency, 1))
 
+        # Built once and shared by every item rather than rebuilt per item.
+        # This is only safe because no BaseNode subclass mutates self outside
+        # __init__ — execute() reads self.config and writes nothing — so
+        # concurrent items (max_concurrency > 1) cannot corrupt each other. A
+        # node that ever carries per-execution state on self must be
+        # constructed inside _run_item instead.
+        inner_nodes = [create_node(nc) for nc in inner_configs]
+
         async def _run_item(item: Any, idx: int) -> Any:
             async with semaphore:
                 item_inputs = {**inputs, "item": item, "index": idx}
                 item_result: Any = item
-                for nc in inner_configs:
-                    node = create_node(nc)
+                for node in inner_nodes:
                     res = await node.execute(item_inputs, context)
                     if res.success:
                         item_inputs.update({"previous": res.output})
