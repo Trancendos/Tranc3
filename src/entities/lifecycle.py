@@ -115,7 +115,9 @@ class LifecycleEmitter:
                 if asyncio.iscoroutine(result):
                     await result
             except Exception as e:
-                logger.error(f"Error in lifecycle listener for event {key}: {e}", exc_info=True)  # listeners should not crash the emitter
+                logger.error(
+                    f"Error in lifecycle listener for event {key}: {e}", exc_info=True
+                )  # listeners should not crash the emitter
 
         # Fire catch-all listeners
         for listener in self._any_listeners:

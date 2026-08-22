@@ -1,6 +1,7 @@
-import asyncio
 import pytest
+
 from src.entities.lifecycle import LifecycleEmitter, LifecycleEvent
+
 
 @pytest.mark.asyncio
 async def test_lifecycle_emitter_exceptions():
