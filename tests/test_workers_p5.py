@@ -60,7 +60,9 @@ def _import_gateway_worker_no_evict(full: Path) -> object:
     if mod is None:
         for name in ("config", "database", "service"):
             sys.modules.pop(name, None)
-        spec = importlib.util.spec_from_file_location("workers.gateway-service.worker", full)
+        spec = importlib.util.spec_from_file_location(
+            "workers.gateway-service.worker", full
+        )
         mod = importlib.util.module_from_spec(spec)
         sys.modules["workers.gateway-service.worker"] = mod
         spec.loader.exec_module(mod)
@@ -109,7 +111,9 @@ def _import_worker(rel_path: str) -> object:
 
 def _client_for(mod, extra_headers: dict | None = None) -> TestClient:
     """Create a TestClient, injecting X-Internal-Secret if the module uses one."""
-    secret = getattr(mod, "_INTERNAL_SECRET", None) or getattr(mod, "INTERNAL_SECRET", None)
+    secret = getattr(mod, "_INTERNAL_SECRET", None) or getattr(
+        mod, "INTERNAL_SECRET", None
+    )
     headers: dict = {}
     if secret:
         headers["X-Internal-Secret"] = secret
@@ -201,12 +205,8 @@ class TestApiGateway:
 
 
 class TestBackupService:
-
     @pytest.fixture(autouse=True)
-    def setup_env_vars(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("BACKUP_ROOT", str(tmp_path / "backups"))
-    @pytest.fixture(autouse=True)
-    def setup_env_vars(self, tmp_path, monkeypatch):
+    def setup(self, tmp_path, monkeypatch):
         monkeypatch.setenv("BACKUP_ROOT", str(tmp_path / "backups"))
         self.mod = _import_worker("workers/backup-service/worker.py")
         self.client = _client_for(self.mod)
@@ -407,15 +407,19 @@ class TestInfinityAdminService:
     )
     def test_admin_config_with_auth(self):
         client = TestClient(
-            self.mod.app, headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")}
+            self.mod.app,
+            headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")},
         )
         r = client.get("/admin/config")
         assert r.status_code in (200, 404, 500)
 
-    @pytest.mark.skip(reason="Same Dimensional JWT-gateway blocker as test_admin_config_with_auth.")
+    @pytest.mark.skip(
+        reason="Same Dimensional JWT-gateway blocker as test_admin_config_with_auth."
+    )
     def test_admin_primes(self):
         client = TestClient(
-            self.mod.app, headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")}
+            self.mod.app,
+            headers={"X-Internal-Secret": os.environ.get("INTERNAL_SECRET", "")},
         )
         r = client.get("/admin/primes")
         assert r.status_code in (200, 404, 500)
@@ -460,7 +464,9 @@ class TestInfinityOneService:
 class TestInfinityPortalService:
     @pytest.fixture(autouse=True)
     def setup(self, tmp_path):
-        os.environ["INFINITY_PORTAL_DB_PATH"] = str(tmp_path / "infinity_portal_test.db")
+        os.environ["INFINITY_PORTAL_DB_PATH"] = str(
+            tmp_path / "infinity_portal_test.db"
+        )
         self.mod = _import_worker("workers/infinity-portal-service/worker.py")
         self.client = _client_for(self.mod)
 
@@ -520,7 +526,9 @@ class TestInfinityPortalService:
 class TestInfinityShardsService:
     @pytest.fixture(autouse=True)
     def setup(self, tmp_path):
-        os.environ["INFINITY_SHARDS_DB_PATH"] = str(tmp_path / "infinity_shards_test.db")
+        os.environ["INFINITY_SHARDS_DB_PATH"] = str(
+            tmp_path / "infinity_shards_test.db"
+        )
         self.mod = _import_worker("workers/infinity-shards-service/worker.py")
         # Entity-shards/power lookups depend on state populated during app
         # startup (lifespan) — _client_for()'s plain TestClient(app), used
@@ -531,7 +539,9 @@ class TestInfinityShardsService:
             self.mod, "INTERNAL_SECRET", None
         )
         headers = {"X-Internal-Secret": secret} if secret else {}
-        with TestClient(self.mod.app, headers=headers, raise_server_exceptions=False) as client:
+        with TestClient(
+            self.mod.app, headers=headers, raise_server_exceptions=False
+        ) as client:
             self.client = client
             yield
 
