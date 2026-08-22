@@ -98,21 +98,25 @@ class CveScanner:
         )
 
         all_items: List[Any] = []
-        for ingestor in ingestors:
-            try:
-                items = ingestor.fetch()
-                all_items.extend(items)
-                logger.debug(
-                    "cryptex.cve_scanner: %s returned %d items",
-                    type(ingestor).__name__,
-                    len(items),
-                )
-            except Exception as exc:
-                logger.warning(
-                    "cryptex.cve_scanner: ingestor %s failed: %s",
-                    type(ingestor).__name__,
-                    exc,
-                )
+        import concurrent.futures
+        if ingestors:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(ingestors)) as executor:
+                futures = [executor.submit(ingestor.fetch) for ingestor in ingestors]
+                for ingestor, future in zip(ingestors, futures):
+                    try:
+                        items = future.result()
+                        all_items.extend(items)
+                        logger.debug(
+                            "cryptex.cve_scanner: %s returned %d items",
+                            type(ingestor).__name__,
+                            len(items),
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "cryptex.cve_scanner: ingestor %s failed: %s",
+                            type(ingestor).__name__,
+                            exc,
+                        )
 
         # Deduplicate by CVE-ID (keep first seen)
         seen_ids: set[str] = set()
