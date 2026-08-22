@@ -242,6 +242,153 @@ class TestHealthCheckerWithServer:
         server.shutdown()
 
     @pytest.mark.asyncio
+    async def test_check_healthy_service_no_aiohttp(self, healthy_server, monkeypatch):
+        """Test health check falls back to urllib when aiohttp is missing."""
+        import src.observability.health as health_module
+
+        monkeypatch.setattr(health_module, "aiohttp", None)
+
+        port = healthy_server
+        custom = {
+            "healthy-svc": {
+                "url": f"http://127.0.0.1:{port}/health",
+                "priority": "P0",
+                "named": "Healthy",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("healthy-svc")
+        assert result["status"] == "healthy"
+        assert result["service"] == "healthy-svc"
+
+    @pytest.mark.asyncio
+    async def test_check_degraded_service_no_aiohttp(self, degraded_server, monkeypatch):
+        import src.observability.health as health_module
+
+        monkeypatch.setattr(health_module, "aiohttp", None)
+        port = degraded_server
+        custom = {
+            "degraded-svc": {
+                "url": f"http://127.0.0.1:{port}/health",
+                "priority": "P1",
+                "named": "Degraded",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("degraded-svc")
+        assert result["status"] == "degraded"
+
+    @pytest.mark.asyncio
+    async def test_check_unhealthy_service_no_aiohttp(self, error_server, monkeypatch):
+        import src.observability.health as health_module
+
+        monkeypatch.setattr(health_module, "aiohttp", None)
+        port = error_server
+        custom = {
+            "error-svc": {
+                "url": f"http://127.0.0.1:{port}/health",
+                "priority": "P0",
+                "named": "Error",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("error-svc")
+        assert result["status"] == "unhealthy"
+
+    @pytest.mark.asyncio
+    async def test_check_exception_no_aiohttp(self, monkeypatch):
+        import src.observability.health as health_module
+
+        monkeypatch.setattr(health_module, "aiohttp", None)
+
+        custom = {
+            "error-svc": {
+                "url": "http://127.0.0.1:0/health",
+                "priority": "P0",
+                "named": "Error",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("error-svc")
+        assert result["status"] == "unhealthy"
+
+    @pytest.mark.asyncio
+    async def test_check_all_half_unhealthy(self, error_server, healthy_server):
+        import src.observability.health as health_module
+
+        custom = {
+            "svc-1": {"url": f"http://127.0.0.1:{error_server}/health", "priority": "P1"},
+            "svc-2": {"url": f"http://127.0.0.1:{error_server}/health", "priority": "P1"},
+            "svc-3": {"url": f"http://127.0.0.1:{healthy_server}/health", "priority": "P1"},
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_all()
+        assert result["overall"] == "unhealthy"
+
+    @pytest.mark.asyncio
+    async def test_check_healthy_service_with_aiohttp(self, healthy_server):
+        import src.observability.health as health_module
+
+        port = healthy_server
+        custom = {
+            "healthy-svc": {
+                "url": f"http://127.0.0.1:{port}/health",
+                "priority": "P0",
+                "named": "Healthy",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("healthy-svc")
+        assert result["status"] == "healthy"
+
+    @pytest.mark.asyncio
+    async def test_check_degraded_service_with_aiohttp(self, degraded_server):
+        import src.observability.health as health_module
+
+        port = degraded_server
+        custom = {
+            "degraded-svc": {
+                "url": f"http://127.0.0.1:{port}/health",
+                "priority": "P1",
+                "named": "Degraded",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("degraded-svc")
+        assert result["status"] == "degraded"
+
+    @pytest.mark.asyncio
+    async def test_check_unhealthy_service_with_aiohttp(self, error_server):
+        import src.observability.health as health_module
+
+        port = error_server
+        custom = {
+            "error-svc": {
+                "url": f"http://127.0.0.1:{port}/health",
+                "priority": "P0",
+                "named": "Error",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("error-svc")
+        assert result["status"] == "unhealthy"
+
+    @pytest.mark.asyncio
+    async def test_check_exception_with_aiohttp(self):
+        import src.observability.health as health_module
+
+        custom = {
+            "error-svc": {
+                "url": "http://127.0.0.1:0/health",
+                "priority": "P0",
+                "named": "Error",
+            },
+        }
+        checker = health_module.HealthChecker(registry=custom)
+        result = await checker.check_service("error-svc")
+        assert result["status"] == "unhealthy"
+
+    @pytest.mark.asyncio
     async def test_check_healthy_service(self, healthy_server):
         port = healthy_server
         custom = {
