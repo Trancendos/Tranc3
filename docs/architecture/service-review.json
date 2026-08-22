@@ -158,6 +158,7 @@
       "workflow-engine-service"
     ],
     "ORPHANED": [
+      "__pycache__",
       "dimensional-nexus-service",
       "gateway-service",
       "optional-services-health"
@@ -186,7 +187,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "0a6f8e79",
+  "commit": "59df9ef",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -256,6 +257,7 @@
       "workflow-engine-service"
     ],
     "not built by any compose service": [
+      "__pycache__",
       "dimensional-nexus-service",
       "gateway-service",
       "optional-services-health"
@@ -297,7 +299,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-21T22:39:41.938201+00:00",
+  "generated_at": "2026-08-22T17:25:13.082016+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -4233,6 +4235,17 @@
       "service": "zot"
     },
     {
+      "build_context": "workers/__pycache__",
+      "checks": {},
+      "failures": [
+        "not built by any compose service"
+      ],
+      "has_dockerfile": false,
+      "lifecycle": "ORPHANED",
+      "python_files": 0,
+      "service": "__pycache__"
+    },
+    {
       "build_context": "workers/dimensional-nexus-service",
       "checks": {},
       "failures": [
@@ -4451,7 +4464,7 @@
   "totals": {
     "INFRA": 86,
     "NEEDS_WORK": 67,
-    "ORPHANED": 3,
+    "ORPHANED": 4,
     "RUNNING": 21
   }
 }

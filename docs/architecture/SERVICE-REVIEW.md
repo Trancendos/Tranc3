@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `0a6f8e79`. Regenerate with 
+Generated from repo state at `59df9ef`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -9,7 +9,7 @@ Generated from repo state at `0a6f8e79`. Regenerate with
 |---|---:|---|
 | **INFRA** | 86 | third-party image — counted, not checked |
 | **NEEDS_WORK** | 67 | deployed, but at least one connection check fails |
-| **ORPHANED** | 3 | real code and a Dockerfile, nothing builds it |
+| **ORPHANED** | 4 | real code and a Dockerfile, nothing builds it |
 | **RUNNING** | 21 | deployed and every applicable check passes |
 
 ## What is failing, by check
@@ -18,7 +18,7 @@ Generated from repo state at `0a6f8e79`. Regenerate with
 |---|---:|---|
 | imports_resolve | 65 | `analytics-service`, `artifactory-service`, `audit-service`, `basement`, `blender-worker`, `cache-service`, `cdn-service`, `chaos-party` … +57 |
 | telemetry_reaches | 34 | `audit-service`, `blender-worker`, `cdn-service`, `config-service`, `cron-service`, `deepagents-orchestrator-service`, `email-service`, `ffmpeg-worker` … +26 |
-| not built by any compose service | 3 | `dimensional-nexus-service`, `gateway-service`, `optional-services-health` |
+| not built by any compose service | 4 | `__pycache__`, `dimensional-nexus-service`, `gateway-service`, `optional-services-health` |
 
 ## Dimensionals — what is in scope, what is not
 
@@ -356,6 +356,9 @@ that none of them import.
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ## ORPHANED
+
+### `__pycache__`
+- **not built by any compose service** —
 
 ### `dimensional-nexus-service`
 - **not built by any compose service** — 
