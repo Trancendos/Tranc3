@@ -1,0 +1,9 @@
+🎯 **What:** The testing gap for the `call_mcp_tool` method in `src/main_enhanced.py` has been addressed. The function looks up an MCP tool in the registry and calls its handler, but previously lacked unit tests.
+
+📊 **Coverage:** The following scenarios are now tested:
+- Error handling when the MCP registry is unavailable.
+- Error handling when a requested tool is not found in the registry.
+- Successful invocation of a tool with provided parameters.
+- Successful invocation of a tool using default parameters (empty dictionary).
+
+✨ **Result:** Test coverage for `src/main_enhanced.py` is improved, ensuring the core functionality of MCP tool invocation handles missing dependencies and executes handlers correctly.
