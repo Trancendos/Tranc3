@@ -114,8 +114,7 @@ class BM25Index:
             for tok in set(tokens):
                 df[tok] = df.get(tok, 0) + 1
         self._idf = {
-            tok: math.log((N - freq + 0.5) / (freq + 0.5) + 1.0)
-            for tok, freq in df.items()
+            tok: math.log((N - freq + 0.5) / (freq + 0.5) + 1.0) for tok, freq in df.items()
         }
         self._dirty = False
 
@@ -180,9 +179,7 @@ class KnowledgeBrain:
         brain = KnowledgeBrain("data/knowledge.db", markdown_dir=...) # with markdown import dir
     """
 
-    def __init__(
-        self, db_path: str = ":memory:", markdown_dir: Optional[str] = None
-    ) -> None:
+    def __init__(self, db_path: str = ":memory:", markdown_dir: Optional[str] = None) -> None:
         self._db_path = db_path
         self._markdown_dir = Path(markdown_dir) if markdown_dir else None
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
@@ -219,9 +216,7 @@ class KnowledgeBrain:
     def _rebuild_index(self) -> None:
         rows = self._conn.execute("SELECT id, title, content FROM pages").fetchall()
         for row in rows:
-            self._bm25._docs[row["id"]] = BM25Index._tokenize(
-                f"{row['title']} {row['content']}"
-            )
+            self._bm25._docs[row["id"]] = BM25Index._tokenize(f"{row['title']} {row['content']}")
         if rows:
             self._bm25._dirty = True
 
@@ -285,9 +280,7 @@ class KnowledgeBrain:
 
     async def get_page(self, page_id: str) -> Optional[KBPage]:
         """Retrieve a page by id; returns None if not found."""
-        row = self._conn.execute(
-            "SELECT * FROM pages WHERE id = ?", (page_id,)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM pages WHERE id = ?", (page_id,)).fetchone()
         if row is None:
             return None
         return self._row_to_page(row)
@@ -298,7 +291,8 @@ class KnowledgeBrain:
             return {}
         placeholders = ",".join(["?"] * len(page_ids))
         rows = self._conn.execute(
-            f"SELECT * FROM pages WHERE id IN ({placeholders})", tuple(page_ids)  # sourcery skip: avoid-sql-injection
+            f"SELECT * FROM pages WHERE id IN ({placeholders})",
+            tuple(page_ids),  # sourcery skip: avoid-sql-injection
         ).fetchall()
         return {row["id"]: self._row_to_page(row) for row in rows}
 
@@ -324,9 +318,7 @@ class KnowledgeBrain:
                 (source,),
             ).fetchall()
         else:
-            rows = self._conn.execute(
-                "SELECT * FROM pages ORDER BY updated_at DESC"
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM pages ORDER BY updated_at DESC").fetchall()
         return [self._row_to_page(r) for r in rows]
 
     # ── Async Search ──────────────────────────────────────────────────────────
@@ -462,9 +454,7 @@ def _parse_wikilinks(source_id: str, content: str) -> list[KBLink]:
             target, alias = raw, ""
         target = target.strip().lower().replace(" ", "-")
         if target and target != source_id:
-            links.append(
-                KBLink(source_id=source_id, target_id=target, alias=alias.strip())
-            )
+            links.append(KBLink(source_id=source_id, target_id=target, alias=alias.strip()))
     return links
 
 
