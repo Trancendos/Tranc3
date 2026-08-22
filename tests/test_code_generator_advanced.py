@@ -1,21 +1,28 @@
 import pytest
+
 from src.skills.code_generator import AdvancedCodeGenerator, CodeGenerationRequest
+
 
 @pytest.fixture
 def generator():
     return AdvancedCodeGenerator()
+
 
 def test_extract_pydantic_fields_no_fields(generator):
     req = CodeGenerationRequest(description="Just a simple router")
     fields = generator._extract_pydantic_fields(req.description)
     assert fields == "pass"
 
+
 def test_extract_pydantic_fields_with_fields(generator):
-    req = CodeGenerationRequest(description="Create a model with name: str, age: int, and is_active (bool)")
+    req = CodeGenerationRequest(
+        description="Create a model with name: str, age: int, and is_active (bool)"
+    )
     fields = generator._extract_pydantic_fields(req.description)
     assert "name: str" in fields
     assert "age: int" in fields
     assert "is_active: bool" in fields
+
 
 def test_apply_substitutions_with_fields(generator):
     template = """
@@ -33,6 +40,7 @@ def test_apply_substitutions_with_fields(generator):
     assert "age: int" in result
     assert "# TODO: define fields" not in result
     assert "# TODO: define response fields" not in result
+
 
 def test_apply_substitutions_no_fields(generator):
     template = """
