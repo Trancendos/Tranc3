@@ -74,6 +74,13 @@ mounted in `api.py`).
   `tranc3-*` service names stay only where they genuinely serve the Tier-3 engine
   (Tranc3Engine, tranc3-backend, tranc3-ai); new platform-level names use
   "trancendos-*". See `config/estate/naming_conventions.md` §0.
+- **Norman Hawkins holds two different tiers and they are not interchangeable.** He is
+  **The Observatory's Lead AI (Tier 3)** and separately **The Spark's Prime (Tier 2)**.
+  The Spark's own Lead AI is **Imfy** (`AID-SPK-01`) — `PLATFORM_ENTITIES.md` PID-SPK and
+  `src/entities/platform.py` have always said so; this table said "Norman Hawkins" until
+  2026-08-22, which put a Prime in a Lead AI column. `src/personality/role_resolution.py`
+  had the same collapse, mapping Imfy onto `norman-hawkins.json`, so The Spark answered in
+  The Observatory's voice. Both are corrected; `imfy.json` now exists.
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
 - "tAimra" = location name; "tAImra" = its Lead AI name (different capitalisation — both correct)
@@ -104,7 +111,7 @@ mounted in `api.py`).
 
 | Code Name | Lead AI (Tier 3) | Role / Description | Status | Foundation |
 |---|---|---|---|---|
-| **The Spark** | Norman Hawkins | MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE | ✅ In repo | `src/mcp/` |
+| **The Spark** | Imfy | MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE (Norman Hawkins is The Spark's **Prime**, Tier 2 — not its Lead AI) | ✅ In repo | `src/mcp/` |
 | **The Digital Grid** | Tyler Towncroft | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
 | **The Void** | Prometheus | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
 | **The Workshop** | Larry Lowhammer | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
@@ -192,7 +199,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `wiki-content/Architecture-CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python, describing the Hybrid/Local path once funded (moved from repo root — see `docs/WIKI_INDEX.md`)
 - `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
 - `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
-- `docs/architecture/ea-workbook/` — EA/CMDB workbook (17 CSVs + runbooks/API-spec/compliance
+- `docs/architecture/ea-workbook/` — EA/CMDB workbook (19 CSVs + runbooks/API-spec/compliance
   docs) covering 6 real anchor services in depth (The Spark, The Digital Grid, Infinity,
   The Void, The Workshop, The Observatory) — not a full inventory of all 90+ services
 
@@ -395,7 +402,11 @@ Key module domains under `src/`:
 - `ai_gateway/` — **AI Gateway**: priority-based failover router, LRU cache, token budgets, provider health tracking
 - `auth/zero_trust.py` — **Zero Trust IAM**: device posture, MFA, geographic policies, risk scoring
 - `registry/` — BotRegistry: maps BotType → handler
-- `personality/` — 5 named personality instances (dorris-fontaine, cornelius-macintyre, the-guardian, vesper-nightingale, atlas-meridian)
+- `personality/` — 47 personality profile files in `src/personality/profiles/` covering the
+  platform's 47 Lead AIs (plus 6 `tranc3-*` base archetypes and the 2 unmapped legacy
+  profiles `vesper-nightingale` / `atlas-meridian`). Some files are deliberately shared:
+  the five Porters resolve to `the-porter-family.json`, The Dutchy to `predictive-lore.json`,
+  Nexus-Prime to `the-nexus-ai.json`
 - `monetisation/` — billing tiers: free (100 req/hr), pro £29 (1k/hr), business £149 (10k/hr)
 - `database/` — SQLAlchemy models + Alembic migrations
 - `database/vector_store.py` — Pinecone/in-memory vector store (user memory)
