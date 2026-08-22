@@ -1,6 +1,4 @@
-"""
-src/observability/observatory.py
-The Observatory — audit log for every action, change, activity on Trancendos.
+"""The Observatory — audit log for every action, change, activity on Trancendos.
 
 Every write operation anywhere in the platform emits an AuditEvent.
 Events are:
@@ -10,8 +8,8 @@ Events are:
   4. Forwarded to The Void when secrets are accessed
 
 Usage:
-  from src.observability.observatory import observe
-  observe("user.login", actor="user:42", target="auth", metadata={"ip": "..."})
+    from src.observability.observatory import observe
+    observe("user.login", actor="user:42", target="auth", metadata={"ip": "..."})
 """
 
 from __future__ import annotations
