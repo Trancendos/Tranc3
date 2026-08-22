@@ -398,33 +398,39 @@ async def update_user(user_id: str, update: UserUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
-    updates: dict = {}
-    if update.display_name is not None:
-        updates["display_name"] = update.display_name
-    if update.email is not None:
-        updates["email"] = str(update.email)
-    if update.role is not None:
-        updates["role"] = update.role
-    if update.preferences is not None:
-        updates["preferences"] = json.dumps(update.preferences)
-    if update.is_active is not None:
-        updates["is_active"] = 1 if update.is_active else 0
-    if update.bio is not None:
-        updates["bio"] = update.bio
-    if update.avatar_url is not None:
-        updates["avatar_url"] = update.avatar_url
-    if update.timezone is not None:
-        updates["timezone"] = update.timezone
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    display_name = (
+        update.display_name if update.display_name is not None else existing["display_name"]
+    )
+    email = str(update.email) if update.email is not None else existing["email"]
+    role = update.role if update.role is not None else existing["role"]
+    preferences = (
+        json.dumps(update.preferences)
+        if update.preferences is not None
+        else existing["preferences"]
+    )
+    is_active = (
+        (1 if update.is_active else 0) if update.is_active is not None else existing["is_active"]
+    )
+    bio = update.bio if update.bio is not None else existing["bio"]
+    avatar_url = update.avatar_url if update.avatar_url is not None else existing["avatar_url"]
+    timezone_val = update.timezone if update.timezone is not None else existing["timezone"]
+    updated_at = datetime.now(timezone.utc).isoformat()
 
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
-    # nosemgrep: python.lang.security.audit.hardcoded-sql-expressions.hardcoded-sql-expression
-    # nosec B608
-    query = "UPDATE users SET " + set_clause + " WHERE user_id = ?"
     db.execute(
-        query,
-        (*updates.values(), user_id),
-    )  # sourcery skip: avoid-sql-injection
+        "UPDATE users SET display_name = ?, email = ?, role = ?, preferences = ?, is_active = ?, bio = ?, avatar_url = ?, timezone = ?, updated_at = ? WHERE user_id = ?",
+        (
+            display_name,
+            email,
+            role,
+            preferences,
+            is_active,
+            bio,
+            avatar_url,
+            timezone_val,
+            updated_at,
+            user_id,
+        ),
+    )
     db.commit()
 
     row = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
