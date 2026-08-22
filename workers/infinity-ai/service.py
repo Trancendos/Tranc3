@@ -193,7 +193,7 @@ class OpenRouterClient:
             headers = {
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://trancendos.com",
-                "X-Title": "Tranc3 AI Gateway"
+                "X-Title": "Tranc3 AI Gateway",
             }
             if self.api_key:
                 headers["Authorization"] = f"Bearer {self.api_key}"
@@ -203,12 +203,16 @@ class OpenRouterClient:
                     f"{self.base_url}/chat/completions",
                     json=payload,
                     headers=headers,
-                    timeout=60.0
+                    timeout=60.0,
                 )
                 resp.raise_for_status()
                 return resp.json()
         except httpx.HTTPStatusError as e:
-            logger.warning("OpenRouter HTTP error: %s %s", e.response.status_code, e.response.reason_phrase)
+            logger.warning(
+                "OpenRouter HTTP error: %s %s",
+                e.response.status_code,
+                e.response.reason_phrase,
+            )
             return None
         except Exception as e:
             logger.warning("OpenRouter request failed: %s", e)
@@ -242,7 +246,10 @@ class HuggingFaceClient:
             prompt = "\n".join(f"{m.role}: {m.content}" for m in messages) + "\nassistant:"
             payload = {
                 "inputs": prompt,
-                "parameters": {"max_new_tokens": max_tokens, "temperature": temperature},
+                "parameters": {
+                    "max_new_tokens": max_tokens,
+                    "temperature": temperature,
+                },
             }
             data = json.dumps(payload).encode()
             actual_model = model if "/" in model else self.FREE_MODELS[0]
@@ -309,14 +316,14 @@ class GroqClient:
             }
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.api_key}",
             }
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{self.base_url}/chat/completions",
                     json=payload,
                     headers=headers,
-                    timeout=30.0
+                    timeout=30.0,
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -358,14 +365,14 @@ class CerebrasClient:
             }
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.api_key}",
             }
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{self.base_url}/chat/completions",
                     json=payload,
                     headers=headers,
-                    timeout=30.0
+                    timeout=30.0,
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -411,21 +418,29 @@ class TogetherClient:
             }
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.api_key}",
             }
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{self.base_url}/chat/completions",
                     json=payload,
                     headers=headers,
-                    timeout=30.0
+                    timeout=30.0,
                 )
                 resp.raise_for_status()
                 result = resp.json()
                 content = result["choices"][0]["message"]["content"]
-                return {"content": content, "model": actual_model, "provider": "together"}
+                return {
+                    "content": content,
+                    "model": actual_model,
+                    "provider": "together",
+                }
         except httpx.HTTPStatusError as e:
-            logger.warning("Together HTTP error: %s %s", e.response.status_code, e.response.reason_phrase)
+            logger.warning(
+                "Together HTTP error: %s %s",
+                e.response.status_code,
+                e.response.reason_phrase,
+            )
             return None
         except Exception as e:
             logger.warning("Together request failed: %s", sanitize_for_log(e))
@@ -461,21 +476,29 @@ class DeepSeekClient:
             }
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.api_key}",
             }
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{self.base_url}/chat/completions",
                     json=payload,
                     headers=headers,
-                    timeout=30.0
+                    timeout=30.0,
                 )
                 resp.raise_for_status()
                 result = resp.json()
                 content = result["choices"][0]["message"]["content"]
-                return {"content": content, "model": self.FREE_MODEL, "provider": "deepseek"}
+                return {
+                    "content": content,
+                    "model": self.FREE_MODEL,
+                    "provider": "deepseek",
+                }
         except httpx.HTTPStatusError as e:
-            logger.warning("DeepSeek HTTP error: %s %s", e.response.status_code, e.response.reason_phrase)
+            logger.warning(
+                "DeepSeek HTTP error: %s %s",
+                e.response.status_code,
+                e.response.reason_phrase,
+            )
             return None
         except Exception as e:
             logger.warning("DeepSeek request failed: %s", sanitize_for_log(e))
