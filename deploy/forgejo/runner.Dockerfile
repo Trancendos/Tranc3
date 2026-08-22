@@ -15,7 +15,7 @@
 #     into this container by docker-compose.yml; no dockerd of its own)
 #   - git, curl, jq, make
 
-FROM code.forgejo.org/forgejo/runner:3
+FROM code.forgejo.org/forgejo/runner:12
 
 USER root
 
