@@ -95,7 +95,7 @@ async def _stuck_task_sweeper() -> None:
                   AND (julianday('now') - julianday(started_at)) * 86400 > ?
                   AND retries + 1 >= max_retries
                 """,
-                (now_iso, STUCK_TIMEOUT_SECONDS)
+                (now_iso, STUCK_TIMEOUT_SECONDS),
             )
             failed = conn.execute("SELECT changes()").fetchone()[0]
 
@@ -112,7 +112,7 @@ async def _stuck_task_sweeper() -> None:
                   AND (julianday('now') - julianday(started_at)) * 86400 > ?
                   AND retries + 1 < max_retries
                 """,
-                (STUCK_TIMEOUT_SECONDS,)
+                (STUCK_TIMEOUT_SECONDS,),
             )
             requeued = conn.execute("SELECT changes()").fetchone()[0]
 
