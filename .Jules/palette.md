@@ -18,3 +18,6 @@
 ## 2024-05-15 - [Icon-only Buttons Accessibility]
 **Learning:** Icon-only buttons without explicit text fail `axe-core` accessibility tests.
 **Action:** Always add an `aria-label` attribute to icon-only buttons to provide an accessible name for screen readers, and add `aria-hidden="true"` to the inner SVG elements to avoid redundant announcements.
+## 2026-05-18 - [Fix silent exceptions in lifecycle listeners]
+**Learning:** `except Exception: pass` hides potentially critical errors without visibility. Found instances of this in `src/entities/lifecycle.py` affecting `emit_lifecycle` and `emit_lifecycle_sync`.
+**Action:** Replaced silent pass with `logger.error` indicating the event and error detail to maintain non-crashing behavior while ensuring observability.
