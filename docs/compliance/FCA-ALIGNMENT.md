@@ -20,10 +20,10 @@ The following are explicitly blocked by `src/compliance/ai_governance.py`:
 
 ```python
 PROHIBITED_USES = [
-    "financial_advice_regulated",           # COBS — regulated advice
-    "autonomous_binding_financial_decisions", # MiFID II
-    "investment_recommendation_personal",    # COBS 9A
-    "credit_recommendation_regulated",       # CCA-regulated
+    "financial_advice_regulated",  # COBS — regulated advice
+    "autonomous_binding_financial_decisions",  # MiFID II
+    "investment_recommendation_personal",  # COBS 9A
+    "credit_recommendation_regulated",  # CCA-regulated
 ]
 ```
 
