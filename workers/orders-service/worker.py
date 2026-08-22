@@ -369,13 +369,11 @@ async def update_listing(listing_id: str, req: UpdateListingRequest):
 
         params.append(listing_id)
 
+        update_sql = f"UPDATE listings SET {', '.join(updates)} WHERE id=?"  # noqa: S608
         # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query
         # The 'updates' list contains hardcoded column assignments appended directly by the server,
         # with user inputs passed as parameterized placeholders.
-        conn.execute(
-            f"UPDATE listings SET {', '.join(updates)} WHERE id=?",  # noqa: S608
-            params
-        )  # nosec B608
+        conn.execute(update_sql, params)  # nosec B608
         conn.commit()
 
         updated_row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
