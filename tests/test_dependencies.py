@@ -1,5 +1,7 @@
 import pytest
+
 from src.dependencies import ServiceContainer
+
 
 def test_service_container_has():
     sc = ServiceContainer()
@@ -39,8 +41,8 @@ def test_service_container_register_factory_non_singleton():
     sc.register_factory("non_singleton", my_factory, singleton=False)
     assert sc.has("non_singleton") is True
 
-    val1 = sc.get("non_singleton")
-    val2 = sc.get("non_singleton")
+    sc.get("non_singleton")
+    sc.get("non_singleton")
 
     # The get method implementation unconditionally caches as singleton
     # unless explicitly handled differently. But in current implementation it caches.
