@@ -225,7 +225,12 @@ def test_a_worker_path_outside_the_repository_is_rejected():
     import entity_registry_conformance as guard
 
     for bad, why in (
-        ("/tmp", "absolute"),
+        # /etc rather than /tmp: both are absolute and both exist, which is all
+        # this case needs, but bandit's B108 flags a literal "/tmp" as a
+        # hardcoded temp directory. A test fixture is not that -- yet silencing
+        # a security linter with a nosec comment to keep a fixture string is a
+        # worse habit than picking a different existing path.
+        ("/etc", "absolute"),
         ("/", "filesystem root"),
         ("../outside", "leading traversal"),
         ("workers/../../outside", "embedded traversal"),
