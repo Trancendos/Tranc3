@@ -431,31 +431,31 @@ from fastapi import HTTPException
 _items: Dict[str, Any] = {{}}
 
 @app.get("/items")
-async def list_all():
+async def list_items():
     return {{"data": list(_items.values())}}
 
 @app.post("/items")
-async def create(data: Dict[str, Any]):
+async def create_item(data: Dict[str, Any]):
     item_id = str(uuid.uuid4())
     data["id"] = item_id
     _items[item_id] = data
     return {{"ok": True, **data}}
 
 @app.get("/items/{{item_id}}")
-async def get_by_id(item_id: str):
+async def get_item(item_id: str):
     if item_id not in _items:
         raise HTTPException(404, f"Not found: {{item_id}}")
     return _items[item_id]
 
 @app.patch("/items/{{item_id}}")
-async def update_by_id(item_id: str, data: Dict[str, Any]):
+async def update_item(item_id: str, data: Dict[str, Any]):
     if item_id not in _items:
         raise HTTPException(404, f"Not found: {{item_id}}")
     _items[item_id].update(data)
     return {{"ok": True}}
 
 @app.delete("/items/{{item_id}}")
-async def delete_by_id(item_id: str):
+async def delete_item(item_id: str):
     if item_id not in _items:
         raise HTTPException(404, f"Not found: {{item_id}}")
     del _items[item_id]
