@@ -729,7 +729,7 @@ class AdvancedCodeGenerator:
                     ]
                 )
 
-        if not logic_lines:
+        if len(logic_lines) <= 2:
             logic_lines.append("pass")
 
         return "\n                ".join(logic_lines)
