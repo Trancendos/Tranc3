@@ -600,13 +600,29 @@ def _generate_pytest_tests(code: str, description: str) -> str:
             prefix = "async " if is_async else ""
             decorator = "@pytest.mark.asyncio\n" if is_async else ""
             call = f"await {fn}({', '.join(params)})" if is_async else f"{fn}({', '.join(params)})"
+            assertion = "assert result is not None  # TODO: strengthen assertion"
+            if getattr(node, "returns", None):
+                if isinstance(node.returns, ast.Constant) and node.returns.value is None:
+                    assertion = "assert result is None"
+                else:
+                    rt = None
+                    if isinstance(node.returns, ast.Name):
+                        rt = node.returns.id
+                    elif isinstance(node.returns, ast.Subscript) and isinstance(node.returns.value, ast.Name):
+                        rt = node.returns.value.id
+
+                    if rt in ("int", "float", "str", "bool", "dict", "list", "set", "tuple", "bytes"):
+                        assertion = f"assert isinstance(result, {rt})"
+                    elif rt in ("Dict", "List", "Set", "Tuple"):
+                        assertion = f"assert isinstance(result, {rt.lower()})"
+
             lines += [
                 f"{decorator}{prefix}def test_{fn}() -> None:",
                 f'    """Test {fn}."""',
                 "    # Arrange / Act",
                 f"    result = {call}",
                 "    # Assert",
-                "    assert result is not None  # TODO: strengthen assertion",
+                f"    {assertion}",
                 "",
             ]
 
