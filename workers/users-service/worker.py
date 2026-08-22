@@ -327,30 +327,37 @@ async def list_users(
     active_only: bool = Query(default=False),
 ):
     offset = (page - 1) * per_page
-    conditions = []
     params: list = []
-    if role:
-        conditions.append("role = ?")
+
+    if role and active_only:
         params.append(role)
-    if active_only:
-        conditions.append("is_active = 1")
-    if conditions:
-        where = "WHERE " + " AND ".join(conditions)
-        # nosemgrep: python.lang.security.audit.hardcoded-sql-expressions.hardcoded-sql-expression
-        # nosec B608
-        total = db.execute("SELECT COUNT(*) as c FROM users " + where, tuple(params)).fetchone()[
-            "c"
-        ]  # sourcery skip: avoid-sql-injection
-        # nosemgrep: python.lang.security.audit.hardcoded-sql-expressions.hardcoded-sql-expression
-        # nosec B608
+        total = db.execute(
+            "SELECT COUNT(*) as c FROM users WHERE role = ? AND is_active = 1", tuple(params)
+        ).fetchone()["c"]
         rows = db.execute(
-            "SELECT * FROM users " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM users WHERE role = ? AND is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
             tuple(params) + (per_page, offset),
-        ).fetchall()  # sourcery skip: avoid-sql-injection
+        ).fetchall()
+    elif role:
+        params.append(role)
+        total = db.execute(
+            "SELECT COUNT(*) as c FROM users WHERE role = ?", tuple(params)
+        ).fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE role = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            tuple(params) + (per_page, offset),
+        ).fetchall()
+    elif active_only:
+        total = db.execute("SELECT COUNT(*) as c FROM users WHERE is_active = 1").fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
     else:
         total = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
         rows = db.execute(
-            "SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?", (per_page, offset)
+            "SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
         ).fetchall()
     return UserListResponse(
         users=[_row_to_response(r) for r in rows],
