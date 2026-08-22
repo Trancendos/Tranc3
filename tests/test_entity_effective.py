@@ -72,3 +72,17 @@ class TestEffectiveEntity:
             assert entity.lead_ai in entity.lead_ais, (
                 f"{entity.lead_ai!r} not present in its own lead_ais {entity.lead_ais!r}"
             )
+
+
+    def test_build_overrides_map_mocking(self):
+
+        # We mock fetching overrides from a store by just providing the expected row format directly
+        rows = [
+            {"entity_type": "lead_ai", "slot": "", "override_name": "Mocked Prime"},
+            {"entity_type": "tier", "slot": "agent_alpha", "override_name": "8"},
+        ]
+
+        m = build_overrides_map(rows)
+
+        assert m["lead_ai"] == "Mocked Prime"
+        assert m["tier_agent_alpha"] == "8"
