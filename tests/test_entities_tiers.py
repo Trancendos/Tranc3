@@ -5,6 +5,7 @@ from src.entities.tiers import Prime, Sovereign
 
 def test_emergency_stop_logging(caplog):
     import logging
+
     caplog.set_level(logging.ERROR)
 
     sovereign = Sovereign("SOV-TEST", "Test Sovereign")
@@ -19,6 +20,7 @@ def test_emergency_stop_logging(caplog):
     class FailingAI:
         id = "AI-TEST"
         name = "Test AI"
+
         async def stop(self):
             raise RuntimeError("ai stop failed")
 
