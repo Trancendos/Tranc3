@@ -138,3 +138,56 @@ def test_routed_ports_survives_unparseable_compose():
 
     assert guard._routed_ports("{[not: valid: yaml") == set()
     assert guard._routed_ports("") == set()
+
+
+def test_a_location_that_declares_nothing_does_not_pass():
+    """The emptiest possible description must not be the safest one.
+
+    Every path and port rule sits behind `if wp:`, so a Location with no
+    worker_path once received no verdict at all -- the guard built to catch a
+    registry describing less than it should, silently accepting a Location
+    that described nothing. That is how the original drift stayed invisible:
+    27 of 43 Locations carried no port and no output mentioned it.
+    """
+    import entity_registry_conformance as guard
+
+    entity = guard.PLATFORM_ENTITIES["The Nexus"]  # deliberately NOT exempt
+    original_path, original_port = entity.worker_path, entity.worker_port
+    try:
+        object.__setattr__(entity, "worker_path", None)
+        object.__setattr__(entity, "worker_port", None)
+        rules = {v["rule"] for v in guard.collect_violations()}
+        assert "metadata-missing" in rules, (
+            "a non-exempt Location with no worker_path passed the guard; "
+            "declaring nothing must not be a way through it"
+        )
+    finally:
+        object.__setattr__(entity, "worker_path", original_path)
+        object.__setattr__(entity, "worker_port", original_port)
+
+    assert collect_violations() == [], "the probe leaked state into the registry"
+
+
+def test_exempt_locations_may_still_declare_nothing():
+    """The four non-worker Locations are the one legitimate exception.
+
+    Arcadia, The Workshop, The Chaos Party and The Citadel are not FastAPI
+    services, so requiring worker metadata of them would turn a correct state
+    into a permanent violation -- and a guard with a permanent violation is one
+    people learn to ignore.
+    """
+    import entity_registry_conformance as guard
+
+    for pid in guard.NON_WORKER_LOCATIONS:
+        entity = next(e for e in guard.PLATFORM_ENTITIES.values() if e.pid == pid)
+        original = entity.worker_path
+        try:
+            object.__setattr__(entity, "worker_path", None)
+            offenders = [
+                v
+                for v in guard.collect_violations()
+                if v["pid"] == pid and v["rule"] == "metadata-missing"
+            ]
+            assert not offenders, f"{pid} is exempt and must not be required to declare a path"
+        finally:
+            object.__setattr__(entity, "worker_path", original)

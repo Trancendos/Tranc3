@@ -164,11 +164,40 @@ def collect_violations() -> list[dict]:
         wp = (getattr(entity, "worker_path", None) or "").strip()
         port = getattr(entity, "worker_port", None)
 
+        if not wp:
+            # A Location that declares NOTHING must not pass by declaring
+            # nothing. Every check below is guarded by `if wp:`, so an absent
+            # worker_path used to mean an absent verdict -- the guard built to
+            # catch a registry describing less than it should, silently
+            # accepting the emptiest possible description. That is exactly how
+            # the original drift went unseen: 27 of 43 Locations carried no
+            # port, and no output said so.
+            if pid not in NON_WORKER_LOCATIONS:
+                violations.append(
+                    {
+                        "rule": "metadata-missing",
+                        "pid": pid,
+                        "location": loc,
+                        "detail": (
+                            "no worker_path; a Location that is not in "
+                            "NON_WORKER_LOCATIONS must say where it lives"
+                        ),
+                    }
+                )
+            continue
+
         if wp:
             by_path[wp.rstrip("/")].append(f"{pid} ({loc})")
 
             # 1. the path must exist on disk
-            if not (REPO / wp.rstrip("/")).exists():
+            try:
+                path_exists = (REPO / wp.rstrip("/")).exists()
+            except (OSError, ValueError):
+                # An embedded null byte or an over-long name raises instead of
+                # returning False. Treat it as missing -- unreadable is not
+                # the same as fine.
+                path_exists = False
+            if not path_exists:
                 violations.append(
                     {
                         "rule": "path-missing",
