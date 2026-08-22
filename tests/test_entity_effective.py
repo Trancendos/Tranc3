@@ -75,6 +75,7 @@ class TestEffectiveEntity:
 
     def test_list_all_effective(self):
         from src.entities.effective import list_all_effective
+
         entities = list_all_effective()
         assert len(entities) > 0
         assert any(e.pid == "PID-LAB" for e in entities)
@@ -100,11 +101,7 @@ class TestEffectiveEntity:
         assert ent.display_tier("missing_key", 99) == 99
 
     def test_tier_overrides_invalid_and_valid(self):
-        ov = {
-            "tier_agent_beta": "notanint",
-            "tier_bot_01": "1",
-            "tier_lead_ai": "invalid"
-        }
+        ov = {"tier_agent_beta": "notanint", "tier_bot_01": "1", "tier_lead_ai": "invalid"}
         ent = resolve_entity("PID-LAB", ov)
         assert ent is not None
 
