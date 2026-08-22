@@ -1,7 +1,7 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from src.dependencies import container, configure_services
+from src.dependencies import configure_services, container
+
 
 def test_configure_services_registers_factories():
     # Reset container to ensure clean state
@@ -19,14 +19,21 @@ def test_configure_services_registers_factories():
 
     # Assert services are registered
     expected_services = [
-        "redis", "db", "feature_flags", "vector_store",
-        "personality", "consciousness", "evolution", "quantum"
+        "redis",
+        "db",
+        "feature_flags",
+        "vector_store",
+        "personality",
+        "consciousness",
+        "evolution",
+        "quantum",
     ]
 
     for service in expected_services:
         assert container.has(service)
 
     assert container._initialized is True
+
 
 def test_configure_services_error_handling():
     # Reset container
@@ -40,12 +47,15 @@ def test_configure_services_error_handling():
         configure_services()
 
     # We will simulate ImportError by patching sys.modules
-    with patch.dict("sys.modules", {
-        "src.personality.matrix": None,
-        "src.bio_neural.consciousness_engine": None,
-        "src.evolution.self_improving_core": None,
-        "src.quantum.quantum_core": None,
-    }):
+    with patch.dict(
+        "sys.modules",
+        {
+            "src.personality.matrix": None,
+            "src.bio_neural.consciousness_engine": None,
+            "src.evolution.self_improving_core": None,
+            "src.quantum.quantum_core": None,
+        },
+    ):
         # Calling get() or the factory directly should return None for optional services
         assert container.get("personality") is None
         assert container.get("consciousness") is None
