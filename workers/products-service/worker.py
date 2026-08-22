@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import sqlite3
 import threading
 import uuid
@@ -39,6 +40,15 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
+
+def _sanitize_ident(ident: str) -> str:
+    """Ensure string is a valid SQLite identifier to prevent SQL injection."""
+    if not isinstance(ident, str) or not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", ident):
+        raise ValueError(f"Invalid identifier: {ident}")
+    return ident
+
+
 class ProductsDatabase:
     """SQLite-backed storage for products."""
 
@@ -93,7 +103,7 @@ class ProductsDatabase:
     def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         data.setdefault("created_at", now)
-        cols = list(data.keys())
+        cols = [_sanitize_ident(k) for k in data.keys()]
         vals = list(data.values())
         placeholders = ", ".join("?" for _ in cols)
         with self._cursor() as cur:
@@ -102,7 +112,8 @@ class ProductsDatabase:
 
     def get(self, id_field: str, id_value: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
-        row = conn.execute(f"SELECT * FROM products WHERE {id_field}=?", (id_value,)).fetchone()
+        safe_id = _sanitize_ident(id_field)
+        row = conn.execute(f"SELECT * FROM products WHERE {safe_id}=?", (id_value,)).fetchone()
         return dict(row) if row else None
 
     def list(self, limit: int = 50, offset: int = 0, **filters) -> List[Dict[str, Any]]:
@@ -110,7 +121,7 @@ class ProductsDatabase:
         query = "SELECT * FROM products WHERE 1=1"
         params: list = []
         for key, val in filters.items():
-            query += f" AND {key}=?"
+            query += f" AND {_sanitize_ident(key)}=?"
             params.append(val)
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
@@ -119,23 +130,25 @@ class ProductsDatabase:
 
     def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        sets = ", ".join(f"{k}=?" for k in data.keys())
+        safe_id = _sanitize_ident(id_field)
+        sets = ", ".join(f"{_sanitize_ident(k)}=?" for k in data.keys())
         vals = list(data.values()) + [id_value]
         with self._cursor() as cur:
-            cur.execute(f"UPDATE products SET {sets} WHERE {id_field}=?", vals)
+            cur.execute(f"UPDATE products SET {sets} WHERE {safe_id}=?", vals)
             return cur.rowcount > 0
 
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
+        safe_id = _sanitize_ident(id_field)
         if soft:
             with self._cursor() as cur:
                 cur.execute(
-                    f"UPDATE products SET is_active=0, updated_at=? WHERE {id_field}=?",
+                    f"UPDATE products SET is_active=0, updated_at=? WHERE {safe_id}=?",
                     (datetime.now(timezone.utc).isoformat(), id_value),
                 )
                 return cur.rowcount > 0
         else:
             with self._cursor() as cur:
-                cur.execute(f"DELETE FROM products WHERE {id_field}=?", (id_value,))
+                cur.execute(f"DELETE FROM products WHERE {safe_id}=?", (id_value,))
                 return cur.rowcount > 0
 
 

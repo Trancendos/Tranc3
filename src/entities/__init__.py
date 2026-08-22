@@ -3,7 +3,7 @@ Trancendos Platform Entity Registry
 """
 
 from .lifecycle import (
-    LifecycleContext,
+    LifecycleContext,  # noqa: F401
     LifecycleEmitter,
     LifecycleEvent,
     LifecycleListener,
