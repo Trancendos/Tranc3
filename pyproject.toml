@@ -170,3 +170,16 @@ output = ["json"]
 # ── osv-scanner ───────────────────────────────────────────────────────
 # Config file: .osv-scanner.toml (false-positive suppression)
 # Run: osv-scanner --recursive --config .osv-scanner.toml .
+
+[tool.poetry.dependencies]
+pyyaml = "^6.0.3"
+fastapi = "^0.141.1"
+pydantic = {extras = ["email"], version = "^2.13.4"}
+python-multipart = "^0.0.32"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.1,<10.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "pytest-asyncio (>=1.4.0,<2.0.0)"
+]
