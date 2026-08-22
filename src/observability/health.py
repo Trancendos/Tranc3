@@ -8,14 +8,12 @@ Replaces Cloudflare Health Checks and CF Analytics Dashboard.
 from __future__ import annotations
 
 import asyncio
-import aiohttp
-import json
 import logging
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+import aiohttp
 
 logger = logging.getLogger("tranc3.health")
 
@@ -296,7 +294,7 @@ class HealthChecker:
             }
             self._cache[name] = result
             return result
-        except aiohttp.ClientError as e:
+        except aiohttp.ClientError:
             result = {
                 "service": name,
                 "named": svc.get("named", ""),
@@ -336,7 +334,7 @@ class HealthChecker:
         tasks = [self.check_service(name) for name in names]
         completed_results = await asyncio.gather(*tasks)
 
-        results = {name: result for name, result in zip(names, completed_results)}
+        results = dict(zip(names, completed_results, strict=True))
 
         total = len(results)
         healthy = sum(1 for r in results.values() if r["status"] == "healthy")
