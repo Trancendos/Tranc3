@@ -290,11 +290,18 @@ from nanoservices.igi_gitops import IGIGitOps, DriftDetector, ForgejoConfig
 
 # Configure Forgejo connection
 forgejo = ForgejoConfig(
-    url="https://forgejo.local", repository="Trancendos/Tranc3", branch="main", flux_path="flux/"
+    url="https://forgejo.local",
+    repository="Trancendos/Tranc3",
+    branch="main",
+    flux_path="flux/"
 )
 
 # Create drift detector with auto-healing
-detector = DriftDetector(forgejo_config=forgejo, auto_heal=True, check_interval_seconds=30)
+detector = DriftDetector(
+    forgejo_config=forgejo,
+    auto_heal=True,
+    check_interval_seconds=30
+)
 
 # Start monitoring (runs in background)
 detector.start()
@@ -302,9 +309,7 @@ detector.start()
 # Check current drift status
 drifts = detector.check_drift()
 for drift in drifts:
-    print(
-        f"[{drift.severity.value}] {drift.resource_type}/{drift.resource_name}: {drift.drift_type}"
-    )
+    print(f"[{drift.severity.value}] {drift.resource_type}/{drift.resource_name}: {drift.drift_type}")
 ```
 
 ---

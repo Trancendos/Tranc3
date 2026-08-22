@@ -55,7 +55,6 @@ All 43 platform entities are defined in `PLATFORM_ENTITIES.md` and `src/entities
 ```python
 # CORRECT — look up via entity registry
 from src.entities.platform import get_entity_by_pid
-
 entity = get_entity_by_pid("PID-TDG")  # The Digital Grid
 
 # CORRECT — use canonical constant
@@ -170,7 +169,6 @@ try:
     from Dimensional.liquid.ltc_router import LiquidRouter
     from Dimensional.genetics.optimizer import GeneticOptimizer
     from Dimensional.genetics.fitness import LatencyThroughputFitness
-
     _DIMENSIONAL_AVAILABLE = True
 except ImportError:
     _DIMENSIONAL_AVAILABLE = False
@@ -190,7 +188,7 @@ from Dimensional.gas.pressure import PressureBalancer
 from Dimensional.gas.kinetic import KineticEnergyTracker
 
 balancer = PressureBalancer(peers)
-result = balancer.select()  # returns .selected peer
+result = balancer.select()          # returns .selected peer
 tracker = KineticEnergyTracker(worker="SID-NXS-01")
 tracker.record(rps)
 temp = balancer.system_temperature()  # scalar load indicator
@@ -205,7 +203,7 @@ temp = balancer.system_temperature()  # scalar load indicator
 from Dimensional.liquid.ltc_router import LiquidRouter
 
 router = LiquidRouter(peers)
-result = router.route(signals)  # signals: dict[str, float] | None
+result = router.route(signals)   # signals: dict[str, float] | None
 target = result.target
 ```
 
@@ -220,7 +218,7 @@ from Dimensional.genetics.fitness import LatencyThroughputFitness
 
 optimizer = GeneticOptimizer(fitness=LatencyThroughputFitness())
 result = await optimizer.evolve(generations=30, pop_size=20)
-best = result.best_config  # dict of optimised parameters
+best = result.best_config   # dict of optimised parameters
 ```
 
 Schedule `evolve()` periodically (e.g. every 100 cycles) to adapt routing weights.
@@ -288,21 +286,16 @@ from Dimensional.architecture.proactive_orchestrator import ProactiveOrchestrato
 
 app = FastAPI(title="<service-name>-worker", version="1.0.0")
 
-
 # Startup / shutdown lifecycle
 @app.on_event("startup")
 async def startup(): ...
 
-
 @app.on_event("shutdown")
 async def shutdown(): ...
 
-
 # Health endpoint (required)
 @app.get("/health")
-async def health():
-    return {"status": "ok", "service": "<name>"}
-
+async def health(): return {"status": "ok", "service": "<name>"}
 
 # Metrics endpoint (required)
 @app.get("/metrics")
@@ -359,7 +352,6 @@ from pydantic import BaseModel
 # 3. Dimensional (graceful-degradation wrapper)
 try:
     from Dimensional.gas.pressure import PressureBalancer
-
     _GAS_AVAILABLE = True
 except ImportError:
     _GAS_AVAILABLE = False
@@ -393,7 +385,6 @@ logger.info("%s started (tier=%d)", self.dna, self.TIER)
 ```python
 # Use canonical error codes from error_catalog
 from src.errors.error_catalog import ErrorCode
-
 raise HTTPException(status_code=400, detail=ErrorCode.INVALID_PAYLOAD.value)
 ```
 

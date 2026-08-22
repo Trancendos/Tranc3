@@ -128,13 +128,10 @@ re-export strategy is identical either way.)
 ```python
 # src/resilience/circuit_state.py  (canonical)
 from enum import Enum
-
-
 class CircuitState(str, Enum):
     CLOSED = "closed"
     OPEN = "open"
-    HALF_OPEN = "half_open"  # canonicalized (mesh migrates off "half-open")
-
+    HALF_OPEN = "half_open"   # canonicalized (mesh migrates off "half-open")
 
 # src/mesh/types.py            → from src.resilience.circuit_state import CircuitState  # noqa: F401
 # src/nanoservices/…           → from src.resilience.circuit_state import CircuitState  # noqa: F401

@@ -7,13 +7,13 @@ Replaces Cloudflare Health Checks and CF Analytics Dashboard.
 
 from __future__ import annotations
 
-import asyncio
+import json
 import logging
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-
-import aiohttp
 
 logger = logging.getLogger("tranc3.health")
 
@@ -253,82 +253,56 @@ class HealthChecker:
         self.registry = registry or SERVICE_REGISTRY
         self._cache: Dict[str, Dict[str, Any]] = {}
 
-    async def check_service(
-        self, name: str, timeout: float = 5.0, session: Optional[aiohttp.ClientSession] = None
-    ) -> Dict[str, Any]:
+    async def check_service(self, name: str, timeout: float = 5.0) -> Dict[str, Any]:
         """Check health of a single service."""
         svc = self.registry.get(name)
         if not svc:
             return {"service": name, "status": "unknown", "error": "Not registered"}
 
         url = svc["url"]
-
-        async def fetch(sess: aiohttp.ClientSession):
-            try:
-                client_timeout = aiohttp.ClientTimeout(total=timeout)
-                async with sess.get(
-                    url, headers={"Accept": "application/json"}, timeout=client_timeout
-                ) as resp:
-                    if resp.status >= 400:
-                        result = {
-                            "service": name,
-                            "named": svc.get("named", ""),
-                            "priority": svc.get("priority", ""),
-                            "status": "degraded" if resp.status < 500 else "unhealthy",
-                            "error": f"HTTP {resp.status}",
-                            "checked_at": datetime.now(timezone.utc).isoformat(),
-                        }
-                        self._cache[name] = result
-                        return result
-
-                    body = await resp.json()
-                    result = {
-                        "service": name,
-                        "named": svc.get("named", ""),
-                        "priority": svc.get("priority", ""),
-                        "status": "healthy",
-                        "details": body,
-                        "checked_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                    self._cache[name] = result
-                    return result
-            except asyncio.TimeoutError:
+        try:
+            req = urllib.request.Request(url, method="GET")
+            req.add_header("Accept", "application/json")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 — static localhost SERVICE_REGISTRY URLs
+                body = json.loads(resp.read().decode())
                 result = {
                     "service": name,
                     "named": svc.get("named", ""),
                     "priority": svc.get("priority", ""),
-                    "status": "unhealthy",
-                    "error": "Timeout",
+                    "status": "healthy",
+                    "details": body,
                     "checked_at": datetime.now(timezone.utc).isoformat(),
                 }
                 self._cache[name] = result
                 return result
-            except Exception as e:
-                result = {
-                    "service": name,
-                    "named": svc.get("named", ""),
-                    "priority": svc.get("priority", ""),
-                    "status": "unhealthy",
-                    "error": str(e),
-                    "checked_at": datetime.now(timezone.utc).isoformat(),
-                }
-                self._cache[name] = result
-                return result
-
-        if session:
-            return await fetch(session)
-        else:
-            async with aiohttp.ClientSession() as sess:
-                return await fetch(sess)
+        except urllib.error.HTTPError as e:
+            result = {
+                "service": name,
+                "named": svc.get("named", ""),
+                "priority": svc.get("priority", ""),
+                "status": "degraded" if e.code < 500 else "unhealthy",
+                "error": f"HTTP {e.code}",
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+            }
+            self._cache[name] = result
+            return result
+        except Exception as e:
+            result = {
+                "service": name,
+                "named": svc.get("named", ""),
+                "priority": svc.get("priority", ""),
+                "status": "unhealthy",
+                "error": str(e),
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+            }
+            self._cache[name] = result
+            return result
 
     async def check_all(self) -> Dict[str, Any]:
         """Check health of all registered services and compute overall status."""
         results = {}
-        async with aiohttp.ClientSession() as session:
-            tasks = [self.check_service(name, session=session) for name in self.registry]
-            completed = await asyncio.gather(*tasks)
-            for res in completed:
-                results[res["service"]] = res
+        for name in self.registry:
+            results[name] = await self.check_service(name)
 
         total = len(results)
         healthy = sum(1 for r in results.values() if r["status"] == "healthy")

@@ -306,62 +306,29 @@ Bidirectional event bridge between The HIVE and Sentinel Station. Data flow even
 class DataPriority(str, Enum):
     CRITICAL | HIGH | NORMAL | LOW | BACKGROUND
 
-
 class SwarmStatus(str, Enum):
     FORMING | ACTIVE | SCALING | DRAINING | COMPLETED | FAILED
-
 
 class PipelineStatus(str, Enum):
     PENDING | RUNNING | PAUSED | COMPLETED | FAILED
 
-
 class HiveDataSource(BaseModel):
     source_id, name, data_type, pillar, throughput_mbps, status, metadata
-
 
 class HiveDataSink(BaseModel):
     sink_id, name, data_type, pillar, consumption_rate_mbps, status, metadata
 
-
 class DataChunk(BaseModel):
-    (
-        chunk_id,
-        pipeline_id,
-        source_id,
-        sink_id,
-        priority,
-        size_bytes,
-    )
+    chunk_id, pipeline_id, source_id, sink_id, priority, size_bytes,
     checksum, status, hops, created_at, delivered_at, metadata
 
-
 class Swarm(BaseModel):
-    (
-        swarm_id,
-        name,
-        purpose,
-        status,
-        nodes,
-        data_type,
-    )
+    swarm_id, name, purpose, status, nodes, data_type,
     total_tasks, completed_tasks, failed_tasks, metadata
 
-
 class DataPipeline(BaseModel):
-    (
-        pipeline_id,
-        name,
-        source_id,
-        sink_ids,
-        status,
-        priority,
-    )
-    (
-        replication_factor,
-        total_chunks,
-        delivered_chunks,
-        failed_chunks,
-    )
+    pipeline_id, name, source_id, sink_ids, status, priority,
+    replication_factor, total_chunks, delivered_chunks, failed_chunks,
     throughput_mbps, latency_ms, metadata
 ```
 
@@ -440,7 +407,6 @@ class CoordinatorState(str, Enum):
     DEGRADED = "degraded"
     STOPPING = "stopping"
 
-
 class BridgeIdentity(str, Enum):
     INFINITY_BRIDGE = "infinity"
     NEXUS = "nexus"
@@ -458,16 +424,15 @@ class BridgeHealth:
     stats: Dict[str, Any]
     error: Optional[str] = None
 
-
 @dataclass
 class CrossBridgeEvent:
-    event_id: str  # Auto-generated UUID
-    source_bridge: str  # "infinity", "nexus", or "hive"
+    event_id: str           # Auto-generated UUID
+    source_bridge: str      # "infinity", "nexus", or "hive"
     target_bridges: List[str]  # Bridges to receive this event
-    sentinel_channel: str  # SentinelChannel value
-    event_type: str  # Event type identifier
-    payload: Dict[str, Any]  # Event data
-    timestamp: str  # ISO 8601 timestamp
+    sentinel_channel: str   # SentinelChannel value
+    event_type: str         # Event type identifier
+    payload: Dict[str, Any] # Event data
+    timestamp: str          # ISO 8601 timestamp
 ```
 
 ### Coordinator Lifecycle
@@ -570,10 +535,9 @@ The three bridges are formally defined in `Dimensional/infinity/nomenclature.py`
 
 ```python
 class TransferSystem(str, Enum):
-    NEXUS = "nexus"  # The Nexus — AI, Agent, and Bot traffic
-    HIVE = "hive"  # The HIVE — Data movement and swarm systems
-    BRIDGE = "bridge"  # The Infinity Bridge — User traffic
-
+    NEXUS = "nexus"      # The Nexus — AI, Agent, and Bot traffic
+    HIVE = "hive"        # The HIVE — Data movement and swarm systems
+    BRIDGE = "bridge"    # The Infinity Bridge — User traffic
 
 TRANSFER_SYSTEMS = {
     TransferSystem.NEXUS: {
@@ -593,12 +557,11 @@ TRANSFER_SYSTEMS = {
     },
 }
 
-
 class SentinelChannel(str, Enum):
     # ...
-    HIVE = "hive"  # HIVE Data Events
-    NEXUS = "nexus"  # Nexus Entity Events (AI/Agent/Bot movement)
-    BRIDGE = "bridge"  # Bridge User Events
+    HIVE = "hive"       # HIVE Data Events
+    NEXUS = "nexus"     # Nexus Entity Events (AI/Agent/Bot movement)
+    BRIDGE = "bridge"   # Bridge User Events
     # ...
 ```
 

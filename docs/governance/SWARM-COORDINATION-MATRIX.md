@@ -21,13 +21,8 @@ backends"` — implements a real, minimal, scalar reinforcement/decay pattern:
 ```python
 class ThresholdGuard:
     pheromone: float = 1.0
-
-    def reinforce(self) -> None:
-        self.pheromone = min(1.0, self.pheromone + 0.1)
-
-    def decay(self) -> None:
-        self.pheromone = max(0.0, self.pheromone - PHEROMONE_DECAY)
-
+    def reinforce(self) -> None: self.pheromone = min(1.0, self.pheromone + 0.1)
+    def decay(self) -> None: self.pheromone = max(0.0, self.pheromone - PHEROMONE_DECAY)
 
 def _select_backend() -> str:
     return max(available, key=lambda b: _GUARDS[b].pheromone) if available else "offline"

@@ -112,7 +112,8 @@ token = lib.get_token(token_label="YubiHSM")
 with token.open(user_pin="0001password") as session:
     # Generate RSA key pair
     pub, priv = session.generate_keypair(
-        pkcs11.KeyType.RSA, 2048, template={pkcs11.Attribute.TOKEN: True}
+        pkcs11.KeyType.RSA, 2048,
+        template={pkcs11.Attribute.TOKEN: True}
     )
     # Sign data
     signature = session.sign(priv, data, mechanism=pkcs11.Mechanism.SHA256_RSA_PKCS)
@@ -132,7 +133,8 @@ hsm = YubiHsm.connect("yubihsm://localhost:12345")
 session = hsm.create_session_derived(1, "password")
 
 # Generate an HMAC key
-key = session.create_hmac_key(0, "hmac-key", algorithms=[HMAC_SHA256], capabilities=SIGN_HMAC)
+key = session.create_hmac_key(0, "hmac-key",
+    algorithms=[HMAC_SHA256], capabilities=SIGN_HMAC)
 
 # Sign data
 signature = key.sign_hmac_sha256(data)
@@ -214,15 +216,14 @@ Ceph provides an S3-compatible API through the RADOS Gateway (RGW). Key findings
 import boto3
 
 # Connect to Ceph RGW
-s3 = boto3.client(
-    "s3",
-    endpoint_url="http://ceph-rgw:7480",
-    aws_access_key_id="CEPH_ACCESS_KEY",
-    aws_secret_access_key="CEPH_SECRET_KEY",
+s3 = boto3.client('s3',
+    endpoint_url='http://ceph-rgw:7480',
+    aws_access_key_id='CEPH_ACCESS_KEY',
+    aws_secret_access_key='CEPH_SECRET_KEY'
 )
 
 # Standard S3 operations work transparently
-s3.put_object(Bucket="tranc3-data", Key="path/to/object", Body=data)
+s3.put_object(Bucket='tranc3-data', Key='path/to/object', Body=data)
 ```
 
 **Benchmarking Insights (2025)**: Recent Ceph blog posts detail extensive benchmarking of the RGW, including TLS performance analysis. The RGW handles secure, scalable object storage effectively, with encryption-in-transit overhead being manageable.
