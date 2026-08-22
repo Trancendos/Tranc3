@@ -12,7 +12,7 @@ change_id = cab_gate.register_change(
     change_type="production_deployment",
     description="Deploy rate-limit-service v1.0 to port 8026",
     requestor="platform-engineer",
-    risk="low"
+    risk="low",
 )
 ```
 Or via The Town Hall UI: `http://trancendos.com/townhall/changes/new`
