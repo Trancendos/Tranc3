@@ -1,6 +1,5 @@
 """Tests for the dependency injection container."""
 
-import pytest
 
 from src.dependencies import ServiceContainer
 
