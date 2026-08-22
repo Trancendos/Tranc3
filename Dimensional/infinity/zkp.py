@@ -64,7 +64,7 @@ Usage
     assert result.valid is True
 
     # Tier membership proof (prove you're Tier.AI without revealing which AI)
-    tier_secret = os.environ.get("TIER_AI_SECRET", "default-dev-secret")
+    tier_secret = os.environ.get("TIER_AI_SECRET")
     tier_proof = prover.prove_tier_membership(tier=Tier.AI, shared_secret=tier_secret)
     tier_result = verifier.verify_tier_membership(tier_proof, expected_tier=Tier.AI)
 """
