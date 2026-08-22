@@ -18,3 +18,12 @@
 ## 2024-05-15 - [Icon-only Buttons Accessibility]
 **Learning:** Icon-only buttons without explicit text fail `axe-core` accessibility tests.
 **Action:** Always add an `aria-label` attribute to icon-only buttons to provide an accessible name for screen readers, and add `aria-hidden="true"` to the inner SVG elements to avoid redundant announcements.
+## 2026-05-18 - [Fix silent exceptions in lifecycle listeners]
+**Learning:** `except Exception: pass` hides potentially critical errors without visibility. Found instances of this in `src/entities/lifecycle.py` affecting `emit_lifecycle` and `emit_lifecycle_sync`.
+**Action:** Replaced silent pass with `logger.error` indicating the event and error detail to maintain non-crashing behavior while ensuring observability.
+## 2026-05-18 - [Add unit tests to fix coverage gap in code health improvement]
+**Learning:** The previous fix to `src/entities/lifecycle.py` introducing `logger.error()` was uncovered by unit tests, resulting in a GitHub Actions CI Codecov failure (target 60%, hit 20%).
+**Action:** Created `tests/test_lifecycle.py` targeting `LifecycleEmitter` exceptions to restore code coverage to >60%.
+## 2026-05-18 - [Fix python ruff lint formatting]
+**Learning:** Adding longer lines in python can trigger `ruff format` to fail in CI.
+**Action:** Used `python3 -m ruff format src/entities/lifecycle.py` to fix formatting and allow CI to pass.
