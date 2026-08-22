@@ -262,16 +262,14 @@ class HealthChecker:
         url = svc["url"]
         client_timeout = aiohttp.ClientTimeout(total=timeout)
         try:
+            # Note: For maximum connection pooling efficiency this session should ideally be
+            # initialized once globally or at the class level and closed properly. However,
+            # since HealthChecker is instantiated transiently in some contexts, we create a
+            # new session here. For the scope of this refactor, it correctly avoids blocking
+            # the event loop compared to urllib.request.urlopen.
             async with aiohttp.ClientSession(timeout=client_timeout) as session:
                 async with session.get(url, headers={"Accept": "application/json"}) as resp:
-                    if resp.status >= 400:
-                        raise aiohttp.ClientResponseError(
-                            request_info=resp.request_info,
-                            history=resp.history,
-                            status=resp.status,
-                            message=resp.reason,
-                            headers=resp.headers,
-                        )
+                    resp.raise_for_status()
                     body = await resp.json()
                     result = {
                         "service": name,
