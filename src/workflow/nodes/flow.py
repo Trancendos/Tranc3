@@ -25,9 +25,7 @@ class ConditionNode(BaseNode):
         expression = self.config.config.get("expression", "True")
         local_ns: Dict[str, Any] = {"inputs": inputs, "context": context, **inputs}
         try:
-            result = bool(
-                eval(expression, {"__builtins__": {}}, local_ns)
-            )  # noqa: S307  # nosec B307
+            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
                 {"condition": result, "branch": "true" if result else "false"},
