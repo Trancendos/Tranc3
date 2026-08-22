@@ -493,3 +493,24 @@ def test_vault_service_short_ciphertext_raises(vault_worker):
     vs = vault_worker
     with pytest.raises(ValueError, match="ciphertext too short"):
         vs._decrypt_secret("deadbeef")  # way too short
+
+
+def test_intelligence_agent_run_cycle():
+    from src.section7.intelligence_agent import IntelligenceAgent, IntelligenceItem, SourceType
+    from unittest.mock import MagicMock
+
+    agent = IntelligenceAgent()
+    agent._router = MagicMock()
+
+    class DummyIngestor:
+        def fetch(self):
+            return [IntelligenceItem(source_type=SourceType.MANUAL, raw_content="content")]
+
+    class FailingIngestor:
+        def fetch(self):
+            raise ValueError("Failed")
+
+    stats = agent.run_cycle([DummyIngestor(), FailingIngestor()])
+    assert stats["fetched"] == 1
+    assert stats["errors"] == 1
+    assert stats["routed"] == 1
