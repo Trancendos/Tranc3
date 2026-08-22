@@ -313,12 +313,12 @@ async def browse_listings(
         conn.close()
 
 
-
 class UpdateListingRequest(BaseModel):
     quantity: Optional[float] = Field(None, gt=0)
     price_per_unit: Optional[float] = Field(None, ge=0)
     description: Optional[str] = None
     status: Optional[str] = None
+
 
 @_router.get("/listings/{listing_id}")
 async def get_listing(listing_id: str):
@@ -331,6 +331,7 @@ async def get_listing(listing_id: str):
         return dict(row)
     finally:
         conn.close()
+
 
 @_router.patch("/listings/{listing_id}")
 async def update_listing(listing_id: str, req: UpdateListingRequest):
@@ -387,6 +388,7 @@ async def update_listing(listing_id: str, req: UpdateListingRequest):
     finally:
         conn.close()
 
+
 @_router.delete("/listings/{listing_id}", status_code=204)
 async def delete_listing(listing_id: str):
     """Delete a specific listing."""
@@ -400,8 +402,10 @@ async def delete_listing(listing_id: str):
     finally:
         conn.close()
 
+
 # ---------------------------------------------------------------------------
 # Orders
+
 
 # ---------------------------------------------------------------------------
 @_router.post("/orders", status_code=201)
@@ -493,9 +497,9 @@ async def buyer_orders(
         conn.close()
 
 
-
 class UpdateOrderRequest(BaseModel):
     status: Optional[str] = None
+
 
 @_router.get("/orders")
 async def list_orders(
@@ -506,13 +510,13 @@ async def list_orders(
     conn = _get_conn()
     try:
         rows = conn.execute(
-            "SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (limit, offset)
+            "SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
         ).fetchall()
         total = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
         return {"total": total, "orders": [dict(r) for r in rows]}
     finally:
         conn.close()
+
 
 @_router.get("/orders/id/{order_id}")
 async def get_order(order_id: str):
@@ -525,6 +529,7 @@ async def get_order(order_id: str):
         return dict(row)
     finally:
         conn.close()
+
 
 @_router.patch("/orders/id/{order_id}")
 async def update_order(order_id: str, req: UpdateOrderRequest):
@@ -552,6 +557,7 @@ async def update_order(order_id: str, req: UpdateOrderRequest):
     finally:
         conn.close()
 
+
 @_router.delete("/orders/id/{order_id}", status_code=204)
 async def delete_order(order_id: str):
     """Delete a specific order."""
@@ -565,8 +571,10 @@ async def delete_order(order_id: str):
     finally:
         conn.close()
 
+
 # ---------------------------------------------------------------------------
 # Exchange Stats
+
 
 # ---------------------------------------------------------------------------
 @_router.get("/exchange/stats")
