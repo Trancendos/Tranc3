@@ -1,3 +1,10 @@
+---
+title: "API Specification Template (OpenAPI 3.1)"
+category: Architecture
+last-reviewed: 2026-07-17
+status: needs-update
+---
+
 # API Specification Template (OpenAPI 3.1)
 
 A reusable OpenAPI 3.1 skeleton for documenting the endpoints tracked in `05_apis.csv`,

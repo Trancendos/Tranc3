@@ -1,3 +1,10 @@
+---
+title: "PROC-DSR-001 — Data Subject Request Handling Procedure"
+category: Operations
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # PROC-DSR-001 — Data Subject Request Handling Procedure
 **Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Parent Policy:** POL-PRI-001  
 **Effective:** 2026-06-12 | **SLA:** 30 calendar days from receipt

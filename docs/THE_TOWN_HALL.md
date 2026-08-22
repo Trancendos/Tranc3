@@ -1,3 +1,10 @@
+---
+title: "The Town Hall"
+category: Reference
+last-reviewed: 2026-05-31
+status: needs-update
+---
+
 # The Town Hall
 
 **Location:** The Town Hall · **Lead AI:** Tristuran · **PID:** PID-TWH

@@ -1,3 +1,10 @@
+---
+title: "Design Governance Framework — Trancendos Platform"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Design Governance Framework — Trancendos Platform
 
 **Version:** 1.1.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC

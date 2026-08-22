@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Imaginarium"
+category: Reference
+last-reviewed: 2026-07-27
+status: needs-update
+---
+
 # Service Doc-Pack — Imaginarium
 
 | Field | Value |

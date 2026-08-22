@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Cryptex"
+category: Reference
+last-reviewed: 2026-08-01
+status: needs-update
+---
+
 # Service Doc-Pack — Cryptex
 
 | Field | Value |

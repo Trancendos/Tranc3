@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack Template — `<Service Name>`"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Service Doc-Pack Template — `<Service Name>`
 
 > **How to use.** Copy this file into `docs/services/<service-slug>/README.md` (or split

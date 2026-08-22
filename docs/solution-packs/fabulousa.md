@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Fabulousa"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Fabulousa
 
 > **PID-FAB · AID-FAB-01 · Creativity pillar**  

@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — DocUtari"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — DocUtari
 
 > **PID-DOC · AID-DOC-01 · Knowledge pillar**  

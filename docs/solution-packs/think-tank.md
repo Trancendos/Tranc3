@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Think Tank"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Think Tank
 
 > **PID-TNK · AID-TNK-01 · DevOps pillar**  

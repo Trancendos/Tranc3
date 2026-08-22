@@ -1,3 +1,10 @@
+---
+title: "Three-Lane Transport and the Terminal Hub"
+category: Architecture
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Three-Lane Transport and the Terminal Hub
 
 **Date:** 2026-08-17

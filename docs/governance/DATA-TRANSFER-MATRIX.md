@@ -1,3 +1,10 @@
+---
+title: "Data Transfer Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Data Transfer Matrix
 
 > **What this is.** A narrow, honest look at cross-border data transfer for a platform that is

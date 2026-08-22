@@ -1,3 +1,10 @@
+---
+title: "Matrix Index"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Matrix Index
 
 > **What this is.** A single master map answering one question for every "Matrix" or "Framework"

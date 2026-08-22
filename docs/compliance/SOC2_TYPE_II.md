@@ -1,3 +1,10 @@
+---
+title: "SOC 2 Type II — Trust Services Criteria Mapping"
+category: Security
+last-reviewed: 2026-06-07
+status: needs-update
+---
+
 # SOC 2 Type II — Trust Services Criteria Mapping
 **Organisation:** Trancendos Ltd  
 **Scope:** Tranc3 Platform — all self-hosted workers, infrastructure, data stores, CI/CD  

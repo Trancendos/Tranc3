@@ -1,3 +1,10 @@
+---
+title: "Compliance Register — Tranc3 / Trancendos Platform"
+category: Security
+last-reviewed: 2026-07-17
+status: needs-update
+---
+
 # Compliance Register — Tranc3 / Trancendos Platform
 
 **Classification:** UNCLASSIFIED — PUBLIC  

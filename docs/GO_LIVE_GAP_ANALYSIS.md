@@ -1,3 +1,10 @@
+---
+title: "Go-Live Gap Analysis — Trancendos Estate (4 repos)"
+category: Deployment
+last-reviewed: 2026-08-19
+status: needs-update
+---
+
 # Go-Live Gap Analysis — Trancendos Estate (4 repos)
 
 > ## ⚠️ STATUS AS OF 2026-08-18 — two of the three blockers below are CLOSED

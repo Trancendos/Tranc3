@@ -1,3 +1,10 @@
+---
+title: "Trancendos Infrastructure Architecture — Mermaid Diagrams"
+category: Architecture
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Trancendos Infrastructure Architecture — Mermaid Diagrams
 
 This document provides Mermaid diagrams for each SYSTEM_MODE deployment topology.

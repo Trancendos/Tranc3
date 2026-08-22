@@ -1,3 +1,10 @@
+---
+title: "AI-to-AI Relationship Matrix, Activity Feed & Location Brochure"
+category: Reference
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # AI-to-AI Relationship Matrix, Activity Feed & Location Brochure
 
 > **Truthfulness:** this doc describes `src/relations/` as written — a real, tested, SQLite-backed

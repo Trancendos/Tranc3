@@ -1,3 +1,10 @@
+---
+title: "Disaster Recovery Runbook — Trancendos Platform"
+category: Operations
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # Disaster Recovery Runbook — Trancendos Platform
 
 **Classification:** UNCLASSIFIED — INTERNAL  

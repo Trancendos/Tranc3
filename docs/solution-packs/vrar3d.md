@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — VRAR3D"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — VRAR3D
 
 > **PID-VR3 · AID-VR3-01 · Wellbeing pillar**  

@@ -1,3 +1,10 @@
+---
+title: "Trancendos Documentation Index"
+category: Reference
+last-reviewed: 2026-07-03
+status: complete
+---
+
 # Trancendos Documentation Index
 
 This file maps the full documentation landscape. Conceptual, governance, and historical

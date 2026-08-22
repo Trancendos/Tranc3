@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Chaos Party"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Chaos Party
 
 > **PID-TCP · AID-TCP-01 · Development (Code) pillar**  

@@ -1,3 +1,10 @@
+---
+title: "Trancendos Platform — Design System"
+category: Development
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # Trancendos Platform — Design System
 
 > Canonical reference for all development work on the Trancendos / Tranc3 platform.

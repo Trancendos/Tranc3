@@ -1,3 +1,10 @@
+---
+title: "Template Library Index"
+category: Reference
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Template Library Index
 
 **Version:** 1.0.0 | **Date:** 2026-06-12

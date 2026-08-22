@@ -1,3 +1,10 @@
+---
+title: "Hard Stop Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Hard Stop Matrix
 
 > **What this is.** A single map of every mechanism on the platform that can outright halt

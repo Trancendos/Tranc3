@@ -1,3 +1,10 @@
+---
+title: "hostIPC Risk Acceptance — Nanoservice Shared Memory"
+category: Security
+last-reviewed: 2026-06-19
+status: needs-update
+---
+
 # hostIPC Risk Acceptance — Nanoservice Shared Memory
 
 **Status:** ACCEPTED (with controls)  

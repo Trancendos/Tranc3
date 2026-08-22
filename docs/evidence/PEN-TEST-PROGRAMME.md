@@ -1,3 +1,10 @@
+---
+title: "Penetration Test Programme"
+category: Reference
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Penetration Test Programme
 
 **Version:** 1.0.0 | **Date:** 2026-06-12

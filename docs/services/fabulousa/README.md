@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Fabulousa"
+category: Reference
+last-reviewed: 2026-07-18
+status: needs-update
+---
+
 # Service Doc-Pack — Fabulousa
 
 | Field | Value |

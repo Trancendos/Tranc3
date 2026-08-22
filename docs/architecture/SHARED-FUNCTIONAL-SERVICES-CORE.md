@@ -1,3 +1,10 @@
+---
+title: "Shared Functional Services Core (SFSC) — the `Dimensional` package"
+category: Architecture
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Shared Functional Services Core (SFSC) — the `Dimensional` package
 
 **Status:** Findings + remediation, 2026-08-17

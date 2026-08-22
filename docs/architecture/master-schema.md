@@ -1,3 +1,10 @@
+---
+title: "Trancendos Master Schema Documentation"
+category: Architecture
+last-reviewed: 2026-08-01
+status: needs-update
+---
+
 # Trancendos Master Schema Documentation
 
 ## SCHEMA-CORE-001 — Universal ID Taxonomy

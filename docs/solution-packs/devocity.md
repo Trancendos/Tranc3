@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — DevOcity"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — DevOcity
 
 > **PID-DEV · AID-DEV-01 · DevOps pillar**  

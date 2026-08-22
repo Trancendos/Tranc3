@@ -1,3 +1,10 @@
+---
+title: "ISO 27001:2022 — Statement of Applicability (SOA)"
+category: Security
+last-reviewed: 2026-07-27
+status: needs-update
+---
+
 # ISO 27001:2022 — Statement of Applicability (SOA)
 **Organisation:** Trancendos Ltd  
 **Scope:** Tranc3 Platform — all self-hosted workers, infrastructure, data stores, CI/CD  

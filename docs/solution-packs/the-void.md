@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Void"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Void
 
 > **PID-VOI · AID-VOI-01 · Security pillar**  

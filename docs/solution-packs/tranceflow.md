@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — TranceFlow"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — TranceFlow
 
 > **PID-TFL · AID-TFL-01 · Creativity pillar**  

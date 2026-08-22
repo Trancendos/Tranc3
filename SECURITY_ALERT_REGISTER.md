@@ -1,3 +1,10 @@
+---
+title: "Security Alert Register"
+category: Reference
+last-reviewed: 2026-07-31
+status: complete
+---
+
 # Security Alert Register
 
 Every security-scanner finding that is not silently outstanding gets a row here,

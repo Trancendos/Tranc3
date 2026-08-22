@@ -1,3 +1,10 @@
+---
+title: "FCA Alignment Programme"
+category: Security
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # FCA Alignment Programme
 
 **Version:** 1.0.0 | **Date:** 2026-06-12 | **Owner:** Trancendos Platform Engineering

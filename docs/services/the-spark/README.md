@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Spark (MCP Server)"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Service Doc-Pack — The Spark (MCP Server)
 
 > **Reference implementation** of the Trancendos per-service Doc Pack. Every claim below

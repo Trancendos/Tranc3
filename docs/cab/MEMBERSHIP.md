@@ -1,3 +1,10 @@
+---
+title: "Change Advisory Board — Membership Register"
+category: Reference
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # Change Advisory Board — Membership Register
 
 **Document ID:** CAB-002  

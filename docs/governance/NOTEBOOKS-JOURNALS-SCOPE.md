@@ -1,3 +1,10 @@
+---
+title: "Notebooks / Journals for AIs and Agents — Scoping Doc"
+category: Reference
+last-reviewed: 2026-07-31
+status: needs-update
+---
+
 # Notebooks / Journals for AIs and Agents — Scoping Doc
 
 > **What this is.** A design scope, not an implementation, for giving each named AI and Agent a

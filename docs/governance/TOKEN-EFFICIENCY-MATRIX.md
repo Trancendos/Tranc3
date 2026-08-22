@@ -1,3 +1,10 @@
+---
+title: "Token Efficiency Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Token Efficiency Matrix
 
 > **What this is.** `docs/governance/THRESHOLD-MATRIX.md` §3 already documents per-provider rate

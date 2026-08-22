@@ -1,3 +1,10 @@
+---
+title: "Operational Runbooks — Trancendos Platform"
+category: Operations
+last-reviewed: 2026-07-04
+status: needs-update
+---
+
 # Operational Runbooks — Trancendos Platform
 
 > **Classification:** UNCLASSIFIED — PUBLIC  

@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Resonate"
+category: Reference
+last-reviewed: 2026-07-18
+status: needs-update
+---
+
 # Service Doc-Pack — Resonate
 
 | Field | Value |

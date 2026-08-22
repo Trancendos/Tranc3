@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Security Vulnerability Assessment"
+category: Security
+last-reviewed: 2026-07-02
+status: needs-update
+---
+
 # Tranc3 Security Vulnerability Assessment
 
 **Date:** 2026-05-21

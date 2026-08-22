@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Tranquility"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Tranquility
 
 > **PID-TRQ · AID-TRQ-01 · Wellbeing pillar**  

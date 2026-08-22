@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Research Findings — Cross-Repo Intelligence & Frontier Technologies"
+category: Architecture
+last-reviewed: 2026-05-23
+status: needs-update
+---
+
 # Tranc3 Research Findings — Cross-Repo Intelligence & Frontier Technologies
 
 **Date**: 2025-01 (Synthesized from multi-session research)

@@ -1,3 +1,10 @@
+---
+title: "ISO 27001:2022 — Information Security Risk Register"
+category: Security
+last-reviewed: 2026-07-27
+status: needs-update
+---
+
 # ISO 27001:2022 — Information Security Risk Register
 **Organisation:** Trancendos Ltd  
 **Scope:** Tranc3 Platform  

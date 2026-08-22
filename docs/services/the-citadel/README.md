@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Citadel (Strategic Ops & DevOps Fortress)"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Service Doc-Pack — The Citadel (Strategic Ops & DevOps Fortress)
 
 | Field | Value |

@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Lab"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Lab
 
 > **PID-LAB · AID-LAB-01 · Development (Code) pillar**  

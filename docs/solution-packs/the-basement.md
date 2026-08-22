@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Basement"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Basement
 
 > **PID-BSM · AID-BSM-01 · Knowledge pillar**  

@@ -1,3 +1,10 @@
+---
+title: "Change Advisory Board — Approval Workflow"
+category: Reference
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # Change Advisory Board — Approval Workflow
 
 **Document ID:** CAB-003  

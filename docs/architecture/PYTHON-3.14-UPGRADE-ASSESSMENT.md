@@ -1,3 +1,10 @@
+---
+title: "Python 3.11 → 3.14 Upgrade Assessment"
+category: Architecture
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Python 3.11 → 3.14 Upgrade Assessment
 
 **Status:** Stages 1, 2 and 6 landed. **82 of the 84 workers with a requirements file are

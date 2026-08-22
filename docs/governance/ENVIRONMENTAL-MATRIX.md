@@ -1,3 +1,10 @@
+---
+title: "Environmental Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Environmental Matrix
 
 > **What this is.** The platform's sustainability/environmental posture, honestly split into what's

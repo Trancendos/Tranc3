@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — The Digital Grid (Workflow DAG Engine)"
+category: Reference
+last-reviewed: 2026-07-18
+status: needs-update
+---
+
 # Service Doc-Pack — The Digital Grid (Workflow DAG Engine)
 
 > Code-grounded Doc Pack per `docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md`.

@@ -1,3 +1,10 @@
+---
+title: "Service Doc-Pack — Think Tank"
+category: Reference
+last-reviewed: 2026-07-12
+status: needs-update
+---
+
 # Service Doc-Pack — Think Tank
 
 | Field | Value |

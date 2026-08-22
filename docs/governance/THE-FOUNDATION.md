@@ -1,3 +1,10 @@
+---
+title: "The Foundation — the parent entity above Trancendos"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # The Foundation — the parent entity above Trancendos
 
 **Version:** 1.0.0

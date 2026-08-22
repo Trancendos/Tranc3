@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Section 7"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Section 7
 
 > **PID-DUT · AID-DUT-01 · DevOps pillar**  

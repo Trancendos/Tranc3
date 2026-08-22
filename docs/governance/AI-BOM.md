@@ -1,3 +1,10 @@
+---
+title: "AI-BOM — the models this platform consumes"
+category: Reference
+last-reviewed: 2026-08-19
+status: needs-update
+---
+
 # AI-BOM — the models this platform consumes
 
 **Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-08-19

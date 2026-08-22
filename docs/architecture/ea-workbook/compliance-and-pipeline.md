@@ -1,3 +1,10 @@
+---
+title: "Compliance Mapping & Deployment Pipeline"
+category: Architecture
+last-reviewed: 2026-07-17
+status: needs-update
+---
+
 # Compliance Mapping & Deployment Pipeline
 
 Maps ITIL / SOC2 / GDPR / HIPAA / ISO 27001 controls onto this workbook's CMDB columns and

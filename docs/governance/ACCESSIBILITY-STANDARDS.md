@@ -1,3 +1,10 @@
+---
+title: "Accessibility Standards"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Accessibility Standards
 
 > **What this is.** Before this document, real accessibility engineering already existed in the

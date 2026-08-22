@@ -1,3 +1,10 @@
+---
+title: "AI Governance — Trancendos Platform"
+category: Security
+last-reviewed: 2026-06-07
+status: needs-update
+---
+
 # AI Governance — Trancendos Platform
 
 **Status**: Baseline established · Formal certification pending  

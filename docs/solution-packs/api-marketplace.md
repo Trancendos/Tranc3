@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — API Marketplace"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — API Marketplace
 
 > **PID-APM · AID-APM-01 · Commercial / Financial pillar**  

@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Town Hall"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Town Hall
 
 > **PID-TWH · AID-TWH-01 · Architectural pillar**  

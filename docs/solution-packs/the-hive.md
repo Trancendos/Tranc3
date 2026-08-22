@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The HIVE"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The HIVE
 
 > **PID-HVE · AID-HVE-01 · Architectural pillar**  

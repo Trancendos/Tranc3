@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Ice Box"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Ice Box
 
 > **PID-ICB · AID-ICB-01 · Security pillar**  

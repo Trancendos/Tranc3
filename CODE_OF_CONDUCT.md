@@ -1,3 +1,10 @@
+---
+title: "CODE_OF_CONDUCT.md"
+category: Reference
+last-reviewed: 2026-05-19
+status: needs-update
+---
+
 Infinity-Trancendos Network Code of Conduct
 
 1. Our Philosophy & Purpose

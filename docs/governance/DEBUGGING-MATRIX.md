@@ -1,3 +1,10 @@
+---
+title: "Debugging Matrix"
+category: Reference
+last-reviewed: 2026-07-30
+status: needs-update
+---
+
 # Debugging Matrix
 
 > **What this is.** `docs/runbooks/` covers three operational scenarios (API backend deploy,

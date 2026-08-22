@@ -1,3 +1,10 @@
+---
+title: "EA / CMDB Workbook"
+category: Architecture
+last-reviewed: 2026-07-24
+status: needs-update
+---
+
 # EA / CMDB Workbook
 
 A 19-file CSV configuration-management-database (CMDB) layer describing Trancendos's

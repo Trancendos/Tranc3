@@ -1,3 +1,10 @@
+---
+title: "AI ↔ Agent ↔ Bot Tier Matrix"
+category: Reference
+last-reviewed: 2026-07-31
+status: needs-update
+---
+
 # AI ↔ Agent ↔ Bot Tier Matrix
 
 > **What this is.** Four brainstormed items — AI-to-Agent, AI-to-Bot, Orchestrator-AI-to-Prime-AI,

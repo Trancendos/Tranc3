@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Imaginarium"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Imaginarium
 
 > **PID-IMG · AID-IMG-01 · Creativity pillar**  

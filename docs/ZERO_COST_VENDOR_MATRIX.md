@@ -1,3 +1,10 @@
+---
+title: "Zero-Cost Vendor Matrix"
+category: Reference
+last-reviewed: 2026-07-27
+status: needs-update
+---
+
 # Zero-Cost Vendor Matrix
 
 **Owner:** Platform Engineering

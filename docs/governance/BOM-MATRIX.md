@@ -1,3 +1,10 @@
+---
+title: "BOM Matrix — Bills of Materials Across the Platform"
+category: Reference
+last-reviewed: 2026-08-19
+status: needs-update
+---
+
 # BOM Matrix — Bills of Materials Across the Platform
 
 > **What this is.** A follow-up brainstorm asked whether the "BOM-ification" trend (SBOM, CBOM,

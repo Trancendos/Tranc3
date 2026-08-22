@@ -1,3 +1,10 @@
+---
+title: "DEF STAN 00-044 — Configuration Management"
+category: Security
+last-reviewed: 2026-06-06
+status: needs-update
+---
+
 # DEF STAN 00-044 — Configuration Management
 
 **Standard:** DEF STAN 00-044 (adapted)  

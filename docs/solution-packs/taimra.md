@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — tAimra"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — tAimra
 
 > **PID-TMR · AID-TMR-01 · Wellbeing pillar**  

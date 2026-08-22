@@ -1,3 +1,10 @@
+---
+title: "Management Review Template"
+category: Reference
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Management Review Template
 
 **Framework:** ISO 27001:2022 Clause 9.3 | **Frequency:** Quarterly

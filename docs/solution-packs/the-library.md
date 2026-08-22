@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Library"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Library
 
 > **PID-LIB · AID-LIB-01 · Knowledge pillar**  

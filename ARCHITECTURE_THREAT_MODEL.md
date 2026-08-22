@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Architecture Threat Model"
+category: Reference
+last-reviewed: 2026-06-19
+status: complete
+---
+
 # Tranc3 Architecture Threat Model
 
 **Version:** 1.0  

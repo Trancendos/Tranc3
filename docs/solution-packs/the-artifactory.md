@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Artifactory"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Artifactory
 
 > **PID-ART · AID-ART-01 · Commercial / Financial pillar**  

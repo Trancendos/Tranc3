@@ -1,3 +1,10 @@
+---
+title: "Monolith Extraction Findings — 2026-08-08 systematic sweep"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Monolith Extraction Findings — 2026-08-08 systematic sweep
 
 **Status:** 7 confirmed-safe removals shipped in this pass. An 8th (`src/resonate/`) was reverted

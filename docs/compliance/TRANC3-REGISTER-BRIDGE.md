@@ -1,3 +1,10 @@
+---
+title: "Tranc3 Register Bridge — Magna Carta ↔ DEFSTAN Mapping"
+category: Security
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Tranc3 Register Bridge — Magna Carta ↔ DEFSTAN Mapping
 
 **Version:** 1.0.0 | **Date:** 2026-06-12

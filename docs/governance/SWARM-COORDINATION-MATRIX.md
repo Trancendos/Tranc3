@@ -1,3 +1,10 @@
+---
+title: "Swarm Coordination Matrix"
+category: Reference
+last-reviewed: 2026-08-07
+status: needs-update
+---
+
 # Swarm Coordination Matrix
 
 > **What this is.** A brainstorm session (external, not this codebase) proposed a large stigmergy /

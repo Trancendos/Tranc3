@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — Luminous"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — Luminous
 
 > **PID-LUM · AID-LUM-01 · Architectural pillar**  

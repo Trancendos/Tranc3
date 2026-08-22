@@ -1,3 +1,10 @@
+---
+title: "Compliance Operating Model — Tranc3 Platform"
+category: Security
+last-reviewed: 2026-06-12
+status: needs-update
+---
+
 # Compliance Operating Model — Tranc3 Platform
 
 **Version:** 1.0.0 | **Date:** 2026-06-12 | **Owner:** Trancendos Platform Engineering

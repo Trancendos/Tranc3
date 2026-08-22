@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Warp Tunnel"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Warp Tunnel
 
 > **PID-WTP · AID-WTP-01 · Security pillar**  

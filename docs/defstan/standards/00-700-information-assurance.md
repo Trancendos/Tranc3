@@ -1,3 +1,10 @@
+---
+title: "DEF STAN 00-700 — Information Assurance"
+category: Security
+last-reviewed: 2026-07-17
+status: needs-update
+---
+
 # DEF STAN 00-700 — Information Assurance
 
 **Standard:** DEF STAN 00-700 (adapted for civilian public platform)  

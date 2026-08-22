@@ -1,3 +1,10 @@
+---
+title: "Solution Pack — The Lighthouse"
+category: Reference
+last-reviewed: 2026-08-18
+status: needs-update
+---
+
 # Solution Pack — The Lighthouse
 
 > **PID-LTH · AID-LTH-01 · Security pillar**  
