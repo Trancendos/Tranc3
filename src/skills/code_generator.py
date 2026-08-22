@@ -687,6 +687,34 @@ class AdvancedCodeGenerator:
                 raise NotImplementedError
             """)
 
+    def _extract_pydantic_fields(self, description: str) -> str:
+        """Extract Pydantic model fields from description using regex."""
+        fields = {}
+        # Matches patterns like `name: str` or `age (int)`
+        pattern = r"(?i)([a-z_][a-z0-9_]*)\s*(?:[:]\s*|\(\s*)(str|int|float|bool|list|dict|any)[^a-zA-Z0-9_]"
+        for match in re.finditer(pattern, description + " "):
+            fields[match.group(1)] = match.group(2).lower()
+
+        if not fields:
+            return "pass"
+
+        lines = []
+        type_map = {
+            "str": "str",
+            "int": "int",
+            "float": "float",
+            "bool": "bool",
+            "list": "list",
+            "dict": "dict",
+            "any": "Any",
+        }
+
+        for name, type_str in fields.items():
+            py_type = type_map.get(type_str, "Any")
+            lines.append(f"{name}: {py_type}")
+
+        return "\n    ".join(lines)
+
     def _apply_substitutions(self, template: str, request: CodeGenerationRequest) -> str:
         """Fill in template placeholders from the request description."""
         words = re.findall(r"[A-Za-z]+", request.description)
@@ -695,7 +723,7 @@ class AdvancedCodeGenerator:
         prefix = resource + "s"
         tag = resource
 
-        return (
+        res = (
             template.replace("{prefix}", prefix)
             .replace("{tag}", tag)
             .replace("{Model}", model)
@@ -704,6 +732,19 @@ class AdvancedCodeGenerator:
             .replace("{description}", request.description[:80])
             .replace("{handler_name}", "handle_" + resource)
         )
+
+        def replace_fields(match):
+            indent = match.group(1)
+            # Remove the hardcoded internal indent from `_extract_pydantic_fields`
+            fields_str = self._extract_pydantic_fields(request.description).replace(
+                "\n    ", "\n" + indent
+            )
+            return indent + fields_str
+
+        res = re.sub(r"([ \t]*)# TODO: define fields\n\s*pass", replace_fields, res)
+        res = re.sub(r"([ \t]*)# TODO: define response fields", replace_fields, res)
+
+        return res
 
     # ------------------------------------------------------------------
     # LLM enhancement
