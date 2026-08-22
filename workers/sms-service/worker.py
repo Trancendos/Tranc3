@@ -361,6 +361,4 @@ app.include_router(_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        app, host="0.0.0.0", port=WORKER_PORT
-    )  # nosec B104 — containerised service
+    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)  # nosec B104
