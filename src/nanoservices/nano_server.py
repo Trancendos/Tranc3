@@ -7,10 +7,6 @@
 # Run standalone:
 #   python -m src.nanoservices.nano_server            # port 8001
 #   NANO_PORT=8002 python -m src.nanoservices.nano_server
-#
-# Or mount as a sub-application inside the main FastAPI app:
-#   from src.nanoservices.nano_server import nano_app
-#   app.mount("/nano", nano_app)
 
 from __future__ import annotations
 
@@ -135,7 +131,9 @@ async def _run(bot_name: str, **kwargs) -> dict:
                 if r.status_code < 500:
                     return r.json()
         except Exception as exc:
-            logger.warning("Bots proxy to %s failed (%s) — falling back to local", bot_name, exc)
+            logger.warning(
+                "Bots proxy to %s failed (%s) — falling back to local", bot_name, exc
+            )
 
     if _registry is None:
         raise HTTPException(503, detail="Worker registry not initialised")
@@ -429,7 +427,9 @@ async def evolution_health():
 @nano_app.exception_handler(Exception)
 async def _generic_error(request: Request, exc: Exception):
     logger.exception("Nanoservice error at %s: %s", request.url.path, exc)
-    return JSONResponse(status_code=500, content={"error": str(exc), "path": str(request.url.path)})
+    return JSONResponse(
+        status_code=500, content={"error": str(exc), "path": str(request.url.path)}
+    )
 
 
 # ─── Standalone entry point ───────────────────────────────────────────────────
