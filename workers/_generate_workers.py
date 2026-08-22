@@ -180,11 +180,13 @@ logger = logging.getLogger(WORKER_NAME)
 # Database
 # ---------------------------------------------------------------------------
 
+
 def _sanitize_ident(ident: str) -> str:
     """Ensure string is a valid SQLite identifier to prevent SQL injection."""
-    if not isinstance(ident, str) or not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', ident):
+    if not isinstance(ident, str) or not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", ident):
         raise ValueError(f"Invalid identifier: {{ident}}")
     return ident
+
 
 class {table.title().replace("_", "")}Database:
     """SQLite-backed storage for {table}."""
@@ -306,7 +308,6 @@ async def health():
     }}
 
 
-# TODO: Add specific CRUD endpoints for {name}
 # The database class above provides create(), get(), list(), update(), delete() methods
 # Implement domain-specific endpoints based on business requirements
 
