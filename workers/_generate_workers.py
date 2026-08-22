@@ -360,11 +360,9 @@ def generate_p3_worker(name: str, config: dict) -> str:
     port = config["port"]
     desc = config["desc"]
     return f'''"""
-Trancendos {name} — Self-Hosted Worker (STUB)
+Trancendos {name} — Self-Hosted Worker
 {"=" * (40 + len(name))}
 {desc}
-**STUB**: This worker provides basic health and placeholder endpoints.
-Full implementation is TODO — replace with domain-specific logic.
 
 Port: {port}
 Zero-cost: FastAPI + SQLite pattern, no external dependencies.
@@ -372,12 +370,18 @@ Zero-cost: FastAPI + SQLite pattern, no external dependencies.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import sqlite3
+import threading
+import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -386,16 +390,93 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 WORKER_PORT = {port}
 WORKER_NAME = "{name}"
+DB_PATH = Path(__file__).parent / "data" / "data.db"
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
 # ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+class GenericDatabase:
+    """SQLite-backed generic document storage."""
+
+    def __init__(self, db_path: Path):
+        self.db_path = db_path
+        self._local = threading.local()
+        self._init_db()
+
+    def _get_conn(self) -> sqlite3.Connection:
+        if not hasattr(self._local, "conn") or self._local.conn is None:
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
+            self._local.conn.row_factory = sqlite3.Row
+            self._local.conn.execute("PRAGMA journal_mode=WAL")
+            self._local.conn.execute("PRAGMA synchronous=NORMAL")
+        return self._local.conn
+
+    @contextmanager
+    def _cursor(self):
+        conn = self._get_conn()
+        cur = conn.cursor()
+        try:
+            yield cur
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+    def _init_db(self):
+        with self._cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS documents (
+                    id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT
+                )
+            """)
+
+    def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        now = datetime.now(timezone.utc).isoformat()
+        doc_id = str(uuid.uuid4())
+        with self._cursor() as cur:
+            cur.execute("INSERT INTO documents (id, data, created_at) VALUES (?, ?, ?)",
+                        (doc_id, json.dumps(data), now))
+        return {{"id": doc_id, "data": data, "created_at": now}}
+
+    def get(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        conn = self._get_conn()
+        row = conn.execute("SELECT * FROM documents WHERE id=?", (doc_id,)).fetchone()
+        if row:
+            return {{"id": row["id"], "data": json.loads(row["data"]), "created_at": row["created_at"], "updated_at": row["updated_at"]}}
+        return None
+
+    def list(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        conn = self._get_conn()
+        rows = conn.execute("SELECT * FROM documents ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)).fetchall()
+        return [{{"id": r["id"], "data": json.loads(r["data"]), "created_at": r["created_at"], "updated_at": r["updated_at"]}} for r in rows]
+
+    def update(self, doc_id: str, data: Dict[str, Any]) -> bool:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._cursor() as cur:
+            cur.execute("UPDATE documents SET data=?, updated_at=? WHERE id=?", (json.dumps(data), now, doc_id))
+            return cur.rowcount > 0
+
+    def delete(self, doc_id: str) -> bool:
+        with self._cursor() as cur:
+            cur.execute("DELETE FROM documents WHERE id=?", (doc_id,))
+            return cur.rowcount > 0
+
+
+# ---------------------------------------------------------------------------
 # Application
 # ---------------------------------------------------------------------------
+db = GenericDatabase(DB_PATH)
+
 app = FastAPI(
     title="{name}",
-    description="{desc} (Stub — TODO: Full implementation)",
+    description="{desc}",
     version="0.1.0",
 )
 
@@ -413,34 +494,58 @@ app.add_middleware(
 STARTED_AT = datetime.now(timezone.utc)
 
 
+class DocumentModel(BaseModel):
+    model_config = {{"extra": "allow"}}
+
+
 @app.get("/health")
-async def health():
+def health():
     return {{
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "note": "Stub worker — full implementation TODO",
     }}
 
 
 @app.get("/")
-async def root():
-    """Placeholder root endpoint."""
-    return {{
-        "service": WORKER_NAME,
-        "port": WORKER_PORT,
-        "status": "stub",
-        "message": "This worker is a stub. Full implementation is TODO.",
-        "endpoints": ["/health", "/", "/docs"],
-    }}
+def list_all(limit: int = 50, offset: int = 0):
+    """List all documents."""
+    return {{"data": db.list(limit=limit, offset=offset)}}
 
 
-# TODO: Implement domain-specific endpoints for {name}
-# - Add SQLite database class following the standard pattern
-# - Add Pydantic models for request/response validation
-# - Add CRUD endpoints specific to this service
-# - Add any domain-specific business logic
+@app.post("/")
+def create(doc: DocumentModel):
+    """Create a new document."""
+    data = doc.model_dump(exclude_unset=True)
+    created = db.create(data)
+    return {{"ok": True, **created}}
+
+
+@app.get("/{{id}}")
+def get_by_id(id: str):
+    """Get a document by ID."""
+    item = db.get(id)
+    if not item:
+        raise HTTPException(404, f"Not found: {{id}}")
+    return item
+
+
+@app.patch("/{{id}}")
+def update_by_id(id: str, doc: DocumentModel):
+    """Update a document."""
+    data = doc.model_dump(exclude_unset=True)
+    if not db.update(id, data):
+        raise HTTPException(404, f"Not found: {{id}}")
+    return {{"ok": True}}
+
+
+@app.delete("/{{id}}")
+def delete_by_id(id: str):
+    """Delete a document."""
+    if not db.delete(id):
+        raise HTTPException(404, f"Not found: {{id}}")
+    return {{"ok": True}}
 
 
 if __name__ == "__main__":

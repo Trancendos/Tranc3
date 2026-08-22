@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@v4 # v4
         with:
           # Do NOT init submodules — that is the very operation under test, and
           # letting it run here would fail the job with a confusing checkout
