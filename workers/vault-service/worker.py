@@ -704,7 +704,7 @@ async def scan_for_leaks():
     if insert_data:
         conn.executemany(
             "INSERT OR IGNORE INTO leak_detections (id, variable_name, variable_value_preview, severity, created_at) VALUES (?,?,?,?,?)",
-            insert_data
+            insert_data,
         )
     conn.commit()
     conn.close()
