@@ -338,13 +338,20 @@ async def list_users(
         where = "WHERE " + " AND ".join(conditions)
         # nosemgrep: python.lang.security.audit.hardcoded-sql-expressions.hardcoded-sql-expression
         # nosec B608
-        total = db.execute("SELECT COUNT(*) as c FROM users " + where, tuple(params)).fetchone()["c"]  # sourcery skip: avoid-sql-injection
+        total = db.execute("SELECT COUNT(*) as c FROM users " + where, tuple(params)).fetchone()[
+            "c"
+        ]  # sourcery skip: avoid-sql-injection
         # nosemgrep: python.lang.security.audit.hardcoded-sql-expressions.hardcoded-sql-expression
         # nosec B608
-        rows = db.execute("SELECT * FROM users " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?", tuple(params) + (per_page, offset)).fetchall()  # sourcery skip: avoid-sql-injection
+        rows = db.execute(
+            "SELECT * FROM users " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            tuple(params) + (per_page, offset),
+        ).fetchall()  # sourcery skip: avoid-sql-injection
     else:
         total = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
-        rows = db.execute("SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?", (per_page, offset)).fetchall()
+        rows = db.execute(
+            "SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?", (per_page, offset)
+        ).fetchall()
     return UserListResponse(
         users=[_row_to_response(r) for r in rows],
         total=total,
