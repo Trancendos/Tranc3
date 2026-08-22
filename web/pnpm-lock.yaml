@@ -85,8 +85,8 @@ importers:
         specifier: 10.4.6
         version: 10.4.6(@types/react-dom@18.3.7(@types/react@18.3.29))(@types/react@18.3.29)(esbuild@0.28.1)(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0))
       '@storybook/addon-mcp':
-        specifier: 0.6.0
-        version: 0.6.0(@storybook/addon-vitest@10.4.6(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10)(@vitest/runner@4.1.10)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vitest@4.1.10))(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(typescript@5.9.3)
+        specifier: 0.7.0
+        version: 0.7.0(@storybook/addon-vitest@10.4.6(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10)(@vitest/runner@4.1.10)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vitest@4.1.10))(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(typescript@5.9.3)
       '@storybook/addon-vitest':
         specifier: 10.4.6
         version: 10.4.6(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10)(@vitest/runner@4.1.10)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vitest@4.1.10)
@@ -1466,11 +1466,11 @@ packages:
       '@types/react':
         optional: true
 
-  '@storybook/addon-mcp@0.6.0':
-    resolution: {integrity: sha512-E79m2S7ik9wiF1AnI49fwbLQkrD03PicIZpCdeFhbbB19MF4tKFKyaQtbT3f6eaAP4EP2+COLDVLCQ7B3rGF4w==}
+  '@storybook/addon-mcp@0.7.0':
+    resolution: {integrity: sha512-f/IWGRMzWynBg5kDJ3DYvvnafuSX88kykGNFzzLOlkLVpfxEZoAmQF6AS47tw25GuH6EFIqSo6ZDBLHLVyZ/IQ==}
     peerDependencies:
-      '@storybook/addon-vitest': ^0.0.0-0 || ^9.1.16 || ^10.0.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0
-      storybook: ^0.0.0-0 || ^9.1.16 || ^10.0.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0
+      '@storybook/addon-vitest': ^0.0.0-0 || ^9.1.16 || ^10.0.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0 || ^10.5.0-0
+      storybook: ^0.0.0-0 || ^9.1.16 || ^10.0.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0 || ^10.5.0-0
     peerDependenciesMeta:
       '@storybook/addon-vitest':
         optional: true
@@ -1526,8 +1526,8 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@storybook/mcp@0.7.0':
-    resolution: {integrity: sha512-Pr4E61tM5e7aDzqgNOL/Ylw8CGdb+BIDGOf3vbmFfkR8ZnXjPxaV/vhTEsiXynnIpjQWCzySCxOU1icxZsgjrA==}
+  '@storybook/mcp@0.8.0':
+    resolution: {integrity: sha512-G+XDgoWGrE98moXqKSee8fQyMQxoIWxRAbPG8r/HQ95pKodratevDqNyOgW+t6ZigM6AAVN1WHiFc5MI+hc8sg==}
 
   '@storybook/react-dom-shim@10.4.6':
     resolution: {integrity: sha512-iGNmKzrq9vgl2PDrYAnZKI+yvac3Ym+lJXXuQaqlFRS23zA5MNm4EBX+rAG7WulqchoK6NaZ0KQOs2mAgEpTMg==}
@@ -2578,8 +2578,8 @@ packages:
     resolution: {integrity: sha512-azl+t0z7pw/z958Gy9svOTuzqIk6xq+NSheJzn5MMWtWTFywIacg2wUlzKFGtt3cthx0r2SxMK0yzJOR0IES7Q==}
     engines: {node: '>=14.0.0'}
 
-  tmcp@1.19.4:
-    resolution: {integrity: sha512-fMoUJ3Gef9iA0yKZNeW2SQCCKTluCwghUyOz/qxPS8XxrQk6Jlw4lgql3S+s6L//FteLeSJ7erKxMWl727mZoQ==}
+  tmcp@1.20.0:
+    resolution: {integrity: sha512-dcDximKQBGqLP/aEAVA26HcWRHhKipstg1w0fbDDJ0HcFZ6lolLU1YYmStYEn/73f534i7WrDNcjRfRYdV9CoA==}
 
   totalist@3.0.1:
     resolution: {integrity: sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ==}
@@ -3923,14 +3923,14 @@ snapshots:
       - vite
       - webpack
 
-  '@storybook/addon-mcp@0.6.0(@storybook/addon-vitest@10.4.6(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10)(@vitest/runner@4.1.10)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vitest@4.1.10))(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(typescript@5.9.3)':
+  '@storybook/addon-mcp@0.7.0(@storybook/addon-vitest@10.4.6(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10)(@vitest/runner@4.1.10)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vitest@4.1.10))(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(typescript@5.9.3)':
     dependencies:
-      '@storybook/mcp': 0.7.0(typescript@5.9.3)
-      '@tmcp/adapter-valibot': 0.1.6(tmcp@1.19.4(typescript@5.9.3))(valibot@1.4.2(typescript@5.9.3))
-      '@tmcp/transport-http': 0.8.6(tmcp@1.19.4(typescript@5.9.3))
+      '@storybook/mcp': 0.8.0(typescript@5.9.3)
+      '@tmcp/adapter-valibot': 0.1.6(tmcp@1.20.0(typescript@5.9.3))(valibot@1.4.2(typescript@5.9.3))
+      '@tmcp/transport-http': 0.8.6(tmcp@1.20.0(typescript@5.9.3))
       picoquery: 2.5.0
       storybook: 10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      tmcp: 1.19.4(typescript@5.9.3)
+      tmcp: 1.20.0(typescript@5.9.3)
       valibot: 1.4.2(typescript@5.9.3)
     optionalDependencies:
       '@storybook/addon-vitest': 10.4.6(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10)(@vitest/runner@4.1.10)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vitest@4.1.10)
@@ -3978,11 +3978,11 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  '@storybook/mcp@0.7.0(typescript@5.9.3)':
+  '@storybook/mcp@0.8.0(typescript@5.9.3)':
     dependencies:
-      '@tmcp/adapter-valibot': 0.1.6(tmcp@1.19.4(typescript@5.9.3))(valibot@1.4.2(typescript@5.9.3))
-      '@tmcp/transport-http': 0.8.6(tmcp@1.19.4(typescript@5.9.3))
-      tmcp: 1.19.4(typescript@5.9.3)
+      '@tmcp/adapter-valibot': 0.1.6(tmcp@1.20.0(typescript@5.9.3))(valibot@1.4.2(typescript@5.9.3))
+      '@tmcp/transport-http': 0.8.6(tmcp@1.20.0(typescript@5.9.3))
+      tmcp: 1.20.0(typescript@5.9.3)
       valibot: 1.4.2(typescript@5.9.3)
     transitivePeerDependencies:
       - '@tmcp/auth'
@@ -4130,22 +4130,22 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.1
 
-  '@tmcp/adapter-valibot@0.1.6(tmcp@1.19.4(typescript@5.9.3))(valibot@1.4.2(typescript@5.9.3))':
+  '@tmcp/adapter-valibot@0.1.6(tmcp@1.20.0(typescript@5.9.3))(valibot@1.4.2(typescript@5.9.3))':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@valibot/to-json-schema': 1.7.1(valibot@1.4.2(typescript@5.9.3))
-      tmcp: 1.19.4(typescript@5.9.3)
+      tmcp: 1.20.0(typescript@5.9.3)
       valibot: 1.4.2(typescript@5.9.3)
 
-  '@tmcp/session-manager@0.2.2(tmcp@1.19.4(typescript@5.9.3))':
+  '@tmcp/session-manager@0.2.2(tmcp@1.20.0(typescript@5.9.3))':
     dependencies:
-      tmcp: 1.19.4(typescript@5.9.3)
+      tmcp: 1.20.0(typescript@5.9.3)
 
-  '@tmcp/transport-http@0.8.6(tmcp@1.19.4(typescript@5.9.3))':
+  '@tmcp/transport-http@0.8.6(tmcp@1.20.0(typescript@5.9.3))':
     dependencies:
-      '@tmcp/session-manager': 0.2.2(tmcp@1.19.4(typescript@5.9.3))
+      '@tmcp/session-manager': 0.2.2(tmcp@1.20.0(typescript@5.9.3))
       esm-env: 1.2.2
-      tmcp: 1.19.4(typescript@5.9.3)
+      tmcp: 1.20.0(typescript@5.9.3)
 
   '@tybys/wasm-util@0.10.2':
     dependencies:
@@ -5027,7 +5027,7 @@ snapshots:
 
   tinyspy@4.0.4: {}
 
-  tmcp@1.19.4(typescript@5.9.3):
+  tmcp@1.20.0(typescript@5.9.3):
     dependencies:
       '@standard-schema/spec': 1.1.0
       json-rpc-2.0: 1.7.1
