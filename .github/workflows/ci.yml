@@ -169,6 +169,14 @@ jobs:
       - name: Matrix index freshness
         run: python scripts/build_matrix_index.py --check
 
+      # The PID column joins the EA service inventory to the entity registry.
+      # Without it, Tier3AI was free text nothing could check, and the CMDB had
+      # drifted from the registry unnoticed. The floor is a ratchet: coverage
+      # may rise, and a change that drops it below the recorded measurement
+      # fails here rather than quietly un-joining the two halves of the estate.
+      - name: PID coverage
+        run: python scripts/pid_coverage.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
