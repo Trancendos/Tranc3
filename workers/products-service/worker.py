@@ -32,9 +32,7 @@ WORKER_NAME = "products-service"
 DB_PATH = Path(__file__).parent / "data" / "products.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
 
@@ -88,9 +86,7 @@ class ProductsDatabase:
             # CREATE TABLE IF NOT EXISTS doesn't touch an already-existing
             # table, so a pre-existing products.db from before the sku
             # column was added needs an explicit, guarded migration.
-            existing_cols = {
-                row[1] for row in cur.execute("PRAGMA table_info(products)")
-            }
+            existing_cols = {row[1] for row in cur.execute("PRAGMA table_info(products)")}
             if "sku" not in existing_cols:
                 cur.execute("ALTER TABLE products ADD COLUMN sku TEXT DEFAULT ''")
 
@@ -113,9 +109,7 @@ class ProductsDatabase:
         if not id_field.isidentifier():
             raise ValueError("Invalid id_field")
         conn = self._get_conn()
-        row = conn.execute(
-            f"SELECT * FROM products WHERE {id_field}=?", (id_value,)
-        ).fetchone()
+        row = conn.execute(f"SELECT * FROM products WHERE {id_field}=?", (id_value,)).fetchone()
         return dict(row) if row else None
 
     def list(self, limit: int = 50, offset: int = 0, **filters) -> List[Dict[str, Any]]:
@@ -360,6 +354,4 @@ app.include_router(_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        app, host="127.0.0.1", port=WORKER_PORT
-    )  # nosec B104 — containerised service
+    uvicorn.run(app, host="127.0.0.1", port=WORKER_PORT)  # nosec B104 — containerised service
