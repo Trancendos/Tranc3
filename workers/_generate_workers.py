@@ -542,6 +542,7 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)  # nosec B104 — containerised service
 '''
 
+
 def write_worker_files(name: str, worker_code: str, port: int):
     """Write worker.py, requirements-worker.txt, and Dockerfile for a worker."""
     worker_dir = f"Tranc3/workers/{name}"
