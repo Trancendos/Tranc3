@@ -43,10 +43,8 @@ def test_configure_services_error_handling():
     mock_config.REDIS_URL = "redis://localhost:6379"
     mock_config.DATABASE_URL = "sqlite:///:memory:"
 
-    with patch("src.core.config.settings", mock_config):
-        configure_services()
-
     # We will simulate ImportError by patching sys.modules
+    # Apply the patch before configure_services() and the get() calls
     with patch.dict(
         "sys.modules",
         {
@@ -56,6 +54,9 @@ def test_configure_services_error_handling():
             "src.quantum.quantum_core": None,
         },
     ):
+        with patch("src.core.config.settings", mock_config):
+            configure_services()
+
         # Calling get() or the factory directly should return None for optional services
         assert container.get("personality") is None
         assert container.get("consciousness") is None
