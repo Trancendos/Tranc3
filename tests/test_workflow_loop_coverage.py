@@ -1,5 +1,4 @@
 import pytest
-
 from src.workflow.nodes.base import NodeConfig, NodeType
 from src.workflow.nodes.flow import LoopNode
 
