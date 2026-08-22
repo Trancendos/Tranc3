@@ -58,7 +58,7 @@ Usage:
     # secret memory is now zeroized
 
     # HSM key operations
-    hsm = SoftHSM2Provider(token="tranc3", pin="123456")
+    hsm = SoftHSM2Provider(token="tranc3", pin=os.environ.get("SOFTHSM2_PIN"))
     key_handle = hsm.generate_key(key_type="AES", key_size=256)
     ciphertext = hsm.encrypt(key_handle, plaintext)
     plaintext = hsm.decrypt(key_handle, ciphertext)
@@ -508,10 +508,10 @@ class SoftHSM2Provider(HSMProvider):
         apt install softhsm2
 
         # Initialize a token
-        softhsm2-util --init-token --slot 0 --label "tranc3" --pin 123456 --so-pin 12345678
+        softhsm2-util --init-token --slot 0 --label "tranc3" --pin $SOFTHSM2_PIN --so-pin $SOFTHSM2_SO_PIN
 
     Usage:
-        hsm = SoftHSM2Provider(token="tranc3", pin="123456")
+        hsm = SoftHSM2Provider(token="tranc3", pin=os.environ.get("SOFTHSM2_PIN"))
         hsm.initialize()
         key = hsm.generate_key(HSMKeyType.AES, 256, label="master-key")
         ciphertext = hsm.encrypt(key, b"secret data")
@@ -522,13 +522,18 @@ class SoftHSM2Provider(HSMProvider):
     def __init__(
         self,
         token: str = "tranc3",
-        pin: str = "123456",
+        pin: Optional[str] = None,
         library_path: Optional[str] = None,
         slot: Optional[int] = None,
         audit_logger: Optional[VaultAuditLogger] = None,
     ) -> None:
         self._token = token
-        self._pin = SecureBytes(pin.encode("utf-8"))
+        resolved_pin = pin or os.environ.get("SOFTHSM2_PIN")
+        if not resolved_pin:
+            raise ValueError(
+                "SOFTHSM2_PIN environment variable is required when pin is not provided"
+            )
+        self._pin = SecureBytes(resolved_pin.encode("utf-8"))
         self._library_path = library_path or self._find_library()
         self._slot = slot
         self._session = None
@@ -1627,7 +1632,7 @@ def create_vault_security(
     if hsm_type == "softhsm2":
         hsm = SoftHSM2Provider(
             token=hsm_config.get("token", "tranc3"),
-            pin=hsm_config.get("pin", "123456"),
+            pin=hsm_config.get("pin"),
             library_path=hsm_config.get("library_path"),
             slot=hsm_config.get("slot"),
             audit_logger=audit_logger,
