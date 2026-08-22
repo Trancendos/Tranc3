@@ -739,6 +739,53 @@ class AdvancedCodeGenerator:
                     return {{"error": str(e)}}
             """)
 
+    def _translate_nl_to_cli_logic(self, description: str) -> str:
+        """Natural language to code translation logic for CLI templates."""
+        desc = description.lower()
+        logic_lines = []
+
+        # 1. Parsing logic
+        if "csv" in desc:
+            logic_lines.extend(
+                ["import csv", "with open(input, 'r') as f:", "    data = list(csv.reader(f))"]
+            )
+        elif "json" in desc:
+            logic_lines.extend(
+                ["import json", "with open(input, 'r') as f:", "    data = json.load(f)"]
+            )
+        else:
+            logic_lines.extend(["with open(input, 'r') as f:", "    data = f.read()"])
+
+        # 2. Processing logic
+        if "count" in desc or "rows" in desc or "length" in desc:
+            logic_lines.append("typer.echo(f'Count: {len(data)}')")
+
+        # 3. Output logic
+        if "write" in desc or "save" in desc or "output" in desc:
+            if "json" in desc and "csv" not in desc:
+                logic_lines.extend(
+                    [
+                        "with open(output, 'w') as f:",
+                        "    json.dump(data, f, indent=2)",
+                        "if verbose:",
+                        "    typer.echo(f'Saved JSON to {output}')",
+                    ]
+                )
+            else:
+                logic_lines.extend(
+                    [
+                        "with open(output, 'w') as f:",
+                        "    f.write(str(data))",
+                        "if verbose:",
+                        "    typer.echo(f'Saved to {output}')",
+                    ]
+                )
+
+        if len(logic_lines) <= 2:
+            logic_lines.append("pass")
+
+        return "\n                ".join(logic_lines)
+
     def _apply_substitutions(self, template: str, request: CodeGenerationRequest) -> str:
         """Fill in template placeholders from the request description."""
         words = re.findall(r"[A-Za-z]+", request.description)
@@ -755,6 +802,15 @@ class AdvancedCodeGenerator:
             f'                        raise ValueError("Empty payload")\n'
             f'                    return JSONResponse(content={{"status": "success", "resource": "{resource}", "data": body}})'
         )
+
+        # CLI templates get their own translation. This is additive to the
+        # handler_logic above rather than an alternative to it: the return
+        # below substitutes {handler_logic} and {description} unconditionally,
+        # so dropping those two assignments would raise NameError for every
+        # template, CLI or not.
+        if "import typer" in template:
+            cli_logic = self._translate_nl_to_cli_logic(request.description)
+            template = template.replace("# TODO: implement", cli_logic)
 
         return (
             template.replace("{prefix}", prefix)
