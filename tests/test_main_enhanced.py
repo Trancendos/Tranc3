@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-import asyncio
-from unittest.mock import MagicMock, patch, ANY, AsyncMock
+
 from src.main_enhanced import TRANC3Enhanced
+
 
 @pytest.mark.asyncio
 async def test_start_background_services_all_enabled():
