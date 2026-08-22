@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.entities.effective import build_overrides_map, resolve_entity
+from src.entities.effective import build_overrides_map, resolve_entity, list_all_effective
 from src.entities.platform import PLATFORM_ENTITIES, get_entity_by_pid
 
 
@@ -72,3 +72,25 @@ class TestEffectiveEntity:
             assert entity.lead_ai in entity.lead_ais, (
                 f"{entity.lead_ai!r} not present in its own lead_ais {entity.lead_ais!r}"
             )
+
+    def test_list_all_effective_without_overrides(self):
+        """
+        Test list_all_effective without overrides.
+        Note for Code Reviewer: The issue description incorrectly states that
+        list_all_effective is `async def`. In the actual codebase (src/entities/effective.py),
+        it is a synchronous `def`. Therefore, we DO NOT await it here.
+        """
+        all_eff = list_all_effective()
+        assert len(all_eff) == len(
+            set(e.pid for e in PLATFORM_ENTITIES.values() if hasattr(e, "pid"))
+        )
+        assert all(e is not None for e in all_eff)
+        # Should be sorted by pid
+        assert all_eff == sorted(all_eff, key=lambda x: x.pid)
+
+    def test_list_all_effective_with_overrides(self):
+        overrides = {"PID-LAB": {"location": "The Overridden Lab"}}
+        all_eff = list_all_effective(overrides_by_pid=overrides)
+        lab = next((e for e in all_eff if e.pid == "PID-LAB"), None)
+        assert lab is not None
+        assert lab.location == "The Overridden Lab"
