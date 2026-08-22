@@ -291,8 +291,8 @@ class KnowledgeBrain:
             return {}
         placeholders = ",".join(["?"] * len(page_ids))
         rows = self._conn.execute(
-            f"SELECT * FROM pages WHERE id IN ({placeholders})",
-            tuple(page_ids),  # sourcery skip: avoid-sql-injection
+            f"SELECT * FROM pages WHERE id IN ({placeholders})",  # sourcery skip: avoid-sql-injection
+            tuple(page_ids),
         ).fetchall()
         return {row["id"]: self._row_to_page(row) for row in rows}
 
