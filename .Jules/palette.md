@@ -21,3 +21,6 @@
 ## 2026-05-18 - [Fix silent exceptions in lifecycle listeners]
 **Learning:** `except Exception: pass` hides potentially critical errors without visibility. Found instances of this in `src/entities/lifecycle.py` affecting `emit_lifecycle` and `emit_lifecycle_sync`.
 **Action:** Replaced silent pass with `logger.error` indicating the event and error detail to maintain non-crashing behavior while ensuring observability.
+## 2026-05-18 - [Add unit tests to fix coverage gap in code health improvement]
+**Learning:** The previous fix to `src/entities/lifecycle.py` introducing `logger.error()` was uncovered by unit tests, resulting in a GitHub Actions CI Codecov failure (target 60%, hit 20%).
+**Action:** Created `tests/test_lifecycle.py` targeting `LifecycleEmitter` exceptions to restore code coverage to >60%.
