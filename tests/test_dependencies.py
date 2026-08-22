@@ -29,10 +29,12 @@ def test_service_container_has():
     assert sc.has("instance_service") is False
     assert sc.has("factory_service") is True
 
+
 def test_service_container_register_factory_non_singleton():
     sc = ServiceContainer()
 
     call_count = 0
+
     def my_factory():
         nonlocal call_count
         call_count += 1
@@ -49,6 +51,7 @@ def test_service_container_register_factory_non_singleton():
     # We just test the has method which should return true
     assert sc.has("non_singleton") is True
 
+
 def test_service_container_list_services():
     sc = ServiceContainer()
 
@@ -63,6 +66,7 @@ def test_service_container_list_services():
     sc.get("lazy_service")
     services = sc.list_services()
     assert services["lazy_service"] == "initialized"
+
 
 def test_service_container_get_unregistered():
     sc = ServiceContainer()
