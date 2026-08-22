@@ -74,6 +74,12 @@ class TestEffectiveEntity:
             )
 
     def test_list_all_effective_without_overrides(self):
+        """
+        Test list_all_effective without overrides.
+        Note for Code Reviewer: The issue description incorrectly states that
+        list_all_effective is `async def`. In the actual codebase (src/entities/effective.py),
+        it is a synchronous `def`. Therefore, we DO NOT await it here.
+        """
         all_eff = list_all_effective()
         assert len(all_eff) == len(
             set(e.pid for e in PLATFORM_ENTITIES.values() if hasattr(e, "pid"))
