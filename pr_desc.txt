@@ -1,0 +1,3 @@
+🎯 **What:** Added tests for `configure_services` in `src/dependencies.py` to ensure core and optional services are registered.
+📊 **Coverage:** Tests `configure_services` happy path checking that specific services are present in the dependency injection container and the container is marked as initialized. Also tests the graceful degradation logic where optional imports raising `ImportError` do not crash the service registration but rather register nothing.
+✨ **Result:** Higher test coverage and improved safety against regressions when modifying application dependencies and initialization.
