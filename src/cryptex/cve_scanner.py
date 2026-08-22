@@ -102,7 +102,7 @@ class CveScanner:
         if ingestors:
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(ingestors)) as executor:
                 futures = [executor.submit(ingestor.fetch) for ingestor in ingestors]
-                for ingestor, future in zip(ingestors, futures):
+                for ingestor, future in zip(ingestors, futures, strict=False):
                     try:
                         items = future.result()
                         all_items.extend(items)
