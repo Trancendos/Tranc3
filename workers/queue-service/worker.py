@@ -95,22 +95,27 @@ async def _stuck_task_sweeper() -> None:
                 (STUCK_TIMEOUT_SECONDS,),
             ).fetchall()
 
-            requeued = 0
-            failed = 0
+            failed_ids = []
+            requeued_ids = []
             for row in rows:
-                task_id = row["id"]
                 if row["retries"] + 1 >= row["max_retries"]:
-                    conn.execute(
-                        "UPDATE tasks SET status='failed', completed_at=?, error=? WHERE id=?",
-                        (now_iso, "max_retries_exceeded_on_stuck", task_id),
-                    )
-                    failed += 1
+                    failed_ids.append((now_iso, "max_retries_exceeded_on_stuck", row["id"]))
                 else:
-                    conn.execute(
-                        "UPDATE tasks SET status='pending', started_at=NULL, worker_id=NULL, retries=retries+1, error='requeued_after_stuck' WHERE id=?",
-                        (task_id,),
-                    )
-                    requeued += 1
+                    requeued_ids.append((row["id"],))
+
+            if failed_ids:
+                conn.executemany(
+                    "UPDATE tasks SET status='failed', completed_at=?, error=? WHERE id=?",
+                    failed_ids,
+                )
+            if requeued_ids:
+                conn.executemany(
+                    "UPDATE tasks SET status='pending', started_at=NULL, worker_id=NULL, retries=retries+1, error='requeued_after_stuck' WHERE id=?",
+                    requeued_ids,
+                )
+
+            requeued = len(requeued_ids)
+            failed = len(failed_ids)
 
             if rows:
                 conn.commit()
@@ -227,7 +232,12 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "tasks": {"pending": pending, "processing": processing, "done": done, "failed": failed},
+        "tasks": {
+            "pending": pending,
+            "processing": processing,
+            "done": done,
+            "failed": failed,
+        },
         "entity": {
             "name": "The HIVE",
             "lead_ai": "The Queen",
@@ -251,7 +261,14 @@ async def enqueue(req: EnqueueRequest):
             INSERT INTO tasks (id, queue_name, payload, priority, max_retries, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (task_id, req.queue_name, json.dumps(req.payload), req.priority, req.max_retries, now),
+            (
+                task_id,
+                req.queue_name,
+                json.dumps(req.payload),
+                req.priority,
+                req.max_retries,
+                now,
+            ),
         )
         conn.commit()
     finally:
@@ -403,4 +420,8 @@ app.include_router(_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)  # nosec B104 — containerised service
+    uvicorn.run(
+        app,
+        host="0.0.0.0",  # nosec B104
+        port=WORKER_PORT,
+    )  # containerised service
