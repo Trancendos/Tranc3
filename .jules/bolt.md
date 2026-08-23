@@ -1,3 +1,7 @@
 ## 2024-05-26 - [Python Cosine Similarity Optimizaton]
 **Learning:** In pure Python (when `numpy` is unavailable), calculating dot product and vector norms in three separate `sum(...)` generator expressions requires three passes over the vector and three generator overheads. Doing it in a single loop (`for x, y in zip(a, b)`) is 30%+ faster.
 **Action:** When calculating vector similarity in pure Python, use a single loop to calculate dot product and norms simultaneously instead of multiple generator expressions.
+
+## 2026-08-23 - [Python Generator Overhead in Distance Metrics]
+**Learning:** When evaluating distance metrics such as cosine similarity, euclidean distance, or manhattan distance in pure Python, it is significantly more performant to compute sums and intermediate values within a single, unified loop instead of chaining multiple generator expressions using `sum()`. The function call overhead for generators in tight inner loops outweighs the syntactic conciseness.
+**Action:** When calculating similarity between vectors or computing aggregate metrics across multiple arrays, default to standard explicit `for` loops that traverse index-by-index once, keeping intermediate states localized.
