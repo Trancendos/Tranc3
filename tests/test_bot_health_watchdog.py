@@ -73,6 +73,15 @@ class TestIsDegradedForBot:
         )
         assert watchdog._is_degraded_for_bot("Kilo Code Review", result) is True
 
+    def test_assistant_request_failed_is_degraded(self):
+        result = CheckRunResult(
+            pr_number=1,
+            name="Kilo Code Review",
+            conclusion="failure",
+            summary_text="Review failed: Assistant request failed",
+        )
+        assert watchdog._is_degraded_for_bot("Kilo Code Review", result) is True
+
 
 class TestDetectDegradedBots:
     def test_below_threshold_streak_is_not_flagged(self):
