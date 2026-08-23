@@ -516,10 +516,19 @@ class EvalSuite:
 
     @staticmethod
     def _cosine_similarity(vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
-        """Cosine similarity between two float vectors."""
-        dot = sum(a * b for a, b in zip(vec_a, vec_b, strict=False))
-        norm_a = math.sqrt(sum(a * a for a in vec_a))
-        norm_b = math.sqrt(sum(b * b for b in vec_b))
-        if norm_a == 0 or norm_b == 0:
+        """Cosine similarity between two float vectors.
+
+        Performance optimization: Uses a single loop to calculate dot product
+        and norms simultaneously instead of three separate generator passes.
+        """
+        dot = 0.0
+        norm_a_sq = 0.0
+        norm_b_sq = 0.0
+        for x, y in zip(vec_a, vec_b, strict=False):
+            dot += x * y
+            norm_a_sq += x * x
+            norm_b_sq += y * y
+
+        if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
-        return dot / (norm_a * norm_b)
+        return dot / math.sqrt(norm_a_sq * norm_b_sq)

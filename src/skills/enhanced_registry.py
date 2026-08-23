@@ -172,9 +172,18 @@ class EnhancedSkillRegistry:
             self._embedder = None
 
     def _cosine(self, a: List[float], b: List[float]) -> float:
-        dot = sum(x * y for x, y in zip(a, b, strict=False))
-        mag_a = math.sqrt(sum(x * x for x in a))
-        mag_b = math.sqrt(sum(y * y for y in b))
+        """Performance optimization: Uses a single loop to calculate dot product
+        and norms simultaneously instead of three separate generator passes."""
+        dot = 0.0
+        mag_a_sq = 0.0
+        mag_b_sq = 0.0
+        for x, y in zip(a, b, strict=False):
+            dot += x * y
+            mag_a_sq += x * x
+            mag_b_sq += y * y
+
+        mag_a = math.sqrt(mag_a_sq)
+        mag_b = math.sqrt(mag_b_sq)
         if mag_a < 1e-12 or mag_b < 1e-12:
             return 0.0
         return dot / (mag_a * mag_b)
