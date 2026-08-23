@@ -69,6 +69,7 @@ class CheckRunResult:
     name: str
     conclusion: str | None
     summary_text: str = ""
+    title: str = ""
 
 
 @dataclass
@@ -81,7 +82,8 @@ def _is_degraded_for_bot(bot_name: str, result: CheckRunResult) -> bool:
     if result.conclusion in _HEALTHY_CONCLUSIONS:
         return False
     phrases = KNOWN_BOTS.get(bot_name, ())
-    haystack = result.summary_text.lower()
+    # Include title as well since some error messages are in the check run title instead of the summary
+    haystack = (str(result.summary_text) + " " + str(getattr(result, 'title', ''))).lower()
     return any(phrase in haystack for phrase in phrases)
 
 
@@ -150,6 +152,7 @@ async def fetch_recent_pr_check_runs(
                     name=cr["name"],
                     conclusion=cr.get("conclusion"),
                     summary_text=((cr.get("output") or {}).get("summary") or ""),
+                    title=((cr.get("output") or {}).get("title") or ""),
                 )
                 for cr in check_runs
                 if cr["name"] in KNOWN_BOTS
