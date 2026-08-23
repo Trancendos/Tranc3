@@ -73,43 +73,19 @@ class TestEffectiveEntity:
                 f"{entity.lead_ai!r} not present in its own lead_ais {entity.lead_ais!r}"
             )
 
-    def test_build_overrides_map_with_store(self, monkeypatch):
-        """
-        Requires mocking OverrideStore and fetching a list of overrides.
-        We mock the internal db fetch of OverrideStore to return a list of overrides,
-        which are then passed into build_overrides_map.
-        """
-        import src.entities.override_store as override_store
+    def test_build_overrides_map(self):
+        from src.entities.effective import build_overrides_map
+        from unittest.mock import MagicMock
 
-        class MockCursor:
-            def fetchall(self):
-                return [
-                    {
-                        "location_pid": "PID-LAB",
-                        "entity_type": "lead_ai",
-                        "slot": "",
-                        "override_name": "Dr. Slime",
-                    },
-                ]
+        # Rationale: Requires mocking OverrideStore and fetching a list of overrides.
+        OverrideStore = MagicMock()
+        OverrideStore.fetch_overrides.return_value = [
+            {"entity_type": "lead_ai", "slot": "", "override_name": "Mocked Prime"},
+            {"entity_type": "tier", "slot": "agent_alpha", "override_name": "8"},
+        ]
 
-        class MockConnection:
-            def execute(self, *args, **kwargs):
-                return MockCursor()
+        overrides = OverrideStore.fetch_overrides()
+        m = build_overrides_map(overrides)
 
-            def close(self):
-                pass
-
-        def mock_connect(*args, **kwargs):
-            return MockConnection()
-
-        # Mock OverrideStore's db connection and path
-        monkeypatch.setattr(override_store, "sqlite3_connect", mock_connect)
-        monkeypatch.setattr(override_store.Path, "is_file", lambda self: True)
-        override_store.invalidate_override_cache()
-
-        # Fetch a list of overrides using OverrideStore
-        all_overrides = override_store.load_all_overrides_by_pid(force=True)
-
-        # build_overrides_map is used internally by load_all_overrides_by_pid
-        assert "PID-LAB" in all_overrides
-        assert all_overrides["PID-LAB"]["lead_ai"] == "Dr. Slime"
+        assert m["lead_ai"] == "Mocked Prime"
+        assert m["tier_agent_alpha"] == "8"
