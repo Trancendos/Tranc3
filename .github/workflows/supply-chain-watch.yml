@@ -1,0 +1,228 @@
+# .github/workflows/supply-chain-watch.yml
+#
+# GitHub-hosted twin of the supply-chain scans in .forgejo/workflows/ —
+# following the same side-by-side pattern as bot-health-watchdog.yml rather
+# than migrating anything. The Forgejo originals keep their broader job set
+# (licences, outdated lists, worker sweep, dashboards) and will run again once
+# The Workshop is deployed; this file carries only the two measurements whose
+# answer changes with the passage of time rather than with a commit.
+#
+# WHY THIS EXISTS AT ALL
+#
+# Every scheduled supply-chain control in this repo lives in .forgejo/workflows/,
+# which GitHub does not read. Sixteen scheduled Forgejo jobs exist and fourteen
+# need `runs-on: self-hosted` — the act-runner on hardware that is currently
+# awaiting repair funding, which is the same reason the estate is Cloud Only.
+# The scans were therefore built, wired, and dormant: a control that exists and
+# does not fire. That is the failure mode this repo keeps rediscovering
+# (payload_scanner.py unwired from /mcp/rpc; a security score that could not move
+# when a CVE landed), so it is worth naming plainly rather than papering over.
+#
+# The standing policy is to avoid GitHub Actions where possible, because of rate
+# limits under prolonged use. This file is a deliberate, narrow exception: two
+# jobs, one daily and one weekly, chosen because a dormant scan is worse than a
+# metered one. It is not a general migration and should not grow into one.
+#
+# WHY THESE TWO, AND WHY DIFFERENT CADENCES
+#
+# Abandonment and vulnerability disclosure are events in the world, not events in
+# the repository. A push-triggered scan cannot see either: a dependency that gets
+# a CVE published against it on a quiet Sunday produces no commit to trigger on.
+#
+#   vulnerability census — DAILY. Under CRA Art. 14(1) an actively exploited
+#     vulnerability must be notified within 24 hours of becoming aware of it.
+#     Twenty-four hours is a lookup interval, not a scanning interval, so the
+#     intake that feeds it cannot be weekly. See MC-045 in the Magna Carta
+#     register and docs/compliance/EU-CRA-PROFILE.md.
+#
+#   obsolescence census — WEEKLY. Dormancy is measured in years, and the census
+#     makes ~110 live calls to pypi.org and registry.npmjs.org. Running that
+#     daily buys no earlier warning and adds a daily chance of a transient
+#     registry outage. The Forgejo original is weekly for the same reason.
+#
+# Both scripts are fail-closed by construction: a surface that could not be
+# scanned is reported as unknown, never as healthy. That property is why they are
+# safe to schedule unattended and wrong to put in a blocking PR gate — a registry
+# outage would redden a pull request that touched no dependency at all.
+
+name: Supply Chain Watch
+
+on:
+  schedule:
+    - cron: '0 5 * * *'    # Daily 05:00 UTC — vulnerability census
+    - cron: '30 5 * * 1'   # Monday 05:30 UTC — obsolescence census
+  workflow_dispatch:       # Manual trigger — runs both
+
+# Least privilege at the top; only the alert job is granted issues: write, below.
+# The two census jobs read the repository and talk to package registries -- they
+# have no reason to hold a token that can write to the issue tracker.
+permissions:
+  contents: read
+
+# One run at a time. The `all` scope takes roughly nine minutes against two live
+# registries, so a manual dispatch overlapping the 05:00 schedule would run both
+# censuses twice and could comment on the tracking issue twice for one condition.
+concurrency:
+  group: supply-chain-watch
+  cancel-in-progress: false
+
+jobs:
+  vulnerability:
+    name: Vulnerability census (daily)
+    # On a manual dispatch github.event.schedule is unset, so both jobs run.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 5 * * *'
+    runs-on: ubuntu-latest
+    # ~9 minutes of registry latency; the 360-minute default would let a hung
+    # connection sit for six hours before anyone noticed.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # A read-only audit has no need of a push token left in .git/config.
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node 24
+        # npm audit reads package-lock.json directly; no install step is needed,
+        # and adding one would run lifecycle hooks this repo deliberately blocks.
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
+      - name: Install pip-audit
+        # The version this repository declares, not whatever released today. A
+        # floating scanner can change the census result with no commit here, and
+        # would then disagree with the merge gate, which installs from this file.
+        # cut/tr strips the trailing inline comment -- the raw grep line ends with
+        # "# Audit pip packages against OSV/NVD ..." and pip would choke on it.
+        run: |
+          pin=$(grep -m1 '^pip-audit==' requirements-security.txt | cut -d'#' -f1 | tr -d ' ')
+          echo "installing $pin"
+          pip install --quiet "$pin"
+
+      - name: Measure open vulnerabilities
+        # --check fails on any fixable finding or any surface that errored.
+        # A documented accepted risk passes; an unexamined one does not.
+        #
+        # --scope all is the whole estate: the census discovers every manifest in
+        # the repo rather than working from a hardcoded list, deduplicates the
+        # Python ones by dependency set (91 files collapse to ~40 distinct), and
+        # skips git submodules, which audit themselves. Roughly nine minutes,
+        # nearly all of it waiting on pypi.org and registry.npmjs.org — fine here,
+        # which is why the production merge gate uses --scope core instead.
+        run: python scripts/vulnerability_census.py --check --scope all
+
+      - name: Upload vulnerability census
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: vulnerability-census
+          path: logs/vulnerability_census.json
+          retention-days: 90
+
+  obsolescence:
+    name: Obsolescence census (weekly)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 5 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Measure dependency obsolescence
+        # --fail-on stranded is the strict setting and passes today, because every
+        # currently-dormant component carries a reasoned disposition in
+        # docs/governance/OBSOLESCENCE-ACCEPTED.md. The gate therefore fires only
+        # on a dormant component nobody has looked at yet — a reviewed risk
+        # passes, an unexamined one does not.
+        run: python scripts/obsolescence_census.py --check --fail-on stranded
+
+      - name: Upload obsolescence census
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: obsolescence-census
+          path: logs/obsolescence_census.json
+          retention-days: 90
+
+  alert:
+    name: Raise a tracking issue on failure
+    needs: [vulnerability, obsolescence]
+    # A scheduled workflow has no pull request to redden and nobody watching the
+    # Actions tab at 05:00. Without this job a failure is indistinguishable from
+    # a pass — which is the exact defect this workflow exists to correct, so it
+    # would be a poor joke to reproduce it here. Runs when either census failed;
+    # `always()` is required because a skipped sibling job otherwise cancels it.
+    if: always() && (needs.vulnerability.result == 'failure' || needs.obsolescence.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open or update the tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VULN_RESULT: ${{ needs.vulnerability.result }}
+          OBSO_RESULT: ${{ needs.obsolescence.result }}
+        run: |
+          set -euo pipefail
+
+          # The label doubles as the de-duplication key: one open issue at a
+          # time, commented on daily, instead of thirty issues in a month.
+          gh label create supply-chain-watch \
+            --repo "$REPO" \
+            --color B60205 \
+            --description "Raised by .github/workflows/supply-chain-watch.yml" \
+            2>/dev/null || true
+
+          body=$(cat <<EOF
+          A scheduled supply-chain census failed.
+
+          | Census | Result |
+          |---|---|
+          | Vulnerability (daily) | \`${VULN_RESULT}\` |
+          | Obsolescence (weekly) | \`${OBSO_RESULT}\` |
+
+          Run: ${RUN_URL}
+
+          Both censuses are fail-closed, so this means one of:
+
+          - a **fixable** vulnerability is open — a patch exists and has not been taken;
+          - a **stranded** dependency has no reasoned disposition in \`docs/governance/OBSOLESCENCE-ACCEPTED.md\`;
+          - a surface could not be scanned, and is therefore reported as unknown rather than healthy.
+
+          The third case is the one worth checking first: an unreachable registry
+          is a scanning failure, not a finding, and should not be closed as noise.
+
+          ---
+          _Filed automatically by \`.github/workflows/supply-chain-watch.yml\`._
+          EOF
+          )
+
+          existing=$(gh issue list --repo "$REPO" \
+            --label supply-chain-watch --state open \
+            --json number --jq '.[0].number // empty')
+
+          if [ -n "$existing" ]; then
+            echo "Updating existing issue #${existing}"
+            gh issue comment "$existing" --repo "$REPO" --body "$body"
+          else
+            echo "Opening a new tracking issue"
+            gh issue create --repo "$REPO" \
+              --title "Supply Chain Watch: a scheduled census is failing" \
+              --label supply-chain-watch \
+              --body "$body"
+          fi
