@@ -172,9 +172,27 @@ class EnhancedSkillRegistry:
             self._embedder = None
 
     def _cosine(self, a: List[float], b: List[float]) -> float:
-        dot = sum(x * y for x, y in zip(a, b, strict=False))
-        mag_a = math.sqrt(sum(x * x for x in a))
-        mag_b = math.sqrt(sum(y * y for y in b))
+        # ⚡ Bolt Optimization: Use a single explicit loop instead of multiple generator
+        # expressions to calculate vector distance metrics simultaneously.
+        # This reduces iteration overhead and is significantly faster in pure Python.
+        dot = 0.0
+        sq_a = 0.0
+        sq_b = 0.0
+        for x, y in zip(a, b, strict=False):
+            dot += x * y
+            sq_a += x * x
+            sq_b += y * y
+
+        # Handle cases where vectors have unequal lengths
+        if len(a) > len(b):
+            for x in a[len(b) :]:
+                sq_a += x * x
+        elif len(b) > len(a):
+            for y in b[len(a) :]:
+                sq_b += y * y
+
+        mag_a = math.sqrt(sq_a)
+        mag_b = math.sqrt(sq_b)
         if mag_a < 1e-12 or mag_b < 1e-12:
             return 0.0
         return dot / (mag_a * mag_b)
