@@ -74,6 +74,13 @@ mounted in `api.py`).
   `tranc3-*` service names stay only where they genuinely serve the Tier-3 engine
   (Tranc3Engine, tranc3-backend, tranc3-ai); new platform-level names use
   "trancendos-*". See `config/estate/naming_conventions.md` §0.
+- **Norman Hawkins holds two different tiers and they are not interchangeable.** He is
+  **The Observatory's Lead AI (Tier 3)** and separately **The Spark's Prime (Tier 2)**.
+  The Spark's own Lead AI is **Imfy** (`AID-SPK-01`) — `PLATFORM_ENTITIES.md` PID-SPK and
+  `src/entities/platform.py` have always said so; this table said "Norman Hawkins" until
+  2026-08-22, which put a Prime in a Lead AI column. `src/personality/role_resolution.py`
+  had the same collapse, mapping Imfy onto `norman-hawkins.json`, so The Spark answered in
+  The Observatory's voice. Both are corrected; `imfy.json` now exists.
 - "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
 - "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
 - "tAimra" = location name; "tAImra" = its Lead AI name (different capitalisation — both correct)
@@ -85,7 +92,7 @@ mounted in `api.py`).
   references, "Nexus-Prime" where a distinct AID is required (matching how "The Guardian" below
   gets a full title only in entity contexts).
 - Infinity's Lead AI is "The Guardian (Marcus Magnolia)" — Infinity has two distinct Tier-3 AIs (`lead_ais` in `src/entities/platform.py`): The Guardian (Marcus Magnolia) and The Orb of Orisis. As Prime (Tier 2) elsewhere (The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box), use "The Guardian (Marcus Magnolia)" without a qualifier — "(Anchor: Orb of Orisis)" is retired as a combined title.
-- TateKing's Lead AI is "Benji Tate" and Arcadian Exchange's is "Clarence Porter" — both have several distinct Tier-3 AIs (`lead_ais`) that each run their own dedicated Agent Alpha/Beta pair (`agent_teams` in `src/entities/platform.py`): TateKing's Sam King has The Director-S/The Editor-S; Arcadian Exchange's Ann, George, Edward, and James Porter each have their own Speculator-X/Trader-X pair. Infinity (The Guardian (Marcus Magnolia) vs. The Orb of Orisis) and The Lab (The Dr. (Nikolai O'denhime) vs. Slime) also each have their own dedicated `agent_teams` pair per Lead AI — all four multi-AI Locations follow this same per-name pairing, none share a single team across their Lead AIs.
+- TateKing's Lead AI is "Benji Tate" and Arcadian Exchange's is "Clarence Porter" — both have several distinct Tier-3 AIs (`lead_ais`) that each run their own dedicated Agent Alpha/Beta pair (`agent_teams` in `src/entities/platform.py`): TateKing's Sam King has The Director-S/The Editor-S; Arcadian Exchange's Ann, George, Edward, and James Porter each have their own Speculator-X/Trader-X pair. Infinity (The Guardian (Marcus Magnolia) vs. The Orb of Orisis), The Lab (The Dr. (Nikolai O'denhime) vs. Slime) and The Chaos Party (The Mad Hatter vs. **Alice Dream**) also each have their own dedicated `agent_teams` pair per Lead AI — all **five** multi-AI Locations follow this same per-name pairing, none share a single team across their Lead AIs. The Chaos Party's split is the clearest illustration of why: The Mad Hatter runs adversarial testing (fault injection, chaos, boundary abuse) with The March Hare / The Dormouse, while Alice Dream runs the deterministic half (acceptance, regression, smoke) with The White Rabbit / The Looking-Glass. A chaos agent seeks variance and an acceptance agent requires none, so a shared pair would leave the repeatable suite inheriting non-determinism.
 - `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
 - "Section 7" is the **Location** (PID-DUT) and "The Dutchy" is its **Lead AI** (AID-DUT-01) — corrected 2026-07-31 by the owner; the entity table previously inverted this ("The Dutchy" as location, "Predictive lore" as Lead AI). "Predictive lore" survives only inside the primary-function descriptor and as the persona profile file `src/personality/profiles/predictive-lore.json` (which "The Dutchy" resolves to). Code paths `src/section7/`, `src/research/section7.py` and worker dir `workers/the-dutchy/` are unchanged.
 - **AeonMind** (`aeonmind/` — Rust/Go/Python/WASM) — a separate, generic polyglot agent-framework
@@ -104,7 +111,7 @@ mounted in `api.py`).
 
 | Code Name | Lead AI (Tier 3) | Role / Description | Status | Foundation |
 |---|---|---|---|---|
-| **The Spark** | Norman Hawkins | MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE | ✅ In repo | `src/mcp/` |
+| **The Spark** | Imfy | MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE (Norman Hawkins is The Spark's **Prime**, Tier 2 — not its Lead AI) | ✅ In repo | `src/mcp/` |
 | **The Digital Grid** | Tyler Towncroft | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
 | **The Void** | Prometheus | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
 | **The Workshop** | Larry Lowhammer | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
@@ -130,7 +137,7 @@ mounted in `api.py`).
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | ✅ In repo | `workers/imaginarium/worker.py` (standalone worker); orchestrates the others |
 | **The Lab** | The Dr. (Nikolai O'denhime) + Slime | Code creation platform (Claude Code-style) | ✅ Self-hosted | `workers/the-lab/` (Port 8055) + `workers/lab-service/` (Port 8066) — supersedes the old `src/lab/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
-| **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py`; `workers/chaos-party/worker.py` (standalone worker, port 8079) |
+| **The Chaos Party** | The Mad Hatter + Alice Dream | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py`; `workers/chaos-party/worker.py` (standalone worker, port 8079) |
 | **The Artifactory** | Lunascene | Central artifact repository library | ✅ Self-hosted | `workers/artifactory-service/` (Port 8047, Zot OCI registry bridge) — supersedes the old `src/artifactory/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | ✅ In repo | `src/apimarket/` (router registered in `api.py`); Gravitee.io planned integration |
 | **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | `src/cryptex/` (router registered in `api.py`); Wazuh + MISP planned integration |
@@ -192,7 +199,7 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `wiki-content/Architecture-CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python, describing the Hybrid/Local path once funded (moved from repo root — see `docs/WIKI_INDEX.md`)
 - `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
 - `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
-- `docs/architecture/ea-workbook/` — EA/CMDB workbook (17 CSVs + runbooks/API-spec/compliance
+- `docs/architecture/ea-workbook/` — EA/CMDB workbook (19 CSVs + runbooks/API-spec/compliance
   docs) covering 6 real anchor services in depth (The Spark, The Digital Grid, Infinity,
   The Void, The Workshop, The Observatory) — not a full inventory of all 90+ services
 
@@ -395,7 +402,11 @@ Key module domains under `src/`:
 - `ai_gateway/` — **AI Gateway**: priority-based failover router, LRU cache, token budgets, provider health tracking
 - `auth/zero_trust.py` — **Zero Trust IAM**: device posture, MFA, geographic policies, risk scoring
 - `registry/` — BotRegistry: maps BotType → handler
-- `personality/` — 5 named personality instances (dorris-fontaine, cornelius-macintyre, the-guardian, vesper-nightingale, atlas-meridian)
+- `personality/` — 47 personality profile files in `src/personality/profiles/` covering the
+  platform's 47 Lead AIs (plus 6 `tranc3-*` base archetypes and the 2 unmapped legacy
+  profiles `vesper-nightingale` / `atlas-meridian`). Some files are deliberately shared:
+  the five Porters resolve to `the-porter-family.json`, The Dutchy to `predictive-lore.json`,
+  Nexus-Prime to `the-nexus-ai.json`
 - `monetisation/` — billing tiers: free (100 req/hr), pro £29 (1k/hr), business £149 (10k/hr)
 - `database/` — SQLAlchemy models + Alembic migrations
 - `database/vector_store.py` — Pinecone/in-memory vector store (user memory)

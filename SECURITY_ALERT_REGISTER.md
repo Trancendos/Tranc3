@@ -116,6 +116,53 @@ release ships.
 
 ---
 
+### SEC-005 — mcp session-hijacking / host-validation advisories, unreachable behind semgrep's exact pin
+
+| Field | Value |
+|---|---|
+| **Disposition** | **ACCEPT** |
+| **ID** | PYSEC-2026-3481, PYSEC-2026-3482, PYSEC-2026-3483 (CVE-2026-52869, CVE-2026-52870, CVE-2026-59950) |
+| **Scanner** | pip-audit |
+| **Component** | `mcp==1.23.3` — transitive via `semgrep`, `requirements-security.txt` |
+| **Blocked-by** | `semgrep` exact-pins `mcp==1.23.3` through 1.172.0 — patched mcp releases exist and cannot be installed |
+| **Recorded** | 2026-08-21 |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2026-11-21 |
+| **Re-evaluate** | On every `semgrep` bump — see the check below |
+
+Patched releases exist (1.27.2 and 1.28.1) and **cannot be reached**: every semgrep
+release through 1.172.0 exact-pins `mcp==1.23.3`, not a range, so overriding it fails
+pip resolution rather than producing a patched install. The census therefore classifies
+these three as `blocked` rather than `fixable` — a fix exists, but not for us.
+
+The **Blocked-by** row above is what produces that classification, and it is the only
+thing that can. `scripts/vulnerability_census.py` reads blocked ids from entries
+carrying that row alone, never from register membership: an entry dispositioned
+`SUPPRESS` for want of any patch (SEC-004) must start failing the gate the moment
+upstream ships one, and would silently stop doing so if being *documented* were enough
+to earn `blocked`. All three ids are written in full for the same reason — the
+census's id pattern matches `CVE-YYYY-NNNN`, so a shorthand like "52869 / 52870"
+would register only the first.
+
+Not exploitable as used. All three are bugs in mcp's *server* transports — session
+hijacking and missing Host/Origin validation in the SSE, WebSocket and
+experimental-tasks paths. `semgrep` is invoked here purely as a CLI SAST scanner from
+pre-commit and CI; it never starts an mcp server, so none of those code paths execute.
+
+**This entry exists because the analysis was in the wrong place.** The same reasoning
+already sat in a comment block at the foot of `requirements-security.txt`, where it was
+correct, current and invisible: `scripts/vulnerability_census.py` reads dispositions
+from this register and from `SECURITY.md`, and nowhere else. A risk documented somewhere
+the control cannot read is, to that control, undocumented — which is how three
+knowingly-carried findings would have reported as open. The requirements comment stays
+as installation guidance; this register entry is what makes the disposition count.
+
+**Re-check on every semgrep bump:** `pip download --no-deps semgrep==<version>` and grep
+its `METADATA` for `Requires-Dist: mcp`. If the pin has moved to a range, or to 1.28.1 or
+above, drop this entry and take the fix.
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
