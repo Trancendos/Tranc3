@@ -172,8 +172,13 @@ jobs:
       # -- which is how it reported 100% while 31 vulnerabilities were open on the
       # default branch. --check fails here on any FIXABLE finding; an unfixable
       # one recorded in SECURITY_ALERT_REGISTER.md counts as accepted and passes.
+      # --scope core keeps this to the root manifests (~90s). The full estate --
+      # every discovered worker manifest -- is swept daily by
+      # .github/workflows/supply-chain-watch.yml, which alerts rather than blocks:
+      # a worker CVE disclosed overnight should raise an issue, not redden a pull
+      # request that never touched it.
       - name: Dependency vulnerability census
-        run: python3 scripts/vulnerability_census.py --check
+        run: python3 scripts/vulnerability_census.py --check --scope core
 
       - name: Security dimension score
         run: python3 scripts/security_score.py --min-percent 90
