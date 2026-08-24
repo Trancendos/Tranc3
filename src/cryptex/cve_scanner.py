@@ -21,7 +21,6 @@ and Cryptex's threat analysis engine.
 
 from __future__ import annotations
 
-import concurrent.futures
 import logging
 import os
 from dataclasses import dataclass, field
@@ -99,25 +98,21 @@ class CveScanner:
         )
 
         all_items: List[Any] = []
-
-        if ingestors:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=len(ingestors)) as executor:
-                futures = [executor.submit(ingestor.fetch) for ingestor in ingestors]
-                for ingestor, future in zip(ingestors, futures, strict=True):
-                    try:
-                        items = future.result()
-                        all_items.extend(items)
-                        logger.debug(
-                            "cryptex.cve_scanner: %s returned %d items",
-                            type(ingestor).__name__,
-                            len(items),
-                        )
-                    except Exception as exc:
-                        logger.warning(
-                            "cryptex.cve_scanner: ingestor %s failed: %s",
-                            type(ingestor).__name__,
-                            exc,
-                        )
+        for ingestor in ingestors:
+            try:
+                items = ingestor.fetch()
+                all_items.extend(items)
+                logger.debug(
+                    "cryptex.cve_scanner: %s returned %d items",
+                    type(ingestor).__name__,
+                    len(items),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "cryptex.cve_scanner: ingestor %s failed: %s",
+                    type(ingestor).__name__,
+                    exc,
+                )
 
         # Deduplicate by CVE-ID (keep first seen)
         seen_ids: set[str] = set()

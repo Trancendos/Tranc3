@@ -1,0 +1,44 @@
+F401 `jose.JWTError` imported but unused; consider using `importlib.util.find_spec` to test for availability
+   --> Dimensional/infinity/auth_gateway.py:116:31
+    |
+114 |     """
+115 |     try:
+116 |         from jose import jwt, JWTError  # noqa: I001
+    |                               ^^^^^^^^
+117 |
+118 |         payload = jwt.decode(token, secret, algorithms=[algorithm])
+    |
+help: Remove unused import: `jose.JWTError`
+
+E501 Line too long (117 > 100)
+  --> aeonmind/python/aeonmind/core/adaptive.py:93:101
+   |
+92 |     @classmethod
+93 |     def with_parameters(cls, parameters: np.ndarray, config: Optional[AdaptiveConfig] = None) -> AdaptiveMetaLearner:  # noqa: UP045
+   |                                                                                                     ^^^^^^^^^^^^^^^^^
+94 |         """Create a learner initialized with specific parameters."""
+95 |         learner = cls(len(parameters), config)
+   |
+
+E501 Line too long (109 > 100)
+   --> aeonmind/python/aeonmind/core/frontier_agent.py:175:101
+    |
+174 |     @classmethod
+175 |     def from_entity(cls, entity: AgentEntity, config: Optional[FrontierAgentConfig] = None) -> FrontierAgent:  # noqa: UP045
+    |                                                                                                     ^^^^^^^^^
+176 |         """Create a FrontierAgent from an AgentEntity."""
+177 |         agent = cls(config or FrontierAgentConfig(name=entity.name))
+    |
+
+E501 Line too long (101 > 100)
+   --> aeonmind/python/aeonmind/systems/orchestrator.py:108:101
+    |
+106 |         return ai
+107 |
+108 |     def create_agent(self, name: str, config: Optional[FrontierAgentConfig] = None) -> FrontierAgent:  # noqa: UP045
+    |                                                                                                     ^
+109 |         """Create a new Agent (Tier 4)."""
+110 |         agent_config = config or FrontierAgentConfig(name=name)
+    |
+
+Found 4 errors.

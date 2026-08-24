@@ -18,14 +18,11 @@ These classes provide:
 from __future__ import annotations
 
 import asyncio
-import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from .lifecycle import LifecycleEmitter, LifecycleEvent
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -411,23 +408,15 @@ class Sovereign:
         for prime in self._primes.values():
             try:
                 await prime.stop()
-            except Exception as e:
-                logger.error(
-                    "Failed to stop Prime %s during emergency stop: %s",
-                    getattr(prime, "id", "unknown"),
-                    e,
-                )
+            except Exception:
+                pass
         # Stop all directly registered AIs
         for ai in self._ais.values():
             if hasattr(ai, "stop") and asyncio.iscoroutinefunction(ai.stop):
                 try:
                     await ai.stop()
-                except Exception as e:
-                    logger.error(
-                        "Failed to stop AI %s during emergency stop: %s",
-                        getattr(ai, "id", "unknown"),
-                        e,
-                    )
+                except Exception:
+                    pass
 
     async def resume_from_emergency(self) -> None:
         """Resume from emergency stop."""

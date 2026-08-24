@@ -150,7 +150,6 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 from __future__ import annotations
 
 import json
-import re
 import logging
 import os
 import sqlite3
@@ -179,13 +178,6 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-
-def _sanitize_ident(ident: str) -> str:
-    """Ensure string is a valid SQLite identifier to prevent SQL injection."""
-    if not isinstance(ident, str) or not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', ident):
-        raise ValueError(f"Invalid identifier: {{ident}}")
-    return ident
-
 class {table.title().replace("_", "")}Database:
     """SQLite-backed storage for {table}."""
 
@@ -224,7 +216,7 @@ class {table.title().replace("_", "")}Database:
     def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         data.setdefault("created_at", now)
-        cols = [_sanitize_ident(k) for k in data.keys()]
+        cols = list(data.keys())
         vals = list(data.values())
         placeholders = ", ".join("?" for _ in cols)
         with self._cursor() as cur:
@@ -233,8 +225,7 @@ class {table.title().replace("_", "")}Database:
 
     def get(self, id_field: str, id_value: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
-        safe_id = _sanitize_ident(id_field)
-        row = conn.execute(f"SELECT * FROM {table} WHERE {{safe_id}}=?", (id_value,)).fetchone()
+        row = conn.execute(f"SELECT * FROM {table} WHERE {{id_field}}=?", (id_value,)).fetchone()
         return dict(row) if row else None
 
     def list(self, limit: int = 50, offset: int = 0, **filters) -> List[Dict[str, Any]]:
@@ -242,7 +233,7 @@ class {table.title().replace("_", "")}Database:
         query = f"SELECT * FROM {table} WHERE 1=1"
         params: list = []
         for key, val in filters.items():
-            query += f" AND {{_sanitize_ident(key)}}=?"
+            query += f" AND {{key}}=?"
             params.append(val)
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
@@ -251,23 +242,21 @@ class {table.title().replace("_", "")}Database:
 
     def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        safe_id = _sanitize_ident(id_field)
-        sets = ", ".join(f"{{_sanitize_ident(k)}}=?" for k in data.keys())
+        sets = ", ".join(f"{{k}}=?" for k in data.keys())
         vals = list(data.values()) + [id_value]
         with self._cursor() as cur:
-            cur.execute(f"UPDATE {table} SET {{sets}} WHERE {{safe_id}}=?", vals)
+            cur.execute(f"UPDATE {table} SET {{sets}} WHERE {{id_field}}=?", vals)
             return cur.rowcount > 0
 
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
-        safe_id = _sanitize_ident(id_field)
         if soft:
             with self._cursor() as cur:
-                cur.execute(f"UPDATE {table} SET is_active=0, updated_at=? WHERE {{safe_id}}=?",
+                cur.execute(f"UPDATE {table} SET is_active=0, updated_at=? WHERE {{id_field}}=?",
                             (datetime.now(timezone.utc).isoformat(), id_value))
                 return cur.rowcount > 0
         else:
             with self._cursor() as cur:
-                cur.execute(f"DELETE FROM {table} WHERE {{safe_id}}=?", (id_value,))
+                cur.execute(f"DELETE FROM {table} WHERE {{id_field}}=?", (id_value,))
                 return cur.rowcount > 0
 
 

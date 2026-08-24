@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "593f7992",
+  "commit": "0a6f8e79",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-22T03:30:04.274373+00:00",
+  "generated_at": "2026-08-21T22:39:41.938201+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -426,7 +426,7 @@
       "build_context": "workers/artifactory-service",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by The Artifactory",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -1179,7 +1179,7 @@
       "build_context": "workers/fabulousa-service",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by Fabulousa",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -1591,7 +1591,7 @@
       "build_context": "workers/imaginarium",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by Imaginarium",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -3035,7 +3035,7 @@
       "build_context": "workers/sashas-photo-studio",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by Sashas Photo Studio",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -3369,7 +3369,7 @@
       "build_context": "workers/tateking",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by TateKing",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -3422,7 +3422,7 @@
       "build_context": "workers/the-academy",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by The Academy",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -3536,7 +3536,7 @@
       "build_context": "workers/the-lab",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by The Lab",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -3575,7 +3575,7 @@
       "build_context": "workers/the-studio",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by The Studio",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -3736,7 +3736,7 @@
       "build_context": "workers/tranceflow",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by TranceFlow",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -4065,7 +4065,7 @@
       "build_context": "workers/warp-radio",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by Warp Radio",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {
@@ -4103,7 +4103,7 @@
       "build_context": "workers/warp-tunnel",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by The Warp Tunnel",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {

@@ -10,20 +10,6 @@
 sandbox-ca.crt
 
 
-# Static analysis / scan output artifacts
-ruff_errors.json
-ruff_check_out.txt
-ruff-check*.txt
-ruff*.json
-*.sarif
-bandit_*.json
-codeql_*.sarif
-trivy_*.json
-pylint_*.txt
-flake8_*.txt
-scan_*.out
-scan_*.json
-
 # Python
 __pycache__/
 *.py[cod]
@@ -121,9 +107,3 @@ workers/files-service/data/
 
 *storybook.log
 storybook-static
-
-# Action-version audit output. Written into the repo root by
-# scripts/audit_action_versions.py on every run, the same way ruff_check_out.txt
-# and ruff_errors.json were -- committed scan output that reads as source.
-ACTION_AUDIT.md
-action-audit.json

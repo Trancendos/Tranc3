@@ -1,0 +1,70 @@
+[
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 39,
+      "row": 116
+    },
+    "filename": "/app/Dimensional/infinity/auth_gateway.py",
+    "fix": null,
+    "location": {
+      "column": 31,
+      "row": 116
+    },
+    "message": "`jose.JWTError` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+    "noqa_row": 116,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 118,
+      "row": 93
+    },
+    "filename": "/app/aeonmind/python/aeonmind/core/adaptive.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 93
+    },
+    "message": "Line too long (117 > 100)",
+    "noqa_row": 93,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 110,
+      "row": 175
+    },
+    "filename": "/app/aeonmind/python/aeonmind/core/frontier_agent.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 175
+    },
+    "message": "Line too long (109 > 100)",
+    "noqa_row": 175,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 108
+    },
+    "filename": "/app/aeonmind/python/aeonmind/systems/orchestrator.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 108
+    },
+    "message": "Line too long (101 > 100)",
+    "noqa_row": 108,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  }
+]

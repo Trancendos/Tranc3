@@ -263,15 +263,11 @@ class KnowledgeBrain:
         self._bm25.add(page)
         # Remove stale wikilinks before re-inserting
         self._conn.execute("DELETE FROM links WHERE source_id = ?", (page.id,))
-        links = _parse_wikilinks(page.id, page.content)
-        if links:
-            self._conn.executemany(
+        for link in _parse_wikilinks(page.id, page.content):
+            self._conn.execute(
                 """INSERT OR IGNORE INTO links(source_id, target_id, alias, relation, weight)
                    VALUES (?, ?, ?, ?, ?)""",
-                [
-                    (link.source_id, link.target_id, link.alias, link.relation, link.weight)
-                    for link in links
-                ],
+                (link.source_id, link.target_id, link.alias, link.relation, link.weight),
             )
         self._conn.commit()
         return page.id

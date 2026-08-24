@@ -244,8 +244,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Easel-Bot", "Renders dynamic design drafts for live preview."),
         bot_03=Bot("Clay-Bot", "Speeds up simple vector and morphing operations."),
         bot_04=Bot("Layout-Bot", "Plots design grids, focal alignments, and bounds."),
-        worker_port=8069,
-        worker_path="workers/the-studio/",
+        worker_port=None,
+        worker_path="src/studio/",
     ),
     "Sashas Photo Studio": LocationEntity(
         location="Sashas Photo Studio",
@@ -265,8 +265,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Shutter-Bot", "Triggers high-speed renders to output flat image layers."),
         bot_03=Bot("Flash-Bot", "Regulates light direction, balance, and HDR variables."),
         bot_04=Bot("Lens-Bot", "Fixes perspective distortions and lens anomalies."),
-        worker_port=8062,
-        worker_path="workers/sashas-photo-studio/",
+        worker_port=None,
+        worker_path="src/studio/",
     ),
     "TranceFlow": LocationEntity(
         location="TranceFlow",
@@ -286,8 +286,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Collider-Bot", "Monitors boundary boxes for collision scripts."),
         bot_03=Bot("Ray-Tracer-Bot", "Handles lighting paths, reflections, and shadows."),
         bot_04=Bot("Sprite-Bot", "Renders fast 2D graphics and UIs over 3D spaces."),
-        worker_port=8059,
-        worker_path="workers/tranceflow/",
+        worker_port=None,
+        worker_path="src/studio/",
     ),
     "TateKing": LocationEntity(
         location="TateKing",
@@ -310,8 +310,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Splicer-Bot", "Joins video clips and audio tracks into unified tracks."),
         bot_03=Bot("Renderer-Bot", "Compresses/outputs video files into target formats."),
         bot_04=Bot("Scrubber-Bot", "Generates fast, low-res preview frames for the timeline."),
-        worker_port=8061,
-        worker_path="workers/tateking/",
+        worker_port=None,
+        worker_path="src/studio/",
     ),
     "Fabulousa": LocationEntity(
         location="Fabulousa",
@@ -331,8 +331,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Hex-Code-Bot", "Verifies color accuracy and dynamic CSS themes."),
         bot_03=Bot("Font-Fetcher-Bot", "Loads and handles web typography assets/fallbacks."),
         bot_04=Bot("Padding-Bot", "Calculates margins and responsive flex properties."),
-        worker_port=8048,
-        worker_path="workers/fabulousa-service/",
+        worker_port=None,
+        worker_path="src/studio/",
     ),
     "Imaginarium": LocationEntity(
         location="Imaginarium",
@@ -356,8 +356,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Welder-Bot", "Links user input triggers in the UI directly to backend functions."
         ),
         bot_04=Bot("Polisher-Bot", "Runs final visual sweeps on lighting, styling, and alignment."),
-        worker_port=8064,
-        worker_path="workers/imaginarium/",
+        worker_port=None,
+        worker_path="src/studio/",
     ),
     # NOTE: Canonical name is "The Digital Grid" (with space). The entity table
     # has a formatting inconsistency ("The DigitalGrid") — the name with space is correct.
@@ -409,8 +409,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Compile-Bot", "Runs rapid, isolated builds to verify code compilation."),
         bot_03=Bot("Debug-Bot", "Inspects runtime stacks, pinpointing errors to the exact line."),
         bot_04=Bot("Test-Bot", "Runs automated code tests, reporting pass/fail ratios."),
-        worker_port=8055,
-        worker_path="workers/the-lab/",
+        worker_port=None,
+        worker_path="src/lab/",
     ),
     "The Workshop": LocationEntity(
         location="The Workshop",
@@ -502,8 +502,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Checksum-Bot", "Generates secure hashes to verify downloaded files are unmodified."
         ),
         bot_04=Bot("Versioner-Bot", "Manages software version tags and deprecation warnings."),
-        worker_port=8047,
-        worker_path="workers/artifactory-service/",
+        worker_port=None,
+        worker_path="src/artifactory/",
     ),
     "API Marketplace": LocationEntity(
         location="API Marketplace",
@@ -681,8 +681,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Eraser-Bot", "Resets coding sandboxes, removing trial code for the next lesson."
         ),
         bot_04=Bot("Bell-Bot", "Sends notifications for class dates, live sessions, or deadlines."),
-        worker_port=8056,
-        worker_path="workers/the-academy/",
+        worker_port=None,
+        worker_path="src/academy/",
     ),
     "DocUtari": LocationEntity(
         location="DocUtari",
@@ -740,8 +740,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Mothball-Bot", "Encrypts and locks retired legacy versions of platform software."
         ),
-        worker_port=8068,
-        worker_path="workers/basement/",
+        worker_port=None,
+        worker_path="src/basement/",
     ),
     "The Spark": LocationEntity(
         location="The Spark",
@@ -909,8 +909,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Portal-Bot", "Safely moves compromised file layers directly into the secure Ice Box."
         ),
-        worker_port=8072,
-        worker_path="workers/warp-tunnel/",
+        worker_port=None,
+        worker_path="src/security/warp_tunnel/",
     ),
     "Cryptex": LocationEntity(
         location="Cryptex",
@@ -980,8 +980,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Permafrost-Bot",
             "Isolates local offline storage caches until secure networks reconnect.",
         ),
-        worker_port=8046,
-        worker_path="workers/ice-box-service/",
+        worker_port=None,
+        worker_path="src/security/ice_box/",
     ),
     "Warp Radio": LocationEntity(
         location="Warp Radio",
@@ -1014,8 +1014,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Volume-Bot",
             "Adjusts volume properties, executing smooth fades across node transitions.",
         ),
-        worker_port=8073,
-        worker_path="workers/warp-radio/",
+        worker_port=None,
+        worker_path="src/warp_radio/",
     ),
     "Section 7": LocationEntity(
         location="Section 7",
@@ -1255,8 +1255,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Aura-Bot",
             "Adjusts ambient color backlighting across platforms to support user relaxation.",
         ),
-        worker_port=8077,
-        worker_path="workers/tranquility/",
+        worker_port=None,
+        worker_path="src/tranquility/",
     ),
     "I-Mind": LocationEntity(
         location="I-Mind",
@@ -1294,8 +1294,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Soothe-Bot",
             "Triggers local cognitive decompression, offering prompts when distress peaks.",
         ),
-        worker_port=8075,
-        worker_path="workers/imind/",
+        worker_port=None,
+        worker_path="src/imind/",
     ),
     "tAimra": LocationEntity(
         location="tAimra",
@@ -1331,8 +1331,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Alert-Bot",
             "Warns users of upcoming tasks, giving them buffer time to finish current work.",
         ),
-        worker_port=8074,
-        worker_path="workers/taimra/",
+        worker_port=None,
+        worker_path="src/taimra/",
     ),
     "VRAR3D": LocationEntity(
         location="VRAR3D",
@@ -1369,8 +1369,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "VR-Lens-Bot",
             "Adjusts focal dimensions, scaling imagery dynamically to reduce eye strain.",
         ),
-        worker_port=8060,
-        worker_path="workers/vrar3d/",
+        worker_port=None,
+        worker_path="src/vrar3d/",
     ),
     "Resonate": LocationEntity(
         location="Resonate",
@@ -1408,8 +1408,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Harmonic-Bot",
             "Smoothly blends external audio playlists with active calming sounds securely.",
         ),
-        worker_port=8076,
-        worker_path="workers/resonate/",
+        worker_port=None,
+        worker_path="src/resonate/",
     ),
 }
 
