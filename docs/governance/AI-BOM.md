@@ -5,7 +5,8 @@
 **Inventory:** [`config/ai_models.yaml`](../../config/ai_models.yaml) ·
 **Generator:** [`scripts/ai_bom.py`](../../scripts/ai_bom.py) ·
 **Output:** `logs/ai-bom.cyclonedx.json` (CycloneDX 1.6) ·
-**Supersedes the "premature" judgement in:** [BOM-MATRIX.md](BOM-MATRIX.md) §3
+**Supersedes the "premature" judgement in:** [BOM-MATRIX.md](BOM-MATRIX.md) §3 ·
+**Why it was built:** [SUPPLY-CHAIN-POSTURE-MATRIX.md](SUPPLY-CHAIN-POSTURE-MATRIX.md) §2 item 8
 
 ---
 

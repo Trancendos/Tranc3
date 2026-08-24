@@ -862,6 +862,16 @@ services:
         observability: ./src/observability
     container_name: cron-service-worker
     ports: ["8021:8021"]
+    environment:
+      # Target for the seeded Basement -> Library promotion job. The backend
+      # keeps the tranc3-* name because it serves the Tier-3 engine, per
+      # config/estate/naming_conventions.md 0; it is also the compose service
+      # and container name, so this is the address that actually resolves.
+      - BASEMENT_URL=http://tranc3-backend:8000
+      # /basement/promote is admin-guarded and a scheduler holds no user
+      # session, so the job authenticates as a service. Without this the job
+      # fires daily, is recorded as a run, and promotes nothing.
+      - INTERNAL_SECRET=${INTERNAL_SECRET:?INTERNAL_SECRET is required for the seeded Basement promotion job}
     volumes:
       - cron-data:/data
     healthcheck:
@@ -3215,6 +3225,7 @@ services:
       - THE_STUDIO_URL=http://the-studio:8069
       - TATEKING_URL=http://tateking:8061
       - TRANCEFLOW_URL=http://tranceflow:8059
+      - FABULOUSA_URL=http://fabulousa-service:8048
     expose:
       - "8064"
     ports:

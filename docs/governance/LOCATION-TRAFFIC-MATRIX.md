@@ -6,7 +6,7 @@
 > that and points to the real (partial) building blocks instead of inventing a matrix that isn't
 > there.
 
-**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-07-30
+**Owner:** Platform Owner Trancendos · **Version:** 1.1.0 · **Last verified:** 2026-08-21
 
 ---
 
@@ -52,6 +52,13 @@ platform's audit/metrics layer and is the natural home for this if it's ever bui
 not do so today.
 
 ## 4. Path forward, if this is ever prioritized
+
+> **Update, 2026-08-21.** A fourth option — declaring the intended flows and measuring them —
+> has since been built: `docs/governance/LOCATION-FLOW-CONTRACT.md`, backed by
+> `config/estate/flow_contract.yaml` and `scripts/flow_conformance.py`. It does not produce
+> traffic volumes and does not replace options 1–3 below; it establishes whether each declared
+> flow exists in code at all, which turned out to be the prior question. Of 39 declared flows,
+> 14 are reached by nothing.
 
 Not committed work — recorded here so a future pass doesn't have to re-derive it:
 
