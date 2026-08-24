@@ -136,6 +136,47 @@ jobs:
       - name: AI model inventory drift
         run: python scripts/ai_bom.py --check
 
+      # The estate states its architecture as flow -- "all MCP routes through The
+      # Spark", "all secrets flow into The Void" -- and until the flow contract
+      # existed, none of those claims could be checked, so none could be
+      # maintained. This measures each declared flow against the working tree.
+      #
+      # It fails on REGRESSION only, against config/estate/flow_baseline.json --
+      # not on the standing backlog of flows that are built and reached by
+      # nothing. A gate that is red on day one for reasons nobody can fix that
+      # day teaches people to wave it through, which is the failure it exists to
+      # prevent. Improving a flow means refreshing the baseline, which is a
+      # visible act in the diff rather than a silent one.
+      #
+      # Pure filesystem and grep work, no network: it belongs on every PR.
+      # Fails when a Location's worker_path is missing, unserved, shared with
+      # another Location, or when its worker_port disagrees with compose. The
+      # registry is the platform's identity source of truth; when it drifts,
+      # the Admin OS worker map goes blind without saying so.
+      - name: Entity registry conformance
+        run: python scripts/entity_registry_conformance.py --check
+
+      - name: Location flow conformance
+        run: python scripts/flow_conformance.py --check
+
+      # MATRIX-INDEX.md's inventory is generated, so it cannot silently fall
+      # behind the filesystem the way the hand-written list did -- 51 of 68
+      # matrix documents were absent from it when this was measured. The
+      # editorial judgement above the generated block stays hand-written.
+      # Deliberately submodule-independent: the check returns the same answer
+      # with compliance/magna-carta/ present or absent, so it cannot fail here
+      # for an environmental reason.
+      - name: Matrix index freshness
+        run: python scripts/build_matrix_index.py --check
+
+      # The PID column joins the EA service inventory to the entity registry.
+      # Without it, Tier3AI was free text nothing could check, and the CMDB had
+      # drifted from the registry unnoticed. The floor is a ratchet: coverage
+      # may rise, and a change that drops it below the recorded measurement
+      # fails here rather than quietly un-joining the two halves of the estate.
+      - name: PID coverage
+        run: python scripts/pid_coverage.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest

@@ -44,9 +44,11 @@ positive become something the platform subsequently treats as established fact.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import re
+import threading
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Any
@@ -278,8 +280,46 @@ def render_article(p: Pattern) -> tuple[str, str, list[str]]:
         "context — recent releases, known issues, published work bearing on the problem.",
     ]
 
-    tags = ["auto-promoted", "basement-evidence", p.kind, f"confidence-{p.confidence}"]
+    tags = [
+        "auto-promoted",
+        "basement-evidence",
+        p.kind,
+        f"confidence-{p.confidence}",
+        promotion_key(p.signature),
+    ]
     return title, "\n".join(lines), tags
+
+
+def promotion_key(signature: str) -> str:
+    """A stable per-pattern tag, so the same evidence promotes exactly once.
+
+    Promotion is now reachable over HTTP (`POST /basement/promote`), which makes
+    the write path retryable: a client retry, an impatient second click, or two
+    admins acting on the same alert would each raise another Library draft from
+    identical Basement evidence. Duplicate drafts are worse than none -- the
+    queue is a proposal list an admin reads, and a list that repeats itself is
+    one they stop reading.
+
+    Keyed on the pattern signature rather than the rendered title, because the
+    title carries occurrence counts and moves as more evidence arrives, while
+    the signature is the identity of the pattern itself. Hashed and truncated
+    only to keep it usable as a tag; collisions at 64 bits over a few hundred
+    patterns are not a real risk, and the cost of one would be a single skipped
+    draft, not a corrupted article.
+    """
+    digest = hashlib.sha256(signature.encode("utf-8", errors="replace")).hexdigest()
+    return f"promotion-{digest[:16]}"
+
+
+# Promotion is check-then-create: look for the pattern's key, then author the
+# draft. Two concurrent callers can both find nothing and both write, so the
+# pair has to be one critical section. The lock is process-scoped because the
+# Library it guards is too -- `get_library()` returns an in-process singleton
+# backed by plain dicts (`_articles`, `_tag_index`), so there is no shared store
+# for a cross-process race to corrupt. If the Library ever gains durable shared
+# storage, this becomes insufficient and the dedup belongs in a unique
+# constraint instead; that is recorded here rather than left to be rediscovered.
+_PROMOTION_LOCK = threading.Lock()
 
 
 def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
@@ -296,6 +336,7 @@ def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
         "patterns": 0,
         "promoted": 0,
         "skipped": 0,
+        "duplicates": 0,
         "details": [],
     }
     try:
@@ -330,19 +371,40 @@ def promote(limit: int = SCAN_LIMIT, dry_run: bool = False) -> dict[str, Any]:
 
     for p in patterns:
         title, body, tags = render_article(p)
-        try:
-            art = library.create(
-                title=title,
-                body=body,
-                tags=tags,
-                author="The Observatory",
-                source="observatory",
-                # DRAFT, not PUBLISHED: a proposal for an admin, not knowledge.
-                status=ArticleStatus.DRAFT,
-            )
-            result["promoted"] += 1
-            result["details"].append({"article_id": art.id, "title": title, "kind": p.kind})
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to promote pattern %r: %s", p.signature[:60], exc)
-            result["skipped"] += 1
+        key = promotion_key(p.signature)
+
+        # One critical section per pattern, covering the check AND the write.
+        # Splitting them is what allows two callers to both find nothing and
+        # both author a draft from the same evidence.
+        with _PROMOTION_LOCK:
+            try:
+                already_promoted = bool(library.by_tag(key, limit=1))
+            except Exception as exc:  # noqa: BLE001 -- a lookup failure must not
+                # silently become a duplicate write, so it is recorded and skipped.
+                logger.warning("Duplicate check failed for %r: %s", p.signature[:60], exc)
+                result["skipped"] += 1
+                continue
+
+            if already_promoted:
+                # Already raised from this evidence. Not an error and not a
+                # skip-for-failure: the requested end state already holds.
+                result["duplicates"] += 1
+                result["details"].append({"title": title, "kind": p.kind, "duplicate": True})
+                continue
+
+            try:
+                art = library.create(
+                    title=title,
+                    body=body,
+                    tags=tags,
+                    author="The Observatory",
+                    source="observatory",
+                    # DRAFT, not PUBLISHED: a proposal for an admin, not knowledge.
+                    status=ArticleStatus.DRAFT,
+                )
+                result["promoted"] += 1
+                result["details"].append({"article_id": art.id, "title": title, "kind": p.kind})
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to promote pattern %r: %s", p.signature[:60], exc)
+                result["skipped"] += 1
     return result
