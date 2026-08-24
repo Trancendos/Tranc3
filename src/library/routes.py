@@ -7,7 +7,13 @@ from fastapi import APIRouter, Body, Depends, Path, Query
 from fastapi.responses import JSONResponse
 
 from auth import get_current_user
-from src.library.knowledge_base import Article, ArticleStatus, DataClassification, get_library
+from src.library.knowledge_base import (
+    Article,
+    ArticleStatus,
+    DataClassification,
+    Jurisdiction,
+    get_library,
+)
 
 router = APIRouter(prefix="/library", tags=["library"])
 
@@ -92,6 +98,14 @@ async def create_article(
     ),
     classification: str = Body("internal"),
     retention_days: Optional[int] = Body(None, ge=0),
+    jurisdiction: str = Body(
+        "GLOBAL",
+        description="Data-residency constraint. LOCAL_ONLY keeps the article in-process only.",
+    ),
+    legal_hold: bool = Body(
+        False,
+        description="Only honored for admin callers — placing a hold is a governance action.",
+    ),
     current_user: dict = Depends(get_current_user),
 ):
     try:
@@ -99,10 +113,14 @@ async def create_article(
     except ValueError:
         valid = [c.value for c in DataClassification]
         return JSONResponse({"error": f"Unknown classification. Valid: {valid}"}, status_code=400)
+    try:
+        jurisdiction_enum = Jurisdiction(jurisdiction.upper())
+    except ValueError:
+        valid = [j.value for j in Jurisdiction]
+        return JSONResponse({"error": f"Unknown jurisdiction. Valid: {valid}"}, status_code=400)
     caller_id = current_user.get("id") or current_user.get("sub") or "system"
-    resolved_author = (
-        author if author is not None and current_user.get("role") == "admin" else caller_id
-    )
+    is_admin = current_user.get("role") == "admin"
+    resolved_author = author if author is not None and is_admin else caller_id
     art = get_library().create(
         title=title,
         body=body,
@@ -110,6 +128,8 @@ async def create_article(
         author=resolved_author,
         classification=classification_enum,
         retention_days=retention_days,
+        jurisdiction=jurisdiction_enum,
+        legal_hold=bool(legal_hold) and is_admin,
     )
     return art.to_dict()
 

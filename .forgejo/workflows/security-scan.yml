@@ -76,6 +76,9 @@ jobs:
             --severity-level medium \
             --confidence-level medium
 
+      - name: ecdsa accepted-risk drift guard (CVE-2024-23342)
+        run: python3 scripts/check_ecdsa_direct_usage.py
+
       - name: Security dimension (repo-weighted)
         run: python3 scripts/security_score.py --min-percent 90
 
@@ -120,26 +123,26 @@ jobs:
       - name: npm audit — tranc3-ai
         working-directory: cloudflare/tranc3-ai
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=moderate || true
 
       - name: npm audit — infinity-void
         working-directory: cloudflare/infinity-void
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=moderate || true
 
       - name: npm audit — api-gateway
         working-directory: cloudflare/trancendos-api-gateway
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=high || true
         continue-on-error: true
 
       - name: npm audit — tranc3-bots
         working-directory: tranc3-bots
         run: |
-          npm ci --prefer-offline 2>/dev/null || npm install
+          npm ci --ignore-scripts --prefer-offline
           npm audit --audit-level=moderate || true
         continue-on-error: true
 
@@ -159,7 +162,10 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install semgrep
-        run: python3 -m pip install semgrep --quiet
+        # Pinned to match requirements-security.txt / Makefile's security-install --
+        # that pin's accepted-risk notes (mcp==1.23.3, SECURITY.md) are only
+        # authoritative if every semgrep invocation actually uses the same version.
+        run: python3 -m pip install semgrep==1.172.0 --quiet
 
       - name: Run semgrep (Python security + OWASP + FastAPI + JWT + SQL injection)
         run: |

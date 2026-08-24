@@ -372,6 +372,38 @@ scrape_configs:
           service: 'node-exporter'
           category: 'observability'
 
+  # ── ipmi-exporter — physical host health via the BMC (iDRAC) ─────────
+  # node-exporter above reports what the OS can see. This reports what it
+  # cannot: power supply status, fan RPM, inlet/CPU temperature, chassis
+  # intrusion and SEL depth — all read from the baseboard management
+  # controller below the OS.
+  #
+  # Uses the exporter's relabel pattern: the BMC address travels as the
+  # scrape __param_target, so one exporter instance can cover several hosts
+  # by adding entries to the targets list.
+  - job_name: 'ipmi-citadel'
+    metrics_path: '/ipmi'
+    scrape_interval: 60s      # BMCs are slow; do not hammer iDRAC6
+    scrape_timeout: 30s
+    params:
+      module: ['default']
+    static_configs:
+      - targets:
+          # The iDRAC address — NOT the host OS address. Set this once iDRAC
+          # is configured; see deploy/CITADEL_OPERATIONS.md §2.
+          - '192.168.1.5'
+        labels:
+          service: 'ipmi-exporter'
+          category: 'observability'
+          host: 'citadel'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 'ipmi-exporter:9290'
+
   # ── library-service — The Library ACO wiki router (Port 8067) ────────
   - job_name: 'library-service'
     metrics_path: '/metrics'

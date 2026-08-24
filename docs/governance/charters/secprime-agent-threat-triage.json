@@ -1,0 +1,28 @@
+{
+  "charter_id": "secprime-agent-threat-triage",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "SecPrime",
+  "mission": "Triage and summarize threat intelligence for Cryptex, The Void, The Lighthouse, The Ice Box, and The Warp Tunnel \u2014 never act on findings directly.",
+  "allowed_actions": [
+    "read_threat_intel",
+    "summarize_incident",
+    "flag_for_human_review"
+  ],
+  "forbidden_actions": [
+    "quarantine_service",
+    "rotate_credentials",
+    "modify_firewall_rules",
+    "access_vault_secrets"
+  ],
+  "risk_tier": "high",
+  "approval_required": true,
+  "escalation_triggers": [
+    "prompt_injection_suspected",
+    "sensitive_data_detected",
+    "irreversible_action_requested"
+  ],
+  "escalation_severity": "critical",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate"
+}

@@ -21,7 +21,6 @@ Features:
 
 from __future__ import annotations
 
-import hmac
 import json
 import logging
 import os
@@ -34,6 +33,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 logger = logging.getLogger("tranc3.workers.users-service")
 
@@ -177,8 +178,12 @@ _INTERNAL_SECRET: str = _internal_secret_raw.strip()
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 # ---------------------------------------------------------------------------

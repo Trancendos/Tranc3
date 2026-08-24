@@ -1,0 +1,22 @@
+# pnpm settings for this package.
+#
+# These overrides are duplicated from package.json's `overrides` block, which is
+# what `npm ci` (the installer CI actually uses) reads. They have to live HERE as
+# well because pnpm 11 no longer reads the `pnpm` key in package.json -- an
+# override declared only there is silently ignored, and pnpm then resolves the
+# vulnerable version while the file appears to forbid it.
+#
+# That is not hypothetical: before this file existed, package.json pinned
+# dompurify ^3.4.12 while pnpm-lock.yaml resolved dompurify 3.4.12 and nanoid
+# 3.3.17 -- both covered by live advisories. npm was patched; pnpm was not.
+#
+#   dompurify <=3.4.12  GHSA-55q2-fjhq-7xh7  (detached subtree stays executable -> XSS)
+#   nanoid    <3.3.18   GHSA-2v37-7h3g-55p8  (infinite loop when size is zero)
+#
+# Keep these three in step: package.json `overrides`, package.json `pnpm.overrides`
+# (for pnpm 10), and this file (for pnpm 11+).
+overrides:
+  brace-expansion: ^5.0.8
+  dompurify: ^3.4.13
+  nanoid: ^3.3.18
+  valibot: ^1.4.2

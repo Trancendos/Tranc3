@@ -67,21 +67,34 @@ async def _lifespan(app: FastAPI):
     logger.info("Infinity Auth stopped")
 
 
-cors_origins = _cors_origins()
-app = FastAPI(
-    title="Infinity — Authentication Service",
-    description="OAuth2/JWT/TOTP authentication for the Trancendos platform.",
-    version="1.0.0",
-    lifespan=_lifespan,
-)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.include_router(router)
+def create_app() -> FastAPI:
+    """Build a fresh FastAPI app bound to the router's *current* global state.
+
+    router.py's routes read db/rate_limiter/worker_kit from module-global
+    state set by init_router() (dependency-injection-by-global-mutation, not
+    closures captured at route-decoration time) — so calling init_router()
+    with test doubles and then create_app() picks those doubles up, without
+    needing a second app-construction code path for tests.
+    """
+    cors_origins = _cors_origins()
+    new_app = FastAPI(
+        title="Infinity — Authentication Service",
+        description="OAuth2/JWT/TOTP authentication for the Trancendos platform.",
+        version="1.0.0",
+        lifespan=_lifespan,
+    )
+    new_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    new_app.include_router(router)
+    return new_app
+
+
+app = create_app()
 
 if __name__ == "__main__":
     import uvicorn

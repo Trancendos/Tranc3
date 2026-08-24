@@ -170,6 +170,15 @@ class ZeroTrustMiddleware:
 
         Returns the context with updated access_policy.
         """
+        # Re-derive the final decision from scratch for *this* path rather than
+        # inheriting extract_context()'s tentative default. _determine_policy() (called
+        # during extraction) returns MFA_REQUIRED for any non-mfa_verified context
+        # regardless of path — if evaluate() didn't reset that here, every unmatched
+        # route (health checks aside) would incorrectly require MFA for any caller
+        # without an X-MFA-Verified header, including unauthenticated bootstrap routes
+        # like login/register that have no business being MFA-gated.
+        context.access_policy = AccessPolicy.ALLOW
+
         # Check blocked countries
         if context.country and context.country in self.options.blocked_countries:
             context.access_policy = AccessPolicy.DENY

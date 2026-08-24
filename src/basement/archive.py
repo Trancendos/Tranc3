@@ -115,9 +115,24 @@ class Basement:
         return record
 
     def ingest_observatory_event(self, event: Any) -> ArchiveRecord:
-        """Accept an AuditEvent from The Observatory."""
+        """Accept an AuditEvent from The Observatory.
+
+        `retained` (exempts the record from _evict()'s oldest-first pruning) must
+        follow the same rule Observatory.record() uses to decide whether an event
+        is even forwarded here at all — severity, a tagged retention_class, or an
+        explicit legal_hold — otherwise a legal-held or retention-tagged INFO/
+        WARNING event would reach Basement only to be evicted the same way it
+        would have been from the ring buffer, defeating the whole point of
+        forwarding it.
+        """
         content = f"{event.event_type} | actor={event.actor} | target={event.target} | outcome={event.outcome}"
-        retained = getattr(event, "severity", None) in ("critical", "security")
+        legal_hold = getattr(event, "legal_hold", False)
+        retention_class = getattr(event, "retention_class", None)
+        retained = (
+            getattr(event, "severity", None) in ("critical", "security")
+            or legal_hold
+            or retention_class is not None
+        )
         return self.ingest(
             content=content,
             source=ArchiveSource.SECURITY if retained else ArchiveSource.OBSERVATORY,
@@ -126,6 +141,8 @@ class Basement:
                 "actor": event.actor,
                 "target": event.target,
                 "service": event.service,
+                "retention_class": retention_class,
+                "legal_hold": legal_hold,
             },
             retained=retained,
         )
