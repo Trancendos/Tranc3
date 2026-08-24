@@ -25,7 +25,6 @@ Port: 8049
 
 from __future__ import annotations
 
-import hmac
 import logging
 import os
 import sqlite3
@@ -39,6 +38,8 @@ import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -68,8 +69,9 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 STARTED_AT = datetime.now(timezone.utc)
@@ -119,8 +121,7 @@ def _db():
 
 def _init_db() -> None:
     with _db() as conn:
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS provider_usage (
                 provider TEXT NOT NULL,
                 period TEXT NOT NULL,  -- 'YYYY-MM-DD' for daily, 'YYYY-MM' for monthly
@@ -129,8 +130,7 @@ def _init_db() -> None:
                 tokens INTEGER DEFAULT 0,
                 PRIMARY KEY (provider, period, period_type)
             )
-            """
-        )
+            """)
 
 
 _init_db()

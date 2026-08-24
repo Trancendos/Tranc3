@@ -90,7 +90,14 @@ jobs:
       - name: Build tranc3-ai worker
         run: |
           if [ -f workers/tranc3-ai/Dockerfile ]; then
-            docker build -t tranc3-ai:latest workers/tranc3-ai/ || echo "tranc3-ai Dockerfile not ready yet"
+            # --build-context supplies the Shared Functional Services Core.
+            # These two workers are the only own-context workers built here
+            # rather than by `docker compose build`, so they cannot pick the
+            # contexts up from docker-compose.production.yml's
+            # `additional_contexts:` and must name them on the command line.
+            docker build -t tranc3-ai:latest \
+              --build-context observability=src/observability \
+              workers/tranc3-ai/ || echo "tranc3-ai Dockerfile not ready yet"
           else
             echo "tranc3-ai: Using Python worker (no Dockerfile needed)"
           fi
@@ -98,7 +105,9 @@ jobs:
       - name: Build infinity-void worker
         run: |
           if [ -f workers/infinity-void/Dockerfile ]; then
-            docker build -t infinity-void:latest workers/infinity-void/ || echo "infinity-void Dockerfile not ready yet"
+            docker build -t infinity-void:latest \
+              --build-context observability=src/observability \
+              workers/infinity-void/ || echo "infinity-void Dockerfile not ready yet"
           else
             echo "infinity-void: Using Python worker (no Dockerfile needed)"
           fi

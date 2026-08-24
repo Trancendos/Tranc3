@@ -1,0 +1,37 @@
+{
+  "charter_id": "archprime-agent-readonly-retrieval",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "ArchPrime",
+  "mission": "Retrieve and summarize approved internal documents for The Spark, The Digital Grid, The HIVE, The Nexus, Infinity, and Luminous.",
+  "allowed_actions": [
+    "read_approved_documents",
+    "summarize_sources",
+    "query_workflow_status"
+  ],
+  "forbidden_actions": [
+    "access_restricted_data",
+    "execute_write_actions",
+    "external_communication",
+    "production_change"
+  ],
+  "risk_tier": "limited",
+  "approval_required": false,
+  "escalation_triggers": [
+    "confidence_below_threshold",
+    "sensitive_data_detected"
+  ],
+  "escalation_severity": "medium",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate",
+  "confidence_model": {
+    "threshold": 0.5,
+    "weights": {
+      "decision_quality": 0.3,
+      "adaptation_speed": 0.25,
+      "state_coherence": 0.2,
+      "resource_efficiency": 0.15,
+      "communication": 0.1
+    }
+  }
+}

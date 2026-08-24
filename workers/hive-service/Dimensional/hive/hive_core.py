@@ -57,6 +57,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.cors import resolve_cors_origins
 from Dimensional.infinity.nomenclature import (
     SentinelChannel,
 )
@@ -936,13 +937,7 @@ def create_hive_app() -> FastAPI:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            o.strip()
-            for o in os.getenv(
-                "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
-            ).split(",")
-            if o.strip()
-        ],
+        allow_origins=resolve_cors_origins("HIVE"),
         allow_methods=["*"],
         allow_headers=["*"],
     )

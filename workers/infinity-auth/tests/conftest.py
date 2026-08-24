@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import asynccontextmanager
 from unittest.mock import MagicMock
 
 import pytest
@@ -59,8 +60,19 @@ def test_client(tmp_db, mock_worker_kit):
     from main import create_app
 
     app = create_app()
+
     # Override lifespan so tests don't need a real worker_kit.startup coroutine
-    app.router.lifespan_context = None  # type: ignore[assignment]
+    # (mock_worker_kit's startup/shutdown are sync MagicMocks, not awaitable,
+    # and the real lifespan also spawns a background health-reporter task and
+    # imports src.observability — none of which tests need). Starlette's
+    # Router.lifespan requires lifespan_context to be an async-context-manager
+    # callable, not None — assigning None here raises "'NoneType' object is
+    # not callable" the moment TestClient triggers the ASGI lifespan protocol.
+    @asynccontextmanager
+    async def _noop_lifespan(_app):
+        yield
+
+    app.router.lifespan_context = _noop_lifespan
 
     with TestClient(app, raise_server_exceptions=True) as client:
         yield client

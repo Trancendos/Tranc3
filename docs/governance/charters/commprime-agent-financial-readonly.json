@@ -1,0 +1,28 @@
+{
+  "charter_id": "commprime-agent-financial-readonly",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "CommPrime",
+  "mission": "Read and summarize non-transactional data for Royal Bank of Arcadia, Arcadian Exchange, and ChronosSphere.",
+  "allowed_actions": [
+    "read_ledger_summary",
+    "summarize_billing_status",
+    "query_schedule"
+  ],
+  "forbidden_actions": [
+    "execute_payment",
+    "modify_billing_tier",
+    "execute_trade",
+    "access_payment_credentials"
+  ],
+  "risk_tier": "high",
+  "approval_required": true,
+  "escalation_triggers": [
+    "irreversible_action_requested",
+    "production_change",
+    "policy_conflict"
+  ],
+  "escalation_severity": "high",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate"
+}

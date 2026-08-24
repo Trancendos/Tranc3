@@ -14,6 +14,7 @@ import json
 import logging
 import time
 import uuid
+from collections import OrderedDict
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Request
@@ -22,7 +23,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
 from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
+from src.shared.client_ip import resolve_client_ip
 
+from .payload_scanner import scan_rpc_payload
 from .tools import registry
 
 logger = logging.getLogger(__name__)
@@ -47,6 +50,63 @@ ERR_INTERNAL_ERROR = -32603
 ERR_TOOL_NOT_FOUND = -32001
 ERR_TOOL_EXECUTION = -32002
 ERR_RESOURCE_NOT_FOUND = -32003
+ERR_INJECTION_DETECTED = -32004
+
+# ---------------------------------------------------------------------------
+# Prompt-injection strike tracking
+# ---------------------------------------------------------------------------
+
+# Number of high-severity scanner hits from the same IP before it gets Cryptex-blocked.
+# Every request is still rejected on its own regardless of strike count — this threshold
+# only gates the escalation to a platform-wide IP ban, so one false positive (the
+# scanner's catalogue includes literal patterns like bare "SECRET_KEY" or "file://" that
+# can legitimately appear in a tool call's arguments) can't get a caller permanently
+# banned; a sustained pattern of high-severity hits still does.
+_INJECTION_BLOCK_THRESHOLD = 3
+# Bounded so a caller can't grow this dict without limit by cycling through spoofed
+# X-Forwarded-For values (state is in-memory and per-process anyway — lost on restart,
+# same trade-off this platform already accepts for rate limiting; see CLAUDE.md
+# "In-memory rate limiting over Cloudflare KV").
+_INJECTION_STRIKE_MAP_MAX_ENTRIES = 10_000
+_injection_strike_counts: OrderedDict[str, int] = OrderedDict()
+
+
+def _resolve_client_ip(request: Request) -> Optional[str]:
+    """
+    Best-effort real client IP, preferring the Traefik-set X-Forwarded-For header.
+
+    Delegates to src/shared/client_ip.py's resolve_client_ip() — the same resolver
+    GovernanceMiddleware (src/security/middleware.py) uses for its is_blocked() check.
+    Using two different resolvers here was the cause of a real bug: this endpoint used
+    to strike-track and block the XFF-resolved IP while GovernanceMiddleware checked
+    request.client.host (Traefik's own container IP), so a Cryptex block set here never
+    actually matched what GovernanceMiddleware looked up on the next request — the block
+    had no effect. See docs/governance/SECURITY-POSTURE-MATRIX.md §6.
+    """
+    return resolve_client_ip(request.headers, request.client.host if request.client else None)
+
+
+def _record_injection_strike(client_ip: str) -> None:
+    """Escalate to a Cryptex IP block only after repeated high-severity detections."""
+    count = _injection_strike_counts.get(client_ip, 0) + 1
+    _injection_strike_counts[client_ip] = count
+    _injection_strike_counts.move_to_end(client_ip)
+    while len(_injection_strike_counts) > _INJECTION_STRIKE_MAP_MAX_ENTRIES:
+        _injection_strike_counts.popitem(last=False)
+    if count < _INJECTION_BLOCK_THRESHOLD:
+        return
+    try:
+        from src.cryptex.threat_detector import get_cryptex
+
+        get_cryptex().block_ip(client_ip)
+        logger.warning(
+            "mcp.rpc ip blocked after repeated injection attempts ip=%s strikes=%d",
+            sanitize_for_log(client_ip),  # codeql[py/log-injection]
+            count,
+        )
+    except Exception:
+        pass  # nosec B110 - never let Cryptex unavailability break the reject path
+
 
 # ---------------------------------------------------------------------------
 # Pydantic models
@@ -344,6 +404,30 @@ async def rpc_endpoint(
     if not method or not isinstance(method, str):
         return JSONResponse(
             content=_err(req_id, ERR_INVALID_REQUEST, "method must be a non-empty string"),
+            status_code=200,
+        )
+
+    # Prompt-injection scan — payload_scanner.py existed but was never called from this
+    # endpoint until now, leaving The Spark's one purpose-built defense against jailbreak/
+    # instruction-override attempts against tools/call arguments inert. Fail-safe by design
+    # (scan_rpc_payload never raises), so this can't itself become a DoS vector.
+    scan = scan_rpc_payload(body)
+    if not scan.ok and scan.high_severity:
+        client_ip = _resolve_client_ip(request)
+        logger.warning(
+            "mcp.rpc injection blocked method=%s ip=%s findings=%s",
+            sanitize_for_log(method),  # codeql[py/log-injection]
+            sanitize_for_log(client_ip or "unknown"),  # codeql[py/log-injection]
+            sanitize_for_log(scan.summary()),  # codeql[py/log-injection]
+        )
+        if client_ip:
+            _record_injection_strike(client_ip)
+        return JSONResponse(
+            content=_err(
+                req_id,
+                ERR_INJECTION_DETECTED,
+                "Request blocked: prompt-injection pattern detected",
+            ),
             status_code=200,
         )
 

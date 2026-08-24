@@ -11,6 +11,15 @@ COPY config.py models.py database.py service.py router.py main.py ./
 
 RUN mkdir -p /data/tranceflow-assets && chown tranceflow:tranceflow /data /data/tranceflow-assets
 
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context sharedcore=../../Dimensional .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=tranceflow:tranceflow . /app/Dimensional/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 USER tranceflow
 
 EXPOSE 8059

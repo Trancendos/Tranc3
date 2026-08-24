@@ -1,0 +1,328 @@
+"""
+Tests for AI Governance Constitution Phase 3 — AgentOrchestrator.submit_task()
+gating Tier 4 dispatch through the escalation FSM (src/compliance/escalation_fsm.py).
+
+Uses a small isolated fixture charter set and an isolated SQLite DB, mirroring
+tests/test_escalation_fsm.py's pattern, rather than the real
+docs/governance/charters/ seed set and shared data/ path.
+"""
+
+from __future__ import annotations
+
+import json
+
+import pytest
+
+import src.agents.orchestrator as orchestrator_module
+import src.compliance.ai_governance as ai_governance_module
+import src.compliance.cab_gate as cab_gate_module
+import src.compliance.escalation_fsm as fsm_module
+from src.agents.orchestrator import AgentConfig, AgentOrchestrator, AgentTask
+from src.compliance.escalation_fsm import CharterRegistry, EscalationFSM
+
+ARCHPRIME_READONLY = {
+    "charter_id": "test-archprime-readonly",
+    "version": "1.0.0",
+    "tier": 4,
+    "domain": "ArchPrime",
+    "mission": "Test charter with no approval required.",
+    "allowed_actions": ["read_approved_documents"],
+    "forbidden_actions": ["delete_thing"],
+    "risk_tier": "minimal",
+    "approval_required": False,
+    "escalation_triggers": ["audit_gap"],
+    "escalation_severity": "low",
+    "audit_sink": "observatory",
+    "fallback_behavior": "stop_and_escalate",
+}
+
+COMMPRIME_APPROVAL = {
+    "charter_id": "test-commprime-approval",
+    "version": "1.0.0",
+    "tier": 4,
+    "domain": "CommPrime",
+    "mission": "Test charter requiring CAB approval.",
+    "allowed_actions": ["read_ledger_summary"],
+    "forbidden_actions": ["transfer_funds"],
+    "risk_tier": "high",
+    "approval_required": True,
+    "escalation_triggers": ["irreversible_action_requested"],
+    "escalation_severity": "high",
+    "audit_sink": "observatory",
+    "fallback_behavior": "stop_and_escalate",
+}
+
+
+@pytest.fixture
+def charters_dir(tmp_path):
+    d = tmp_path / "charters"
+    d.mkdir()
+    for charter in (ARCHPRIME_READONLY, COMMPRIME_APPROVAL):
+        with open(d / f"{charter['charter_id']}.json", "w", encoding="utf-8") as f:
+            json.dump(charter, f)
+    return d
+
+
+@pytest.fixture
+def registry(charters_dir):
+    return CharterRegistry(charters_dir)
+
+
+@pytest.fixture
+def fsm(registry, tmp_path, monkeypatch):
+    monkeypatch.setattr(fsm_module, "_DB_PATH", tmp_path / "escalation_fsm.db")
+    monkeypatch.setattr(cab_gate_module, "_DB_PATH", tmp_path / "cab_changes.db")
+    monkeypatch.setattr(ai_governance_module, "_DB_PATH", tmp_path / "ai_governance.db")
+    # cab_gate.cab_gate is a module-level singleton constructed at import time — see
+    # tests/test_escalation_fsm.py's fsm fixture for why this explicit init is needed.
+    with cab_gate_module._get_conn() as conn:
+        cab_gate_module._init_db(conn)
+    return EscalationFSM(registry)
+
+
+@pytest.fixture
+def orch(fsm, tmp_path, monkeypatch):
+    monkeypatch.setattr(orchestrator_module, "get_escalation_fsm", lambda: fsm)
+    return AgentOrchestrator(db_path=str(tmp_path / "agents.db"))
+
+
+def test_approved_action_is_enqueued(orch):
+    orch.register_agent(AgentConfig(id="agent-1", name="A1", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-1", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+
+    stored = orch.get_task(task_id)
+    assert stored.status == "pending"
+    assert stored.escalation_record_id is not None
+    assert any(t[2] == task_id for t in orch._queue)
+
+
+def test_approval_required_action_is_not_enqueued(orch):
+    orch.register_agent(AgentConfig(id="agent-2", name="A2", role="reader", domain="CommPrime"))
+    task = AgentTask(agent_id="agent-2", action="read_ledger_summary")
+    task_id = orch.submit_task(task)
+
+    stored = orch.get_task(task_id)
+    assert stored.status == "pending_governance"
+    assert not any(t[2] == task_id for t in orch._queue)
+
+
+def test_forbidden_action_is_blocked(orch):
+    orch.register_agent(AgentConfig(id="agent-3", name="A3", role="reader", domain="CommPrime"))
+    task = AgentTask(agent_id="agent-3", action="transfer_funds")
+    task_id = orch.submit_task(task)
+
+    stored = orch.get_task(task_id)
+    assert stored.status == "blocked_governance"
+    assert "rejected" in stored.error
+    assert not any(t[2] == task_id for t in orch._queue)
+
+
+def test_unmatched_action_escalates_rather_than_defaulting_permissive(orch):
+    """Per §3.4: ambiguity (no charter covers the action) escalates, it is never
+    treated as implicitly allowed."""
+    orch.register_agent(AgentConfig(id="agent-4", name="A4", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-4", action="do_something_unlisted")
+    task_id = orch.submit_task(task)
+
+    stored = orch.get_task(task_id)
+    assert stored.status == "pending_governance"
+    assert not any(t[2] == task_id for t in orch._queue)
+
+
+def test_unregistered_agent_resolves_to_unassigned_domain(orch):
+    """An agent with no registered AgentConfig falls back to the 'unassigned' domain
+    rather than raising — no charter covers (4, 'unassigned', ...) in this fixture set,
+    so it escalates."""
+    task = AgentTask(agent_id="ghost-agent", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+
+    stored = orch.get_task(task_id)
+    assert stored.status == "pending_governance"
+
+
+def test_task_survives_reload_from_db(orch, fsm, tmp_path, monkeypatch):
+    orch.register_agent(AgentConfig(id="agent-5", name="A5", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-5", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+
+    monkeypatch.setattr(orchestrator_module, "get_escalation_fsm", lambda: fsm)
+    reloaded = AgentOrchestrator(db_path=str(tmp_path / "agents.db"))
+    stored = reloaded.get_task(task_id)
+    assert stored is not None
+    assert stored.action == "read_approved_documents"
+    assert stored.escalation_record_id == orch.get_task(task_id).escalation_record_id
+
+
+def test_agent_task_positional_construction_preserves_field_order():
+    """cubic P2: `action` must not be inserted between the pre-Phase-3 fields — a
+    positional caller like AgentTask(id, agent_id, description, priority, status)
+    must still bind priority/status to the right slots."""
+    task = AgentTask("task-1", "agent-x", "some description", 7, "pending")
+    assert task.priority == 7
+    assert task.status == "pending"
+    assert task.action == ""
+
+
+def test_resync_governance_enqueues_after_cab_approval(orch, fsm):
+    """cubic P1: submit_task() alone never re-enqueues a CAB-approved task — the
+    governance route only updates the FSM record. resync_governance() closes that
+    loop when called after the decision lands."""
+    orch.register_agent(AgentConfig(id="agent-6", name="A6", role="reader", domain="CommPrime"))
+    task = AgentTask(agent_id="agent-6", action="read_ledger_summary")
+    task_id = orch.submit_task(task)
+    assert orch.get_task(task_id).status == "pending_governance"
+    assert not any(t[2] == task_id for t in orch._queue)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.resolve_cab(record_id, approver="human-1", approved=True)
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "pending"
+    assert any(t[2] == task_id for t in orch._queue)
+
+
+def test_resync_governance_blocks_after_cab_rejection(orch, fsm):
+    orch.register_agent(AgentConfig(id="agent-7", name="A7", role="reader", domain="CommPrime"))
+    task = AgentTask(agent_id="agent-7", action="read_ledger_summary")
+    task_id = orch.submit_task(task)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.resolve_cab(record_id, approver="human-1", approved=False)
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "blocked_governance"
+    assert not any(t[2] == task_id for t in orch._queue)
+
+
+def test_resync_governance_is_a_noop_for_already_resolved_task(orch):
+    orch.register_agent(AgentConfig(id="agent-8", name="A8", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-8", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+    assert orch.get_task(task_id).status == "pending"
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "pending"
+    # Calling it again must not double-enqueue.
+    queue_hits = [t for t in orch._queue if t[2] == task_id]
+    assert len(queue_hits) == 1
+
+
+def test_resync_governance_unknown_task_returns_none(orch):
+    assert orch.resync_governance("does-not-exist") is None
+
+
+def test_resync_governance_blocks_on_frozen_state(orch, fsm):
+    """cubic P2: resync_governance() previously only treated rejected/halted as
+    blocking, silently leaving a frozen task as pending_governance."""
+    orch.register_agent(
+        AgentConfig(id="agent-frozen", name="AF", role="reader", domain="CommPrime")
+    )
+    task = AgentTask(agent_id="agent-frozen", action="read_ledger_summary")
+    task_id = orch.submit_task(task)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.freeze(record_id, reason="suspicious pattern")
+
+    resynced = orch.resync_governance(task_id)
+    assert resynced.status == "blocked_governance"
+    assert "frozen" in resynced.error
+
+
+def test_dequeue_task_returns_approved_task_marked_running(orch):
+    orch.register_agent(AgentConfig(id="agent-dq1", name="DQ1", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq1", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+
+    dequeued = orch.dequeue_task()
+    assert dequeued is not None
+    assert dequeued.id == task_id
+    assert dequeued.status == "running"
+    assert dequeued.started_at is not None
+
+
+def test_dequeue_task_empty_queue_returns_none(orch):
+    assert orch.dequeue_task() is None
+
+
+def test_dequeue_task_skips_and_blocks_task_halted_after_enqueue(orch, fsm):
+    """cubic P1: a task already sitting in the runnable queue must not be
+    dispatchable once its escalation record is halted after the fact — the
+    stale status='pending' snapshot on the task itself is not authoritative."""
+    orch.register_agent(AgentConfig(id="agent-dq2", name="DQ2", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq2", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+    assert any(t[2] == task_id for t in orch._queue)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.halt(record_id, reason="hard stop triggered")
+
+    assert orch.dequeue_task() is None
+    stored = orch.get_task(task_id)
+    assert stored.status == "blocked_governance"
+    assert "halted" in stored.error
+
+
+def test_dequeue_task_blocks_task_whose_escalation_record_vanished(orch, fsm):
+    """cubic P2: if the escalation record backing an already-queued task disappears
+    (RecordNotFoundError), dequeue_task() previously just `continue`d past it without
+    updating task.status — leaving it stuck at 'pending' forever while silently never
+    dispatching it again. A caller polling get_task() would see 'pending' and
+    reasonably believe the task is still queued and will eventually run."""
+    orch.register_agent(AgentConfig(id="agent-dq4", name="DQ4", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq4", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+    assert any(t[2] == task_id for t in orch._queue)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    with fsm_module._get_conn() as conn:
+        conn.execute("DELETE FROM escalation_records WHERE record_id = ?", (record_id,))
+        conn.commit()
+
+    assert orch.dequeue_task() is None
+    stored = orch.get_task(task_id)
+    assert stored.status == "blocked_governance"
+    assert "no longer found" in stored.error
+
+
+def test_reload_does_not_reenqueue_task_halted_before_restart(orch, fsm, tmp_path, monkeypatch):
+    """cubic P1: restarting the orchestrator must not resurrect hard-stopped work —
+    _load_tasks_from_db() must re-check the live FSM state, not just the stored
+    status='pending' + escalation_record_id-present combination."""
+    orch.register_agent(AgentConfig(id="agent-dq3", name="DQ3", role="reader", domain="ArchPrime"))
+    task = AgentTask(agent_id="agent-dq3", action="read_approved_documents")
+    task_id = orch.submit_task(task)
+
+    record_id = orch.get_task(task_id).escalation_record_id
+    fsm.halt(record_id, reason="hard stop before restart")
+
+    monkeypatch.setattr(orchestrator_module, "get_escalation_fsm", lambda: fsm)
+    reloaded = AgentOrchestrator(db_path=str(tmp_path / "agents.db"))
+    stored = reloaded.get_task(task_id)
+    assert stored is not None
+    assert stored.status == "blocked_governance"
+    assert not any(t[2] == task_id for t in reloaded._queue)
+
+
+def test_reload_does_not_enqueue_legacy_pending_row_without_escalation_record(
+    orch, fsm, tmp_path, monkeypatch
+):
+    """cubic P1: a 'pending' agent_tasks row with no escalation_record_id predates
+    Phase 3's gating — an upgrade must not silently run it outside the Tier 4 gate."""
+    orch._db.execute(
+        """
+        INSERT INTO agent_tasks
+            (id, agent_id, description, action, priority, status, created_at,
+             started_at, completed_at, result, error, escalation_record_id)
+        VALUES ('legacy-1', 'agent-9', 'pre-phase-3 work', '', 5, 'pending',
+                '2020-01-01T00:00:00', NULL, NULL, NULL, NULL, NULL)
+        """
+    )
+    orch._db.commit()
+
+    monkeypatch.setattr(orchestrator_module, "get_escalation_fsm", lambda: fsm)
+    reloaded = AgentOrchestrator(db_path=str(tmp_path / "agents.db"))
+    stored = reloaded.get_task("legacy-1")
+    assert stored is not None
+    assert stored.status == "pending"
+    assert not any(t[2] == "legacy-1" for t in reloaded._queue)

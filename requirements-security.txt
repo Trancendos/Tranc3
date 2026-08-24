@@ -13,7 +13,13 @@ hashin==1.0.5         # Add package hashes to requirements for integrity
 
 # === OWASP Compliance ===
 # These support OWASP Top 10 validation in CI/CD
-semgrep==1.164.0      # Pattern-based static analysis for security anti-patterns
+# 1.164.0 -> 1.172.0: transitively fixes CVE-2026-7246 (click command injection,
+# PYSEC-2026-2132) and 5 PyJWT CVEs (PYSEC-2026-175/176/177/178/179) by pulling in
+# click~=8.4.2 and pyjwt~=2.13.0 instead of semgrep 1.164.0's click~=8.1.8/pyjwt~=2.12.0.
+# semgrep still hard-pins mcp==1.23.3 exactly (verified: still true as of 1.172.0,
+# the latest release) -- see the mcp accepted-risk note below, this bump doesn't
+# touch that one.
+semgrep==1.172.0      # Pattern-based static analysis for security anti-patterns
 
 # === SBOM Generation ===
 # CycloneDX for Software Bill of Materials (compliance requirement)
@@ -32,3 +38,15 @@ lxml==6.1.1
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks in XML parsing (CWE-611)
+
+# === Accepted risks (documented, upstream-blocked -- do not silently re-suppress) ===
+# mcp==1.23.3 (transitive via semgrep, exact-pinned `mcp==1.23.3` by every semgrep
+# release through 1.172.0 -- verified, not just the currently-pinned 1.172.0):
+# CVE-2026-52869/52870/59950 (PYSEC-2026-3481/3482/3483) are session-hijacking and
+# missing Host/Origin validation bugs in mcp's SSE, WebSocket, and experimental-tasks
+# *server* transports. semgrep here is invoked purely as a CLI SAST scanner (pre-commit,
+# CI) -- it never starts an mcp server, so those transport code paths are never reached.
+# Overriding this pin breaks installation (semgrep's `mcp==1.23.3` is an exact pin, not
+# a range) -- see requirements-security.txt PR history for the pip resolver conflict.
+# Re-check on every semgrep bump: `pip download --no-deps semgrep==<version>` and grep
+# its METADATA for `Requires-Dist: mcp` to see if the pin has moved.

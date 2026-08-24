@@ -23,6 +23,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # tests/ includes cases that read the real compliance/magna-carta
+          # submodule content (e.g. Matrix Suites tests) — without this, the
+          # submodule dirs are empty gitlinks on ubuntu-latest's fresh
+          # checkout, and those tests silently fall back to "no suites"/404
+          # instead of exercising real data.
+          submodules: recursive
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -48,6 +55,18 @@ jobs:
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             || true  # Don't block main on test failures during stabilization
+
+      # The Chaos Party is the platform's testing Location. Until this step
+      # existed, CI ran pytest and told it nothing. /runs/batch also forwards to
+      # The Observatory, so one post feeds both. Skips cleanly when
+      # CHAOS_PARTY_URL is unset (a GitHub-hosted runner cannot reach a
+      # compose-internal worker); fails loudly once it is set.
+      - name: Report test run to The Chaos Party
+        if: always()
+        env:
+          CHAOS_PARTY_URL: ${{ secrets.CHAOS_PARTY_URL }}
+          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
+        run: python scripts/report_tests_to_chaos_party.py --ran-by ci
 
       - name: Upload coverage
         if: always()
