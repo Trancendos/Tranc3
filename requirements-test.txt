@@ -12,4 +12,4 @@ pytest-cov==7.1.0
 # Worker deps imported by the test suite (tests/test_workers_p0.py imports the
 # infinity-auth worker, which requires pyotp for TOTP/MFA). Kept in sync with
 # workers/infinity-auth/requirements-worker.txt.
-pyotp==2.9.0
+pyotp==2.10.0
