@@ -45,6 +45,16 @@ jobs:
       - name: Check master service matrix freshness
         run: python scripts/check_master_matrix_freshness.py
 
+      - name: Estate lint (duplication + registry drift)
+        # Non-blocking (no --strict): the registry/compose reconciliation
+        # checks currently carry a real pre-existing backlog (unregistered
+        # services, container-naming) unrelated to duplication detection —
+        # failing CI on those now would be a surprise, unscoped break. The
+        # duplication/orphan checks specifically (see
+        # config/estate/duplication_baseline.yaml) are the newly-added part;
+        # promote this to --strict once the pre-existing backlog is triaged.
+        run: python scripts/estate_lint.py || true
+
       - name: Create logs dir
         run: mkdir -p logs
 
@@ -110,6 +120,13 @@ jobs:
     needs: smoke
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # tests/ includes cases that read the real compliance/magna-carta
+          # submodule content (e.g. Matrix Suites tests) — without this, the
+          # submodule dirs are empty gitlinks on a fresh runner, and those
+          # tests silently fall back to "no suites"/404 instead of exercising
+          # real data.
+          submodules: recursive
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -130,6 +147,13 @@ jobs:
 
       - name: Create logs dir
         run: mkdir -p logs
+
+      - name: Check topology map freshness
+        # Needs the real compliance/magna-carta submodule content (Matrix
+        # Suites registry) this job already checks out above — the smoke
+        # job's checkout doesn't have it, which is why this lives here and
+        # not next to the master-matrix freshness check.
+        run: python scripts/check_topology_map_freshness.py
 
       - name: Run full test suite
         run: |

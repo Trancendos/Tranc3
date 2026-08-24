@@ -71,6 +71,58 @@ jobs:
             echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
           fi
 
+      - name: Validate required deploy secrets
+        # Mirrors both src/core/startup_validator.py's hard-fail checks
+        # (SECRET_KEY, JWT_SECRET >= 32 chars; DATABASE_URL, REDIS_URL
+        # non-empty; REDIS_URL scheme) AND src/core/config.py's
+        # Tranc3Config field_validators, which additionally reject the
+        # known dev placeholder strings and whitespace-only values even
+        # when they're long enough to pass the length check alone.
+        # `flyctl secrets set` happily accepts an empty/placeholder/
+        # malformed value with no error — the app then only fails at
+        # runtime, minutes later, as a bare 503 with no indication why.
+        # Catch it here instead, with a readable message, before anything
+        # is deployed.
+        env:
+          IN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          IN_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          IN_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          IN_REDIS_URL: ${{ secrets.REDIS_URL }}
+        run: |
+          fail=0
+          check_len() {
+            name="$1"; val="$2"; min="$3"; placeholder="$4"
+            trimmed="$(echo "$val" | tr -d '[:space:]')"
+            if [ -z "$trimmed" ]; then
+              echo "::error::$name is not set (or empty/whitespace-only) in The Workshop's org/repo secrets (Settings > Actions > Secrets)."
+              fail=1
+            elif [ "${#val}" -lt "$min" ]; then
+              echo "::error::$name is set but shorter than $min characters — startup_validator.py rejects this in production."
+              fail=1
+            elif [ -n "$placeholder" ] && [ "$val" = "$placeholder" ]; then
+              echo "::error::$name is still set to the dev placeholder value ('$placeholder') — config.py's field_validator rejects this in production. Set a real generated secret."
+              fail=1
+            fi
+          }
+          check_len SECRET_KEY "$IN_SECRET_KEY" 32 "dev-secret-key-change-in-production"
+          check_len JWT_SECRET "$IN_JWT_SECRET" 32 "dev-jwt-secret-change-in-production"
+          if [ -z "$IN_DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is not set (or empty) in secrets."
+            fail=1
+          fi
+          if [ -z "$IN_REDIS_URL" ]; then
+            echo "::error::REDIS_URL is not set (or empty) in secrets."
+            fail=1
+          elif ! echo "$IN_REDIS_URL" | grep -qE '^(redis|rediss|unix)://'; then
+            echo "::error::REDIS_URL doesn't start with redis://, rediss://, or unix:// — the app will silently fall back to an in-memory queue. Likely cause: the Upstash REST URL (https://...) was used instead of the TCP connection string."
+            fail=1
+          fi
+          if [ "$fail" -eq 1 ]; then
+            echo "::error::One or more required deploy secrets are missing/invalid — see errors above. Fix them, then re-run this workflow."
+            exit 1
+          fi
+          echo "All required deploy secrets present and well-formed."
+
       - name: Inject all production secrets into Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -120,11 +172,36 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Health check
+        # Retries instead of one fixed-delay check: a heavy first-boot image
+        # (torch/qiskit/etc, ~2.9GB) or a transient Fly platform hiccup can
+        # push real startup past a single 15s sleep, which reads as a false
+        # failure even though the app comes up seconds later.
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          sleep 15
-          STATUS=$(curl -sf https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
-          echo "Health check status: $STATUS"
-          [ "$STATUS" = "200" ] || { echo "Health check failed"; exit 1; }
+          MAX_ATTEMPTS=6
+          DELAY_SECONDS=15
+          STATUS="000"
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            # -sS (not -f): -f makes curl exit non-zero on HTTP 4xx/5xx while
+            # still having written the %{http_code} output, so the `|| echo
+            # "000"` fallback below would ALSO fire and concatenate into a
+            # bogus "503000". Without -f, curl completes normally on any HTTP
+            # response and -w prints the real code; the fallback then only
+            # catches genuine transport failures (DNS, connection refused).
+            STATUS=$(curl -sS https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
+            echo "Health check attempt $attempt/$MAX_ATTEMPTS status: $STATUS"
+            [ "$STATUS" = "200" ] && break
+            [ "$attempt" -lt "$MAX_ATTEMPTS" ] && sleep "$DELAY_SECONDS"
+          done
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Health check failed after $MAX_ATTEMPTS attempts (final status=$STATUS). Dumping Fly status/logs for diagnosis below \
+              — no need to fetch these manually from the Fly dashboard next time."
+            flyctl status --app tranc3-backend || echo "(flyctl status unavailable)"
+            echo "--- flyctl logs (tranc3-backend) ---"
+            timeout 25 flyctl logs --app tranc3-backend --no-tail || echo "(log dump timed out or unavailable)"
+            exit 1
+          fi
 
   # ────────────────────────────────────────────────────────────────────────────
   # Bots: trancendos-bots on Fly.io

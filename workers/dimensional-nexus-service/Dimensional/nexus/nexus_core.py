@@ -55,6 +55,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from Dimensional.cors import resolve_cors_origins
 from Dimensional.infinity.abac import ABACEngine
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.rbac import RBACEngine
@@ -1026,22 +1027,9 @@ def create_nexus_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    cors_origins = [
-        o.strip()
-        for o in os.getenv(
-            "CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
-        ).split(",")
-        if o.strip()
-    ]
-    if "*" in cors_origins:
-        raise RuntimeError(
-            "CORS_ORIGINS cannot contain '*' — this service sets allow_credentials=True, "
-            "and browsers reject wildcard origins on credentialed responses."
-        )
-
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins,
+        allow_origins=resolve_cors_origins("Nexus", allow_credentials=True),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

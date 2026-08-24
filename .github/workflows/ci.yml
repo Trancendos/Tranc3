@@ -42,12 +42,154 @@ jobs:
             --exclude ".forgejo" \
             .
 
+  topology:
+    # Two classes of defect that no test can catch, because both only fail
+    # inside a built container while passing locally: a service calling a
+    # sibling on `localhost`, and a worker importing a package its Docker build
+    # context excludes. Both are cheap static checks against compose itself.
+    name: Service Topology
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # The History integrity step needs real history. The default depth of 1
+          # gives a graft boundary that `rev-list --max-parents=0` reports as a
+          # root, and no origin/main at all — which is how the first version of
+          # that check silently verified nothing. The script also deepens `main`
+          # itself (so it works on Forgejo and locally); this makes it certain here.
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install PyYAML
+        run: pip install PyYAML
+
+      - name: Cross-service URL check
+        run: python scripts/check_service_urls.py
+
+      - name: Build-context import check
+        run: python scripts/check_worker_build_context.py
+
+      # Catches the one way named build contexts fail: a Dockerfile that copies
+      # `--from=sharedcore` while its compose entry supplies no such context.
+      # That builds fine for anyone passing --build-context by hand and fails
+      # only in the deployment, so it has to be caught here.
+      - name: Shared-core build-context check
+        run: python scripts/apply_shared_core_contexts.py --check
+
+      # Fails if any service compares the internal secret in-line again. The
+      # estate had 77 such gates, 28 timing-unsafe and 10 fail-open; this is
+      # what stops an 85th appearing.
+      - name: Internal-auth delegation check
+        run: python scripts/migrate_internal_auth.py --check
+
+      # The shared web-framework stack (fastapi/starlette/pydantic/uvicorn/redis)
+      # is restated in 86 requirements files. Left unguarded it drifts — the
+      # estate once held 5 different uvicorn pins at once — and drift on this
+      # stack is coupled: fastapi constrains starlette and pydantic, so a
+      # sliding pin can stop satisfying its own framework at image-build time.
+      # Pins main's root commit, so a real history rewrite (re-root, whole-graph
+      # squash, force push of an unrelated tree) fails on the commit that causes
+      # it rather than surfacing months later as "why is every branch
+      # unmergeable?". It deepens main itself first: on the shallow clone
+      # actions/checkout produces, `rev-list --max-parents=0` returns a graft
+      # boundary that is indistinguishable from a root, and `merge-base` reports
+      # perfectly related branches as unrelated — a trap that already produced
+      # one confident, wrong conclusion (see BRANCH-SALVAGE-ANALYSIS.md §3).
+      - name: History integrity
+        run: python scripts/check_history_integrity.py
+
+      - name: Framework pin alignment
+        run: python scripts/align_framework_pins.py --check
+
+      - name: Service review freshness
+        run: python scripts/build_service_review.py --check
+
+      # Guards an ADOPTED timing profile against rot; a no-op until one is
+      # bootstrapped, because failing CI for a feature nobody has turned on yet
+      # is noise. Once `.test-timings.json` exists, a profile that has fallen
+      # below 80% coverage of the collected suite fails here -- below that the
+      # shard split degrades toward balancing test COUNTS, which is the wrong
+      # quantity and silently gives back the wall-clock win.
+      - name: Test timing profile freshness
+        run: python scripts/test_intelligence.py --check
+
+      # web/ declares dependency overrides in three places, each read by a
+      # different installer (npm / pnpm 10 / pnpm 11+). Those entries exist to
+      # force transitive packages past published advisories, so drift between
+      # them does not break a build -- it silently un-patches whichever installer
+      # was left behind. Both halves of that have already happened here: a pnpm
+      # lockfile serving vulnerable dompurify while npm was patched, and an
+      # override declared only under the `pnpm` key that pnpm 11 ignores.
+      - name: Dependency override sync
+        run: python scripts/check_override_sync.py
+
+      # Model identifiers are not dependencies any package manager understands --
+      # they are bare strings in adapters and env defaults, so dependency scanning
+      # walks straight past them. This fails when code references a model that is
+      # not declared in config/ai_models.yaml with a licence, an execution location
+      # and a data-egress answer. Fast and network-free, unlike the obsolescence
+      # census, so it belongs on every PR.
+      - name: AI model inventory drift
+        run: python scripts/ai_bom.py --check
+
+      # The estate states its architecture as flow -- "all MCP routes through The
+      # Spark", "all secrets flow into The Void" -- and until the flow contract
+      # existed, none of those claims could be checked, so none could be
+      # maintained. This measures each declared flow against the working tree.
+      #
+      # It fails on REGRESSION only, against config/estate/flow_baseline.json --
+      # not on the standing backlog of flows that are built and reached by
+      # nothing. A gate that is red on day one for reasons nobody can fix that
+      # day teaches people to wave it through, which is the failure it exists to
+      # prevent. Improving a flow means refreshing the baseline, which is a
+      # visible act in the diff rather than a silent one.
+      #
+      # Pure filesystem and grep work, no network: it belongs on every PR.
+      # Fails when a Location's worker_path is missing, unserved, shared with
+      # another Location, or when its worker_port disagrees with compose. The
+      # registry is the platform's identity source of truth; when it drifts,
+      # the Admin OS worker map goes blind without saying so.
+      - name: Entity registry conformance
+        run: python scripts/entity_registry_conformance.py --check
+
+      - name: Location flow conformance
+        run: python scripts/flow_conformance.py --check
+
+      # MATRIX-INDEX.md's inventory is generated, so it cannot silently fall
+      # behind the filesystem the way the hand-written list did -- 51 of 68
+      # matrix documents were absent from it when this was measured. The
+      # editorial judgement above the generated block stays hand-written.
+      # Deliberately submodule-independent: the check returns the same answer
+      # with compliance/magna-carta/ present or absent, so it cannot fail here
+      # for an environmental reason.
+      - name: Matrix index freshness
+        run: python scripts/build_matrix_index.py --check
+
+      # The PID column joins the EA service inventory to the entity registry.
+      # Without it, Tier3AI was free text nothing could check, and the CMDB had
+      # drifted from the registry unnoticed. The floor is a ratchet: coverage
+      # may rise, and a change that drops it below the recorded measurement
+      # fails here rather than quietly un-joining the two halves of the estate.
+      - name: PID coverage
+        run: python scripts/pid_coverage.py --check
+
   test:
     name: Pytest
     runs-on: ubuntu-latest
     needs: lint
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # tests/ includes cases that read the real compliance/magna-carta
+          # submodule content (e.g. Matrix Suites tests) — without this, the
+          # submodule dirs are empty gitlinks on ubuntu-latest's fresh
+          # checkout, and those tests silently fall back to "no suites"/404
+          # instead of exercising real data.
+          submodules: recursive
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6

@@ -1,0 +1,26 @@
+{
+  "charter_id": "govprime-agent-policy-support",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "GovPrime",
+  "mission": "Draft and summarize governance content for The Town Hall and Arcadia \u2014 never finalize or publish policy.",
+  "allowed_actions": [
+    "draft_policy_summary",
+    "read_governance_register",
+    "summarize_review_status"
+  ],
+  "forbidden_actions": [
+    "publish_policy",
+    "modify_governance_register",
+    "close_review_cycle"
+  ],
+  "risk_tier": "high",
+  "approval_required": true,
+  "escalation_triggers": [
+    "policy_conflict",
+    "irreversible_action_requested"
+  ],
+  "escalation_severity": "high",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate"
+}

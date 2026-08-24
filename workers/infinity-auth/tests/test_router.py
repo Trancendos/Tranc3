@@ -178,7 +178,11 @@ def test_get_profile(test_client):
 
 def test_get_profile_without_token(test_client):
     resp = test_client.get("/auth/me")
-    assert resp.status_code == 403  # HTTPBearer returns 403 when no header
+    # FastAPI's HTTPBearer raises 401 "Not authenticated" for a missing/malformed
+    # Authorization header on current FastAPI (aligned with HTTP semantics — 401
+    # means unauthenticated, 403 means authenticated-but-forbidden); older
+    # versions used 403 here, which this assertion was written against.
+    assert resp.status_code == 401
 
 
 # ── /auth/verify ─────────────────────────────────────────────────────────────

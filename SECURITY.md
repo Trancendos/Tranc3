@@ -82,6 +82,19 @@ See `docs/CVE_REMEDIATION_REPORT.md` for the complete list of 66 resolved CVEs.
 | aiohttp | (new) | 3.13.5 | 20 CVEs resolved |
 | cryptography | (new) | 48.0.0 | CVE-2026-26007, CVE-2024-12797, +2 more |
 | undici | (new) | 7.15.0 | CVE-2026-1525, CVE-2026-22036, +3 more |
+| semgrep | 1.164.0 | 1.172.0 | CVE-2026-7246 (click, transitive), CVE-2026-48522/523/524/525/526 (PyJWT, transitive) |
+
+### Accepted Risks (2026-08, documented — not silently suppressed)
+
+These are tracked findings from the current Dependabot/pip-audit sweep with no safe fix
+available today. Each is re-evaluated whenever its upstream pin changes; do not re-flag
+without checking this table first.
+
+| Package | Finding | Why it's accepted | Re-check trigger |
+|---------|---------|--------------------|-------------------|
+| `ecdsa==0.19.2` (now explicit-pinned; previously transitive via `python-jose`'s `Requires-Dist: ecdsa!=0.15`) — repo-wide: the root app plus 7 `workers/*` services that use `python-jose` for JWT (`gateway-service`, `gbrain-bridge`, `infinity-admin-service`, `infinity-auth`, `infinity-one-service`, `infinity-portal-service`, `sentinel-station-service`; same reasoning documented inline in each) | CVE-2024-23342 / PYSEC-2026-1325 — Minerva timing side-channel in `SigningKey.sign_digest()` / ECDH | The pin to 0.19.2 itself fixes a separate, distinct issue — PYSEC-2026-2467 (DoS via malformed DER signature length field) — and closes the exact-pinning gap (an unpinned transitive dep violated this doc's own "Exact dependency pinning" principle). PYSEC-2026-1325 (Minerva) is the remaining accepted risk: no patched release exists for it specifically (`fix_versions: []`); maintainers have stated side-channel attacks are out of scope and there is no planned fix. This app's and every listed worker's JWT usage is HS256/RS256-only (grep-confirmed no ES256/384/512 usage) — the vulnerable ECDSA sign/ECDH paths are never invoked. | If ES256/ES384/ES512 JWT support is ever added, or if a patched `ecdsa` release ships for PYSEC-2026-1325 |
+| `mcp==1.23.3` (transitive via `semgrep`, exact-pinned by every semgrep release verified through the latest 1.172.0) | CVE-2026-52869/52870/59950 (PYSEC-2026-3481/3482/3483) — session-hijacking / missing Host-Origin validation in `mcp`'s SSE, WebSocket, and experimental-tasks *server* transports | Overriding the pin breaks pip's resolver (exact `==` pin, not a range). `semgrep` here is used purely as a CLI SAST scanner (pre-commit, CI) — it never starts an `mcp` server, so the vulnerable transport code is never reached. | On every `semgrep` version bump: `pip download --no-deps semgrep==<version>` and grep its METADATA for `Requires-Dist: mcp` |
+| `react-router` / `react-router-dom` 7.18.2 (`web/package.json`) | GHSA-qwww-vcr4-c8h2 / CVE pending — RSC Mode CSRF bypass allowing action execution before a 400 response, fixed in 8.3.0 | `web/` is a plain Vite + React 18 client-side SPA (`vite`, `tsc && vite build` — no Next.js, no RSC anywhere in the codebase); the vulnerable code path is RSC-mode-specific and unreachable. The fix requires `react-router@8.3.0`, which itself requires React ≥19.2.7 — bumping past this CVE means a React 18→19 migration first, scoped as its own initiative rather than folded into a dependency-patch sweep (verified via `npm install` producing an ERESOLVE peer-dependency conflict against `react@18.3.1`). | When the React 18→19 migration lands |
 
 ## Compliance Alignment
 

@@ -54,6 +54,23 @@ self-hosted, zero-cost (replaces a Cloudflare Zero Trust dependency). Real mecha
 **Question answered:** *"Given this request's device, location, and MFA state right now, should it
 be allowed, denied, or challenged?"*
 
+**Correction (2026-08-07):** "extracted from request headers" above was true of `mfa_verified` in a
+way that was a real vulnerability, not just an implementation detail — `X-MFA-Verified` was read
+straight from the raw client request with nothing between the caller and the app validating it, so
+any caller could set it themselves and satisfy MFA-gated routes with no real MFA challenge. Fixed:
+`mfa_verified` is now derived from the signed JWT's own claim (set server-side by
+`workers/infinity-auth/router.py` only after a real TOTP/backup-code check), never from client
+input. `device_posture`/`country` remain genuinely header-derived, and no real device-attestation or
+GeoIP pipeline backs them yet — an honest, still-open gap, not a security hole in the same class as
+the header-spoofing bug (no caller-supplied header alone impersonates a *verified* MFA challenge the
+way the old raw `X-MFA-Verified` did). But `device_posture` is not purely a soft risk-scoring input:
+for any path listed in `ZeroTrustOptions.healthy_device_routes` (`src/auth/zero_trust.py`), a
+non-`HEALTHY` posture is a hard `DENY`, not just an added risk-score point — so a caller who can
+influence the header this pipeline reads can also hard-block themselves out of (or into, if the
+header is trusted upstream of a real attestation source) those specific routes. `country` remains
+purely score/policy-list driven (`ZERO_TRUST_BLOCKED_COUNTRIES`), no separate hard-gate route list.
+Full trace: [SECURITY-POSTURE-MATRIX.md](SECURITY-POSTURE-MATRIX.md) §2.
+
 ## 4. How the three relate
 
 ```text
