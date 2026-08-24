@@ -511,12 +511,12 @@ jobs:
           git add requirements.txt safe_upgrades.json
           git commit -m "deps(auto): apply ${{ steps.apply.outputs.change_count }} safe N-1 patch/minor upgrades
 
-Auto-remediation by The Workshop dependency scanner.
-All upgrades are same-major-version (patch or minor) safe bumps.
-Major version upgrades require manual review — see artifacts.
+          Auto-remediation by The Workshop dependency scanner.
+          All upgrades are same-major-version (patch or minor) safe bumps.
+          Major version upgrades require manual review — see artifacts.
 
-Scan run: ${{ github.run_number }}
-Policy: N-1 compliance (within 1 major/minor of latest stable)"
+          Scan run: ${{ github.run_number }}
+          Policy: N-1 compliance (within 1 major/minor of latest stable)"
 
           git push origin "$BRANCH" || echo "Push failed — may need Forgejo token"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV

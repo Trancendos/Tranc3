@@ -797,7 +797,7 @@ html {
     transform     var(--ux-motion-standard);
 }
 .ux-liquid:hover {
-  border-radius: 1.5rem 0.75rem 1.5rem 0.75rem;
+  border-radius: 1.5rem 0.75rem;
   transform: translateY(-1px);
 }
 

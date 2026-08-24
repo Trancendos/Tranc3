@@ -1147,7 +1147,7 @@ components:
   - ref: TRC-P3-040
     name: "The Chaos Party"
     short_id: chaos-party
-    lead_ai: "The Mad Hatter"
+    lead_ai: "The Mad Hatter & Alice Dream"
     role: "Central testing platform — validation & compliance (Alice in Wonderland themed)"
     status: building
     version: "0.3.0"
