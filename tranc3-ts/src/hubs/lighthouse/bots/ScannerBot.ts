@@ -58,7 +58,7 @@ export class ScannerBot extends Bot {
   private async handleOperation(input: ScannerInput): Promise<ScannerResult> {
     const tokenId = input.tokenId ?? 'UNKNOWN';
     const findings: ScannerFinding[] = [];
-    let riskScore = 0;
+    const riskScore = 0;
     const timestamp = new Date();
 
     // Simulated scan analysis

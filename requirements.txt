@@ -14,14 +14,14 @@ torch==2.13.0
 
 # === Tokenization ===
 # Fixes: CVE-2026-1260 (GHSA-38vq-g6vr-w8wf) — heap overflow via crafted model file.
-# sentencepiece==0.2.1 is the PATCHED version that fixes CVE-2026-1260.
+# sentencepiece==0.2.2 is the PATCHED version that fixes CVE-2026-1260.
 # Trivy may still flag this as vulnerable due to a stale vulnerability database;
 # the finding is a false positive — see .trivyignore for suppression details.
 # Hardening: only load model files from trusted sources; validate model file integrity.
-sentencepiece==0.2.1
+sentencepiece==0.2.2
 
 # === Datasets ===
-datasets==5.0.0
+datasets==5.0.1
 
 # === Numerical Computing ===
 numpy==2.1.3
@@ -59,7 +59,7 @@ bcrypt==5.0.0
 
 # === MFA / TOTP ===
 # pyotp: TOTP/HOTP one-time passwords — powers MFA in workers/infinity-auth.
-pyotp==2.9.0
+pyotp==2.10.0
 
 # === Database / ORM / Migrations ===
 # SQLAlchemy: ORM models in src/database/schema.py + src/auth/db_user_manager.py.

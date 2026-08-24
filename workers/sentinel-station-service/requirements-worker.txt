@@ -3,7 +3,7 @@ fastapi==0.141.1
 starlette==1.6.0
 uvicorn==0.52.3
 pydantic==2.13.4
-sse-starlette==3.4.5
+sse-starlette==3.4.8
 python-jose[cryptography]==3.5.0
 # ecdsa explicit pin (previously unpinned/transitive via python-jose's
 # `Requires-Dist: ecdsa!=0.15`, violating this repo's exact-pinning policy).
@@ -18,4 +18,4 @@ ecdsa==0.19.2
 # This worker never signs/verifies ES256/ES384/ES512 JWTs (grep confirms no ES2xx usage),
 # so the vulnerable ECDSA sign/ECDH code paths are never invoked. See SECURITY.md.
 pyasn1==0.6.4
-email-validator==2.2.0
+email-validator==2.3.0
