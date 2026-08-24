@@ -131,7 +131,7 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **PID-DGR** | **The Digital Grid** | Development (Code) | Tyler Towncroft (AID-DGR-01) | The Doctor (Nikolai O'denhime) | The Flow-Weaver (SID-DGR-01) | Event-Broker (SID-DGR-02) | Trigger-Bot (NID-DGR-01) | Action-Bot (NID-DGR-02) | Condition-Bot (NID-DGR-03) | Loop-Bot (NID-DGR-04) |
 | **PID-LAB** | **The Lab** | Development (Code) | The Dr. (Nikolai O'denhime) & Slime (AID-LAB-01) | Cornelius MacIntyre | The Hounds (SID-LAB-01) | Syntax-Sage (SID-LAB-02) | Lint-Bot (NID-LAB-01) | Compile-Bot (NID-LAB-02) | Debug-Bot (NID-LAB-03) | Test-Bot (NID-LAB-04) |
 | **PID-WRK** | **The Workshop** | Development (Code) | Larry Lowhammer (AID-WRK-01) | The Doctor (Nikolai O'denhime) | Branch-Manager (SID-WRK-01) | Merge-Master (SID-WRK-02) | Commit-Bot (NID-WRK-01) | Push-Bot (NID-WRK-02) | Pull-Bot (NID-WRK-03) | Clone-Bot (NID-WRK-04) |
-| **PID-TCP** | **The Chaos Party** | Development (Code) | The Mad Hatter (AID-TCP-01) | The Doctor (Nikolai O'denhime) | The March Hare (SID-TCP-01) | The Dormouse (SID-TCP-02) | Teapot-Bot (NID-TCP-01) | Pocket-Watch-Bot (NID-TCP-02) | Sugar-Cube-Bot (NID-TCP-03) | Jam-Tart-Bot (NID-TCP-04) |
+| **PID-TCP** | **The Chaos Party** | Development (Code) | The Mad Hatter & Alice Dream (AID-TCP-01) | The Doctor (Nikolai O'denhime) | The March Hare (SID-TCP-01) | The Dormouse (SID-TCP-02) | Teapot-Bot (NID-TCP-01) | Pocket-Watch-Bot (NID-TCP-02) | Sugar-Cube-Bot (NID-TCP-03) | Jam-Tart-Bot (NID-TCP-04) |
 | **PID-OBS** | **The Observatory** | Knowledge | Norman Hawkins (AID-OBS-01) | Cornelius MacIntyre | The Watcher (SID-OBS-01) | The Scribe (SID-OBS-02) | Log-Alpha-Bot (NID-OBS-01) | Log-Beta-Bot (NID-OBS-02) | Tracer-Bot (NID-OBS-03) | Timestamp-Bot (NID-OBS-04) |
 | **PID-LIB** | **The Library** | Knowledge | Zimik (AID-LIB-01) | Norman Hawkins | The Curator (SID-LIB-01) | The Indexer (SID-LIB-02) | Page-Bot (NID-LIB-01) | Bookmark-Bot (NID-LIB-02) | Spine-Bot (NID-LIB-03) | Dust-Jacket-Bot (NID-LIB-04) |
 | **PID-ACA** | **The Academy** | Knowledge | Shimshi (AID-ACA-01) | Norman Hawkins | The Tutor (SID-ACA-01) | The Proctor (SID-ACA-02) | Chalk-Bot (NID-ACA-01) | Board-Bot (NID-ACA-02) | Eraser-Bot (NID-ACA-03) | Bell-Bot (NID-ACA-04) |
@@ -156,13 +156,21 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **PID-VR3** | **VRAR3D** | Wellbeing | Entari (AID-VR3-01) | Savania | World-Builder (SID-VR3-01) | The VR-Guide (SID-VR3-02) | Render-Bot (NID-VR3-01) | Track-Bot (NID-VR3-02) | Haptic-Bot (NID-VR3-03) | VR-Lens-Bot (NID-VR3-04) |
 | **PID-RES** | **Resonate** | Wellbeing | Magdalena (AID-RES-01) | Savania | The Tuner (SID-RES-01) | The Balancer (SID-RES-02) | Frequency-Bot (NID-RES-01) | Wave-Bot (NID-RES-02) | Pitch-Bot (NID-RES-03) | Harmonic-Bot (NID-RES-04) |
 
-> **Per-name agent teams (TateKing, Arcadian Exchange).** These two rows show only the
-> primary name's Agent Alpha/Beta pair — the table has room for one pair per row. Each
-> additional name runs its own dedicated pair (`src/entities/platform.py`'s
-> `agent_teams`), not the shared pair shown above: TateKing's Sam King has The
-> Director-S (SID-TKG-03) / The Editor-S (SID-TKG-04); Arcadian Exchange's Ann, George,
-> Edward, and James Porter have their own Speculator-X/Trader-X pairs at SID-AEX-03
-> through SID-AEX-10.
+> **Per-name agent teams (five Locations).** TateKing, Arcadian Exchange, Infinity, The
+> Lab and The Chaos Party each carry more than one Lead AI, and each of those rows shows
+> only the *primary* name's Agent Alpha/Beta pair — the table has room for one pair per
+> row. Every additional name runs its own dedicated pair (`src/entities/platform.py`'s
+> `agent_teams`), never the shared pair shown above:
+>
+> - TateKing — Sam King: The Director-S (SID-TKG-03) / The Editor-S (SID-TKG-04)
+> - Arcadian Exchange — Ann, George, Edward and James Porter: Speculator-X/Trader-X pairs
+>   at SID-AEX-03 through SID-AEX-10
+> - Infinity — The Orb of Orisis: its own pair alongside The Guardian's
+> - The Lab — Slime: its own pair alongside The Dr.'s
+> - The Chaos Party — Alice Dream: The White Rabbit (SID-TCP-03) / The Looking-Glass
+>   (SID-TCP-04), separate from The Mad Hatter's March Hare / Dormouse. The split is
+>   deliberate: adversarial and deterministic testing want opposite things from a run, so
+>   one pair cannot serve both without the acceptance suite inheriting non-determinism.
 
 ---
 

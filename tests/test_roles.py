@@ -6,7 +6,12 @@ from __future__ import annotations
 
 import pytest
 
-from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES, PLATFORM_ROLES
+from src.entities.platform import (
+    JOB_DESCRIPTIONS,
+    PLATFORM_ENTITIES,
+    PLATFORM_ROLES,
+    all_seats,
+)
 from src.roles.registry import RoleRegistry, UnknownLocationError
 
 
@@ -32,8 +37,14 @@ class TestSeeding:
         # Functional Services Core), so the expected count is Locations plus
         # roles rather than Locations alone. Asserting the union rather than a
         # literal keeps this honest if either set grows.
+        # One row per SEAT, not per Location. The five Locations with more than
+        # one Lead AI now carry a row each for their co-leads, which is the
+        # point of the seat model -- 43 Job Descriptions were previously being
+        # asked to cover 51 AIs. The set of *locations* is unchanged, so that
+        # assertion still holds and is what pins the seeding coverage.
         roles = registry.list_roles()
-        assert len(roles) == len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
+        assert len(roles) == len(all_seats())
+        assert len(roles) > len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
         assert {r.location for r in roles} == set(PLATFORM_ENTITIES) | set(PLATFORM_ROLES)
 
     def test_seed_assigns_canonical_lead_ai(self, registry):
@@ -47,7 +58,7 @@ class TestSeeding:
         reg1 = RoleRegistry(db_path=db_path)
         reg1.close()
         reg2 = RoleRegistry(db_path=db_path)
-        assert len(reg2.list_roles()) == len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
+        assert len(reg2.list_roles()) == len(all_seats())
         reg2.close()
 
 
