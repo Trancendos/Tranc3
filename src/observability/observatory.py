@@ -1,16 +1,16 @@
-# src/observability/observatory.py
-# The Observatory — audit log for every action, change, activity on Trancendos.
-#
-# Every write operation anywhere in the platform emits an AuditEvent.
-# Events are:
-#   1. Stored in-process ring buffer (last 10k events) for fast /observatory/feed
-#   2. Written to the audit log table (PostgreSQL, via async queue)
-#   3. Forwarded to The Library for KB article generation triggers
-#   4. Forwarded to The Void when secrets are accessed
-#
-# Usage:
-#   from src.observability.observatory import observe
-#   observe("user.login", actor="user:42", target="auth", metadata={"ip": "..."})
+"""The Observatory — audit log for every action, change, activity on Trancendos.
+
+Every write operation anywhere in the platform emits an AuditEvent.
+Events are:
+  1. Stored in-process ring buffer (last 10k events) for fast /observatory/feed
+  2. Written to the audit log table (PostgreSQL, via async queue)
+  3. Forwarded to The Library for KB article generation triggers
+  4. Forwarded to The Void when secrets are accessed
+
+Usage:
+    from src.observability.observatory import observe
+    observe("user.login", actor="user:42", target="auth", metadata={"ip": "..."})
+"""
 
 from __future__ import annotations
 
@@ -178,6 +178,17 @@ class Observatory:
                 from src.basement.archive import get_basement
 
                 get_basement().ingest_observatory_event(event)
+            except Exception:
+                pass  # nosec B110 — graceful degradation; error logged upstream
+
+            # Also durably persist to workers/basement/'s SQLite-backed
+            # archive so the event survives a process restart — the
+            # in-process Basement singleton above is memory-only. Fail-open:
+            # forward_event() never raises and never blocks this call.
+            try:
+                from src.basement.bridge import forward_event
+
+                forward_event(event)
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
 

@@ -5,6 +5,15 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     adduser --disabled-password --gecos "" appuser
 COPY worker.py .
 RUN mkdir -p /app/data && chown appuser:appuser /app/data
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context sharedcore=../../Dimensional .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=appuser:appuser . /app/Dimensional/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 USER appuser
 EXPOSE 8068
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

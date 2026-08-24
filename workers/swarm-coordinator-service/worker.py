@@ -11,7 +11,6 @@ Zero-cost: subprocess + local scripts only (no paid APIs).
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
 import logging
 import os
@@ -22,9 +21,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header
 from pydantic import BaseModel, Field
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from src.entities.health_metadata import health_entity_block
 from src.errors.error_catalog import ErrorCode
 
@@ -92,9 +92,11 @@ def _run_manifest(path: Path) -> dict[str, Any]:
     results = [_run_task(t) for t in manifest.get("tasks") or []]
     report = {
         "run_id": str(uuid.uuid4()),
-        "manifest": str(path.relative_to(ROOT))
-        if path.is_absolute() and str(path).startswith(str(ROOT))
-        else str(path),
+        "manifest": (
+            str(path.relative_to(ROOT))
+            if path.is_absolute() and str(path).startswith(str(ROOT))
+            else str(path)
+        ),
         "orchestrator": manifest.get("orchestrator"),
         "run_at": datetime.now(timezone.utc).isoformat(),
         "results": results,
@@ -156,10 +158,12 @@ async def startup() -> None:
 async def _require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
-        raise HTTPException(status_code=401, detail=ErrorCode.AUTH_TOKEN_INVALID.value)
+    guard_internal_secret(
+        x_internal_secret,
+        _INTERNAL_SECRET,
+        mismatch_status=401,
+        detail=ErrorCode.AUTH_TOKEN_INVALID.value,
+    )
 
 
 class RunRequest(BaseModel):

@@ -23,6 +23,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.service_auth_fastapi import guard_internal_secret
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -183,8 +185,12 @@ def _offline_stub(task: str, language: str, code_or_desc: str) -> str:
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # Delegated to Dimensional.service_auth, which this worker now reaches
+    # through the `sharedcore` named build context. It compares with
+    # compare_digest and refuses when the secret is unset.
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 # ---------------------------------------------------------------------------
