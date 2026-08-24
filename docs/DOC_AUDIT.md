@@ -1,3 +1,10 @@
+---
+title: "Documentation Audit"
+category: Reference
+last-reviewed: 2026-08-21
+status: needs-update
+---
+
 # Documentation Audit (DOC_AUDIT)
 
 > **Purpose:** Catalog every documentation file in the repo (root-level `.md`/`.rst`/`.txt` and the entire `docs/` tree), record its metadata, summarize its purpose, assess its current state, and flag docs that reference code paths or other docs that no longer exist.

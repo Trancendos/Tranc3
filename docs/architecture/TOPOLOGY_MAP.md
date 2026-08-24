@@ -1,3 +1,10 @@
+---
+title: "Architectural Topology Map"
+category: Architecture
+last-reviewed: 2026-08-21
+status: needs-update
+---
+
 # Trancendos — Architectural Topology Map
 
 **Version:** 1.0.0 | **Classification:** UNCLASSIFIED — INTERNAL

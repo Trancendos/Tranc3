@@ -1,3 +1,10 @@
+---
+title: "Project Structure → Documentation Coverage Map"
+category: Reference
+last-reviewed: 2026-08-21
+status: needs-update
+---
+
 # Project Structure → Documentation Coverage Map
 
 > **Purpose.** Maps the actual code layout of this repository to its documentation, so we can

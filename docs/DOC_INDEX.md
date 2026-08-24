@@ -34,6 +34,7 @@ Canonical navigation hub for all Trancendos documentation. Documents are organiz
 | [Shared Functional Services Core (SFSC) — the `Dimensional` package](docs/architecture/SHARED-FUNCTIONAL-SERVICES-CORE.md) | Architecture | needs-update |
 | [Test intelligence — the CircleCI question, answered in-platform](docs/architecture/TEST-INTELLIGENCE.md) | Architecture | needs-update |
 | [Three-Lane Transport and the Terminal Hub](docs/architecture/THREE-LANE-TRANSPORT.md) | Architecture | needs-update |
+| [Trancendos — Architectural Topology Map](docs/architecture/TOPOLOGY_MAP.md) | Architecture | needs-update |
 | [Tranc3 Research Findings — Cross-Repo Intelligence & Frontier Technologies](docs/RESEARCH_FINDINGS.md) | Architecture | needs-update |
 
 ## Development
@@ -112,6 +113,7 @@ Canonical navigation hub for all Trancendos documentation. Documents are organiz
 | [Change Advisory Board — Approval Workflow](docs/cab/APPROVAL_WORKFLOW.md) | Reference | needs-update |
 | [Change Advisory Board — Charter](docs/cab/CHARTER.md) | Reference | needs-update |
 | [Change Advisory Board — Membership Register](docs/cab/MEMBERSHIP.md) | Reference | needs-update |
+| [Documentation Audit (DOC_AUDIT)](docs/DOC_AUDIT.md) | Reference | needs-update |
 | [Penetration Test Programme](docs/evidence/PEN-TEST-PROGRAMME.md) | Reference | needs-update |
 | [Policy Attestation Register](docs/evidence/POLICY-ATTESTATION-REGISTER.md) | Reference | needs-update |
 | [Design Governance Framework — Trancendos Platform](docs/framework/DESIGN-GOVERNANCE-FRAMEWORK.md) | Reference | needs-update |
@@ -155,6 +157,7 @@ Canonical navigation hub for all Trancendos documentation. Documents are organiz
 | [Token Efficiency Matrix](docs/governance/TOKEN-EFFICIENCY-MATRIX.md) | Reference | needs-update |
 | [Trancendos Models Matrix](docs/governance/TRANCENDOS-MODELS-MATRIX.md) | Reference | needs-update |
 | [UX/UI Design Matrix](docs/governance/UX-UI-DESIGN-MATRIX.md) | Reference | needs-update |
+| [Project Structure → Documentation Coverage Map](docs/PROJECT_COVERAGE_MAP.md) | Reference | needs-update |
 | [Service Doc-Pack — API Marketplace](docs/services/api-marketplace/README.md) | Reference | needs-update |
 | [Service Doc-Pack — Arcadia (Post-Login Front-End Hub)](docs/services/arcadia/README.md) | Reference | needs-update |
 | [Service Doc-Pack — Arcadian Exchange](docs/services/arcadian-exchange/README.md) | Reference | needs-update |
@@ -247,6 +250,7 @@ Canonical navigation hub for all Trancendos documentation. Documents are organiz
 | [The Town Hall](docs/THE_TOWN_HALL.md) | Reference | needs-update |
 | [Trancendos Documentation Index](docs/WIKI_INDEX.md) | Reference | complete |
 | [Windows deploy (CLOUD_ONLY / Fly.io)](docs/WINDOWS_DEPLOY.md) | Reference | needs-update |
+| [Workflow Action SHA Audit](docs/workflow-action-sha-audit.md) | Reference | needs-update |
 | [Zero-Cost Vendor Matrix](docs/ZERO_COST_VENDOR_MATRIX.md) | Reference | needs-update |
 | [Trancendos Platform Entity Hierarchy](PLATFORM_ENTITIES.md) | Reference | complete |
 | [TRANC3 — Core AI Platform](README.md) | Reference | complete |
