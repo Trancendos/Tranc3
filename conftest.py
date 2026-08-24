@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import subprocess
 import tempfile
 import time
 
@@ -83,12 +84,43 @@ _log = logging.getLogger("tranc3.tests")
 # ── JSON test-result log ──────────────────────────────────────────────────────
 
 
+def _current_commit() -> str:
+    """The commit under test, for correlating results across runs.
+
+    Without this, "flaky" cannot be distinguished from "fixed": a test that
+    failed yesterday and passes today looks identical to one that alternates
+    on the same code. scripts/test_intelligence.py only calls a test flaky
+    when it disagrees with itself at a SINGLE commit, which needs this field.
+
+    CI provides the SHA in the environment; locally we ask git. Unknown is a
+    valid answer -- it degrades flaky detection to a weaker signal rather than
+    producing a false one.
+    """
+    for var in ("GITHUB_SHA", "FORGEJO_SHA", "CI_COMMIT_SHA"):
+        sha = os.environ.get(var, "").strip()
+        if sha:
+            return sha[:12]
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()[:12]
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return "unknown"
+
+
 class _TestResultLogger:
     """Appends one JSON line per test to logs/test_results.jsonl."""
 
     def __init__(self, path: str = "logs/test_results.jsonl") -> None:
         os.makedirs("logs", exist_ok=True)
         self._path = path
+        # Resolved once: a subprocess per test would dominate the runtime of
+        # the fast suites, and the commit cannot change mid-session anyway.
+        self._commit = _current_commit()
+        self._run_id = f"{int(time.time())}-{os.getpid()}"
 
     def record(self, name: str, outcome: str, duration_ms: float, reason: str = "") -> None:
         entry = {
@@ -97,6 +129,8 @@ class _TestResultLogger:
             "outcome": outcome,
             "duration_ms": round(duration_ms, 2),
             "reason": reason,
+            "commit": self._commit,
+            "run_id": self._run_id,
         }
         with open(self._path, "a") as f:
             f.write(json.dumps(entry) + "\n")
