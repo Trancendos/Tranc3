@@ -1,17 +1,16 @@
 # CodeQL custom configuration for Tranc3
 # Excludes test/fixture code, simulation/research code, and generated files.
+# NOTE: Query packs (custom packs) should be configured in the codeql-action/init step
+# in your workflow; the `queries:` section here uses standard built-in suites.
 
 name: "Tranc3 CodeQL Config"
 
+# Limit analysis to the languages we care about here to reduce noise & cost.
+languages:
+  - python
+  - javascript
+
 # Paths excluded from analysis:
-#   - tests/scripts/docs: non-production code
-#   - nanoservices simulation modules: homomorphic encryption, genetic optimizers,
-#     hyperdimensional lattice — these use random/MD5 for simulation purposes,
-#     not for cryptographic key generation. Real crypto uses secrets module.
-#   - evolution/: genetic algorithm code — pseudo-random by design (non-crypto)
-#   - deepmind/planning.py: uses MD5 with usedforsecurity=False for deterministic seeding
-#   - workers/: self-hosted service workers (separate scan via Trivy/Semgrep)
-#   - Known validator/security modules that intentionally handle untrusted input
 paths-ignore:
   - tests
   - scripts
@@ -36,10 +35,8 @@ paths-ignore:
   - "**/goal_manager.py"
   - "**/heartbeat_aggregator.py"
 
-# Use security-extended queries — focuses on security issues rather than
-# style/quality noise, reducing false-positive volume.
-# AlertSuppression packs are specified via the `packs:` parameter in the
-# codeql-action/init step (not here) — the `queries: uses:` format only
-# supports pre-defined query suite names, not external pack references.
+# Use security-focused query suites. Packs (third-party/custom) should be
+# provided via the codeql-action/init packs: parameter in the workflow.
 queries:
   - uses: security-extended
+  - uses: security-and-quality

@@ -143,7 +143,7 @@ export class FontFetcherBot extends Bot {
     const { query, category, weight, source } = params;
     const q = query.toLowerCase();
 
-    let results = FONT_CATALOG.filter((font) => {
+    const results = FONT_CATALOG.filter((font) => {
       // Name match
       const nameMatch = font.family.toLowerCase().includes(q);
 

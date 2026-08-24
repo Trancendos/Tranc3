@@ -4,4 +4,4 @@ starlette==1.6.0
 uvicorn==0.52.3
 pydantic==2.13.4
 httpx==0.28.1
-python-multipart==0.0.31
+python-multipart==0.0.32

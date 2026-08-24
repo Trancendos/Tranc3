@@ -15,6 +15,7 @@ trail survive restarts. Every reassignment is recorded in
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 import threading
 import time
@@ -22,8 +23,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from src.entities.platform import JOB_DESCRIPTIONS, PLATFORM_ENTITIES, PLATFORM_ROLES
+from src.entities.platform import (
+    PLATFORM_ENTITIES,
+    PLATFORM_ROLES,
+    all_seats,
+    get_seats,
+)
 from src.validation.validators import validate_non_empty, validate_safe_string
+
+logger = logging.getLogger("tranc3.roles.registry")
 
 DEFAULT_DB_PATH = Path("data/role_registry.db")
 
@@ -31,22 +39,28 @@ DEFAULT_DB_PATH = Path("data/role_registry.db")
 @dataclass
 class RoleAssignment:
     location: str
-    pillar: str
-    primary_function: str
-    job_description: str
-    assigned_ai: Optional[str]
-    assigned_at: float
-    assigned_by: str
+    # `primary` for a Location's headline seat, otherwise a slug of the AI the
+    # seat was designed for. Defaulted so existing constructions are unchanged.
+    seat_id: str = "primary"
+    designed_for: Optional[str] = None
+    functions: Tuple[str, ...] = ()
+    pillar: str = ""
+    primary_function: str = ""
+    job_description: str = ""
+    assigned_ai: Optional[str] = None
+    assigned_at: float = 0.0
+    assigned_by: str = "system"
 
 
 @dataclass
 class AssignmentHistoryEntry:
     location: str
-    previous_ai: Optional[str]
-    new_ai: Optional[str]
-    changed_at: float
-    changed_by: str
-    reason: str
+    seat_id: str = "primary"
+    previous_ai: Optional[str] = None
+    new_ai: Optional[str] = None
+    changed_at: float = 0.0
+    changed_by: str = "system"
+    reason: str = ""
 
 
 class UnknownLocationError(KeyError):
@@ -117,11 +131,13 @@ class RoleRegistry:
         self._conn.execute(
             """
             CREATE TABLE IF NOT EXISTS role_assignments (
-                location TEXT PRIMARY KEY,
+                location TEXT NOT NULL,
+                seat_id TEXT NOT NULL DEFAULT 'primary',
                 job_description TEXT NOT NULL,
                 assigned_ai TEXT,
                 assigned_at REAL NOT NULL,
-                assigned_by TEXT NOT NULL DEFAULT 'system'
+                assigned_by TEXT NOT NULL DEFAULT 'system',
+                PRIMARY KEY (location, seat_id)
             )
             """
         )
@@ -130,6 +146,7 @@ class RoleRegistry:
             CREATE TABLE IF NOT EXISTS role_assignment_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 location TEXT NOT NULL,
+                seat_id TEXT NOT NULL DEFAULT 'primary',
                 previous_ai TEXT,
                 new_ai TEXT,
                 changed_at REAL NOT NULL,
@@ -138,7 +155,142 @@ class RoleRegistry:
             )
             """
         )
+        self._migrate_to_seat_keyed_schema()
         self._conn.commit()
+
+    def _needs_seat_migration(self, table: str) -> bool:
+        """True when `table` exists and predates the `seat_id` column.
+
+        `table` is one of two literals chosen by the caller below, never
+        anything derived from input -- but PRAGMA takes no bind parameter for
+        an identifier, so the check is written as two explicit statements
+        rather than one interpolated one.
+        """
+        if table == "role_assignments":
+            cur = self._conn.execute("PRAGMA table_info(role_assignments)")
+        else:
+            cur = self._conn.execute("PRAGMA table_info(role_assignment_history)")
+        names = {row[1] for row in cur.fetchall()}
+        return bool(names) and "seat_id" not in names
+
+    def _has_table(self, name: str) -> bool:
+        cur = self._conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)
+        )
+        return cur.fetchone() is not None
+
+    def _migrate_to_seat_keyed_schema(self) -> None:
+        """Rebuild a pre-seat DB whose primary key was `location` alone.
+
+        The old schema could hold exactly one row per Location, so the five
+        Locations with more than one Lead AI had no way to record their
+        co-lead's separate job -- eight AIs with no Job Description between
+        them. SQLite cannot alter a primary key in place, so the table is
+        rebuilt; every existing row becomes that Location's `primary` seat,
+        which is what it always was, so no operator's manual reassignment is
+        disturbed.
+
+        ATOMICITY, AND WHY IT IS NOT OPTIONAL HERE
+
+        The first version ran RENAME, CREATE, INSERT and DROP as four bare
+        statements. `sqlite3` autocommits DDL in its default legacy transaction
+        mode, so those were four units of work, not one -- and the failure that
+        opens is silent data loss. Stop the process between the rename and the
+        copy and the next startup finds a `role_assignments` that already has
+        `seat_id`, so `_needs_seat_migration` says False, the legacy rows sit
+        stranded in `role_assignments_pre_seat`, and `_seed_defaults` fills the
+        empty table with seeded defaults. Every operator reassignment made
+        before the upgrade is quietly replaced, and nothing anywhere reports it.
+
+        So each rebuild runs inside an explicit transaction, and a leftover
+        `*_pre_seat` table is treated as unfinished work to be resumed rather
+        than as debris to ignore. Raised in review by CodeRabbit on PR #839.
+
+        Written as two literal blocks rather than a loop over interpolated
+        table names: SQLite cannot bind an identifier, so the only way to be
+        structurally free of injection is to have no interpolation at all.
+        """
+        if self._needs_seat_migration("role_assignments") or self._has_table(
+            "role_assignments_pre_seat"
+        ):
+            logger.info("Migrating role_assignments to the seat-keyed schema")
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                if self._needs_seat_migration("role_assignments"):
+                    self._conn.execute(
+                        "ALTER TABLE role_assignments RENAME TO role_assignments_pre_seat"
+                    )
+                self._init_one_table("role_assignments")
+                # OR IGNORE: on a resumed rebuild the new table may already
+                # hold some copied rows, and a legacy row must never overwrite
+                # a newer one.
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO role_assignments "
+                    "(location, seat_id, job_description, assigned_ai, assigned_at, assigned_by) "
+                    "SELECT location, 'primary', job_description, assigned_ai, assigned_at, "
+                    "assigned_by FROM role_assignments_pre_seat"
+                )
+                self._conn.execute("DROP TABLE role_assignments_pre_seat")
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
+
+        if self._needs_seat_migration("role_assignment_history") or self._has_table(
+            "role_assignment_history_pre_seat"
+        ):
+            logger.info("Migrating role_assignment_history to the seat-keyed schema")
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                if self._needs_seat_migration("role_assignment_history"):
+                    self._conn.execute(
+                        "ALTER TABLE role_assignment_history "
+                        "RENAME TO role_assignment_history_pre_seat"
+                    )
+                self._init_one_table("role_assignment_history")
+                self._conn.execute(
+                    "INSERT OR IGNORE INTO role_assignment_history "
+                    "(location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason) "
+                    "SELECT location, 'primary', previous_ai, new_ai, changed_at, changed_by, "
+                    "reason FROM role_assignment_history_pre_seat"
+                )
+                self._conn.execute("DROP TABLE role_assignment_history_pre_seat")
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
+
+    def _init_one_table(self, table: str) -> None:
+        """Create a single table from the current schema, used by the migration."""
+        if table == "role_assignments":
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS role_assignments (
+                    location TEXT NOT NULL,
+                    seat_id TEXT NOT NULL DEFAULT 'primary',
+                    job_description TEXT NOT NULL,
+                    assigned_ai TEXT,
+                    assigned_at REAL NOT NULL,
+                    assigned_by TEXT NOT NULL DEFAULT 'system',
+                    PRIMARY KEY (location, seat_id)
+                )
+                """
+            )
+        else:
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS role_assignment_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    location TEXT NOT NULL,
+                    seat_id TEXT NOT NULL DEFAULT 'primary',
+                    previous_ai TEXT,
+                    new_ai TEXT,
+                    changed_at REAL NOT NULL,
+                    changed_by TEXT NOT NULL,
+                    reason TEXT NOT NULL DEFAULT ''
+                )
+                """
+            )
 
     def _seed_defaults(self) -> None:
         """Seed one row per platform entity, initial holder = its canonical `lead_ai`.
@@ -149,15 +301,20 @@ class RoleRegistry:
         next startup instead of being silently skipped forever.
         """
         now = time.time()
+        # One row per SEAT. `all_seats()` derives the list from `lead_ais` and
+        # `agent_teams`, so a Location that gains a co-lead is backfilled on the
+        # next startup rather than needing this list edited to match.
         rows = [
             (
-                location,
-                JOB_DESCRIPTIONS.get(location, entity.primary_function),
-                entity.lead_ai,
+                seat.location,
+                seat.seat_id,
+                seat.job_description,
+                seat.designed_for,
                 now,
                 "system:seed",
             )
-            for location, entity in PLATFORM_ENTITIES.items()
+            for seat in all_seats()
+            if seat.location in PLATFORM_ENTITIES
         ]
         # Non-Location platform roles (the Shared Functional Services Core and
         # anything later added beside it). Seeded into the same table so "who
@@ -165,13 +322,13 @@ class RoleRegistry:
         # PLATFORM_ENTITIES, because a Dimensional has no pillar, agent team or
         # worker port and is not a Location.
         rows += [
-            (role.role_id, role.job_description, role.default_holder, now, "system:seed")
+            (role.role_id, "primary", role.job_description, role.default_holder, now, "system:seed")
             for role in PLATFORM_ROLES.values()
         ]
         self._conn.executemany(
             "INSERT OR IGNORE INTO role_assignments "
-            "(location, job_description, assigned_ai, assigned_at, assigned_by) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "(location, seat_id, job_description, assigned_ai, assigned_at, assigned_by) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             rows,
         )
         self._conn.commit()
@@ -200,11 +357,19 @@ class RoleRegistry:
         operator who has since manually reassigned that seat is left alone.
         Idempotent: once migrated, `assigned_ai` no longer matches
         `old_name` and this is a no-op on every later startup.
+
+        Scoped to the `primary` seat. Every retired name here is a Location's
+        headline name, and once seats existed an unscoped SELECT returned
+        whichever row SQLite happened to order first -- so at Arcadian Exchange
+        it read a Porter sibling's seat, failed to match "The Porter Family",
+        and skipped the migration entirely. The unscoped UPDATE was worse: it
+        would have stamped the primary's new name across all five seats.
         """
         now = time.time()
         for location, (old_name, new_name) in self._RENAMED_LEAD_AIS.items():
             cur = self._conn.execute(
-                "SELECT assigned_ai FROM role_assignments WHERE location = ?",
+                "SELECT assigned_ai FROM role_assignments "
+                "WHERE location = ? AND seat_id = 'primary'",
                 (location,),
             )
             row = cur.fetchone()
@@ -212,13 +377,13 @@ class RoleRegistry:
                 continue
             self._conn.execute(
                 "UPDATE role_assignments SET assigned_ai = ?, assigned_at = ?, "
-                "assigned_by = ? WHERE location = ?",
+                "assigned_by = ? WHERE location = ? AND seat_id = 'primary'",
                 (new_name, now, "system:rename_migration", location),
             )
             self._conn.execute(
                 "INSERT INTO role_assignment_history "
-                "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "(location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason) "
+                "VALUES (?, 'primary', ?, ?, ?, ?, ?)",
                 (
                     location,
                     old_name,
@@ -232,6 +397,11 @@ class RoleRegistry:
 
     def _row_to_assignment(self, row: sqlite3.Row) -> RoleAssignment:
         entity = PLATFORM_ENTITIES.get(row["location"])
+        seat_id = row["seat_id"] if "seat_id" in row.keys() else "primary"
+        seat = next(
+            (s for s in get_seats(row["location"]) if s.seat_id == seat_id),
+            None,
+        )
         # A non-Location platform role has no pillar and no LocationEntity, so
         # its scope stands in for primary_function. Without this the SFSC row
         # would come back from /roles with two empty fields and read as broken
@@ -239,6 +409,9 @@ class RoleRegistry:
         role = None if entity else PLATFORM_ROLES.get(row["location"])
         return RoleAssignment(
             location=row["location"],
+            seat_id=seat_id,
+            designed_for=seat.designed_for if seat else None,
+            functions=seat.functions if seat else (),
             pillar=entity.pillar.value if entity else "",
             primary_function=(entity.primary_function if entity else (role.scope if role else "")),
             job_description=row["job_description"],
@@ -250,20 +423,40 @@ class RoleRegistry:
     def list_roles(self) -> List[RoleAssignment]:
         with self._lock:
             cur = self._conn.execute(
-                "SELECT location, job_description, assigned_ai, assigned_at, assigned_by "
-                "FROM role_assignments ORDER BY location"
+                "SELECT location, seat_id, job_description, assigned_ai, assigned_at, assigned_by "
+                # Primary seat first within each Location: a reader scanning the
+                # list sees the headline role before its specialisations.
+                "FROM role_assignments ORDER BY location, seat_id != 'primary', seat_id"
             )
             return [self._row_to_assignment(row) for row in cur.fetchall()]
 
-    def get_role(self, location: str) -> Optional[RoleAssignment]:
+    def get_role(self, location: str, seat_id: str = "primary") -> Optional[RoleAssignment]:
+        """One seat. Defaults to `primary`, so existing callers are unchanged."""
         with self._lock:
             cur = self._conn.execute(
-                "SELECT location, job_description, assigned_ai, assigned_at, assigned_by "
-                "FROM role_assignments WHERE location = ?",
-                (location,),
+                "SELECT location, seat_id, job_description, assigned_ai, assigned_at, assigned_by "
+                "FROM role_assignments WHERE location = ? AND seat_id = ?",
+                (location, seat_id),
             )
             row = cur.fetchone()
             return self._row_to_assignment(row) if row else None
+
+    def get_location_seats(self, location: str) -> List[RoleAssignment]:
+        """Every seat at one Location, primary first.
+
+        The question `get_role` cannot answer: at The Chaos Party it returns
+        both The Mad Hatter's adversarial-testing seat and Alice Dream's
+        deterministic-assurance seat, which is the distinction the single-row
+        model erased.
+        """
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT location, seat_id, job_description, assigned_ai, assigned_at, assigned_by "
+                "FROM role_assignments WHERE location = ? "
+                "ORDER BY seat_id != 'primary', seat_id",
+                (location,),
+            )
+            return [self._row_to_assignment(row) for row in cur.fetchall()]
 
     def assign_ai(
         self,
@@ -271,29 +464,39 @@ class RoleRegistry:
         ai_name: str,
         changed_by: str = "operator",
         reason: str = "",
+        seat_id: str = "primary",
     ) -> RoleAssignment:
-        """Assign (or reassign) an AI to a location's Job Description."""
+        """Assign (or reassign) an AI to one seat's Job Description.
+
+        `seat_id` defaults to `primary`, so a caller that does not know seats
+        exist still moves the Location's headline role and nothing else. Every
+        write below is scoped to the seat: without that scoping the composite
+        key would have turned a single reassignment into a rewrite of every
+        co-lead at the same Location.
+        """
         if location not in PLATFORM_ENTITIES and location not in PLATFORM_ROLES:
             raise UnknownLocationError(location)
         ai_name = validate_non_empty(ai_name, "ai_name")
         ai_name = validate_safe_string(ai_name, "ai_name", max_length=256)
         with self._lock:
-            current = self.get_role(location)
-            previous_ai = current.assigned_ai if current else None
+            current = self.get_role(location, seat_id)
+            if current is None:
+                raise UnknownLocationError(f"{location}[{seat_id}]")
+            previous_ai = current.assigned_ai
             now = time.time()
             self._conn.execute(
                 "UPDATE role_assignments SET assigned_ai = ?, assigned_at = ?, assigned_by = ? "
-                "WHERE location = ?",
-                (ai_name, now, changed_by, location),
+                "WHERE location = ? AND seat_id = ?",
+                (ai_name, now, changed_by, location, seat_id),
             )
             self._conn.execute(
                 "INSERT INTO role_assignment_history "
-                "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (location, previous_ai, ai_name, now, changed_by, reason),
+                "(location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (location, seat_id, previous_ai, ai_name, now, changed_by, reason),
             )
             self._conn.commit()
-            result: RoleAssignment = self.get_role(location)  # type: ignore[assignment]
+            result: RoleAssignment = self.get_role(location, seat_id)  # type: ignore[assignment]
         _emit_relations_event(
             actor_ai=ai_name,
             location=location,
@@ -309,27 +512,30 @@ class RoleRegistry:
         location: str,
         changed_by: str = "operator",
         reason: str = "",
+        seat_id: str = "primary",
     ) -> RoleAssignment:
-        """Vacate a location's Job Description — leaves the role unassigned."""
+        """Vacate one seat's Job Description — leaves that role unassigned."""
         if location not in PLATFORM_ENTITIES and location not in PLATFORM_ROLES:
             raise UnknownLocationError(location)
         with self._lock:
-            current = self.get_role(location)
-            previous_ai = current.assigned_ai if current else None
+            current = self.get_role(location, seat_id)
+            if current is None:
+                raise UnknownLocationError(f"{location}[{seat_id}]")
+            previous_ai = current.assigned_ai
             now = time.time()
             self._conn.execute(
                 "UPDATE role_assignments SET assigned_ai = NULL, assigned_at = ?, "
-                "assigned_by = ? WHERE location = ?",
-                (now, changed_by, location),
+                "assigned_by = ? WHERE location = ? AND seat_id = ?",
+                (now, changed_by, location, seat_id),
             )
             self._conn.execute(
                 "INSERT INTO role_assignment_history "
-                "(location, previous_ai, new_ai, changed_at, changed_by, reason) "
-                "VALUES (?, ?, NULL, ?, ?, ?)",
-                (location, previous_ai, now, changed_by, reason or "unassigned"),
+                "(location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason) "
+                "VALUES (?, ?, ?, NULL, ?, ?, ?)",
+                (location, seat_id, previous_ai, now, changed_by, reason or "unassigned"),
             )
             self._conn.commit()
-            result: RoleAssignment = self.get_role(location)  # type: ignore[assignment]
+            result: RoleAssignment = self.get_role(location, seat_id)  # type: ignore[assignment]
         if previous_ai:
             _emit_relations_event(
                 actor_ai=previous_ai,
@@ -341,20 +547,24 @@ class RoleRegistry:
             )
         return result
 
-    def get_history(self, location: str) -> List[AssignmentHistoryEntry]:
+    def get_history(
+        self, location: str, seat_id: Optional[str] = None
+    ) -> List[AssignmentHistoryEntry]:
         if location not in PLATFORM_ENTITIES and location not in PLATFORM_ROLES:
             raise UnknownLocationError(location)
         with self._lock:
             cur = self._conn.execute(
-                "SELECT location, previous_ai, new_ai, changed_at, changed_by, reason "
+                "SELECT location, seat_id, previous_ai, new_ai, changed_at, changed_by, reason "
                 "FROM role_assignment_history WHERE location = ? "
+                "AND (? IS NULL OR seat_id = ?) "
                 "ORDER BY changed_at DESC, id DESC",
-                (location,),
+                (location, seat_id, seat_id),
             )
             rows = cur.fetchall()
         return [
             AssignmentHistoryEntry(
                 location=row["location"],
+                seat_id=row["seat_id"],
                 previous_ai=row["previous_ai"],
                 new_ai=row["new_ai"],
                 changed_at=row["changed_at"],
