@@ -53,10 +53,10 @@ jobs:
           CURRENT=$(git -C workers/cranbania rev-parse --short HEAD)
           git commit -m "chore(submodule): advance CranBania to ${CURRENT}
 
-Auto-synced by sync-cranbania-submodule Forgejo workflow.
-Full SHA: ${TARGET_SHA}
+          Auto-synced by sync-cranbania-submodule Forgejo workflow.
+          Full SHA: ${TARGET_SHA}
 
-https://claude.ai/code" || echo "Nothing to advance"
+          https://claude.ai/code" || echo "Nothing to advance"
 
       - name: Push branch and open PR
         run: |

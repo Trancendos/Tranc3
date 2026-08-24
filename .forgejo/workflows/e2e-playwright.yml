@@ -30,10 +30,18 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: tests/e2e/package-lock.json
 
       - name: Install Playwright dependencies
         working-directory: tests/e2e
-        run: npm install
+        # `npm ci`, not `npm install`: tests/e2e now carries a lockfile, so the
+        # transitive tree is pinned by integrity hash instead of being resolved
+        # fresh on every run. --ignore-scripts blocks lifecycle hooks, which is
+        # where the recent npm supply-chain worms put their payload. Nothing is
+        # lost: the only hook in this tree is fsevents (macOS-only), and the
+        # browser download is the explicit step below, not a postinstall.
+        run: npm ci --ignore-scripts
 
       - name: Install Playwright browsers
         working-directory: tests/e2e

@@ -10,7 +10,7 @@
 **Code:** `src/entities/platform.py` (`JOB_DESCRIPTIONS` dict, `get_job_description()`),
 `src/roles/registry.py` (`RoleRegistry`, SQLite-backed), `src/roles/routes.py` (HTTP API, mounted
 in `api.py` at `/roles`).
-**Owner:** Platform Owner Trancendos · **Version:** 1.0.0 · **Last verified:** 2026-07-11
+**Owner:** Platform Owner Trancendos · **Version:** 2.0.0 · **Last verified:** 2026-08-21 (seat model added)
 
 ---
 
@@ -30,6 +30,75 @@ it: `lead_ai` remains the *canonical, documented* name (used throughout `CLAUDE.
 is the *live, operational* holder, seeded from `lead_ai` but free to diverge once an operator
 reassigns it. Treat `lead_ai` as "who this role was designed for" and the registry as "who
 actually holds it right now."
+
+## 1a. Seats — one Job Description per AI role
+
+> **Added 2026-08-21.** The model in §1 held one Job Description per Location. That is correct for
+> the 38 Locations with a single Lead AI and wrong for the five that have more: **43 Job
+> Descriptions were being asked to cover 51 AI seats**, so eight AIs held no job title at all, and
+> `role_assignments` was keyed by `location` alone — structurally unable to record a second.
+
+They were never spares. The Chaos Party is the clearest case: The Mad Hatter runs adversarial
+testing — rapid mock payloads, memory-leak and performance watching — while Alice Dream runs the
+deterministic half, acceptance and regression and smoke, where a repeatable result is the whole
+point. One title covering both describes neither, and an operator reassigning "The Chaos Party"
+could not say which of the two jobs they were moving.
+
+A **seat** is one Job Description at one Location plus the AI it was designed for. Seats are
+*derived* from `lead_ais` and `agent_teams` rather than declared in a parallel list, so the seat
+roster cannot drift from the entity table. Only the eight co-lead **titles** are declared
+(`CO_LEAD_JOB_DESCRIPTIONS` in `src/entities/platform.py`), because a job title is an editorial
+decision no amount of introspection can derive.
+
+Each seat's **functions** come from its own Agent pair's descriptions. That is deliberate: the
+agents are the concrete work, so a seat's stated function is evidenced by the two things doing it
+rather than asserted independently and left to rot.
+
+### The eight co-lead seats
+
+| Location | Seat | Job Description | Designed for | Functions (from its Agent pair) |
+|---|---|---|---|---|
+| **TateKing** | `sam-king` | Head of Production Operations & Delivery | Sam King | Oversees production logistics, scheduling, and resource coordination across video projects<br>Manages asset delivery pipelines, versioning, and platform-specific format finishing |
+| **The Lab** | `slime` | Head of Diagnostics & Defect Remediation | Slime | Traces failing tests and stack traces back to their originating commit or logic error<br>Drafts targeted fixes and re-runs the failing case to confirm the regression is resolved |
+| **The Chaos Party** | `alice-dream` | Head of Deterministic Assurance | Alice Dream | Runs deterministic, schedule-bound suites — acceptance, regression and smoke — where a repeatable result is the whole point<br>Reflects actual behaviour against expected, producing the pass/fail assertions and diffs the Observatory trends on |
+| **Arcadian Exchange** | `ann-porter` | Head of Storage Procurement | Ann Porter | Assesses storage cost trends across providers to secure bulk capacity<br>Automates bidding on storage marketplaces for the best rates |
+| **Arcadian Exchange** | `george-porter` | Head of Model & Inference Procurement | George Porter | Assesses AI model licensing and inference cost trends<br>Automates bidding on model marketplaces for compute-efficient access |
+| **Arcadian Exchange** | `edward-porter` | Head of Workflow Tooling Procurement | Edward Porter | Assesses workflow and orchestration tooling costs<br>Automates bidding on workflow-automation marketplaces |
+| **Arcadian Exchange** | `james-porter` | Head of API Credit Procurement | James Porter | Assesses API credit pricing trends across providers<br>Automates bidding on API-credit marketplaces for cost efficiency |
+| **Infinity** | `the-orb-of-orisis` | Head of Architectural Foresight | The Orb of Orisis | Projects how current architectural decisions will scale or strain months ahead<br>Maps dependency and growth trends into a forward-looking architecture roadmap |
+
+The primary seat at every Location keeps its existing headline title, so every caller of
+`get_job_description(location)` and `get_role(location)` is unchanged.
+
+### API
+
+| Call | Returns |
+|---|---|
+| `GET /roles/` | Every seat, primary first within each Location |
+| `GET /roles/{location}` | The Location's **primary** seat (unchanged behaviour) |
+| `GET /roles/{location}/seats` | **New** — every seat at that Location, with `designed_for` and `functions` |
+| `POST /roles/{location}/assign` | Body takes `seat_id`, defaulting to `primary` |
+| `DELETE /roles/{location}/assign` | Body takes `seat_id`, defaulting to `primary` |
+| `GET /roles/{location}/history` | Optional `seat_id` filter; entries record which seat moved |
+
+### Two defects the change surfaced
+
+Both were latent, and both were writes scoped to `location` alone that the composite key turned
+into cross-seat corruption:
+
+- **`assign_ai` / `remove_ai`** updated `WHERE location = ?`. Under the seat schema that would have
+  rewritten every co-lead at a Location on a single reassignment.
+- **`_migrate_renamed_lead_ais`** read with `fetchone()` over an unscoped `SELECT`. Once Arcadian
+  Exchange had five rows it read whichever SQLite ordered first, failed to match "The Porter
+  Family", and skipped the migration — while its `UPDATE` would have stamped one name across all
+  five seats. Caught by `tests/test_roles.py::TestRenameMigration`, which is why that test existed.
+
+A persisted pre-seat database is rebuilt on open: every existing row becomes that Location's
+`primary` seat, which is what it always was, so no operator's manual reassignment is disturbed.
+`tests/test_role_seats.py::TestMigrationFromTheLocationOnlySchema` proves that against a real
+legacy database rather than a mock.
+
+---
 
 ## 2. Master table (seed state)
 
