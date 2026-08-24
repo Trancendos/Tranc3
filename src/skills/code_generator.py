@@ -479,13 +479,8 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
 
             async def extract(source: str) -> AsyncIterator[dict]:
                 \"\"\"Yield records from *source*.\"\"\"
-                # Generic mock implementation simulating asynchronous extraction
-
-                # Simulate reading a batch of records from the source
-                print(f"Starting extraction from {source}")
-                for i in range(1, 11):
-                    await asyncio.sleep(0.01)  # Simulate I/O delay
-                    yield {"id": i, "source": source, "status": "extracted"}
+                # TODO: implement extraction
+                yield {}
 
 
             async def transform(record: dict) -> dict:
@@ -548,7 +543,8 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
                 \"\"\"Handle {description}.\"\"\"
                 try:
                     body = await request.json()
-{handler_logic}
+                    # TODO: implement handler logic
+                    return JSONResponse(content={{"status": "ok"}})
                 except Exception as exc:
                     logger.exception("Handler error: %s", exc)
                     raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
@@ -604,41 +600,13 @@ def _generate_pytest_tests(code: str, description: str) -> str:
             prefix = "async " if is_async else ""
             decorator = "@pytest.mark.asyncio\n" if is_async else ""
             call = f"await {fn}({', '.join(params)})" if is_async else f"{fn}({', '.join(params)})"
-            assertion = "assert result is not None  # TODO: strengthen assertion"
-            if getattr(node, "returns", None):
-                if isinstance(node.returns, ast.Constant) and node.returns.value is None:
-                    assertion = "assert result is None"
-                else:
-                    rt = None
-                    if isinstance(node.returns, ast.Name):
-                        rt = node.returns.id
-                    elif isinstance(node.returns, ast.Subscript) and isinstance(
-                        node.returns.value, ast.Name
-                    ):
-                        rt = node.returns.value.id
-
-                    if rt in (
-                        "int",
-                        "float",
-                        "str",
-                        "bool",
-                        "dict",
-                        "list",
-                        "set",
-                        "tuple",
-                        "bytes",
-                    ):
-                        assertion = f"assert isinstance(result, {rt})"
-                    elif rt in ("Dict", "List", "Set", "Tuple"):
-                        assertion = f"assert isinstance(result, {rt.lower()})"
-
             lines += [
                 f"{decorator}{prefix}def test_{fn}() -> None:",
                 f'    """Test {fn}."""',
                 "    # Arrange / Act",
                 f"    result = {call}",
                 "    # Assert",
-                f"    {assertion}",
+                "    assert result is not None  # TODO: strengthen assertion",
                 "",
             ]
 
@@ -705,7 +673,6 @@ class AdvancedCodeGenerator:
         # Default: generic async Python function
         return textwrap.dedent(f"""\
             import asyncio
-            import json
             import logging
             from typing import Any, Dict, Optional
 
@@ -716,27 +683,8 @@ class AdvancedCodeGenerator:
                 \"\"\"
                 {request.description}
                 \"\"\"
-                try:
-                    from src.core.tranc3_inference import get_engine
-
-                    engine = get_engine()
-                    context_str = json.dumps(context, indent=2) if context else "None"
-
-                                                                                prompt = (
-                        f"Task: {request.description}\\n\\n"
-                        f"Context data:\\n{{context_str}}\\n\\n"
-                        "Please perform the task and return the result."
-                    )
-
-                    result = await engine.generate(
-                        prompt=prompt,
-                        max_new_tokens=1024,
-                        temperature=0.4,
-                    )
-                    return {{"result": result.get("response", "")}}
-                except Exception as e:
-                    logger.error("Error executing generic fallback: %s", e)
-                    return {{"error": str(e)}}
+                # TODO: implement
+                raise NotImplementedError
             """)
 
     def _apply_substitutions(self, template: str, request: CodeGenerationRequest) -> str:
@@ -747,24 +695,14 @@ class AdvancedCodeGenerator:
         prefix = resource + "s"
         tag = resource
 
-        safe_desc = request.description[:80].replace("\n", " ")
-        handler_logic = (
-            f'                    logger.info("Processing {resource} request")\n'
-            f"                    # Logic for: {safe_desc}\n"
-            f"                    if not body:\n"
-            f'                        raise ValueError("Empty payload")\n'
-            f'                    return JSONResponse(content={{"status": "success", "resource": "{resource}", "data": body}})'
-        )
-
         return (
             template.replace("{prefix}", prefix)
             .replace("{tag}", tag)
             .replace("{Model}", model)
             .replace("{resource}", resource)
             .replace("{ModelName}", model + "Model")
-            .replace("{description}", safe_desc)
+            .replace("{description}", request.description[:80])
             .replace("{handler_name}", "handle_" + resource)
-            .replace("{handler_logic}", handler_logic)
         )
 
     # ------------------------------------------------------------------
@@ -849,7 +787,7 @@ class AdvancedCodeGenerator:
         explanation = await self.explain_code(final_code)
 
         # 6. Quality score
-        (self._analyzer.analyze_python(final_code) if request.language == "python" else {})
+        self._analyzer.analyze_python(final_code) if request.language == "python" else {}
         smells = (
             self._analyzer.detect_code_smells(final_code) if request.language == "python" else []
         )

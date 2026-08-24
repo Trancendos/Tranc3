@@ -62,24 +62,7 @@ class TRANC3Enhanced:
         """Initialize all subsystems with graceful degradation."""
         logger.info("TRANC3 Enhanced — initializing subsystems")
 
-        self._init_mcp()
-        self._init_workflow()
-        self._init_deepmind()
-        self._init_healing()
-        self._init_skills()
-        self._init_code_generator()
-        self._init_tranc3_engine()
-        self._init_hybrid_engine()
-        self._init_2060_systems()
-
-        self._initialized = True
-        logger.info(
-            "TRANC3 Enhanced fully initialized — %d subsystems active",
-            len(self._subsystems),
-        )
-
-    def _init_mcp(self):
-        """Initialize MCP Tools registry."""
+        # 1. MCP Tools registry
         try:
             from src.mcp.tools import registry as mcp_registry
 
@@ -88,8 +71,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("MCP registry init failed (non-fatal): %s", e)
 
-    def _init_workflow(self):
-        """Initialize Workflow executor."""
+        # 2. Workflow executor
         try:
             from src.workflow.executor import event_bus
             from src.workflow.executor import executor as workflow_executor
@@ -100,8 +82,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("Workflow executor init failed (non-fatal): %s", e)
 
-    def _init_deepmind(self):
-        """Initialize DeepMind planning."""
+        # 3. DeepMind planning
         try:
             from src.deepmind.planning import planner
 
@@ -110,8 +91,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("DeepMind planner init failed (non-fatal): %s", e)
 
-    def _init_healing(self):
-        """Initialize Self-healing monitor."""
+        # 4. Self-healing monitor
         try:
             from src.healing.health_monitor import health_monitor
             from src.healing.nanocode_bots import dispatcher
@@ -125,8 +105,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("Healing system init failed (non-fatal): %s", e)
 
-    def _init_skills(self):
-        """Initialize Enhanced skill registry."""
+        # 5. Enhanced skill registry
         try:
             from src.skills.enhanced_registry import registry as skill_registry
 
@@ -141,8 +120,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("Skill registry init failed (non-fatal): %s", e)
 
-    def _init_code_generator(self):
-        """Initialize Code generator."""
+        # 6. Code generator
         try:
             from src.skills.code_generator import code_generator
 
@@ -151,8 +129,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("Code generator init failed (non-fatal): %s", e)
 
-    def _init_tranc3_engine(self):
-        """Initialize TRANC3 local inference engine (own weights, no API)."""
+        # 7. TRANC3 local inference engine (own weights, no API)
         try:
             from src.core.tranc3_inference import get_engine
 
@@ -169,8 +146,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("TRANC3 engine init failed (non-fatal): %s", e)
 
-    def _init_hybrid_engine(self):
-        """Initialize TF Hybrid engine (optional)."""
+        # 7b. TF Hybrid engine (optional)
         try:
             from src.tensorflow_core.hybrid_engine import hybrid_engine
 
@@ -179,8 +155,7 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("TF Hybrid engine init failed (non-fatal): %s", e)
 
-    def _init_2060_systems(self):
-        """Initialize Original 2060 systems."""
+        # 8. Original 2060 systems
         try:
             from src.bio_neural.consciousness_engine import ConsciousnessModel
             from src.evolution.self_improving_core import SelfEvolvingArchitecture
@@ -195,6 +170,12 @@ class TRANC3Enhanced:
             logger.info("✓ TRANC3 2060 core systems ready")
         except Exception as e:
             logger.warning("2060 core init failed (non-fatal): %s", e)
+
+        self._initialized = True
+        logger.info(
+            "TRANC3 Enhanced fully initialized — %d subsystems active",
+            len(self._subsystems),
+        )
 
     def _default_2060_config(self) -> Dict:
         return {

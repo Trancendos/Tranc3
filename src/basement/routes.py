@@ -4,12 +4,12 @@ from __future__ import annotations
 import os
 from typing import Optional
 
+from Dimensional.security import constant_time_compare
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from auth import get_current_user
-from Dimensional.security import constant_time_compare
 from src.basement.archive import ArchiveSource, get_basement
 from src.basement.promotion import promote as promote_patterns
 

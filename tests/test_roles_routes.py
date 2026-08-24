@@ -2,11 +2,12 @@
 # HTTP-level tests for src/roles/routes.py (the /roles API).
 
 import pytest
+
+from src.entities.platform import PLATFORM_ENTITIES, PLATFORM_ROLES, all_seats
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from auth import get_current_user
-from src.entities.platform import PLATFORM_ENTITIES, PLATFORM_ROLES, all_seats
 from src.roles import registry as registry_module
 from src.roles.registry import RoleRegistry
 from src.roles.routes import router as roles_router

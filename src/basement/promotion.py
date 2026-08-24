@@ -46,9 +46,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import threading
 import os
 import re
-import threading
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Any

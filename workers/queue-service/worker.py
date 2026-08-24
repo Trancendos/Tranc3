@@ -84,37 +84,35 @@ async def _stuck_task_sweeper() -> None:
             # Find tasks that have been processing too long
             now_iso = datetime.now(timezone.utc).isoformat()
             # SQLite datetime comparison via string (ISO-8601 sorts lexicographically)
-            cur = conn.cursor()
-
-            # 1. Update failed
-            cur.execute(
+            rows = conn.execute(
                 """
-                UPDATE tasks
-                SET status='failed', completed_at=?, error='max_retries_exceeded_on_stuck'
+                SELECT id, retries, max_retries
+                FROM tasks
                 WHERE status='processing'
                   AND started_at IS NOT NULL
                   AND (julianday('now') - julianday(started_at)) * 86400 > ?
-                  AND retries + 1 >= max_retries
-                """,
-                (now_iso, STUCK_TIMEOUT_SECONDS),
-            )
-            failed = cur.rowcount
-
-            # 2. Update requeued
-            cur.execute(
-                """
-                UPDATE tasks
-                SET status='pending', started_at=NULL, worker_id=NULL, retries=retries+1, error='requeued_after_stuck'
-                WHERE status='processing'
-                  AND started_at IS NOT NULL
-                  AND (julianday('now') - julianday(started_at)) * 86400 > ?
-                  AND retries + 1 < max_retries
                 """,
                 (STUCK_TIMEOUT_SECONDS,),
-            )
-            requeued = cur.rowcount
+            ).fetchall()
 
-            if failed > 0 or requeued > 0:
+            requeued = 0
+            failed = 0
+            for row in rows:
+                task_id = row["id"]
+                if row["retries"] + 1 >= row["max_retries"]:
+                    conn.execute(
+                        "UPDATE tasks SET status='failed', completed_at=?, error=? WHERE id=?",
+                        (now_iso, "max_retries_exceeded_on_stuck", task_id),
+                    )
+                    failed += 1
+                else:
+                    conn.execute(
+                        "UPDATE tasks SET status='pending', started_at=NULL, worker_id=NULL, retries=retries+1, error='requeued_after_stuck' WHERE id=?",
+                        (task_id,),
+                    )
+                    requeued += 1
+
+            if rows:
                 conn.commit()
                 logger.info("Stuck-task sweep: requeued=%d, failed=%d", requeued, failed)
             conn.close()

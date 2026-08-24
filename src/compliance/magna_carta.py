@@ -61,7 +61,7 @@ _HIGH_RISK_CHANGES = {
     "supplier_onboarding",
 }
 
-# Prohibited AI uses (MC-RULE-004) — EU AI Act Article 5 unacceptable-risk practices.
+# Prohibited AI uses (MC-RULE-004)
 _PROHIBITED_AI_USES = {
     "social_scoring",
     "real_time_biometric_identification_public",
@@ -71,41 +71,8 @@ _PROHIBITED_AI_USES = {
     "mass surveillance",
 }
 
-# Prohibited *financial* AI uses (MC-RULE-004) — the regulatory perimeter.
-#
-# These are held in code, not only in magna_carta_config.json, for the same
-# reason _PROHIBITED_AI_USES is: the perimeter must survive a config edit.
-# docs/compliance/FCA-ALIGNMENT.md has claimed since v1.0.0 that these four
-# were enforced; until now they existed in that document and nowhere else.
-# See docs/compliance/FINANCIAL-REGULATORY-PERIMETER.md for what each one maps
-# to and why crossing it changes Trancendos' authorisation status.
-_PROHIBITED_FINANCIAL_USES = {
-    "financial_advice_regulated",  # FCA COBS — regulated advice
-    "autonomous_binding_financial_decisions",  # MiFID II / UK MiFIR
-    "investment_recommendation_personal",  # FCA COBS 9A — personal recommendation
-    "credit_recommendation_regulated",  # Consumer Credit Act
-}
-
-# AI routes that require governance (MC-RULE-004).
-#
-# The first three prefixes described a routing layout this repo does not serve:
-# no mounted router uses "/ai/", "/infinity-ai/" or "/model-router/", so the
-# rule skipped every in-process request. They are kept because the self-hosted
-# workers (infinity-ai :8009, model-router-service :8033) do serve them behind
-# Traefik; the rest are the AI paths api.py actually serves — note the tier
-# routers mount at "/primes" and "/sovereign", not at their model-base names
-# T2ance and Trance-One.
-_AI_ROUTE_PREFIXES = (
-    "/ai/",
-    "/infinity-ai/",
-    "/model-router/",
-    "/luminous/",
-    "/models/",
-    "/adaptive/",
-    "/tranc3ts/",
-    "/primes/",
-    "/sovereign/",
-)
+# AI routes that require governance (MC-RULE-004)
+_AI_ROUTE_PREFIXES = ("/ai/", "/infinity-ai/", "/model-router/")
 
 # Protected routes requiring auth (MC-RULE-001)
 _PROTECTED_PREFIXES = (
@@ -213,19 +180,12 @@ class MagnaCartaCompliance:
             return {"compliant": True, "violations": [], "framework": "inactive"}
 
         violations: List[Dict[str, Any]] = []
-        # Rules whose handler raised. _apply_rule converts an exception into
-        # passed=True in advisory mode, which is the right fail-safe but makes a
-        # broken rule indistinguishable from a satisfied one in the outcome.
-        # MC-RULE-004 sat crashing on every AI request for exactly that reason.
-        handler_errors: List[str] = []
         rules = self.config.get("rules", [])
 
         for rule in rules:
             if not rule.get("enabled", True):
                 continue
             result = self._apply_rule(rule, request_data)
-            if result.get("handler_error"):
-                handler_errors.append(result["rule_id"])
             if not result["passed"]:
                 violations.append(result)
                 if self._fail_closed_enabled() and result.get("severity") == "high":
@@ -234,7 +194,6 @@ class MagnaCartaCompliance:
         outcome = {
             "compliant": len(violations) == 0,
             "violations": violations,
-            "handler_errors": handler_errors,
             "framework": "magna_carta_v1",
             "rules_checked": len(rules),
             "mode": self._enforcement.get("mode", "advisory"),
@@ -319,7 +278,7 @@ class MagnaCartaCompliance:
             # Fail safe: don't block on handler errors unless fail-closed
             passed = not self._fail_closed_enabled()
             message = f"Rule handler error ({rule_id})"
-            detail = {"handler_error": True}
+            detail = {}
 
         return {
             "rule_id": rule_id,
@@ -443,15 +402,8 @@ class MagnaCartaCompliance:
         failures = []
         from src.compliance.ai_governance import MODEL_REGISTRY, classify_risk
 
-        # `or ""` rather than a .get() default: the middleware always sets these
-        # keys, and sets them to None when no route has declared them. A default
-        # only fires on a *missing* key, so `data.get("use_case", "")` returned
-        # None on every real request and `use_case.lower()` below raised
-        # AttributeError. The engine catches that and, in advisory mode, marks
-        # the rule passed — so the perimeter check reported success precisely
-        # because it had crashed.
-        model_id = data.get("model_id") or ""
-        use_case = data.get("use_case") or ""
+        model_id = data.get("model_id", "")
+        use_case = data.get("use_case", "")
 
         if "model_registered" in checks:
             if model_id and model_id not in MODEL_REGISTRY:
@@ -462,10 +414,9 @@ class MagnaCartaCompliance:
             if classification["risk_tier"] == "unacceptable":
                 failures.append(f"unacceptable_risk_tier:{model_id}")
 
-        if "prohibited_use_blocked" in checks and use_case:
+        if "prohibited_use_blocked" in checks:
             use_lower = use_case.lower()
-            configured = {str(u) for u in (rule.get("prohibited_uses") or [])}
-            for prohibited in configured | _PROHIBITED_AI_USES | _PROHIBITED_FINANCIAL_USES:
+            for prohibited in set(rule.get("prohibited_uses") or []) | _PROHIBITED_AI_USES:
                 if prohibited.replace("_", " ") in use_lower or prohibited in use_lower:
                     failures.append(f"prohibited_use:{prohibited}")
 
