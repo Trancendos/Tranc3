@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import random
+import re
 import sqlite3
 import time
 from collections import deque
@@ -132,6 +133,7 @@ _FORGEJO_TOKEN = os.environ.get("FORGEJO_TOKEN", "")
 _FORGEJO_RPM = int(os.environ.get("FORGEJO_THRESHOLD_RPM", "30"))
 
 _NATS_URL = os.environ.get("NATS_URL", "http://nats:8222")
+_BASEMENT_URL = os.environ.get("BASEMENT_URL", "http://tranc3-backend:8000")
 _NATS_RPM = int(os.environ.get("NATS_JETSTREAM_THRESHOLD_RPM", "200"))
 
 _VALKEY_URL = os.environ.get("REDIS_URL", "redis://valkey:6379")
@@ -372,6 +374,100 @@ def init_db() -> None:
         conn.commit()
 
 
+# ChronosSphere is the platform's scheduler, so a flow that needs to happen on a
+# clock belongs here rather than in a README. The Basement -> Library promotion
+# is the first: src/basement/promotion.py finds confirmed patterns and drafts
+# Library articles from them, and POST /basement/promote makes that reachable --
+# but reachable is not scheduled. Without this job, patterns are promoted when
+# somebody remembers to ask.
+#
+# `/basement/promote` reads `limit` and `dry_run` from the QUERY STRING and is
+# guarded by admin-or-service auth, so both belong in the URL and the request
+# needs a credential. The secret is stored as a `${INTERNAL_SECRET}` reference
+# rather than a value: the jobs table is an operator-readable schedule, not a
+# secret store, and `_execute_job` resolves the reference at request time.
+_SEEDED_JOBS: tuple[dict[str, object], ...] = (
+    {
+        "id": "basement-library-promotion",
+        "name": "Promote confirmed Basement patterns into The Library",
+        # 03:15 daily: after the nightly archive settles, before working hours.
+        "schedule": "15 3 * * *",
+        "url": f"{_BASEMENT_URL.rstrip('/')}/basement/promote?limit=500&dry_run=false",
+        "method": "POST",
+        "payload": {},
+        "headers": {"X-Internal-Secret": "${INTERNAL_SECRET}"},
+    },
+)
+
+# Columns the deployment owns: a changed BASEMENT_URL or schedule must reach an
+# already-seeded row, or the job keeps calling an address that no longer exists.
+# `enabled` is deliberately absent -- that one belongs to the operator. Written
+# out rather than joined from a column list so the statement stays a literal.
+_REFRESH_SEEDED_JOB = (
+    "UPDATE jobs SET name=?, schedule=?, url=?, method=?, payload=?, headers=? WHERE id=?"
+)
+
+
+def seed_default_jobs() -> None:
+    """Insert the platform's standing jobs if they are not already present.
+
+    `INSERT OR IGNORE` on a stable id, which makes the two operator actions
+    behave differently on purpose: disabling a job (enabled=0) survives a
+    restart because the row still exists and the insert is ignored, while
+    deleting one lets it return. Disable is therefore the supported way to turn
+    a standing job off -- deletion reads as "remove this instance", not "the
+    platform should stop doing this".
+
+    Ignoring the insert would also freeze the row's URL, schedule and headers at
+    whatever the deployment looked like the first time this ran, so those are
+    refreshed on every startup. The split is: the deployment owns where and when
+    the job fires, the operator owns whether it fires at all.
+    """
+    with get_conn() as conn:
+        for job in _SEEDED_JOBS:
+            values = {
+                "name": job["name"],
+                "schedule": job["schedule"],
+                "url": job["url"],
+                "method": job["method"],
+                "payload": json.dumps(job.get("payload") or {}),
+                "headers": json.dumps(job.get("headers") or {}),
+            }
+            conn.execute(
+                "INSERT OR IGNORE INTO jobs "
+                "(id, name, schedule, url, method, payload, headers, enabled, backend, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    job["id"],
+                    values["name"],
+                    values["schedule"],
+                    values["url"],
+                    values["method"],
+                    values["payload"],
+                    values["headers"],
+                    1,
+                    "apscheduler",
+                    time.time(),
+                ),
+            )
+            # The insert above is ignored for a row that already exists, which
+            # is what preserves a deliberate `enabled=0`. It would also preserve
+            # a stale URL, so refresh the deployment-owned columns explicitly.
+            conn.execute(
+                _REFRESH_SEEDED_JOB,
+                (
+                    values["name"],
+                    values["schedule"],
+                    values["url"],
+                    values["method"],
+                    values["payload"],
+                    values["headers"],
+                    job["id"],
+                ),
+            )
+        conn.commit()
+
+
 # ---------------------------------------------------------------------------
 # Cron expression parser (5-field: min hour dom mon dow)
 # ---------------------------------------------------------------------------
@@ -409,6 +505,40 @@ def _cron_matches(schedule: str, dt: datetime) -> bool:
         return False
 
 
+_HEADER_REFERENCE = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
+
+
+class MissingCredential(RuntimeError):
+    """A job's header references an environment variable that is not set."""
+
+
+def _resolve_header_references(headers: dict) -> dict:
+    """Substitute `${VAR}` header values from the environment.
+
+    Credentials belong in the process environment, not in the jobs table -- the
+    schedule is operator-readable and gets copied into support tickets. A job
+    therefore stores the reference and this resolves it at request time.
+
+    A missing variable raises rather than sending the header empty or dropping
+    it. Sending it anyway would make the target answer 401 and the run would be
+    recorded as an HTTP failure, which reads like the target is broken; the
+    misconfiguration here should say so in its own words.
+    """
+    resolved = {}
+    for name, value in headers.items():
+        match = _HEADER_REFERENCE.match(value) if isinstance(value, str) else None
+        if not match:
+            resolved[name] = value
+            continue
+        env_value = os.environ.get(match.group(1), "")
+        if not env_value:
+            raise MissingCredential(
+                f"header {name} needs {match.group(1)}, which is unset in this environment"
+            )
+        resolved[name] = env_value
+    return resolved
+
+
 async def _execute_job(job: dict) -> None:
     start = time.time()
     status = "ok"
@@ -418,7 +548,7 @@ async def _execute_job(job: dict) -> None:
 
     if job.get("url"):
         try:
-            headers = json.loads(job.get("headers") or "{}")
+            headers = _resolve_header_references(json.loads(job.get("headers") or "{}"))
             payload = json.loads(job.get("payload") or "{}")
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.request(
@@ -508,6 +638,7 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
     init_db()
+    seed_default_jobs()
     logger.info("cron-service DB ready at %s", DB_PATH)
     task = asyncio.create_task(_scheduler_loop())
     yield

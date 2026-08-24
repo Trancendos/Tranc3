@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from src.entities.platform import PLATFORM_ENTITIES, PLATFORM_ROLES
+from src.entities.platform import PLATFORM_ENTITIES, PLATFORM_ROLES, all_seats
 from src.roles.registry import RoleRegistry, UnknownLocationError
 
 
@@ -89,5 +89,8 @@ def test_platform_role_row_is_not_blank(registry: RoleRegistry) -> None:
 
 def test_locations_still_seeded_alongside_roles(registry: RoleRegistry) -> None:
     rows = registry.list_roles()
-    assert len(rows) == len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
+    # One row per SEAT now: the five multi-Lead-AI Locations carry a row each
+    # for their co-leads. The location SET is what pins seeding coverage.
+    assert len(rows) == len(all_seats())
+    assert len(rows) > len(PLATFORM_ENTITIES) + len(PLATFORM_ROLES)
     assert {r.location for r in rows} >= set(PLATFORM_ENTITIES)
