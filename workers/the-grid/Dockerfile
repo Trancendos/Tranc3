@@ -8,6 +8,15 @@ RUN pip install --no-cache-dir -r requirements-worker.txt
 COPY --chown=worker:worker worker.py main.py config.py database.py models.py router.py service.py ./
 RUN mkdir -p /app/data \
     && chown -R worker:worker /app/data
+# --- Shared Functional Services Core (SFSC) — named build contexts ---
+# Not copied into this directory — there is one copy of the core, at the
+# repo root. Supplied by docker-compose.production.yml, or for a direct
+#   docker build --build-context sharedcore=../../Dimensional .
+# See scripts/apply_shared_core_contexts.py for why this is not a base image.
+COPY --from=sharedcore --chown=worker:worker . /app/Dimensional/
+ENV PYTHONPATH=/app
+# --- end SFSC ---
+
 # Security: drop to non-root user
 USER worker
 

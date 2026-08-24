@@ -143,6 +143,30 @@ class DBUserManager:
         }
         return {"user_id": user_id, "username": username, "tier": "free"}
 
+    def count_users(self) -> Optional[int]:
+        """Total registered accounts, or None when the count cannot be trusted.
+
+        The staged-rollout gate enforces per-stage caps against this number, so
+        a DB failure must return None (deny in capped stages) rather than the
+        fallback store's length — the fallback only knows users created since
+        this process started, which would under-count a real deployment.
+        """
+        session = self._get_session()
+        if session:
+            try:
+                from src.database.schema import User
+
+                return int(session.query(User).count())
+            except Exception as e:
+                logger.error("DB count_users failed: %s", sanitize_for_log(e))
+                return None
+            finally:
+                session.close()
+        if self._use_db:
+            # DB configured but session unavailable — the true count is unknown.
+            return None
+        return len(self._fallback)
+
     def authenticate_user(self, username: str, password: str) -> Optional[dict]:
         session = self._get_session()
         if session:

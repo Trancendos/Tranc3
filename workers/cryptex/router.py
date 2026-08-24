@@ -9,6 +9,7 @@ from service import SecurityEngineRouter
 
 import config
 from database import CryptexDatabase
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from models import ScanRequest, ThreatIndicator
 
 
@@ -16,10 +17,12 @@ def _make_cryptex_router(db: CryptexDatabase, engine_router: SecurityEngineRoute
     async def _auth(
         x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
     ) -> None:
-        if not config.INTERNAL_SECRET:
-            return
-        if x_internal_secret != config.INTERNAL_SECRET:
-            raise HTTPException(401, "Invalid or missing X-Internal-Secret header")
+        guard_internal_secret(
+            x_internal_secret,
+            config.INTERNAL_SECRET,
+            mismatch_status=401,
+            detail="Invalid or missing X-Internal-Secret header",
+        )
 
     router = APIRouter(dependencies=[Depends(_auth)])
 

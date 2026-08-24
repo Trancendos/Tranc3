@@ -13,7 +13,6 @@ Model is loaded lazily on the first /reconstruct request.
 from __future__ import annotations
 
 import base64
-import hmac
 import io
 import logging
 import os
@@ -24,10 +23,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+from Dimensional.service_auth_fastapi import guard_internal_secret
 
 WORKER_PORT = int(os.getenv("PORT") or "8111")
 WORKER_NAME = "triposr-worker"
@@ -52,8 +53,9 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 
 
 def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
-    if not hmac.compare_digest(x_internal_secret, INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    guard_internal_secret(
+        x_internal_secret, INTERNAL_SECRET, mismatch_status=403, detail="Forbidden"
+    )
 
 
 logging.basicConfig(
@@ -158,9 +160,16 @@ class ReconstructRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from src.observability.worker_setup import instrument_worker
+    # OpenTelemetry instrumentation is best-effort. This worker's Docker build
+    # context is its own directory, so `src/` is absent from the image and the
+    # import raises inside the container. Unguarded, that ImportError escapes
+    # lifespan and the worker never starts — telemetry taking the service down.
+    try:
+        from src.observability.worker_setup import instrument_worker
 
-    instrument_worker(app, service_name="tranc3.triposr-worker")
+        instrument_worker(app, service_name="tranc3.triposr-worker")
+    except Exception:  # noqa: BLE001 — telemetry must never block startup
+        pass
     if _check_tsr_available():
         logger.info("TripoSR package detected; model will be loaded on first request.")
     else:

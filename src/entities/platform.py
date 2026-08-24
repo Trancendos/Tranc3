@@ -20,9 +20,10 @@ Tier System:
   Tier 5 - Bots (task-specific micro-workers: 01-04)
 """
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
 
 class Pillar(str, Enum):
@@ -243,8 +244,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Easel-Bot", "Renders dynamic design drafts for live preview."),
         bot_03=Bot("Clay-Bot", "Speeds up simple vector and morphing operations."),
         bot_04=Bot("Layout-Bot", "Plots design grids, focal alignments, and bounds."),
-        worker_port=None,
-        worker_path="src/studio/",
+        worker_port=8069,
+        worker_path="workers/the-studio/",
     ),
     "Sashas Photo Studio": LocationEntity(
         location="Sashas Photo Studio",
@@ -264,8 +265,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Shutter-Bot", "Triggers high-speed renders to output flat image layers."),
         bot_03=Bot("Flash-Bot", "Regulates light direction, balance, and HDR variables."),
         bot_04=Bot("Lens-Bot", "Fixes perspective distortions and lens anomalies."),
-        worker_port=None,
-        worker_path="src/studio/",
+        worker_port=8062,
+        worker_path="workers/sashas-photo-studio/",
     ),
     "TranceFlow": LocationEntity(
         location="TranceFlow",
@@ -285,8 +286,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Collider-Bot", "Monitors boundary boxes for collision scripts."),
         bot_03=Bot("Ray-Tracer-Bot", "Handles lighting paths, reflections, and shadows."),
         bot_04=Bot("Sprite-Bot", "Renders fast 2D graphics and UIs over 3D spaces."),
-        worker_port=None,
-        worker_path="src/studio/",
+        worker_port=8059,
+        worker_path="workers/tranceflow/",
     ),
     "TateKing": LocationEntity(
         location="TateKing",
@@ -309,8 +310,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Splicer-Bot", "Joins video clips and audio tracks into unified tracks."),
         bot_03=Bot("Renderer-Bot", "Compresses/outputs video files into target formats."),
         bot_04=Bot("Scrubber-Bot", "Generates fast, low-res preview frames for the timeline."),
-        worker_port=None,
-        worker_path="src/studio/",
+        worker_port=8061,
+        worker_path="workers/tateking/",
     ),
     "Fabulousa": LocationEntity(
         location="Fabulousa",
@@ -330,8 +331,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Hex-Code-Bot", "Verifies color accuracy and dynamic CSS themes."),
         bot_03=Bot("Font-Fetcher-Bot", "Loads and handles web typography assets/fallbacks."),
         bot_04=Bot("Padding-Bot", "Calculates margins and responsive flex properties."),
-        worker_port=None,
-        worker_path="src/studio/",
+        worker_port=8048,
+        worker_path="workers/fabulousa-service/",
     ),
     "Imaginarium": LocationEntity(
         location="Imaginarium",
@@ -355,8 +356,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Welder-Bot", "Links user input triggers in the UI directly to backend functions."
         ),
         bot_04=Bot("Polisher-Bot", "Runs final visual sweeps on lighting, styling, and alignment."),
-        worker_port=None,
-        worker_path="src/studio/",
+        worker_port=8064,
+        worker_path="workers/imaginarium/",
     ),
     # NOTE: Canonical name is "The Digital Grid" (with space). The entity table
     # has a formatting inconsistency ("The DigitalGrid") — the name with space is correct.
@@ -408,8 +409,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_02=Bot("Compile-Bot", "Runs rapid, isolated builds to verify code compilation."),
         bot_03=Bot("Debug-Bot", "Inspects runtime stacks, pinpointing errors to the exact line."),
         bot_04=Bot("Test-Bot", "Runs automated code tests, reporting pass/fail ratios."),
-        worker_port=None,
-        worker_path="src/lab/",
+        worker_port=8055,
+        worker_path="workers/the-lab/",
     ),
     "The Workshop": LocationEntity(
         location="The Workshop",
@@ -446,6 +447,14 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         ],
         primary_function="Central Testing Platform (Wonderland Theme)",
         primes=["The Dr. (Nikolai O'denhime)"],
+        # Two Lead AIs by design, covering the two halves of testing. The Mad
+        # Hatter runs adversarial work — fault injection, chaos, boundary abuse.
+        # Alice Dream runs the sane half — deterministic happy-path, acceptance
+        # and regression runs that must be repeatable to be worth anything.
+        # Chaos alone cannot tell you the system works; it can only tell you
+        # where it breaks. Both names are Carroll (1865, public domain), matching
+        # the Location's existing March Hare / Dormouse / Teapot-Bot naming.
+        lead_ais=["The Mad Hatter", "Alice Dream"],
         online_mode="Live mutation tests; real-time anomaly reporting.",
         offline_mode="Local test execution; offline review of test logs.",
         agent_alpha=Agent(
@@ -493,8 +502,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Checksum-Bot", "Generates secure hashes to verify downloaded files are unmodified."
         ),
         bot_04=Bot("Versioner-Bot", "Manages software version tags and deprecation warnings."),
-        worker_port=None,
-        worker_path="src/artifactory/",
+        worker_port=8047,
+        worker_path="workers/artifactory-service/",
     ),
     "API Marketplace": LocationEntity(
         location="API Marketplace",
@@ -672,8 +681,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Eraser-Bot", "Resets coding sandboxes, removing trial code for the next lesson."
         ),
         bot_04=Bot("Bell-Bot", "Sends notifications for class dates, live sessions, or deadlines."),
-        worker_port=None,
-        worker_path="src/academy/",
+        worker_port=8056,
+        worker_path="workers/the-academy/",
     ),
     "DocUtari": LocationEntity(
         location="DocUtari",
@@ -731,8 +740,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Mothball-Bot", "Encrypts and locks retired legacy versions of platform software."
         ),
-        worker_port=None,
-        worker_path="src/basement/",
+        worker_port=8068,
+        worker_path="workers/basement/",
     ),
     "The Spark": LocationEntity(
         location="The Spark",
@@ -830,8 +839,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Padlock-Bot", "Instantly locks sensitive structures if a local breach is suspected."
         ),
-        worker_port=8024,
-        worker_path="workers/config-service/",
+        # Corrected: the infinity-void worker owns /vault/status, /secrets, /secrets/retrieve —
+        # the domain routes for this Location. Previously registered as
+        # workers/config-service/ (port 8024), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8002,
+        worker_path="workers/infinity-void/",
     ),
     "The Lighthouse": LocationEntity(
         location="The Lighthouse",
@@ -896,8 +909,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Portal-Bot", "Safely moves compromised file layers directly into the secure Ice Box."
         ),
-        worker_port=None,
-        worker_path="src/security/warp_tunnel/",
+        worker_port=8072,
+        worker_path="workers/warp-tunnel/",
     ),
     "Cryptex": LocationEntity(
         location="Cryptex",
@@ -928,8 +941,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Honeypot-Bot",
             "Spins up virtual servers with decoy data to distract/evaluate attackers.",
         ),
-        worker_port=8026,
-        worker_path="workers/rate-limit-service/",
+        # Corrected: the cryptex worker owns /scan, /scans, /intel/ingest, /intel/lookup, /engines —
+        # the domain routes for this Location. Previously registered as
+        # workers/rate-limit-service/ (port 8026), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8053,
+        worker_path="workers/cryptex/",
     ),
     "The Ice Box": LocationEntity(
         location="The Ice Box",
@@ -963,8 +980,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Permafrost-Bot",
             "Isolates local offline storage caches until secure networks reconnect.",
         ),
-        worker_port=None,
-        worker_path="src/security/ice_box/",
+        worker_port=8046,
+        worker_path="workers/ice-box-service/",
     ),
     "Warp Radio": LocationEntity(
         location="Warp Radio",
@@ -997,8 +1014,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Volume-Bot",
             "Adjusts volume properties, executing smooth fades across node transitions.",
         ),
-        worker_port=None,
-        worker_path="src/warp_radio/",
+        worker_port=8073,
+        worker_path="workers/warp-radio/",
     ),
     "Section 7": LocationEntity(
         location="Section 7",
@@ -1030,8 +1047,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         bot_04=Bot(
             "Whisper-Bot", "Delivers summarized threat and trend alerts directly to strategic hubs."
         ),
-        worker_port=8027,
-        worker_path="workers/geo-service/",
+        # Corrected: the the-dutchy worker owns /status, /reports, /analyse —
+        # the domain routes for this Location. Previously registered as
+        # workers/geo-service/ (port 8027), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8057,
+        worker_path="workers/the-dutchy/",
     ),
     "The Citadel": LocationEntity(
         location="The Citadel",
@@ -1193,8 +1214,12 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Belt-Bot",
             "Manages continuous compilation pipelines, guiding code from start to finish.",
         ),
-        worker_port=8029,
-        worker_path="workers/health-aggregator/",
+        # Corrected: the devocity worker owns /status, /pipelines, /deploy —
+        # the domain routes for this Location. Previously registered as
+        # workers/health-aggregator/ (port 8029), which is an unrelated
+        # infrastructure worker; CLAUDE.md's worker map named the right one.
+        worker_port=8110,
+        worker_path="workers/devocity/",
     ),
     "Tranquility": LocationEntity(
         location="Tranquility",
@@ -1230,8 +1255,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Aura-Bot",
             "Adjusts ambient color backlighting across platforms to support user relaxation.",
         ),
-        worker_port=None,
-        worker_path="src/tranquility/",
+        worker_port=8077,
+        worker_path="workers/tranquility/",
     ),
     "I-Mind": LocationEntity(
         location="I-Mind",
@@ -1269,8 +1294,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Soothe-Bot",
             "Triggers local cognitive decompression, offering prompts when distress peaks.",
         ),
-        worker_port=None,
-        worker_path="src/imind/",
+        worker_port=8075,
+        worker_path="workers/imind/",
     ),
     "tAimra": LocationEntity(
         location="tAimra",
@@ -1306,8 +1331,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Alert-Bot",
             "Warns users of upcoming tasks, giving them buffer time to finish current work.",
         ),
-        worker_port=None,
-        worker_path="src/taimra/",
+        worker_port=8074,
+        worker_path="workers/taimra/",
     ),
     "VRAR3D": LocationEntity(
         location="VRAR3D",
@@ -1344,8 +1369,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "VR-Lens-Bot",
             "Adjusts focal dimensions, scaling imagery dynamically to reduce eye strain.",
         ),
-        worker_port=None,
-        worker_path="src/vrar3d/",
+        worker_port=8060,
+        worker_path="workers/vrar3d/",
     ),
     "Resonate": LocationEntity(
         location="Resonate",
@@ -1383,8 +1408,8 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Harmonic-Bot",
             "Smoothly blends external audio playlists with active calming sounds securely.",
         ),
-        worker_port=None,
-        worker_path="src/resonate/",
+        worker_port=8076,
+        worker_path="workers/resonate/",
     ),
 }
 
@@ -1673,6 +1698,28 @@ def _wire_multi_agent_teams() -> None:
         ),
     }
 
+    # The Chaos Party runs two testing disciplines that must not share a team:
+    # adversarial (The Mad Hatter) and deterministic (Alice Dream). A chaos agent
+    # and an acceptance agent want opposite things from a run — one seeks
+    # variance, the other requires none — so one pair cannot serve both without
+    # the sane suite inheriting non-determinism.
+    chaos = PLATFORM_ENTITIES["The Chaos Party"]
+    chaos.agent_teams = {
+        "The Mad Hatter": AgentPair(chaos.agent_alpha, chaos.agent_beta),
+        "Alice Dream": AgentPair(
+            Agent(
+                "The White Rabbit",
+                "Runs deterministic, schedule-bound suites — acceptance, regression "
+                "and smoke — where a repeatable result is the whole point.",
+            ),
+            Agent(
+                "The Looking-Glass",
+                "Reflects actual behaviour against expected, producing the pass/fail "
+                "assertions and diffs the Observatory trends on.",
+            ),
+        ),
+    }
+
 
 def _assign_ids() -> None:
     """Assign PID, AID, SID, and NID fields to all entities in PLATFORM_ENTITIES.
@@ -1875,3 +1922,239 @@ def get_all_ids() -> List[Dict]:
                 }
             )
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLATFORM ROLES — accountable ownership for things that are NOT Locations
+#
+# Every one of the 43 Locations has a Lead AI who notices when it breaks. The
+# Shared Functional Services Core (`Dimensional/`) had nobody, and the cost of
+# that showed up as a specific class of defect rather than as an abstraction:
+# 447 lines of point-of-authorship security scanning built and never wired to
+# anything; three duplicate CircuitState enums sitting inside the core while an
+# ADR consolidated the other four; eight files the shared_core -> Dimensional
+# rename left as stale copies; telemetry dead in 34 services. Each is the kind
+# of thing an owner would have caught.
+#
+# These roles are deliberately NOT added to PLATFORM_ENTITIES. A Dimensional is
+# not a Location — it has no pillar, no agent teams, no worker port — and
+# forcing one into the 43-entity registry would corrupt the entity model to
+# solve an ownership problem. They are a parallel, smaller concept: a named
+# responsibility with a default holder, seeded into the same Role Assignment
+# Registry so ownership stays mutable, audited, and reassignable at runtime
+# without a code change.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PlatformRole:
+    """A named responsibility that is not a Location."""
+
+    role_id: str
+    job_description: str
+    default_holder: str
+    scope: str
+    rationale: str
+
+
+PLATFORM_ROLES: Dict[str, PlatformRole] = {
+    "Dimensional": PlatformRole(
+        role_id="Dimensional",
+        job_description="Head of Data Transport & Swarm Operations",
+        default_holder="The Queen",
+        scope=(
+            "The Shared Functional Services Core (Dimensional/) — 101 modules "
+            "imported by 314 files: sanitisation, path/URL validation, security "
+            "automation, event bus, service registry, circuit state."
+        ),
+        rationale=(
+            "The Queen holds this because the registry already says so, not "
+            "because the metaphor is pleasing. Her Job Description at The HIVE "
+            "is literally 'Head of Data Transport & Swarm Operations', and a "
+            "shared core consumed by 314 files is data transport and swarm "
+            "operations. She also has the most capacity to take it: she owns "
+            "one Location, the fewest of any major Lead AI (Rocking Ricki 3, "
+            "Voxx 2, Trancendos 2), and is Prime for none, so nothing competes "
+            "for her attention. Her Prime is already Cornelius MacIntyre, the "
+            "highest in-degree Prime on the platform, so escalation needs no "
+            "new path. Norman Hawkins was the obvious alternative — he owns "
+            "The Observatory, where Dimensional health telemetry lands — but "
+            "he owns two Locations and is Prime for five, and giving one AI "
+            "both the producer and the sink removes the independent check."
+        ),
+    ),
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Role seats — one Job Description per AI role, not per Location
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# THE GAP THIS CLOSES
+#
+# `JOB_DESCRIPTIONS` carries one title per Location, and `role_assignments` was
+# keyed by Location alone. That model holds for the 38 Locations with a single
+# Lead AI and breaks for the five that do not: 43 Job Descriptions were being
+# asked to cover 51 AI seats, so eight AIs held no Job Description at all.
+#
+# They are not spares. The Chaos Party is the clearest case: The Mad Hatter runs
+# adversarial testing — rapid mock payloads, memory-leak and performance
+# watching — while Alice Dream runs the deterministic half, acceptance and
+# regression and smoke, where a repeatable result is the whole point. One title
+# covering both describes neither, and an operator reassigning "The Chaos Party"
+# could not say which of the two jobs they were moving.
+#
+# HOW A SEAT IS DERIVED RATHER THAN DECLARED
+#
+# Seats are computed from what the entity table already holds -- `lead_ais` for
+# who, `agent_teams` for what they actually do -- so the seat list cannot drift
+# from the roster the way a hand-maintained parallel list would. Only the eight
+# co-lead *titles* are declared below, because a job title is an editorial
+# decision that no amount of introspection can derive.
+#
+# Each seat's `functions` come from its own Agent pair's descriptions. That is
+# deliberate: the agents are the concrete work, so a seat's stated function is
+# evidenced by the two things doing it rather than asserted independently and
+# left to rot.
+
+# The primary seat keeps the Location's existing headline title, so every caller
+# of `get_job_description(location)` is unchanged. Co-leads get their own.
+CO_LEAD_JOB_DESCRIPTIONS: Dict[Tuple[str, str], str] = {
+    # Benji Tate holds video production; Sam King's agents run logistics,
+    # scheduling, delivery pipelines and format finishing -- operations, not
+    # editorial.
+    ("TateKing", "Sam King"): "Head of Production Operations & Delivery",
+    # The Dr. authors and optimises; Slime's agents trace a failing test to its
+    # originating commit and draft the fix. Authoring and diagnosis are
+    # different disciplines and the estate already documents them separately
+    # (docs/governance/DEBUGGING-MATRIX.md).
+    ("The Lab", "Slime"): "Head of Diagnostics & Defect Remediation",
+    # The deterministic half of testing. A chaos agent seeks variance and an
+    # acceptance agent requires none, which is why these never shared a team.
+    ("The Chaos Party", "Alice Dream"): "Head of Deterministic Assurance",
+    # The Guardian holds identity and access; the Orb's agents project how
+    # today's architecture scales and map that into a forward roadmap.
+    ("Infinity", "The Orb of Orisis"): "Head of Architectural Foresight",
+    # Clarence Porter is Chief Procurement Officer and runs the compute desk.
+    # Each sibling runs a distinct market, per their own Speculator/Trader pair.
+    ("Arcadian Exchange", "Ann Porter"): "Head of Storage Procurement",
+    ("Arcadian Exchange", "George Porter"): "Head of Model & Inference Procurement",
+    ("Arcadian Exchange", "Edward Porter"): "Head of Workflow Tooling Procurement",
+    ("Arcadian Exchange", "James Porter"): "Head of API Credit Procurement",
+}
+
+
+def seat_id_for(ai_name: str) -> str:
+    """A stable slug key for one AI's seat.
+
+    Derived from the name rather than an incrementing id so the key survives a
+    reordering of `lead_ais`, and so a row in the registry can be read without
+    a join to work out whose seat it is.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", ai_name.lower()).strip("-")
+    return slug or "seat"
+
+
+@dataclass(frozen=True)
+class RoleSeat:
+    """One Job Description at one Location, and the AI it was designed for."""
+
+    location: str
+    seat_id: str
+    job_description: str
+    designed_for: str
+    is_primary: bool
+    functions: Tuple[str, ...] = ()
+
+    @property
+    def key(self) -> Tuple[str, str]:
+        return (self.location, self.seat_id)
+
+
+def get_seats(location: str) -> List[RoleSeat]:
+    """Every Job Description seat at one Location, primary first.
+
+    A single-Lead-AI Location returns exactly one seat, so callers that never
+    cared about co-leads see no change in shape beyond a list of one.
+    """
+    entity = PLATFORM_ENTITIES.get(location)
+    if entity is None:
+        role = PLATFORM_ROLES.get(location)
+        if role is None:
+            return []
+        return [
+            RoleSeat(
+                location=location,
+                seat_id="primary",
+                job_description=role.job_description,
+                designed_for=role.default_holder,
+                is_primary=True,
+            )
+        ]
+
+    holders = list(entity.lead_ais) or [entity.lead_ai]
+    # `lead_ai` is the primary in either shape. A roster that listed co-leads
+    # but omitted the canonical name would otherwise yield a Location with no
+    # `primary` seat at all -- and every default-seat caller reads that as a
+    # missing row: `get_role(location)` returns None, `assign_ai` and
+    # `remove_ai` raise UnknownLocationError. Cheap to guarantee here, and
+    # invisible until a roster edit makes it expensive.
+    # Primary first regardless of roster order, so the documented ordering is a
+    # property of this function rather than of how `lead_ais` happens to be
+    # typed. Every current roster lists the canonical name first, which is
+    # exactly why a future edit that does not would be easy to miss.
+    holders = [entity.lead_ai, *(h for h in holders if h != entity.lead_ai)]
+    primary_title = JOB_DESCRIPTIONS.get(location, entity.primary_function)
+    teams = entity.agent_teams or {}
+    seats: List[RoleSeat] = []
+
+    for holder in holders:
+        is_primary = holder == entity.lead_ai
+        title = (
+            primary_title
+            if is_primary
+            else CO_LEAD_JOB_DESCRIPTIONS.get((location, holder), primary_title)
+        )
+        pair = teams.get(holder)
+        functions: Tuple[str, ...] = ()
+        if pair is not None:
+            functions = (pair.alpha.description, pair.beta.description)
+        elif is_primary and entity.agent_alpha and entity.agent_beta:
+            functions = (entity.agent_alpha.description, entity.agent_beta.description)
+        seats.append(
+            RoleSeat(
+                location=location,
+                seat_id="primary" if is_primary else seat_id_for(holder),
+                job_description=title,
+                designed_for=holder,
+                is_primary=is_primary,
+                functions=functions,
+            )
+        )
+    return seats
+
+
+def all_seats() -> List[RoleSeat]:
+    """Every seat across every Location and platform role."""
+    seats: List[RoleSeat] = []
+    for location in PLATFORM_ENTITIES:
+        seats.extend(get_seats(location))
+    for role_id in PLATFORM_ROLES:
+        seats.extend(get_seats(role_id))
+    return seats
+
+
+def seats_without_a_distinct_title() -> List[RoleSeat]:
+    """Co-lead seats still falling back to their Location's headline title.
+
+    A co-lead sharing the primary's title is the exact condition this model was
+    built to remove, so it is reported rather than left to be noticed. Empty
+    today; non-empty the moment a sixth multi-AI Location is added without a
+    title for its co-lead.
+    """
+    return [
+        seat
+        for seat in all_seats()
+        if not seat.is_primary
+        and (seat.location, seat.designed_for) not in CO_LEAD_JOB_DESCRIPTIONS
+    ]

@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
+from bots import governance_client
 from bots.handlers import HANDLERS
 from bots.pool import BotPool
 from bots.types import JobResult, JobSpec, JobStatus
@@ -67,6 +68,10 @@ class BotRegistry:
         handler = HANDLERS.get(job.bot_type)
         if handler is None:
             raise ValueError(f"Unknown bot_type: {job.bot_type!r}")
+        # AI Governance Constitution Phase 3 — no-op unless GOVERNANCE_GATE_ENABLED=true
+        # (see bots/governance_client.py). Raises GovernanceBlockedError, which
+        # BotPool._execute() turns into a normal JobStatus.FAILED result.
+        await governance_client.check_action(job.bot_type, requestor=f"bot-registry:{job.job_id}")
         logger.debug("Dispatching %s (job=%s)", job.bot_type, job.job_id)
         return await handler(job.payload)
 

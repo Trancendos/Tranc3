@@ -9,6 +9,16 @@ from __future__ import annotations
 import logging
 import re
 
+# Named so both _REDACT_PATTERNS (redact-and-continue, for logs) and
+# _PII_PATTERNS (detect-only, for pre-forward gates — see contains_pii())
+# share one definition of "what an email/credit-card number looks like"
+# rather than two that could drift apart.
+_EMAIL_PATTERN = re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b")
+_CREDIT_CARD_PATTERN = re.compile(r"\b(?:\d[ -]?){13,19}\b")
+# UK National Insurance number: 2 letters, 6 digits, 1 letter (e.g.
+# QQ123456C) — a strong, low-false-positive PII signal.
+_UK_NI_NUMBER_PATTERN = re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]\b")
+
 # Patterns that should never appear in logs
 _REDACT_PATTERNS: list[tuple[re.Pattern, str]] = [
     # JWT tokens (header.payload.signature)
@@ -29,9 +39,11 @@ _REDACT_PATTERNS: list[tuple[re.Pattern, str]] = [
     # Passwords in URLs
     (re.compile(r"://([^:@/]+):([^@/]+)@"), r"://\1:[PASSWORD-REDACTED]@"),
     # Email addresses (PII)
-    (re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b"), "[EMAIL-REDACTED]"),
+    (_EMAIL_PATTERN, "[EMAIL-REDACTED]"),
     # Credit card numbers (Luhn-like 13-19 digit sequences)
-    (re.compile(r"\b(?:\d[ -]?){13,19}\b"), "[CC-REDACTED]"),
+    (_CREDIT_CARD_PATTERN, "[CC-REDACTED]"),
+    # UK National Insurance numbers (PII)
+    (_UK_NI_NUMBER_PATTERN, "[NI-NUMBER-REDACTED]"),
     # Private keys (PEM)
     (
         re.compile(
@@ -49,6 +61,34 @@ def redact(text: str) -> str:
     for pattern, replacement in _REDACT_PATTERNS:
         text = pattern.sub(replacement, text)
     return text
+
+
+# Detection-only subset for call sites that need a yes/no "does this text
+# look like it carries personal data" answer (not a redact-and-continue),
+# e.g. a pre-forward gate before content leaves a process boundary.
+# Deliberately narrower than _REDACT_PATTERNS above: this omits credential/
+# secret patterns (JWT, API keys, AWS keys, private keys, Stripe keys) since
+# those are a different risk category (compromised credentials, not personal
+# data).
+_PII_PATTERNS: tuple[re.Pattern, ...] = (
+    _EMAIL_PATTERN,
+    _CREDIT_CARD_PATTERN,
+    _UK_NI_NUMBER_PATTERN,
+)
+
+
+def contains_pii(text: str) -> bool:
+    """Best-effort check for PII-shaped content (email address, credit-card-
+    like digit run, UK National Insurance number).
+
+    This is a fast heuristic for call sites deciding whether to forward
+    content across a process/trust boundary — it is NOT a compliance-grade
+    DLP scanner. A False result means "no strong signal found", not "this
+    content contains no personal data" (e.g. a bare name or address with no
+    email/card/NI-number won't trip it); a True result should be treated as
+    "assume personal data until proven otherwise", not a confirmed positive.
+    """
+    return any(pattern.search(text) for pattern in _PII_PATTERNS)
 
 
 class RedactingFormatter(logging.Formatter):

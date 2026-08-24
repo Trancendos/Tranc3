@@ -355,6 +355,12 @@ async def observatory_ingest(
         metadata=body.get("metadata", {}),
         actor_ip=body.get("actor_ip"),
         session_id=body.get("session_id"),
+        retention_class=body.get("retention_class"),
+        # cubic P2: bool("false") is True — a caller sending the JSON string
+        # "false" instead of the literal false would otherwise force a
+        # permanent legal hold when none was intended. Only an actual JSON
+        # boolean true counts.
+        legal_hold=body.get("legal_hold") is True,
     )
     logger.debug(
         "observatory.ingest via HTTP: %s",

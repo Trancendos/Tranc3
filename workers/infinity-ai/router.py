@@ -8,9 +8,10 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, Query
 
 from config import INTERNAL_SECRET, PROVIDER_DAILY_LIMITS, WORKER_NAME, WORKER_PORT
+from Dimensional.service_auth_fastapi import guard_internal_secret
 from models import ChatCompletionRequest
 
 # These are injected at startup via init_router()
@@ -35,13 +36,15 @@ def init_router(db, gateway):
 async def require_internal_auth(
     x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
 ) -> None:
-    if not INTERNAL_SECRET:
-        return
-    if x_internal_secret != INTERNAL_SECRET:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or missing X-Internal-Secret header",
-        )
+    # Fails closed. The early `if not INTERNAL_SECRET: return` meant a blank
+    # secret opened every route on protected_router — and `.env.example` ships
+    # it blank, so a template copied without editing disables auth silently.
+    guard_internal_secret(
+        x_internal_secret,
+        INTERNAL_SECRET,
+        mismatch_status=401,
+        detail="Invalid or missing X-Internal-Secret header",
+    )
 
 
 # ---------------------------------------------------------------------------

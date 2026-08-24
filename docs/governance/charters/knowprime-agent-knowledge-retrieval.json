@@ -1,0 +1,36 @@
+{
+  "charter_id": "knowprime-agent-knowledge-retrieval",
+  "version": "1.0.0",
+  "tier": 4,
+  "domain": "KnowPrime",
+  "mission": "Retrieve and cross-reference knowledge base content for The Library, The Academy, DocUtari, The Basement, Turing's Hub, and Section 7.",
+  "allowed_actions": [
+    "read_approved_documents",
+    "summarize_sources",
+    "cross_reference_articles"
+  ],
+  "forbidden_actions": [
+    "delete_archived_record",
+    "modify_published_article",
+    "access_restricted_data"
+  ],
+  "risk_tier": "minimal",
+  "approval_required": false,
+  "escalation_triggers": [
+    "confidence_below_threshold",
+    "audit_gap"
+  ],
+  "escalation_severity": "low",
+  "audit_sink": "observatory",
+  "fallback_behavior": "stop_and_escalate",
+  "confidence_model": {
+    "threshold": 0.5,
+    "weights": {
+      "decision_quality": 0.3,
+      "adaptation_speed": 0.25,
+      "state_coherence": 0.2,
+      "resource_efficiency": 0.15,
+      "communication": 0.1
+    }
+  }
+}
