@@ -1,12 +1,17 @@
 # src/basement/routes.py
 from __future__ import annotations
 
+import os
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from auth import get_current_user
+from Dimensional.security import constant_time_compare
 from src.basement.archive import ArchiveSource, get_basement
+from src.basement.promotion import promote as promote_patterns
 
 router = APIRouter(prefix="/basement", tags=["basement"])
 
@@ -45,3 +50,63 @@ async def get_record(record_id: str):
     if not r:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return {**r.to_dict(), "content": r.content}
+
+
+_bearer = HTTPBearer(auto_error=False)
+
+# ChronosSphere calls this route on a schedule, and a scheduler holds no user
+# session. Minting a standing admin JWT for a worker would give a machine a
+# human's authority with no human behind it, so the route instead accepts the
+# platform's shared internal secret as a second, service-only identity -- the
+# same `X-Internal-Secret` used by /observatory/events and /compliance/waivers.
+#
+# One deliberate difference from those routes: they guard with
+# `if _INTERNAL_SECRET and ...`, so an unset secret disables the check. That
+# shape is wrong here. This header is an ALTERNATIVE to an admin credential, so
+# an unset secret would turn it into a password-less admin bypass. Unset means
+# the service path does not exist and the admin JWT is the only way in.
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def _require_admin_or_service(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    x_internal_secret: Optional[str] = Header(default=None, alias="X-Internal-Secret"),
+) -> dict:
+    """Promotion writes into The Library, so it is an admin action.
+
+    Matching the guard on `/admin-os`: a read of the evidence store is open to
+    any authenticated caller, but authoring knowledge from it is not. An
+    internal service presenting the shared secret counts as that authority;
+    anything else must be an admin bearer token.
+    """
+    if x_internal_secret is not None:
+        if not _INTERNAL_SECRET:
+            raise HTTPException(status_code=403, detail="Service authentication is not configured")
+        if not constant_time_compare(x_internal_secret, _INTERNAL_SECRET):
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return {"sub": "service", "id": "service", "username": "service", "role": "admin"}
+
+    current_user = await get_current_user(credentials)
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return current_user
+
+
+@router.post("/promote", dependencies=[Depends(_require_admin_or_service)])
+def run_promotion(
+    limit: int = Query(default=500, ge=1, le=5000),
+    dry_run: bool = Query(default=False),
+):
+    """Scan Basement evidence and raise a Library draft per confirmed pattern.
+
+    `src/basement/promotion.py` has implemented this whole path -- clustering,
+    regression detection, article rendering -- since it was written, and until
+    now nothing called it. The module's own docstring describes closing "the
+    fourth leg" of Chaos Party -> Observatory -> Basement -> Library; the leg
+    was built and left with no entry point, so evidence accumulated in the
+    store and reached nobody.
+
+    `dry_run=true` reports the patterns it would raise without writing, which is
+    the mode to use when tuning thresholds against real evidence.
+    """
+    return promote_patterns(limit=limit, dry_run=dry_run)

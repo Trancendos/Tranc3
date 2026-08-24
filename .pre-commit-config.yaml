@@ -20,7 +20,12 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        # Kubernetes/Flux manifests bundle several documents per file.
+        args: [--allow-multiple-documents]
       - id: check-json
+        # VS Code settings are JSONC: comments are valid there, and
+        # check-json only understands strict JSON.
+        exclude: ^\.vscode/
       - id: check-toml
       - id: check-merge-conflict
       - id: detect-private-key
@@ -52,7 +57,7 @@ repos:
       - id: isort
 
   # ── Semgrep (semantic code analysis) ──────────────────────────────
-  - repo: https://github.com/returntocorp/semgrep-pre-commit
+  - repo: https://github.com/semgrep/pre-commit
     rev: v1.63.0
     hooks:
       - id: semgrep
