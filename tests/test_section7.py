@@ -496,8 +496,9 @@ def test_vault_service_short_ciphertext_raises(vault_worker):
 
 
 def test_intelligence_agent_run_cycle():
-    from src.section7.intelligence_agent import IntelligenceAgent, IntelligenceItem, SourceType
     from unittest.mock import MagicMock
+
+    from src.section7.intelligence_agent import IntelligenceAgent, IntelligenceItem, SourceType
 
     agent = IntelligenceAgent()
     agent._router = MagicMock()
