@@ -1,16 +1,18 @@
-import time
-import math
 import random
+import time
+
 
 def fusion_attention_orig(q_slice, k_slice):
     dot = sum(a * b for a, b in zip(q_slice, k_slice))
     return dot
+
 
 def fusion_attention_opt(q_slice, k_slice):
     dot = 0.0
     for a, b in zip(q_slice, k_slice):
         dot += a * b
     return dot
+
 
 q = [random.random() for _ in range(128)]
 k = [random.random() for _ in range(128)]

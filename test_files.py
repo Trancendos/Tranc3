@@ -25,4 +25,5 @@ def _cosine_opt(a, b):
         return 0.0
 
     import math
+
     return dot / math.sqrt(norm_a_sq * norm_b_sq)

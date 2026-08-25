@@ -1,7 +1,8 @@
-import time
 import math
 import random
-from typing import List, Sequence
+import time
+from typing import List
+
 
 def _cosine_original(a: List[float], b: List[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b))
@@ -10,6 +11,7 @@ def _cosine_original(a: List[float], b: List[float]) -> float:
     if na == 0 or nb == 0:
         return 0.0
     return dot / (na * nb)
+
 
 def _cosine_optimized(a: List[float], b: List[float]) -> float:
     # Optimized implementation using a single explicit loop
@@ -39,15 +41,20 @@ def _cosine_optimized(a: List[float], b: List[float]) -> float:
 
     return dot / math.sqrt(norm_a_sq * norm_b_sq)
 
+
 # Test correctness
 a = [1.0, 2.0, 3.0, 4.0, 5.0]
 b = [1.0, 2.0, 3.0]
 
-print(f"Correctness test (unequal len): Orig={_cosine_original(a, b)}, Opt={_cosine_optimized(a, b)}")
+print(
+    f"Correctness test (unequal len): Orig={_cosine_original(a, b)}, Opt={_cosine_optimized(a, b)}"
+)
 
 a2 = [1.0, 2.0, 3.0]
 b2 = [2.0, 3.0, 4.0]
-print(f"Correctness test (equal len): Orig={_cosine_original(a2, b2)}, Opt={_cosine_optimized(a2, b2)}")
+print(
+    f"Correctness test (equal len): Orig={_cosine_original(a2, b2)}, Opt={_cosine_optimized(a2, b2)}"
+)
 
 # Benchmark
 a_large = [random.random() for _ in range(1536)]
