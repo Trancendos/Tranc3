@@ -1,6 +1,8 @@
-import pytest
 import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from src.main_enhanced import TRANC3Enhanced
 
 

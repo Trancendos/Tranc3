@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `7aba29c8`. Regenerate with 
+Generated from repo state at `593f7992`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
@@ -22,7 +22,7 @@ Generated from repo state at `7aba29c8`. Regenerate with
 
 ## Dimensionals — what is in scope, what is not
 
-`Dimensional/` holds 105 modules. 
+`Dimensional/` holds 105 modules.
 A concern is *in scope* when the shared core owns it; a *candidate* when two or
 more services solve it independently; *out of scope* when exactly one service
 does, because that is not shared code, it is that service's job.
@@ -358,17 +358,16 @@ that none of them import.
 ## ORPHANED
 
 ### `dimensional-nexus-service`
-- **not built by any compose service** — 
+- **not built by any compose service** —
 
 ### `gateway-service`
-- **not built by any compose service** — 
+- **not built by any compose service** —
 
 ### `optional-services-health`
-- **not built by any compose service** — 
+- **not built by any compose service** —
 
 ## Running clean
 
 21 services pass every applicable check:
 
 `api-gateway`, `backup-service`, `bullmq-queue-service`, `cranbania`, `hive-service`, `ice-box-service`, `infinity-admin`, `infinity-auth`, `infinity-bridge`, `infinity-one`, `infinity-portal`, `infinity-shards`, `infinity-ws`, `nexus-ws-rs`, `rate-limit-service-rs`, `remotion-render-service`, `sentinel-station-service`, `swarm-coordinator-service`, `tranc3-backend`, `users-service`, `vault-service-rs`
-
