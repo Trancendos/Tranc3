@@ -331,19 +331,27 @@ class TestEvalSuiteLoraComparison:
         assert len(pair) == 2
         assert all(isinstance(r, EvalResult) for r in pair)
 
+
 def test_cosine_similarity_empty() -> None:
     from src.evaluation.model_eval import EvalSuite
+
     assert EvalSuite._cosine_similarity([], []) == 0.0
+
 
 def test_cosine_similarity_orthogonal() -> None:
     from src.evaluation.model_eval import EvalSuite
+
     assert EvalSuite._cosine_similarity([1.0, 0.0], [0.0, 1.0]) == 0.0
+
 
 def test_cosine_similarity_identical() -> None:
     from src.evaluation.model_eval import EvalSuite
+
     assert round(EvalSuite._cosine_similarity([1.0, 2.0], [1.0, 2.0]), 5) == 1.00000
+
 
 def test_cosine_similarity_unequal_lengths() -> None:
     from src.evaluation.model_eval import EvalSuite
+
     res = EvalSuite._cosine_similarity([1.0, 2.0, 3.0], [1.0, 2.0])
     assert isinstance(res, float)

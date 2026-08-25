@@ -21,8 +21,10 @@ async def test_code_generator_fastapi_handler():
     assert 'raise ValueError("Empty payload")' in code
     assert "return JSONResponse" in code
 
+
 def test_enhanced_registry_cosine() -> None:
     from src.skills.enhanced_registry import EnhancedSkillRegistry
+
     registry = EnhancedSkillRegistry()
     assert registry._cosine([], []) == 0.0
     assert registry._cosine([1.0, 0.0], [0.0, 1.0]) == 0.0
