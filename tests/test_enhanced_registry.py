@@ -1,5 +1,7 @@
-import pytest
 import math
+
+import pytest
+
 from src.skills.enhanced_registry import EnhancedSkillRegistry, Skill
 
 
