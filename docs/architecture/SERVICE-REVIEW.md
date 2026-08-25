@@ -152,7 +152,7 @@ that none of them import.
 
 ### `identity-service`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/identity-service/worker.py:25 Dimensional.service_auth_fastapi`
+  - `workers/identity-service/worker.py:26 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `imaginarium`
@@ -235,7 +235,7 @@ that none of them import.
 
 ### `products-service`
 - **imports_resolve** — 1 unguarded, 1 guarded, 0 vendored
-  - `workers/products-service/worker.py:25 Dimensional.service_auth_fastapi`
+  - `workers/products-service/worker.py:26 Dimensional.service_auth_fastapi`
 - **telemetry_reaches** — import is guarded but src/ is absent — telemetry silently off
 
 ### `queue-service`
