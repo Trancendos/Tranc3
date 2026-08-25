@@ -1,10 +1,10 @@
 # Disaster Recovery Runbook — Trancendos Platform
 
-**Classification:** UNCLASSIFIED — INTERNAL  
-**Owner:** Trancendos Platform Engineering  
-**Version:** 1.0.0  
-**Last Reviewed:** 2026-06-06  
-**Next Review:** 2026-12-06  
+**Classification:** UNCLASSIFIED — INTERNAL
+**Owner:** Trancendos Platform Engineering
+**Version:** 1.0.0
+**Last Reviewed:** 2026-06-06
+**Next Review:** 2026-12-06
 **Compliance:** DEF STAN 00-600 REQ-SU-006
 
 ---
@@ -30,7 +30,7 @@ sqlite3.backup() → gzip compress → AES-GCM encrypt → write <worker>_<ts>_<
                                                     → write <worker>_<ts>_<tier>.meta.json
 ```
 
-Key derivation: HKDF-SHA256 from `TRANC3_DB_MASTER_KEY` (or PBKDF2 from `SECRET_KEY`).  
+Key derivation: HKDF-SHA256 from `TRANC3_DB_MASTER_KEY` (or PBKDF2 from `SECRET_KEY`).
 Backup root: `BACKUP_ROOT` env var (default: `/data/backups`).
 
 **Retention:**
@@ -252,7 +252,7 @@ Run quarterly (or after any major infrastructure change):
 python scripts/dr_restore.py dr-drill
 ```
 
-Expected output: All workers show `✓ PASS` for both verify and restore columns.  
+Expected output: All workers show `✓ PASS` for both verify and restore columns.
 **Target:** 100% pass rate. Alert on any failure.
 
 Also verify the REST API:

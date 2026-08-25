@@ -1,6 +1,6 @@
 # Trancendos Platform — Naming Conventions
 
-Version: 1.1.0  
+Version: 1.1.0
 Applies to: all services, workers, containers, modules, and CF Workers in this repository.
 
 ---
