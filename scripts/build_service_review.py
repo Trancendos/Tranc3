@@ -690,7 +690,7 @@ def render_md(g: dict) -> str:
     a = L.append
     a("# Platform Service Review")
     a("")
-    a(f"Generated from repo state at `{g['commit']}`. Regenerate with ")
+    a(f"Generated from repo state at `{g['commit']}`. Regenerate with")
     a("`python scripts/build_service_review.py`; CI checks freshness with `--check`.")
     a("")
     a("## Where the estate stands")
