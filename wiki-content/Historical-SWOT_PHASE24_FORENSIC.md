@@ -1,8 +1,8 @@
 # SWOT Analysis & Forensic Assessment — Tranc3 Platform (Phase 24)
 
-**Date:** 2026-05-26  
-**Branch:** `claude/platform-enhancement-phase24`  
-**Assessed by:** Platform Engineering Audit  
+**Date:** 2026-05-26
+**Branch:** `claude/platform-enhancement-phase24`
+**Assessed by:** Platform Engineering Audit
 
 ---
 
@@ -143,5 +143,5 @@ Total new RAM budget: ~85MB on existing host.
 3. **Activate OTel in all workers** — Add `FastAPIInstrumentor.instrument_app(app)` + `OTLPSpanExporter` to worker startup
 4. **Install advanced packages** — `pip install ncps deap pygad pyswarms prometheus-client opentelemetry-api opentelemetry-sdk`
 5. **Run `make bootstrap`** to generate real secrets and initialise databases
-6. **Deploy NATS + Tempo** — `docker compose up -d nats tempo` 
+6. **Deploy NATS + Tempo** — `docker compose up -d nats tempo`
 7. **Enable Watchtower** for auto security patch deployment

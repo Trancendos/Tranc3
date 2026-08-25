@@ -1,8 +1,8 @@
 # Production forensic assessment (honest)
 
-**Date:** 2026-05-31 (re-review)  
-**Branch audited:** `main` (+ uncommitted forensic fixes)  
-**Method:** Static code review, production-gate pytest (52 tests incl. `test_p0_health_syntax`), compose/script cross-check, `make production-score`.  
+**Date:** 2026-05-31 (re-review)
+**Branch audited:** `main` (+ uncommitted forensic fixes)
+**Method:** Static code review, production-gate pytest (52 tests incl. `test_p0_health_syntax`), compose/script cross-check, `make production-score`.
 **Not verified in this environment:** Full `docker compose up` on Citadel, DNS cutover, pip-audit on Workshop.
 
 ---
@@ -36,7 +36,7 @@ The automated `make production-score` **repo-weighted** line (~94%) is **not** l
 | 9 | `pip-audit` 0 HIGH on Workshop | **Unverified** | `make dependency-audit` |
 | 10 | DNS → Traefik (CF off) | **Not done** | Ops |
 
-**P0 code readiness after fixes: ~96%** (gate green; auth syntax + entity blocks + deploy order fixed)  
+**P0 code readiness after fixes: ~96%** (gate green; auth syntax + entity blocks + deploy order fixed)
 **P0 live readiness: ~12%** — run `make generate-prod-env` → `make deploy-live` → `make monitor` on Citadel to reach ≥95%.
 
 ---
@@ -87,7 +87,7 @@ The automated `make production-score` **repo-weighted** line (~94%) is **not** l
 | CF decommission | **35** | DNS still external |
 | Live ops executed | **10** | No production host proof |
 
-**Honest weighted overall (P0-focused): ~82%**  
+**Honest weighted overall (P0-focused): ~82%**
 **Automated scorecard (pre-fix): ~95% — treat as ceiling for “repo artifacts”, not live prod.**
 
 ---
