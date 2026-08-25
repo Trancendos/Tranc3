@@ -1,5 +1,5 @@
 # POL-OPS-002 — Change Management Policy
-**Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED  
+**Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED
 **Effective:** 2026-06-12 | **Review Cycle:** Annual | **Approver:** Platform Owner
 
 ## 1. Purpose

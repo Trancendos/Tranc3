@@ -4,6 +4,19 @@
 # Run manually: pre-commit run --all-files
 # Updated: 2026-05 — Proactive Remediation & Automation
 
+# Hooks that cannot run inside pre-commit.ci's sandbox: it has no network
+# access and installs nothing from this repository. Each is still enforced
+# elsewhere — semgrep, safety and the security scanner in
+# .forgejo/workflows/security-scan.yml, the EA workbook in the Service
+# Topology job of .github/workflows/ci.yml.
+ci:
+  skip:
+    - semgrep
+    - python-safety-dependencies-check
+    - validate-ea-workbook
+    - security-scanner
+    - security-autofix
+
 repos:
   # ── Ruff (lint + format) ──────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -41,20 +54,15 @@ repos:
     rev: 1.9.4
     hooks:
       - id: bandit
-        args: [-c, pyproject.toml, -r, src]
+        # medium+ severity, matching the gate in
+        # .forgejo/workflows/security-scan.yml. Low findings are tracked by
+        # the ratchet in security-baseline.yml instead of blocking a commit.
+        args: [-c, pyproject.toml, -ll, --confidence-level, medium, -r, src, api.py]
+        # Scan the configured targets rather than the changed-file list:
+        # pre-commit's filenames bypass [tool.bandit] exclude_dirs, which
+        # dragged tests/ and scripts/ into every run.
+        pass_filenames: false
         additional_dependencies: ["bandit[toml]"]
-
-  # ── Python formatting ─────────────────────────────────────────────
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        language_version: python3.11
-
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
 
   # ── Semgrep (semantic code analysis) ──────────────────────────────
   - repo: https://github.com/semgrep/pre-commit
@@ -88,6 +96,10 @@ repos:
     hooks:
       - id: typos
         args: [--config, .typos.toml]
+        # Generated third-party artefacts. .typos.toml's files.extend-exclude
+        # is ignored when pre-commit passes explicit paths, so the exclusion
+        # has to be repeated here.
+        exclude: ^(reports/|\.security_learning/|\.security_telemetry/|\.secrets\.baseline$)
 
   # ── EA/CMDB workbook integrity ────────────────────────────────────
   - repo: local

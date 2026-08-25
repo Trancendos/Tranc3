@@ -1,6 +1,6 @@
 # Vault Runbook — Tranc3 Citadel
 
-HashiCorp Vault on the Citadel. Single-node file-backed storage.  
+HashiCorp Vault on the Citadel. Single-node file-backed storage.
 5 Shamir key shares, 3-of-5 threshold required to unseal.
 
 ---
@@ -79,7 +79,7 @@ docker compose logs vault
 ./scripts/vault-init.sh --load-env .env.production
 ```
 
-You will be prompted for an **encryption passphrase** (≥ 16 chars).  
+You will be prompted for an **encryption passphrase** (≥ 16 chars).
 This passphrase protects the Shamir keys file. **Store it in your password manager immediately.**
 
 The script:
@@ -102,7 +102,7 @@ cp deploy/vault/vault-tokens.enc /media/usb/tranc3-vault-tokens.enc
 shred -u deploy/vault/vault-keys.enc
 ```
 
-`vault-tokens.enc` can stay on the server (tokens can be regenerated with the root token).  
+`vault-tokens.enc` can stay on the server (tokens can be regenerated with the root token).
 `vault-keys.enc` **must not** remain on the server — if an attacker gets both the file and the server, they can unseal Vault.
 
 ---
@@ -254,20 +254,20 @@ vault audit enable file file_path=/vault/logs/audit.log
 
 ### Scenario: Lost encryption passphrase
 
-If you lose the passphrase that protects `vault-keys.enc`, you cannot decrypt the Shamir keys.  
-To recover: you need the unseal keys in plaintext (distributed copies held by key holders).  
+If you lose the passphrase that protects `vault-keys.enc`, you cannot decrypt the Shamir keys.
+To recover: you need the unseal keys in plaintext (distributed copies held by key holders).
 Collect 3 of the 5 keys, then use `vault-unseal.sh` interactively.
 
 ### Scenario: Vault sealed and key file deleted
 
-If `vault-keys.enc` was deleted without backup AND Vault is sealed:  
+If `vault-keys.enc` was deleted without backup AND Vault is sealed:
 The vault cannot be unsealed automatically. You need ≥ 3 key holders to provide their keys interactively.
 
 ---
 
 ## Prometheus Metrics
 
-Vault exposes `/v1/sys/metrics` for Prometheus scraping.  
+Vault exposes `/v1/sys/metrics` for Prometheus scraping.
 The telemetry block in `vault.hcl` enables this with a 30-second retention window.
 
 Prometheus config (`monitoring/prometheus.yml`) should include:

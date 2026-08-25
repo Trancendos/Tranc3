@@ -1,8 +1,8 @@
 # Phase 23 Enhancement Report — Tranc3 Infinity Ecosystem
 
-**Version**: 0.8.0  
-**Date**: 2025-05-24  
-**Status**: Complete  
+**Version**: 0.8.0
+**Date**: 2025-05-24
+**Status**: Complete
 
 ---
 
@@ -354,23 +354,23 @@ Version updated from 0.7.0 to 0.8.0 across:
 ## Architecture Decisions Record
 
 ### ADR-001: Tier Enum Naming Convention
-**Decision**: Use semantic names (Tier.HUMAN, Tier.PRIME) rather than positional names (Tier.TIER_0, Tier.TIER_2).  
+**Decision**: Use semantic names (Tier.HUMAN, Tier.PRIME) rather than positional names (Tier.TIER_0, Tier.TIER_2).
 **Rationale**: Semantic names are self-documenting and resilient to tier reordering.
 
 ### ADR-002: SentinelChannel Mapping for Bridges
-**Decision**: Map logical categories to existing channels (HEALTH→INFRASTRUCTURE, AI→NEXUS, CONFIG→PLATFORM, SERVICES→PILLARS).  
+**Decision**: Map logical categories to existing channels (HEALTH→INFRASTRUCTURE, AI→NEXUS, CONFIG→PLATFORM, SERVICES→PILLARS).
 **Rationale**: The SentinelChannel enum does not have HEALTH, AI, CONFIG, or SERVICES members. The chosen mappings align semantically with the available channels.
 
 ### ADR-003: ZKP Group Parameter Access
-**Decision**: Use module-level variables (_G, _P, _Q) instead of class-level attributes accessed via self.  
+**Decision**: Use module-level variables (_G, _P, _Q) instead of class-level attributes accessed via self.
 **Rationale**: Python's name mangling transforms `self._G` to `self._ZKPProver__G`, causing AttributeError. Module-level variables avoid this issue entirely.
 
 ### ADR-004: Bridge Graceful Degradation
-**Decision**: Bridges silently skip publishing when sentinel/bus dependencies are None rather than raising errors.  
+**Decision**: Bridges silently skip publishing when sentinel/bus dependencies are None rather than raising errors.
 **Rationale**: In development and testing environments, downstream services may not be available. Silent degradation allows the platform to function in reduced-capacity mode without cascading failures.
 
 ### ADR-005: CSS Custom Properties for Theming
-**Decision**: Implement theme switching through CSS custom properties on :root with data-theme attribute.  
+**Decision**: Implement theme switching through CSS custom properties on :root with data-theme attribute.
 **Rationale**: CSS custom properties enable instantaneous theme switching without JavaScript DOM manipulation, support inheritance and cascading, and provide a single source of truth for all design tokens.
 
 ---
