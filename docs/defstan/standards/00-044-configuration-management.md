@@ -1,8 +1,8 @@
 # DEF STAN 00-044 — Configuration Management
 
-**Standard:** DEF STAN 00-044 (adapted)  
-**Area Code:** CM  
-**Status Summary:** 5 COMPLIANT, 1 PARTIAL  
+**Standard:** DEF STAN 00-044 (adapted)
+**Area Code:** CM
+**Status Summary:** 5 COMPLIANT, 1 PARTIAL
 **Score:** ~91.7%
 
 ## Purpose
@@ -15,7 +15,7 @@ Establishes configuration management requirements: version control, schema migra
 
 All source code, config, IaC, and documentation in Forgejo. No direct production edits.
 
-**Evidence:** `.forgejo/workflows/`, `deploy/forgejo/` — The Workshop  
+**Evidence:** `.forgejo/workflows/`, `deploy/forgejo/` — The Workshop
 **Status:** COMPLIANT
 
 ---
@@ -24,7 +24,7 @@ All source code, config, IaC, and documentation in Forgejo. No direct production
 
 All schema changes through Alembic migrations in version control.
 
-**Evidence:** `migrations/`, `alembic.ini`  
+**Evidence:** `migrations/`, `alembic.ini`
 **Status:** COMPLIANT
 
 ---
@@ -33,7 +33,7 @@ All schema changes through Alembic migrations in version control.
 
 Dev/staging/production configs strictly separated.
 
-**Evidence:** `docker-compose.production.yml`, `docker-compose.development.yml`  
+**Evidence:** `docker-compose.production.yml`, `docker-compose.development.yml`
 **Status:** COMPLIANT
 
 ---
@@ -42,7 +42,7 @@ Dev/staging/production configs strictly separated.
 
 All infrastructure defined as code. No manual production infrastructure creation.
 
-**Evidence:** `docker-compose.production.yml` (38 workers + Traefik + Vault + Prometheus + Grafana + Loki + IPFS)  
+**Evidence:** `docker-compose.production.yml` (38 workers + Traefik + Vault + Prometheus + Grafana + Loki + IPFS)
 **Status:** COMPLIANT
 
 ---
@@ -51,7 +51,7 @@ All infrastructure defined as code. No manual production infrastructure creation
 
 All third-party dependency versions pinned. Lock files maintained. Renovate bot for updates.
 
-**Evidence:** `requirements.txt`, `package-lock.json`, `renovate.json`  
+**Evidence:** `requirements.txt`, `package-lock.json`, `renovate.json`
 **Status:** COMPLIANT
 
 ---
@@ -60,5 +60,5 @@ All third-party dependency versions pinned. Lock files maintained. Renovate bot 
 
 Significant changes go through documented change request process with approval before production.
 
-**Evidence:** `src/townhall/` (PRINCE2/ITIL governance), `.forgejo/workflows/` (PR workflow)  
+**Evidence:** `src/townhall/` (PRINCE2/ITIL governance), `.forgejo/workflows/` (PR workflow)
 **Status:** PARTIAL — PR workflow enforced; formal CAB process planned in The Town Hall

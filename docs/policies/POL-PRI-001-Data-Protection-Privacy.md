@@ -1,5 +1,5 @@
 # POL-PRI-001 — Data Protection & Privacy Policy
-**Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC  
+**Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC
 **Effective:** 2026-06-12 | **Review Cycle:** Annual | **Approver:** Platform Owner
 
 ## 1. Purpose
@@ -59,5 +59,5 @@ All data processors are bound by Data Processing Agreements (DPAs). The supplier
 This policy is reviewed annually or following significant changes to processing activities, legislation, or platform architecture.
 
 ---
-*Magna Carta Rule Reference: MC-RULE-002 (PII Protection), MC-RULE-009 (GDPR Transparency)*  
+*Magna Carta Rule Reference: MC-RULE-002 (PII Protection), MC-RULE-009 (GDPR Transparency)*
 *DEFSTAN Reference: REQ-PRI-001, REQ-PRI-002*

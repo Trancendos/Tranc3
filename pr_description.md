@@ -1,8 +1,13 @@
-💡 **What:** The optimization implemented
-The `run_cycle` method in `IntelligenceAgent` previously iterated through all ingestors, called `.fetch()` on each, and immediately called `self.ingest_many(items)`. `self.ingest_many()` internally loops through each item to ingest and classify it. This resulted in calling `.ingest_many()` N times (once per ingestor) rather than once on all items. The optimization simply aggregates the `fetch()` results from all ingestors into a single list `all_items` and then makes a single call to `self.ingest_many(all_items)`.
+🧹 log exceptions instead of passing silently during emergency stop
 
-🎯 **Why:** The performance problem it solves
-Executing DB operations or routing dispatches inside an outer loop creates an N+1 performance anti-pattern. While `ingest_many` currently loops over its input items locally, aggregating all items and calling `ingest_many` once prepares the ground for batched DB inserts, batched external API dispatches, or processing the workload more efficiently, reducing call overhead and potential latency buildup per ingestor.
+🎯 **What:**
+Instead of silently swallowing exceptions with `pass` during the `emergency_stop` method inside `src/entities/tiers.py`, the exceptions are now appropriately caught and logged using `logger.error()`.
 
-📊 **Measured Improvement:**
-Baseline tests mocking `run_cycle` with 100 dummy ingestors fetching 100 items each showed standard execution taking around 1.01 seconds. When testing a mocked batch query setup, comparing looping N times versus 1 aggregated batch, the execution time marginally improved from ~0.077 seconds to ~0.072 seconds on dummy memory-bound processing. While the current processing is CPU-bound so the gain is minimal (~6-10% reduced call overhead), the change is structurally critical to avoid actual N+1 I/O when `ingest_many` transitions to hitting the database.
+💡 **Why:**
+Silently suppressing exceptions makes debugging very difficult and masks potential errors that occur during emergency stop. By logging the error with the ID of the Prime/AI that failed to stop properly, we improve the maintainability and observability of the codebase.
+
+✅ **Verification:**
+Verified by running `pytest tests/test_models_governance_tiers.py` and checking with `ruff` to ensure correctness without regressions.
+
+✨ **Result:**
+Clearer diagnostics and logging outputs during emergency stops, retaining the exact same functional behavior while improving code health and debuggability.
