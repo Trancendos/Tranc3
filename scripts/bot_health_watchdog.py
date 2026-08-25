@@ -83,7 +83,7 @@ def _is_degraded_for_bot(bot_name: str, result: CheckRunResult) -> bool:
         return False
     phrases = KNOWN_BOTS.get(bot_name, ())
     # Include title as well since some error messages are in the check run title instead of the summary
-    haystack = (str(result.summary_text) + " " + str(getattr(result, 'title', ''))).lower()
+    haystack = (str(result.summary_text) + " " + result.title).lower()
     return any(phrase in haystack for phrase in phrases)
 
 
