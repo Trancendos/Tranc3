@@ -1,9 +1,9 @@
 # Tranc3 API Reference
 
-> **Version:** 0.1.0  
-> **Base URL:** `http://localhost:8000`  
-> **Authentication:** Bearer token (JWT) for protected endpoints  
-> **Protocol:** HTTP/REST + WebSocket  
+> **Version:** 0.1.0
+> **Base URL:** `http://localhost:8000`
+> **Authentication:** Bearer token (JWT) for protected endpoints
+> **Protocol:** HTTP/REST + WebSocket
 
 ---
 
