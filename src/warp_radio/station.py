@@ -8,6 +8,7 @@ Lead AI: Rocking Ricki
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -36,8 +37,8 @@ class StreamSource:
 
 @dataclass
 class WarpRadioConfig:
-    icecast_url: str = "http://localhost:8000"
-    icecast_admin_password: str = "hackme"
+    icecast_url: str = os.getenv("ICECAST_URL", "http://localhost:8000")
+    icecast_admin_password: str = os.getenv("ICECAST_ADMIN_PASSWORD", "hackme")
     mount_point: str = "/stream"
     max_listeners: int = 100
     default_format: str = "mp3"
