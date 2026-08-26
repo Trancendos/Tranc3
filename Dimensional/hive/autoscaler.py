@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import operator
 import time
 import uuid
 from collections import defaultdict, deque
@@ -185,10 +186,12 @@ class MetricsCollector:
             n = len(recent)
             xs = list(range(n))
             ys = [m.load_factor for m in recent]
+
             sum_x = sum(xs)
             sum_y = sum(ys)
-            sum_xy = sum(x * y for x, y in zip(xs, ys, strict=True))
-            sum_xx = sum(x * x for x in xs)
+            # Optimized vector dot product using C-based sum(map(...))
+            sum_xy = sum(map(operator.mul, xs, ys))
+            sum_xx = sum(map(operator.mul, xs, xs))
             denom = n * sum_xx - sum_x * sum_x
             if denom == 0:
                 return 0.0
