@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "3686a2b",
+  "commit": "e614935",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-26T08:40:23.175219+00:00",
+  "generated_at": "2026-08-26T08:45:24.630973+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",

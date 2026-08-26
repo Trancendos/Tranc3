@@ -1,6 +1,6 @@
 # Platform Service Review
 
-Generated from repo state at `3686a2b`. Regenerate with
+Generated from repo state at `e614935`. Regenerate with
 `python scripts/build_service_review.py`; CI checks freshness with `--check`.
 
 ## Where the estate stands
