@@ -18,3 +18,6 @@
 ## 2024-05-15 - [Icon-only Buttons Accessibility]
 **Learning:** Icon-only buttons without explicit text fail `axe-core` accessibility tests.
 **Action:** Always add an `aria-label` attribute to icon-only buttons to provide an accessible name for screen readers, and add `aria-hidden="true"` to the inner SVG elements to avoid redundant announcements.
+## 2024-08-24 - Interactive Elements in Hover-Only Containers
+**Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
+**Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
