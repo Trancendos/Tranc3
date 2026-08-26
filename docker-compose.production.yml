@@ -3180,7 +3180,7 @@ services:
   # published through the Cloudflare tunnel. This container reaches it over the
   # LAN; nothing here exposes it.
   ipmi-exporter:
-    image: prometheuscommunity/ipmi-exporter:v1.9.0
+    image: prometheuscommunity/ipmi-exporter:v1.9.0@sha256:3e9f80832dee163d77e872934915ddb58b81bbafb4875c25663cfdf8a846e737
     container_name: tranc3-ipmi-exporter
     restart: unless-stopped
     command:
