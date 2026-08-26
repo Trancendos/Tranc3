@@ -103,7 +103,7 @@ export function WorkflowCard({
       </div>
 
       {/* Actions */}
-      <div className="mt-3 flex gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+      <div className="mt-3 flex gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
         {onRun && (
           <button
             onClick={() => onRun(workflowId)}

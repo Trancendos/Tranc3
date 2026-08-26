@@ -18,3 +18,6 @@
 ## 2024-05-15 - [Icon-only Buttons Accessibility]
 **Learning:** Icon-only buttons without explicit text fail `axe-core` accessibility tests.
 **Action:** Always add an `aria-label` attribute to icon-only buttons to provide an accessible name for screen readers, and add `aria-hidden="true"` to the inner SVG elements to avoid redundant announcements.
+## 2024-05-18 - [Hidden UI Actions in Cards]
+**Learning:** Tailwind`s `group-hover:opacity-100` pattern for revealing action buttons is inaccessible to keyboard users unless paired with `focus-within:opacity-100`.
+**Action:** Always add `focus-within:opacity-100` to containers using `group-hover:opacity-100` to ensure interactive elements are visible when they receive keyboard focus.
