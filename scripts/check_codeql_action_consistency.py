@@ -36,8 +36,18 @@ WORKFLOW_DIR = Path(__file__).resolve().parent.parent / ".github" / "workflows"
 # `uses: github/codeql-action/<sub-action>@<ref>` with an optional trailing
 # `# comment`. Kept as a regex rather than a YAML parse on purpose: this must
 # work on a file that does not parse cleanly, and `uses:` is unambiguous.
+#
+# The optional quote matters. YAML allows `uses: "github/codeql-action/init@v4"`
+# and `uses: 'github/codeql-action/init@v4"'` just as readily as the bare form,
+# and the first version of this pattern matched only bare scalars. A quoted pin
+# was therefore not compared against anything -- the check would print OK for a
+# file whose pins disagreed, which is precisely the failure it exists to catch.
+# The closing quote is excluded from `ref` so `init@v4"` never reads as a
+# distinct ref from `init@v4`.
 USES_RE = re.compile(
-    r"^\s*(?:-\s*)?uses:\s*github/codeql-action/(?P<sub>[\w-]+)@(?P<ref>[^\s#]+)",
+    r"^\s*(?:-\s*)?uses:\s*"
+    r"(?P<q>[\"'])?"
+    r"github/codeql-action/(?P<sub>[\w-]+)@(?P<ref>[^\s#\"']+)",
 )
 
 

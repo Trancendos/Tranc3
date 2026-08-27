@@ -17,7 +17,7 @@ import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -322,7 +322,13 @@ class UpdateListingRequest(BaseModel):
     quantity: Optional[float] = Field(None, gt=0)
     price_per_unit: Optional[float] = Field(None, ge=0)
     description: Optional[str] = None
-    status: Optional[str] = None
+    # Constrained rather than free text. Only two statuses exist anywhere in
+    # this worker: rows are created 'active' (line ~266) and a purchase moves
+    # them to 'sold' when the quantity reaches zero (line ~448). Browsing
+    # (`WHERE status='active'`) and purchasing both filter on 'active', so a
+    # PATCH setting any other string returned 200 while making the listing
+    # invisible to buyers and impossible to purchase -- with nothing to say so.
+    status: Optional[Literal["active", "sold"]] = None
 
 
 @_router.get("/listings/{listing_id}")

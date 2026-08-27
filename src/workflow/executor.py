@@ -256,9 +256,14 @@ class WorkflowExecutor:
             # disconnected workflow therefore left its asyncio.Event behind in
             # a long-lived executor, and a later cancel() could report success
             # for an execution that had already failed here.
-            failed = await self._handle_sort_failure(state, execution_id, exc)
-            self._cancel_flags.pop(execution_id, None)
-            return failed
+            # In a finally, not after the await: _handle_sort_failure awaits
+            # event_bus.publish, and a CancelledError there would otherwise skip
+            # the pop and leave the flag behind -- the same leak, via a narrower
+            # door.
+            try:
+                return await self._handle_sort_failure(state, execution_id, exc)
+            finally:
+                self._cancel_flags.pop(execution_id, None)
 
         # Seed initial outputs — root nodes will use initial_inputs
         node_outputs: Dict[str, Any] = {}

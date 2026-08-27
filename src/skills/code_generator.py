@@ -758,7 +758,10 @@ class AdvancedCodeGenerator:
             logic_lines.extend(["with open(input, 'r') as f:", "    data = f.read()"])
 
         # 2. Processing logic
-        if "count" in desc or "rows" in desc or "length" in desc:
+        # Whole words: substring matching fired "Count:" on any description
+        # mentioning a discount or an account.
+        desc_words = set(re.findall(r"[a-z]+", desc))
+        if desc_words & {"count", "rows", "length"}:
             logic_lines.append("typer.echo(f'Count: {len(data)}')")
 
         # 3. Output logic
@@ -814,6 +817,12 @@ class AdvancedCodeGenerator:
             "any": "Any",
         }
 
+        # Hard keywords only. `keyword.issoftkeyword` was also checked here at
+        # first, which was wrong: soft keywords (`match`, `case`, `type`, `_`)
+        # are contextual and perfectly legal as annotation targets --
+        # `class M: match: str` parses. Renaming them bought nothing and
+        # silently changed the generated API's field names.
+        emitted: dict[str, str] = {}
         for name, type_str in fields.items():
             py_type = type_map.get(type_str, "Any")
             # The field-name pattern above happily matches Python keywords, so a
@@ -821,9 +830,15 @@ class AdvancedCodeGenerator:
             # model body -- a SyntaxError, not a bad name. A trailing underscore
             # is the documented convention for this collision (PEP 8) and keeps
             # the field rather than silently dropping it.
-            if keyword.iskeyword(name) or keyword.issoftkeyword(name):
-                name = f"{name}_"
-            lines.append(f"{name}: {py_type}")
+            safe = f"{name}_" if keyword.iskeyword(name) else name
+            # ...but that rename can collide with a field already called
+            # `class_`, and dict-ordered emission would have let the second
+            # annotation overwrite the first with no error at all. Suffix until
+            # free, so both survive and neither is silently lost.
+            while safe in emitted and emitted[safe] != name:
+                safe = f"{safe}_"
+            emitted[safe] = name
+            lines.append(f"{safe}: {py_type}")
 
         return "\n    ".join(lines)
 
