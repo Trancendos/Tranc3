@@ -786,7 +786,15 @@ def render_md(g: dict) -> str:
     a("")
     a(", ".join(f"`{s}`" for s in running) or "_none_")
     a("")
-    return "\n".join(L) + "\n"
+    # Normalise before returning so this generator and pre-commit cannot fight
+    # over the same file. pre-commit.ci's trailing-whitespace and
+    # end-of-file-fixer hooks strip exactly this, and it pushed an autofix
+    # commit doing so; the next `build_service_review.py` run put it straight
+    # back, so the two churned against each other indefinitely. `--check`
+    # never caught it because it compares parsed content, not bytes.
+    # Stripping per line rather than fixing the one offending f-string keeps
+    # the invariant true for any line added later.
+    return "\n".join(line.rstrip() for line in L).rstrip("\n") + "\n"
 
 
 def main() -> int:
