@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "cffb40b0",
+  "commit": "598f684a",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-22T16:56:26.645914+00:00",
+  "generated_at": "2026-08-27T18:58:22.074801+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -1987,7 +1987,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "prometheuscommunity/ipmi-exporter:v1.9.0",
+      "image": "prometheuscommunity/ipmi-exporter:v1.9.0@sha256:3e9f80832dee163d77e872934915ddb58b81bbafb4875c25663cfdf8a846e737",
       "lifecycle": "INFRA",
       "service": "ipmi-exporter"
     },
@@ -2183,7 +2183,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/berriai/litellm:main-latest@sha256:3a1980074ff2ac13883e0ffee1bebec345d8addd004be251079cee173b0e8305",
+      "image": "ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f",
       "lifecycle": "INFRA",
       "service": "litellm"
     },

@@ -1,7 +1,7 @@
 # Intellectual Property Register Entry
 
-**Asset:** {{asset}}  
-**Type:** {{ip_type}}  
+**Asset:** {{asset}}
+**Type:** {{ip_type}}
 **Owner:** Trancendos / {{owner}}
 
 ## Licence

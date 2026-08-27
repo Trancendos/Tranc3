@@ -2037,7 +2037,7 @@ services:
   #            → mistral → huggingface (x8 rotation with hard stops)
   # ══════════════════════════════════════════════════════════════════════════
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest@sha256:3a1980074ff2ac13883e0ffee1bebec345d8addd004be251079cee173b0e8305
+    image: ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f
     container_name: trancendos-litellm
     command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "4"]
     volumes:
@@ -3180,7 +3180,7 @@ services:
   # published through the Cloudflare tunnel. This container reaches it over the
   # LAN; nothing here exposes it.
   ipmi-exporter:
-    image: prometheuscommunity/ipmi-exporter:v1.9.0
+    image: prometheuscommunity/ipmi-exporter:v1.9.0@sha256:3e9f80832dee163d77e872934915ddb58b81bbafb4875c25663cfdf8a846e737
     container_name: tranc3-ipmi-exporter
     restart: unless-stopped
     command:

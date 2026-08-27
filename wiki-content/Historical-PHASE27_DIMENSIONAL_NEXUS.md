@@ -1,7 +1,7 @@
 # Phase 27: Three-Bridge Architecture — Nexus, HIVE, and InfinityBridge
 
-**Branch:** `phase-24/aeonmind-polyglot-v0.9.0`  
-**Date:** 2025-05-24  
+**Branch:** `phase-24/aeonmind-polyglot-v0.9.0`
+**Date:** 2025-05-24
 **Status:** Complete — 3012 tests passing (67 Nexus + 53 HIVE + 60 Three-Bridge Integration + 37 Coordinator + 2795 platform), full suite green
 
 ---
@@ -69,8 +69,8 @@ These are **three separate systems**, each purpose-built for its traffic type. T
 
 The InfinityBridge handles all user context and human movement across the platform. Users traversing between Admin, Arcadia, and The Citadel use the light bridges of the InfinityBridge.
 
-**Package:** `Dimensional/infinity/bridge/`  
-**Port:** 8070  
+**Package:** `Dimensional/infinity/bridge/`
+**Port:** 8070
 **Worker Service:** `workers/infinity-bridge-service/`
 
 **Defined in:** `Dimensional/infinity/nomenclature.py`
@@ -80,7 +80,7 @@ InfinityLocation.BRIDGE  # "infinity_bridge"
 SentinelChannel.BRIDGE  # "bridge" — Bridge User Events
 ```
 
-**Transfers:** Users  
+**Transfers:** Users
 **Description:** User transfer system within Infinity — connects Admin, Arcadia, and The Citadel
 
 ### InfinityBridge Subsystems
@@ -153,7 +153,7 @@ Bidirectional event bridge between InfinityBridge and Sentinel Station. User tra
 
 The Nexus is the dedicated routing and coordination system for AI, Agent, and Bot traffic (Tier 3–5). It provides causal event ordering, tier-aware access control, real-time health aggregation, cross-Nexus event routing, and a live WebSocket dashboard.
 
-**Package:** `Dimensional/nexus/`  
+**Package:** `Dimensional/nexus/`
 **Port:** 8050
 
 ### Nexus Subsystems
@@ -251,7 +251,7 @@ Bidirectional event bridge between The Nexus and Sentinel Station. AI/Agent/Bot 
 
 The HIVE is the dedicated routing and coordination system for data movement and swarm systems. It handles data pipelines, chunk routing with priority and replication, distributed swarm coordination for data processing, and flow monitoring with throughput/latency tracking.
 
-**Package:** `Dimensional/hive/`  
+**Package:** `Dimensional/hive/`
 **Port:** 8060
 
 ### HIVE Subsystems
@@ -642,7 +642,7 @@ InfinityBridge is tested through the cross-bridge integration test suite coverin
 | TestCoordinatorSingleton | 1 | Singleton pattern |
 | TestAllThreeBridgesThroughCoordinator | 4 | User traffic, unified status, custom instances, stats |
 
-**Total new tests: 217 (67 + 53 + 60 + 37)**  
+**Total new tests: 217 (67 + 53 + 60 + 37)**
 **Full suite: 3012 passed, 21 skipped**
 
 ---

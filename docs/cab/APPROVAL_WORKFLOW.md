@@ -1,10 +1,10 @@
 # Change Advisory Board — Approval Workflow
 
-**Document ID:** CAB-003  
-**DEF STAN ref:** REQ-CM-006  
-**Owner:** The Town Hall  
-**Version:** 1.0  
-**Date:** 2026-06-06  
+**Document ID:** CAB-003
+**DEF STAN ref:** REQ-CM-006
+**Owner:** The Town Hall
+**Version:** 1.0
+**Date:** 2026-06-06
 
 ---
 
