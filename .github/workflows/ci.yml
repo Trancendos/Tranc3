@@ -105,6 +105,13 @@ jobs:
       - name: Framework pin alignment
         run: python scripts/align_framework_pins.py --check
 
+      # Guards the invariant that took CodeQL red on main for three days:
+      # init stamps its config with its own release version and analyze
+      # rejects a config from a different one, so every
+      # github/codeql-action/* pin inside one workflow file must match.
+      - name: CodeQL action pin consistency
+        run: python scripts/check_codeql_action_consistency.py
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 

@@ -47,7 +47,15 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
+        # Every github/codeql-action/* step in this job must resolve to the same
+        # release: init writes a config stamped with its own version and analyze
+        # refuses a config written by a different one ("Loaded a configuration
+        # file for version '4.36.2', but running version '4.37.7'"). That split
+        # is what took CodeQL red on main from 2026-08-22 to 2026-08-25, and a
+        # pin bump silently dropped this comment once already -- so the rule is
+        # now enforced by scripts/check_codeql_action_consistency.py in ci.yml
+        # rather than trusted to this note.
+        uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -56,7 +64,7 @@ jobs:
 
       - name: Perform CodeQL Analysis
         id: analyze
-        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
+        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         with:
           category: "/language:${{ matrix.language }}"
           output: sarif-results
@@ -92,7 +100,7 @@ jobs:
 
       - name: Upload SARIF results
         id: upload_sarif
-        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         with:
           sarif_file: sarif-results/${{ matrix.sarif-name }}.sarif
           category: "/language:${{ matrix.language }}"
