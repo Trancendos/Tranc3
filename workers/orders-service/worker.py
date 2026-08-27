@@ -295,11 +295,16 @@ async def browse_listings(
         conditions.append("seller_id=?")
         params.append(seller_id)
 
+    # `conditions` holds only literal fragments appended by the code above
+    # ("resource_type=?", "price_per_unit >= ?", ...); every caller-supplied
+    # value goes into `params` and reaches SQLite as a bound `?`. The scanners
+    # match on the f-string, not on what is interpolated, so both lines are
+    # suppressed with the reason recorded rather than left to fail the gate.
     where_clause = " AND ".join(conditions)
     listing_sql = (
-        f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608
+        f"SELECT * FROM listings WHERE {where_clause} ORDER BY price_per_unit ASC LIMIT ? OFFSET ?"  # noqa: S608  # nosec B608
     )
-    count_sql = f"SELECT COUNT(*) FROM listings WHERE {where_clause}"  # noqa: S608
+    count_sql = f"SELECT COUNT(*) FROM listings WHERE {where_clause}"  # noqa: S608  # nosec B608
 
     conn = _get_conn()
     try:
@@ -370,11 +375,13 @@ async def update_listing(listing_id: str, req: UpdateListingRequest):
 
         params.append(listing_id)
 
-        update_sql = f"UPDATE listings SET {', '.join(updates)} WHERE id=?"  # noqa: S608
+        # Same shape as the search query above: `updates` holds only literal
+        # "column=?" fragments, values ride in `params`. The nosec has to sit on
+        # the f-string line -- that is the line bandit reports -- not on the
+        # execute below, where it was previously and therefore did nothing.
+        update_sql = f"UPDATE listings SET {', '.join(updates)} WHERE id=?"  # noqa: S608  # nosec B608
         # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query
-        # The 'updates' list contains hardcoded column assignments appended directly by the server,
-        # with user inputs passed as parameterized placeholders.
-        conn.execute(update_sql, params)  # nosec B608
+        conn.execute(update_sql, params)
         conn.commit()
 
         updated_row = conn.execute("SELECT * FROM listings WHERE id=?", (listing_id,)).fetchone()
@@ -399,6 +406,13 @@ async def delete_listing(listing_id: str):
             if not row:
                 raise HTTPException(404, "Listing not found")
             cur.execute("DELETE FROM listings WHERE id=?", (listing_id,))
+    except sqlite3.IntegrityError as exc:
+        # _get_conn sets PRAGMA foreign_keys=ON and orders.listing_id REFERENCES
+        # listings(id), so deleting a listing an order points at raises here.
+        # _cursor rolls back and re-raises, which FastAPI would otherwise turn
+        # into a 500 -- a server error for a well-formed request the server is
+        # simply refusing. 409 says what actually happened.
+        raise HTTPException(409, "Listing cannot be deleted while orders reference it") from exc
     finally:
         conn.close()
 

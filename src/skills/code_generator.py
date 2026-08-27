@@ -5,6 +5,7 @@ with AST analysis, smell detection, and autonomous self-improvement.
 
 import ast
 import hashlib
+import keyword
 import logging
 import re
 import textwrap
@@ -417,7 +418,7 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
         "fastapi_router": textwrap.dedent("""\
             from fastapi import APIRouter, HTTPException, status
             from pydantic import BaseModel
-            from typing import List, Optional
+            from typing import Any, List, Optional
 
             router = APIRouter(prefix="/{prefix}", tags=["{tag}"])
 
@@ -784,7 +785,12 @@ class AdvancedCodeGenerator:
         if len(logic_lines) <= 2:
             logic_lines.append("pass")
 
-        return "\n                ".join(logic_lines)
+        # Unindented on purpose. The caller re-indents to whatever column the
+        # target template's placeholder sits at -- see _apply_substitutions.
+        # This used to join with sixteen spaces, which is the indentation the
+        # fastapi_handler body needs, not the four the typer_cli body needs, so
+        # every generated CLI raised IndentationError on its second logic line.
+        return "\n".join(logic_lines)
 
     def _extract_pydantic_fields(self, description: str) -> str:
         """Extract Pydantic model fields from description using regex."""
@@ -810,6 +816,13 @@ class AdvancedCodeGenerator:
 
         for name, type_str in fields.items():
             py_type = type_map.get(type_str, "Any")
+            # The field-name pattern above happily matches Python keywords, so a
+            # description mentioning "class: str" produced `class: str` in the
+            # model body -- a SyntaxError, not a bad name. A trailing underscore
+            # is the documented convention for this collision (PEP 8) and keeps
+            # the field rather than silently dropping it.
+            if keyword.iskeyword(name) or keyword.issoftkeyword(name):
+                name = f"{name}_"
             lines.append(f"{name}: {py_type}")
 
         return "\n    ".join(lines)
@@ -838,7 +851,19 @@ class AdvancedCodeGenerator:
         # template, CLI or not.
         if "import typer" in template:
             cli_logic = self._translate_nl_to_cli_logic(request.description)
-            template = template.replace("# TODO: implement", cli_logic)
+            # Re-indent to the placeholder's own column rather than assuming
+            # one. str.replace keeps the first line where the placeholder was
+            # and leaves every later line at column 0, so they must be padded
+            # to match; deriving it here keeps this correct if the template's
+            # nesting ever changes.
+            marker = "# TODO: implement"
+            indent = ""
+            for line in template.splitlines():
+                if marker in line:
+                    indent = line[: len(line) - len(line.lstrip())]
+                    break
+            cli_logic = ("\n" + indent).join(cli_logic.splitlines())
+            template = template.replace(marker, cli_logic)
 
         res = (
             template.replace("{prefix}", prefix)

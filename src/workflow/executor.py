@@ -251,7 +251,14 @@ class WorkflowExecutor:
         try:
             layers = _topological_sort(workflow.nodes, workflow.edges)
         except ValueError as exc:
-            return await self._handle_sort_failure(state, execution_id, exc)
+            # This returns before the try/finally below, so the finally's
+            # _cancel_flags.pop never runs on this path. Every cyclic or
+            # disconnected workflow therefore left its asyncio.Event behind in
+            # a long-lived executor, and a later cancel() could report success
+            # for an execution that had already failed here.
+            failed = await self._handle_sort_failure(state, execution_id, exc)
+            self._cancel_flags.pop(execution_id, None)
+            return failed
 
         # Seed initial outputs — root nodes will use initial_inputs
         node_outputs: Dict[str, Any] = {}
@@ -367,7 +374,13 @@ class WorkflowExecutor:
                 "elapsed_ms": state.elapsed_ms,
             },
         )
-        logger.info("Workflow '%s' completed in %.1fms.", workflow.name, state.elapsed_ms)
+        # Workflow names are attacker-supplied via the registration route, and
+        # the sibling log at the start of this method already sanitises them.
+        logger.info(
+            "Workflow '%s' completed in %.1fms.",
+            sanitize_for_log(workflow.name),
+            state.elapsed_ms,
+        )
         return state
 
     async def _handle_execution_failure(
