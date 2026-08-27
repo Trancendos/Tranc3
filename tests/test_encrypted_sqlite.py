@@ -9,6 +9,20 @@ import sqlite3
 
 import pytest
 
+# These must be set before the import below: encrypted_sqlite reads both at
+# module scope. They cannot move into a fixture for that reason -- but they were
+# also never restored, so this module left SECRET_KEY changed for the whole
+# session. conftest.py's _assert_shared_env_unchanged guard exists precisely to
+# catch that and did: it failed at teardown of tests/core/test_dependencies.py,
+# and the drifted key also flipped
+# tests/test_api.py::TestChat::test_chat_known_location_with_unmapped_ai_falls_back
+# to resolve 'fiddsy' instead of 'tranc3-creative'. Whether it bites at all
+# depends on collection order, which is what made it look intermittent.
+_PRIOR_ENV = {
+    "SECRET_KEY": os.environ.get("SECRET_KEY"),
+    "TRANC3_DB_ENCRYPTION_DISABLED": os.environ.get("TRANC3_DB_ENCRYPTION_DISABLED"),
+}
+
 os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
 os.environ["SECRET_KEY"] = "test-secret-key-for-encrypted-sqlite-unit-tests-32chars"
 
@@ -23,6 +37,18 @@ from src.database.encrypted_sqlite import (  # noqa: E402
     encrypt_field,
     invalidate_key_cache,
 )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _restore_shared_env():
+    """Put the env back exactly as it was, so later modules are not poisoned."""
+    yield
+    for name, prior in _PRIOR_ENV.items():
+        if prior is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = prior
+    invalidate_key_cache()
 
 
 @pytest.fixture()
