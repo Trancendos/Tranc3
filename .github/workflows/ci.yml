@@ -112,6 +112,15 @@ jobs:
       - name: CodeQL action pin consistency
         run: python scripts/check_codeql_action_consistency.py
 
+      # Seven workflows are duplicated across .github/ and .forgejo/.
+      # production-gate.yml's own header declares they should differ only in
+      # the header, the runner, and the hardening -- and nothing enforced that,
+      # so the Forgejo copy of the merge gate had silently lost the dependency
+      # vulnerability census. Forgejo being dormant is what hid it: the weaker
+      # gate is the one that takes over when The Workshop is stood back up.
+      - name: Workflow drift (GitHub vs Forgejo copies)
+        run: python scripts/check_workflow_drift.py --check
+
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 

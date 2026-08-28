@@ -19,6 +19,15 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      # The vulnerability census audits five npm surfaces as well as the Python
+      # manifest, so the gate needs a Node it can rely on rather than whatever
+      # the runner image happens to carry. Pinned for the same reason the
+      # Python tooling below is pinned: a gate whose toolchain floats can go
+      # red with no change in this repo.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt -q
@@ -94,7 +103,7 @@ jobs:
       - name: Docker compose config (production)
         run: |
           if ! command -v docker >/dev/null 2>&1; then
-            echo "SKIP: docker not available on runner (compose YAML validated via citadel_compose_validate.py)"
+            echo "SKIP: docker not available (compose YAML validated via citadel_compose_validate.py)"
             exit 0
           fi
           # Validate the compose *schema*, independently of whether this host has
@@ -113,6 +122,7 @@ jobs:
           grep -o '\${[A-Za-z0-9_]*:?[^}]*}' docker-compose.production.yml \
             | sed 's/^\${//; s/:?.*//' | sort -u \
             | sed 's/$/=ci-validation-placeholder/' > "$env_file"
+          echo "Synthesised $(wc -l < "$env_file") placeholder variables for validation."
           if [ ! -f .env.production ]; then
             stub_env=1
             : > .env.production
@@ -130,6 +140,9 @@ jobs:
 
       - name: Pre-deploy quality gate (critical only)
         run: python3 scripts/pre_deploy_quality_gate.py
+
+      - name: Dependency vulnerability census
+        run: python3 scripts/vulnerability_census.py --check --scope core
 
       - name: Security dimension score
         run: python3 scripts/security_score.py --min-percent 90
