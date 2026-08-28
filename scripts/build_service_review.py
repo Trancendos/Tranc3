@@ -822,6 +822,36 @@ def main() -> int:
         print("service review: up to date")
         return 0
 
+    # Idempotent write. `generated_at` and `commit` change on every run and are
+    # deliberately ignored by --check above, so they carry no signal the gate
+    # uses -- but they were still rewritten every time, which made this pair of
+    # generated files the single largest source of merge conflicts in the repo.
+    # A test-merge of the open PRs against main put SERVICE-REVIEW.md and
+    # service-review.json in 8 of them, in most cases as the *only* conflict:
+    # two branches that touched entirely unrelated code still collided here,
+    # purely on a timestamp and a short SHA.
+    #
+    # So when the substantive content is unchanged, carry the committed values
+    # forward and leave the files byte-identical. Regenerating on a branch that
+    # changed nothing real now produces no diff at all, and provenance is still
+    # recorded whenever the content genuinely moves.
+    if OUT_JSON.is_file() and OUT_MD.is_file():
+        try:
+            prev = json.loads(OUT_JSON.read_text())
+        except json.JSONDecodeError:
+            prev = None
+        if prev is not None:
+            a, b = dict(prev), dict(g)
+            for volatile in ("generated_at", "commit"):
+                a.pop(volatile, None)
+                b.pop(volatile, None)
+            if a == b:
+                for volatile in ("generated_at", "commit"):
+                    if volatile in prev:
+                        g[volatile] = prev[volatile]
+                js = json.dumps(g, indent=2, sort_keys=True)
+                md = render_md(g)
+
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(js + "\n", encoding="utf-8")
     OUT_MD.write_text(md, encoding="utf-8")
