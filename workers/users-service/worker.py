@@ -274,10 +274,7 @@ async def create_user(user: UserCreate):
     prefs_json = json.dumps(user.preferences)
     try:
         db.execute(
-            """INSERT INTO users
-               (user_id, username, email, display_name, role, preferences,
-                bio, avatar_url, timezone, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            "INSERT INTO users (user_id, username, email, display_name, role, preferences, bio, avatar_url, timezone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 user_id,
                 user.username,
@@ -327,19 +324,38 @@ async def list_users(
     active_only: bool = Query(default=False),
 ):
     offset = (page - 1) * per_page
-    conditions = []
     params: list = []
-    if role:
-        conditions.append("role = ?")
+
+    if role and active_only:
         params.append(role)
-    if active_only:
-        conditions.append("is_active = 1")
-    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    total = db.execute(f"SELECT COUNT(*) as c FROM users {where}", tuple(params)).fetchone()["c"]
-    rows = db.execute(
-        f"SELECT * FROM users {where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        tuple(params) + (per_page, offset),
-    ).fetchall()
+        total = db.execute(
+            "SELECT COUNT(*) as c FROM users WHERE role = ? AND is_active = 1", tuple(params)
+        ).fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE role = ? AND is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            tuple(params) + (per_page, offset),
+        ).fetchall()
+    elif role:
+        params.append(role)
+        total = db.execute(
+            "SELECT COUNT(*) as c FROM users WHERE role = ?", tuple(params)
+        ).fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE role = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            tuple(params) + (per_page, offset),
+        ).fetchall()
+    elif active_only:
+        total = db.execute("SELECT COUNT(*) as c FROM users WHERE is_active = 1").fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
+    else:
+        total = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
     return UserListResponse(
         users=[_row_to_response(r) for r in rows],
         total=total,
@@ -379,29 +395,38 @@ async def update_user(user_id: str, update: UserUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
-    updates: dict = {}
-    if update.display_name is not None:
-        updates["display_name"] = update.display_name
-    if update.email is not None:
-        updates["email"] = str(update.email)
-    if update.role is not None:
-        updates["role"] = update.role
-    if update.preferences is not None:
-        updates["preferences"] = json.dumps(update.preferences)
-    if update.is_active is not None:
-        updates["is_active"] = 1 if update.is_active else 0
-    if update.bio is not None:
-        updates["bio"] = update.bio
-    if update.avatar_url is not None:
-        updates["avatar_url"] = update.avatar_url
-    if update.timezone is not None:
-        updates["timezone"] = update.timezone
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    display_name = (
+        update.display_name if update.display_name is not None else existing["display_name"]
+    )
+    email = str(update.email) if update.email is not None else existing["email"]
+    role = update.role if update.role is not None else existing["role"]
+    preferences = (
+        json.dumps(update.preferences)
+        if update.preferences is not None
+        else existing["preferences"]
+    )
+    is_active = (
+        (1 if update.is_active else 0) if update.is_active is not None else existing["is_active"]
+    )
+    bio = update.bio if update.bio is not None else existing["bio"]
+    avatar_url = update.avatar_url if update.avatar_url is not None else existing["avatar_url"]
+    timezone_val = update.timezone if update.timezone is not None else existing["timezone"]
+    updated_at = datetime.now(timezone.utc).isoformat()
 
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
     db.execute(
-        f"UPDATE users SET {set_clause} WHERE user_id = ?",
-        (*updates.values(), user_id),
+        "UPDATE users SET display_name = ?, email = ?, role = ?, preferences = ?, is_active = ?, bio = ?, avatar_url = ?, timezone = ?, updated_at = ? WHERE user_id = ?",
+        (
+            display_name,
+            email,
+            role,
+            preferences,
+            is_active,
+            bio,
+            avatar_url,
+            timezone_val,
+            updated_at,
+            user_id,
+        ),
     )
     db.commit()
 
