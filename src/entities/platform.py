@@ -1826,9 +1826,12 @@ def get_job_description(location: str) -> Optional[str]:
 
 
 def get_entity_by_pid(pid: str) -> Optional[LocationEntity]:
-    """Look up a LocationEntity by its PID-XXX identifier."""
+    """Look up a LocationEntity by its PID-XXX identifier (case-insensitive)."""
+    if not pid:
+        return None
+    pid_lower = pid.lower()
     for entity in PLATFORM_ENTITIES.values():
-        if entity.pid == pid:
+        if entity.pid and entity.pid.lower() == pid_lower:
             return entity
     return None
 
