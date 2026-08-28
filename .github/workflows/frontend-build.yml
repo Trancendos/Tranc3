@@ -50,7 +50,7 @@ jobs:
         working-directory: web
 
     steps:
-      - uses: actions/checkout@v4 # v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           # npm ci, the production build and the Storybook/Playwright run all
           # execute third-party code; none of them need to push, so don't leave
@@ -184,7 +184,7 @@ jobs:
     # deploy-pages this job has no external side effect, so it is safe on PRs.
 
     steps:
-      - uses: actions/checkout@v4 # v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
 
