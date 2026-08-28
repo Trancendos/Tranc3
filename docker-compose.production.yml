@@ -2360,7 +2360,7 @@ services:
   # Route: logs.trancendos.com
   # ══════════════════════════════════════════════════════════════════════════
   dozzle:
-    image: amir20/dozzle:latest@sha256:01f9018ffdaa0ec523f9a91dea3eff65b25cdb5f0566ac6d5a2cb4cf591e35e9
+    image: amir20/dozzle:latest@sha256:0ecac18a3491962002e9d6b9f9a363155131a4213e723ab86fc76dfee6e3cd8e
     container_name: trancendos-dozzle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
