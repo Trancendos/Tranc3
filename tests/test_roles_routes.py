@@ -41,9 +41,7 @@ class TestReadRoutes:
         # this assertion was a literal 43 and broke the moment a role was added,
         # which tells you the count changed but not whether it changed
         # correctly. Comparing the actual key set does.
-        assert {r["location"] for r in body} == set(PLATFORM_ENTITIES) | set(
-            PLATFORM_ROLES
-        )
+        assert {r["location"] for r in body} == set(PLATFORM_ENTITIES) | set(PLATFORM_ROLES)
         assert len(body) == len(all_seats())
 
     def test_get_known_role(self, client):
@@ -95,9 +93,7 @@ class TestAssignRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_admin_can_assign(self, client):
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.post(
                 "/roles/The Nexus/assign",
@@ -110,9 +106,7 @@ class TestAssignRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_assign_unknown_location_404s(self, client):
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.post("/roles/Nonexistent Place/assign", json={"ai_name": "X"})
             assert resp.status_code == 404
@@ -122,9 +116,7 @@ class TestAssignRoute:
     def test_assign_unsafe_ai_name_rejected(self, client):
         before_role = client.get("/roles/The Nexus").json()
         before_history = client.get("/roles/The Nexus/history").json()
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.post(
                 "/roles/The Nexus/assign",
@@ -137,9 +129,7 @@ class TestAssignRoute:
         assert client.get("/roles/The Nexus/history").json() == before_history
 
     def test_assign_blank_ai_name_rejected(self, client):
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.post("/roles/The Nexus/assign", json={"ai_name": "   "})
             assert resp.status_code == 400
@@ -147,9 +137,7 @@ class TestAssignRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_assign_records_history(self, client):
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             client.post("/roles/The HIVE/assign", json={"ai_name": "Swarm AI 2"})
             history = client.get("/roles/The HIVE/history").json()
@@ -175,9 +163,7 @@ class TestUnassignRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_admin_can_unassign(self, client):
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.request("DELETE", "/roles/The Nexus/assign")
             assert resp.status_code == 200
@@ -186,9 +172,7 @@ class TestUnassignRoute:
             client.app.dependency_overrides.pop(get_current_user, None)
 
     def test_unassign_unknown_location_404s(self, client):
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
             resp = client.request("DELETE", "/roles/Nonexistent Place/assign")
             assert resp.status_code == 404
@@ -243,13 +227,9 @@ class TestSuiteStewardshipRoutes:
         assert resp.json()["detail"] == "invalid_registry"
 
     def test_reassigning_steward_location_shows_drift(self, client):
-        client.app.dependency_overrides[get_current_user] = _override(
-            "admin1", role="admin"
-        )
+        client.app.dependency_overrides[get_current_user] = _override("admin1", role="admin")
         try:
-            resp = client.post(
-                "/roles/Cryptex/assign", json={"ai_name": "Temp Steward"}
-            )
+            resp = client.post("/roles/Cryptex/assign", json={"ai_name": "Temp Steward"})
             assert resp.status_code == 200
         finally:
             client.app.dependency_overrides.pop(get_current_user, None)
@@ -315,10 +295,7 @@ class TestSeatScopedMutation:
         assert resp.status_code == 200
         assert resp.json()["seat_id"] == "sam-king"
 
-        seats = {
-            s["seat_id"]: s["assigned_ai"]
-            for s in client.get("/roles/TateKing/seats").json()
-        }
+        seats = {s["seat_id"]: s["assigned_ai"] for s in client.get("/roles/TateKing/seats").json()}
         assert seats["sam-king"] == "Stand-In"
         assert seats["primary"] == "Benji Tate", "the sibling seat must not move"
 
@@ -334,18 +311,13 @@ class TestSeatScopedMutation:
             "DELETE", "/roles/Infinity/assign", json={"seat_id": "the-orb-of-orisis"}
         )
         assert resp.status_code == 200
-        seats = {
-            s["seat_id"]: s["assigned_ai"]
-            for s in client.get("/roles/Infinity/seats").json()
-        }
+        seats = {s["seat_id"]: s["assigned_ai"] for s in client.get("/roles/Infinity/seats").json()}
         assert seats["the-orb-of-orisis"] is None
         assert seats["primary"] == "The Guardian (Marcus Magnolia)"
 
     def test_an_unknown_seat_is_404(self, client):
         client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
-        resp = client.post(
-            "/roles/TateKing/assign", json={"ai_name": "X", "seat_id": "not-a-seat"}
-        )
+        resp = client.post("/roles/TateKing/assign", json={"ai_name": "X", "seat_id": "not-a-seat"})
         assert resp.status_code == 404
 
 
@@ -375,9 +347,7 @@ class TestSlashContainingLocationNames:
 class TestHistoryIsSeatAware:
     def test_history_reports_which_seat_moved(self, client):
         client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
-        client.post(
-            "/roles/TateKing/assign", json={"ai_name": "A", "seat_id": "sam-king"}
-        )
+        client.post("/roles/TateKing/assign", json={"ai_name": "A", "seat_id": "sam-king"})
         entries = client.get("/roles/TateKing/history").json()
         assert entries and entries[0]["seat_id"] == "sam-king"
 
@@ -385,15 +355,9 @@ class TestHistoryIsSeatAware:
         """Without the filter a reader sees two interleaved seat moves with no
         way to separate them."""
         client.app.dependency_overrides[get_current_user] = _override("admin1", "admin")
-        client.post(
-            "/roles/TateKing/assign", json={"ai_name": "A", "seat_id": "primary"}
-        )
-        client.post(
-            "/roles/TateKing/assign", json={"ai_name": "B", "seat_id": "sam-king"}
-        )
+        client.post("/roles/TateKing/assign", json={"ai_name": "A", "seat_id": "primary"})
+        client.post("/roles/TateKing/assign", json={"ai_name": "B", "seat_id": "sam-king"})
 
         assert len(client.get("/roles/TateKing/history").json()) == 2
-        only = client.get(
-            "/roles/TateKing/history", params={"seat_id": "sam-king"}
-        ).json()
+        only = client.get("/roles/TateKing/history", params={"seat_id": "sam-king"}).json()
         assert len(only) == 1 and only[0]["new_ai"] == "B"

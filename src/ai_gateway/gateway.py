@@ -222,9 +222,7 @@ class AIGateway:
                     route.max_latency_ms,
                 )
 
-                self._process_successful_response(
-                    request, config, response, route, route_idx
-                )
+                self._process_successful_response(request, config, response, route, route_idx)
 
                 return response
 
@@ -235,9 +233,7 @@ class AIGateway:
         # All providers failed
         self._metrics.errors += 1
         error_summary = "; ".join(f"{e['provider']}: {e['error']}" for e in errors)
-        raise AIGatewayError(
-            "ALL_PROVIDERS_FAILED", f"All AI providers failed: {error_summary}"
-        )
+        raise AIGatewayError("ALL_PROVIDERS_FAILED", f"All AI providers failed: {error_summary}")
 
     # ── Health Checks ────────────────────────────────────────
 
@@ -275,9 +271,7 @@ class AIGateway:
 
     # ── Private ──────────────────────────────────────────────
 
-    def _resolve_routes(
-        self, routes: list[RouteRule], request: AIRequest
-    ) -> list[RouteRule]:
+    def _resolve_routes(self, routes: list[RouteRule], request: AIRequest) -> list[RouteRule]:
         """Resolve applicable routes based on conditions and priority."""
         applicable = []
         for route in routes:
@@ -326,9 +320,7 @@ class AIGateway:
         else:
             return await provider.complete(request)
 
-    def _check_cache(
-        self, request: AIRequest, config: TenantAIConfig
-    ) -> AIResponse | None:
+    def _check_cache(self, request: AIRequest, config: TenantAIConfig) -> AIResponse | None:
         """Check the response cache."""
         cache_key = self._make_cache_key(request, config)
         cached = self._cache.get(cache_key)
@@ -384,10 +376,7 @@ class AIGateway:
             ordered = [n for n in ranked if n in registered]
             # Append any providers not in sampler
             ordered += [n for n in self._providers.keys() if n not in ordered]
-            return [
-                RouteRule(provider=name, priority=idx)
-                for idx, name in enumerate(ordered)
-            ]
+            return [RouteRule(provider=name, priority=idx) for idx, name in enumerate(ordered)]
         except Exception:
             return [
                 RouteRule(provider=name, priority=idx)
@@ -400,18 +389,14 @@ class AIGateway:
         """Check if a provider for a route is viable and return it, else append to errors."""
         provider = self._providers.get(route.provider)
         if not provider:
-            errors.append(
-                {"provider": route.provider, "error": "Provider not registered"}
-            )
+            errors.append({"provider": route.provider, "error": "Provider not registered"})
             return None
 
         # Skip unhealthy providers
         health = self._health_status.get(route.provider)
         if health and not health.healthy:
             if self._config.verbose:
-                logger.info(
-                    "Skipping unhealthy provider: %s", sanitize_for_log(route.provider)
-                )
+                logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))
             return None
 
         # Skip providers that have hit their free-tier quota threshold
@@ -450,9 +435,7 @@ class AIGateway:
 
             get_sampler().record_success(
                 route.provider,
-                latency_ms=(
-                    response.latency_ms if hasattr(response, "latency_ms") else 0.0
-                ),
+                latency_ms=(response.latency_ms if hasattr(response, "latency_ms") else 0.0),
             )
         except Exception:
             pass
@@ -469,9 +452,7 @@ class AIGateway:
         try:
             from src.mesh.quota_enforcer import get_enforcer
 
-            get_enforcer().record_request(
-                route.provider, tokens=float(response.tokens_total)
-            )
+            get_enforcer().record_request(route.provider, tokens=float(response.tokens_total))
         except Exception:  # quota tracking is best-effort; don't fail the request
             pass
 

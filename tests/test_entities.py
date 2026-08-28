@@ -308,7 +308,6 @@ class TestLookupFunctions:
         monkeypatch.setitem(WORKER_ENTITY_MAP, 9998, "NonexistentEntity")
         assert get_entity_for_port(9998) is None
 
-
     def test_get_entity_for_location(self):
         entity = get_entity_for_location("Infinity")
         assert entity is not None

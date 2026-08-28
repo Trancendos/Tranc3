@@ -180,13 +180,11 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
                 mod.init_schema()
                 client = TestClient(mod.app)
                 response = client.get("/health")
-                assert (
-                    response.status_code == 200
-                ), f"Worker {module_name} /health returned {response.status_code}"
+                assert response.status_code == 200, (
+                    f"Worker {module_name} /health returned {response.status_code}"
+                )
                 data = response.json()
-                assert (
-                    "status" in data
-                ), f"Worker {module_name} /health missing 'status' field"
+                assert "status" in data, f"Worker {module_name} /health missing 'status' field"
             return
 
     # Workers that use module-level DB_PATH + init_db() + lifespan pattern.
@@ -201,13 +199,11 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
             mod.init_db()
             client = TestClient(mod.app)
             response = client.get("/health")
-            assert (
-                response.status_code == 200
-            ), f"Worker {module_name} /health returned {response.status_code}"
+            assert response.status_code == 200, (
+                f"Worker {module_name} /health returned {response.status_code}"
+            )
             data = response.json()
-            assert (
-                "status" in data
-            ), f"Worker {module_name} /health missing 'status' field"
+            assert "status" in data, f"Worker {module_name} /health missing 'status' field"
         return
 
     import contextlib
@@ -218,9 +214,9 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
 
         client = TestClient(mod.app)
         response = client.get("/health")
-        assert (
-            response.status_code == 200
-        ), f"Worker {module_name} /health returned {response.status_code}"
+        assert response.status_code == 200, (
+            f"Worker {module_name} /health returned {response.status_code}"
+        )
 
         data = response.json()
         assert "status" in data, f"Worker {module_name} /health missing 'status' field"
@@ -232,11 +228,7 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
                 test_db._conn.close()
             except Exception:
                 pass  # nosec B110 — graceful degradation
-        if (
-            hasattr(test_db, "_local")
-            and hasattr(test_db._local, "conn")
-            and test_db._local.conn
-        ):
+        if hasattr(test_db, "_local") and hasattr(test_db._local, "conn") and test_db._local.conn:
             try:
                 test_db._local.conn.close()
             except Exception:
@@ -265,9 +257,7 @@ class TestWorkerCounts:
 
     def test_p0_worker_count(self):
         """Verify P0 workers (infinity-ws, infinity-auth)."""
-        p0_workers = [
-            w for w in ALL_WORKERS if w[0] in ("infinity_ws", "infinity_auth")
-        ]
+        p0_workers = [w for w in ALL_WORKERS if w[0] in ("infinity_ws", "infinity_auth")]
         assert len(p0_workers) == 2
 
     def test_p1_worker_count(self):
