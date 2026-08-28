@@ -2,6 +2,6 @@
 # Tranc3 AI Worker dependencies
 fastapi==0.141.1
 starlette==1.6.0
-uvicorn[standard]==0.52.3
+uvicorn[standard]==0.52.4
 httpx==0.28.1
 httpcore==1.0.9
