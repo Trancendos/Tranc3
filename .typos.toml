@@ -14,6 +14,24 @@ extend-exclude = [
     ".security_learning/",
     ".security_telemetry/",
     ".secrets.baseline",
+    # Lockfiles and build artefacts: machine-generated, no prose to check, and
+    # collectively the largest inputs the scan was being handed.
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "Cargo.lock",
+    "poetry.lock",
+    "*.tsbuildinfo",
+    "docs/architecture/service-review.json",
+    "docs/architecture/ea-workbook/",
+    # Git submodules. They are separate repositories with their own hooks and
+    # their own .typos.toml; scanning them from here would apply this repo's
+    # allowlist to content it does not own, and report findings nobody working
+    # in this repo can fix. (This exclusion only became necessary once the hook
+    # switched to pass_filenames: false -- pre-commit's own file list never
+    # descended into submodules, so the change quietly widened the scan.)
+    "compliance/magna-carta/",
+    "workers/cranbania/",
 ]
 
 [default]
