@@ -24,3 +24,6 @@
 ## 2024-08-24 - Interactive Elements in Hover-Only Containers
 **Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
 **Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
+## 2024-09-02 - Explicit Label Associations for Forms
+**Learning:** Found an accessibility anti-pattern where custom form elements (like complex selects or styled text inputs) used adjacent `<label>` tags without the explicit `htmlFor` and `id` linking. This prevents screen readers from understanding the context and prevents the native click-to-focus behavior.
+**Action:** Always bind labels to their respective inputs using explicit `id` and `htmlFor` attributes, or wrap them appropriately with ARIA attributes (e.g. `aria-labelledby` for widget groups) to guarantee accessibility.

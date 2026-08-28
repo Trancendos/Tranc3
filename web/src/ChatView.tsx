@@ -190,8 +190,8 @@ export default function ChatView() {
 
         {/* Language */}
         <div>
-          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Language</label>
-          <select value={language} onChange={e => setLanguage(e.target.value)}
+          <label htmlFor="chat-language" className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Language</label>
+          <select id="chat-language" value={language} onChange={e => setLanguage(e.target.value)}
             className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg}`}>
             {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
           </select>
@@ -199,8 +199,8 @@ export default function ChatView() {
 
         {/* Personality — dynamic from API */}
         <div>
-          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Settings className="w-3 h-3" /> Personality</label>
-          <select value={personality} onChange={e => setPersonality(e.target.value)}
+          <label htmlFor="chat-personality" className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Settings className="w-3 h-3" /> Personality</label>
+          <select id="chat-personality" value={personality} onChange={e => setPersonality(e.target.value)}
             className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg}`}>
             {personalities.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
@@ -208,8 +208,8 @@ export default function ChatView() {
 
         {/* Emotion */}
         <div>
-          <label className="text-xs text-gray-500 mb-1">Your Emotion</label>
-          <div className="grid grid-cols-2 gap-1">
+          <label id="chat-emotion-label" className="text-xs text-gray-500 mb-1">Your Emotion</label>
+          <div role="group" aria-labelledby="chat-emotion-label" className="grid grid-cols-2 gap-1">
             {EMOTIONS.map(e => (
               <button key={e.id} onClick={() => setEmotion(e.id)}
                 className={`text-xs py-1 px-2 rounded-lg transition-all ${emotion === e.id ? e.color : dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
