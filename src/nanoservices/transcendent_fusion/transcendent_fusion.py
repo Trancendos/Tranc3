@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+import operator
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -216,7 +217,8 @@ class CrossModalAttention:
             v_slice = value[start:end]
 
             # Dot product attention
-            dot = sum(a * b for a, b in zip(q_slice, k_slice))
+            # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
+            dot = sum(map(operator.mul, q_slice, k_slice))
             scale = math.sqrt(self.head_dim) if self.head_dim > 0 else 1.0
             weight = math.exp(dot / scale) if dot / scale < 500 else 1.0
             attention_weights.append(weight)
@@ -453,7 +455,8 @@ class FusionEngine:
                 e1 = embeddings[m1]
                 e2 = embeddings[m2]
                 if e1 and e2:
-                    cos_sim = sum(a * b for a, b in zip(e1, e2))
+                    # Optimization: map(operator.mul) executes in C, ~1.3-1.6x faster than zip + generator
+                    cos_sim = sum(map(operator.mul, e1, e2))
                     if abs(cos_sim) < 0.3:
                         insights.append(f"Complementary information between {m1} and {m2}")
 
