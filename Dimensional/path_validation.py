@@ -410,31 +410,27 @@ def list_validated_children(
 ) -> list[dict]:
     """List children of a validated directory path.
 
+    Delegates to list_validated_children_fd(). This used to have its own
+    implementation -- validate_path() followed by resolved.iterdir() -- which
+    is the check-then-use pattern _open_contained() exists to replace. It
+    caught a symlink that was already in place at validation time, but it
+    re-walked the path by name afterwards, so a component swapped between the
+    two steps was followed; and because it never called _open_contained(), it
+    kept listing on platforms without os.open() dir_fd support, where the
+    read path deliberately refuses. A containment guarantee that the file
+    reader honours and the directory lister does not is not a guarantee.
+
     Returns a list of dicts with keys: name, type ('file'/'directory'), size.
+    The 'modified' key from the fd variant is dropped here to keep this
+    function's documented contract unchanged.
 
     Raises:
-        PathTraversalError: If the path escapes *base_dir*.
+        PathTraversalError: If the path escapes *base_dir*, or if containment
+            cannot be enforced on this platform.
         FileNotFoundError: If the directory does not exist.
+        NotADirectoryError: If the validated path is not a directory.
     """
-    resolved = validate_path(rel, base_dir, must_exist=True)
-    if not resolved.is_dir():
-        raise FileNotFoundError(f"Validated path is not a directory: {resolved}")
-
-    children = []
-    try:
-        entries = sorted(resolved.iterdir())
-    except OSError:
-        return children
-    for child in entries:
-        try:
-            stat = child.stat()
-            children.append(
-                {
-                    "name": child.name,
-                    "type": "directory" if child.is_dir() else "file",
-                    "size": stat.st_size if child.is_file() else 0,
-                }
-            )
-        except OSError:
-            pass
-    return children
+    return [
+        {"name": c["name"], "type": c["type"], "size": c["size"]}
+        for c in list_validated_children_fd(rel, base_dir)
+    ]

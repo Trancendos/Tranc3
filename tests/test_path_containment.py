@@ -22,10 +22,12 @@ import os
 
 import pytest
 
+import Dimensional.path_validation as path_validation
 from Dimensional.path_validation import (
     _SUPPORTS_DIR_FD,
     PathTraversalError,
     _open_contained,
+    list_validated_children,
     list_validated_children_fd,
     read_validated_file_text,
 )
@@ -213,3 +215,42 @@ def test_base_dir_accepts_a_str_as_well_as_a_path(tree):
     base, _ = tree
     text, _size = read_validated_file_text("real/sub/file.txt", str(base))
     assert text == "contained"
+
+
+class TestListerHonoursTheSameContainmentAsTheReader:
+    """The reader and the lister must refuse in the same conditions.
+
+    list_validated_children() previously had its own implementation that never
+    called _open_contained(), so it kept listing on a platform where the reader
+    refused. A containment guarantee only one of the two honours is not a
+    guarantee, and nothing failed when they disagreed.
+    """
+
+    def test_lister_fails_closed_without_dir_fd_support(self, tmp_path, monkeypatch):
+        (tmp_path / "ok.txt").write_text("legit")
+        monkeypatch.setattr(path_validation, "_SUPPORTS_DIR_FD", False)
+
+        with pytest.raises(PathTraversalError, match="dir_fd"):
+            list_validated_children(tmp_path, tmp_path)
+
+    def test_reader_and_lister_agree_without_dir_fd_support(self, tmp_path, monkeypatch):
+        (tmp_path / "ok.txt").write_text("legit")
+        monkeypatch.setattr(path_validation, "_SUPPORTS_DIR_FD", False)
+
+        for call in (
+            lambda: read_validated_file_text(tmp_path / "ok.txt", tmp_path),
+            lambda: list_validated_children(tmp_path, tmp_path),
+        ):
+            with pytest.raises(PathTraversalError):
+                call()
+
+    def test_lister_still_works_and_keeps_its_documented_keys(self, tmp_path):
+        (tmp_path / "ok.txt").write_text("legit")
+        (tmp_path / "sub").mkdir()
+
+        children = list_validated_children(tmp_path, tmp_path)
+
+        assert {c["name"] for c in children} == {"ok.txt", "sub"}
+        # 'modified' belongs to the fd variant; this function's contract is
+        # name/type/size and delegating must not widen it.
+        assert all(set(c) == {"name", "type", "size"} for c in children)
