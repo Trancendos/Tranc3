@@ -35,14 +35,42 @@ class StreamSource:
     listeners: int = 0
 
 
+# Icecast ships with "hackme" as its stock admin password, so it is the first
+# thing an attacker tries against an exposed mount. Making it configurable is
+# necessary but not sufficient: with a fallback default, a deployment that
+# simply forgets to set the variable still runs on the known credential, and
+# nothing anywhere says so. That is the failure this file is meant to have
+# fixed, so the fallback is removed rather than kept for convenience.
+#
+# Fail closed, matching how api.py already treats SECRET_KEY: an unset password
+# raises at construction, where it is loud and traceable, instead of at the
+# first unauthorised admin request, where it is not. Tests and local runs set
+# TRANC3_WARP_RADIO_ALLOW_INSECURE=1 to opt into a throwaway value explicitly.
+# Not a credential: the literal this module refuses to run on.
+_INSECURE_DEFAULT_PASSWORD = "hackme"  # nosec B105
+
+
+def _require_icecast_password() -> str:
+    """Read the Icecast admin password, refusing to fall back to a known default."""
+    password = os.getenv("ICECAST_ADMIN_PASSWORD")
+    if password and password != _INSECURE_DEFAULT_PASSWORD:
+        return password
+    if os.getenv("TRANC3_WARP_RADIO_ALLOW_INSECURE") == "1":
+        return password or _INSECURE_DEFAULT_PASSWORD
+    raise ValueError(
+        "ICECAST_ADMIN_PASSWORD is not set, or is still Icecast's stock "
+        f"'{_INSECURE_DEFAULT_PASSWORD}'. Set a real password, or set "
+        "TRANC3_WARP_RADIO_ALLOW_INSECURE=1 to accept the default deliberately "
+        "(local development only)."
+    )
+
+
 @dataclass
 class WarpRadioConfig:
     icecast_url: str = field(
         default_factory=lambda: os.getenv("ICECAST_URL", "http://localhost:8000")
     )
-    icecast_admin_password: str = field(
-        default_factory=lambda: os.getenv("ICECAST_ADMIN_PASSWORD", "hackme")
-    )
+    icecast_admin_password: str = field(default_factory=_require_icecast_password)
     mount_point: str = "/stream"
     max_listeners: int = 100
     default_format: str = "mp3"
