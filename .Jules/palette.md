@@ -18,3 +18,6 @@
 ## 2024-05-15 - [Icon-only Buttons Accessibility]
 **Learning:** Icon-only buttons without explicit text fail `axe-core` accessibility tests.
 **Action:** Always add an `aria-label` attribute to icon-only buttons to provide an accessible name for screen readers, and add `aria-hidden="true"` to the inner SVG elements to avoid redundant announcements.
+## 2026-07-16 - Prevent Accidental Data Loss on Destructive Actions
+**Learning:** The application contained several destructive actions (e.g. deleting keys, flushing cache, dissolving swarms, resetting buckets) that executed immediately upon clicking icon-only buttons, making it easy for users to accidentally cause data loss or system state changes.
+**Action:** Always wrap destructive API calls with `window.confirm` dialogues to ensure intentionality, and add descriptive `title` tooltips to icon-only buttons to clarify their function before interaction.
