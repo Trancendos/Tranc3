@@ -395,36 +395,49 @@ async def update_user(user_id: str, update: UserUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
-    display_name = (
-        update.display_name if update.display_name is not None else existing["display_name"]
-    )
-    email = str(update.email) if update.email is not None else existing["email"]
-    role = update.role if update.role is not None else existing["role"]
-    preferences = (
-        json.dumps(update.preferences)
-        if update.preferences is not None
-        else existing["preferences"]
-    )
-    is_active = (
-        (1 if update.is_active else 0) if update.is_active is not None else existing["is_active"]
-    )
-    bio = update.bio if update.bio is not None else existing["bio"]
-    avatar_url = update.avatar_url if update.avatar_url is not None else existing["avatar_url"]
-    timezone_val = update.timezone if update.timezone is not None else existing["timezone"]
-    updated_at = datetime.now(timezone.utc).isoformat()
-
+    # COALESCE(?, column) keeps each unsupplied field at whatever the row holds
+    # *at write time*, which is what makes this a PATCH rather than a full-row
+    # overwrite.
+    #
+    # The previous version read `existing` above and then wrote every column
+    # back from that snapshot. Two concurrent PATCHes to different fields then
+    # lose one of the two updates: the second writes back the stale value it
+    # read for the field it was not changing. Reproduced before this change --
+    # PATCH display_name and PATCH bio interleaved left display_name at its
+    # original value.
+    #
+    # It is also a single static statement, so there is no SET clause built at
+    # runtime. That matters for how this got here: the dynamic clause it
+    # replaced was flagged as SQL injection, which it was not (the interpolated
+    # names were literals in this file and every value was already bound), but
+    # rewriting to avoid the *pattern* is what introduced the real bug. This
+    # form has neither the pattern nor the bug.
+    #
+    # None means "not supplied" throughout the UserUpdate model, so no field can
+    # be set to NULL through this endpoint -- the same limit the previous
+    # implementations had.
     db.execute(
-        "UPDATE users SET display_name = ?, email = ?, role = ?, preferences = ?, is_active = ?, bio = ?, avatar_url = ?, timezone = ?, updated_at = ? WHERE user_id = ?",
+        """UPDATE users SET
+               display_name = COALESCE(?, display_name),
+               email        = COALESCE(?, email),
+               role         = COALESCE(?, role),
+               preferences  = COALESCE(?, preferences),
+               is_active    = COALESCE(?, is_active),
+               bio          = COALESCE(?, bio),
+               avatar_url   = COALESCE(?, avatar_url),
+               timezone     = COALESCE(?, timezone),
+               updated_at   = ?
+           WHERE user_id = ?""",
         (
-            display_name,
-            email,
-            role,
-            preferences,
-            is_active,
-            bio,
-            avatar_url,
-            timezone_val,
-            updated_at,
+            update.display_name,
+            str(update.email) if update.email is not None else None,
+            update.role,
+            json.dumps(update.preferences) if update.preferences is not None else None,
+            (1 if update.is_active else 0) if update.is_active is not None else None,
+            update.bio,
+            update.avatar_url,
+            update.timezone,
+            datetime.now(timezone.utc).isoformat(),
             user_id,
         ),
     )
@@ -570,4 +583,10 @@ app.include_router(_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8006)  # nosec B104 — containerised service
+    # Binding all interfaces is intentional: the service runs containerised and is
+    # reached through the compose network, never exposed directly.
+    #
+    # The rationale sits above rather than after the marker because bandit parses
+    # everything following `nosec` as a test-ID list -- it was reading
+    # "containerised" and "service" as test names and warning on every scan.
+    uvicorn.run(app, host="0.0.0.0", port=8006)  # nosec B104
