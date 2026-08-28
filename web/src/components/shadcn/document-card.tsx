@@ -66,7 +66,7 @@ export function DocumentCard({
       {...props}
     >
       <div className="flex items-start gap-3">
-        <span className="text-2xl shrink-0 mt-0.5">{fileIcon(contentType)}</span>
+        <span className="text-2xl shrink-0 mt-0.5" aria-hidden="true">{fileIcon(contentType)}</span>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -102,19 +102,21 @@ export function DocumentCard({
           {onDownload && (
             <button
               onClick={onDownload}
-              className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label="Download"
+              className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+              aria-label={`Download ${title}`}
+              title="Download"
             >
-              ↓
+              <span aria-hidden="true">↓</span>
             </button>
           )}
           {onDelete && (
             <button
               onClick={onDelete}
-              className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label="Delete"
+              className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+              aria-label={`Delete ${title}`}
+              title="Delete"
             >
-              ✕
+              <span aria-hidden="true">✕</span>
             </button>
           )}
         </div>

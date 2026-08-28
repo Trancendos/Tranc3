@@ -21,3 +21,6 @@
 ## 2026-07-16 - Prevent Accidental Data Loss on Destructive Actions
 **Learning:** The application contained several destructive actions (e.g. deleting keys, flushing cache, dissolving swarms, resetting buckets) that executed immediately upon clicking icon-only buttons, making it easy for users to accidentally cause data loss or system state changes.
 **Action:** Always wrap destructive API calls with `window.confirm` dialogues to ensure intentionality, and add descriptive `title` tooltips to icon-only buttons to clarify their function before interaction.
+## 2024-08-24 - Interactive Elements in Hover-Only Containers
+**Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
+**Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
