@@ -107,17 +107,19 @@ export function WorkflowCard({
         {onRun && (
           <button
             onClick={() => onRun(workflowId)}
-            className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+            aria-label={`Run ${name}`}
           >
-            ▶ Run
+            <span aria-hidden="true" className="mr-1">▶</span> Run
           </button>
         )}
         {onDelete && (
           <button
             onClick={() => onDelete(workflowId)}
-            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 focus-visible:ring-offset-card"
+            aria-label={`Delete ${name}`}
           >
-            ✕ Delete
+            <span aria-hidden="true" className="mr-1">✕</span> Delete
           </button>
         )}
       </div>
