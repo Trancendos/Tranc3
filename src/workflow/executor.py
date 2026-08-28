@@ -314,14 +314,24 @@ class WorkflowExecutor:
         )
         self.executions[execution_id] = state
 
-        await event_bus.publish(
-            "workflow.started",
-            {
-                "execution_id": execution_id,
-                "workflow_id": workflow.id,
-                "workflow_name": workflow.name,
-            },
-        )
+        try:
+            await event_bus.publish(
+                "workflow.started",
+                {
+                    "execution_id": execution_id,
+                    "workflow_id": workflow.id,
+                    "workflow_name": workflow.name,
+                },
+            )
+        except BaseException:
+            # The flag is registered above but execute() has not entered either
+            # of its try/finally blocks yet, so a raising or cancelled publish
+            # would leak the asyncio.Event with no cleanup at all -- and a later
+            # cancel() would then report success for an execution that never
+            # started. Roll back what this method registered, then re-raise.
+            self._cancel_flags.pop(execution_id, None)
+            self.executions.pop(execution_id, None)
+            raise
 
         logger.info(
             "Starting workflow '%s' (execution %s)",
