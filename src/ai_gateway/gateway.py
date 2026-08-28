@@ -437,8 +437,11 @@ class AIGateway:
                 route.provider,
                 latency_ms=(response.latency_ms if hasattr(response, "latency_ms") else 0.0),
             )
-        except Exception:
-            pass
+        except Exception:  # bandit feedback is best-effort; never fail a served request
+            # Debug rather than silence: the sampler being permanently broken
+            # degrades routing quality invisibly, which is worth being able to
+            # find in a log even though it must not surface to the caller.
+            logger.debug("Thompson sampler success feedback failed", exc_info=True)
 
         # Cache response
         if config.cache_enabled:
@@ -469,5 +472,5 @@ class AIGateway:
             from src.inference.thompson_sampler import get_sampler
 
             get_sampler().record_failure(route.provider)
-        except Exception:
-            pass
+        except Exception:  # bandit feedback is best-effort; the route already failed
+            logger.debug("Thompson sampler failure feedback failed", exc_info=True)

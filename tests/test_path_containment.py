@@ -132,6 +132,37 @@ class TestOpenContained:
         after = len(os.listdir("/proc/self/fd"))
         assert after <= before + 1, f"descriptors leaked: {before} -> {after}"
 
+    @needs_dir_fd
+    def test_a_symlinked_base_is_refused(self, tree):
+        """The walk must not start from a swapped root.
+
+        Every component below is opened with O_NOFOLLOW, but base itself was
+        opened by name without it -- so a base replaced by a symlink after
+        validate_path() resolved it would have made every careful step
+        afterwards relative to the attacker's directory.
+        """
+        base, outside = tree
+        fake_base = base.parent / "fake_base"
+        os.symlink(outside, fake_base)
+
+        with pytest.raises(PathTraversalError):
+            _open_contained(fake_base / "secret.txt", fake_base, os.O_RDONLY)
+
+    def test_containment_is_refused_outright_without_dir_fd(self, tree, monkeypatch):
+        """No dir_fd must fail closed, not fall back to an unguarded open.
+
+        The earlier version opened the resolved pathname instead, which keeps
+        the final-component guarantee and drops the intermediate one -- the
+        exact hole this function exists to close.
+        """
+        import Dimensional.path_validation as pv
+
+        base, _ = tree
+        monkeypatch.setattr(pv, "_SUPPORTS_DIR_FD", False)
+
+        with pytest.raises(PathTraversalError, match="dir_fd"):
+            pv._open_contained(base / "real" / "sub" / "file.txt", base, os.O_RDONLY)
+
 
 class TestCallersStillWork:
     """The two public readers keep their existing contracts."""

@@ -159,6 +159,14 @@ def safe_join(
 _SUPPORTS_DIR_FD = os.open in getattr(os, "supports_dir_fd", set())
 
 
+def _is_symlink_at_path(path: Path) -> bool:
+    """Is *path* itself a symlink? False if it has since vanished."""
+    try:
+        return stat.S_ISLNK(os.lstat(str(path)).st_mode)
+    except OSError:
+        return False
+
+
 def _is_symlink_at(dir_fd: int, name: str) -> bool:
     """Is *name* a symlink, as seen from *dir_fd*? False if it has since vanished."""
     try:
@@ -195,10 +203,35 @@ def _open_contained(resolved: Path, base: Path, flags: int) -> int:
     parts = resolved.relative_to(base).parts
 
     if not _SUPPORTS_DIR_FD:
-        return os.open(str(resolved), flags | getattr(os, "O_NOFOLLOW", 0))
+        # Fail closed. The previous version fell back to opening the resolved
+        # pathname here, which keeps the final-component guarantee but not the
+        # intermediate one -- i.e. exactly the hole this function exists to
+        # close, left open on a platform where it happens to be inconvenient.
+        # Documenting a security control as partially unenforced is the failure
+        # mode this repo keeps finding, so the fallback is refused rather than
+        # explained. The estate deploys on Linux throughout (Docker Compose,
+        # Dockerfiles, Fly.io), so nothing shipped reaches this branch.
+        raise PathTraversalError(
+            "Containment cannot be enforced on this platform: os.open() has no "
+            "dir_fd support, so intermediate path components cannot be opened "
+            "relative to a trusted base and a concurrent symlink swap could "
+            f"redirect the read outside {base}."
+        )
 
     dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-    fd = os.open(str(base), dir_flags)
+    # O_NOFOLLOW on the base too, not just its children: base is itself the
+    # output of Path.resolve(), so it should not be a symlink either, and
+    # opening it by name is one more chance for the tree to have changed since
+    # validate_path() ran. Without this the walk could start from the wrong
+    # root and every careful step below would be relative to it.
+    try:
+        fd = os.open(str(base), dir_flags | getattr(os, "O_NOFOLLOW", 0))
+    except OSError as exc:
+        if exc.errno in (errno.ELOOP, errno.ENOTDIR) and _is_symlink_at_path(base):
+            raise PathTraversalError(
+                f"Base directory {base} is a symlink; the tree changed after validation."
+            ) from exc
+        raise
     try:
         for i, name in enumerate(parts):
             is_last = i == len(parts) - 1

@@ -810,7 +810,26 @@ def main() -> int:
         if not OUT_JSON.is_file() or not OUT_MD.is_file():
             print("service review has never been generated", file=sys.stderr)
             return 1
-        committed = json.loads(OUT_JSON.read_text())
+        # The write path below already guards this and says why; --check was
+        # added later without the same guard, so a corrupt or hand-truncated
+        # service-review.json crashed the freshness gate with a JSONDecodeError
+        # or a TypeError from dict() instead of failing it. A gate that raises
+        # reads as infrastructure breakage, not as "the artifact is stale".
+        try:
+            committed = json.loads(OUT_JSON.read_text())
+        except json.JSONDecodeError:
+            print(
+                "service-review.json is not valid JSON — rerun scripts/build_service_review.py",
+                file=sys.stderr,
+            )
+            return 1
+        if not isinstance(committed, dict):
+            print(
+                "service-review.json is valid JSON but not an object — rerun "
+                "scripts/build_service_review.py",
+                file=sys.stderr,
+            )
+            return 1
         old, new = dict(committed), json.loads(js)
         for volatile in ("generated_at", "commit"):
             old.pop(volatile, None)
