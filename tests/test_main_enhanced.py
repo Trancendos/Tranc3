@@ -9,10 +9,15 @@ split into _init_* methods), #905 (start_background_services), #906
 package but tests/unit/ would not have been one, so that path collides with
 this file's basename at collection time; its tests live here instead.
 
-A fifth, #879, is deliberately not carried over. It assigned
-sys.modules["torch"] = MagicMock() at module import time, which leaks into every
-later test in the session rather than being scoped to its own test. Its
-initialize() coverage is already served by test_initialize_calls_private_methods.
+#879 is now carried too, in tests/test_main_enhanced_initialize.py. It was
+previously left out because it assigned sys.modules["torch"] = MagicMock() at
+module import time, which leaks into every later test in the session -- and it
+did: run alongside this file it turned a later isinstance() check into
+"isinstance() arg 2 must be a type". The stubs turned out to be vestigial.
+src/main_enhanced.py already guards `import torch` with try/except and binds the
+name at import time, so a sys.modules write after import cannot reach it anyway;
+the tests that genuinely need a stub patch src.main_enhanced.torch directly.
+Removing the three lines keeps all of #879's coverage and ends the leak.
 """
 
 import asyncio
