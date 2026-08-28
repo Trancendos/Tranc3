@@ -95,12 +95,33 @@ ACCEPTED_DIVERGENCES: dict[str, str] = {
 
 
 def normalise_run(body: str | None) -> tuple[str, ...]:
-    """A shell body reduced to what it actually does.
+    """A shell body reduced for comparison.
 
-    Comments and blank lines are dropped and runs of whitespace collapsed, so
-    that reformatting or re-wording a comment is not reported as drift. Comment
-    text genuinely differing between the two copies is normal -- each explains
-    its own platform.
+    Blank lines and **whole-line** comments are dropped, and runs of whitespace
+    are collapsed, so that reflowing or re-wording a standalone comment is not
+    reported as drift -- comment text differing between the two copies is
+    normal, since each explains its own platform.
+
+    A trailing inline comment is deliberately NOT stripped, and is compared as
+    part of the command. That is a real limitation: two copies whose only
+    difference is `cmd # a` versus `cmd # b` will be reported. It is the safer
+    limitation to have, because stripping inline comments correctly needs to
+    know when `#` is quoted, and in these workflows it usually is. Measured
+    across both trees at the time of writing: of 671 effective shell lines,
+    7 contain a `#` beyond the first character, and 6 of those 7 have it
+    inside a quote --
+
+        elif [ "${#val}" -lt "$min" ]; then       # parameter expansion
+        echo "## Frontend deployed to Cloudflare Pages"   # markdown heading
+
+    Splitting on the first `#` would truncate those to `elif [ "${` and
+    `echo "`, so two genuinely different bodies would compare equal. A false
+    negative in a drift gate is worse than a false positive: the false positive
+    is visible and gets an ACCEPTED_DIVERGENCES entry with a reason, whereas a
+    false negative silently reports parity that is not there.
+
+    If an inline comment ever does differ legitimately, record it in
+    ACCEPTED_DIVERGENCES rather than making this function shell-aware.
     """
     out = []
     for line in (body or "").splitlines():
