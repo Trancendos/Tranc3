@@ -810,15 +810,33 @@ def main() -> int:
         if not OUT_JSON.is_file() or not OUT_MD.is_file():
             print("service review has never been generated", file=sys.stderr)
             return 1
-        old = json.loads(OUT_JSON.read_text())
-        new = json.loads(js)
-        old.pop("generated_at", None), new.pop("generated_at", None)
-        old.pop("commit", None), new.pop("commit", None)
+        committed = json.loads(OUT_JSON.read_text())
+        old, new = dict(committed), json.loads(js)
+        for volatile in ("generated_at", "commit"):
+            old.pop(volatile, None)
+            new.pop(volatile, None)
         if old != new:
             print(
                 "service review is stale — rerun scripts/build_service_review.py", file=sys.stderr
             )
             return 1
+
+        # The Markdown was only checked for existence, so a change to
+        # render_md() -- or a hand-edit of the committed report -- left the gate
+        # green over a stale document. Rebuild it against the committed volatile
+        # values, mirroring how the JSON comparison ignores them, so this
+        # catches real drift without failing on a timestamp.
+        g_for_md = dict(g)
+        for volatile in ("generated_at", "commit"):
+            if volatile in committed:
+                g_for_md[volatile] = committed[volatile]
+        if OUT_MD.read_text() != render_md(g_for_md):
+            print(
+                "SERVICE-REVIEW.md is stale — rerun scripts/build_service_review.py",
+                file=sys.stderr,
+            )
+            return 1
+
         print("service review: up to date")
         return 0
 

@@ -654,6 +654,12 @@ def _generate_pytest_tests(code: str, description: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _require_import(lines: List[str], statement: str) -> None:
+    """Ensure *statement* leads *lines*, without duplicating an existing import."""
+    if statement not in lines:
+        lines.insert(0, statement)
+
+
 class AdvancedCodeGenerator:
     """
     Combines template-based generation, local TRANC3 LLM enhancement,
@@ -752,12 +758,19 @@ class AdvancedCodeGenerator:
         # write CSV output" parsed with csv.reader instead of json.load — the
         # second only surfaced when a round-trip test covered all four
         # combinations.
-        in_clause, out_clause = desc, ""
-        for verb in ("write", "save", "output"):
-            head, sep, tail = desc.partition(verb)
-            if sep:
-                in_clause, out_clause = head, tail
-                break
+        # A bare substring search matched "output" inside a *filename*: for
+        # "read output.csv and count rows" the split put "csv" in the output
+        # clause and left "read " as the input clause, so the tool parsed a CSV
+        # file as text AND generated a writer for a description that only asked
+        # for a count. The trailing \w* keeps "saves"/"writes" matching (a plain
+        # \b would not); the lookahead is what rejects a filename, since \b
+        # alone happily matches "output" in "output.csv" -- "." is a non-word
+        # character, so the boundary holds.
+        out_verb = re.search(r"\b(?:write|save|output)\w*\b(?!\.\w)", desc)
+        if out_verb:
+            in_clause, out_clause = desc[: out_verb.start()], desc[out_verb.end() :]
+        else:
+            in_clause, out_clause = desc, ""
 
         # 1. Parsing logic
         if "csv" in in_clause:
@@ -789,18 +802,43 @@ class AdvancedCodeGenerator:
             )
 
         # 3. Output logic
-        if desc_words & {"write", "save", "output"}:
+        # Gated on the same match as the clause split above, not on a word set:
+        # a word set re-introduces the filename bug by seeing "output" in
+        # "output.csv" and writing a file nobody asked for.
+        if out_verb:
             # Fall back to the input format when the output clause names none:
             # "reads a JSON file ... and saves the output" says nothing after the
             # verb and must still write JSON.
             out_fmt = next((f for f in ("json", "csv") if f in out_clause), in_fmt)
+            # The serializer's own import is emitted here rather than assumed
+            # from the parsing branch: the input and output formats are chosen
+            # independently, so CSV-in/JSON-out reached json.dump() having only
+            # imported csv, and the generated CLI died on NameError.
             if out_fmt == "json":
+                _require_import(logic_lines, "import json")
                 logic_lines.extend(
                     [
                         "with open(output, 'w') as f:",
                         "    json.dump(data, f, indent=2)",
                         "if verbose:",
                         "    typer.echo(f'Saved JSON to {output}')",
+                    ]
+                )
+            elif out_fmt == "csv":
+                # str(data) wrote Python list syntax into a file named .csv.
+                # The row normalisation gives non-tabular input a defined shape
+                # -- one field per record -- instead of iterating a string
+                # character by character.
+                _require_import(logic_lines, "import csv")
+                logic_lines.extend(
+                    [
+                        "rows = data if isinstance(data, list) else [data]",
+                        "with open(output, 'w', newline='') as f:",
+                        "    csv.writer(f).writerows(",
+                        "        r if isinstance(r, (list, tuple)) else [r] for r in rows",
+                        "    )",
+                        "if verbose:",
+                        "    typer.echo(f'Saved CSV to {output}')",
                     ]
                 )
             else:
