@@ -251,15 +251,12 @@ class WorkflowExecutor:
         try:
             layers = _topological_sort(workflow.nodes, workflow.edges)
         except ValueError as exc:
-            # This returns before the try/finally below, so the finally's
-            # _cancel_flags.pop never runs on this path. Every cyclic or
-            # disconnected workflow therefore left its asyncio.Event behind in
-            # a long-lived executor, and a later cancel() could report success
-            # for an execution that had already failed here.
-            # In a finally, not after the await: _handle_sort_failure awaits
-            # event_bus.publish, and a CancelledError there would otherwise skip
-            # the pop and leave the flag behind -- the same leak, via a narrower
-            # door.
+            # Cyclic or disconnected workflows land here. The finally makes the
+            # _cancel_flags cleanup exception-safe, including when the
+            # workflow.failed publish inside _handle_sort_failure is cancelled --
+            # without it the asyncio.Event stayed behind in a long-lived
+            # executor and a later cancel() reported success for an execution
+            # that had already failed.
             try:
                 return await self._handle_sort_failure(state, execution_id, exc)
             finally:

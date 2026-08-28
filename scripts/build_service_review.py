@@ -840,7 +840,10 @@ def main() -> int:
             prev = json.loads(OUT_JSON.read_text())
         except json.JSONDecodeError:
             prev = None
-        if prev is not None:
+        # isinstance, not `is not None`: a service-review.json holding a bare
+        # scalar (`42`, `"x"`, `true`) parses fine and would reach dict() and
+        # raise, turning a corrupt artifact into a crash instead of a rewrite.
+        if isinstance(prev, dict):
             a, b = dict(prev), dict(g)
             for volatile in ("generated_at", "commit"):
                 a.pop(volatile, None)

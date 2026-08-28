@@ -745,16 +745,33 @@ class AdvancedCodeGenerator:
         desc = description.lower()
         logic_lines = []
 
+        # Split once, at the first output verb, and classify each half on its own
+        # clause. Both formats used to be read off the whole description, which
+        # got each other's case wrong in mirror image: "read a CSV file and write
+        # JSON output" wrote text instead of JSON, and "read a JSON file and
+        # write CSV output" parsed with csv.reader instead of json.load — the
+        # second only surfaced when a round-trip test covered all four
+        # combinations.
+        in_clause, out_clause = desc, ""
+        for verb in ("write", "save", "output"):
+            head, sep, tail = desc.partition(verb)
+            if sep:
+                in_clause, out_clause = head, tail
+                break
+
         # 1. Parsing logic
-        if "csv" in desc:
+        if "csv" in in_clause:
+            in_fmt = "csv"
             logic_lines.extend(
                 ["import csv", "with open(input, 'r') as f:", "    data = list(csv.reader(f))"]
             )
-        elif "json" in desc:
+        elif "json" in in_clause:
+            in_fmt = "json"
             logic_lines.extend(
                 ["import json", "with open(input, 'r') as f:", "    data = json.load(f)"]
             )
         else:
+            in_fmt = "text"
             logic_lines.extend(["with open(input, 'r') as f:", "    data = f.read()"])
 
         # 2. Processing logic
@@ -762,11 +779,22 @@ class AdvancedCodeGenerator:
         # mentioning a discount or an account.
         desc_words = set(re.findall(r"[a-z]+", desc))
         if desc_words & {"count", "rows", "length"}:
-            logic_lines.append("typer.echo(f'Count: {len(data)}')")
+            # The text branch leaves `data` as the whole file string, so a bare
+            # len() reported characters -- newlines included -- where CSV and
+            # JSON reported records. Branch in the generated code rather than
+            # here, because the same template serves all three input formats.
+            logic_lines.append(
+                "typer.echo(f'Count: "
+                "{len(data.splitlines()) if isinstance(data, str) else len(data)}')"
+            )
 
         # 3. Output logic
-        if "write" in desc or "save" in desc or "output" in desc:
-            if "json" in desc and "csv" not in desc:
+        if desc_words & {"write", "save", "output"}:
+            # Fall back to the input format when the output clause names none:
+            # "reads a JSON file ... and saves the output" says nothing after the
+            # verb and must still write JSON.
+            out_fmt = next((f for f in ("json", "csv") if f in out_clause), in_fmt)
+            if out_fmt == "json":
                 logic_lines.extend(
                     [
                         "with open(output, 'w') as f:",

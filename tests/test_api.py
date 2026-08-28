@@ -174,7 +174,10 @@ class TestChat:
         from src.roles.registry import get_registry
 
         registry = get_registry()
-        original = registry.get_role("DocUtari")
+        # Capture the scalar, not the RoleAssignment: get_role returns the
+        # stored object and assign_ai mutates it in place, so holding the
+        # object would give back the value this test just wrote.
+        original_ai = getattr(registry.get_role("DocUtari"), "assigned_ai", None)
         registry.assign_ai("DocUtari", "An AI With No Profile", changed_by="test")
         try:
             token = self._get_token()
@@ -190,8 +193,12 @@ class TestChat:
             assert r.status_code == 200
             assert r.json()["personality"] == "tranc3-creative"
         finally:
-            if original and original.assigned_ai:
-                registry.assign_ai("DocUtari", original.assigned_ai, changed_by="test-restore")
+            # A vacant seat has to be vacated again, not left holding this
+            # test's placeholder -- the registry is process-wide.
+            if original_ai:
+                registry.assign_ai("DocUtari", original_ai, changed_by="test-restore")
+            else:
+                registry.remove_ai("DocUtari", changed_by="test-restore")
 
     def test_chat_unknown_location_falls_back_to_supplied_personality(self):
         token = self._get_token()

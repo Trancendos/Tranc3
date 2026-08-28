@@ -397,7 +397,7 @@ async def update_listing(listing_id: str, req: UpdateListingRequest):
     except Exception as exc:
         conn.rollback()
         logger.exception("Update listing failed")
-        raise HTTPException(500, f"Update listing failed: {exc}") from exc
+        raise HTTPException(500, "Update listing failed") from exc
     finally:
         conn.close()
 
@@ -482,7 +482,7 @@ async def purchase(req: PurchaseRequest):
     except Exception as exc:
         conn.rollback()
         logger.exception("Purchase failed")
-        raise HTTPException(500, f"Purchase failed: {exc}") from exc
+        raise HTTPException(500, "Purchase failed") from exc
     finally:
         conn.close()
 
@@ -571,21 +571,47 @@ async def update_order(order_id: str, req: UpdateOrderRequest):
     except Exception as exc:
         conn.rollback()
         logger.exception("Update order failed")
-        raise HTTPException(500, f"Update order failed: {exc}") from exc
+        raise HTTPException(500, "Update order failed") from exc
     finally:
         conn.close()
 
 
 @_router.delete("/orders/id/{order_id}", status_code=204)
 async def delete_order(order_id: str):
-    """Delete a specific order."""
+    """Cancel an order, returning its quantity to the listing.
+
+    Deleting the order row alone would leave the listing permanently short:
+    `purchase` decrements `listings.quantity` and flips `status` to 'sold' when
+    it reaches zero, so a bare DELETE consumes inventory and then destroys the
+    only record of why. The reversal is the exact inverse of `purchase`, in one
+    EXCLUSIVE transaction so a concurrent purchase cannot interleave between
+    the restore and the delete.
+    """
+    now = datetime.now(timezone.utc).isoformat()
     conn = _get_conn()
     try:
-        with _cursor(conn) as cur:
-            row = cur.execute("SELECT id FROM orders WHERE id=?", (order_id,)).fetchone()
-            if not row:
-                raise HTTPException(404, "Order not found")
-            cur.execute("DELETE FROM orders WHERE id=?", (order_id,))
+        conn.execute("BEGIN EXCLUSIVE")
+        order = conn.execute(
+            "SELECT listing_id, quantity FROM orders WHERE id=?", (order_id,)
+        ).fetchone()
+        if not order:
+            conn.rollback()
+            raise HTTPException(404, "Order not found")
+
+        # Back to 'active': the restored quantity is necessarily > 0, which is
+        # exactly the condition under which `purchase` leaves a listing active.
+        conn.execute(
+            "UPDATE listings SET quantity = quantity + ?, status='active', updated_at=? WHERE id=?",
+            (order["quantity"], now, order["listing_id"]),
+        )
+        conn.execute("DELETE FROM orders WHERE id=?", (order_id,))
+        conn.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Delete order failed")
+        raise HTTPException(500, "Delete order failed") from exc
     finally:
         conn.close()
 
