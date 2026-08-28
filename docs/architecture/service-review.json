@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "6819b4a7",
+  "commit": "92342c39",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-28T06:39:16.944806+00:00",
+  "generated_at": "2026-08-28T19:42:44.906881+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -1087,7 +1087,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "amir20/dozzle:latest@sha256:01f9018ffdaa0ec523f9a91dea3eff65b25cdb5f0566ac6d5a2cb4cf591e35e9",
+      "image": "amir20/dozzle:latest@sha256:0ecac18a3491962002e9d6b9f9a363155131a4213e723ab86fc76dfee6e3cd8e",
       "lifecycle": "INFRA",
       "service": "dozzle"
     },
