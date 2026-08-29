@@ -73,6 +73,46 @@ REQUIRED_DUPLICATED_WORKFLOWS: frozenset[str] = frozenset(
 # Each key is "<workflow>::<scope>". The value is why the two platforms are
 # meant to differ there. A divergence without an entry here fails the check.
 ACCEPTED_DIVERGENCES: dict[str, str] = {
+    "deploy-cloudflare.yml::(workflow triggers)::(on)::on": (
+        "Each copy watches its own workflow file. The GitHub copy lists"
+        "`.github/workflows/deploy-cloudflare.yml` in its trigger paths and"
+        "the Forgejo copy lists `.forgejo/workflows/deploy-cloudflare.yml`,"
+        "so editing one re-runs that one. Making them identical would mean"
+        "each platform ignoring changes to the file it actually executes."
+        "Everything else in both `on:` blocks matches -- this entry is"
+        "scoped to `on` alone, so a narrowed branch filter or a dropped"
+        "schedule would still be reported."
+    ),
+    "deploy-fly.yml::(workflow triggers)::(on)::on": (
+        "Each copy watches its own workflow file. The GitHub copy lists"
+        "`.github/workflows/deploy-fly.yml` in its trigger paths and the"
+        "Forgejo copy lists `.forgejo/workflows/deploy-fly.yml`, so editing"
+        "one re-runs that one. Making them identical would mean each"
+        "platform ignoring changes to the file it actually executes."
+        "Everything else in both `on:` blocks matches -- this entry is"
+        "scoped to `on` alone, so a narrowed branch filter or a dropped"
+        "schedule would still be reported."
+    ),
+    "frontend-build.yml::(workflow triggers)::(on)::on": (
+        "Each copy watches its own workflow file. The GitHub copy lists"
+        "`.github/workflows/frontend-build.yml` in its trigger paths and"
+        "the Forgejo copy lists `.forgejo/workflows/frontend-build.yml`, so"
+        "editing one re-runs that one. Making them identical would mean"
+        "each platform ignoring changes to the file it actually executes."
+        "Everything else in both `on:` blocks matches -- this entry is"
+        "scoped to `on` alone, so a narrowed branch filter or a dropped"
+        "schedule would still be reported."
+    ),
+    "perf-smoke.yml::(workflow triggers)::(on)::on": (
+        "Each copy watches its own workflow file. The GitHub copy lists"
+        "`.github/workflows/perf-smoke.yml` in its trigger paths and the"
+        "Forgejo copy lists `.forgejo/workflows/perf-smoke.yml`, so editing"
+        "one re-runs that one. Making them identical would mean each"
+        "platform ignoring changes to the file it actually executes."
+        "Everything else in both `on:` blocks matches -- this entry is"
+        "scoped to `on` alone, so a narrowed branch filter or a dropped"
+        "schedule would still be reported."
+    ),
     "ci.yml::jobs": (
         "Deliberately different decompositions, not drift. The GitHub copy "
         "splits into lint/test/topology because those are the PR status checks "
@@ -81,7 +121,7 @@ ACCEPTED_DIVERGENCES: dict[str, str] = {
         "sense on a self-hosted runner with no per-minute cost. Forcing these "
         "into one shape would either slow every PR or thin the nightly sweep."
     ),
-    "bot-health-watchdog.yml::watchdog::Run bot health watchdog": (
+    "bot-health-watchdog.yml::watchdog::Run bot health watchdog::env": (
         "The same variable, from the only place each platform can get it. "
         "GitHub Actions injects `secrets.GITHUB_TOKEN` automatically for every "
         "run; Forgejo has no equivalent auto-provided token, so its copy reads "
@@ -96,28 +136,28 @@ ACCEPTED_DIVERGENCES: dict[str, str] = {
         "bot integration'; the GitHub one omits 'The Citadel'. Same command, "
         "same effect."
     ),
-    "deploy-cloudflare.yml::preflight::Check Cloudflare credentials": (
+    "deploy-cloudflare.yml::preflight::Check Cloudflare credentials::run": (
         "The warning text names the secret store the reader must actually go "
         "and fix: 'GitHub repo secrets' on one side, 'org/repo secrets in The "
         "Workshop' on the other. Identical text would send half the readers to "
         "the wrong place."
     ),
-    "deploy-fly.yml::deploy-backend::Check Fly credentials": (
+    "deploy-fly.yml::deploy-backend::Check Fly credentials::run": (
         "Same reason as the Cloudflare credential check -- the message names "
         "the platform's own secret store."
     ),
-    "deploy-fly.yml::deploy-backend::Validate required deploy secrets": (
+    "deploy-fly.yml::deploy-backend::Validate required deploy secrets::run": (
         "Same reason -- remediation text names the platform's secret store."
     ),
-    "deploy-fly.yml::deploy-bots::Notify The Citadel": (
+    "deploy-fly.yml::deploy-bots::Notify The Citadel::run": (
         "The webhook payload's sender.login identifies which runner sent it "
         "('github-actions' vs 'forgejo-runner'). The Observatory uses that to "
         "attribute the deploy, so making them identical would lose information."
     ),
-    "frontend-build.yml::deploy-pages::Check Cloudflare credentials": (
+    "frontend-build.yml::deploy-pages::Check Cloudflare credentials::run": (
         "Same reason as deploy-cloudflare.yml -- platform-specific secret store."
     ),
-    "frontend-build.yml::deploy-pages::Deploy to Cloudflare Pages": (
+    "frontend-build.yml::deploy-pages::Deploy to Cloudflare Pages::run": (
         'The Forgejo copy guards the write with `if [ -n "$GITHUB_STEP_SUMMARY" ]` '
         "because act-runner does not always set that variable, where GitHub "
         "Actions always does. The guard is correct on both, but only load-"
@@ -129,10 +169,15 @@ ACCEPTED_DIVERGENCES: dict[str, str] = {
 def normalise_run(body: str | None) -> tuple[str, ...]:
     """A shell body reduced for comparison, losslessly.
 
-    Only two things are removed, and neither can change what a command does:
-    trailing whitespace on each line, and trailing blank lines at the end of
-    the body. Everything else -- leading indentation, runs of internal
-    whitespace, blank lines, comment lines -- is preserved and compared.
+    Nothing is removed. Every line is compared exactly as written, including
+    trailing whitespace, because that can change what a command does:
+    `EOF` terminates a `<<EOF` heredoc and `EOF ` does not, so a copy whose
+    only difference is a trailing space after a terminator is a copy that
+    hangs where the other runs. `.forgejo/workflows/ci.yml` opens three
+    heredocs, so this is reachable here rather than theoretical. The one
+    concession is that a trailing *newline* on the body as a whole is
+    ignored, which YAML block scalars vary on for reasons unrelated to what
+    the script does.
 
     An earlier version of this function collapsed internal whitespace and
     dropped blank and comment lines, on the reasoning that neither matters in
@@ -154,8 +199,10 @@ def normalise_run(body: str | None) -> tuple[str, ...]:
     gets an ACCEPTED_DIVERGENCES entry with a written reason, and the reason
     is then reviewable. A false negative is silent.
     """
-    lines = [line.rstrip() for line in (body or "").splitlines()]
-    while lines and not lines[-1]:
+    lines = (body or "").splitlines()
+    # Only a wholly empty trailing line goes -- YAML's `|` and `|-` differ on
+    # whether the block ends with one, and that difference is not executable.
+    while lines and lines[-1] == "":
         lines.pop()
     return tuple(lines)
 
@@ -195,6 +242,11 @@ def effective_env(*layers: object) -> object:
     return canonical(merged) if merged else None
 
 
+#: The synthetic job id under which a workflow's own `on:` block is compared.
+#: Not a real job, so it cannot collide with one.
+TRIGGER_KEY = "(workflow triggers)"
+
+
 def skeleton(doc: dict) -> dict[str, list[tuple]]:
     """Job id -> ordered steps, each reduced to what determines its behaviour.
 
@@ -211,6 +263,16 @@ def skeleton(doc: dict) -> dict[str, list[tuple]]:
     """
     jobs = {}
     workflow_env = doc.get("env")
+    # `on:` decides whether the workflow runs at all. A copy that narrowed
+    # `on.pull_request` to a branch the other does not have, or dropped a
+    # schedule, would be a gate that no longer fires -- reported by every
+    # other check in this script as perfectly in sync, because until now the
+    # skeleton was derived from `doc["jobs"]` alone.
+    #
+    # PyYAML parses the bare key `on` as the boolean True (YAML 1.1), so both
+    # spellings are read.
+    triggers = doc.get("on", doc.get(True))
+    jobs[TRIGGER_KEY] = [("(on)", None, (), canonical(triggers), None, None, None)]
     for job_id, job in (doc.get("jobs") or {}).items():
         job_env = job.get("env")
         steps = []
@@ -307,25 +369,38 @@ def compare(name: str) -> list[str]:
         # difference must not become a blanket exemption for its whole job.
         for gh_step, fj_step in zip(gh_steps, fj_steps, strict=True):
             label = gh_step[0] or "(unnamed step)"
-            key = f"{name}::{job_id}::{label}"
-            accepted = key in ACCEPTED_DIVERGENCES
-            if gh_step[1] != fj_step[1]:
+            # The synthetic trigger and job-control rows reuse the step
+            # tuple's shape, so their slots carry different meanings.
+            if job_id == TRIGGER_KEY:
+                field_names = ("on", "(unused)", "(unused)", "(unused)")
+            elif label == "(job controls)":
+                field_names = ("if", "permissions", "env", "continue-on-error")
+            else:
+                field_names = ("if", "with", "env", "continue-on-error")
+
+            # An accepted divergence names the ONE field it excuses. Keying by
+            # step alone -- which this did until CodeRabbit's second review of
+            # #992 -- meant the documented `Deploy to Cloudflare Pages` body
+            # exception also silenced `if: false` and every other control on
+            # that step. Same shape as the accepted step-names entry that was
+            # suppressing its whole job: an exemption must not grow past what
+            # somebody actually wrote down for it.
+            base = f"{name}::{job_id}::{label}"
+
+            if gh_step[1] != fj_step[1] and f"{base}::uses" not in ACCEPTED_DIVERGENCES:
                 findings.append(
                     f"{name} [{job_id}] {label!r}: different action -- "
                     f"GitHub uses {gh_step[1]}, Forgejo uses {fj_step[1]}"
                 )
-            if gh_step[2] != fj_step[2] and not accepted:
+            if gh_step[2] != fj_step[2] and f"{base}::run" not in ACCEPTED_DIVERGENCES:
                 findings.append(
                     f"{name} [{job_id}] {label!r}: shell body differs "
                     f"({len(gh_step[2])} vs {len(fj_step[2])} lines)"
                 )
             for field, gh_value, fj_value in zip(
-                ("if", "with", "env", "continue-on-error"),
-                gh_step[3:],
-                fj_step[3:],
-                strict=True,
+                field_names, gh_step[3:], fj_step[3:], strict=True
             ):
-                if gh_value != fj_value and not accepted:
+                if gh_value != fj_value and f"{base}::{field}" not in ACCEPTED_DIVERGENCES:
                     findings.append(
                         f"{name} [{job_id}] {label!r}: {field!r} differs -- "
                         f"GitHub {gh_value!r}, Forgejo {fj_value!r}"

@@ -8,11 +8,16 @@ on:
       - 'cloudflare/pages/**'
       - 'docker/Dockerfile.web'
       - 'docker/nginx.conf'
+      - '.forgejo/workflows/frontend-build.yml'
   pull_request:
     paths:
       - 'web/**'
       - 'docker/Dockerfile.web'
       - 'docker/nginx.conf'
+      - '.forgejo/workflows/frontend-build.yml'
+  # The GitHub copy has always had this; without it there is no way to run
+  # this build on Forgejo by hand.
+  workflow_dispatch:
 
 jobs:
   build:

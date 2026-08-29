@@ -98,6 +98,18 @@ def value(
     fall without anyone editing a table, which is what makes the ranking
     improve with use rather than staying as accurate as its first guess.
     """
+    # Validated before the unpriced branch, not after it. With the checks
+    # below the branch, `value(units=10, cost_to_serve=-100)` returned an
+    # unpriced valuation with net=+100 -- a negative cost silently becoming
+    # £100 of profit on a resource with no price signal at all. This module
+    # exists to make fabricated revenue unrepresentable, and that was a way
+    # to fabricate it. Caught by CodeRabbit on #992.
+    if units < 0 or cost_to_serve < 0 or (unit_price is not None and unit_price < 0):
+        raise ValueError(
+            "units, unit_price and cost_to_serve must all be non-negative; "
+            f"got units={units}, unit_price={unit_price}, cost_to_serve={cost_to_serve}"
+        )
+
     if unit_price is None or basis is Basis.NONE:
         return Valuation(
             resource_id=resource_id,
@@ -115,12 +127,6 @@ def value(
                 "than estimated, because a made-up figure here would be quoted "
                 "later as though it had been measured."
             ),
-        )
-
-    if units < 0 or unit_price < 0 or cost_to_serve < 0:
-        raise ValueError(
-            "units, unit_price and cost_to_serve must all be non-negative; "
-            f"got units={units}, unit_price={unit_price}, cost_to_serve={cost_to_serve}"
         )
 
     gross = units * unit_price
