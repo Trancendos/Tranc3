@@ -147,8 +147,13 @@ class CirService:
         self._path = Path(db_path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
+        # Matching src.townhall.itsm: an explicit busy timeout and WAL, because
+        # the closure gate reads this database on every incident close and a
+        # second worker's write lock must not turn a gate check into an error.
+        self._conn = sqlite3.connect(str(self._path), check_same_thread=False, timeout=30.0)
         self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout=30000")
         self._create_schema()
 
     def close(self) -> None:

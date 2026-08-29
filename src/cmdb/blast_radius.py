@@ -311,7 +311,13 @@ def _dependants() -> Dict[str, Tuple[_Edge, ...]]:
 
 
 def reset_cache() -> None:
-    """Drop the cached graph. For tests that rewrite the workbook."""
+    """Drop the cached graph. For tests that rewrite the workbook.
+
+    `_identity_index` is cleared first because `_edges()` and `coverage()`
+    both read through it. Clearing only the graph caches left the inventory
+    half stale, so this did not do what its name promised.
+    """
+    _identity_index.cache_clear()
     _edges.cache_clear()
     _dependants.cache_clear()
     coverage.cache_clear()

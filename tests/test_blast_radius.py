@@ -18,6 +18,7 @@ from src.cmdb.blast_radius import (
     EdgeSource,
     blast_radius,
     coverage,
+    reset_cache,
     safe_blast_radius,
     services_without_dependency_data,
 )
@@ -208,3 +209,23 @@ class TestBothWorkbookSourcesAreRead:
                 if node.failure_impact:
                     seen = True
         assert seen, "no edge carried a failure impact; the edge table is not being read"
+
+
+class TestResetCacheResetsEverythingItReads:
+    def test_it_clears_the_identity_index_too(self):
+        """`reset_cache` exists for tests that rewrite the workbook.
+
+        `_edges()` and `coverage()` both read through the cached identity
+        index, so clearing only the graph caches left the inventory half
+        stale and the function did not do what its name promised.
+        """
+        from src.cmdb.identity import _index
+
+        _index()  # populate
+        assert _index.cache_info().currsize == 1
+        reset_cache()
+        assert _index.cache_info().currsize == 0
+
+    def test_the_graph_still_answers_after_a_reset(self):
+        reset_cache()
+        assert blast_radius(WITH_DATA).affected

@@ -121,8 +121,13 @@ class TestEveryITSMEventRoutesToAChannelSentinelAccepts:
         import pathlib
         import re
 
-        source = pathlib.Path(
-            "workers/dimensional-nexus-service/Dimensional/infinity/nomenclature.py"
+        # Anchored to this file, not the pytest working directory. A relative
+        # path meant that running the suite from anywhere but the repo root
+        # made source.exists() False and skipped -- so the mirror every other
+        # assertion in this class trusts would have been verified by nothing.
+        source = (
+            pathlib.Path(__file__).resolve().parents[1]
+            / "workers/dimensional-nexus-service/Dimensional/infinity/nomenclature.py"
         )
         if not source.exists():  # pragma: no cover - worker tree not checked out
             pytest.skip("dimensional-nexus worker tree not present")
@@ -182,4 +187,29 @@ class TestRoutingPutsEventsWhereSomeoneWouldLook:
         assert _event_type_to_sentinel_channel("workflow.started") == "workflows"
         assert _event_type_to_sentinel_channel("service.registered") == "platform"
         assert _event_type_to_sentinel_channel("secret.stored") == "security"
-        assert _event_type_to_sentinel_channel("security.cve.ingested") == "platform"
+        assert _event_type_to_sentinel_channel("security.cve.ingested") == "security"
+
+    def test_no_family_named_after_a_channel_lands_on_the_generic_default(self):
+        """The gap the per-member validity sweep could not see.
+
+        `security.*` routed to "platform". That is a *valid* channel, so the
+        422 test passed, nothing was rejected and nothing was logged -- threat
+        detections were delivered to everyone except the people subscribed to
+        security. Validity is not correctness.
+
+        So: if an event family is named after a channel, it must route to that
+        channel and not fall through to the default. Singular and plural both
+        count (`workflow.*` -> "workflows").
+        """
+        from src.event_bus.types import PlatformEventType
+
+        misrouted = []
+        for member in PlatformEventType:
+            prefix = member.value.split(".", 1)[0]
+            destination = _event_type_to_sentinel_channel(member.value)
+            for channel in SENTINEL_CHANNELS:
+                if channel == "platform":
+                    continue  # the default; nothing can "fall through" to it wrongly
+                if prefix in (channel, channel.rstrip("s")) and destination != channel:
+                    misrouted.append((member.value, destination, channel))
+        assert not misrouted, f"families named after a channel but routed elsewhere: {misrouted}"

@@ -226,8 +226,14 @@ class ItsmService:
         self._path = Path(db_path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
-        self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
+        # _lock coordinates threads in one process; a second uvicorn worker
+        # holding a write lock is not covered by it, so the connection needs a
+        # real busy timeout and WAL rather than the 5s default and a reader
+        # blocked by every writer.
+        self._conn = sqlite3.connect(str(self._path), check_same_thread=False, timeout=30.0)
         self._conn.row_factory = sqlite3.Row
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout=30000")
         self._cir = cir
         self._create_schema()
 
@@ -368,11 +374,17 @@ class ItsmService:
             self.get_incident(incident_id)
             self._cir_service().require_closable(incident_id)
 
-        resolved_at = time.time() if status in _TERMINAL else None
+        # COALESCE, not an unconditional write: RESOLVED then CLOSED is the
+        # normal flow, and both are terminal, so writing time.time() on each
+        # replaced the real resolution time with the close time. Any move back
+        # to a non-terminal status wrote NULL over it. Time-to-resolve then
+        # reports a close time as a resolve time.
         with self._lock:
             cur = self._conn.execute(
-                "UPDATE incidents SET status = ?, resolved_at = ? WHERE id = ?",
-                (status.value, resolved_at, incident_id),
+                "UPDATE incidents SET status = ?, resolved_at = "
+                "CASE WHEN ? THEN COALESCE(resolved_at, ?) ELSE resolved_at END "
+                "WHERE id = ?",
+                (status.value, int(status in _TERMINAL), time.time(), incident_id),
             )
             self._conn.commit()
             if cur.rowcount == 0:

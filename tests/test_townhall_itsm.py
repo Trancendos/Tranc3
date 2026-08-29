@@ -146,6 +146,33 @@ class TestAnIncidentKnowsWhoAnswersForIt:
         assert not resolve_ownership("nonsense").resolved
 
 
+class TestTheResolutionTimeIsTheResolutionTime:
+    """RESOLVED and CLOSED are both terminal, and both used to write the clock."""
+
+    def test_closing_does_not_overwrite_the_resolution_time(self, service, cir):
+        incident = service.create_incident("Down", "…")
+        resolved = service.update_incident_status(incident.id, IncidentStatus.RESOLVED)
+        assert resolved.resolved_at is not None
+
+        cir.raise_improvement("add a probe", raised_by="Tristuran", incident_id=incident.id)
+        closed = service.update_incident_status(incident.id, IncidentStatus.CLOSED)
+        # Writing time.time() on every terminal transition replaced the real
+        # resolution time with the close time, so time-to-resolve reporting
+        # read a close time as a resolve time.
+        assert closed.resolved_at == resolved.resolved_at
+
+    def test_reopening_does_not_erase_the_resolution_time(self, service):
+        incident = service.create_incident("Down", "…")
+        resolved = service.update_incident_status(incident.id, IncidentStatus.RESOLVED)
+        reopened = service.update_incident_status(incident.id, IncidentStatus.INVESTIGATING)
+        assert reopened.resolved_at == resolved.resolved_at
+
+    def test_a_never_resolved_incident_has_no_resolution_time(self, service):
+        incident = service.create_incident("Down", "…")
+        service.update_incident_status(incident.id, IncidentStatus.INVESTIGATING)
+        assert service.get_incident(incident.id).resolved_at is None
+
+
 class TestTransitionsAreAnnounced:
     """Problem Management and the CIR react to these. Before, they could not
     see anything this module did."""
@@ -292,13 +319,30 @@ class TestTheRoutesAreReachableAndWritesAreGated:
     feed the event stream, so they require an admin."""
 
     @pytest.fixture
-    def client(self):
+    def client(self, tmp_path, monkeypatch):
         from fastapi.testclient import TestClient
 
         import api
+        import src.townhall.cir as cir_module
+        import src.townhall.itsm as itsm_module
         import tests.conftest  # noqa: F401  — applies env defaults
+        from src.townhall.cir import CirService
 
-        return TestClient(api.app)
+        # Replace the process-wide singletons, not the names bound into the
+        # routes module, so the ItsmService's own closure gate and the routes
+        # see the same temporary databases. Without this these tests shared
+        # data/townhall_itsm.db with every other test in the run — and once the
+        # connections carried a 30s busy timeout, that sharing stopped being
+        # silent and became a 30s stall.
+        cir_svc = CirService(db_path=tmp_path / "cir.db")
+        itsm_svc = ItsmService(db_path=tmp_path / "itsm.db", cir=cir_svc)
+        monkeypatch.setattr(cir_module, "_cir", cir_svc)
+        monkeypatch.setattr(itsm_module, "_itsm", itsm_svc)
+        try:
+            yield TestClient(api.app)
+        finally:
+            itsm_svc.close()
+            cir_svc.close()
 
     def test_the_itsm_routes_are_mounted(self, client):
         import api

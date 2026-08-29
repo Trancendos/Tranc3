@@ -139,11 +139,13 @@ def _impact(identifier: str, max_hops: int) -> Dict[str, Any]:
     """
     try:
         radius = blast_radius(identifier, max_hops=max_hops)
-    except IdentityResolutionError as exc:
+    except IdentityResolutionError:
+        # The caveat below is written here and says everything the caller
+        # needs; echoing the exception text added nothing and put arbitrary
+        # internal detail into a response body.
         return {
             "identifier": identifier,
             "resolved": False,
-            "unresolved_reason": str(exc),
             "caveat": (
                 f"{identifier!r} is not a known ServiceID, PID, Location name "
                 "or port, so no impact can be assessed. This is not a finding "

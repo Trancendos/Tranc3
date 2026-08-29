@@ -254,7 +254,16 @@ def _event_type_to_sentinel_channel(event_type: str) -> str:
     # walked every member against the worker's enum.
     if event_type.startswith("ai."):
         return "models"
-    if event_type.startswith("auth.") or event_type.startswith("secret."):
+    if (
+        event_type.startswith("auth.")
+        or event_type.startswith("secret.")
+        or event_type.startswith("security.")
+    ):
+        # `security.*` used to fall through to the "platform" default. That is
+        # a *valid* channel, so nothing rejected it and nothing logged it --
+        # threat detections and CVE ingestions were delivered, just not to
+        # anyone subscribed to security. Validity is not correctness, and the
+        # routing test that swept this file checked only the first.
         return "security"
     if event_type.startswith("user."):
         return "platform"
