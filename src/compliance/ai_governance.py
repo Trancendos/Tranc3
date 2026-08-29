@@ -204,6 +204,148 @@ MODEL_REGISTRY: Dict[str, ModelCard] = {
         eu_ai_act_articles=["Art. 13 (Transparency)", "Art. 50 (AI-generated content disclosure)"],
         nist_rmf_functions=["GOVERN", "MAP"],
     ),
+    "imind_sensitivity": ModelCard(
+        model_id="imind_sensitivity",
+        name="I-Mind — Sensitivity & Crisis Classifier (Elouise)",
+        version="1.0.0",
+        description=(
+            "Classifies free text for crisis, self-harm, mental-health, safeguarding "
+            "and personal-data sensitivity (src/imind/protocol.py, mounted at /imind, "
+            "and called by Tranquility on a low reported mood). A CRITICAL or HIGH "
+            "assessment raises a P1 Town Hall incident so a person sees it. "
+            "IMPLEMENTATION IS REGULAR EXPRESSIONS, not a model."
+        ),
+        # Highest tier in this registry, and deliberately so. It infers a
+        # person's mental state from their words and its output triggers an
+        # intervention. Whether the Act formally bites here is a lawyer's
+        # question; classifying it below HIGH because the implementation is
+        # simple would be reasoning from the code instead of the consequence.
+        risk_tier=RiskTier.HIGH,
+        intended_use=(
+            "A tripwire that surfaces possible user distress to a human. Not a "
+            "screening instrument, not a triage tool, and not a substitute for "
+            "clinical judgement."
+        ),
+        prohibited_uses=[
+            "Screening, triage, or any use where a NONE result is read as evidence of safety",
+            "Automated decisions affecting a person with no human in the loop",
+            "Emotion inference in workplace or education settings (EU AI Act Art. 5)",
+            "Insurance, employment, credit or eligibility decisions",
+            "Retaining or forwarding assessed text beyond the safeguarding purpose",
+        ],
+        training_data_sources=[
+            "N/A — hand-written regular expressions, no training data, no model weights",
+        ],
+        known_limitations=[
+            "Regular expressions only — no semantic understanding whatsoever",
+            "English only; 'je veux mourir' is not detected (tested)",
+            "Misses indirect and euphemistic ideation — \"I don't want to be here "
+            'anymore" returns NONE (tested)',
+            "Cannot distinguish first-person distress from quoted or third-party "
+            "speech — 'my friend is suicidal' returns CRITICAL (tested)",
+            "Recall and precision have NEVER been measured; there is no labelled "
+            "evaluation set and no false-negative rate",
+            "A NONE result carries no information about safety",
+            "Until 2026-08-29 the only production caller passed a synthetic string "
+            "that could not match any pattern and discarded the result — the path "
+            "was inert in three independent ways",
+        ],
+        fairness_metrics={
+            "crisis_recall": FairnessMetric(
+                threshold=0.95,
+                description=(
+                    "Fraction of genuine crisis disclosures detected. UNMEASURED — "
+                    "requires a labelled, ethically-sourced evaluation set that does "
+                    "not exist. The most important unmeasured number in the estate."
+                ),
+            ),
+            "third_party_false_positive_rate": FairnessMetric(
+                threshold=0.2,
+                description=(
+                    "Fraction of alerts raised on speech about somebody else. Known "
+                    "to be non-zero and unmeasured."
+                ),
+            ),
+            "language_coverage": FairnessMetric(
+                threshold=0.9,
+                description=(
+                    "Share of user languages with any detection capability. "
+                    "Currently 1 language; anyone writing in another is undetected."
+                ),
+            ),
+        },
+        last_audit_date=None,
+        next_audit_due=_NEXT_AUDIT,
+        eu_ai_act_articles=[
+            "Art. 5 (Prohibited practices — emotion inference in work/education)",
+            "Art. 9 (Risk management)",
+            "Art. 14 (Human oversight)",
+            "Annex III (if deployed in an eligibility-affecting context)",
+        ],
+        nist_rmf_functions=["GOVERN", "MAP", "MEASURE", "MANAGE"],
+    ),
+    "resonate_empathy": ModelCard(
+        model_id="resonate_empathy",
+        name="Resonate — Empathy Response Wrapper (Magdalena)",
+        version="1.0.0",
+        description=(
+            "Wraps outgoing responses with empathetic framing (src/resonate/empathy.py). "
+            "Shapes tone; does not classify the user or make decisions about them."
+        ),
+        risk_tier=RiskTier.LIMITED,
+        intended_use="Softening the register of platform responses",
+        prohibited_uses=[
+            "Simulating a therapeutic relationship or implying clinical competence",
+            "Concealing from the user that they are talking to an AI",
+        ],
+        training_data_sources=["N/A — rule-based response shaping, no model weights"],
+        known_limitations=[
+            "Rule-based; no understanding of what it is softening",
+            "Empathetic phrasing over an incorrect answer makes it more persuasive, "
+            "not more correct",
+        ],
+        fairness_metrics={},
+        last_audit_date=None,
+        next_audit_due=_NEXT_AUDIT,
+        eu_ai_act_articles=["Art. 50 (Transparency — users must know it is AI)"],
+        nist_rmf_functions=["GOVERN", "MAP"],
+    ),
+    "ai_gateway": ModelCard(
+        model_id="ai_gateway",
+        name="AI Gateway — Third-Party Model Router",
+        version="1.0.0",
+        description=(
+            "Priority failover router (src/ai_gateway/, worker port 8009): Ollama → "
+            "HuggingFace → OpenRouter → backend → offline stub. Runs no model of its "
+            "own; it decides which third party answers, so the answering model varies "
+            "between requests and is chosen at runtime."
+        ),
+        risk_tier=RiskTier.LIMITED,
+        intended_use="Routing inference to the cheapest available provider",
+        prohibited_uses=[
+            "Routing personal or special-category data to a provider without a "
+            "lawful basis and a data-processing agreement",
+        ],
+        training_data_sources=[
+            "None of its own. Inherits whatever each downstream provider was trained "
+            "on — see docs/compliance/AI-BOM for the consumed-model inventory",
+        ],
+        known_limitations=[
+            "The model that answered a given request is a runtime property, so "
+            "reproducibility and provenance are per-request, not per-system",
+            "Fairness properties are inherited from providers and cannot be asserted here",
+            "The offline stub returns deterministic non-answers that a caller could "
+            "mistake for model output",
+        ],
+        fairness_metrics={},
+        last_audit_date=None,
+        next_audit_due=_NEXT_AUDIT,
+        eu_ai_act_articles=[
+            "Art. 50 (Transparency)",
+            "Art. 53 (GPAI provider obligations — passed through to providers)",
+        ],
+        nist_rmf_functions=["GOVERN", "MAP"],
+    ),
     "mlflow_experiments": ModelCard(
         model_id="mlflow_experiments",
         name="MLflow Experiment Tracker (self-hosted)",

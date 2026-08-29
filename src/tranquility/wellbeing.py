@@ -111,15 +111,74 @@ class Tranquility:
         profile.entries.append(entry)
 
         if mood_level in (MoodLevel.VERY_LOW, MoodLevel.LOW):
-            try:
-                from src.imind.protocol import get_imind
-
-                get_imind().assess(f"User reported mood: {mood_level.name}", actor=user_id)
-            except Exception:
-                pass  # nosec B110 — graceful degradation; error logged upstream
+            self._safeguarding_check(user_id, mood_level, notes)
 
         self._emit(user_id, "tranquility.mood_logged", {"mood": mood_level.value})
         return entry
+
+    def _safeguarding_check(self, user_id: str, mood_level: "MoodLevel", notes: str) -> None:
+        """Run a low mood past I-Mind, and make an escalation reach a person.
+
+        This call previously did none of those things. It passed the synthetic
+        string ``f"User reported mood: {mood_level.name}"`` -- literally
+        "User reported mood: VERY_LOW" -- which matches none of I-Mind's crisis
+        patterns, so the result was always NONE. It then discarded the returned
+        assessment, ``escalate`` included, inside ``except Exception: pass``.
+        Three independent layers, each of which alone made it inert, on the one
+        path in the estate that is meant to notice someone in crisis.
+
+        The user's own ``notes`` are what could carry ideation, so they are what
+        is assessed. On escalation a Town Hall incident is raised, because an
+        incident is this platform's existing way of saying "a person needs to
+        look at this" -- unlike an Observatory log line, which is the only thing
+        that happened before.
+
+        What this deliberately does NOT do is decide the clinical response: who
+        is paged, what they say, which helpline applies. That is a human policy
+        decision and inventing one here would be worse than not having it. This
+        gets the signal in front of somebody; the response is theirs to define.
+        """
+        try:
+            from src.imind.protocol import get_imind
+
+            # The mood is context; the free text is the evidence.
+            subject = notes.strip() or f"(no notes) reported mood: {mood_level.name}"
+            assessment = get_imind().assess(subject, actor=user_id)
+        except Exception:
+            logger.exception(
+                "tranquility: safeguarding assessment failed for user %s -- "
+                "a low mood was recorded with no sensitivity check",
+                user_id,
+            )
+            return
+
+        if not assessment.escalate:
+            return
+
+        try:
+            from src.townhall.itsm import IncidentPriority, get_itsm_service
+
+            get_itsm_service().create_incident(
+                f"Safeguarding escalation: {assessment.level.value}",
+                (
+                    f"I-Mind assessed a Tranquility mood entry as "
+                    f"{assessment.level.value} ({', '.join(c.value for c in assessment.categories)}). "
+                    "The user's own words are deliberately NOT copied here; retrieve them "
+                    f"through Tranquility for user {user_id} under the applicable access "
+                    "controls. This needs a person, not a queue."
+                ),
+                priority=IncidentPriority.P1,
+                service="imind",
+            )
+        except Exception:
+            # Never silent: an escalation that fails to reach anyone is the
+            # failure mode this whole method exists to remove.
+            logger.exception(
+                "tranquility: SAFEGUARDING ESCALATION NOT DELIVERED for user %s "
+                "(level=%s) -- incident could not be raised",
+                user_id,
+                assessment.level.value,
+            )
 
     def record_message(self, user_id: str) -> None:
         profile = self.get_or_create(user_id)
