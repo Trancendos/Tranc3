@@ -70,6 +70,58 @@ rather than asserted independently and left to rot.
 The primary seat at every Location keeps its existing headline title, so every caller of
 `get_job_description(location)` and `get_role(location)` is unchanged.
 
+### The five external seats — the Arcadian Exchange's second mandate
+
+Every seat above is **internal**: it serves the platform and the people using it. The Arcadian
+Exchange is the one Location that also trades *outside* Trancendos, so each of its five Porters
+holds two entwined Job Descriptions — an internal, user-facing procurement seat and an external,
+market-facing revenue seat. Ten Job Descriptions across five AIs.
+
+The pairing is the whole design, not a filing convention. The price intelligence that tells Ann
+Porter what storage costs to buy is the same intelligence that tells her what spare capacity is
+worth selling; George Porter's inference-market model prices both the reservation he buys and the
+capacity he resells. Each external seat therefore names the internal seat it mirrors
+(`paired_with`), and `get_seats` refuses to emit an external seat whose twin is missing — a revenue
+mandate with no procurement counterpart has nothing feeding it.
+
+| Seat | Job Description | Designed for | Paired with | Revenue function |
+|---|---|---|---|---|
+| `clarence-porter-external` | Chief Revenue Officer | Clarence Porter | `primary` (Chief Procurement Officer) | Ranks every opportunity the other four raise against one another, so the estate pursues the best return rather than the most recent suggestion<br>Holds the risk limits and the escalation threshold: past either, an opportunity goes to a human, not to market |
+| `ann-porter-external` | Head of Capacity & Asset Monetisation | Ann Porter | `ann-porter` (Storage Procurement) | Offers surplus storage and IPFS capacity back to the marketplaces her internal seat buys from<br>Licenses finished creative assets the estate already holds — Sashas Photo Studio images, TateKing video, TranceFlow models, Warp Radio audio — with provenance and licence terms attached |
+| `george-porter-external` | Head of Market & Treasury Operations | George Porter | `george-porter` (Model & Inference Procurement) | Models treasury positions and market exposure in **advisory mode only** — a recommendation and a rationale, never an executed trade<br>Resells reserved inference and compute bought below spot by his internal seat |
+| `edward-porter-external` | Head of Expert & Managed Services | Edward Porter | `edward-porter` (Workflow Tooling Procurement) | Packages the estate's own operational competence: governance and compliance profiles from Magna Carta, workflow templates from The Digital Grid, the CMDB and EA workbook<br>Scopes and prices consolidation engagements, where a client's several tools are replaced by one Location |
+| `james-porter-external` | Head of Data, Knowledge & Audience Products | James Porter | `james-porter` (API Credit Procurement) | Sells metered API access and knowledge products from The Library, priced against the credit costs his internal seat already tracks<br>Publishes aggregate, non-identifying data products and audience inventory |
+
+#### What the external mandate deliberately will not do
+
+An external seat describes what the platform is *willing* to sell. Three limits are part of the
+design rather than gaps in it, and each is written into the seat's own stated functions so it
+travels with the role instead of living only here:
+
+- **No autonomous trading.** George Porter's treasury seat produces recommendations. Executing
+  trades in securities or crypto on behalf of others is a regulated activity Trancendos is not
+  authorised for, and an AI seat is not the place to discover that.
+- **No user data as product.** James Porter's seat sells aggregate, non-identifying data. A user's
+  own data is theirs; tAimra's digital twin is opt-in for the user's benefit, not inventory.
+- **No reselling what the platform only licenses.** Third-party analyst research and any other
+  licensed material the estate holds for its own use cannot be repackaged into a knowledge product.
+  The licence forbids it, and Edward Porter's service packs are built from the platform's *own*
+  governance work for exactly that reason.
+
+`EXTERNAL_SEATS` is confined to the Arcadian Exchange. Widening it to another Location is a
+decision about what Trancendos sells, so it should arrive as a written change with a reason, not as
+a derivation that quietly grew.
+
+#### Where it lives
+
+`EXTERNAL_SEATS` and `ExternalSeat` in `src/entities/platform.py`; every `RoleSeat` and
+`RoleAssignment` now carries a `mandate` of `"internal"` or `"external"`, defaulted to `"internal"`
+so every pre-existing seat keeps its meaning without being restated. `/roles` returns `mandate` on
+each row, and `GET /roles/Arcadian Exchange/seats` returns all ten. A registry database created
+before this existed backfills the five external rows on its next startup without disturbing any
+manual reassignment already made — `tests/test_roles.py::TestExternalMandate` proves that by
+stripping the rows and reopening.
+
 ### API
 
 | Call | Returns |
