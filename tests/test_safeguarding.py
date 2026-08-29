@@ -115,10 +115,14 @@ class TestTheEscalationIsOwned:
 
 class TestTheUsersWordsAreNotCopiedIntoTheIncident:
     def test_the_incident_does_not_quote_the_note(self, tranquility, raised):
-        secret = "I want to die and here is something private"
-        tranquility.log_mood("u1", 1, notes=secret)
+        # Named `disclosure`, not `secret`: detect-secrets' keyword heuristic
+        # flags a variable called `secret`, and silencing it with an allowlist
+        # pragma would tell every future reader that a real credential here was
+        # reviewed and waived. There is no credential; there is a person's note.
+        disclosure = "I want to die and here is something private"
+        tranquility.log_mood("u1", 1, notes=disclosure)
         assert raised
-        assert secret not in raised[0]["description"]
+        assert disclosure not in raised[0]["description"]
         assert "private" not in raised[0]["description"]
 
     def test_the_incident_says_where_to_retrieve_it_instead(self, tranquility, raised):
