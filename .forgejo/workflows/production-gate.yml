@@ -6,12 +6,30 @@ on:
   pull_request:
     branches: [main]
 
+# Every step in this gate runs with the same test environment, declared once
+# here rather than repeated on individual steps. Three steps used to carry
+# their own copy of these five variables while the other twelve ran without
+# them, so the two platforms' gates were not running the same checks under
+# the same conditions -- caught by scripts/check_workflow_drift.py once it
+# started comparing effective environments.
+env:
+  SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
+  JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
+  DATABASE_URL: sqlite:///./test.db
+  REDIS_URL: redis://localhost:6379/0
+  ENVIRONMENT: test
+
 jobs:
   production-gate:
     name: Production merge gate
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Do not leave the checkout token in .git/config where any later
+          # step could read or push with it. The GitHub copy has always
+          # set this; this one had not.
+          persist-credentials: false
 
       - name: Set up Python 3.11
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -31,18 +49,25 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt -q
-          # Ensure test runner extras are present even if requirements install is partial
+          # Test-runner extras, in case the requirements install is partial.
           pip install pytest-asyncio psycopg2-binary -q 2>/dev/null || true
           # The exact tool set scripts/pre_deploy_quality_gate.py declares in its
-          # own `gate_tools` string — keep the two in step. A missing one fails
-          # that gate in a way that reads as a code problem rather than a setup
-          # problem (absent bandit reports "0 medium+ issue(s)" with an empty
-          # finding list; absent ruff blocks before any check runs).
+          # own `gate_tools` string — keep the two in step. Every one of these is
+          # a hard requirement of that gate, and a missing one fails it in a way
+          # that reads as a code problem rather than a setup problem: absent
+          # bandit reports "0 medium+ issue(s) (exit 1)" (a block with an empty
+          # finding list), and absent ruff blocks before a single check runs.
           #
-          # Pinned, not latest: a gate whose linter floats can go red on an
-          # upstream release with no change here. bandit and pip-audit come from
-          # requirements-security.txt; ruff matches the 0.15.8 pinned across the
-          # repo's lint workflows.
+          # Versions are pinned, not latest. A merge gate whose linter floats can
+          # go red on a new upstream release with no change in this repo, which
+          # makes the signal untrustworthy exactly when it matters. bandit and
+          # pip-audit come from requirements-security.txt (the repo's declared
+          # versions); ruff matches the 0.15.8 already pinned in ci.yml,
+          # python.yml and test.yml, so the gate and the lint checks cannot
+          # disagree about what passes.
+          #
+          # Not `|| true` — if the gate's own tooling cannot be installed, the
+          # gate is not running, and that should fail loudly here.
           pip install pytest pytest-asyncio "ruff==0.15.8" -q
           pip install -r requirements-security.txt -q
 
@@ -66,21 +91,9 @@ jobs:
             tests/test_p0_health_syntax.py \
             tests/test_p0_metrics_mount.py \
             -q --tb=short
-        env:
-          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
-          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
 
       - name: API import gate
         run: python -c "import api; print('api OK')"
-        env:
-          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
-          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
 
       - name: Citadel compose validate
         run: python3 scripts/citadel_compose_validate.py
@@ -106,13 +119,25 @@ jobs:
             echo "SKIP: docker not available (compose YAML validated via citadel_compose_validate.py)"
             exit 0
           fi
-          # Validate the compose *schema*, independently of whether this host has
-          # a populated .env — that is what `citadel_preflight.py` and the deploy
-          # itself are for. Secrets come from throwaway placeholders derived from
-          # the compose file, so new required variables are covered automatically,
-          # and the operator's real .env.production is left untouched (a stub is
-          # only created when the file is genuinely absent).
+          # docker-compose.production.yml uses ${VAR:?required} for all of its
+          # secrets (53 at last count). That fail-fast is correct for a real deploy
+          # and wrong for a syntax check: this step validates the compose *schema*,
+          # not whether an operator has populated a .env. On the Citadel host a real .env exists,
+          # so the Forgejo original never hit this — on a hosted runner it aborts on
+          # the first missing variable and every later check in the file goes
+          # unvalidated.
+          #
+          # Synthesise a throwaway value per required variable, derived from the
+          # compose file itself so new secrets are covered automatically instead of
+          # drifting against a hardcoded list here.
           env_file="$(mktemp)"
+          # Only clean up the stub if this step is the one that created it.
+          # The unconditional `rm -f .env.production` this replaces was safe
+          # only by accident of the runner: on ubuntu-latest the file never
+          # exists, but the same step on any self-hosted runner would delete
+          # the operator's real, populated secrets file. The Forgejo copy
+          # already guarded this; the guard is ported here so the two agree
+          # on the safe behaviour rather than on the lucky one.
           stub_env=""
           cleanup() {
             rm -f "$env_file"
@@ -123,6 +148,11 @@ jobs:
             | sed 's/^\${//; s/:?.*//' | sort -u \
             | sed 's/$/=ci-validation-placeholder/' > "$env_file"
           echo "Synthesised $(wc -l < "$env_file") placeholder variables for validation."
+          # Every worker inherits `env_file: .env.production` via the
+          # x-worker-common anchor. That file is operator-supplied and gitignored
+          # (.gitignore's `.env.*`), so it is absent in a fresh checkout and Compose
+          # refuses to resolve the project without it. An empty stub satisfies the
+          # reference; the values in it are irrelevant to a schema check.
           if [ ! -f .env.production ]; then
             stub_env=1
             : > .env.production
@@ -131,12 +161,6 @@ jobs:
 
       - name: Citadel preflight (compose contracts)
         run: python3 scripts/citadel_preflight.py
-        env:
-          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
-          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
 
       - name: Pre-deploy quality gate (critical only)
         run: python3 scripts/pre_deploy_quality_gate.py
