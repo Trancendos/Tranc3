@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from Dimensional.sanitize import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 
@@ -138,6 +140,11 @@ class Tranquility:
         decision and inventing one here would be worse than not having it. This
         gets the signal in front of somebody; the response is theirs to define.
         """
+        # user_id reaches the log lines below, and a value carrying newlines
+        # could forge entries in the safeguarding trail specifically -- the one
+        # trail where a fabricated "escalation delivered" line does most harm.
+        safe_user = sanitize_for_log(user_id)
+
         try:
             from src.imind.protocol import get_imind
 
@@ -148,7 +155,7 @@ class Tranquility:
             logger.exception(
                 "tranquility: safeguarding assessment failed for user %s -- "
                 "a low mood was recorded with no sensitivity check",
-                user_id,
+                safe_user,
             )
             return
 
@@ -182,7 +189,7 @@ class Tranquility:
             logger.exception(
                 "tranquility: SAFEGUARDING ESCALATION NOT DELIVERED for user %s "
                 "(level=%s) -- incident could not be raised",
-                user_id,
+                safe_user,
                 assessment.level.value,
             )
 

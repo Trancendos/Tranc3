@@ -227,7 +227,7 @@ MODEL_REGISTRY: Dict[str, ModelCard] = {
             "clinical judgement."
         ),
         prohibited_uses=[
-            "Screening, triage, or any use where a NONE result is read as evidence of safety",
+            ("Screening, triage, or any use where a NONE result is read as evidence of safety"),
             "Automated decisions affecting a person with no human in the loop",
             "Emotion inference in workplace or education settings (EU AI Act Art. 5)",
             "Insurance, employment, credit or eligibility decisions",
@@ -239,16 +239,24 @@ MODEL_REGISTRY: Dict[str, ModelCard] = {
         known_limitations=[
             "Regular expressions only — no semantic understanding whatsoever",
             "English only; 'je veux mourir' is not detected (tested)",
-            "Misses indirect and euphemistic ideation — \"I don't want to be here "
-            'anymore" returns NONE (tested)',
-            "Cannot distinguish first-person distress from quoted or third-party "
-            "speech — 'my friend is suicidal' returns CRITICAL (tested)",
-            "Recall and precision have NEVER been measured; there is no labelled "
-            "evaluation set and no false-negative rate",
+            (
+                "Misses indirect and euphemistic ideation — \"I don't want to be "
+                'here anymore" returns NONE (tested)'
+            ),
+            (
+                "Cannot distinguish first-person distress from quoted or third-party "
+                "speech — 'my friend is suicidal' returns CRITICAL (tested)"
+            ),
+            (
+                "Recall and precision have NEVER been measured; there is no labelled "
+                "evaluation set and no false-negative rate"
+            ),
             "A NONE result carries no information about safety",
-            "Until 2026-08-29 the only production caller passed a synthetic string "
-            "that could not match any pattern and discarded the result — the path "
-            "was inert in three independent ways",
+            (
+                "Until 2026-08-29 the only production caller passed a synthetic "
+                "string that could not match any pattern and discarded the result "
+                "— the path was inert in three independent ways"
+            ),
         ],
         fairness_metrics={
             "crisis_recall": FairnessMetric(
@@ -301,8 +309,10 @@ MODEL_REGISTRY: Dict[str, ModelCard] = {
         training_data_sources=["N/A — rule-based response shaping, no model weights"],
         known_limitations=[
             "Rule-based; no understanding of what it is softening",
-            "Empathetic phrasing over an incorrect answer makes it more persuasive, "
-            "not more correct",
+            (
+                "Empathetic phrasing over an incorrect answer makes it more "
+                "persuasive, not more correct"
+            ),
         ],
         fairness_metrics={},
         last_audit_date=None,
@@ -323,19 +333,28 @@ MODEL_REGISTRY: Dict[str, ModelCard] = {
         risk_tier=RiskTier.LIMITED,
         intended_use="Routing inference to the cheapest available provider",
         prohibited_uses=[
-            "Routing personal or special-category data to a provider without a "
-            "lawful basis and a data-processing agreement",
+            (
+                "Routing personal or special-category data to a provider without a "
+                "lawful basis and a data-processing agreement"
+            ),
         ],
         training_data_sources=[
-            "None of its own. Inherits whatever each downstream provider was trained "
-            "on — see docs/compliance/AI-BOM for the consumed-model inventory",
+            (
+                "None of its own. Inherits whatever each downstream provider was "
+                "trained on — see docs/compliance/AI-BOM for the consumed-model "
+                "inventory"
+            ),
         ],
         known_limitations=[
-            "The model that answered a given request is a runtime property, so "
-            "reproducibility and provenance are per-request, not per-system",
+            (
+                "The model that answered a given request is a runtime property, so "
+                "reproducibility and provenance are per-request, not per-system"
+            ),
             "Fairness properties are inherited from providers and cannot be asserted here",
-            "The offline stub returns deterministic non-answers that a caller could "
-            "mistake for model output",
+            (
+                "The offline stub returns deterministic non-answers that a caller "
+                "could mistake for model output"
+            ),
         ],
         fairness_metrics={},
         last_audit_date=None,

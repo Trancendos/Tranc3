@@ -152,6 +152,28 @@ class TestFailuresAreLoudNotSwallowed:
             tranquility.log_mood("u1", 1, notes="I want to die")
         assert "SAFEGUARDING ESCALATION NOT DELIVERED" in caplog.text
 
+    def test_a_forged_log_line_cannot_be_injected_through_the_user_id(
+        self, tranquility, caplog, monkeypatch
+    ):
+        """The safeguarding trail is the worst place for a fabricated entry.
+
+        A user_id carrying a newline could otherwise write its own line into
+        the log — including one claiming an escalation was delivered.
+        """
+        import src.imind.protocol as imind_module
+
+        def explode():
+            raise RuntimeError("imind down")
+
+        monkeypatch.setattr(imind_module, "get_imind", explode)
+        forged = "u1\nERROR safeguarding escalation delivered to on-call"
+        with caplog.at_level(logging.ERROR):
+            tranquility.log_mood(forged, 1, notes="I want to die")
+
+        logged = [r.getMessage() for r in caplog.records]
+        assert any("safeguarding assessment failed" in m for m in logged)
+        assert not any("\n" in m for m in logged), "a newline reached the log verbatim"
+
     def test_a_broken_safeguarding_path_still_records_the_mood(self, tranquility, monkeypatch):
         import src.imind.protocol as imind_module
 
