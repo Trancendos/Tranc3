@@ -220,3 +220,28 @@ class TestTheLimitationsAreRealAndRecorded:
 
         for phrase in ("cutting myself", "killing myself", "ending my life", "self-harming"):
             assert get_imind().assess(phrase).escalate is True, phrase
+
+
+class TestTheLogSanitiserCoversEveryLineBreakPythonKnows:
+    """`str.splitlines()` is the yardstick, not the CR/LF pair.
+
+    The sanitiser stripped \\r and \\n and let U+0085, U+2028 and U+2029
+    through — and Python itself splits lines on all three, so any downstream
+    tool that splits log lines the way Python does would still have seen a
+    forged entry. Asserted against splitlines() rather than a hand-listed set,
+    so a new separator Python learns about fails here.
+    """
+
+    def test_no_sanitised_value_can_split_into_two_lines(self):
+        from Dimensional.sanitize import sanitize_for_log
+
+        for code in (10, 13, 0x85, 0x2028, 0x2029, 11, 12):
+            forged = "u1" + chr(code) + "ERROR escalation delivered"
+            assert len(sanitize_for_log(forged).splitlines()) == 1, (
+                f"U+{code:04X} survives sanitisation and still breaks the line"
+            )
+
+    def test_a_benign_id_is_left_readable(self):
+        from Dimensional.sanitize import sanitize_for_log
+
+        assert sanitize_for_log("user-42_alpha") == "user-42_alpha"
