@@ -184,7 +184,7 @@ this is worth" is a reportable answer here; a fabricated one is not representabl
 **§5's second rule — nothing charges a real user except through Royal Bank of Arcadia — holds
 because this subsystem has no payment path at all.** It ranks and calibrates; it never takes money.
 Recording an outcome (`POST /exchange/outcome`) writes only to the realisation ratio. Realised
-income still books through `src/monetisation/billing.py`'s twelve streams, which is why every
+income still books through `src/monetisation/billing.py`'s thirteen streams, which is why every
 resource in the catalogue names the stream it settles into — one ledger, one answer to "what did we
 earn".
 

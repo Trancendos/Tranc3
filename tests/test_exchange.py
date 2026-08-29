@@ -487,3 +487,45 @@ class TestRoutes:
             ],
         )
         assert response.status_code == 422
+
+
+class TestRevenueStreamsRecordWhatIsActuallyEarned:
+    """A resource must settle into a stream that records the estate's own take.
+
+    `marketplace_fees` is the Arcadian Exchange's **2.5% cut of somebody
+    else's transaction**. Six resources the estate sells outright -- its own
+    spare storage, and the images, video, 3D and audio it produced -- were
+    routed there when this catalogue was first written. The opportunity book
+    would have reported the full sale price while the ledger recorded 2.5% of
+    it: a fortyfold overstatement, silently, on a third of the inventory.
+    """
+
+    def test_nothing_direct_books_into_the_fee_stream(self):
+        booked = [
+            r.resource_id for r in SELLABLE_RESOURCES if r.revenue_stream == "marketplace_fees"
+        ]
+        assert booked == [], (
+            "These resources book into the 2.5% fee stream. If one is genuinely "
+            "brokered between two outside parties that is correct and this test "
+            "should say so explicitly; otherwise the estate keeps the whole "
+            f"sale price and the stream is wrong: {booked}"
+        )
+
+    def test_the_ledger_has_a_home_for_direct_asset_sales(self):
+        from src.monetisation.billing import PassiveRevenueEngine
+
+        assert "asset_licensing" in PassiveRevenueEngine.STREAMS
+
+    def test_every_stream_named_by_the_catalogue_can_actually_be_booked(self):
+        # validate_catalogue covers this, but assert it here too: the failure
+        # mode is a valuation that produces a number no ledger will accept.
+        from src.monetisation.billing import PassiveRevenueEngine
+
+        tracker = PassiveRevenueEngine()
+        for resource in SELLABLE_RESOURCES:
+            before = tracker.streams[resource.revenue_stream]
+            tracker.record(resource.revenue_stream, 1.0)
+            assert tracker.streams[resource.revenue_stream] == pytest.approx(before + 1.0), (
+                f"{resource.resource_id} names stream {resource.revenue_stream!r}, "
+                f"which the ledger silently dropped"
+            )

@@ -7,7 +7,7 @@ mandate -- the part that runs before anything is sold, and that
 `PassiveRevenueEngine` only ever sees the settled end of.
 
 **It composes with the existing ledger rather than shadowing it.** Realised
-income still books through `PassiveRevenueEngine`'s twelve streams; every
+income still books through `PassiveRevenueEngine`'s thirteen streams; every
 resource in the catalogue names the stream it settles into. Recording an
 outcome here feeds the realisation ratio and nothing else, so there is one
 ledger and one place a number can come from.

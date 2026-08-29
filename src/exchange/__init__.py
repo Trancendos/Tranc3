@@ -12,7 +12,7 @@ plausibly worth, and what it is not permitted to sell at all.
     engine.py      pulls, values, rules on, ranks, and learns from outcomes
     routes.py      /exchange, mounted in api.py
 
-Realised income still books through `PassiveRevenueEngine`'s twelve streams.
+Realised income still books through `PassiveRevenueEngine`'s thirteen streams.
 Every resource here names the stream it settles into, so there is one ledger
 and one answer to "what did we earn".
 """

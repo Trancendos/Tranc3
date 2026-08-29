@@ -14,7 +14,7 @@ here rather than producing an opportunity book that quietly references a
 service the platform no longer has.
 
 **Every source names a real revenue stream.** `PassiveRevenueEngine` already
-books realised income across twelve streams. This module is the missing front
+books realised income across thirteen streams. This module is the missing front
 half -- what *could* be sold and for how much -- so it maps onto those streams
 rather than inventing a parallel ledger that would then have to be reconciled.
 """
@@ -78,7 +78,7 @@ SELLABLE_RESOURCES: Tuple[SellableResource, ...] = (
         location="DocUtari",
         description="Storage and IPFS capacity held above the estate's own need",
         owning_seat="ann-porter-external",
-        revenue_stream="marketplace_fees",
+        revenue_stream="asset_licensing",
         unit="GiB-month",
     ),
     SellableResource(
@@ -86,7 +86,7 @@ SELLABLE_RESOURCES: Tuple[SellableResource, ...] = (
         location="Sashas Photo Studio",
         description="Rendered images the studio produced and the estate holds rights to",
         owning_seat="ann-porter-external",
-        revenue_stream="marketplace_fees",
+        revenue_stream="asset_licensing",
         unit="licensed image",
     ),
     SellableResource(
@@ -94,7 +94,7 @@ SELLABLE_RESOURCES: Tuple[SellableResource, ...] = (
         location="TateKing",
         description="Finished video segments and edits available for licensing",
         owning_seat="ann-porter-external",
-        revenue_stream="marketplace_fees",
+        revenue_stream="asset_licensing",
         unit="licensed clip",
     ),
     SellableResource(
@@ -102,7 +102,7 @@ SELLABLE_RESOURCES: Tuple[SellableResource, ...] = (
         location="TranceFlow",
         description="3D models and game-ready assets built in-house",
         owning_seat="ann-porter-external",
-        revenue_stream="marketplace_fees",
+        revenue_stream="asset_licensing",
         unit="licensed model",
     ),
     SellableResource(
@@ -110,7 +110,7 @@ SELLABLE_RESOURCES: Tuple[SellableResource, ...] = (
         location="Warp Radio",
         description="Original audio beds and stings produced for the estate",
         owning_seat="ann-porter-external",
-        revenue_stream="marketplace_fees",
+        revenue_stream="asset_licensing",
         unit="licensed track",
     ),
     SellableResource(
@@ -135,7 +135,7 @@ SELLABLE_RESOURCES: Tuple[SellableResource, ...] = (
         location="Royal Bank of Arcadia",
         description="Treasury and market exposure modelling on the estate's own balance",
         owning_seat="george-porter-external",
-        revenue_stream="marketplace_fees",
+        revenue_stream="consulting",
         unit="advisory note",
         constraint=Constraint.REGULATED,
         constraint_note=(
