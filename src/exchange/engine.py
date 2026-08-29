@@ -29,6 +29,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from Dimensional.sanitize import sanitize_for_log
 from src.exchange.governance import Decision, Ruling, rule
 from src.exchange.sources import SELLABLE_RESOURCES, get_resource, validate_catalogue
 from src.exchange.valuation import Basis, Valuation, value
@@ -195,13 +196,18 @@ class OpportunityEngine:
             )
             self._conn.commit()
         ratio = self.realisation_ratio(resource_id)
+        # Every value here reaches the log from a request body. `resource_id`
+        # is already constrained to the catalogue by the check above and the
+        # two amounts are floats, so none of them can carry a newline today --
+        # but "today" is doing load-bearing work in that sentence, and the
+        # estate has a sanitiser for exactly this. Composed into one string so
+        # a single barrier covers all four rather than three of them.
         logger.info(
-            "Exchange outcome recorded for %s: estimated %.2f, realised %.2f, "
-            "realisation ratio now %.3f",
-            resource_id,
-            estimated,
-            realised,
-            ratio,
+            "Exchange outcome recorded: %s",
+            sanitize_for_log(
+                f"{resource_id} estimated {estimated:.2f}, realised {realised:.2f}, "
+                f"realisation ratio now {ratio:.3f}"
+            ),
         )
         return ratio
 
