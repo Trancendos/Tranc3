@@ -358,3 +358,149 @@ class TestThePositionReportsWhatHappened:
         assert position["open_losses"] == 1
         assert Domain.CREATIVE_ASSETS.value in position["barred_domains"]
         assert Domain.CAPACITY.value not in position["barred_domains"]
+
+
+class TestTheSanctionedRouteIntoACapitalAtRiskDomain:
+    """Treasury is unreachable by earning. `assign()` is the way in, and the
+    tests above never touched it — so nothing verified that the front door
+    was locked while both side doors were being checked.
+
+    It was not. A seat could pass its own id as `assigned_by` and grant
+    itself TREASURY outright, which made the adjacency isolation and the
+    CAPITAL_AT_RISK skip decorative. Reproduced, then gated.
+    """
+
+    def test_a_seat_cannot_assign_itself_a_domain(self, expertise):
+        seat = "ann-porter-external"
+        with pytest.raises(PermissionError):
+            expertise.assign(
+                seat,
+                Domain.TREASURY,
+                assigned_by=seat,
+                reason="I would like to trade capital",
+            )
+        assert not expertise.horizon(seat).covers(Domain.TREASURY)
+
+    def test_another_seat_cannot_assign_on_its_behalf(self, expertise):
+        with pytest.raises(PermissionError):
+            expertise.assign(
+                "ann-porter-external",
+                Domain.TREASURY,
+                assigned_by="george-porter-external",
+                reason="helping a colleague out",
+            )
+        assert not expertise.horizon("ann-porter-external").covers(Domain.TREASURY)
+
+    def test_the_taxonomy_owner_may_assign_a_capital_at_risk_domain(self, expertise):
+        seat = "ann-porter-external"
+        expertise.assign(
+            seat,
+            Domain.TREASURY,
+            assigned_by=TAXONOMY_OWNER,
+            reason="board-approved treasury mandate",
+        )
+        assert expertise.horizon(seat).covers(Domain.TREASURY)
+
+    def test_an_assignment_records_who_and_why(self, expertise):
+        # A manual grant into capital-at-risk with no attributable reason is
+        # exactly the thing an auditor would ask about first.
+        seat = "ann-porter-external"
+        expertise.assign(
+            seat,
+            Domain.TREASURY,
+            assigned_by=TAXONOMY_OWNER,
+            reason="board-approved treasury mandate",
+        )
+        change = expertise.changes(seat)[0]
+        assert change.direction == "widened"
+        assert change.domain == Domain.TREASURY.value
+        assert TAXONOMY_OWNER in change.evidence
+        assert "board-approved treasury mandate" in change.evidence
+
+    def test_an_assignment_needs_a_written_reason(self, expertise):
+        seat = "ann-porter-external"
+        with pytest.raises(ValueError):
+            expertise.assign(seat, Domain.TREASURY, assigned_by=TAXONOMY_OWNER, reason="  ")
+        assert not expertise.horizon(seat).covers(Domain.TREASURY)
+
+
+class TestInputsThatWouldCorruptTheRecord:
+    """Negative money is not a small number, it is a different kind of thing.
+    Booking one would make every ratio and total downstream meaningless."""
+
+    @pytest.mark.parametrize(
+        ("estimated", "realised"), [(-1.0, 100.0), (100.0, -1.0), (-5.0, -5.0)]
+    )
+    def test_an_outcome_with_negative_money_is_refused(self, expertise, estimated, realised):
+        with pytest.raises(ValueError):
+            expertise.record_outcome(
+                "ann-porter-external",
+                Domain.CAPACITY,
+                estimated=estimated,
+                realised=realised,
+            )
+
+    @pytest.mark.parametrize(("estimated", "realised"), [(-1.0, 100.0), (100.0, -1.0)])
+    def test_a_settlement_with_negative_money_is_refused(self, treasury, estimated, realised):
+        with pytest.raises(ValueError):
+            treasury.settle(
+                resource_id="storage-surplus",
+                domain=Domain.CAPACITY,
+                estimated=estimated,
+                realised=realised,
+            )
+
+    @pytest.mark.parametrize("rate", [-0.1, 1.5])
+    def test_a_reinvestment_rate_outside_zero_to_one_is_refused(self, tmp_path, rate):
+        with pytest.raises(ValueError):
+            Treasury(db_path=tmp_path / "bad.db", reinvestment_rate=rate)
+
+    def test_a_loss_cannot_be_closed_twice(self, treasury):
+        # The second close would lift a bar that the first already lifted,
+        # and record a measure against a loss nobody is still carrying.
+        treasury.settle(
+            resource_id="storage-surplus",
+            domain=Domain.CAPACITY,
+            estimated=1000.0,
+            realised=400.0,
+        )
+        loss = treasury.open_losses(Domain.CAPACITY)[0]
+        treasury.record_measure(
+            loss.loss_id, measure="cap commitments at 60%", recorded_by=TAXONOMY_OWNER
+        )
+        with pytest.raises(ValueError):
+            treasury.record_measure(
+                loss.loss_id, measure="cap them again", recorded_by=TAXONOMY_OWNER
+            )
+
+    def test_closing_a_loss_that_does_not_exist_is_refused(self, treasury):
+        with pytest.raises(ValueError):
+            treasury.record_measure(99999, measure="phantom measure", recorded_by=TAXONOMY_OWNER)
+
+
+class TestTheRegistriesReportTheirOwnState:
+    def test_an_unreclassified_resource_reports_its_catalogue_domain(self, taxonomy):
+        resource = next(iter(RESOURCE_DOMAINS))
+        assert taxonomy.effective_domain(resource) is domain_of(resource)
+
+    def test_the_taxonomy_snapshot_is_valid_json_naming_its_owner(self, taxonomy):
+        import json
+
+        snapshot = json.loads(taxonomy.snapshot())
+        assert snapshot
+
+    def test_changes_without_a_seat_returns_every_seats_movements(self, expertise):
+        expertise.assign(
+            "ann-porter-external",
+            Domain.TREASURY,
+            assigned_by=TAXONOMY_OWNER,
+            reason="first mandate",
+        )
+        expertise.assign(
+            "george-porter-external",
+            Domain.TREASURY,
+            assigned_by=TAXONOMY_OWNER,
+            reason="second mandate",
+        )
+        seats = {c.seat_id for c in expertise.changes()}
+        assert seats == {"ann-porter-external", "george-porter-external"}

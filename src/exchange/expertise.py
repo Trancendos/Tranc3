@@ -27,7 +27,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from src.exchange.domains import CAPITAL_AT_RISK, Domain, adjacent_to
+from src.exchange.domains import (
+    CAPITAL_AT_RISK,
+    TAXONOMY_OWNER,
+    TAXONOMY_OWNER_TITLE,
+    Domain,
+    adjacent_to,
+)
 
 logger = logging.getLogger("tranc3.exchange.expertise")
 
@@ -302,7 +308,20 @@ class ExpertiseRegistry:
         """Put a seat into a domain it cannot reach by earning.
 
         The only route into a capital-at-risk domain, and deliberately manual.
+        Owner-gated for the same reason reclassify() and record_measure() are:
+        without the check, a seat could pass its own id as `assigned_by` and
+        grant itself TREASURY outright -- which would make the two defences
+        keeping treasury unreachable by earning (adjacency isolation and the
+        CAPITAL_AT_RISK skip in review()) decorative, since the front door
+        was open the whole time. Verified by reproducing it before fixing.
         """
+        if assigned_by != TAXONOMY_OWNER:
+            raise PermissionError(
+                f"Only {TAXONOMY_OWNER_TITLE} ({TAXONOMY_OWNER}) may place a seat "
+                f"into a market it cannot earn; {assigned_by!r} cannot assign "
+                f"{domain.value} to {seat_id!r}. A seat assigning itself a domain "
+                f"is the widening this registry exists to prevent."
+            )
         if not reason.strip():
             raise ValueError("A manual horizon assignment needs a written reason")
         evidence = f"assigned by {assigned_by}: {reason}"
