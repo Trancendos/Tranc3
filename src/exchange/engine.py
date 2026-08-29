@@ -197,7 +197,8 @@ class OpportunityEngine:
         income -- `PassiveRevenueEngine` owns the ledger, and duplicating it
         here would create two answers to "what did we earn".
         """
-        if get_resource(resource_id) is None:
+        resource = get_resource(resource_id)
+        if resource is None:
             raise ValueError(f"{resource_id!r} is not a resource in the catalogue")
         if estimated < 0 or realised < 0:
             raise ValueError("estimated and realised must both be non-negative")
@@ -209,17 +210,19 @@ class OpportunityEngine:
             )
             self._conn.commit()
         ratio = self.realisation_ratio(resource_id)
-        # Every value here reaches the log from a request body. `resource_id`
-        # is already constrained to the catalogue by the check above and the
-        # two amounts are floats, so none of them can carry a newline today --
-        # but "today" is doing load-bearing work in that sentence, and the
-        # estate has a sanitiser for exactly this. Composed into one string so
-        # a single barrier covers all four rather than three of them.
+        # `resource.resource_id` rather than the caller's `resource_id`: the
+        # two are equal by the check above, but this one is the catalogue's own
+        # constant, so no request-supplied string reaches the log at all. That
+        # is better than sanitising the caller's copy -- it logs the canonical
+        # id rather than whatever the caller happened to send that matched --
+        # and it removes the taint at its source instead of relying on a
+        # barrier further down. The sanitiser stays as the second layer,
+        # covering the two amounts.
         logger.info(
             "Exchange outcome recorded: %s",
             sanitize_for_log(
-                f"{resource_id} estimated {estimated:.2f}, realised {realised:.2f}, "
-                f"realisation ratio now {ratio:.3f}"
+                f"{resource.resource_id} estimated {estimated:.2f}, "
+                f"realised {realised:.2f}, realisation ratio now {ratio:.3f}"
             ),
         )
         return ratio
