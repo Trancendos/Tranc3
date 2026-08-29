@@ -26,6 +26,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from auth import get_current_user
+from src.cmdb.blast_radius import DEFAULT_MAX_HOPS, blast_radius
+from src.cmdb.identity import IdentityResolutionError
 from src.townhall.itsm import (
     IncidentPriority,
     IncidentStatus,
@@ -98,6 +100,55 @@ def ownership(service: str) -> Dict[str, Any]:
     not on the hook.
     """
     return resolve_ownership(service).to_dict()
+
+
+def _impact(identifier: str, max_hops: int) -> Dict[str, Any]:
+    """Impact assessment for one service identifier.
+
+    Answers `resolved: false` rather than 404 when the identifier is not in
+    the CMDB, and never conflates that with a service that resolves but has
+    no recorded dependants -- the payload's `unknown_rather_than_empty` is
+    the flag for the second case. Both are "we do not know", and an incident
+    prioritiser that reads either as a genuine zero downgrades a real P1.
+    """
+    try:
+        radius = blast_radius(identifier, max_hops=max_hops)
+    except IdentityResolutionError as exc:
+        return {
+            "identifier": identifier,
+            "resolved": False,
+            "unresolved_reason": str(exc),
+            "caveat": (
+                f"{identifier!r} is not a known ServiceID, PID, Location name "
+                "or port, so no impact can be assessed. This is not a finding "
+                "that its impact is nil."
+            ),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"identifier": identifier, "resolved": True, **radius.to_dict()}
+
+
+@router.get("/impact/{identifier}")
+def impact(identifier: str, max_hops: int = Query(DEFAULT_MAX_HOPS, ge=1, le=10)) -> Dict[str, Any]:
+    """What else breaks if this service does -- ITIL impact assessment.
+
+    Reachable before raising anything, so a change can be assessed rather
+    than only an incident explained after the fact.
+    """
+    return _impact(identifier, max_hops)
+
+
+@router.get("/incidents/{incident_id}/impact")
+def incident_impact(
+    incident_id: str, max_hops: int = Query(DEFAULT_MAX_HOPS, ge=1, le=10)
+) -> Dict[str, Any]:
+    """The blast radius of the service this incident is about."""
+    try:
+        incident = get_itsm_service().get_incident(incident_id)
+    except UnknownIncidentError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"incident_id": incident.id, **_impact(incident.service, max_hops)}
 
 
 @router.get("/changes")

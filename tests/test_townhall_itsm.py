@@ -296,6 +296,70 @@ class TestTheRoutesAreReachableAndWritesAreGated:
         assert client.get("/townhall/itsm/incidents").status_code == 200
         assert client.get("/townhall/itsm/changes").status_code == 200
 
+    def test_impact_can_be_asked_before_anything_breaks(self, client):
+        # The point of exposing it: assess a change, not only explain an
+        # incident after the fact.
+        body = client.get("/townhall/itsm/impact/SRV-VOID-001").json()
+        assert body["resolved"] is True
+        assert body["has_dependency_data"] is True
+        assert body["known"]
+        assert body["coverage"]["services"] > 0
+
+    def test_impact_for_an_unknown_identifier_is_not_a_silent_zero(self, client):
+        # 200 with resolved:false, never a 404 that a caller might read as
+        # "assessed, nothing affected".
+        response = client.get("/townhall/itsm/impact/SRV-NOPE-999")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["resolved"] is False
+        assert "not a finding" in body["caveat"]
+        assert "affected_count" not in body
+
+    def test_impact_distinguishes_no_data_from_no_dependants(self, client):
+        from src.cmdb.blast_radius import services_without_dependency_data
+
+        absent = services_without_dependency_data()[0]
+        body = client.get(f"/townhall/itsm/impact/{absent}").json()
+        assert body["resolved"] is True
+        assert body["affected_count"] == 0
+        # Resolved, walked, and still unknown -- a different answer from the
+        # unresolved case above, and the one that downgrades real P1s if it
+        # is read as a zero.
+        assert body["unknown_rather_than_empty"] is True
+
+    def test_an_incident_carries_the_blast_radius_of_its_own_service(self, client):
+        from auth import get_current_user
+
+        client.app.dependency_overrides[get_current_user] = lambda: {
+            "sub": "admin",
+            "role": "admin",
+        }
+        try:
+            created = client.post(
+                "/townhall/itsm/incidents",
+                json={"title": "vault unreachable", "service": "SRV-VOID-001"},
+            ).json()
+        finally:
+            client.app.dependency_overrides.pop(get_current_user, None)
+
+        body = client.get(f"/townhall/itsm/incidents/{created['id']}/impact").json()
+        assert body["incident_id"] == created["id"]
+        assert body["resolved"] is True
+        assert body["known"]
+
+    def test_impact_for_an_unknown_incident_is_404(self, client):
+        assert client.get("/townhall/itsm/incidents/no-such/impact").status_code == 404
+
+    def test_the_default_incident_service_does_not_resolve(self, client):
+        """The root FastAPI app has no row in 02_service_inventory.csv.
+
+        So an incident raised with the default `service` cannot be impact
+        assessed. Recorded as a test rather than a comment: it fails the day
+        the row is added, which is the day this expectation should change.
+        """
+        body = client.get("/townhall/itsm/impact/tranc3-backend").json()
+        assert body["resolved"] is False
+
     def test_ownership_can_be_asked_without_raising_an_incident(self, client):
         body = client.get("/townhall/itsm/ownership/SRV-SPARK-001").json()
         assert body["location"] == "The Spark"
