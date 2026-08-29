@@ -837,6 +837,14 @@ from src.townhall.routes import (
 
 app.include_router(_townhall_router)
 
+# The Town Hall's ITSM records. Previously src/townhall/itsm.py had no callers
+# anywhere in src/ -- an incident service nothing could reach.
+from src.townhall.itsm_routes import (
+    router as _townhall_itsm_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_townhall_itsm_router)
+
 # ── The Library (knowledge base) ─────────────────────────────────────────────
 from src.library.routes import (
     router as _library_router,  # noqa: F401  # intentional top-level import
