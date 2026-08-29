@@ -190,12 +190,14 @@ export default function DigitalGridPage() {
                   <div className="pt-1">
                     <button
                       onClick={() => {
-                        setWorkflow((wf) => ({
-                          ...wf,
-                          nodes: wf.nodes.filter((n) => n.id !== selectedNode.id),
-                          edges: wf.edges.filter((e) => e.sourceId !== selectedNode.id && e.targetId !== selectedNode.id),
-                        }));
-                        setSelectedId(null);
+                        if (window.confirm("Are you sure you want to delete this node?")) {
+                          setWorkflow((wf) => ({
+                            ...wf,
+                            nodes: wf.nodes.filter((n) => n.id !== selectedNode.id),
+                            edges: wf.edges.filter((e) => e.sourceId !== selectedNode.id && e.targetId !== selectedNode.id),
+                          }));
+                          setSelectedId(null);
+                        }
                       }}
                       className="w-full py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:border-red-800 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900"
                     >
