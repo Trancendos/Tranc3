@@ -23,11 +23,11 @@ the point: the register cannot silently fall behind the code again.
 
 from __future__ import annotations
 
+import ast
 import os
-import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, REPO_ROOT)
+_REGISTRY_SRC = os.path.join(REPO_ROOT, "src", "compliance", "ai_governance.py")
 
 #: model_id -> the code path that implements it. Curated deliberately rather
 #: than auto-discovered: "does this perform inference or classify a person"
@@ -59,8 +59,62 @@ MINIMUM_RISK: dict[str, str] = {
 _TIER_ORDER = ["minimal", "limited", "high", "unacceptable"]
 
 
+def _read_registry() -> dict[str, dict]:
+    """Read MODEL_REGISTRY out of the source, without importing it.
+
+    Importing the module pulls in pydantic, and the Service Topology job that
+    runs this check installs only PyYAML -- every other script there is
+    stdlib-only. Adding pydantic to that job would couple a governance check to
+    the application's dependency tree and slow every run; worse, a conformance
+    check that stops working for reasons unrelated to what it checks is the
+    very failure mode this script exists to catch. So it parses instead.
+    """
+    tree = ast.parse(open(_REGISTRY_SRC, encoding="utf-8").read(), _REGISTRY_SRC)
+
+    registry_node = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", "") == "MODEL_REGISTRY":
+            registry_node = node.value
+        elif isinstance(node, ast.Assign) and any(
+            getattr(t, "id", "") == "MODEL_REGISTRY" for t in node.targets
+        ):
+            registry_node = node.value
+    if not isinstance(registry_node, ast.Dict):
+        raise SystemExit(
+            f"could not find a MODEL_REGISTRY dict literal in {_REGISTRY_SRC} — "
+            "if it stopped being a literal, this check needs rewriting rather "
+            "than deleting."
+        )
+
+    def _strings(node) -> list[str]:
+        if not isinstance(node, (ast.List, ast.Tuple)):
+            return []
+        return [
+            e.value for e in node.elts if isinstance(e, ast.Constant) and isinstance(e.value, str)
+        ]
+
+    cards: dict[str, dict] = {}
+    for key, value in zip(registry_node.keys, registry_node.values, strict=True):
+        if not (isinstance(key, ast.Constant) and isinstance(value, ast.Call)):
+            continue
+        card = {
+            "risk_tier": "",
+            "known_limitations": [],
+            "prohibited_uses": [],
+            "eu_ai_act_articles": [],
+        }
+        for kw in value.keywords:
+            if kw.arg == "risk_tier" and isinstance(kw.value, ast.Attribute):
+                # RiskTier.HIGH -> "high"
+                card["risk_tier"] = kw.value.attr.lower()
+            elif kw.arg in ("known_limitations", "prohibited_uses", "eu_ai_act_articles"):
+                card[kw.arg] = _strings(kw.value)
+        cards[key.value] = card
+    return cards
+
+
 def main() -> int:
-    from src.compliance.ai_governance import MODEL_REGISTRY, RiskTier
+    MODEL_REGISTRY = _read_registry()
 
     problems: list[str] = []
 
@@ -88,27 +142,27 @@ def main() -> int:
         card = MODEL_REGISTRY.get(model_id)
         if card is None:
             continue  # already reported above as a missing card
-        if _TIER_ORDER.index(card.risk_tier.value) < _TIER_ORDER.index(floor):
+        if _TIER_ORDER.index(card["risk_tier"]) < _TIER_ORDER.index(floor):
             problems.append(
-                f"{model_id}: classified {card.risk_tier.value!r} but MINIMUM_RISK "
+                f"{model_id}: classified {card['risk_tier']!r} but MINIMUM_RISK "
                 f"floors it at {floor!r}. Lowering this is a governance decision, "
                 "not a field edit — change MINIMUM_RISK in this file, with a reason, "
                 "so somebody reviews it."
             )
 
     for model_id, card in MODEL_REGISTRY.items():
-        if card.risk_tier is RiskTier.HIGH:
-            if not card.known_limitations:
+        if card["risk_tier"] == "high":
+            if not card["known_limitations"]:
                 problems.append(
                     f"{model_id}: HIGH risk with an empty known_limitations list. "
                     "A high-risk system with no recorded limitations is a claim "
                     "nobody has checked."
                 )
-            if not any("14" in a or "oversight" in a.lower() for a in card.eu_ai_act_articles):
+            if not any("14" in a or "oversight" in a.lower() for a in card["eu_ai_act_articles"]):
                 problems.append(
                     f"{model_id}: HIGH risk without Art. 14 (human oversight) recorded."
                 )
-            if not card.prohibited_uses:
+            if not card["prohibited_uses"]:
                 problems.append(f"{model_id}: HIGH risk with no prohibited uses recorded.")
 
     if problems:
@@ -117,7 +171,7 @@ def main() -> int:
             print(f"  - {p}")
         return 1
 
-    high = [m for m, c in MODEL_REGISTRY.items() if c.risk_tier is RiskTier.HIGH]
+    high = [m for m, c in MODEL_REGISTRY.items() if c["risk_tier"] == "high"]
     print(
         f"AI register conformance: OK — {len(MODEL_REGISTRY)} systems registered, "
         f"{len(high)} high-risk ({', '.join(high) or 'none'})"
