@@ -112,6 +112,11 @@ travels with the role instead of living only here:
 decision about what Trancendos sells, so it should arrive as a written change with a reason, not as
 a derivation that quietly grew.
 
+The machinery these seats work through is `src/exchange/` — an inventory of what the estate can
+sell, a valuation that refuses to invent revenue, and a gate that blocks rather than annotates.
+It implements the review practice `docs/governance/COST-AND-REVENUE-GOVERNANCE.md` §5 already
+defined, and §5.1 there describes how.
+
 #### Where it lives
 
 `EXTERNAL_SEATS` and `ExternalSeat` in `src/entities/platform.py`; every `RoleSeat` and

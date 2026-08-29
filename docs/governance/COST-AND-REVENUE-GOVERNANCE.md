@@ -157,6 +157,67 @@ Reviewed services and their candidate ideas are tracked in
 exhaustively: only services actually reviewed appear there, following this workbook's existing
 verify-before-document convention (`docs/architecture/ea-workbook/README.md`).
 
+### 5.1 The practice now has code behind it — `src/exchange/`
+
+§5 described a periodic manual review, logged to a CSV. The Arcadian Exchange's **external
+mandate** (`docs/governance/LOCATION-FUNCTIONS.md`, "The five external seats") gives each Porter a
+sell-side Job Description alongside their procurement one, and `src/exchange/` is the machinery
+those seats work through. It does not replace this section's policy — it implements it, and is
+bound by both of §5's rules in code rather than by remembering them.
+
+| Module | What it holds |
+|---|---|
+| `src/exchange/sources.py` | The inventory: 18 sellable resources, each naming its Location, the external seat that owns selling it, the `PassiveRevenueEngine` stream it settles into, and its constraint class |
+| `src/exchange/valuation.py` | What one opportunity is worth *and how much of that figure to believe* |
+| `src/exchange/governance.py` | Whether it may be pursued at all, and who signs it off |
+| `src/exchange/engine.py` | Pulls, values, rules on, ranks, persists, and calibrates from outcomes |
+| `src/exchange/routes.py` | `/exchange`, mounted in `api.py` |
+
+**§5's first rule — no asserted revenue figures — is enforced by the type system, not by
+discipline.** A valuation carries a `Basis`: `realised` (a settled transaction of the same
+resource), `rate_card` (a price the platform actually charges), `comparable` (supplied by the
+caller), or `none`. With `Basis.NONE` the estimate is £0, confidence is 0, and the opportunity is
+returned in an `unpriced` list rather than ranked. Supplying a bare number *without* a basis also
+yields `NONE` — a figure with no stated provenance never becomes a valuation. "We do not know what
+this is worth" is a reportable answer here; a fabricated one is not representable.
+
+**§5's second rule — nothing charges a real user except through Royal Bank of Arcadia — holds
+because this subsystem has no payment path at all.** It ranks and calibrates; it never takes money.
+Recording an outcome (`POST /exchange/outcome`) writes only to the realisation ratio. Realised
+income still books through `src/monetisation/billing.py`'s twelve streams, which is why every
+resource in the catalogue names the stream it settles into — one ledger, one answer to "what did we
+earn".
+
+**The gate blocks rather than annotates.** A refused opportunity never enters the ranking, and an
+escalated one is carried with its decision and named sign-off attached:
+
+| Constraint | Without the fact | With it |
+|---|---|---|
+| `licensed_in` | **Refused** — material held under licence, provenance unproven | **Escalate** to `edward-porter-external`; the Location mixes authored and licensed material, so a person checks |
+| `personal_data` | **Refused** — no cohort size stated, or below `MIN_AGGREGATION_COHORT` (50) | **Escalate** to a human; selling anything derived from users' activity is reviewed |
+| `regulated` | **Escalate** to a human, at any value | — |
+| `client_derived` | **Refused** — no counterparty authorisation recorded | **Clear** |
+| none | **Clear** below £5,000, **escalate** to `clarence-porter-external` at or above it | — |
+
+Every fact the gate consults defaults to the unsafe-to-assume value, so an opportunity raised
+without one is refused or escalated rather than cleared. Omission is not evidence that a condition
+was met.
+
+**It is adaptive in a way that can be inspected.** Each source carries a rolling realisation ratio
+— what fraction of previously estimated value actually settled, over the last 20 outcomes. A source
+that over-promises loses confidence in future rankings without anyone editing a table, and the
+ratio is readable at `GET /exchange/inventory`, so the adaptation can be checked rather than
+trusted. The estimate itself never moves; only belief in it does.
+
+Ranking sorts on **risk-adjusted** value (net x confidence), not on net, so a large number resting
+on a weak basis does not outrank a smaller measured one.
+
+**A note on what this does not know yet.** The catalogue is complete; the price signals are not.
+Most resources currently have no rate card and no settled history, so a book built today returns
+much of the inventory as `unpriced`. That is the intended state rather than a gap to paper over —
+the engine's value at this stage is the inventory, the gate, and a ranking that will be right once
+real signals exist, not a projection assembled from nothing.
+
 ## 6. Open items
 
 - ~~The registry's `openrouter_free` / `openrouter-free` / `openrouter` naming~~ — **closed

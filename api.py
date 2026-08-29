@@ -939,6 +939,16 @@ from src.roles.routes import (
 
 app.include_router(_roles_router)
 
+# ── Arcadian Exchange opportunity book (external/sell-side mandate) ──────────
+# The front half of monetisation: what the estate could sell, what it is worth,
+# and what the eligibility gate refuses. Realised income still books through
+# /billing's PassiveRevenueEngine, so there is one ledger.
+from src.exchange.routes import (
+    router as _exchange_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_exchange_router)
+
 # ── Deployment Mode Registry (Location -> Cloud Only/Hybrid/Local + Dev/UAT) ─
 from src.deployment_modes.routes import (
     router as _deployment_modes_router,  # noqa: F401  # intentional top-level import
