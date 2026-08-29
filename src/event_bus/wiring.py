@@ -243,20 +243,48 @@ async def _sentinel_forward(envelope: EventEnvelope) -> None:
 
 def _event_type_to_sentinel_channel(event_type: str) -> str:
     """Map an EventBus event type string to the closest Sentinel channel name."""
+    # Every value returned here must be a member of SentinelChannel. Sentinel
+    # validates against that closed enum and answers 422 for anything else,
+    # and _sentinel_forward catches the failure into logger.debug -- so a
+    # channel name Sentinel does not know is not an error, it is a silent
+    # drop. Four families used to sit in exactly that state ("ai", "auth",
+    # "users", "financial" are none of them real channels), which meant 17 of
+    # the platform's event types would be rejected the moment Sentinel Station
+    # was reachable, with nothing anywhere saying so. Found by a test that
+    # walked every member against the worker's enum.
     if event_type.startswith("ai."):
-        return "ai"
-    if event_type.startswith("auth."):
-        return "auth"
+        return "models"
+    if event_type.startswith("auth.") or event_type.startswith("secret."):
+        return "security"
     if event_type.startswith("user."):
-        return "users"
+        return "platform"
     if event_type.startswith("workflow."):
         return "workflows"
     if event_type.startswith("service."):
         return "platform"
-    if event_type.startswith("secret."):
-        return "security"
+    # No financial channel exists. `platform` is the honest destination; a
+    # made-up "financial" was worse than imprecise, it was undeliverable.
     if event_type.startswith("order.") or event_type.startswith("payment."):
-        return "financial"
+        return "platform"
+
+    # ── Service management (ITIL4-AILP) ──────────────────────────────────
+    #
+    # Sentinel validates `channel` against a closed SentinelChannel enum and
+    # rejects anything else -- and _sentinel_forward swallows the failure into
+    # logger.debug, so an invented channel name would drop every ITSM event
+    # silently. These therefore map onto channels that already exist rather
+    # than adding one. test_itsm_events pins that.
+    #
+    # Unapproved drift is deliberately routed to `security`, not to the
+    # infrastructure channel its siblings use: production state changing with
+    # no authorising change record is a security event first and a
+    # configuration event second, and putting it in the same stream as routine
+    # deployment chatter is how it gets missed.
+    if event_type == "config.drift.unauthorised":
+        return "security"
+    if event_type.startswith("change.") or event_type.startswith("config."):
+        return "infrastructure"
+
     return "platform"
 
 
