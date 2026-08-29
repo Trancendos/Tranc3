@@ -102,6 +102,7 @@ def _read_registry() -> dict[str, dict]:
             "known_limitations": [],
             "prohibited_uses": [],
             "eu_ai_act_articles": [],
+            "claimed_metrics": [],
         }
         for kw in value.keywords:
             if kw.arg == "risk_tier" and isinstance(kw.value, ast.Attribute):
@@ -109,6 +110,19 @@ def _read_registry() -> dict[str, dict]:
                 card["risk_tier"] = kw.value.attr.lower()
             elif kw.arg in ("known_limitations", "prohibited_uses", "eu_ai_act_articles"):
                 card[kw.arg] = _strings(kw.value)
+            elif kw.arg == "fairness_metrics" and isinstance(kw.value, ast.Dict):
+                # A metric that carries a value= or a status= is claiming a
+                # measurement. FairnessMetric defaults to UNMEASURED with no
+                # value, and that honest default is what should be visible
+                # until somebody actually runs a measurement.
+                for mkey, mval in zip(kw.value.keys, kw.value.values, strict=True):
+                    if not (isinstance(mkey, ast.Constant) and isinstance(mval, ast.Call)):
+                        continue
+                    claims = {k.arg for k in mval.keywords} & {"value", "status", "last_measured"}
+                    if claims:
+                        card["claimed_metrics"].append(
+                            f"{mkey.value} ({', '.join(sorted(claims))})"
+                        )
         cards[key.value] = card
     return cards
 
@@ -136,6 +150,16 @@ def main() -> int:
             problems.append(
                 f"{model_id}: has a model card but no entry in AI_BEARING, so nothing "
                 "checks that the code it governs still exists."
+            )
+
+    for model_id, card in MODEL_REGISTRY.items():
+        if card["claimed_metrics"]:
+            problems.append(
+                f"{model_id}: fairness metrics claim a measurement without one having "
+                f"been recorded: {', '.join(card['claimed_metrics'])}. "
+                "'unmeasured' is the honest default and must stay visible until a "
+                "real measurement run populates it — a card asserting fairness it has "
+                "not measured is worse than a card admitting it has not."
             )
 
     for model_id, floor in MINIMUM_RISK.items():

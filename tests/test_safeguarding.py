@@ -94,6 +94,25 @@ class TestTheNotesAreWhatGetAssessed:
         assert raised == []
 
 
+class TestTheEscalationIsOwned:
+    """An unowned P1 is a page to nobody — the failure this path removes."""
+
+    def test_the_incident_service_resolves_to_a_location_and_an_ai(self, tranquility, raised):
+        from src.townhall.itsm import resolve_ownership
+
+        tranquility.log_mood("u1", 1, notes="I want to die")
+        assert raised
+        ownership = resolve_ownership(raised[0]["service"])
+        # The worker directory name "imind" does NOT resolve; the CMDB
+        # ServiceID does. Passing the wrong one produces an incident with no
+        # accountable owner, which looks identical to a working escalation.
+        assert ownership.resolved is True, (
+            f"{raised[0]['service']!r} does not resolve: {ownership.unresolved_reason}"
+        )
+        assert ownership.location
+        assert ownership.tier3_ai
+
+
 class TestTheUsersWordsAreNotCopiedIntoTheIncident:
     def test_the_incident_does_not_quote_the_note(self, tranquility, raised):
         secret = "I want to die and here is something private"

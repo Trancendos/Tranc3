@@ -168,7 +168,13 @@ class Tranquility:
                     "controls. This needs a person, not a queue."
                 ),
                 priority=IncidentPriority.P1,
-                service="imind",
+                # The canonical CMDB ServiceID, not the worker directory name.
+                # "imind" does not resolve through the identity spine, so the
+                # incident would carry no Location and no accountable AI -- an
+                # unowned P1 is a page to nobody, which is the exact failure
+                # this whole path exists to remove. Asserted in
+                # tests/test_safeguarding.py rather than trusted.
+                service="SRV-IMIND-001",
             )
         except Exception:
             # Never silent: an escalation that fails to reach anyone is the
