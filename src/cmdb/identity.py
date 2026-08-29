@@ -97,6 +97,11 @@ class IdentityResolutionError(LookupError):
 
 
 def _split_deps(raw: str) -> tuple[str, ...]:
+    """Split the workbook's semicolon-separated DependsOnServices field.
+
+    Parsed once here so a blast-radius walk consumes ServiceIDs rather than
+    re-learning the CSV's separator convention at every call site.
+    """
     return tuple(d.strip() for d in (raw or "").split(";") if d.strip())
 
 

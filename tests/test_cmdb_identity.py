@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from src.cmdb import identity
 from src.cmdb.identity import (
     IdentityResolutionError,
     coverage,
@@ -143,3 +144,122 @@ class TestOwnershipQuestionsTheArchitectureNeedsToAnswer:
         assert [s.service_id for s in services_for_location("PID-AEX")] == [
             s.service_id for s in services_for_location("Arcadian Exchange")
         ]
+
+
+class TestTheInconsistencyReportingPathItself:
+    """The branch that reports a dangling PID has to work when it fires.
+
+    It is the only thing standing between "these two committed sources
+    disagree" and silence. Calibration proved it catches an injected
+    PID-GHOST, but that was a mutated scratch copy — nothing in CI exercised
+    the branch, so a refactor could have removed it and every test would
+    still have passed. These build a real CSV instead.
+    """
+
+    @staticmethod
+    def _write_inventory(tmp_path, rows: list[dict]) -> str:
+        import csv as _csv
+
+        path = tmp_path / "02_service_inventory.csv"
+        fields = [
+            "ServiceID",
+            "ServiceName",
+            "PID",
+            "Tier3AI",
+            "Tier2Prime",
+            "Owner",
+            "CriticalityCode",
+            "DependsOnServices",
+        ]
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = _csv.DictWriter(f, fieldnames=fields)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow({k: row.get(k, "") for k in fields})
+        return str(path)
+
+    @pytest.fixture
+    def inventory(self, tmp_path, monkeypatch):
+        """Point the index at a CSV this test controls, and restore after."""
+
+        def _install(rows):
+            path = self._write_inventory(tmp_path, rows)
+            monkeypatch.setattr(identity, "_SERVICE_INVENTORY", path)
+            identity.reset_cache()
+            return path
+
+        yield _install
+        # The real CSV is cached process-wide; leaving a fixture's temp index
+        # in place would silently poison every later test in the session.
+        identity.reset_cache()
+
+    def test_a_dangling_pid_is_reported_not_silently_dropped(self, inventory):
+        inventory(
+            [
+                {"ServiceID": "SRV-REAL-001", "ServiceName": "Real", "PID": "PID-SPK"},
+                {"ServiceID": "SRV-GHOST-001", "ServiceName": "Ghost", "PID": "PID-GHOST"},
+            ]
+        )
+        ghost = resolve("SRV-GHOST-001")
+        assert not ghost.is_mapped_to_location
+        assert ghost.unmapped_reason == "PID PID-GHOST is not a known platform entity"
+        assert coverage()["broken_pid_reference"] == 1
+
+    def test_a_dangling_pid_is_distinguishable_from_an_expected_absence(self, inventory):
+        inventory(
+            [
+                {"ServiceID": "SRV-GHOST-001", "ServiceName": "Ghost", "PID": "PID-GHOST"},
+                {"ServiceID": "SRV-CROSS-001", "ServiceName": "Cross-cutting", "PID": ""},
+            ]
+        )
+        reasons = {s.service_id: s.unmapped_reason for s in unmapped_services()}
+        assert reasons["SRV-GHOST-001"].startswith("PID ")
+        assert reasons["SRV-CROSS-001"] == ("cross-cutting service, not one of the 43 Locations")
+        c = coverage()
+        assert c["broken_pid_reference"] == 1
+        assert c["cross_cutting"] == 1
+
+    def test_a_row_with_no_service_id_is_skipped(self, inventory):
+        inventory(
+            [
+                {"ServiceID": "", "ServiceName": "Blank row"},
+                {"ServiceID": "SRV-REAL-001", "ServiceName": "Real", "PID": "PID-SPK"},
+            ]
+        )
+        assert coverage()["services"] == 1
+        assert resolve("SRV-REAL-001").location == "The Spark"
+
+    def test_reset_cache_actually_rereads_the_inventory(self, inventory):
+        inventory([{"ServiceID": "SRV-ONE-001", "ServiceName": "One", "PID": "PID-SPK"}])
+        assert coverage()["services"] == 1
+        inventory(
+            [
+                {"ServiceID": "SRV-ONE-001", "ServiceName": "One", "PID": "PID-SPK"},
+                {"ServiceID": "SRV-TWO-001", "ServiceName": "Two", "PID": "PID-DGR"},
+            ]
+        )
+        assert coverage()["services"] == 2
+
+
+class TestLocationsThatOwnNoService:
+    """Three of the 43 Locations have no service in the EA workbook —
+    API Marketplace, The Citadel and Think Tank. Asking for one is a real
+    question with a real answer, and the answer is not a silent None."""
+
+    @pytest.mark.parametrize("location", ["API Marketplace", "The Citadel", "Think Tank"])
+    def test_a_location_with_no_service_raises_naming_the_location(self, location):
+        with pytest.raises(IdentityResolutionError) as excinfo:
+            resolve(location)
+        message = str(excinfo.value)
+        assert location in message
+        assert "no service in the EA workbook" in message
+
+    def test_services_for_location_rejects_an_unknown_location(self):
+        with pytest.raises(IdentityResolutionError):
+            services_for_location("Definitely Not A Location")
+
+    def test_services_for_location_returns_empty_for_a_serviceless_location(self):
+        # Distinct from the unknown case above: the Location is real, it just
+        # owns nothing. An empty list is the honest answer; an exception here
+        # would conflate "no services" with "no such place".
+        assert services_for_location("The Citadel") == []
