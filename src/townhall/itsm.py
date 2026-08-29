@@ -215,20 +215,34 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
         from src.event_bus import get_event_bus  # noqa: PLC0415
 
         get_event_bus().emit_async(event_type=event_type, data=data, source="townhall.itsm")
-    except Exception as exc:  # nosec B110 - notification must not fail the write
+    except Exception as exc:  # noqa: BLE001 - a notification must not fail the write
         logger.debug("itsm: emit %s: %s", event_type, exc)
 
 
 class ItsmService:
     """Durable incident and change records that announce their transitions."""
 
-    def __init__(self, db_path: Path | str = DEFAULT_DB_PATH) -> None:
+    def __init__(self, db_path: Path | str = DEFAULT_DB_PATH, cir: Any = None) -> None:
         self._path = Path(db_path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        self._cir = cir
         self._create_schema()
+
+    def _cir_service(self):
+        """The Continual Improvement Register this service closes against.
+
+        Resolved lazily so the process-wide register is not opened just by
+        constructing an ItsmService, and injectable so a test gates against
+        its own register rather than the real one.
+        """
+        if self._cir is None:
+            from src.townhall.cir import get_cir_service  # noqa: PLC0415
+
+            self._cir = get_cir_service()
+        return self._cir
 
     def close(self) -> None:
         with self._lock:
@@ -339,7 +353,21 @@ class ItsmService:
         return inc
 
     def update_incident_status(self, incident_id: str, status: IncidentStatus) -> ItsmIncident:
-        """Move an incident to a new status, persist it, then announce it."""
+        """Move an incident to a new status, persist it, then announce it.
+
+        Closing is gated on the Continual Improvement Register. The check runs
+        *before* the UPDATE: a gate that fires after the row is written has
+        already closed the incident and is merely complaining about it.
+
+        Only CLOSED is gated, never RESOLVED — see `src/townhall/cir.py` for
+        why holding a restoration hostage to paperwork is the wrong trade.
+        """
+        if status is IncidentStatus.CLOSED:
+            # Confirms the incident exists first, so a bad id is a 404 rather
+            # than a confusing refusal about a register entry for nothing.
+            self.get_incident(incident_id)
+            self._cir_service().require_closable(incident_id)
+
         resolved_at = time.time() if status in _TERMINAL else None
         with self._lock:
             cur = self._conn.execute(

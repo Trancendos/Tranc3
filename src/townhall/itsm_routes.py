@@ -28,6 +28,12 @@ from pydantic import BaseModel, Field
 from auth import get_current_user
 from src.cmdb.blast_radius import DEFAULT_MAX_HOPS, blast_radius
 from src.cmdb.identity import IdentityResolutionError
+from src.townhall.cir import (
+    ClosureBlocked,
+    ImprovementKind,
+    UnknownImprovementError,
+    get_cir_service,
+)
 from src.townhall.itsm import (
     IncidentPriority,
     IncidentStatus,
@@ -52,6 +58,26 @@ class UpdateIncidentStatusRequest(BaseModel):
 
 class EscalateIncidentRequest(BaseModel):
     reason: str = Field(min_length=1)
+
+
+class RaiseImprovementRequest(BaseModel):
+    title: str = Field(min_length=1)
+    kind: ImprovementKind = ImprovementKind.PROCESS
+    rationale: str = ""
+    raised_by: str = Field(min_length=1)
+    incident_id: Optional[str] = None
+
+
+class AcceptAsRiskRequest(BaseModel):
+    """Closing an incident with nothing to learn — attributably.
+
+    `accepted_by` and `rationale` are required at the schema boundary as well
+    as in the service, so the route cannot be the softer of the two.
+    """
+
+    accepted_by: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    title: str = ""
 
 
 class CreateChangeRequest(BaseModel):
@@ -184,6 +210,10 @@ def update_incident_status(
         return get_itsm_service().update_incident_status(incident_id, body.status).to_dict()
     except UnknownIncidentError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ClosureBlocked as exc:
+        # 409, not 422: the request is well-formed and the incident is real.
+        # What is missing is the learning, and the detail says how to supply it.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/incidents/{incident_id}/escalate")
@@ -208,3 +238,81 @@ def create_change(
     _require_admin(current_user)
     change = get_itsm_service().create_change(body.title, body.change_type, service=body.service)
     return change.to_dict()
+
+
+# ── continual improvement register ──────────────────────────────────────────
+
+
+@router.get("/improvements")
+def list_improvements(open_only: bool = Query(False)) -> List[Dict[str, Any]]:
+    return [e.to_dict() for e in get_cir_service().list_entries(open_only=open_only)]
+
+
+@router.get("/incidents/{incident_id}/improvements")
+def improvements_for_incident(incident_id: str) -> List[Dict[str, Any]]:
+    """What was learned from this incident — and whether it can be closed."""
+    return [e.to_dict() for e in get_cir_service().entries_for_incident(incident_id)]
+
+
+@router.get("/incidents/{incident_id}/closable")
+def closable(incident_id: str) -> Dict[str, Any]:
+    """Whether the CIR would let this incident close, and why not if it would not.
+
+    Readable before attempting the transition, so the gate can be satisfied
+    deliberately rather than discovered as a 409.
+    """
+    allowed, reason = get_cir_service().may_close(incident_id)
+    return {"incident_id": incident_id, "closable": allowed, "reason": reason}
+
+
+@router.post("/improvements", status_code=201)
+def raise_improvement(
+    body: RaiseImprovementRequest, current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    _require_admin(current_user)
+    try:
+        entry = get_cir_service().raise_improvement(
+            body.title,
+            kind=body.kind,
+            rationale=body.rationale,
+            raised_by=body.raised_by,
+            incident_id=body.incident_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return entry.to_dict()
+
+
+@router.post("/improvements/{improvement_id}/realise")
+def realise_improvement(
+    improvement_id: str, current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    _require_admin(current_user)
+    try:
+        return get_cir_service().realise(improvement_id).to_dict()
+    except UnknownImprovementError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/incidents/{incident_id}/accept-as-risk", status_code=201)
+def accept_as_risk(
+    incident_id: str,
+    body: AcceptAsRiskRequest,
+    current_user: dict = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Record that there is nothing to change here, and who decided that."""
+    _require_admin(current_user)
+    try:
+        get_itsm_service().get_incident(incident_id)
+    except UnknownIncidentError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    try:
+        entry = get_cir_service().accept_as_risk(
+            body.title,
+            accepted_by=body.accepted_by,
+            rationale=body.rationale,
+            incident_id=incident_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return entry.to_dict()

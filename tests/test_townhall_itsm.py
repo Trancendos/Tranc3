@@ -21,8 +21,19 @@ from src.townhall.itsm import (
 
 
 @pytest.fixture
-def service(tmp_path):
-    svc = ItsmService(db_path=tmp_path / "itsm.db")
+def cir(tmp_path):
+    from src.townhall.cir import CirService
+
+    svc = CirService(db_path=tmp_path / "cir.db")
+    yield svc
+    svc.close()
+
+
+@pytest.fixture
+def service(tmp_path, cir):
+    # The CIR is injected, not defaulted: the closure gate reads it, and a
+    # default would have these tests writing into the repo's real register.
+    svc = ItsmService(db_path=tmp_path / "itsm.db", cir=cir)
     yield svc
     svc.close()
 
@@ -151,8 +162,12 @@ class TestTransitionsAreAnnounced:
             (IncidentStatus.CLOSED, "incident.closed"),
         ],
     )
-    def test_each_lifecycle_status_announces_its_verb(self, service, emitted, status, event):
+    def test_each_lifecycle_status_announces_its_verb(self, service, cir, emitted, status, event):
         incident = service.create_incident("Down", "…")
+        if status is IncidentStatus.CLOSED:
+            # Closure is gated on the CIR; satisfy the gate so this test
+            # measures the announcement rather than the refusal.
+            cir.raise_improvement("add a probe", raised_by="Tristuran", incident_id=incident.id)
         emitted.clear()
         service.update_incident_status(incident.id, status)
         assert [e[0] for e in emitted] == [event]
