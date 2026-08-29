@@ -63,6 +63,12 @@ class Valuation:
 
     @property
     def priceable(self) -> bool:
+        """Whether a price signal existed at all.
+
+        False means the estimate is zero because nothing was known, not
+        because the opportunity is worthless -- the two read identically
+        from `net` alone, which is why this is asked separately.
+        """
         return self.basis is not Basis.NONE
 
     @property

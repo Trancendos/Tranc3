@@ -35,6 +35,12 @@ logger = logging.getLogger("tranc3.exchange.routes")
 
 
 def _require_admin(current_user: dict) -> None:
+    """403 unless the caller holds the admin role.
+
+    Deliberately not the "owner or admin" pattern used for per-user
+    resources: what the platform sells is a decision about the platform,
+    with no owner but the operator.
+    """
     if current_user.get("role") != "admin":
         raise HTTPException(
             status_code=403,
@@ -60,6 +66,7 @@ class CandidateRequest(BaseModel):
     content_is_own_work: Optional[bool] = None
 
     def to_candidate(self) -> Candidate:
+        """The engine's own input type, with the request's defaults intact."""
         return Candidate(
             resource_id=self.resource_id,
             units=self.units,
@@ -197,6 +204,7 @@ def record_outcome(
 
 @router.get("/health")
 def health() -> Dict[str, Any]:
+    """Liveness plus the two counts that say whether the catalogue loaded."""
     return {
         "status": "ok",
         "resources": len(SELLABLE_RESOURCES),

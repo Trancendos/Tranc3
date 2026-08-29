@@ -62,6 +62,12 @@ class Opportunity:
         return self.ruling.decision is Decision.CLEAR and self.valuation.net > 0
 
     def to_dict(self) -> Dict[str, Any]:
+        """JSON-safe form, with the derived fields a reader needs.
+
+        `priceable` and `risk_adjusted` are properties rather than stored
+        values, so a caller reading the serialised book would otherwise
+        have to recompute the two things the ranking was sorted on.
+        """
         return {
             "resource_id": self.resource_id,
             "location": self.location,
@@ -106,6 +112,7 @@ class OpportunityEngine:
     """Values and ranks what the estate could sell, and learns from outcomes."""
 
     def __init__(self, db_path: Path | str = DEFAULT_DB_PATH) -> None:
+        """Open the outcome store, refusing to start on a bad catalogue."""
         problems = validate_catalogue()
         if problems:
             # Refusing to start is deliberate. An opportunity book built on a
@@ -124,10 +131,16 @@ class OpportunityEngine:
         self._create_schema()
 
     def close(self) -> None:
+        """Close the connection. Safe to call once; the engine is done after."""
         with self._lock:
             self._conn.close()
 
     def _create_schema(self) -> None:
+        """Two tables: settled outcomes, and point-in-time book snapshots.
+
+        Outcomes are append-only -- a realisation ratio that could be
+        edited after the fact would not be evidence of anything.
+        """
         with self._lock:
             self._conn.execute(
                 """

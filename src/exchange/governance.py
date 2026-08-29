@@ -43,6 +43,12 @@ class Ruling:
 
     @property
     def blocks(self) -> bool:
+        """True for both ESCALATE and REFUSED.
+
+        Callers that only need "may this proceed unattended" should ask
+        this rather than testing for REFUSED, which would let an
+        unsigned-off escalation through.
+        """
         return self.decision is not Decision.CLEAR
 
 

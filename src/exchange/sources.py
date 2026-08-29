@@ -283,6 +283,7 @@ def by_location(location: str) -> List[SellableResource]:
 
 
 def get_resource(resource_id: str) -> SellableResource | None:
+    """One resource by id, or None if the catalogue has no such thing."""
     return next((r for r in SELLABLE_RESOURCES if r.resource_id == resource_id), None)
 
 
@@ -300,6 +301,12 @@ def constrained_resources() -> Dict[Constraint, List[SellableResource]]:
 
 
 def _external_seat_ids() -> set:
+    """Every declared external seat id, across all Locations.
+
+    Imported inside the function rather than at module scope: this file
+    is imported *by* the seat catalogue's consumers, and a top-level
+    import would make the two modules depend on each other.
+    """
     from src.entities.platform import EXTERNAL_SEATS
 
     return {seat.seat_id for seats in EXTERNAL_SEATS.values() for seat in seats}
