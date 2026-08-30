@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import operator
 import time
 import uuid
 from collections import defaultdict, deque
@@ -187,7 +188,8 @@ class MetricsCollector:
             ys = [m.load_factor for m in recent]
             sum_x = sum(xs)
             sum_y = sum(ys)
-            sum_xy = sum(x * y for x, y in zip(xs, ys, strict=True))
+            # ⚡ Bolt: Use map(operator.mul) for faster dot product calculation in pure Python
+            sum_xy = sum(map(operator.mul, xs, ys))
             sum_xx = sum(x * x for x in xs)
             denom = n * sum_xx - sum_x * sum_x
             if denom == 0:
