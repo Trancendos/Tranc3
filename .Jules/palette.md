@@ -24,3 +24,6 @@
 ## 2024-08-24 - Interactive Elements in Hover-Only Containers
 **Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
 **Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
+## 2024-08-30 - Interactive Elements in Hover-Only Containers Update
+**Learning:** In addition to adding `focus-within:opacity-100` on containers to reveal child actions, when targeting a child element itself with `group-hover:opacity-100` based on a parent container's `group` class, using `group-focus:opacity-100` on the child (not `focus-within:opacity-100`) is the correct way to ensure it appears when the parent container receives keyboard focus.
+**Action:** When using Tailwind's `group-hover:opacity-100` on a specific child element (like a background gradient or an icon) within a focusable parent container that has the `group` class, always pair it with `group-focus:opacity-100` on the child element to guarantee accessibility for keyboard users.
