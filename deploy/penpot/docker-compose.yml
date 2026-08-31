@@ -48,7 +48,7 @@ services:
       - tranc3-network
 
   penpot-exporter:
-    image: penpotapp/exporter:latest@sha256:b370f14927050fb05ac646441b5993d9337dda7eec60d944aa112819c88207bc
+    image: penpotapp/exporter:latest@sha256:72a8061e88069b9baf0767bc11fbf3310d2527bb5964ca084cf8c844d84306c8
     container_name: fabulousa-exporter
     restart: unless-stopped
     environment:
