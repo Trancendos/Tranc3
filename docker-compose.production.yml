@@ -2440,7 +2440,7 @@ services:
 # UI: /prefect  |  API: prefect-server:4200  |  SQLite backend
 # ═══════════════════════════════════════════════════════════════════════════
   prefect-server:
-    image: prefecthq/prefect:3-python3.12@sha256:9fd526c1da3a206ff322087266b01b1d24020331a51b95b768408f078cb315fe
+    image: prefecthq/prefect:3-python3.12@sha256:6c0dc14195cae814eddeb66104a8333810a0a9886a5d7f0c45443136f167b3e0
     container_name: trancendos-prefect
     restart: unless-stopped
     command: prefect server start --host 0.0.0.0 --port 4200
