@@ -2082,7 +2082,7 @@ services:
 
   # Ollama — local self-hosted LLM inference (zero-cost, tier 0)
   ollama:
-    image: ollama/ollama:latest@sha256:509fdf54e23bd50d87af646cb51c0a7a203d6a83cc4d6695b3b08c5be1c62c0a
+    image: ollama/ollama:latest@sha256:020e4134285e2ef4d8fd801234176de3b4faadc992a3eb06c8e66a2f9d4c4ba2
     container_name: trancendos-ollama
     volumes:
       - ollama-data:/root/.ollama
