@@ -61,7 +61,7 @@ services:
     restart: unless-stopped
 
   prometheus:
-    image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
+    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
     container_name: tranc3-prometheus
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
     volumes:
@@ -76,7 +76,7 @@ services:
 
   # Loki — log aggregation (Gap G18 action)
   loki:
-    image: grafana/loki:3.7.3@sha256:70b9f699fc9bb868b62f1cfd4f787dfa50242f1fd92e6089787d5d7daea75fe8
+    image: grafana/loki:3.7.7@sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500
     container_name: tranc3-loki
     command: -config.file=/etc/loki/local-config.yaml
     ports:
@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
+    image: grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043
     container_name: tranc3-grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
