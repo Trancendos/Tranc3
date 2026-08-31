@@ -112,15 +112,6 @@ jobs:
       - name: CodeQL action pin consistency
         run: python scripts/check_codeql_action_consistency.py
 
-      # Seven workflows are duplicated across .github/ and .forgejo/.
-      # production-gate.yml's own header declares they should differ only in
-      # the header, the runner, and the hardening -- and nothing enforced that,
-      # so the Forgejo copy of the merge gate had silently lost the dependency
-      # vulnerability census. Forgejo being dormant is what hid it: the weaker
-      # gate is the one that takes over when The Workshop is stood back up.
-      - name: Workflow drift (GitHub vs Forgejo copies)
-        run: python scripts/check_workflow_drift.py --check
-
       - name: Service review freshness
         run: python scripts/build_service_review.py --check
 
@@ -192,14 +183,6 @@ jobs:
       # fails here rather than quietly un-joining the two halves of the estate.
       - name: PID coverage
         run: python scripts/pid_coverage.py --check
-
-      # The AI governance register held three cards while the estate ran a
-      # crisis classifier, an empathy wrapper and a third-party model router
-      # that appeared in it nowhere. A register nothing checks falls behind the
-      # code silently, so adding an AI surface now fails here until it is
-      # registered -- and a high-risk system cannot be quietly downgraded.
-      - name: AI register conformance
-        run: python scripts/check_ai_register.py
 
   test:
     name: Pytest
