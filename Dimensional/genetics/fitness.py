@@ -7,6 +7,7 @@ Multi-objective fitness: lower latency, higher throughput, lower error_rate.
 
 from __future__ import annotations
 
+import operator
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -78,5 +79,6 @@ class MultiWorkerFitness(FitnessEvaluator):
         weights_raw: List[float] = config.get("weights", [1.0] * len(self._latencies))
         total = sum(abs(w) for w in weights_raw) or 1.0
         weights = [abs(w) / total for w in weights_raw]
-        avg_latency = sum(w * lat for w, lat in zip(weights, self._latencies, strict=False))
+        # ⚡ Bolt: Optimize dot product using map and operator.mul
+        avg_latency = sum(map(operator.mul, weights, self._latencies))
         return (avg_latency,)
