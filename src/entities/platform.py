@@ -20,10 +20,13 @@ Tier System:
   Tier 5 - Bots (task-specific micro-workers: 01-04)
 """
 
+import logging
 import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Literal, Optional, Tuple
+
+logger = logging.getLogger("tranc3.entities.platform")
 
 
 class Pillar(str, Enum):
@@ -2068,10 +2071,118 @@ class RoleSeat:
     designed_for: str
     is_primary: bool
     functions: Tuple[str, ...] = ()
+    # "internal" -- serving the platform and the people using it -- or
+    # "external", facing markets and counterparties outside Trancendos.
+    # Defaulted so every seat that existed before the external mandate keeps
+    # its meaning without being restated: a Location's ordinary work is
+    # internal, and always was.
+    mandate: str = "internal"
 
     @property
     def key(self) -> Tuple[str, str]:
         return (self.location, self.seat_id)
+
+    @property
+    def is_external(self) -> bool:
+        return self.mandate == "external"
+
+
+@dataclass(frozen=True)
+class ExternalSeat:
+    """A revenue-facing Job Description paired with an internal one.
+
+    `paired_with` names the internal seat this one is the sell-side of. The
+    pairing is the point rather than decoration: the price intelligence that
+    tells Ann Porter what storage costs to buy is the same intelligence that
+    tells her what spare capacity is worth selling, so the two seats share a
+    market view instead of each building their own.
+    """
+
+    seat_id: str
+    job_description: str
+    designed_for: str
+    paired_with: str
+    functions: Tuple[str, ...] = ()
+
+
+# Locations that trade outside Trancendos as well as inside it. Only the
+# Arcadian Exchange does today -- it is the platform's commercial desk, so a
+# sell-side mandate belongs there and nowhere else by default. The catalogue is
+# explicit rather than derived because an external seat is a decision about
+# what the platform is willing to sell, which should be written down and
+# reviewed, not inferred from a roster.
+EXTERNAL_SEATS: Dict[str, Tuple[ExternalSeat, ...]] = {
+    "Arcadian Exchange": (
+        ExternalSeat(
+            seat_id="clarence-porter-external",
+            job_description="Chief Revenue Officer",
+            designed_for="Clarence Porter",
+            paired_with="primary",
+            functions=(
+                "Ranks every external opportunity the other four seats raise "
+                "against one another, so the estate pursues the best return "
+                "rather than the most recently suggested one",
+                "Holds the risk limits and the escalation threshold: an "
+                "opportunity above either goes to a human, not to market",
+            ),
+        ),
+        ExternalSeat(
+            seat_id="ann-porter-external",
+            job_description="Head of Capacity & Asset Monetisation",
+            designed_for="Ann Porter",
+            paired_with="ann-porter",
+            functions=(
+                "Offers surplus storage and IPFS capacity to the same "
+                "marketplaces her internal seat buys bulk capacity from",
+                "Licenses finished creative assets the estate already holds -- "
+                "Sashas Photo Studio images, TateKing video, TranceFlow models, "
+                "Warp Radio audio -- with provenance and licence terms attached",
+            ),
+        ),
+        ExternalSeat(
+            seat_id="george-porter-external",
+            job_description="Head of Market & Treasury Operations",
+            designed_for="George Porter",
+            paired_with="george-porter",
+            functions=(
+                "Models treasury positions and market exposure in advisory mode "
+                "only -- it produces a recommendation and a rationale, never an "
+                "executed trade, because autonomous trading is a regulated "
+                "activity the platform is not authorised for",
+                "Resells reserved inference and compute capacity bought below "
+                "spot by his internal seat, which is where the two mandates "
+                "share a single price model",
+            ),
+        ),
+        ExternalSeat(
+            seat_id="edward-porter-external",
+            job_description="Head of Expert & Managed Services",
+            designed_for="Edward Porter",
+            paired_with="edward-porter",
+            functions=(
+                "Packages the estate's own operational competence as a service: "
+                "governance and compliance profiles from Magna Carta, workflow "
+                "templates from The Digital Grid, the CMDB and EA workbook",
+                "Scopes and prices consolidation engagements, where a client's "
+                "several tools are replaced by one of the platform's Locations",
+            ),
+        ),
+        ExternalSeat(
+            seat_id="james-porter-external",
+            job_description="Head of Data, Knowledge & Audience Products",
+            designed_for="James Porter",
+            paired_with="james-porter",
+            functions=(
+                "Sells metered API access and knowledge products drawn from The "
+                "Library, priced against the credit costs his internal seat "
+                "already tracks",
+                "Publishes aggregate, non-identifying data products and audience "
+                "inventory -- never a user's own data, and never third-party "
+                "research the platform only holds under licence",
+            ),
+        ),
+    ),
+}
 
 
 def get_seats(location: str) -> List[RoleSeat]:
@@ -2134,6 +2245,37 @@ def get_seats(location: str) -> List[RoleSeat]:
                 functions=functions,
             )
         )
+
+    # External seats come last, so a caller that reads seats[0] still gets the
+    # primary and a caller that slices for internal work does not have to skip
+    # past sell-side rows it never asked for.
+    internal_ids = {seat.seat_id for seat in seats}
+    for external in EXTERNAL_SEATS.get(location, ()):
+        if external.paired_with not in internal_ids:
+            # The internal twin this seat mirrors is gone -- a roster edit
+            # removed the AI, or renamed it past `seat_id_for`. Emitting the
+            # external seat anyway would leave a revenue mandate with no
+            # procurement counterpart feeding it price intelligence, which is
+            # the one thing the pairing exists to guarantee.
+            logger.warning(
+                "External seat %s at %s names paired internal seat %s, which "
+                "does not exist; skipping it. Check lead_ais for this Location.",
+                external.seat_id,
+                location,
+                external.paired_with,
+            )
+            continue
+        seats.append(
+            RoleSeat(
+                location=location,
+                seat_id=external.seat_id,
+                job_description=external.job_description,
+                designed_for=external.designed_for,
+                is_primary=False,
+                functions=external.functions,
+                mandate="external",
+            )
+        )
     return seats
 
 
@@ -2159,5 +2301,6 @@ def seats_without_a_distinct_title() -> List[RoleSeat]:
         seat
         for seat in all_seats()
         if not seat.is_primary
+        and not seat.is_external
         and (seat.location, seat.designed_for) not in CO_LEAD_JOB_DESCRIPTIONS
     ]
