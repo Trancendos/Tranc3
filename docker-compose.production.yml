@@ -2101,7 +2101,7 @@ services:
   # Default model: meta-llama/Llama-3.2-3B-Instruct (set VLLM_DEFAULT_MODEL to change)
   # Port 8090 — OpenAI-compatible: /v1/chat/completions, /v1/models
   vllm:
-    image: vllm/vllm-openai:latest@sha256:251eba5cc7c12fed0b75da22a9240e582b1c9e39f6fbc064f86781b963bd814f
+    image: vllm/vllm-openai:latest@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14
     container_name: trancendos-vllm
     command:
       - "--model"
