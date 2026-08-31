@@ -59,7 +59,7 @@ jobs:
       # The vulnerability census audits five npm surfaces as well as the Python
       # manifest. ubuntu-latest ships a Node, but a gate should not depend on
       # whichever version the image happens to carry this week.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
 
