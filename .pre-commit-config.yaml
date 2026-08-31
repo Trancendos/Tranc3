@@ -77,15 +77,6 @@ repos:
     hooks:
       - id: gitleaks
 
-  # detect-secrets' own is_lock_file filter recognises package-lock.json,
-  # yarn.lock, poetry.lock and nine others, but not pnpm-lock.yaml -- the
-  # list predates pnpm. So web/pnpm-lock.yaml was the one lockfile scanned
-  # as if it were source, and each of its ~460 sha512 integrity digests was
-  # baselined individually. Regenerating the lockfile then left new digests
-  # unbaselined, failing this hook on whichever PR came next rather than on
-  # the one that moved the lockfile. The baseline's should_exclude_file
-  # pattern now covers pnpm-lock.yaml, matching how every other package
-  # manager's lockfile is already treated.
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:

@@ -6,4 +6,3 @@ extensionTargets:
 dataExtensions:
   - models/path-validation.yml
   - models/url-validation.yml
-  - models/log-sanitisation.yml

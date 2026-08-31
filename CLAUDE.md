@@ -461,32 +461,15 @@ EMBED_MODEL              # all-MiniLM-L6-v2 (sentence-transformers)
 
 ## CI/CD
 
-**Forgejo (The Workshop) is the *intended* primary CI/CD system for deployment and heavier
-pipelines — but it is dormant, so today GitHub Actions is the only CI that actually runs.**
-`.forgejo/workflows/` holds 32 files and 57 of their 83 jobs pin `runs-on: self-hosted`, against
-an act-runner on the Citadel host that the cloud-only phase defers standing back up. None of them
-execute. Describe them as the target state, not as a system currently gating anything.
-
-`.github/workflows/` has **20** files (this said 12 until 2026-08-28; it had not been recounted
-since eight more were added). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint and
-Service Topology checks, `codeql.yml`, `test.yml`, `trivy.yml`, `codecov.yml`, `python.yml`,
-`rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`). Two are
-deliberate, narrow exceptions for GitHub-native features with no Forgejo equivalent —
-`publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
+**Forgejo (The Workshop) is the primary CI/CD system for deployment and heavier pipelines.**
+`.github/workflows/` is not dead code, though — it currently has 12 real, active files, several of
+which gate this repo's PRs directly (`ci.yml`'s Ruff/lint checks, `codeql.yml`, `test.yml`,
+`trivy.yml`, `codecov.yml`, `python.yml`, `rust.yml`, `go.yml`). Two more are deliberate, narrow
+exceptions for GitHub-native features with no Forgejo equivalent — `publish-wiki.yml` (GitHub
+Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
 `docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
 deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run
 (PR status checks, CodeQL, Pages/Wiki) rather than being phased out.
-
-**Seven workflows exist in both trees** — `bot-health-watchdog.yml`, `ci.yml`,
-`deploy-cloudflare.yml`, `deploy-fly.yml`, `frontend-build.yml`, `perf-smoke.yml`,
-`production-gate.yml`. They are meant to differ only in header comments, the runner label, and
-platform hardening. Nothing enforced that until `scripts/check_workflow_drift.py` (run in
-`ci.yml`'s Service Topology job), and the contract was already broken: the Forgejo copy of the
-production merge gate had lost the `Dependency vulnerability census` step, so the two copies of
-the platform's gate enforced materially different things. Forgejo's dormancy is what hid it —
-the weaker gate is the one that takes over the day The Workshop returns. Legitimate divergences
-now have to be listed with a written reason in that script's `ACCEPTED_DIVERGENCES`; an
-unexplained one fails CI.
 
 Workflow files in `.forgejo/workflows/`:
 - `deploy-fly.yml` — tranc3-backend + trancendos-bots to Fly.io
