@@ -3037,7 +3037,7 @@ services:
   # Exposes Prometheus endpoint at /api/v1/allmetrics for VictoriaMetrics scrape.
   # Dashboard: http://trancendos.com/netdata
   netdata:
-    image: netdata/netdata:latest@sha256:ac44ec899289dffe02b225803c204e95eb426e6439fc5374cc76ce67683cf54b
+    image: netdata/netdata:latest@sha256:b93fd79b21974e66b73eeed265af1b5ca5eb741d2240b98be7eb74aa8093ec08
     container_name: tranc3-netdata
     restart: unless-stopped
     pid: host
