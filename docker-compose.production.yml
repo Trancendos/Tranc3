@@ -1211,7 +1211,7 @@ services:
   # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
   # API-compatible with hvac Python client used by vault-service/openbao_client.py
   openbao:
-    image: openbao/openbao:latest@sha256:6150c4a6b62067db6141c8da7a6a6b5763f4f47c315343d0c848b40fecdfd452
+    image: openbao/openbao:latest@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
     container_name: trancendos-openbao
     environment:
       BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:?required}"
