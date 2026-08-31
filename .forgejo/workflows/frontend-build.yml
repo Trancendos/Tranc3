@@ -27,7 +27,7 @@ jobs:
         working-directory: web
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # Do not leave the checkout token in .git/config for later
           # steps to read or push with. The GitHub copy has always set
@@ -152,7 +152,7 @@ jobs:
     # Matches the sibling .github/workflows/frontend-build.yml.
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # Do not leave the checkout token in .git/config for later
           # steps to read or push with. The GitHub copy has always set

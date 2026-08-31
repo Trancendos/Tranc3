@@ -46,13 +46,13 @@ jobs:
             context: .
 
     steps:
-      - uses: https://code.forgejo.org/actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: https://code.forgejo.org/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Docker Buildx
-        uses: https://code.forgejo.org/docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+        uses: https://code.forgejo.org/docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
       - name: Log in to Forgejo Package Registry
-        uses: https://code.forgejo.org/docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4
+        uses: https://code.forgejo.org/docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ${{ env.FORGEJO_REGISTRY }}
           username: ${{ env.FORGEJO_REGISTRY_USER }}
@@ -83,7 +83,7 @@ jobs:
       # Fallback: push to Zot if Forgejo registry fails (adaptive rotation)
       - name: Fallback — log in to Zot registry
         if: steps.push-forgejo.outcome == 'failure'
-        uses: https://code.forgejo.org/docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4
+        uses: https://code.forgejo.org/docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ${{ env.ZOT_REGISTRY }}
           username: ${{ secrets.ZOT_REGISTRY_USER }}
