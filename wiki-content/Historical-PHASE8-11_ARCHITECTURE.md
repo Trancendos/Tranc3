@@ -4,7 +4,7 @@
 
 This document covers the advanced architectural patterns implemented across Phases 8–11.1 of the Tranc3 ecosystem. All modules follow the Nanoservice Architecture (NSA) pattern with shared-memory IPC, capability-based discovery, and zero-cost infrastructure.
 
-**Total Nanoservices**: 47 registered modules  
+**Total Nanoservices**: 47 registered modules
 **Import Audit**: 242 Python modules tested, 215 pass cleanly, 27 require PyTorch (production dependency)
 
 ---

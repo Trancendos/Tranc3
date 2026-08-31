@@ -1,6 +1,6 @@
 # App per App Framework — {{app_name}}
 
-**Location:** {{location}}  
+**Location:** {{location}}
 **PID:** {{pid}}
 
 ## Purpose

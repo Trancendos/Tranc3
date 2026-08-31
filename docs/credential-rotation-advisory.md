@@ -1,7 +1,7 @@
 # Credential Rotation Advisory
 
-**Date:** 2026-05-22  
-**Scope:** Tranc3 Smart Adaptive Automation Implementation  
+**Date:** 2026-05-22
+**Scope:** Tranc3 Smart Adaptive Automation Implementation
 **Severity:** ADVISORY — No hardcoded secrets found in source code
 
 ## Executive Summary

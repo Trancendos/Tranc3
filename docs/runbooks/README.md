@@ -1,8 +1,8 @@
 # Operational Runbooks — Trancendos Platform
 
-> **Classification:** UNCLASSIFIED — PUBLIC  
-> **Applies to:** DEF STAN 00-600 (Supportability) — REQ-SU-005  
-> **Owner:** The Citadel / DevOps  
+> **Classification:** UNCLASSIFIED — PUBLIC
+> **Applies to:** DEF STAN 00-600 (Supportability) — REQ-SU-005
+> **Owner:** The Citadel / DevOps
 > **Review cycle:** Quarterly
 
 This directory contains operational runbooks for all Tier-1 and Tier-2 Tranc3

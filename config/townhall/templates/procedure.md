@@ -1,12 +1,12 @@
 # Procedure (SOP): {{title}}
 
-**Owner:** {{owner}}  
+**Owner:** {{owner}}
 **Related policy:** {{policy_id}}
 
 ## Steps
 
-1. 
-2. 
+1.
+2.
 
 ## Evidence / logs
 
