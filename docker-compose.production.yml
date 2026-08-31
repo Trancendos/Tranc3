@@ -2492,7 +2492,7 @@ services:
 # Default creds: admin/admin — override via AIRFLOW_USER / AIRFLOW_PASS
 # ═══════════════════════════════════════════════════════════════════════════
   airflow:
-    image: apache/airflow:2.9.3@sha256:0188b06abb250caccc48bb6d00fde5e74a211273f78b0d143bc4d63f2b67412d
+    image: apache/airflow:3.3.1@sha256:0c4bcc0370e526de1b7892a3bf4343d260c6c82359c66f77155b53cd773d6339
     container_name: trancendos-airflow
     restart: unless-stopped
     entrypoint: >
