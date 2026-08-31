@@ -39,10 +39,21 @@ class SensitivityCategory(str, Enum):
     TRAUMA = "trauma"
 
 
+# Inflections matter here in a way they do not elsewhere. "cut myself" did not
+# match "cutting myself", which is at least as common a phrasing; a missed match
+# is a missed crisis, so the verbs carry their -s/-ing forms.
+#
+# KNOWN AND UNFIXED (recorded in the I-Mind model card, and tested in
+# tests/test_safeguarding.py so the limitation cannot quietly be forgotten):
+# these patterns are English-only, catch no indirect or euphemistic ideation
+# ("I don't want to be here anymore", "everyone would be better off"), and
+# cannot tell first-person distress from quoted or third-party speech
+# ("my friend is suicidal"). Recall has never been measured. Treat this as a
+# tripwire that sometimes fires, never as a screening instrument.
 _CRISIS_PATTERNS = [
-    re.compile(r"\b(suicide|suicidal|end my life|kill myself|want to die)\b", re.I),
-    re.compile(r"\b(self[- ]harm|cut myself|hurt myself)\b", re.I),
-    re.compile(r"\b(no reason to live|can't go on|give up on life)\b", re.I),
+    re.compile(r"\b(suicide|suicidal|end(ing)? my life|kill(ing)? myself|want to die)\b", re.I),
+    re.compile(r"\b(self[- ]harm(ing|ed)?|cut(s|ting)? myself|hurt(s|ing)? myself)\b", re.I),
+    re.compile(r"\b(no reason to live|can'?t go on|give up on life)\b", re.I),
 ]
 
 _MENTAL_HEALTH_PATTERNS = [
