@@ -11,7 +11,7 @@
         "test": "vitest run"
     },
     "dependencies": {
-        "lucide-react": "^0.378.0",
+        "lucide-react": "^1.0.0",
         "posthog-js": "^1.418.2",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
