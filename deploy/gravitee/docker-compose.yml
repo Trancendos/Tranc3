@@ -41,7 +41,7 @@ services:
       - tranc3-network
 
   gravitee-portal:
-    image: graviteeio/apim-portal-ui:4@sha256:dc197f03bb9537d149a9d7a6dd61f857cd8bc1916972593d5ee0ac65b526359d
+    image: graviteeio/apim-portal-ui:4@sha256:6ac60b4ffea41119c53f40ff4c61aa7f2cc6b290fc81f37bdba4fe629b6cf338
     container_name: api-marketplace-portal
     restart: unless-stopped
     ports:
