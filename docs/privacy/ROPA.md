@@ -1,11 +1,11 @@
 # Record of Processing Activities (ROPA)
 
-> **Document ID:** ROPA-001  
-> **Classification:** UNCLASSIFIED — PUBLIC  
-> **GDPR Article:** Art. 30  
-> **Version:** 1.0  
-> **Date:** 2026-06-06  
-> **Controller:** Trancendos  
+> **Document ID:** ROPA-001
+> **Classification:** UNCLASSIFIED — PUBLIC
+> **GDPR Article:** Art. 30
+> **Version:** 1.0
+> **Date:** 2026-06-06
+> **Controller:** Trancendos
 
 ---
 

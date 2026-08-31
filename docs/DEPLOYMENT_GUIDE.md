@@ -1,8 +1,8 @@
 # Tranc3 Deployment Guide — Zero-Cost Infrastructure
 
-> **Version:** 0.1.0  
-> **Mandate:** All cloud services must be zero-cost. Free-tier only. No paid tiers, no credit-expiring trials.  
-> **Last Updated:** 2026-05-23  
+> **Version:** 0.1.0
+> **Mandate:** All cloud services must be zero-cost. Free-tier only. No paid tiers, no credit-expiring trials.
+> **Last Updated:** 2026-05-23
 
 ---
 

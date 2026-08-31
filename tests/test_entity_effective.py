@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.entities.effective import build_overrides_map, resolve_entity
+from src.entities.effective import build_overrides_map, list_all_effective, resolve_entity
 from src.entities.platform import PLATFORM_ENTITIES, get_entity_by_pid
 
 
@@ -72,3 +72,72 @@ class TestEffectiveEntity:
             assert entity.lead_ai in entity.lead_ais, (
                 f"{entity.lead_ai!r} not present in its own lead_ais {entity.lead_ais!r}"
             )
+
+    # ── list_all_effective (#888) ────────────────────────────────────────────
+
+    def test_list_all_effective_returns_one_entry_per_pid_sorted(self):
+        """One EffectiveEntity per distinct PID, ordered by PID.
+
+        PLATFORM_ENTITIES is keyed by location, and several locations share a
+        PID, so the count only matches if list_all_effective de-duplicates —
+        which is the behaviour this pins.
+        """
+        all_eff = list_all_effective()
+        distinct_pids = {e.pid for e in PLATFORM_ENTITIES.values() if getattr(e, "pid", None)}
+
+        assert len(all_eff) == len(distinct_pids)
+        assert {e.pid for e in all_eff} == distinct_pids
+        assert [e.pid for e in all_eff] == sorted(distinct_pids)
+
+    def test_list_all_effective_applies_per_pid_overrides(self):
+        all_eff = list_all_effective(
+            overrides_by_pid={"PID-LAB": {"location": "The Overridden Lab"}}
+        )
+
+        by_pid = {e.pid: e for e in all_eff}
+        assert by_pid["PID-LAB"].location == "The Overridden Lab"
+        # The override is scoped to its own PID and must not leak to the rest.
+        assert all(e.location != "The Overridden Lab" for e in all_eff if e.pid != "PID-LAB")
+
+    # ── resolve_entity tier coercion (#910) ──────────────────────────────────
+
+    def test_resolve_entity_ignores_a_non_numeric_tier_override(self):
+        """A tier override that is not a base-10 integer falls back to the default.
+
+        resolve_entity gates every tier override on str.isdigit(), so a
+        malformed value from the admin store degrades to the canonical tier
+        rather than raising — agents default to 4, bots to 5.
+        """
+        ent = resolve_entity(
+            "PID-LAB",
+            {
+                "tier_agent_beta": "not_an_int",
+                "tier_bot_01": "1",
+                "lead_ai": "Mock Leader",
+            },
+        )
+
+        assert ent is not None
+        assert ent.agent_beta is not None
+        assert ent.agent_beta.tier == 4
+        assert ent.agent_beta.tier_override is None
+
+        assert ent.bots["01"] is not None
+        assert ent.bots["01"].tier == 1
+        assert ent.bots["01"].tier_override == 1
+
+        assert ent.lead_ai == "Mock Leader"
+
+    # ── build_overrides_map (#933) ───────────────────────────────────────────
+
+    def test_build_overrides_map_keys_by_type_and_slot(self):
+        rows = [
+            {"entity_type": "lead_ai", "slot": "", "override_name": "Mocked Prime"},
+            {"entity_type": "tier", "slot": "agent_alpha", "override_name": "8"},
+        ]
+
+        m = build_overrides_map(rows)
+
+        # An empty slot keys on the bare entity_type; a populated one appends it.
+        assert m["lead_ai"] == "Mocked Prime"
+        assert m["tier_agent_alpha"] == "8"

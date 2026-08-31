@@ -110,6 +110,7 @@ export default function HivePage() {
   }
 
   const dissolveSwarm = async (id: string) => {
+    if (!window.confirm(`Are you sure you want to dissolve the swarm "${id}"?`)) return
     try {
       await fetch(`${HIVE_API}/swarms/${id}`, { method: 'DELETE', headers: INTERNAL })
       loadData()
