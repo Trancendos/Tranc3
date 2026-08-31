@@ -420,7 +420,7 @@ services:
   # Profile: api-marketplace
   # ──────────────────────────────────────────────────────────────
   gravitee-gateway:
-    image: graviteeio/apim-gateway:4@sha256:433c976e976459743e96f6c71ace611b2618a892d59a6c75d239dbfd9239528f
+    image: graviteeio/apim-gateway:4@sha256:eba91265410e36a7a952ab583c0722458c869e4f8aa50d196e849447a10ce52b
     container_name: api-marketplace-gateway
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
