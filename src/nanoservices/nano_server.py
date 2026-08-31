@@ -7,10 +7,6 @@
 # Run standalone:
 #   python -m src.nanoservices.nano_server            # port 8001
 #   NANO_PORT=8002 python -m src.nanoservices.nano_server
-#
-# Or mount as a sub-application inside the main FastAPI app:
-#   from src.nanoservices.nano_server import nano_app
-#   app.mount("/nano", nano_app)
 
 from __future__ import annotations
 

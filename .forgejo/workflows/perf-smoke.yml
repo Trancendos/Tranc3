@@ -17,6 +17,7 @@ name: Perf Smoke Test
 
 on:
   pull_request:
+    branches: [main, develop]
     paths:
       - 'api.py'
       - 'src/**'

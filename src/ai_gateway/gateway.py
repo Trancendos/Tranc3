@@ -192,24 +192,7 @@ class AIGateway:
         # 3. Resolve applicable routes
         routes = self._resolve_routes(config.routes, request)
         if not routes:
-            # Fallback: try all providers in registration order, ranked by Thompson sampler
-            try:
-                from src.inference.thompson_sampler import get_sampler
-
-                sampler = get_sampler()
-                ranked = sampler.rank_all()
-                registered = set(self._providers.keys())
-                ordered = [n for n in ranked if n in registered]
-                # Append any providers not in sampler
-                ordered += [n for n in self._providers.keys() if n not in ordered]
-                routes = [
-                    RouteRule(provider=name, priority=idx) for idx, name in enumerate(ordered)
-                ]
-            except Exception:
-                routes = [
-                    RouteRule(provider=name, priority=idx)
-                    for idx, name in enumerate(self._providers.keys())
-                ]
+            routes = self._get_fallback_routes()
 
         if not routes:
             raise AIGatewayError(
@@ -220,30 +203,9 @@ class AIGateway:
         errors: list[dict[str, str]] = []
 
         for route_idx, route in enumerate(routes):
-            provider = self._providers.get(route.provider)
+            provider = self._get_viable_provider(route, errors)
             if not provider:
-                errors.append({"provider": route.provider, "error": "Provider not registered"})
                 continue
-
-            # Skip unhealthy providers
-            health = self._health_status.get(route.provider)
-            if health and not health.healthy:
-                if self._config.verbose:
-                    logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))
-                continue
-
-            # Skip providers that have hit their free-tier quota threshold
-            try:
-                from src.mesh.quota_enforcer import get_enforcer
-
-                if get_enforcer().is_blocked(route.provider):
-                    logger.info(
-                        "Skipping quota-blocked provider: %s",
-                        sanitize_for_log(route.provider),
-                    )
-                    continue
-            except Exception:  # quota enforcer is optional; proceed without check
-                pass
 
             try:
                 # Apply route-specific model
@@ -260,59 +222,13 @@ class AIGateway:
                     route.max_latency_ms,
                 )
 
-                # Track failover
-                if route_idx > 0:
-                    self._metrics.failover_count += 1
-                    response.failover_index = route_idx
-
-                # Update metrics
-                self._track_success(route.provider, response)
-                try:
-                    from src.inference.thompson_sampler import get_sampler
-
-                    get_sampler().record_success(
-                        route.provider,
-                        latency_ms=response.latency_ms if hasattr(response, "latency_ms") else 0.0,
-                    )
-                except Exception:
-                    pass
-
-                # Cache response
-                if config.cache_enabled:
-                    self._cache_response(request, config, response)
-
-                # Update token usage
-                config.tokens_used_today += response.tokens_total
-                _feed_capacity_guard(config.tenant_id, response.tokens_total)
-
-                # Wire zero-cost tracker
-                try:
-                    from src.mesh.quota_enforcer import get_enforcer
-
-                    get_enforcer().record_request(
-                        route.provider, tokens=float(response.tokens_total)
-                    )
-                except Exception:  # quota tracking is best-effort; don't fail the request
-                    pass
+                self._process_successful_response(request, config, response, route, route_idx)
 
                 return response
 
             except Exception as e:
                 errors.append({"provider": route.provider, "error": str(e)})
-
-                # Update health status
-                self._health_status[route.provider] = ProviderHealth(
-                    provider=route.provider,
-                    healthy=False,
-                    error=str(e),
-                )
-                self._track_error(route.provider)
-                try:
-                    from src.inference.thompson_sampler import get_sampler
-
-                    get_sampler().record_failure(route.provider)
-                except Exception:
-                    pass
+                self._process_route_error(e, route)
 
         # All providers failed
         self._metrics.errors += 1
@@ -431,12 +347,130 @@ class AIGateway:
         self._metrics.total_latency_ms += response.latency_ms
 
         if provider not in self._metrics.by_provider:
-            self._metrics.by_provider[provider] = {"requests": 0, "tokens": 0, "errors": 0}
+            self._metrics.by_provider[provider] = {
+                "requests": 0,
+                "tokens": 0,
+                "errors": 0,
+            }
         self._metrics.by_provider[provider]["requests"] += 1
         self._metrics.by_provider[provider]["tokens"] += response.tokens_total
 
     def _track_error(self, provider: str) -> None:
         """Track a provider error."""
         if provider not in self._metrics.by_provider:
-            self._metrics.by_provider[provider] = {"requests": 0, "tokens": 0, "errors": 0}
+            self._metrics.by_provider[provider] = {
+                "requests": 0,
+                "tokens": 0,
+                "errors": 0,
+            }
         self._metrics.by_provider[provider]["errors"] += 1
+
+    def _get_fallback_routes(self) -> list[RouteRule]:
+        """Generate fallback routes using the thompson sampler or registration order."""
+        try:
+            from src.inference.thompson_sampler import get_sampler
+
+            sampler = get_sampler()
+            ranked = sampler.rank_all()
+            registered = set(self._providers.keys())
+            ordered = [n for n in ranked if n in registered]
+            # Append any providers not in sampler
+            ordered += [n for n in self._providers.keys() if n not in ordered]
+            return [RouteRule(provider=name, priority=idx) for idx, name in enumerate(ordered)]
+        except Exception:
+            return [
+                RouteRule(provider=name, priority=idx)
+                for idx, name in enumerate(self._providers.keys())
+            ]
+
+    def _get_viable_provider(
+        self, route: RouteRule, errors: list[dict[str, str]]
+    ) -> AIProvider | None:
+        """Check if a provider for a route is viable and return it, else append to errors."""
+        provider = self._providers.get(route.provider)
+        if not provider:
+            errors.append({"provider": route.provider, "error": "Provider not registered"})
+            return None
+
+        # Skip unhealthy providers
+        health = self._health_status.get(route.provider)
+        if health and not health.healthy:
+            if self._config.verbose:
+                logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))
+            return None
+
+        # Skip providers that have hit their free-tier quota threshold
+        try:
+            from src.mesh.quota_enforcer import get_enforcer
+
+            if get_enforcer().is_blocked(route.provider):
+                logger.info(
+                    "Skipping quota-blocked provider: %s",
+                    sanitize_for_log(route.provider),
+                )
+                return None
+        except Exception:  # quota enforcer is optional; proceed without check
+            pass
+
+        return provider
+
+    def _process_successful_response(
+        self,
+        request: AIRequest,
+        config: TenantAIConfig,
+        response: AIResponse,
+        route: RouteRule,
+        route_idx: int,
+    ) -> None:
+        """Process a successful response by updating metrics, cache, and token usage."""
+        # Track failover
+        if route_idx > 0:
+            self._metrics.failover_count += 1
+            response.failover_index = route_idx
+
+        # Update metrics
+        self._track_success(route.provider, response)
+        try:
+            from src.inference.thompson_sampler import get_sampler
+
+            get_sampler().record_success(
+                route.provider,
+                latency_ms=(response.latency_ms if hasattr(response, "latency_ms") else 0.0),
+            )
+        except Exception:  # bandit feedback is best-effort; never fail a served request
+            # Debug rather than silence: the sampler being permanently broken
+            # degrades routing quality invisibly, which is worth being able to
+            # find in a log even though it must not surface to the caller.
+            logger.debug("Thompson sampler success feedback failed", exc_info=True)
+
+        # Cache response
+        if config.cache_enabled:
+            self._cache_response(request, config, response)
+
+        # Update token usage
+        config.tokens_used_today += response.tokens_total
+        _feed_capacity_guard(config.tenant_id, response.tokens_total)
+
+        # Wire zero-cost tracker
+        try:
+            from src.mesh.quota_enforcer import get_enforcer
+
+            get_enforcer().record_request(route.provider, tokens=float(response.tokens_total))
+        except Exception:  # quota tracking is best-effort; don't fail the request
+            pass
+
+    def _process_route_error(self, e: Exception, route: RouteRule) -> None:
+        """Process a route error by updating health status and tracking metrics."""
+        # Update health status
+        self._health_status[route.provider] = ProviderHealth(
+            provider=route.provider,
+            healthy=False,
+            error=str(e),
+        )
+        self._track_error(route.provider)
+        try:
+            from src.inference.thompson_sampler import get_sampler
+
+            get_sampler().record_failure(route.provider)
+        except Exception:  # bandit feedback is best-effort; the route already failed
+            logger.debug("Thompson sampler failure feedback failed", exc_info=True)
