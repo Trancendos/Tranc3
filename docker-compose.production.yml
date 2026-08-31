@@ -2405,7 +2405,7 @@ services:
 # Item 8 — n8n: Workflow node upgrade for The Digital Grid
 # ═══════════════════════════════════════════════════════════════════════════
   n8n:
-    image: n8nio/n8n:latest@sha256:e0d9593724e36d2584a1686148155e881233b38ae1833101c97c6463c0d36711
+    image: n8nio/n8n:latest@sha256:a9e2e3c8006ed453238266669ea1274be7136f515abe290a2f75a0ab9044c93d
     container_name: trancendos-n8n
     restart: unless-stopped
     environment:
