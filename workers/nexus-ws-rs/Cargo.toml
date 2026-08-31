@@ -8,7 +8,7 @@ name = "nexus-ws"
 path = "src/main.rs"
 
 [dependencies]
-axum = { version = "0.7", features = ["json", "ws", "query"] }
+axum = { version = "0.8", features = ["json", "ws", "query"] }
 tokio = { version = "1", features = ["full"] }
 dashmap = "6"
 serde = { version = "1", features = ["derive"] }
