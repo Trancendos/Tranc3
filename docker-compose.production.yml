@@ -119,7 +119,7 @@ services:
   # ── Prometheus — Metrics Collection ──────────────────────────────────
   # Replaces: Cloudflare Analytics, CF Worker Analytics
   prometheus:
-    image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
+    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
     container_name: tranc3-prometheus
     <<: *common
     ports:
@@ -179,7 +179,7 @@ services:
   # ── Grafana — Observability Dashboard ────────────────────────────────
   # Replaces: Cloudflare Dashboard, CF Analytics
   grafana:
-    image: grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
+    image: grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043
     container_name: tranc3-grafana
     <<: *common
     environment:
@@ -203,7 +203,7 @@ services:
   # ── Loki — Log Aggregation ───────────────────────────────────────────
   # Replaces: Cloudflare Logs, CF Logpush
   loki:
-    image: grafana/loki:3.7.3@sha256:70b9f699fc9bb868b62f1cfd4f787dfa50242f1fd92e6089787d5d7daea75fe8
+    image: grafana/loki:3.7.7@sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500
     container_name: tranc3-loki
     <<: *common
     ports:
@@ -356,7 +356,7 @@ services:
   # Receives OTLP spans from workers via OpenTelemetry exporter.
   # Integrates with existing Grafana (auto-datasource provisioned).
   tempo:
-    image: grafana/tempo:3.0.2@sha256:cda87c212d8c584dc0b89e337e7ed648a5100feb657e5d528480ee4fa03dbbe3
+    image: grafana/tempo:3.0.3@sha256:0296560ac66f8a3600d7fb3014a52c189d4d9c3549ad6ff441bf2409855d68d5
     container_name: tranc3-tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yml"]
@@ -1948,7 +1948,7 @@ services:
   # UI: http://localhost:3301  Backend: ClickHouse + query-service
   # ─────────────────────────────────────────────────────────────────────────
   signoz-clickhouse:
-    image: clickhouse/clickhouse-server:26.5.5-alpine@sha256:d6d599097220479d6a55d6dc838b44fdea7774003666860701c82dc178c6ad13
+    image: clickhouse/clickhouse-server:26.5.7-alpine@sha256:35b419db86eed71ab1c41c03b4fd1f39be26f41eb38b0866268e2ca162445105
     container_name: trancendos-signoz-clickhouse
     environment:
       CLICKHOUSE_DB: signoz_traces

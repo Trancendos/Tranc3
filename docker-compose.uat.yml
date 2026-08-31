@@ -255,7 +255,7 @@ services:
 
   # ── Grafana ───────────────────────────────────────────────────────────────
   grafana:
-    image: grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
+    image: grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043
     container_name: tranc3-uat-grafana
     <<: *uat-common
     env_file: []
