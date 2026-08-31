@@ -477,7 +477,7 @@ services:
       - "traefik.http.services.gravitee-portal.loadbalancer.server.port=8080"
 
   gravitee-mongo:
-    image: mongo:7-jammy@sha256:b0c1f837c31921c93689559d5848fd14b7c421afb92d9b5a11e5a8769f98cad1
+    image: mongo:7-jammy@sha256:406a4fdca9fc763443268f000218d3849ef8996f66ed9e92ba0b501b446ab822
     container_name: gravitee-mongo
     <<: *default-restart
     profiles: ["api-marketplace", "all"]
