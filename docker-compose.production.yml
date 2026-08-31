@@ -1599,7 +1599,7 @@ services:
       - tranc3-net
 
   penpot-db:
-    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: trancendos-penpot-db
     restart: unless-stopped
     environment:
@@ -1733,7 +1733,7 @@ services:
   # UI: http://localhost:3010  Env-set: http://scheduling.trancendos.com
   # ─────────────────────────────────────────────────────────────────────────
   calcom-db:
-    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: trancendos-calcom-db
     environment:
       POSTGRES_USER: calcom
@@ -1782,7 +1782,7 @@ services:
   # UI: http://localhost:3011  Env-set: http://wiki.trancendos.com
   # ─────────────────────────────────────────────────────────────────────────
   outline-db:
-    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: trancendos-outline-db
     environment:
       POSTGRES_USER: outline
@@ -2326,7 +2326,7 @@ services:
     restart: unless-stopped
 
   authentik-db:
-    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: trancendos-authentik-db
     volumes:
       - authentik-db-data:/var/lib/postgresql/data
@@ -2681,7 +2681,7 @@ services:
       - "traefik.http.services.paperless.loadbalancer.server.port=8000"
 
   paperless-db:
-    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: trancendos-paperless-db
     restart: unless-stopped
     environment:
@@ -2788,7 +2788,7 @@ services:
       - "traefik.http.services.openbas.loadbalancer.server.port=8082"
 
   openbas-db:
-    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: trancendos-openbas-db
     restart: unless-stopped
     environment:
