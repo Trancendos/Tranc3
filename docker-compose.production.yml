@@ -1308,7 +1308,7 @@ services:
   # Unlimited spans self-hosted; integrates with The Observatory.
   # SDK env vars: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=http://langfuse:3000
   langfuse:
-    image: langfuse/langfuse:latest@sha256:f635d308449ea02a182f8d4c156daf5709714badf25fb504e84bb229458204f6
+    image: langfuse/langfuse:latest@sha256:7dcc1419da9062c968a428bc63a4ff0e03d4cc84113125f999754a9037912425
     container_name: trancendos-langfuse
     ports:
       - "3002:3000"
