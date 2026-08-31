@@ -153,22 +153,52 @@ class TestChat:
         assert r.status_code == 200
         assert r.json()["personality"] == "dorris-fontaine"
 
-    def test_chat_known_location_with_unmapped_ai_falls_back(self):
-        # DocUtari's seed assigned_ai is the literal placeholder "To be
-        # Defined" — a known Location whose seat resolves to no profile at
-        # all (distinct from "unknown location" and "vacant seat" above).
-        token = self._get_token()
-        r = client.post(
-            "/chat",
-            json={
-                "message": "Hello",
-                "personality": "tranc3-creative",
-                "location": "DocUtari",
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert r.status_code == 200
-        assert r.json()["personality"] == "tranc3-creative"
+    def test_chat_known_location_with_unmapped_ai_falls_back(self, monkeypatch):
+        # A known Location, occupied seat, but the AI holding it has no entry
+        # in AI_NAME_TO_PROFILE_ID — distinct from "unknown location" and
+        # "vacant seat" below, and the case that matters most: the seat looks
+        # healthy, so nothing else would notice the persona silently going
+        # missing.
+        #
+        # This used to lean on DocUtari's seed assigned_ai being the literal
+        # placeholder "To be Defined". That stopped being true when
+        # registry._RENAMED_LEAD_AIS started migrating that placeholder to
+        # "Fiddsy" (which does map, to fiddsy.json), so the test asserted a
+        # fallback that no longer happened and failed on main. No seeded
+        # Location resolves to an unmapped AI any more — which is a good
+        # thing, and exactly why the unmapped branch has to be provoked
+        # deliberately rather than borrowed from whatever the seed data
+        # happens to say this week. Same real-singleton-plus-muted-events
+        # approach as the tests either side of it.
+        monkeypatch.setattr("src.roles.registry._emit_relations_event", lambda *a, **k: None)
+        from src.roles.registry import get_registry
+
+        registry = get_registry()
+        # Capture the scalar, not the RoleAssignment: get_role returns the
+        # stored object and assign_ai mutates it in place, so holding the
+        # object would give back the value this test just wrote.
+        original_ai = getattr(registry.get_role("DocUtari"), "assigned_ai", None)
+        registry.assign_ai("DocUtari", "An AI With No Profile", changed_by="test")
+        try:
+            token = self._get_token()
+            r = client.post(
+                "/chat",
+                json={
+                    "message": "Hello",
+                    "personality": "tranc3-creative",
+                    "location": "DocUtari",
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert r.status_code == 200
+            assert r.json()["personality"] == "tranc3-creative"
+        finally:
+            # A vacant seat has to be vacated again, not left holding this
+            # test's placeholder -- the registry is process-wide.
+            if original_ai:
+                registry.assign_ai("DocUtari", original_ai, changed_by="test-restore")
+            else:
+                registry.remove_ai("DocUtari", changed_by="test-restore")
 
     def test_chat_unknown_location_falls_back_to_supplied_personality(self):
         token = self._get_token()
