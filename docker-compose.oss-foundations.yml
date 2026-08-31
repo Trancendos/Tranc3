@@ -272,7 +272,7 @@ services:
   # Port 4000
   # ─────────────────────────────────────────────────────────────────
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f
+    image: ghcr.io/berriai/litellm:main-latest@sha256:846795f2a2b5787ce2155170fd33b9ae886fd925f26635424ee613d53ece2fa4
     container_name: ai-gateway-litellm
     <<: [*restart, *network]
     profiles: ["ai-proxy", "all"]
@@ -362,7 +362,7 @@ services:
       retries: 3
 
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:65a4cabf0169ea7fbd90ab7bb28ba3f8b5909613635acda1a03ad606f34b456b
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:49eba766581b9134cfa6b584b9eb718355fb9cfbd44b2a7c9c72a427d4891648
     container_name: docutari-paperless
     <<: [*restart, *network]
     profiles: ["doc-utari", "all"]
@@ -546,7 +546,7 @@ services:
       <<: *hc-http
 
   grafana-oss:
-    image: grafana/grafana:latest@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
+    image: grafana/grafana:latest@sha256:3fd54ae1214669f8355f065ec9f6445d5279a3d77095ab048ca045685272429b
     container_name: observatory-grafana
     <<: [*restart, *network]
     profiles: ["observatory", "all"]

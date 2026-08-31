@@ -237,7 +237,7 @@ services:
   # Scrapes same targets as Prometheus; Grafana talks to both.
   # Query API: http://victoriametrics:8428  (Prometheus-compatible PromQL)
   victoriametrics:
-    image: victoriametrics/victoria-metrics:latest@sha256:40ea45a6d14b6ad9f2f1fff597309d456ff9885d77d8d1da5fd559b251db9987
+    image: victoriametrics/victoria-metrics:latest@sha256:6d164540a04f49ba4e696cbdb70f9fee78be1e94b8f2a1292743a0b1ab8275bd
     container_name: tranc3-victoriametrics
     <<: *common
     command:
@@ -1308,7 +1308,7 @@ services:
   # Unlimited spans self-hosted; integrates with The Observatory.
   # SDK env vars: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=http://langfuse:3000
   langfuse:
-    image: langfuse/langfuse:latest@sha256:f635d308449ea02a182f8d4c156daf5709714badf25fb504e84bb229458204f6
+    image: langfuse/langfuse:latest@sha256:7dcc1419da9062c968a428bc63a4ff0e03d4cc84113125f999754a9037912425
     container_name: trancendos-langfuse
     ports:
       - "3002:3000"
@@ -1846,7 +1846,7 @@ services:
   # UI: http://localhost:6875
   # ─────────────────────────────────────────────────────────────────────────
   bookstack-db:
-    image: mariadb:12@sha256:628f228f0fd5913a220438693576b29b6fe4dc1fa0a1298c0e98579fae28635f
+    image: mariadb:12@sha256:dd9b303aed4f4890ed09f766d8ca9ddfd176c0c6f6267feff53b3192ec65a979
     container_name: trancendos-bookstack-db
     environment:
       MYSQL_ROOT_PASSWORD: "${BOOKSTACK_DB_ROOT_PASSWORD:?required}"
@@ -1865,7 +1865,7 @@ services:
       retries: 3
 
   bookstack:
-    image: lscr.io/linuxserver/bookstack:latest@sha256:13dc508fb46aa7d2b726b6c872e4903892bda68391ac948a5603d3ca60f0937e
+    image: lscr.io/linuxserver/bookstack:latest@sha256:3e1aea5d8dd3bb3a5cf16fa7e3b847e2889eedd8516b2825ac379d365b07ba6f
     container_name: trancendos-bookstack
     environment:
       PUID: "1000"
@@ -2037,7 +2037,7 @@ services:
   #            → mistral → huggingface (x8 rotation with hard stops)
   # ══════════════════════════════════════════════════════════════════════════
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f
+    image: ghcr.io/berriai/litellm:main-latest@sha256:846795f2a2b5787ce2155170fd33b9ae886fd925f26635424ee613d53ece2fa4
     container_name: trancendos-litellm
     command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "4"]
     volumes:
@@ -2648,7 +2648,7 @@ services:
 # Item 5 — Paperless-ngx: Document management for DocUtari
 # ═══════════════════════════════════════════════════════════════════════════
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:65a4cabf0169ea7fbd90ab7bb28ba3f8b5909613635acda1a03ad606f34b456b
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:49eba766581b9134cfa6b584b9eb718355fb9cfbd44b2a7c9c72a427d4891648
     container_name: trancendos-paperless
     restart: unless-stopped
     depends_on:
@@ -2733,7 +2733,7 @@ services:
 # API: internal only, consumed by DocUtari bridge worker
 # ═══════════════════════════════════════════════════════════════════════════
   gotenberg:
-    image: gotenberg/gotenberg:8@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923
+    image: gotenberg/gotenberg:8@sha256:87c16b9f364279d321bc9772d31fa58aa6abe036423c270698bd636c3a8e9466
     container_name: trancendos-gotenberg
     restart: unless-stopped
     command:
@@ -2750,7 +2750,7 @@ services:
 # API: internal only, consumed by DocUtari bridge worker
 # ═══════════════════════════════════════════════════════════════════════════
   tika:
-    image: apache/tika:latest-full@sha256:d8e6ed96260ad89307a93195a1b856102987a818ac648502f8efbaf313d32470
+    image: apache/tika:latest-full@sha256:80072bb73dd320a9de9709beb0b16d14dd6d2680376f8d31e498f55b633ba593
     container_name: trancendos-tika
     restart: unless-stopped
     ports:
