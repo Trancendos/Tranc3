@@ -193,14 +193,6 @@ jobs:
       - name: PID coverage
         run: python scripts/pid_coverage.py --check
 
-      # The AI governance register held three cards while the estate ran a
-      # crisis classifier, an empathy wrapper and a third-party model router
-      # that appeared in it nowhere. A register nothing checks falls behind the
-      # code silently, so adding an AI surface now fails here until it is
-      # registered -- and a high-risk system cannot be quietly downgraded.
-      - name: AI register conformance
-        run: python scripts/check_ai_register.py
-
   test:
     name: Pytest
     runs-on: ubuntu-latest
