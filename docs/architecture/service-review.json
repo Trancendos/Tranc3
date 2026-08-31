@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "593f7992",
+  "commit": "6f53b3fc",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-22T03:30:04.274373+00:00",
+  "generated_at": "2026-08-29T11:25:12.064861+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -310,6 +310,7 @@
     "_deployment_modes_router",
     "_ecosystem_router",
     "_enhanced_router",
+    "_exchange_router",
     "_governance_router",
     "_grid_router",
     "_imind_router",
@@ -328,6 +329,7 @@
     "_section7_router",
     "_t2ance_router",
     "_thinktank_router",
+    "_townhall_itsm_router",
     "_townhall_router",
     "_tranc3ts_router",
     "_trance_one_router",
@@ -1087,7 +1089,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "amir20/dozzle:latest@sha256:01f9018ffdaa0ec523f9a91dea3eff65b25cdb5f0566ac6d5a2cb4cf591e35e9",
+      "image": "amir20/dozzle:latest@sha256:0ecac18a3491962002e9d6b9f9a363155131a4213e723ab86fc76dfee6e3cd8e",
       "lifecycle": "INFRA",
       "service": "dozzle"
     },
@@ -1562,7 +1564,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/identity-service/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/identity-service/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -1987,7 +1989,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "prometheuscommunity/ipmi-exporter:v1.9.0",
+      "image": "prometheuscommunity/ipmi-exporter:v1.9.0@sha256:3e9f80832dee163d77e872934915ddb58b81bbafb4875c25663cfdf8a846e737",
       "lifecycle": "INFRA",
       "service": "ipmi-exporter"
     },
@@ -2183,7 +2185,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/berriai/litellm:main-latest@sha256:3a1980074ff2ac13883e0ffee1bebec345d8addd004be251079cee173b0e8305",
+      "image": "ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f",
       "lifecycle": "INFRA",
       "service": "litellm"
     },
@@ -2794,7 +2796,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/products-service/worker.py:25 Dimensional.service_auth_fastapi"
+            "workers/products-service/worker.py:26 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },

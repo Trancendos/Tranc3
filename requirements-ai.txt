@@ -19,12 +19,12 @@ langchain-community==0.4.2
 #        CVE-2024-12720 (tokenization overflow), CVE-2025-1194 (DoS),
 #        CVE-2025-3264, CVE-2025-3263, CVE-2025-3933, CVE-2025-5197,
 #        CVE-2025-6051, CVE-2025-3777
-transformers==5.8.1
+transformers==5.15.1
 
 # === Quantum Computing ===
 # Fixes: CVE-2025-2000 (RCE), CVE-2025-1403 (information disclosure)
-qiskit==2.4.1
+qiskit==2.5.2
 
 # === Observability ===
 # Fixes: CVE-2025-9799 (SSRF in LangFuse)
-langfuse==4.6.1
+langfuse==4.14.4

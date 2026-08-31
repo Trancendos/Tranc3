@@ -1,7 +1,7 @@
 # Exact-pinned — Do NOT use >= or ~=
 fastapi==0.141.1
 starlette==1.6.0
-uvicorn==0.52.3
+uvicorn==0.52.4
 websockets==16.1.1
 pydantic==2.13.4
 PyJWT==2.13.0

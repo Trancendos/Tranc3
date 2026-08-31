@@ -1,7 +1,7 @@
 # ISO 27001:2022 — Statement of Applicability (SOA)
-**Organisation:** Trancendos Ltd  
-**Scope:** Tranc3 Platform — all self-hosted workers, infrastructure, data stores, CI/CD  
-**Version:** 1.0 | **Date:** 2026-06-07 | **Owner:** ISMS Lead  
+**Organisation:** Trancendos Ltd
+**Scope:** Tranc3 Platform — all self-hosted workers, infrastructure, data stores, CI/CD
+**Version:** 1.0 | **Date:** 2026-06-07 | **Owner:** ISMS Lead
 **Status:** Draft — targeting ISO 27001:2022 certification Q2 2027
 
 ---

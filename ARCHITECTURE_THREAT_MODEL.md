@@ -1,9 +1,9 @@
 # Tranc3 Architecture Threat Model
 
-**Version:** 1.0  
-**Date:** 2025-01  
-**Author:** Trancendos Security Engineering  
-**Classification:** Internal — Engineering Use  
+**Version:** 1.0
+**Date:** 2025-01
+**Author:** Trancendos Security Engineering
+**Classification:** Internal — Engineering Use
 **Review Cycle:** Quarterly
 
 ---

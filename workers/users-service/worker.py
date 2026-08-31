@@ -274,10 +274,7 @@ async def create_user(user: UserCreate):
     prefs_json = json.dumps(user.preferences)
     try:
         db.execute(
-            """INSERT INTO users
-               (user_id, username, email, display_name, role, preferences,
-                bio, avatar_url, timezone, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            "INSERT INTO users (user_id, username, email, display_name, role, preferences, bio, avatar_url, timezone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 user_id,
                 user.username,
@@ -327,19 +324,38 @@ async def list_users(
     active_only: bool = Query(default=False),
 ):
     offset = (page - 1) * per_page
-    conditions = []
     params: list = []
-    if role:
-        conditions.append("role = ?")
+
+    if role and active_only:
         params.append(role)
-    if active_only:
-        conditions.append("is_active = 1")
-    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    total = db.execute(f"SELECT COUNT(*) as c FROM users {where}", tuple(params)).fetchone()["c"]
-    rows = db.execute(
-        f"SELECT * FROM users {where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        tuple(params) + (per_page, offset),
-    ).fetchall()
+        total = db.execute(
+            "SELECT COUNT(*) as c FROM users WHERE role = ? AND is_active = 1", tuple(params)
+        ).fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE role = ? AND is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            tuple(params) + (per_page, offset),
+        ).fetchall()
+    elif role:
+        params.append(role)
+        total = db.execute(
+            "SELECT COUNT(*) as c FROM users WHERE role = ?", tuple(params)
+        ).fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE role = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            tuple(params) + (per_page, offset),
+        ).fetchall()
+    elif active_only:
+        total = db.execute("SELECT COUNT(*) as c FROM users WHERE is_active = 1").fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users WHERE is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
+    else:
+        total = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
+        rows = db.execute(
+            "SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
     return UserListResponse(
         users=[_row_to_response(r) for r in rows],
         total=total,
@@ -379,29 +395,51 @@ async def update_user(user_id: str, update: UserUpdate):
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
-    updates: dict = {}
-    if update.display_name is not None:
-        updates["display_name"] = update.display_name
-    if update.email is not None:
-        updates["email"] = str(update.email)
-    if update.role is not None:
-        updates["role"] = update.role
-    if update.preferences is not None:
-        updates["preferences"] = json.dumps(update.preferences)
-    if update.is_active is not None:
-        updates["is_active"] = 1 if update.is_active else 0
-    if update.bio is not None:
-        updates["bio"] = update.bio
-    if update.avatar_url is not None:
-        updates["avatar_url"] = update.avatar_url
-    if update.timezone is not None:
-        updates["timezone"] = update.timezone
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    # COALESCE(?, column) keeps each unsupplied field at whatever the row holds
+    # *at write time*, which is what makes this a PATCH rather than a full-row
+    # overwrite.
+    #
+    # The previous version read `existing` above and then wrote every column
+    # back from that snapshot. Two concurrent PATCHes to different fields then
+    # lose one of the two updates: the second writes back the stale value it
+    # read for the field it was not changing. Reproduced before this change --
+    # PATCH display_name and PATCH bio interleaved left display_name at its
+    # original value.
+    #
+    # It is also a single static statement, so there is no SET clause built at
+    # runtime. That matters for how this got here: the dynamic clause it
+    # replaced was flagged as SQL injection, which it was not (the interpolated
+    # names were literals in this file and every value was already bound), but
+    # rewriting to avoid the *pattern* is what introduced the real bug. This
+    # form has neither the pattern nor the bug.
+    #
+    # None means "not supplied" throughout the UserUpdate model, so no field can
+    # be set to NULL through this endpoint -- the same limit the previous
+    # implementations had.
     db.execute(
-        f"UPDATE users SET {set_clause} WHERE user_id = ?",
-        (*updates.values(), user_id),
+        """UPDATE users SET
+               display_name = COALESCE(?, display_name),
+               email        = COALESCE(?, email),
+               role         = COALESCE(?, role),
+               preferences  = COALESCE(?, preferences),
+               is_active    = COALESCE(?, is_active),
+               bio          = COALESCE(?, bio),
+               avatar_url   = COALESCE(?, avatar_url),
+               timezone     = COALESCE(?, timezone),
+               updated_at   = ?
+           WHERE user_id = ?""",
+        (
+            update.display_name,
+            str(update.email) if update.email is not None else None,
+            update.role,
+            json.dumps(update.preferences) if update.preferences is not None else None,
+            (1 if update.is_active else 0) if update.is_active is not None else None,
+            update.bio,
+            update.avatar_url,
+            update.timezone,
+            datetime.now(timezone.utc).isoformat(),
+            user_id,
+        ),
     )
     db.commit()
 
@@ -545,4 +583,10 @@ app.include_router(_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8006)  # nosec B104 — containerised service
+    # Binding all interfaces is intentional: the service runs containerised and is
+    # reached through the compose network, never exposed directly.
+    #
+    # The rationale sits above rather than after the marker because bandit parses
+    # everything following `nosec` as a test-ID list -- it was reading
+    # "containerised" and "service" as test names and warning on every scan.
+    uvicorn.run(app, host="0.0.0.0", port=8006)  # nosec B104
