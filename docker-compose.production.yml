@@ -2706,7 +2706,7 @@ services:
 # API: trancendos.com/docutari/pdf/api
 # ═══════════════════════════════════════════════════════════════════════════
   stirling-pdf:
-    image: stirlingtools/stirling-pdf:latest@sha256:7ed4d9681d18e4fbc3aa6a63647c4b5c2bcc4b75841df7c05d7e3d2320f5c9a1
+    image: stirlingtools/stirling-pdf:latest@sha256:3b3670fce70b396ec56ba380a3cc7858e0abf83fe13f31c88f7737847763a396
     container_name: trancendos-stirling-pdf
     restart: unless-stopped
     environment:
