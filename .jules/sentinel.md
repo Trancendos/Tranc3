@@ -2,3 +2,8 @@
 **Vulnerability:** Found hardcoded credentials (`icecast_admin_password: str = "hackme"`) and an unconfigurable URL (`icecast_url`) directly within `src/warp_radio/station.py`.
 **Learning:** Hardcoded credentials exposed in source files pose a significant security risk, even if they are default or dummy values. Hardcoding these in the data model's default fields means developers could unintentionally deploy services with known default credentials that could be easily scraped or exploited if unmodified.
 **Prevention:** Always use environment variables (e.g., `os.getenv(...)`) with fallback defaults for configurable sensitive data (like passwords, URLs, or API keys). Ensure secrets can be dynamically injected at runtime, complying with 12-factor application design principles.
+
+## 2024-05-27 - [Remote Code Execution in Workflow Engine]
+**Vulnerability:** Arbitrary code execution via `eval()` in `ConditionNode` and `TransformNode` (workflow engine components). The engine processed user-supplied expressions without sandboxing.
+**Learning:** Even when restricting `__builtins__` in Python's `eval()`, it is trivial to bypass using `__class__` and `__subclasses__()` to access dangerous OS functions. When migrating away from `eval()`, writing a custom AST evaluator requires comprehensive handling of node types (like Attributes and Calls) to avoid regressions while still mitigating security risks.
+**Prevention:** Avoid `eval()` and `exec()`. If evaluating dynamic user expressions is required, use a proven restricted execution environment like `simpleeval` or `RestrictedPython` rather than building custom AST parsers which can be prone to functional regressions and denial of service (DoS) via operations like `**` or string multiplication.
