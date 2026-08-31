@@ -77,6 +77,15 @@ repos:
     hooks:
       - id: gitleaks
 
+  # detect-secrets' own is_lock_file filter recognises package-lock.json,
+  # yarn.lock, poetry.lock and nine others, but not pnpm-lock.yaml -- the
+  # list predates pnpm. So web/pnpm-lock.yaml was the one lockfile scanned
+  # as if it were source, and each of its ~460 sha512 integrity digests was
+  # baselined individually. Regenerating the lockfile then left new digests
+  # unbaselined, failing this hook on whichever PR came next rather than on
+  # the one that moved the lockfile. The baseline's should_exclude_file
+  # pattern now covers pnpm-lock.yaml, matching how every other package
+  # manager's lockfile is already treated.
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
@@ -92,14 +101,27 @@ repos:
 
   # ── Typo detection (security-sensitive) ───────────────────────────
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    # Immutable tag, not the `v1` alias. pre-commit warns on every run that a
+    # moving reference "is never updated after first install": local runs pin
+    # to whatever was cached on first use while pre-commit.ci installs fresh
+    # each time, so the two can silently run different versions of one gate.
+    rev: v1.49.0
     hooks:
       - id: typos
+        # Runs once over the tree instead of being handed ~2,900 explicit
+        # paths. That matters twice over:
+        #
+        #   - The hook was being SIGKILLed (exit -9) on pre-commit.ci while
+        #     passing locally -- a resource ceiling there, not a finding.
+        #     Building and passing an argv of every tracked file is the bulk
+        #     of that cost; typos' own walker is what the tool is built around.
+        #   - .typos.toml's files.extend-exclude is *ignored* when pre-commit
+        #     passes explicit paths, which is why the exclusions previously had
+        #     to be duplicated here and drifted out of sync. With
+        #     pass_filenames: false they apply, so .typos.toml is the single
+        #     place exclusions live.
+        pass_filenames: false
         args: [--config, .typos.toml]
-        # Generated third-party artefacts. .typos.toml's files.extend-exclude
-        # is ignored when pre-commit passes explicit paths, so the exclusion
-        # has to be repeated here.
-        exclude: ^(reports/|\.security_learning/|\.security_telemetry/|\.secrets\.baseline$)
 
   # ── EA/CMDB workbook integrity ────────────────────────────────────
   - repo: local

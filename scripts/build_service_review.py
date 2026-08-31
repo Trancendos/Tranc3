@@ -786,7 +786,15 @@ def render_md(g: dict) -> str:
     a("")
     a(", ".join(f"`{s}`" for s in running) or "_none_")
     a("")
-    return "\n".join(L) + "\n"
+    # Normalise before returning so this generator and pre-commit cannot fight
+    # over the same file. pre-commit.ci's trailing-whitespace and
+    # end-of-file-fixer hooks strip exactly this, and it pushed an autofix
+    # commit doing so; the next `build_service_review.py` run put it straight
+    # back, so the two churned against each other indefinitely. `--check`
+    # never caught it because it compares parsed content, not bytes.
+    # Stripping per line rather than fixing the one offending f-string keeps
+    # the invariant true for any line added later.
+    return "\n".join(line.rstrip() for line in L).rstrip("\n") + "\n"
 
 
 def main() -> int:
@@ -802,17 +810,87 @@ def main() -> int:
         if not OUT_JSON.is_file() or not OUT_MD.is_file():
             print("service review has never been generated", file=sys.stderr)
             return 1
-        old = json.loads(OUT_JSON.read_text())
-        new = json.loads(js)
-        old.pop("generated_at", None), new.pop("generated_at", None)
-        old.pop("commit", None), new.pop("commit", None)
+        # The write path below already guards this and says why; --check was
+        # added later without the same guard, so a corrupt or hand-truncated
+        # service-review.json crashed the freshness gate with a JSONDecodeError
+        # or a TypeError from dict() instead of failing it. A gate that raises
+        # reads as infrastructure breakage, not as "the artifact is stale".
+        try:
+            committed = json.loads(OUT_JSON.read_text())
+        except json.JSONDecodeError:
+            print(
+                "service-review.json is not valid JSON — rerun scripts/build_service_review.py",
+                file=sys.stderr,
+            )
+            return 1
+        if not isinstance(committed, dict):
+            print(
+                "service-review.json is valid JSON but not an object — rerun "
+                "scripts/build_service_review.py",
+                file=sys.stderr,
+            )
+            return 1
+        old, new = dict(committed), json.loads(js)
+        for volatile in ("generated_at", "commit"):
+            old.pop(volatile, None)
+            new.pop(volatile, None)
         if old != new:
             print(
                 "service review is stale — rerun scripts/build_service_review.py", file=sys.stderr
             )
             return 1
+
+        # The Markdown was only checked for existence, so a change to
+        # render_md() -- or a hand-edit of the committed report -- left the gate
+        # green over a stale document. Rebuild it against the committed volatile
+        # values, mirroring how the JSON comparison ignores them, so this
+        # catches real drift without failing on a timestamp.
+        g_for_md = dict(g)
+        for volatile in ("generated_at", "commit"):
+            if volatile in committed:
+                g_for_md[volatile] = committed[volatile]
+        if OUT_MD.read_text() != render_md(g_for_md):
+            print(
+                "SERVICE-REVIEW.md is stale — rerun scripts/build_service_review.py",
+                file=sys.stderr,
+            )
+            return 1
+
         print("service review: up to date")
         return 0
+
+    # Idempotent write. `generated_at` and `commit` change on every run and are
+    # deliberately ignored by --check above, so they carry no signal the gate
+    # uses -- but they were still rewritten every time, which made this pair of
+    # generated files the single largest source of merge conflicts in the repo.
+    # A test-merge of the open PRs against main put SERVICE-REVIEW.md and
+    # service-review.json in 8 of them, in most cases as the *only* conflict:
+    # two branches that touched entirely unrelated code still collided here,
+    # purely on a timestamp and a short SHA.
+    #
+    # So when the substantive content is unchanged, carry the committed values
+    # forward and leave the files byte-identical. Regenerating on a branch that
+    # changed nothing real now produces no diff at all, and provenance is still
+    # recorded whenever the content genuinely moves.
+    if OUT_JSON.is_file() and OUT_MD.is_file():
+        try:
+            prev = json.loads(OUT_JSON.read_text())
+        except json.JSONDecodeError:
+            prev = None
+        # isinstance, not `is not None`: a service-review.json holding a bare
+        # scalar (`42`, `"x"`, `true`) parses fine and would reach dict() and
+        # raise, turning a corrupt artifact into a crash instead of a rewrite.
+        if isinstance(prev, dict):
+            a, b = dict(prev), dict(g)
+            for volatile in ("generated_at", "commit"):
+                a.pop(volatile, None)
+                b.pop(volatile, None)
+            if a == b:
+                for volatile in ("generated_at", "commit"):
+                    if volatile in prev:
+                        g[volatile] = prev[volatile]
+                js = json.dumps(g, indent=2, sort_keys=True)
+                md = render_md(g)
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(js + "\n", encoding="utf-8")

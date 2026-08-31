@@ -14,6 +14,24 @@ extend-exclude = [
     ".security_learning/",
     ".security_telemetry/",
     ".secrets.baseline",
+    # Lockfiles and build artefacts: machine-generated, no prose to check, and
+    # collectively the largest inputs the scan was being handed.
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "Cargo.lock",
+    "poetry.lock",
+    "*.tsbuildinfo",
+    "docs/architecture/service-review.json",
+    "docs/architecture/ea-workbook/",
+    # Git submodules. They are separate repositories with their own hooks and
+    # their own .typos.toml; scanning them from here would apply this repo's
+    # allowlist to content it does not own, and report findings nobody working
+    # in this repo can fix. (This exclusion only became necessary once the hook
+    # switched to pass_filenames: false -- pre-commit's own file list never
+    # descended into submodules, so the change quietly widened the scan.)
+    "compliance/magna-carta/",
+    "workers/cranbania/",
 ]
 
 [default]
@@ -82,6 +100,7 @@ propert = "propert"
 retriev = "retriev"
 rotat = "rotat"
 structur = "structur"
+secur = "secur"
 # Technical vocabulary and accepted spelling variants.
 Hashi = "Hashi"                  # HashiCorp
 MAPE = "MAPE"                    # MAPE-K autonomic loop
@@ -98,6 +117,11 @@ Mis = "Mis"                      # "Mis-tiered", the doc-pack audit status
 mis = "mis"
 inh = "inh"                      # inhibitory conductance/time-constant variables
 iy = "iy"                        # integer y coordinate in the voxel bots
+iz = "iz"                        # Izhikevich neuron model parameters
+                                 # (iz_a/iz_b/iz_c/iz_d in
+                                 # src/nanoservices/neuromorphic/) -- the
+                                 # published names of the model's four
+                                 # coefficients, not a misspelling of "is".
 ND = "ND"
 nd = "nd"
 ba = "ba"
@@ -111,6 +135,13 @@ ure = "ure"
 jus = "jus"
 fo = "fo"
 agai = "agai"                    # truncated inside an ASCII box diagram
+criticals = "criticals"          # the count of CRITICAL findings, as a
+CRITICALS = "CRITICALS"          # field/variable name (report.criticals,
+                                 # $CRITICALS in the scanner workflow) --
+                                 # a plural noun, not "critical".
+THREED = "THREED"                # "3D" spelled out where an identifier
+                                 # cannot start with a digit (TranceFlow,
+                                 # VRAR3D) -- not "THREAD".
 
 [type.py]
 extend-ignore-re = [

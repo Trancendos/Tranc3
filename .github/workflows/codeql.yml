@@ -50,7 +50,11 @@ jobs:
         # Every github/codeql-action/* step in this job must resolve to the same
         # release: init writes a config stamped with its own version and analyze
         # refuses a config written by a different one ("Loaded a configuration
-        # file for version '4.36.2', but running version '4.37.7'").
+        # file for version '4.36.2', but running version '4.37.7'"). That split
+        # is what took CodeQL red on main from 2026-08-22 to 2026-08-25, and a
+        # pin bump silently dropped this comment once already -- so the rule is
+        # now enforced by scripts/check_codeql_action_consistency.py in ci.yml
+        # rather than trusted to this note.
         uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         with:
           languages: ${{ matrix.language }}
