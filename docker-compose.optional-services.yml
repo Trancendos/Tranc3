@@ -184,7 +184,7 @@ services:
   # Profile: design
   # ──────────────────────────────────────────────────────────────
   penpot-frontend:
-    image: penpotapp/frontend:latest@sha256:4725b4698d8d1bd25ee1666e0d900d20da8937fea845c6a088f76cd69293560b
+    image: penpotapp/frontend:latest@sha256:94fa2864d8fc0cd62245af95c03cca89306a7fd23c206a98a3e9dc9a376ea27e
     container_name: fabulousa-frontend
     <<: *default-restart
     profiles: ["design", "all"]
