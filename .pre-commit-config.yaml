@@ -20,7 +20,7 @@ ci:
 repos:
   # ── Ruff (lint + format) ──────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.4
+    rev: v0.16.5
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -66,7 +66,7 @@ repos:
 
   # ── Semgrep (semantic code analysis) ──────────────────────────────
   - repo: https://github.com/semgrep/pre-commit
-    rev: v1.174.0
+    rev: v1.175.0
     hooks:
       - id: semgrep
         args: ["--config", "auto", "--error"]
@@ -105,7 +105,7 @@ repos:
     # moving reference "is never updated after first install": local runs pin
     # to whatever was cached on first use while pre-commit.ci installs fresh
     # each time, so the two can silently run different versions of one gate.
-    rev: v1.49.0
+    rev: v1
     hooks:
       - id: typos
         # Runs once over the tree instead of being handed ~2,900 explicit
