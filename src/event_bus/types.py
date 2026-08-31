@@ -70,6 +70,63 @@ class PlatformEventType(str, enum.Enum):
     SECURITY_THREAT_DETECTED = "security.threat.detected"
     SECURITY_ANOMALY_FLAGGED = "security.anomaly.flagged"
 
+    # ── Service management (ITIL4-AILP) ──────────────────────────────────
+    #
+    # The six ITSM domains had no verbs on this bus, so every arrow in the
+    # architecture's closed-loop diagram was drawn and not built: an incident
+    # could not tell Problem Management it had recurred, a failed change could
+    # not raise an incident, and nothing could reach the improvement register.
+    #
+    # These are lifecycle transitions, not notifications. Each one is a fact
+    # that already happened and that another domain is entitled to react to,
+    # which is why they are past tense. A consumer that reacts to
+    # `change.rolled_back` is reacting to a rollback that completed, not to an
+    # intention to roll back.
+
+    # Service Request Management
+    REQUEST_SUBMITTED = "request.submitted"
+    REQUEST_APPROVED = "request.approved"
+    REQUEST_REJECTED = "request.rejected"
+    REQUEST_FULFILLED = "request.fulfilled"
+
+    # Incident Management
+    INCIDENT_RAISED = "incident.raised"
+    INCIDENT_TRIAGED = "incident.triaged"
+    INCIDENT_ESCALATED = "incident.escalated"
+    INCIDENT_RESOLVED = "incident.resolved"
+    INCIDENT_CLOSED = "incident.closed"
+
+    # Problem Management and Error Control
+    PROBLEM_OPENED = "problem.opened"
+    PROBLEM_ROOT_CAUSE_IDENTIFIED = "problem.root_cause.identified"
+    PROBLEM_KNOWN_ERROR_PUBLISHED = "problem.known_error.published"
+    PROBLEM_CLOSED = "problem.closed"
+
+    # Change Enablement
+    CHANGE_REQUESTED = "change.requested"
+    CHANGE_APPROVED = "change.approved"
+    CHANGE_REJECTED = "change.rejected"
+    CHANGE_DEPLOYED = "change.deployed"
+    CHANGE_ROLLED_BACK = "change.rolled_back"
+    CHANGE_CLOSED = "change.closed"
+
+    # Configuration baseline and drift
+    #
+    # DRIFT_DETECTED says the observed state stopped matching the approved
+    # one. It deliberately does NOT say whether that is authorised -- an
+    # in-flight change produces drift too, and a consumer that raised an
+    # incident on every drift event would storm the desk during every
+    # deployment. Authorisation is a separate fact, so it is a separate event.
+    CONFIG_BASELINE_CAPTURED = "config.baseline.captured"
+    DRIFT_DETECTED = "config.drift.detected"
+    DRIFT_AUTHORISED = "config.drift.authorised"
+    DRIFT_UNAUTHORISED = "config.drift.unauthorised"
+
+    # Continual Improvement Register
+    IMPROVEMENT_RAISED = "improvement.raised"
+    IMPROVEMENT_REALISED = "improvement.realised"
+    IMPROVEMENT_ACCEPTED_AS_RISK = "improvement.accepted_as_risk"
+
 
 class DeliveryStatus(str, enum.Enum):
     """Event delivery status."""
