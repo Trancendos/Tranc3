@@ -184,3 +184,27 @@ describe('SparkDashboard a11y', () => {
     expect(results).toHaveNoViolations()
   })
 })
+
+// ── ChatView ──────────────────────────────────────────────────────────────────
+
+describe('ChatView a11y', () => {
+  it('has no axe violations', async () => {
+    const { container } = await import('../ChatView').then(({ default: ChatView }) =>
+      withRouter(<ChatView />)
+    )
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+})
+
+// ── DigitalGridPage ───────────────────────────────────────────────────────────
+
+describe('DigitalGridPage a11y', () => {
+  it('has no axe violations', async () => {
+    const { container } = await import('../components/workflow/DigitalGridPage').then(
+      ({ default: DigitalGridPage }) => withRouter(<DigitalGridPage />)
+    )
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+})
