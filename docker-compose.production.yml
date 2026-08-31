@@ -2733,7 +2733,7 @@ services:
 # API: internal only, consumed by DocUtari bridge worker
 # ═══════════════════════════════════════════════════════════════════════════
   gotenberg:
-    image: gotenberg/gotenberg:8@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923
+    image: gotenberg/gotenberg:8@sha256:87c16b9f364279d321bc9772d31fa58aa6abe036423c270698bd636c3a8e9466
     container_name: trancendos-gotenberg
     restart: unless-stopped
     command:
