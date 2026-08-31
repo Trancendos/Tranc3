@@ -53,7 +53,7 @@ export function PdfOpsPanel({
             disabled={isDisabled}
             onClick={() => !isDisabled && onSelectOp?.(op.id)}
             className={cn(
-              "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-150",
+              "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               isSelected
                 ? "border-primary bg-primary/10 shadow-glow"
                 : "border-border bg-card hover:border-primary/50 hover:bg-primary/5",

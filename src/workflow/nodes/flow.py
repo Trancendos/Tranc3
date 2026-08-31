@@ -123,13 +123,31 @@ class LoopNode(BaseNode):
 
         semaphore = asyncio.Semaphore(max(max_concurrency, 1))
 
+        # Built once and shared by every item rather than rebuilt per item. That
+        # is safe for the node *objects*: no BaseNode subclass mutates self
+        # outside __init__, so execute() reads self.config and writes nothing.
+        #
+        # Sharing the objects is not on its own enough, though, and an earlier
+        # version of this comment claimed it was. The second shared thing is the
+        # `context` dict, and nodes do write to it — AttentionRouteNode sets
+        # `routed_service` and `routing_candidates`, ForesightNode sets
+        # `predicted_intent`. With max_concurrency > 1 those writes race, and a
+        # later node in one item's chain can read a value another item wrote.
+        # Each item therefore gets its own shallow copy below. Nothing depends
+        # on those writes escaping the loop: under concurrency the surviving
+        # value was already whichever item happened to finish last.
+        #
+        # A node that ever carries per-execution state on self must still be
+        # constructed inside _run_item instead.
+        inner_nodes = [create_node(nc) for nc in inner_configs]
+
         async def _run_item(item: Any, idx: int) -> Any:
             async with semaphore:
                 item_inputs = {**inputs, "item": item, "index": idx}
+                item_context = dict(context)
                 item_result: Any = item
-                for nc in inner_configs:
-                    node = create_node(nc)
-                    res = await node.execute(item_inputs, context)
+                for node in inner_nodes:
+                    res = await node.execute(item_inputs, item_context)
                     if res.success:
                         item_inputs.update({"previous": res.output})
                         item_result = res.output

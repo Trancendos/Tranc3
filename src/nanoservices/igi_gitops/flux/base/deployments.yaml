@@ -1,16 +1,4 @@
 # Nanoservice pod security — hostIPC required for /dev/shm (see docs/HOSTIPC_RISK_ACCEPTANCE.md)
-podSecurity: &podSecurity
-  runAsNonRoot: true
-  seccompProfile:
-    type: RuntimeDefault
-
-containerSecurity: &containerSecurity
-  allowPrivilegeEscalation: false
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  capabilities:
-    drop: ["ALL"]
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,13 +20,21 @@ spec:
     spec:
       hostIPC: true
       securityContext:
-        <<: *podSecurity
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: nsa-broker
           image: tranc3/nsa-broker:latest
           imagePullPolicy: IfNotPresent
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 9100
               name: http
@@ -79,14 +75,6 @@ spec:
               port: 7780
             initialDelaySeconds: 3
             periodSeconds: 5
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: shm
           emptyDir:
@@ -114,13 +102,21 @@ spec:
     spec:
       hostIPC: true
       securityContext:
-        <<: *podSecurity
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: shi-gateway
           image: tranc3/shi-gateway:latest
           imagePullPolicy: IfNotPresent
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 9101
               name: http
@@ -155,14 +151,6 @@ spec:
               port: 9101
             initialDelaySeconds: 10
             periodSeconds: 15
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: shm
           emptyDir:
@@ -196,7 +184,13 @@ spec:
           image: tranc3/dnf-orchestrator:latest
           imagePullPolicy: IfNotPresent
           securityContext:
-            <<: *containerSecurity
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 9102
               name: http
@@ -216,14 +210,6 @@ spec:
           volumeMounts:
             - name: shm
               mountPath: /dev/shm
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 65532
-            runAsGroup: 65532
-            capabilities:
-              drop: ["ALL"]
       volumes:
         - name: shm
           emptyDir:

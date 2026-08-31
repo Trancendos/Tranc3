@@ -67,10 +67,10 @@ Without keys, discovery skips those providers and falls through to `offline` stu
 
 Every `PROACTIVE_INTERVAL_SECONDS` (default 600):
 
-1. Snapshot rotator status  
-2. `scripts/health_check.py`  
-3. `scripts/zero_cost_audit.py`  
-4. `scripts/swarm_runner.py` with `config/swarm/manifests/adaptive-zero-cost.yaml`  
+1. Snapshot rotator status
+2. `scripts/health_check.py`
+3. `scripts/zero_cost_audit.py`
+4. `scripts/swarm_runner.py` with `config/swarm/manifests/adaptive-zero-cost.yaml`
 
 Logs: `logs/proactive-orchestrator.jsonl`
 
@@ -136,10 +136,10 @@ flowchart TB
 
 ### Phase 1 (done) — AI + proactive audit
 
-- [x] `AdaptiveProviderRotator` + chains  
-- [x] Cloud auto-rotation loop  
-- [x] `/adaptive/*` API  
-- [x] Proactive orchestrator + zero-cost audit  
+- [x] `AdaptiveProviderRotator` + chains
+- [x] Cloud auto-rotation loop
+- [x] `/adaptive/*` API
+- [x] Proactive orchestrator + zero-cost audit
 
 ### Phase 2 — Data plane rotation (implemented)
 
@@ -198,8 +198,8 @@ curl https://tranc3-backend.fly.dev/adaptive/status
 
 ## Related docs
 
-- [PLATFORM_INFRASTRUCTURE_MODE.md](Architecture-PLATFORM_INFRASTRUCTURE_MODE)  
-- [ZERO_COST_VENDOR_MATRIX.md](Strategy-ZERO_COST_VENDOR_MATRIX)  
-- [WINDOWS_DEPLOY.md](https://github.com/Trancendos/Tranc3/blob/main/docs/WINDOWS_DEPLOY.md)  
-- [BRANCH_CONSOLIDATION.md](Historical-BRANCH_CONSOLIDATION)  
-- [CF_WORKER_MIGRATION_ROADMAP.md](Architecture-CF_WORKER_MIGRATION_ROADMAP)  
+- [PLATFORM_INFRASTRUCTURE_MODE.md](Architecture-PLATFORM_INFRASTRUCTURE_MODE)
+- [ZERO_COST_VENDOR_MATRIX.md](Strategy-ZERO_COST_VENDOR_MATRIX)
+- [WINDOWS_DEPLOY.md](https://github.com/Trancendos/Tranc3/blob/main/docs/WINDOWS_DEPLOY.md)
+- [BRANCH_CONSOLIDATION.md](Historical-BRANCH_CONSOLIDATION)
+- [CF_WORKER_MIGRATION_ROADMAP.md](Architecture-CF_WORKER_MIGRATION_ROADMAP)
