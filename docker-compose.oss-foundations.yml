@@ -272,7 +272,7 @@ services:
   # Port 4000
   # ─────────────────────────────────────────────────────────────────
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f
+    image: ghcr.io/berriai/litellm:main-latest@sha256:846795f2a2b5787ce2155170fd33b9ae886fd925f26635424ee613d53ece2fa4
     container_name: ai-gateway-litellm
     <<: [*restart, *network]
     profiles: ["ai-proxy", "all"]
