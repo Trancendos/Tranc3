@@ -4,7 +4,7 @@
 # alongside worker.py. worker.py itself does no sys.path manipulation, so it (and
 # src/) are copied flat into /app: Python adds the script's own directory to
 # sys.path[0] at startup, and src/ resolves as a subdirectory of that.
-FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+FROM python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
 
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
