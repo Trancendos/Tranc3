@@ -1865,7 +1865,7 @@ services:
       retries: 3
 
   bookstack:
-    image: lscr.io/linuxserver/bookstack:latest@sha256:13dc508fb46aa7d2b726b6c872e4903892bda68391ac948a5603d3ca60f0937e
+    image: lscr.io/linuxserver/bookstack:latest@sha256:3e1aea5d8dd3bb3a5cf16fa7e3b847e2889eedd8516b2825ac379d365b07ba6f
     container_name: trancendos-bookstack
     environment:
       PUID: "1000"
