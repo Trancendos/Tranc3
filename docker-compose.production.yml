@@ -2012,7 +2012,7 @@ services:
 
   # SigNoz OpenTelemetry Collector (receives OTLP from all workers)
   signoz-otel-collector:
-    image: signoz/signoz-otel-collector:latest@sha256:f9bf94d566055d06581f3befbf361cc26d670f31ad00cb31fda2ec380210c5ec
+    image: signoz/signoz-otel-collector:latest@sha256:72aa1e4c1ec529f178e962c049be35cfd7abae02fe9a397edad10b4a9cba62fa
     container_name: trancendos-signoz-otel
     command: ["--config=/etc/otel-collector-config.yaml"]
     environment:
