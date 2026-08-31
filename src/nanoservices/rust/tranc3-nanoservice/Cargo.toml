@@ -30,7 +30,7 @@ cryptoki = "0.7"
 
 # Cryptography
 sha2 = "0.10"
-hmac = "0.12"
+hmac = "0.13"
 hex = "0.4"
 
 # HTTP server (lightweight)
