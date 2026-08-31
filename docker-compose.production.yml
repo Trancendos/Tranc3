@@ -2750,7 +2750,7 @@ services:
 # API: internal only, consumed by DocUtari bridge worker
 # ═══════════════════════════════════════════════════════════════════════════
   tika:
-    image: apache/tika:latest-full@sha256:d8e6ed96260ad89307a93195a1b856102987a818ac648502f8efbaf313d32470
+    image: apache/tika:latest-full@sha256:80072bb73dd320a9de9709beb0b16d14dd6d2680376f8d31e498f55b633ba593
     container_name: trancendos-tika
     restart: unless-stopped
     ports:
