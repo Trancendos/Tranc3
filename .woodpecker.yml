@@ -13,7 +13,7 @@ when:
 steps:
   # ── Ruff lint + format check (matches GitHub Actions CI gate) ───────────────
   ruff-lint:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
     commands:
       - pip install --quiet ruff
       - ruff check --select E,F,W,B --ignore E501,B008,B904 .
@@ -21,7 +21,7 @@ steps:
 
   # ── Full pytest suite ────────────────────────────────────────────────────────
   pytest:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
     environment:
       SECRET_KEY: woodpecker-ci-test-key-not-real
       DATABASE_URL: sqlite:///./test.db
@@ -36,7 +36,7 @@ steps:
 
   # ── Security: Python dependencies + SAST ────────────────────────────────────
   python-security:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
     commands:
       - pip install --quiet pip-audit bandit
       - pip-audit --requirement requirements.txt --vulnerability-service osv || true
@@ -48,7 +48,7 @@ steps:
 
   # ── Docker Compose lint (Checkov IaC scanner) ────────────────────────────────
   docker-lint:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
     commands:
       - pip install --quiet checkov
       - checkov -f docker-compose.production.yml --quiet || true
