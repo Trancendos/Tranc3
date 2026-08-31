@@ -39,18 +39,9 @@ def registry(tmp_path):
 
 class TestSeatDerivation:
     def test_every_lead_ai_has_a_seat(self):
-        """The count that started this: 43 titles were covering 51 AIs.
-
-        Scoped to internal seats, which are the ones derived from `lead_ais`.
-        External seats come from EXTERNAL_SEATS instead -- a separate,
-        deliberately written-down decision about what the platform sells --
-        so counting them here would make this assert two different things at
-        once and stop telling us whether the roster derivation is intact.
-        """
+        """The count that started this: 43 titles were covering 51 AIs."""
         expected = sum(len(e.lead_ais) or 1 for e in PLATFORM_ENTITIES.values())
-        location_seats = [
-            s for s in all_seats() if s.location in PLATFORM_ENTITIES and s.mandate == "internal"
-        ]
+        location_seats = [s for s in all_seats() if s.location in PLATFORM_ENTITIES]
         assert len(location_seats) == expected
         assert len(location_seats) > len(JOB_DESCRIPTIONS)
 
@@ -175,13 +166,10 @@ class TestRegistrySeats:
         assert len(rows) == len(all_seats())
 
     def test_a_location_returns_all_its_seats(self, registry):
-        # Five Porters, each holding an internal procurement seat and an
-        # external revenue seat -- so ten distinct Job Descriptions, not five.
         seats = registry.get_location_seats("Arcadian Exchange")
-        assert len(seats) == 10
-        assert len([s for s in seats if s.mandate == "internal"]) == 5
+        assert len(seats) == 5
         assert [s.assigned_ai for s in seats][0] == "Clarence Porter"
-        assert len({s.job_description for s in seats}) == 10
+        assert len({s.job_description for s in seats}) == 5
 
     def test_get_role_defaults_to_the_primary_seat(self, registry):
         assert registry.get_role("The Lab").assigned_ai == "The Dr. (Nikolai O'denhime)"

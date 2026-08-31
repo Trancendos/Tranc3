@@ -211,7 +211,7 @@ async def stripe_webhook(
 
 @router.get("/revenue/summary")
 async def revenue_summary():
-    """13-stream passive revenue summary with growth recommendations."""
+    """12-stream passive revenue summary with growth recommendations."""
     tracker = _revenue()
     return {
         "summary": tracker.summary(),

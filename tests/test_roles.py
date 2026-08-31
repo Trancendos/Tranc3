@@ -4,18 +4,13 @@
 
 from __future__ import annotations
 
-import sqlite3
-
 import pytest
 
 from src.entities.platform import (
-    EXTERNAL_SEATS,
     JOB_DESCRIPTIONS,
     PLATFORM_ENTITIES,
     PLATFORM_ROLES,
     all_seats,
-    get_seats,
-    seats_without_a_distinct_title,
 )
 from src.roles.registry import RoleRegistry, UnknownLocationError
 
@@ -255,105 +250,3 @@ class TestRenameMigration:
             assert len(reg2.get_history("DocUtari")) == 1
         finally:
             reg2.close()
-
-
-class TestExternalMandate:
-    """The Arcadian Exchange trades in two directions.
-
-    Each Porter holds an internal (user-facing) procurement seat and an
-    external (market-facing) revenue seat -- two entwined Job Descriptions per
-    AI, ten across the Location. The pairing is what makes them entwined: the
-    price intelligence that tells a seat what to buy tells its twin what the
-    same resource is worth selling.
-    """
-
-    LOCATION = "Arcadian Exchange"
-
-    def test_ten_seats_five_of_each_mandate(self):
-        seats = get_seats(self.LOCATION)
-        assert len(seats) == 10
-        assert sum(1 for s in seats if s.mandate == "internal") == 5
-        assert sum(1 for s in seats if s.is_external) == 5
-
-    def test_every_porter_holds_one_seat_of_each_mandate(self):
-        seats = get_seats(self.LOCATION)
-        by_ai: dict[str, set[str]] = {}
-        for seat in seats:
-            by_ai.setdefault(seat.designed_for, set()).add(seat.mandate)
-        assert len(by_ai) == 5
-        for ai, mandates in by_ai.items():
-            assert mandates == {"internal", "external"}, ai
-
-    def test_external_titles_are_distinct_from_their_internal_twins(self):
-        titles = [s.job_description for s in get_seats(self.LOCATION)]
-        assert len(set(titles)) == len(titles)
-
-    def test_every_external_seat_names_an_internal_seat_that_exists(self):
-        # The guard in get_seats drops an external seat whose twin is missing,
-        # so a broken pairing would show up as a short list rather than a
-        # loud failure. Assert the catalogue itself is intact.
-        for location, externals in EXTERNAL_SEATS.items():
-            internal_ids = {s.seat_id for s in get_seats(location) if s.mandate == "internal"}
-            for external in externals:
-                assert external.paired_with in internal_ids, external.seat_id
-
-    def test_external_seats_do_not_count_as_untitled_co_leads(self):
-        # External seats are non-primary by construction but always carry an
-        # explicit title, so they must not be reported by the co-lead check.
-        assert seats_without_a_distinct_title() == []
-
-    def test_registry_seeds_and_orders_both_mandates(self, registry):
-        seats = registry.get_location_seats(self.LOCATION)
-        assert len(seats) == 10
-        assert seats[0].seat_id == "primary"
-        mandates = [s.mandate for s in seats]
-        # Every internal seat precedes every external one.
-        assert mandates == ["internal"] * 5 + ["external"] * 5
-
-    def test_each_external_seat_seeds_to_the_ai_it_was_designed_for(self, registry):
-        for seat in registry.get_location_seats(self.LOCATION):
-            if seat.mandate == "external":
-                assert seat.assigned_ai == seat.designed_for
-
-    def test_external_seats_backfill_into_a_pre_existing_database(self, tmp_path):
-        # A database created before the external mandate existed must gain the
-        # new seats on the next startup without disturbing a manual
-        # reassignment an operator already made to an internal one.
-        db_path = tmp_path / "backfill.db"
-        reg = RoleRegistry(db_path=db_path)
-        reg.assign_ai(self.LOCATION, "Dorris Fontaine", seat_id="ann-porter", changed_by="operator")
-        reg.close()
-
-        conn = sqlite3.connect(db_path)
-        conn.execute("DELETE FROM role_assignments WHERE seat_id LIKE '%-external'")
-        conn.commit()
-        conn.close()
-
-        reopened = RoleRegistry(db_path=db_path)
-        try:
-            seats = {s.seat_id: s for s in reopened.get_location_seats(self.LOCATION)}
-            assert len(seats) == 10
-            assert seats["ann-porter"].assigned_ai == "Dorris Fontaine"
-            assert seats["ann-porter-external"].assigned_ai == "Ann Porter"
-        finally:
-            reopened.close()
-
-    def test_an_external_seat_can_be_reassigned_independently_of_its_twin(self, registry):
-        registry.assign_ai(
-            self.LOCATION,
-            "Renik",
-            seat_id="george-porter-external",
-            changed_by="operator",
-        )
-        seats = {s.seat_id: s for s in registry.get_location_seats(self.LOCATION)}
-        assert seats["george-porter-external"].assigned_ai == "Renik"
-        # The internal twin is untouched -- the composite key scopes the write.
-        assert seats["george-porter"].assigned_ai == "George Porter"
-
-    def test_no_other_location_has_an_external_mandate(self):
-        # Selling outside Trancendos is a decision about what the platform is
-        # willing to trade, so it is deliberately confined to the commercial
-        # desk until someone writes down a reason to widen it.
-        assert set(EXTERNAL_SEATS) == {self.LOCATION}
-        external_locations = {s.location for s in all_seats() if s.is_external}
-        assert external_locations == {self.LOCATION}

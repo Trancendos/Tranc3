@@ -60,7 +60,6 @@ def load_services(session: Session) -> int:
         session.add(
             Service(
                 service_id=row["ServiceID"],
-                pid=(row.get("PID") or "").strip() or None,
                 service_name=row["ServiceName"],
                 description=row["Description"],
                 service_type=row["ServiceType"],
