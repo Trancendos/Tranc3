@@ -9,10 +9,12 @@
 
 from __future__ import annotations
 
+import errno
 import logging
 import os
 import os.path
 import re
+import stat
 from pathlib import Path, PurePosixPath
 from typing import Union
 
@@ -147,6 +149,126 @@ def safe_join(
     return resolved
 
 
+# os.open()'s dir_fd parameter is POSIX-only. Where it is missing (Windows), the
+# component-by-component walk below cannot be performed at all, and the code
+# falls back to the single resolved-path open that preceded it. That fallback is
+# named here rather than left implicit: it still carries O_NOFOLLOW, so it keeps
+# the final-component guarantee, and it loses only the intermediate-component
+# one. Silently degrading a security control is the failure mode this repo keeps
+# finding, so callers get the weaker guarantee knowingly, not by accident.
+_SUPPORTS_DIR_FD = os.open in getattr(os, "supports_dir_fd", set())
+
+
+def _is_symlink_at_path(path: Path) -> bool:
+    """Is *path* itself a symlink? False if it has since vanished."""
+    try:
+        return stat.S_ISLNK(os.lstat(str(path)).st_mode)
+    except OSError:
+        return False
+
+
+def _is_symlink_at(dir_fd: int, name: str) -> bool:
+    """Is *name* a symlink, as seen from *dir_fd*? False if it has since vanished."""
+    try:
+        return stat.S_ISLNK(os.lstat(name, dir_fd=dir_fd).st_mode)
+    except OSError:
+        return False
+
+
+def _open_contained(resolved: Path, base: Path, flags: int) -> int:
+    """Open *resolved* by walking down from *base* one component at a time.
+
+    validate_path() resolves the path and checks containment, and the caller
+    then opens it by pathname -- which re-resolves the whole thing from scratch.
+    O_NOFOLLOW closes that check-to-open window for the FINAL component only,
+    because that is the only component open() inspects. A concurrent swap of any
+    intermediate parent directory for a symlink still redirects the read outside
+    base (issue #337).
+
+    Walking from a trusted base fd removes the pathname re-resolution entirely:
+    each component is opened relative to the fd of the component before it, so
+    there is no second traversal for an attacker to race. O_NOFOLLOW on every
+    component then makes a swapped-in symlink an error rather than a redirect.
+
+    That O_NOFOLLOW is safe for legitimate paths precisely because *resolved*
+    came from Path.resolve(): every symlink in it has already been dereferenced,
+    so no component of it should be a symlink. One appearing mid-walk means the
+    tree changed under us, which is the attack this closes -- so it is reported
+    as PathTraversalError rather than a bare OSError.
+
+    Returns an open fd the caller owns and must close.
+    """
+    # relative_to() is safe here: validate_path() has already established that
+    # resolved is inside base, and both are resolved absolute paths.
+    parts = resolved.relative_to(base).parts
+
+    if not _SUPPORTS_DIR_FD:
+        # Fail closed. The previous version fell back to opening the resolved
+        # pathname here, which keeps the final-component guarantee but not the
+        # intermediate one -- i.e. exactly the hole this function exists to
+        # close, left open on a platform where it happens to be inconvenient.
+        # Documenting a security control as partially unenforced is the failure
+        # mode this repo keeps finding, so the fallback is refused rather than
+        # explained. The estate deploys on Linux throughout (Docker Compose,
+        # Dockerfiles, Fly.io), so nothing shipped reaches this branch.
+        raise PathTraversalError(
+            "Containment cannot be enforced on this platform: os.open() has no "
+            "dir_fd support, so intermediate path components cannot be opened "
+            "relative to a trusted base and a concurrent symlink swap could "
+            f"redirect the read outside {base}."
+        )
+
+    dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    # O_NOFOLLOW on the base too, not just its children: base is itself the
+    # output of Path.resolve(), so it should not be a symlink either, and
+    # opening it by name is one more chance for the tree to have changed since
+    # validate_path() ran. Without this the walk could start from the wrong
+    # root and every careful step below would be relative to it.
+    try:
+        fd = os.open(str(base), dir_flags | getattr(os, "O_NOFOLLOW", 0))
+    except OSError as exc:
+        if exc.errno in (errno.ELOOP, errno.ENOTDIR) and _is_symlink_at_path(base):
+            raise PathTraversalError(
+                f"Base directory {base} is a symlink; the tree changed after validation."
+            ) from exc
+        raise
+    try:
+        for i, name in enumerate(parts):
+            is_last = i == len(parts) - 1
+            step_flags = (flags if is_last else dir_flags) | getattr(os, "O_NOFOLLOW", 0)
+            try:
+                nxt = os.open(name, step_flags, dir_fd=fd)
+            except OSError as exc:
+                # O_NOFOLLOW reports a symlink as ELOOP for the final component,
+                # but an intermediate one is opened with O_DIRECTORY too and
+                # Linux answers ENOTDIR there instead -- the symlink is simply
+                # not a directory. ENOTDIR is also what an ordinary file in the
+                # middle of a path gives, which is a caller mistake and not an
+                # attack, so the errno alone cannot classify this. lstat on the
+                # same dir_fd settles it without re-resolving anything.
+                if exc.errno in (errno.ELOOP, errno.ENOTDIR) and _is_symlink_at(fd, name):
+                    raise PathTraversalError(
+                        f"Path component {name!r} is a symlink; the tree changed "
+                        f"after validation: {resolved}"
+                    ) from exc
+                raise
+            os.close(fd)
+            fd = nxt
+            # O_DIRECTORY already enforces this on Linux, but it is not required
+            # by POSIX and getattr() degrades it to 0 where it is absent -- in
+            # which case an intermediate file would be opened as if it were a
+            # directory and the walk would continue past it.
+            if not is_last and not getattr(os, "O_DIRECTORY", 0):
+                if not stat.S_ISDIR(os.fstat(fd).st_mode):
+                    raise NotADirectoryError(
+                        f"Path component {name!r} is not a directory: {resolved}"
+                    )
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
 def read_validated_file_text(
     rel: Union[str, Path],
     base_dir: Union[str, Path],
@@ -164,19 +286,23 @@ def read_validated_file_text(
         FileNotFoundError: If the file does not exist.
         ValueError: If the file exceeds *max_bytes*.
     """
-    resolved = validate_path(rel, base_dir, must_exist=True)
+    base = Path(base_dir).resolve()
+    resolved = validate_path(rel, base, must_exist=True)
     if not resolved.is_file():
         raise FileNotFoundError(f"Validated path is not a regular file: {resolved}")
     # Open via file descriptor to keep the validated path object out of the
-    # taint flow that static analyzers (CodeQL) track from user-supplied input.
-    # O_NOFOLLOW closes the check-to-open symlink race on the final path
-    # component: resolved's own final component is never itself a symlink
-    # (Path.resolve() already dereferenced it), so this only ever rejects a
-    # symlink an attacker swapped in after validate_path() ran.
-    fd = os.open(str(resolved), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    # taint flow that static analyzers (CodeQL) track from user-supplied input,
+    # and walk down from base so no component of the path is re-resolved by
+    # name after validation -- see _open_contained().
+    fd = _open_contained(resolved, base, os.O_RDONLY)
     try:
-        stat = os.fstat(fd)
-        size = stat.st_size
+        st = os.fstat(fd)
+        # is_file() above tested the pathname; this tests the descriptor that
+        # was actually opened. Without it a directory or device swapped in
+        # mid-walk would be read as though the earlier check still applied.
+        if not stat.S_ISREG(st.st_mode):
+            raise FileNotFoundError(f"Validated path is not a regular file: {resolved}")
+        size = st.st_size
         if size > max_bytes:
             raise ValueError(f"File too large: {size} bytes > {max_bytes} bytes limit: {resolved}")
         with os.fdopen(fd, "r", encoding=encoding, errors="replace") as fh:
@@ -246,14 +372,12 @@ def list_validated_children_fd(
         FileNotFoundError: If the directory does not exist.
         NotADirectoryError: If the validated path is not a directory.
     """
-    resolved = validate_path(rel, base_dir, must_exist=True)
+    base = Path(base_dir).resolve()
+    resolved = validate_path(rel, base, must_exist=True)
     try:
-        # O_NOFOLLOW closes the check-to-open symlink race on the final path
-        # component (see read_validated_file_text's matching comment).
-        fd = os.open(
-            str(resolved),
-            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
-        )
+        # Walked down from base one component at a time, so no part of the path
+        # is re-resolved by name after validation -- see _open_contained().
+        fd = _open_contained(resolved, base, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     except NotADirectoryError as exc:
         raise NotADirectoryError(f"Validated path is not a directory: {resolved}") from exc
     except FileNotFoundError as exc:
@@ -286,31 +410,27 @@ def list_validated_children(
 ) -> list[dict]:
     """List children of a validated directory path.
 
+    Delegates to list_validated_children_fd(). This used to have its own
+    implementation -- validate_path() followed by resolved.iterdir() -- which
+    is the check-then-use pattern _open_contained() exists to replace. It
+    caught a symlink that was already in place at validation time, but it
+    re-walked the path by name afterwards, so a component swapped between the
+    two steps was followed; and because it never called _open_contained(), it
+    kept listing on platforms without os.open() dir_fd support, where the
+    read path deliberately refuses. A containment guarantee that the file
+    reader honours and the directory lister does not is not a guarantee.
+
     Returns a list of dicts with keys: name, type ('file'/'directory'), size.
+    The 'modified' key from the fd variant is dropped here to keep this
+    function's documented contract unchanged.
 
     Raises:
-        PathTraversalError: If the path escapes *base_dir*.
+        PathTraversalError: If the path escapes *base_dir*, or if containment
+            cannot be enforced on this platform.
         FileNotFoundError: If the directory does not exist.
+        NotADirectoryError: If the validated path is not a directory.
     """
-    resolved = validate_path(rel, base_dir, must_exist=True)
-    if not resolved.is_dir():
-        raise FileNotFoundError(f"Validated path is not a directory: {resolved}")
-
-    children = []
-    try:
-        entries = sorted(resolved.iterdir())
-    except OSError:
-        return children
-    for child in entries:
-        try:
-            stat = child.stat()
-            children.append(
-                {
-                    "name": child.name,
-                    "type": "directory" if child.is_dir() else "file",
-                    "size": stat.st_size if child.is_file() else 0,
-                }
-            )
-        except OSError:
-            pass
-    return children
+    return [
+        {"name": c["name"], "type": c["type"], "size": c["size"]}
+        for c in list_validated_children_fd(rel, base_dir)
+    ]

@@ -1,6 +1,6 @@
 # Legal Compliance Checklist
 
-**Jurisdiction:** {{jurisdiction}}  
+**Jurisdiction:** {{jurisdiction}}
 **Product:** {{product}}
 
 ## Data protection

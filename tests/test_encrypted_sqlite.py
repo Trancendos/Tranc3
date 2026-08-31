@@ -9,10 +9,7 @@ import sqlite3
 
 import pytest
 
-os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
-os.environ["SECRET_KEY"] = "test-secret-key-for-encrypted-sqlite-unit-tests-32chars"
-
-from src.database.encrypted_sqlite import (  # noqa: E402
+from src.database.encrypted_sqlite import (
     EncryptedKVStore,
     _decrypt_bytes,
     _derive_key,
@@ -23,6 +20,46 @@ from src.database.encrypted_sqlite import (  # noqa: E402
     encrypt_field,
     invalidate_key_cache,
 )
+
+# This module needs SECRET_KEY set and TRANC3_DB_ENCRYPTION_DISABLED unset, and
+# it must leave both exactly as it found them -- it previously did neither, and
+# left SECRET_KEY changed for the whole session. conftest.py's
+# _assert_shared_env_unchanged guard exists precisely to catch that and did: it
+# failed at teardown of tests/core/test_dependencies.py, and the drifted key
+# also flipped
+# tests/test_api.py::TestChat::test_chat_known_location_with_unmapped_ai_falls_back
+# to resolve 'fiddsy' instead of 'tranc3-creative'. Whether it bit at all
+# depended on collection order, which is what made it look intermittent.
+#
+# An earlier version of this comment claimed the writes had to happen before the
+# import above, because encrypted_sqlite read the variables at module scope.
+# That was wrong: both reads are inside function bodies --
+# `_derive_key` at line 83 (`os.environ.get("SECRET_KEY", "")`) and
+# `_is_disabled` at line 139 -- so nothing is captured at import time. That
+# matters, because module-level writes are executed during *collection*, before
+# any fixture runs, so they were live for every module pytest imported after
+# this one even though the fixture below restored them at teardown. Setting them
+# inside the fixture closes that window.
+_PRIOR_ENV: dict[str, str | None] = {}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _shared_env():
+    """Apply this module's env, then put it back exactly as it was."""
+    for name in ("SECRET_KEY", "TRANC3_DB_ENCRYPTION_DISABLED"):
+        _PRIOR_ENV[name] = os.environ.get(name)
+    os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
+    os.environ["SECRET_KEY"] = "test-secret-key-for-encrypted-sqlite-unit-tests-32chars"
+    invalidate_key_cache()
+    try:
+        yield
+    finally:
+        for name, prior in _PRIOR_ENV.items():
+            if prior is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = prior
+        invalidate_key_cache()
 
 
 @pytest.fixture()

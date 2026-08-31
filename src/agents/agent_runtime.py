@@ -362,13 +362,21 @@ class AgentRuntime:
         step.started_at = time.time()
         self._current_steps.append(step)
 
-        for attempt in range(self.config.max_retries + 1):
+        # Hoist attribute accesses outside the loop for performance
+        max_retries = self.config.max_retries
+        tool_bridge = self._tool_bridge
+        tool_name = step.tool_name
+        tool_args = step.tool_args
+        agent_id = self.agent_id
+        step_id = step.step_id
+
+        for attempt in range(max_retries + 1):
             try:
-                if self._tool_bridge:
-                    result = await self._tool_bridge.execute(
-                        tool_name=step.tool_name,
-                        args=step.tool_args,
-                        agent_id=self.agent_id,
+                if tool_bridge:
+                    result = await tool_bridge.execute(
+                        tool_name=tool_name,
+                        args=tool_args,
+                        agent_id=agent_id,
                     )
                     step.result = result.data if result else None
                     step.status = "completed"
@@ -378,12 +386,12 @@ class AgentRuntime:
                 break
             except Exception as exc:
                 step.error = str(exc)
-                if attempt < self.config.max_retries:
+                if attempt < max_retries:
                     logger.warning(
                         "Step %s failed (attempt %d/%d): %s",
-                        step.step_id,
+                        step_id,
                         attempt + 1,
-                        self.config.max_retries + 1,
+                        max_retries + 1,
                         exc,
                     )
                     await asyncio.sleep(0.5 * (2**attempt))

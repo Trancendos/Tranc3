@@ -60,24 +60,24 @@ graph TB
     SN --> RG
     RG --> HM
     HM --> DG
-    
+
     GW --> RG
     GK --> RG
     GA --> SF
     GA --> VL
     GA --> HM
-    
+
     PROXY --> GA
     PROXY --> GD
     DNS --> PROXY
     MON --> HM
-    
+
     T1 --> RG
     T2 --> RG
     T3 --> RG
     T4 --> RG
     T5 --> RG
-    
+
     TN_APPS --> GW
     TN_APPS --> GK
     TN_SNAP --> AL
@@ -139,20 +139,20 @@ graph TB
     TN_SYNC --> R2_BACKUP
     SF --> R2_ASSETS
     SF --> TN_ZFS
-    
+
     OCI_COMPUTE --> OCI_API
     OCI_API --> SF
     OCI_API --> VL
     OCI_REGISTRY --> OCI_COMPUTE
-    
+
     GW --> RG
     GA --> HM
     CD --> HM
     SN --> RG
-    
+
     R2_LOGS --> AL
     TN_ZFS --> AL
-    
+
     T1 --> RG
     T4 --> OCI_API
     T5 --> GA
@@ -215,22 +215,22 @@ graph TB
     OCI_API --> SF
     OCI_API --> VL
     OCI_CI --> GH_REPO
-    
+
     SF --> R2_ASSETS
     SF --> OCI_DB
     VL --> R2_SECRETS
     AL --> R2_LOGS
-    
+
     CW_EDGE --> OCI_API
     CW_WAF --> CW_EDGE
-    
+
     GH_CI --> R2_ASSETS
     GH_REPO --> GH_CI
-    
+
     RG --> HM
     SN --> RG
     DG --> HM
-    
+
     T1 --> RG
     T3 --> OCI_API
     T4 --> CW_EDGE
@@ -247,28 +247,28 @@ graph TB
 ```mermaid
 stateDiagram-v2
     [*] --> CLOUD_ONLY: Default Boot
-    
+
     CLOUD_ONLY --> HYBRID: TrueNAS Detected
     HYBRID --> TRUE_NAS: Full Local Available
     TRUE_NAS --> HYBRID: Partial Cloud Failover
     HYBRID --> CLOUD_ONLY: TrueNAS Lost
     TRUE_NAS --> CLOUD_ONLY: Full Cloud Failover
     CLOUD_ONLY --> TRUE_NAS: Direct Full Local
-    
+
     state CLOUD_ONLY {
         [*] --> CloudProvisioning
         CloudProvisioning --> CloudRunning
         CloudRunning --> CloudDegraded: High Latency
         CloudDegraded --> CloudRunning: Recovered
     }
-    
+
     state HYBRID {
         [*] --> HybridSync
         HybridSync --> HybridBalanced
         HybridBalanced --> HybridLocalPreferred: Local Fast
         HybridBalanced --> HybridCloudPreferred: Cloud Fast
     }
-    
+
     state TRUE_NAS {
         [*] --> NasBoot
         NasBoot --> NasFull
@@ -284,34 +284,34 @@ graph LR
     subgraph "Neural Bus /v1"
         NB[Neural Bus<br/>Message Router]
     end
-    
+
     subgraph "Tier 1 — Sovereign"
         S1[The Sovereign<br/>PID-SOVEREIGN-001]
     end
-    
+
     subgraph "Tier 2 — Primes"
         P1[Cornelius<br/>PID-PRIME-002]
         P2[Doctor<br/>PID-PRIME-003]
         P3[Guardian<br/>PID-PRIME-004]
     end
-    
+
     subgraph "Tier 3 — Lead AIs"
         L1[AID-LEAD-001<br/>Architecture Lead]
         L2[AID-LEAD-002<br/>Security Lead]
         L3[AID-LEAD-003<br/>DevOps Lead]
     end
-    
+
     subgraph "Tier 4 — Agents"
         A1[SID-AGENT-001<br/>Scanner Agent]
         A2[SID-AGENT-002<br/>Remediator Agent]
         A3[SID-AGENT-003<br/>Watchdog Agent]
     end
-    
+
     subgraph "Tier 5 — Nanos"
         N1[NID-NANO-001<br/>Heartbeat Bot]
         N2[NID-NANO-002<br/>Log Collector]
     end
-    
+
     S1 <--> NB
     P1 <--> NB
     P2 <--> NB

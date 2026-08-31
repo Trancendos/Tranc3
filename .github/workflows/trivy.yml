@@ -29,11 +29,13 @@ jobs:
       cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Cache Trivy DB
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-v1
@@ -46,10 +48,12 @@ jobs:
     needs: prepare-cache
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Run Trivy config scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: "config"
           scan-ref: "."
@@ -60,14 +64,14 @@ jobs:
           trivyignores: ".trivyignore"
 
       - name: Upload Trivy config SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
         if: always()
         with:
           sarif_file: "trivy-config.sarif"
           category: "trivy-config"
 
       - name: Upload Trivy config SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: trivy-config-sarif
@@ -79,10 +83,12 @@ jobs:
     needs: prepare-cache
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -93,14 +99,14 @@ jobs:
           trivyignores: ".trivyignore"
 
       - name: Upload Trivy fs SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
         if: always()
         with:
           sarif_file: "trivy-fs.sarif"
           category: "trivy-fs"
 
       - name: Upload Trivy fs SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: trivy-fs-sarif
@@ -112,10 +118,12 @@ jobs:
     needs: prepare-cache
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       # `load: true` is what makes this job a scan rather than a build.
       # setup-buildx-action installs the `docker-container` driver, whose
@@ -126,7 +134,7 @@ jobs:
       # UNAUTHORIZED. The image scan had never scanned an image.
       - name: Build Docker image
         id: build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9 # v4
         with:
           context: .
           push: false
@@ -134,7 +142,7 @@ jobs:
           tags: tranc3:${{ github.sha }}
 
       - name: Run Trivy image scan (local image)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: "image"
           image-ref: "tranc3:${{ github.sha }}"
@@ -145,42 +153,23 @@ jobs:
           trivyignores: ".trivyignore"
 
       - name: Upload Trivy image SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
         if: always()
         with:
           sarif_file: "trivy-image.sarif"
           category: "trivy-image"
 
-      - name: Upload Trivy image SARIF artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: trivy-image-sarif
-          path: trivy-image.sarif
-
-  # Optional enforcement job: uncomment or enable if you want pushes to main to fail on HIGH/CRITICAL findings
-  trivy-enforce:
-    name: Trivy Enforce on main (opt-in)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [prepare-cache]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Trivy filesystem scan (enforce)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: "fs"
-          scan-ref: "."
-          format: ${{ env.TRIVY_OUTPUT_FORMAT }}
-          output: "trivy-fs-enforce.sarif"
-          severity: ${{ env.TRIVY_SEVERITY }}
-          exit-code: "1"
-          trivyignores: ".trivyignore"
-
-      - name: Run Trivy image scan (enforce) - optional if you build images in CI
-        uses: aquasecurity/trivy-action@v0.36.0
+      # Image enforcement lives here, not in trivy-enforce, because this is the
+      # only job that has the image. `load: true` above puts tranc3:<sha> into
+      # this runner's docker daemon; images do not cross job boundaries, so the
+      # copy of this scan that used to sit in trivy-enforce (a job that only
+      # checks out the repo) could never have resolved it -- it would have
+      # fallen through to Trivy's remote resolver and asked docker.io for
+      # `library/tranc3`. That was latent rather than observed: the fs step
+      # ahead of it failed first on every run, so the job never reached it.
+      - name: Run Trivy image scan (enforce on main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: "image"
           image-ref: "tranc3:${{ github.sha }}"
@@ -188,20 +177,69 @@ jobs:
           output: "trivy-image-enforce.sarif"
           severity: ${{ env.TRIVY_SEVERITY }}
           exit-code: "1"
+          # See the note in trivy-enforce: without this, exit-code fires on
+          # every severity rather than the HIGH,CRITICAL intended here.
+          limit-severities-for-sarif: true
+          trivyignores: ".trivyignore"
+
+      - name: Upload Trivy image SARIF artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: trivy-image-sarif
+          # trivy-image-enforce.sarif only exists on main; `warn` keeps the
+          # PR runs (where the enforce step is skipped) from failing here.
+          if-no-files-found: warn
+          path: |
+            trivy-image.sarif
+            trivy-image-enforce.sarif
+
+  # This job is NOT optional and NOT opt-in, whatever its name says -- it is
+  # live, and a failure here is a red X on main. The stale "uncomment or enable"
+  # wording below is part of why it went unexamined while it failed on every
+  # push to main from 2026-08-25 onward. Left named as-is only because the job
+  # name is a required status check; the description is now accurate.
+  trivy-enforce:
+    name: Trivy Enforce on main (opt-in)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [prepare-cache]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Run Trivy filesystem scan (enforce)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: ${{ env.TRIVY_OUTPUT_FORMAT }}
+          output: "trivy-fs-enforce.sarif"
+          severity: ${{ env.TRIVY_SEVERITY }}
+          exit-code: "1"
+          # Required for the severity filter above to govern the exit code.
+          # With format=sarif and this left at its `false` default, the action
+          # logs "Building SARIF report with all severities" and overrides
+          # TRIVY_SEVERITY to the full set -- so `exit-code: 1` fires on any
+          # LOW or MEDIUM finding too, and this gate is far stricter than the
+          # HIGH,CRITICAL the env var advertises. The non-enforcing jobs above
+          # deliberately keep the default: they run at exit-code 0, so a wider
+          # SARIF only means richer reporting in the Security tab.
+          limit-severities-for-sarif: true
           trivyignores: ".trivyignore"
 
       - name: Upload enforcement SARIF to Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@42947a340483f03ba47bb1a039b2c519aab3df85 # v3
         if: always()
         with:
           sarif_file: "trivy-fs-enforce.sarif"
           category: "trivy-fs-enforce"
 
       - name: Upload enforcement SARIF artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: trivy-enforce-sarif
-          path: |
-            trivy-fs-enforce.sarif
-            trivy-image-enforce.sarif
+          path: trivy-fs-enforce.sarif

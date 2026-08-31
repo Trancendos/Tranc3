@@ -566,11 +566,13 @@ def list_documents(
     limit: int = 50,
     offset: int = 0,
 ):
+    """List documents with optional filtering by owner and status."""
     return db.list_documents(owner_id=owner_id, status=status, limit=limit, offset=offset)
 
 
 @router.get("/documents/{doc_id}")
 def get_document(doc_id: str):
+    """Retrieve a single document's metadata by ID."""
     doc = db.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -579,6 +581,7 @@ def get_document(doc_id: str):
 
 @router.patch("/documents/{doc_id}")
 def update_document(doc_id: str, data: Dict[str, Any]):
+    """Update specific fields of a document's metadata."""
     if not db.update_document(doc_id, data):
         raise HTTPException(status_code=404, detail="Document not found")
     return db.get_document(doc_id)
@@ -586,6 +589,7 @@ def update_document(doc_id: str, data: Dict[str, Any]):
 
 @router.delete("/documents/{doc_id}")
 def delete_document(doc_id: str):
+    """Soft-delete a document."""
     if not db.soft_delete(doc_id):
         raise HTTPException(status_code=404, detail="Document not found")
     return {"deleted": True}
@@ -593,6 +597,7 @@ def delete_document(doc_id: str):
 
 @router.get("/documents/{doc_id}/download")
 def download_document(doc_id: str):
+    """Stream the actual file content for a given document."""
     doc = db.get_document(doc_id)
     if not doc or not doc.get("storage_path"):
         raise HTTPException(status_code=404, detail="Document not found")

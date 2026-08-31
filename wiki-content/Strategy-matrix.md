@@ -1132,4 +1132,3 @@ Pools:
 | ARM Compute | 4 OCPU / 24 GB RAM (up to 4 instances) | Terraform precondition |
 | AMD Micro | 2 × VM.Standard.E2.1.Micro | Terraform precondition |
 | Block Volume | 200 GB total | Terraform precondition |
-
