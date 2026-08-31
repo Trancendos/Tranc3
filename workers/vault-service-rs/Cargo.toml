@@ -8,7 +8,7 @@ name = "vault-service"
 path = "src/main.rs"
 
 [dependencies]
-axum = { version = "0.7", features = ["json"] }
+axum = { version = "0.8", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 ring = "0.17"
 rusqlite = { version = "0.31", features = ["bundled"] }
