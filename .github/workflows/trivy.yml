@@ -134,7 +134,7 @@ jobs:
       # UNAUTHORIZED. The image scan had never scanned an image.
       - name: Build Docker image
         id: build
-        uses: docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9 # v4
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           push: false
