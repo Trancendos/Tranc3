@@ -242,7 +242,7 @@ class LLMQueryConverter:
     Falls back to heuristic parsing when LLM is unavailable.
     """
 
-    SYSTEM_PROMPT = """You are an expert NRC (Nested Relational Calculus) query translator for the TranceX ecosystem. 
+    SYSTEM_PROMPT = """You are an expert NRC (Nested Relational Calculus) query translator for the TranceX ecosystem.
 Convert natural language queries into valid NRC DSL format.
 
 NRC DSL syntax:

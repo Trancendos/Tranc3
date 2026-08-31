@@ -1,8 +1,8 @@
 # AI Governance — Trancendos Platform
 
-**Status**: Baseline established · Formal certification pending  
-**Last updated**: 2026-06-06  
-**Owner**: Trancendos Engineering  
+**Status**: Baseline established · Formal certification pending
+**Last updated**: 2026-06-06
+**Owner**: Trancendos Engineering
 **Review cadence**: Quarterly (every 90 days)
 
 ---
