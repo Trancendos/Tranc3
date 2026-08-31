@@ -1810,7 +1810,7 @@ services:
     restart: unless-stopped
 
   outline:
-    image: outlinewiki/outline:latest@sha256:6744a369271ce3c5a37316e5bfc5311d8d4452eb5ee4ca9560c96c15fd718a39
+    image: outlinewiki/outline:latest@sha256:32d76719c378931dd65d93945930ca380d8376a0337d98a991fcc12b266f33cf
     container_name: trancendos-outline
     ports:
       - "3011:3000"
