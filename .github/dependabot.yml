@@ -126,6 +126,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # Python base-image bumps are held here, not merged one Dockerfile at a
+      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
+      # merging one changes a container's interpreter without validating that
+      # container's pinned dependencies against it, and that one of them
+      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
+      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
+      # without this the estate regenerates 90 near-identical PRs every run —
+      # which is what produced the 90 that were open on 2026-08-22.
+      #
+      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
+      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
+      # note above does not actually hold the interpreter bump out of the
+      # safe-updates group the way its wording implies — listing only major here
+      # would leave the exact bump this ignore exists for still flowing through.
+      #
+      # Lift this per-directory as each target completes Stages 3-5 of that
+      # assessment's staged plan, rather than removing it wholesale.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
     directory: "/docker"
@@ -144,6 +166,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # Python base-image bumps are held here, not merged one Dockerfile at a
+      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
+      # merging one changes a container's interpreter without validating that
+      # container's pinned dependencies against it, and that one of them
+      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
+      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
+      # without this the estate regenerates 90 near-identical PRs every run —
+      # which is what produced the 90 that were open on 2026-08-22.
+      #
+      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
+      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
+      # note above does not actually hold the interpreter bump out of the
+      # safe-updates group the way its wording implies — listing only major here
+      # would leave the exact bump this ignore exists for still flowing through.
+      #
+      # Lift this per-directory as each target completes Stages 3-5 of that
+      # assessment's staged plan, rather than removing it wholesale.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
     directory: "/tranc3-bots"
@@ -162,6 +206,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # Python base-image bumps are held here, not merged one Dockerfile at a
+      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
+      # merging one changes a container's interpreter without validating that
+      # container's pinned dependencies against it, and that one of them
+      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
+      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
+      # without this the estate regenerates 90 near-identical PRs every run —
+      # which is what produced the 90 that were open on 2026-08-22.
+      #
+      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
+      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
+      # note above does not actually hold the interpreter bump out of the
+      # safe-updates group the way its wording implies — listing only major here
+      # would leave the exact bump this ignore exists for still flowing through.
+      #
+      # Lift this per-directory as each target completes Stages 3-5 of that
+      # assessment's staged plan, rather than removing it wholesale.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
     directory: "/web"
@@ -180,6 +246,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # Python base-image bumps are held here, not merged one Dockerfile at a
+      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
+      # merging one changes a container's interpreter without validating that
+      # container's pinned dependencies against it, and that one of them
+      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
+      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
+      # without this the estate regenerates 90 near-identical PRs every run —
+      # which is what produced the 90 that were open on 2026-08-22.
+      #
+      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
+      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
+      # note above does not actually hold the interpreter bump out of the
+      # safe-updates group the way its wording implies — listing only major here
+      # would leave the exact bump this ignore exists for still flowing through.
+      #
+      # Lift this per-directory as each target completes Stages 3-5 of that
+      # assessment's staged plan, rather than removing it wholesale.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
     directory: "/workers"
@@ -198,6 +286,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # Python base-image bumps are held here, not merged one Dockerfile at a
+      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
+      # merging one changes a container's interpreter without validating that
+      # container's pinned dependencies against it, and that one of them
+      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
+      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
+      # without this the estate regenerates 90 near-identical PRs every run —
+      # which is what produced the 90 that were open on 2026-08-22.
+      #
+      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
+      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
+      # note above does not actually hold the interpreter bump out of the
+      # safe-updates group the way its wording implies — listing only major here
+      # would leave the exact bump this ignore exists for still flowing through.
+      #
+      # Lift this per-directory as each target completes Stages 3-5 of that
+      # assessment's staged plan, rather than removing it wholesale.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
     directory: "/deploy"
@@ -216,6 +326,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # Python base-image bumps are held here, not merged one Dockerfile at a
+      # time. docs/governance/PYTHON-3.14-UPGRADE-ASSESSMENT.md §5 found that
+      # merging one changes a container's interpreter without validating that
+      # container's pinned dependencies against it, and that one of them
+      # (docker/Dockerfile.api) is independently broken by a stale hardcoded
+      # python3.11 site-packages path. There are 90 per-worker Dockerfiles, so
+      # without this the estate regenerates 90 near-identical PRs every run —
+      # which is what produced the 90 that were open on 2026-08-22.
+      #
+      # Both major and minor are listed on purpose. A `3.11-slim` -> `3.14-slim`
+      # tag move is semver-MINOR (major stays 3), so the "majors stay ungrouped"
+      # note above does not actually hold the interpreter bump out of the
+      # safe-updates group the way its wording implies — listing only major here
+      # would leave the exact bump this ignore exists for still flowing through.
+      #
+      # Lift this per-directory as each target completes Stages 3-5 of that
+      # assessment's staged plan, rather than removing it wholesale.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -1,7 +1,7 @@
 # Infinity Ecosystem Architecture — Canonical Reference
 
-**Version:** 0.7.0  
-**Date:** 2025-05-24  
+**Version:** 0.7.0
+**Date:** 2025-05-24
 **Scope:** Trancendos Universe naming conventions, tier structures, pillar architecture, and ecosystem topology
 
 ---
