@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from src.nanoservices.hyperdimensional_lattice.hyperdimensional_lattice import (
     BindingOperation,
     ConceptLattice,
@@ -152,3 +154,17 @@ def test_hyperdimensional_lattice_concept_lattice_project():
 
     proj_tsne = lattice.project(target_dim=3, method=ProjectionMethod.TSNE)
     assert len(proj_tsne.node_positions) == 1
+
+
+def test_hyperdimensional_lattice_concept_lattice_relate():
+    lattice = ConceptLattice(dimension=10, vector_type=VectorType.BIPOLAR)
+    a = lattice.add_concept("a")
+    b = lattice.add_concept("b")
+
+    # create relation
+    lattice.relate(a.id, b.id, weight=0.8)
+
+    assert len(lattice.relations) == 1
+
+    with pytest.raises(ValueError, match="Both nodes must exist"):
+        lattice.relate("missing", "missing_b")
