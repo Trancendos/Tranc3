@@ -5,7 +5,7 @@ uvicorn==0.52.4
 pydantic==2.13.4
 python-multipart==0.0.32
 httpx==0.28.1
-boto3==1.43.78
-botocore==1.43.78
+boto3==1.43.84
+botocore==1.43.84
 redis==8.1.0
 duckdb==1.5.5

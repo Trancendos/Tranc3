@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "bullmq": "^5.21.2",
-    "express": "^4.21.1"
+    "express": "^5.0.0"
   },
   "devDependencies": {
     "@types/express": "5.0.6",
     "@types/node": "24.13.3",
     "ts-node": "10.9.2",
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   }
 }
