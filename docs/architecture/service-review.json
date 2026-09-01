@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "6f53b3fc",
+  "commit": "06d2cb0",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-29T11:25:12.064861+00:00",
+  "generated_at": "2026-09-01T21:12:45.278799+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -341,7 +341,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "apache/airflow:2.9.3@sha256:0188b06abb250caccc48bb6d00fde5e74a211273f78b0d143bc4d63f2b67412d",
+      "image": "apache/airflow:3.3.1@sha256:0c4bcc0370e526de1b7892a3bf4343d260c6c82359c66f77155b53cd773d6339",
       "lifecycle": "INFRA",
       "service": "airflow"
     },
@@ -504,14 +504,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "lifecycle": "INFRA",
       "service": "authentik-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005",
+      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
       "lifecycle": "INFRA",
       "service": "authentik-redis"
     },
@@ -650,14 +650,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "lscr.io/linuxserver/bookstack:latest@sha256:13dc508fb46aa7d2b726b6c872e4903892bda68391ac948a5603d3ca60f0937e",
+      "image": "lscr.io/linuxserver/bookstack:latest@sha256:3e1aea5d8dd3bb3a5cf16fa7e3b847e2889eedd8516b2825ac379d365b07ba6f",
       "lifecycle": "INFRA",
       "service": "bookstack"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "mariadb:12@sha256:628f228f0fd5913a220438693576b29b6fe4dc1fa0a1298c0e98579fae28635f",
+      "image": "mariadb:12@sha256:dd9b303aed4f4890ed09f766d8ca9ddfd176c0c6f6267feff53b3192ec65a979",
       "lifecycle": "INFRA",
       "service": "bookstack-db"
     },
@@ -750,7 +750,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "lifecycle": "INFRA",
       "service": "calcom-db"
     },
@@ -1089,7 +1089,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "amir20/dozzle:latest@sha256:0ecac18a3491962002e9d6b9f9a363155131a4213e723ab86fc76dfee6e3cd8e",
+      "image": "amir20/dozzle:latest@sha256:243666b0593ff33ed1373901575236f0d6bed8a2d6b451cdae4345969a7b6d5c",
       "lifecycle": "INFRA",
       "service": "dozzle"
     },
@@ -1394,14 +1394,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "gotenberg/gotenberg:8@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923",
+      "image": "gotenberg/gotenberg:8@sha256:87c16b9f364279d321bc9772d31fa58aa6abe036423c270698bd636c3a8e9466",
       "lifecycle": "INFRA",
       "service": "gotenberg"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "grafana/grafana:13.1.0@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63",
+      "image": "grafana/grafana:13.1.4@sha256:9be3a3ccdb06bcbb127f888b0c4c1d151837443e478887897a63a27d7b348043",
       "lifecycle": "INFRA",
       "service": "grafana"
     },
@@ -2094,14 +2094,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "langfuse/langfuse:latest@sha256:f635d308449ea02a182f8d4c156daf5709714badf25fb504e84bb229458204f6",
+      "image": "langfuse/langfuse:latest@sha256:7dcc1419da9062c968a428bc63a4ff0e03d4cc84113125f999754a9037912425",
       "lifecycle": "INFRA",
       "service": "langfuse"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image": "postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
       "lifecycle": "INFRA",
       "service": "langfuse-db"
     },
@@ -2185,7 +2185,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f",
+      "image": "ghcr.io/berriai/litellm:main-latest@sha256:846795f2a2b5787ce2155170fd33b9ae886fd925f26635424ee613d53ece2fa4",
       "lifecycle": "INFRA",
       "service": "litellm"
     },
@@ -2275,7 +2275,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "grafana/loki:3.7.3@sha256:70b9f699fc9bb868b62f1cfd4f787dfa50242f1fd92e6089787d5d7daea75fe8",
+      "image": "grafana/loki:3.7.7@sha256:d70e4659623f3e109af669cae76fe2a5dd5be54e2298fe8aed380d982fbc2500",
       "lifecycle": "INFRA",
       "service": "loki"
     },
@@ -2289,7 +2289,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "image": "postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
       "lifecycle": "INFRA",
       "service": "mattermost-db"
     },
@@ -2317,14 +2317,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "mysql:9.7@sha256:8fdf311514c91fa5014e93e98e19d7f5d9eb162a462c13100c956dacc278ee21",
+      "image": "mysql:26.7@sha256:66aec17cd21a956029b83f083b813073859e8355dc1a00e55df6ba02f0e32345",
       "lifecycle": "INFRA",
       "service": "misp-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005",
+      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
       "lifecycle": "INFRA",
       "service": "misp-redis"
     },
@@ -2449,7 +2449,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "n8nio/n8n:latest@sha256:e0d9593724e36d2584a1686148155e881233b38ae1833101c97c6463c0d36711",
+      "image": "n8nio/n8n:latest@sha256:a9e2e3c8006ed453238266669ea1274be7136f515abe290a2f75a0ab9044c93d",
       "lifecycle": "INFRA",
       "service": "n8n"
     },
@@ -2463,7 +2463,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "netdata/netdata:latest@sha256:ac44ec899289dffe02b225803c204e95eb426e6439fc5374cc76ce67683cf54b",
+      "image": "netdata/netdata:latest@sha256:b93fd79b21974e66b73eeed265af1b5ca5eb741d2240b98be7eb74aa8093ec08",
       "lifecycle": "INFRA",
       "service": "netdata"
     },
@@ -2588,14 +2588,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ollama/ollama:latest@sha256:509fdf54e23bd50d87af646cb51c0a7a203d6a83cc4d6695b3b08c5be1c62c0a",
+      "image": "ollama/ollama:latest@sha256:020e4134285e2ef4d8fd801234176de3b4faadc992a3eb06c8e66a2f9d4c4ba2",
       "lifecycle": "INFRA",
       "service": "ollama"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "openbao/openbao:latest@sha256:6150c4a6b62067db6141c8da7a6a6b5763f4f47c315343d0c848b40fecdfd452",
+      "image": "openbao/openbao:latest@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641",
       "lifecycle": "INFRA",
       "service": "openbao"
     },
@@ -2609,7 +2609,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "lifecycle": "INFRA",
       "service": "openbas-db"
     },
@@ -2669,42 +2669,42 @@
     {
       "checks": {},
       "failures": [],
-      "image": "outlinewiki/outline:latest@sha256:6744a369271ce3c5a37316e5bfc5311d8d4452eb5ee4ca9560c96c15fd718a39",
+      "image": "outlinewiki/outline:latest@sha256:32d76719c378931dd65d93945930ca380d8376a0337d98a991fcc12b266f33cf",
       "lifecycle": "INFRA",
       "service": "outline"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "lifecycle": "INFRA",
       "service": "outline-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02",
+      "image": "valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9",
       "lifecycle": "INFRA",
       "service": "outline-redis"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:65a4cabf0169ea7fbd90ab7bb28ba3f8b5909613635acda1a03ad606f34b456b",
+      "image": "ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:73a1d0bcc5b50cb501f084da795722aa5e2988c6bc9b26ca1ae493a57a490c06",
       "lifecycle": "INFRA",
       "service": "paperless"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "lifecycle": "INFRA",
       "service": "paperless-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005",
+      "image": "redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576",
       "lifecycle": "INFRA",
       "service": "paperless-redis"
     },
@@ -2750,35 +2750,35 @@
     {
       "checks": {},
       "failures": [],
-      "image": "penpotapp/backend:latest@sha256:6c8e3851f3734e98e48d5a4a68e2c64485f6bd67a1ffec809aa9f1847d90a646",
+      "image": "penpotapp/backend:latest@sha256:770b55f6e51bfcee49152b30858ca6a47143256de8d43953a50b952b5c60bb55",
       "lifecycle": "INFRA",
       "service": "penpot-backend"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b",
+      "image": "postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
       "lifecycle": "INFRA",
       "service": "penpot-db"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "penpotapp/exporter:latest@sha256:b370f14927050fb05ac646441b5993d9337dda7eec60d944aa112819c88207bc",
+      "image": "penpotapp/exporter:latest@sha256:72a8061e88069b9baf0767bc11fbf3310d2527bb5964ca084cf8c844d84306c8",
       "lifecycle": "INFRA",
       "service": "penpot-exporter"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "penpotapp/frontend:latest@sha256:4725b4698d8d1bd25ee1666e0d900d20da8937fea845c6a088f76cd69293560b",
+      "image": "penpotapp/frontend:latest@sha256:94fa2864d8fc0cd62245af95c03cca89306a7fd23c206a98a3e9dc9a376ea27e",
       "lifecycle": "INFRA",
       "service": "penpot-frontend"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "prefecthq/prefect:3-python3.12@sha256:9fd526c1da3a206ff322087266b01b1d24020331a51b95b768408f078cb315fe",
+      "image": "prefecthq/prefect:3-python3.12@sha256:6c0dc14195cae814eddeb66104a8333810a0a9886a5d7f0c45443136f167b3e0",
       "lifecycle": "INFRA",
       "service": "prefect-server"
     },
@@ -2824,7 +2824,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893",
+      "image": "prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69",
       "lifecycle": "INFRA",
       "service": "prometheus"
     },
@@ -2838,7 +2838,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "qdrant/qdrant:latest@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c",
+      "image": "qdrant/qdrant:latest@sha256:057ee3a8da769fe7310dd3537b4dc7583bf87a95ce8ac43c0af5a46bc580d1fc",
       "lifecycle": "INFRA",
       "service": "qdrant"
     },
@@ -2991,7 +2991,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "renovate/renovate:latest@sha256:39182d1ab9fbf428bd702cb737c49197aa18930de666d7d57336468c5ecb8d63",
+      "image": "renovate/renovate:latest@sha256:6922c734849f2ed1c01e3a7924bd60e25e0ea904731a67bad72b02d563c0c3c3",
       "lifecycle": "INFRA",
       "service": "renovate-bot"
     },
@@ -3147,7 +3147,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "clickhouse/clickhouse-server:26.5.5-alpine@sha256:d6d599097220479d6a55d6dc838b44fdea7774003666860701c82dc178c6ad13",
+      "image": "clickhouse/clickhouse-server:26.5.7-alpine@sha256:35b419db86eed71ab1c41c03b4fd1f39be26f41eb38b0866268e2ca162445105",
       "lifecycle": "INFRA",
       "service": "signoz-clickhouse"
     },
@@ -3161,7 +3161,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "signoz/signoz-otel-collector:latest@sha256:f9bf94d566055d06581f3befbf361cc26d670f31ad00cb31fda2ec380210c5ec",
+      "image": "signoz/signoz-otel-collector:latest@sha256:72aa1e4c1ec529f178e962c049be35cfd7abae02fe9a397edad10b4a9cba62fa",
       "lifecycle": "INFRA",
       "service": "signoz-otel-collector"
     },
@@ -3253,7 +3253,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "stirlingtools/stirling-pdf:latest@sha256:7ed4d9681d18e4fbc3aa6a63647c4b5c2bcc4b75841df7c05d7e3d2320f5c9a1",
+      "image": "stirlingtools/stirling-pdf:latest@sha256:3b3670fce70b396ec56ba380a3cc7858e0abf83fe13f31c88f7737847763a396",
       "lifecycle": "INFRA",
       "service": "stirling-pdf"
     },
@@ -3409,7 +3409,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "grafana/tempo:3.0.2@sha256:cda87c212d8c584dc0b89e337e7ed648a5100feb657e5d528480ee4fa03dbbe3",
+      "image": "grafana/tempo:3.0.3@sha256:0296560ac66f8a3600d7fb3014a52c189d4d9c3549ad6ff441bf2409855d68d5",
       "lifecycle": "INFRA",
       "service": "tempo"
     },
@@ -3614,7 +3614,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "apache/tika:latest-full@sha256:d8e6ed96260ad89307a93195a1b856102987a818ac648502f8efbaf313d32470",
+      "image": "apache/tika:latest-full@sha256:80072bb73dd320a9de9709beb0b16d14dd6d2680376f8d31e498f55b633ba593",
       "lifecycle": "INFRA",
       "service": "tika"
     },
@@ -3926,14 +3926,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "valkey/valkey:9-alpine@sha256:c9b77919daeba2c02ad954d0c844cc4e7142069d177b89c5fd771f405daf9e02",
+      "image": "valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9",
       "lifecycle": "INFRA",
       "service": "valkey"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "hashicorp/vault:2.0@sha256:a296a888b118615dc01d5f1a6846e6d4a7277946caaed5b447008fff5fe06b54",
+      "image": "hashicorp/vault:2.0@sha256:5be49781ecf78bfe775c5309c6a4d9f4e9e040b6c885c99eb2b12fb69855e1a2",
       "lifecycle": "INFRA",
       "service": "vault"
     },
@@ -4013,14 +4013,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "victoriametrics/victoria-metrics:latest@sha256:40ea45a6d14b6ad9f2f1fff597309d456ff9885d77d8d1da5fd559b251db9987",
+      "image": "victoriametrics/victoria-metrics:latest@sha256:6d164540a04f49ba4e696cbdb70f9fee78be1e94b8f2a1292743a0b1ab8275bd",
       "lifecycle": "INFRA",
       "service": "victoriametrics"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "vllm/vllm-openai:latest@sha256:251eba5cc7c12fed0b75da22a9240e582b1c9e39f6fbc064f86781b963bd814f",
+      "image": "vllm/vllm-openai:latest@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14",
       "lifecycle": "INFRA",
       "service": "vllm"
     },
