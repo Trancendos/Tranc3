@@ -1,10 +1,10 @@
 # Change Advisory Board — Charter
 
-**Document ID:** CAB-001  
-**DEF STAN ref:** REQ-CM-006 (DEF STAN 00-044 Configuration Management)  
-**Owner:** The Town Hall  
-**Version:** 1.0  
-**Date:** 2026-06-06  
+**Document ID:** CAB-001
+**DEF STAN ref:** REQ-CM-006 (DEF STAN 00-044 Configuration Management)
+**Owner:** The Town Hall
+**Version:** 1.0
+**Date:** 2026-06-06
 **Review cycle:** Annually or after any Major change classification event
 
 ---

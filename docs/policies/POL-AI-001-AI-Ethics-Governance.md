@@ -1,5 +1,5 @@
 # POL-AI-001 — AI Ethics & Governance Policy
-**Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC  
+**Version:** 1.0.0 | **Owner:** Trancendos Platform Engineering | **Classification:** UNCLASSIFIED — PUBLIC
 **Effective:** 2026-06-12 | **Review Cycle:** Annual | **Approver:** Platform Owner
 
 ## 1. Purpose
@@ -49,6 +49,6 @@ Bias measurement programme (PROC-AI-002) runs quarterly. Results reviewed by Pla
 This policy is reviewed annually or following significant changes to EU AI Act guidance, ISO 42001 updates, or platform AI capabilities.
 
 ---
-*Magna Carta Rule Reference: MC-RULE-004 (AI Governance), MC-RULE-005 (Zero-Cost), MC-RULE-008 (Transparency)*  
-*DEFSTAN Reference: REQ-AI-001, REQ-AI-002, REQ-AI-003*  
+*Magna Carta Rule Reference: MC-RULE-004 (AI Governance), MC-RULE-005 (Zero-Cost), MC-RULE-008 (Transparency)*
+*DEFSTAN Reference: REQ-AI-001, REQ-AI-002, REQ-AI-003*
 *FCA Reference: AI assistive-only positioning (not Part 4A regulated)*

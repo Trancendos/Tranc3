@@ -81,7 +81,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set} ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set};
-      
+
       echo 'Creating buckets...';
       mc mb myminio/tranc3 --ignore-existing;
       mc mb myminio/tranc3-hot --ignore-existing;
@@ -96,15 +96,15 @@ services:
       mc mb myminio/tranc3-logs --ignore-existing;
       mc mb myminio/tranc3-config --ignore-existing;
       mc mb myminio/tranc3-data --ignore-existing;
-      
+
       echo 'Enabling versioning...';
       mc version enable myminio/tranc3;
-      
+
       echo 'Enabling versioning on all buckets...';
       for bucket in tranc3-hot tranc3-warm tranc3-cold tranc3-archive tranc3-temp tranc3-work tranc3-backup tranc3-repl tranc3-models tranc3-logs tranc3-config tranc3-data; do
         mc version enable myminio/$$bucket 2>/dev/null || true;
       done;
-      
+
       echo 'Applying lifecycle policies...';
       if [ -f /etc/minio/lifecycle.json ]; then
         for bucket in tranc3-hot tranc3-warm tranc3-cold tranc3-archive tranc3-temp; do
@@ -113,7 +113,7 @@ services:
       else
         echo '  (No lifecycle.json found at /etc/minio/lifecycle.json — skipping)';
       fi;
-      
+
       echo 'MinIO initialization complete.';
       "
     restart: "no"
@@ -125,7 +125,7 @@ services:
   # Production: Use separate Ceph cluster or CephAnsible deployment.
   # Self-hosted, scalable, free. RADOS Gateway provides S3-compatible API.
   ceph:
-    image: quay.io/ceph/ceph:v20@sha256:6b4b5ae33acd3d736eb26d2a19238bce71a22f9cfb99cca887ba6312d0957644
+    image: quay.io/ceph/ceph:v21@sha256:5ff3692d2f3f4bf47ca7717de6f8f8556440ce3e15efaa680b62cb924eec0541
     container_name: tranc3-ceph
     entrypoint: >
       /bin/bash -c "
