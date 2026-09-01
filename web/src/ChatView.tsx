@@ -190,8 +190,8 @@ export default function ChatView() {
 
         {/* Language */}
         <div>
-          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Language</label>
-          <select value={language} onChange={e => setLanguage(e.target.value)}
+          <label htmlFor="language-select" className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Language</label>
+          <select id="language-select" value={language} onChange={e => setLanguage(e.target.value)}
             className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg}`}>
             {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
           </select>
@@ -199,19 +199,20 @@ export default function ChatView() {
 
         {/* Personality — dynamic from API */}
         <div>
-          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Settings className="w-3 h-3" /> Personality</label>
-          <select value={personality} onChange={e => setPersonality(e.target.value)}
+          <label htmlFor="personality-select" className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Settings className="w-3 h-3" /> Personality</label>
+          <select id="personality-select" value={personality} onChange={e => setPersonality(e.target.value)}
             className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg}`}>
             {personalities.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
 
         {/* Emotion */}
-        <div>
-          <label className="text-xs text-gray-500 mb-1">Your Emotion</label>
+        <div role="group" aria-labelledby="emotion-label">
+          <label id="emotion-label" className="text-xs text-gray-500 mb-1 block">Your Emotion</label>
           <div className="grid grid-cols-2 gap-1">
             {EMOTIONS.map(e => (
               <button key={e.id} onClick={() => setEmotion(e.id)}
+                aria-pressed={emotion === e.id}
                 className={`text-xs py-1 px-2 rounded-lg transition-all ${emotion === e.id ? e.color : dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
                   }`}>
                 {e.label}
@@ -305,7 +306,8 @@ export default function ChatView() {
 
         <div className={`px-6 py-4 border-t ${header}`}>
           <div className="flex gap-3">
-            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+            <label htmlFor="chat-input" className="sr-only">Message input</label>
+            <input id="chat-input" ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
               placeholder="Type a message..."
               aria-label="Message input"

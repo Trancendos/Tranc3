@@ -24,3 +24,6 @@
 ## 2024-08-24 - Interactive Elements in Hover-Only Containers
 **Learning:** Hiding card actions (like Delete or Run buttons) behind `opacity-0 group-hover:opacity-100` completely breaks keyboard navigation because focusable elements remain invisible when users tab to them.
 **Action:** Always pair `group-hover:opacity-100` with `focus-within:opacity-100` on the container so actions reveal themselves gracefully when any child receives keyboard focus.
+## 2026-09-01 - Form Associations and Screen Reader Input Labels
+**Learning:** The ChatView contained forms and selects without proper `id` and `htmlFor` associations, and the main chat input lacked a visually hidden `sr-only` label, relying only on `aria-label`. Explicit associations are required for full accessibility compliance.
+**Action:** Always ensure form inputs and selects are explicitly linked to their labels using `id` and `htmlFor`, and provide screen-reader-only (`sr-only`) labels for critical inputs like chat text areas even if `aria-label` is present.
