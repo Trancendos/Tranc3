@@ -110,8 +110,6 @@ class BaseNode(ABC):
         )
 
 
-
-
 def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
     """Safely evaluates mathematical and logical expressions, supporting basic literals, unary ops, attributes and limited calls."""
     tree = ast.parse(expr, mode="eval")
@@ -126,7 +124,11 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
         elif isinstance(node, ast.Tuple):
             return tuple(_eval(elt) for elt in node.elts)
         elif isinstance(node, ast.Dict):
-            return {_eval(k): _eval(v) for k, v in zip(node.keys, node.values, strict=False) if k is not None}
+            return {
+                _eval(k): _eval(v)
+                for k, v in zip(node.keys, node.values, strict=False)
+                if k is not None
+            }
         elif isinstance(node, ast.Name):
             if node.id in local_ns:
                 return local_ns[node.id]
@@ -156,8 +158,10 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
             elif isinstance(node.op, ast.Sub):
                 return left - right
             elif isinstance(node.op, ast.Mult):
-                if isinstance(left, str) and isinstance(right, int) and right > 1000:
-                    raise ValueError("String multiplication limit exceeded")
+                if isinstance(left, (str, list, tuple)) and isinstance(right, int) and right > 1000:
+                    raise ValueError("Multiplication limit exceeded")
+                if isinstance(right, (str, list, tuple)) and isinstance(left, int) and left > 1000:
+                    raise ValueError("Multiplication limit exceeded")
                 return left * right
             elif isinstance(node.op, ast.Div):
                 return left / right
@@ -225,14 +229,18 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
                 # Extra safety: limit calls to specific types
                 safe_types = (str, dict, list, set, int, float, bool, tuple)
                 if getattr(func, "__self__", None) is not None:
-                    if not isinstance(func.__self__, safe_types):
+                    # Allow built-in module functions (like len which has __self__ = module)
+                    if (
+                        not isinstance(func.__self__, safe_types)
+                        and getattr(func.__self__, "__name__", "") != "builtins"
+                    ):
                         raise ValueError("Method call on non-standard type is denied")
                 elif func not in {len, str, int, float, bool, list, dict, set, max, min, abs, sum}:
                     raise ValueError("Function call is denied")
 
                 args = [_eval(arg) for arg in node.args]
-                # kwargs are skipped for simplicity unless really needed, let's just support basic args
-                return func(*args)
+                kwargs = {kw.arg: _eval(kw.value) for kw in node.keywords if kw.arg is not None}
+                return func(*args, **kwargs)
             raise ValueError(f"Unsupported function call: {ast.dump(node)}")
         else:
             raise ValueError(f"Unsupported node type: {type(node)}")

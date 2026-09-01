@@ -275,7 +275,15 @@ class TestEnumValueCompatibility:
         assert not bad, f"Non-string ErrorCode values: {bad}"
 
     def test_node_type_in_node_registry(self, caplog):
-        from src.workflow.nodes import NODE_REGISTRY, NodeType
+        from src.workflow.nodes.registry import _init_registry, NODE_REGISTRY
+        from src.workflow.nodes.base import NodeType
+        import os
+        old_secret = os.environ.get('SECRET_KEY')
+        _init_registry()
+        if old_secret is not None:
+            os.environ['SECRET_KEY'] = old_secret
+        else:
+            os.environ.pop('SECRET_KEY', None)
 
         _log.info("compat.enum node_registry keys=%s", list(NODE_REGISTRY.keys()))
         assert NodeType.SPARK_TOOL in NODE_REGISTRY

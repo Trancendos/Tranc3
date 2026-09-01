@@ -195,9 +195,17 @@ class TestSecurityLogging:
             async def execute(self, inputs, context):
                 raise ValueError("pen: forced failure with sensitive=data")
 
-        from src.workflow import nodes as _nodes
+        from src.workflow.nodes.registry import NODE_REGISTRY, _init_registry
+        import os
+        old_secret = os.environ.get('SECRET_KEY')
+        _init_registry()
+        if old_secret is not None:
+            os.environ['SECRET_KEY'] = old_secret
+        else:
+            os.environ.pop('SECRET_KEY', None)
 
-        _nodes.NODE_REGISTRY[NodeType.TRIGGER] = RaisingNode
+        orig_node = NODE_REGISTRY.get(NodeType.TRIGGER)
+        NODE_REGISTRY[NodeType.TRIGGER] = RaisingNode
         try:
             b = WorkflowBuilder("pen-fail-wf")
             b.add_node(NodeType.TRIGGER, "bad", config={}, node_id="bad")
@@ -207,9 +215,10 @@ class TestSecurityLogging:
             assert isinstance(state.error, str)
             assert state.status == "failed"
         finally:
-            from src.workflow.nodes import TriggerNode
-
-            _nodes.NODE_REGISTRY[NodeType.TRIGGER] = TriggerNode
+            if orig_node:
+                NODE_REGISTRY[NodeType.TRIGGER] = orig_node
+            else:
+                NODE_REGISTRY.pop(NodeType.TRIGGER, None)
 
     def test_error_catalog_sec_codes_exist(self, caplog):
         """SEC error codes must exist for input blocking, CORS, integrity, and IP blocking."""
