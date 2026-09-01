@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "6f53b3fc",
+  "commit": "a463268",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-08-29T11:25:12.064861+00:00",
+  "generated_at": "2026-09-01T03:32:49.550065+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -650,14 +650,14 @@
     {
       "checks": {},
       "failures": [],
-      "image": "lscr.io/linuxserver/bookstack:latest@sha256:13dc508fb46aa7d2b726b6c872e4903892bda68391ac948a5603d3ca60f0937e",
+      "image": "lscr.io/linuxserver/bookstack:latest@sha256:3e1aea5d8dd3bb3a5cf16fa7e3b847e2889eedd8516b2825ac379d365b07ba6f",
       "lifecycle": "INFRA",
       "service": "bookstack"
     },
     {
       "checks": {},
       "failures": [],
-      "image": "mariadb:12@sha256:628f228f0fd5913a220438693576b29b6fe4dc1fa0a1298c0e98579fae28635f",
+      "image": "mariadb:12@sha256:dd9b303aed4f4890ed09f766d8ca9ddfd176c0c6f6267feff53b3192ec65a979",
       "lifecycle": "INFRA",
       "service": "bookstack-db"
     },
@@ -1394,7 +1394,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "gotenberg/gotenberg:8@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923",
+      "image": "gotenberg/gotenberg:8@sha256:87c16b9f364279d321bc9772d31fa58aa6abe036423c270698bd636c3a8e9466",
       "lifecycle": "INFRA",
       "service": "gotenberg"
     },
@@ -2094,7 +2094,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "langfuse/langfuse:latest@sha256:f635d308449ea02a182f8d4c156daf5709714badf25fb504e84bb229458204f6",
+      "image": "langfuse/langfuse:latest@sha256:7dcc1419da9062c968a428bc63a4ff0e03d4cc84113125f999754a9037912425",
       "lifecycle": "INFRA",
       "service": "langfuse"
     },
@@ -2185,7 +2185,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/berriai/litellm:main-latest@sha256:0f4dce575a6c33d737886fe0796a6b3022358b45c2068a5e1312293e28b35f0f",
+      "image": "ghcr.io/berriai/litellm:main-latest@sha256:846795f2a2b5787ce2155170fd33b9ae886fd925f26635424ee613d53ece2fa4",
       "lifecycle": "INFRA",
       "service": "litellm"
     },
@@ -2690,7 +2690,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:65a4cabf0169ea7fbd90ab7bb28ba3f8b5909613635acda1a03ad606f34b456b",
+      "image": "ghcr.io/paperless-ngx/paperless-ngx:latest@sha256:49eba766581b9134cfa6b584b9eb718355fb9cfbd44b2a7c9c72a427d4891648",
       "lifecycle": "INFRA",
       "service": "paperless"
     },
@@ -3614,7 +3614,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "apache/tika:latest-full@sha256:d8e6ed96260ad89307a93195a1b856102987a818ac648502f8efbaf313d32470",
+      "image": "apache/tika:latest-full@sha256:80072bb73dd320a9de9709beb0b16d14dd6d2680376f8d31e498f55b633ba593",
       "lifecycle": "INFRA",
       "service": "tika"
     },
@@ -4013,7 +4013,7 @@
     {
       "checks": {},
       "failures": [],
-      "image": "victoriametrics/victoria-metrics:latest@sha256:40ea45a6d14b6ad9f2f1fff597309d456ff9885d77d8d1da5fd559b251db9987",
+      "image": "victoriametrics/victoria-metrics:latest@sha256:6d164540a04f49ba4e696cbdb70f9fee78be1e94b8f2a1292743a0b1ab8275bd",
       "lifecycle": "INFRA",
       "service": "victoriametrics"
     },
