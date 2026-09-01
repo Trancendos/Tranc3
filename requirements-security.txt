@@ -19,7 +19,7 @@ hashin==1.0.5         # Add package hashes to requirements for integrity
 # semgrep still hard-pins mcp==1.23.3 exactly (verified: still true as of 1.172.0,
 # the latest release) -- see the mcp accepted-risk note below, this bump doesn't
 # touch that one.
-semgrep==1.173.0      # Pattern-based static analysis for security anti-patterns
+semgrep==1.175.0      # Pattern-based static analysis for security anti-patterns
 
 # === SBOM Generation ===
 # CycloneDX for Software Bill of Materials (compliance requirement)
