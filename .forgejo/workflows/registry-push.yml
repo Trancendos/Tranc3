@@ -60,7 +60,7 @@ jobs:
 
       - name: Extract image metadata
         id: meta
-        uses: https://code.forgejo.org/docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        uses: https://code.forgejo.org/docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: ${{ env.FORGEJO_REGISTRY }}/trancendos/${{ matrix.image }}
           tags: |

@@ -6,7 +6,7 @@ version: "3.8"
 
 services:
   outline:
-    image: outlinewiki/outline:latest@sha256:6744a369271ce3c5a37316e5bfc5311d8d4452eb5ee4ca9560c96c15fd718a39
+    image: outlinewiki/outline:latest@sha256:32d76719c378931dd65d93945930ca380d8376a0337d98a991fcc12b266f33cf
     container_name: the-library
     restart: unless-stopped
     ports:
@@ -51,7 +51,7 @@ services:
       - "traefik.http.services.outline.loadbalancer.server.port=3000"
 
   outline-db:
-    image: postgres:15-alpine@sha256:57e5b9f69e672385cdf630f42b1306b5ca934c9bf8278b5f8b1948533d75a20b
+    image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
     container_name: outline-db
     restart: unless-stopped
     environment:
@@ -69,7 +69,7 @@ services:
       - tranc3-network
 
   outline-redis:
-    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
+    image: redis:8-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
     container_name: outline-redis
     restart: unless-stopped
     networks:

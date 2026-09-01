@@ -8,13 +8,13 @@ name = "nexus-ws"
 path = "src/main.rs"
 
 [dependencies]
-axum = { version = "0.7", features = ["json", "ws", "query"] }
+axum = { version = "0.8", features = ["json", "ws", "query"] }
 tokio = { version = "1", features = ["full"] }
 dashmap = "6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
-jsonwebtoken = "10"
+jsonwebtoken = "11"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 futures = "0.3"

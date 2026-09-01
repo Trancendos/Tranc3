@@ -40,7 +40,7 @@ tqdm==4.70.0
 # === Security & Infrastructure ===
 # Fixes: CVE-2026-26007 (key exchange), CVE-2024-12797 (Flush+Reload),
 #        CVE-2026-34073 (padding oracle), debricked-267656
-cryptography==50.0.0
+cryptography==50.0.1
 
 # Fixes: 20 CVEs including request smuggling, DoS, header parsing,
 #        information disclosure (CVE-2025-69223 through CVE-2026-34520)
@@ -154,7 +154,7 @@ opentelemetry-instrumentation-aiohttp-client==0.65b0
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)
-cachetools==7.1.7
+cachetools==7.1.8
 # diskcache removed — CVE-2025-69872 (pickle deserialization RCE, no upstream fix).
 # Package had zero usages in the codebase; Redis + cachetools cover all caching needs.
 
@@ -194,7 +194,7 @@ qiskit-aer==0.17.2
 # === MessagePack (content negotiation) ===
 # Fixes: GHSA-6v7p-g79w-8964 (HIGH) — out-of-bounds read/crash on Unpacker reuse after caught error.
 # Pinned to exact version per project policy (no >= or ~= specifiers).
-msgpack==1.2.1
+msgpack==1.2.2
 
 # === XML Security ===
 defusedxml==0.7.1     # Prevents XXE attacks (CWE-611); used by billing.py, oci/microceph providers
