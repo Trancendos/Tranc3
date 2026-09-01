@@ -128,7 +128,7 @@ jobs:
         # buy nothing and cost the Shai-Hulud / PhantomRaven execution vector,
         # where the payload runs during `npm install` and harvests whatever
         # credentials the job holds. This job holds CF_API_TOKEN.
-        run: npm ci --ignore-scripts
+        run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: Deploy ${{ matrix.name }}
         working-directory: cloudflare/${{ matrix.dir }}
