@@ -11,20 +11,33 @@ from pathlib import Path
 
 import pytest
 
-import os
-_old_secret = os.environ.get("SECRET_KEY")
-_old_disabled = os.environ.get("TRANC3_DB_ENCRYPTION_DISABLED")
+@pytest.fixture(scope="module", autouse=True)
+def setup_backup_env():
+    import os
+    old_secret = os.environ.get("SECRET_KEY")
+    old_disabled = os.environ.get("TRANC3_DB_ENCRYPTION_DISABLED")
 
-os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
-os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
+    os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
+    os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
 
-import atexit
-def _restore_env():
-    if _old_secret is not None: os.environ["SECRET_KEY"] = _old_secret
-    else: os.environ.pop("SECRET_KEY", None)
-    if _old_disabled is not None: os.environ["TRANC3_DB_ENCRYPTION_DISABLED"] = _old_disabled
-    else: os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
-atexit.register(_restore_env)
+    yield
+
+    if old_secret is not None:
+        os.environ["SECRET_KEY"] = old_secret
+    else:
+        os.environ.pop("SECRET_KEY", None)
+
+    if old_disabled is not None:
+        os.environ["TRANC3_DB_ENCRYPTION_DISABLED"] = old_disabled
+    else:
+        os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
+
+
+
+
+
+
+
 
 from src.backup.engine import BackupEngine, _decrypt_bytes, _encrypt_bytes
 from src.backup.registry import (
