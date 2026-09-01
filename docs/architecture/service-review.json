@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "a463268",
+  "commit": "3115d38",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
