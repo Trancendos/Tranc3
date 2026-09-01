@@ -46,7 +46,7 @@ jobs:
     name: Python — pip-audit + bandit + safety + ruff
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Python security tools
         run: |
@@ -118,7 +118,7 @@ jobs:
     name: Node.js — npm audit (CF Workers + bots)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: npm audit — tranc3-ai
         working-directory: cloudflare/tranc3-ai
@@ -159,7 +159,7 @@ jobs:
     name: Semgrep OSS SAST (CodeQL replacement)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install semgrep
         # Pinned to match requirements-security.txt / Makefile's security-install --
@@ -207,7 +207,7 @@ jobs:
     name: Trivy — misconfig + vulnerability scan
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Trivy
         run: |
@@ -253,7 +253,7 @@ jobs:
     name: Secret Detection (gitleaks + TruffleHog)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -311,7 +311,7 @@ jobs:
     name: OSV-Scanner (multi-ecosystem SCA)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install OSV-Scanner
         run: |
@@ -360,7 +360,7 @@ jobs:
     name: Checkov (IaC + Docker Compose)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Checkov
         run: python3 -m pip install checkov --quiet
@@ -418,7 +418,7 @@ jobs:
     name: SBOM Generation (syft CycloneDX + grype)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install syft
         run: |
@@ -519,7 +519,7 @@ jobs:
       - sbom-generation
     if: always()
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Generate summary
         run: |
@@ -573,7 +573,7 @@ jobs:
     runs-on: deploy-host
     continue-on-error: true
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Generate OpenAPI spec (if server running)
         run: |
