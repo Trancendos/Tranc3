@@ -11,7 +11,7 @@
         "test": "vitest run"
     },
     "dependencies": {
-        "lucide-react": "^0.378.0",
+        "lucide-react": "^1.0.0",
         "posthog-js": "^1.418.2",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
@@ -40,7 +40,7 @@
         "@storybook/addon-vitest": "10.5.9",
         "@storybook/react-vite": "10.5.9",
         "@tailwindcss/postcss": "4.3.3",
-        "@types/node": "26.3.0",
+        "@types/node": "26.4.0",
         "@types/react": "18.3.29",
         "@types/react-dom": "18.3.7",
         "@vitejs/plugin-react": "6.1.0",
@@ -51,7 +51,7 @@
         "clsx": "2.1.1",
         "playwright": "1.62.1",
         "postcss": "8.5.26",
-        "react-router": "7.18.2",
+        "react-router": "8.3.1",
         "react-router-dom": "7.18.2",
         "storybook": "10.5.9",
         "tailwind-merge": "3.6.0",
@@ -63,14 +63,14 @@
     "overrides": {
         "brace-expansion": "^5.0.8",
         "dompurify": "^3.4.13",
-        "nanoid": "^3.3.18",
+        "nanoid": "^6.0.0",
         "valibot": "^1.4.2"
     },
     "pnpm": {
         "overrides": {
             "brace-expansion": "^5.0.8",
             "dompurify": "^3.4.13",
-            "nanoid": "^3.3.18",
+            "nanoid": "^6.0.0",
             "valibot": "^1.4.2"
         }
     }

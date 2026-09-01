@@ -8,7 +8,7 @@ COPY src/ ./src/
 RUN npm run build
 
 # ---- runtime ----
-FROM node:26-slim@sha256:4ebb5ace66f15a24c14c492e01a8beeed4fddf970a856109f5126e703e5fe503
+FROM node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
 
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 

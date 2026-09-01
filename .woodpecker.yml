@@ -13,7 +13,7 @@ when:
 steps:
   # ── Ruff lint + format check (matches GitHub Actions CI gate) ───────────────
   ruff-lint:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
     commands:
       - pip install --quiet ruff
       - ruff check --select E,F,W,B --ignore E501,B008,B904 .
@@ -21,7 +21,7 @@ steps:
 
   # ── Full pytest suite ────────────────────────────────────────────────────────
   pytest:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
     environment:
       SECRET_KEY: woodpecker-ci-test-key-not-real
       DATABASE_URL: sqlite:///./test.db
@@ -36,7 +36,7 @@ steps:
 
   # ── Security: Python dependencies + SAST ────────────────────────────────────
   python-security:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
     commands:
       - pip install --quiet pip-audit bandit
       - pip-audit --requirement requirements.txt --vulnerability-service osv || true
@@ -48,7 +48,7 @@ steps:
 
   # ── Docker Compose lint (Checkov IaC scanner) ────────────────────────────────
   docker-lint:
-    image: python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+    image: python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
     commands:
       - pip install --quiet checkov
       - checkov -f docker-compose.production.yml --quiet || true
@@ -57,7 +57,7 @@ steps:
 
   # ── Node.js audit (web frontend) ─────────────────────────────────────────────
   npm-audit:
-    image: node:24-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
+    image: node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
     directory: web
     commands:
       - npm ci --silent
