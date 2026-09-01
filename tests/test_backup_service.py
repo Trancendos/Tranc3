@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
+
 @pytest.fixture(scope="module", autouse=True)
 def setup_backup_env():
-    import os
     old_secret = os.environ.get("SECRET_KEY")
     old_disabled = os.environ.get("TRANC3_DB_ENCRYPTION_DISABLED")
 
@@ -31,12 +31,6 @@ def setup_backup_env():
         os.environ["TRANC3_DB_ENCRYPTION_DISABLED"] = old_disabled
     else:
         os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
-
-
-
-
-
-
 
 
 from src.backup.engine import BackupEngine, _decrypt_bytes, _encrypt_bytes

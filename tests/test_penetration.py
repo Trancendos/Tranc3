@@ -195,14 +195,16 @@ class TestSecurityLogging:
             async def execute(self, inputs, context):
                 raise ValueError("pen: forced failure with sensitive=data")
 
-        from src.workflow.nodes.registry import NODE_REGISTRY, _init_registry
         import os
-        old_secret = os.environ.get('SECRET_KEY')
+
+        from src.workflow.nodes.registry import NODE_REGISTRY, _init_registry
+
+        old_secret = os.environ.get("SECRET_KEY")
         _init_registry()
         if old_secret is not None:
-            os.environ['SECRET_KEY'] = old_secret
+            os.environ["SECRET_KEY"] = old_secret
         else:
-            os.environ.pop('SECRET_KEY', None)
+            os.environ.pop("SECRET_KEY", None)
 
         orig_node = NODE_REGISTRY.get(NodeType.TRIGGER)
         NODE_REGISTRY[NodeType.TRIGGER] = RaisingNode
