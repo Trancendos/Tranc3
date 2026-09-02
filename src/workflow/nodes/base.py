@@ -115,6 +115,9 @@ class BaseNode(ABC):
 # single expression must not be able to exhaust the executor's memory.
 _MAX_SEQ_LEN = 1_000_000
 _MAX_INT_BITS = 100_000
+# A literal is bounded by the size of the expression that spells it out, so
+# the result ceilings alone do not stop a caller posting one enormous literal.
+_MAX_EXPR_CHARS = 100_000
 
 
 def _guard_size(value: Any) -> Any:
@@ -168,6 +171,8 @@ _SAFE_BUILTINS: Dict[str, Any] = {
 
 def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
     """Safely evaluates mathematical and logical expressions, supporting basic literals, unary ops, attributes and limited calls."""
+    if len(expr) > _MAX_EXPR_CHARS:
+        raise ValueError("Expression exceeds the maximum allowed length")
     tree = ast.parse(expr, mode="eval")
 
     def _eval(node: ast.AST) -> Any:
@@ -176,15 +181,25 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
         elif isinstance(node, ast.Constant):
             return node.value
         elif isinstance(node, ast.List):
-            return [_eval(elt) for elt in node.elts]
+            return _guard_size([_eval(elt) for elt in node.elts])
         elif isinstance(node, ast.Tuple):
-            return tuple(_eval(elt) for elt in node.elts)
+            return _guard_size(tuple(_eval(elt) for elt in node.elts))
         elif isinstance(node, ast.Dict):
-            return {
-                _eval(k): _eval(v)
-                for k, v in zip(node.keys, node.values, strict=False)
-                if k is not None
-            }
+            # A None key is `**mapping`. Skipping those silently returned an
+            # incomplete dict — "{**data}" evaluated to {} — so a TransformNode
+            # merging inputs produced empty output and reported success. The
+            # entries are merged instead, and a non-mapping operand is refused
+            # rather than dropped.
+            out: Dict[Any, Any] = {}
+            for k, v in zip(node.keys, node.values, strict=False):
+                if k is None:
+                    spread = _eval(v)
+                    if not isinstance(spread, dict):
+                        raise ValueError("Only a mapping can be unpacked with '**'")
+                    out.update(spread)
+                else:
+                    out[_eval(k)] = _eval(v)
+            return _guard_size(out)
         elif isinstance(node, ast.Name):
             if node.id in local_ns:
                 return local_ns[node.id]
@@ -307,7 +322,17 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
                     raise ValueError("Function call is denied")
 
                 args = [_eval(arg) for arg in node.args]
-                kwargs = {kw.arg: _eval(kw.value) for kw in node.keywords if kw.arg is not None}
+                # kw.arg is None for `**kwargs`. Filtering those out called the
+                # function with the arguments silently missing; they are merged.
+                kwargs: Dict[str, Any] = {}
+                for kw in node.keywords:
+                    if kw.arg is None:
+                        spread = _eval(kw.value)
+                        if not isinstance(spread, dict):
+                            raise ValueError("Only a mapping can be unpacked with '**'")
+                        kwargs.update(spread)
+                    else:
+                        kwargs[kw.arg] = _eval(kw.value)
                 return func(*args, **kwargs)
             raise ValueError(f"Unsupported function call: {ast.dump(node)}")
         else:

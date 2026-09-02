@@ -234,3 +234,62 @@ def test_type_constructors_do_not_open_an_escape():
     ):
         with pytest.raises(ValueError):
             _safe_eval(expr, ns)
+
+
+# ── Findings from Sourcery's review of this evaluator ─────────────────────────
+
+
+def test_dict_unpacking_is_merged_not_dropped():
+    """`{**mapping}` used to evaluate to {} — silent data loss, not an error.
+
+    A TransformNode merging its inputs returned an empty dict and reported
+    success, so the workflow carried on with the data gone.
+    """
+    ns = {"data": {"a": 1, "b": 2}, "extra": {"c": 3}}
+    assert _safe_eval("{**data}", ns) == {"a": 1, "b": 2}
+    assert _safe_eval("{**data, 'd': 4}", ns) == {"a": 1, "b": 2, "d": 4}
+    assert _safe_eval("{**data, **extra}", ns) == {"a": 1, "b": 2, "c": 3}
+    # A later key wins, matching Python's own semantics.
+    assert _safe_eval("{**data, 'a': 9}", ns) == {"a": 9, "b": 2}
+
+
+def test_keyword_unpacking_is_merged_not_dropped():
+    """`dict(**values)` used to call the function with the arguments missing."""
+    ns = {"values": {"x": 9, "y": 8}}
+    assert _safe_eval("dict(**values)", ns) == {"x": 9, "y": 8}
+    assert _safe_eval("dict(z=1, **values)", ns) == {"z": 1, "x": 9, "y": 8}
+
+
+def test_unpacking_a_non_mapping_is_refused():
+    ns = {"n": 5, "items": [1, 2]}
+    for expr in ("{**n}", "dict(**n)", "{**items}"):
+        with pytest.raises(ValueError, match="Only a mapping can be unpacked"):
+            _safe_eval(expr, ns)
+
+
+def test_expression_length_is_bounded():
+    """A literal is only as big as the text spelling it out, so the text is capped."""
+    huge_literal = "[" + ",".join(["1"] * 300000) + "]"
+    with pytest.raises(ValueError, match="maximum allowed length"):
+        _safe_eval(huge_literal, {})
+
+
+def test_collection_literals_are_size_guarded(monkeypatch):
+    """The ceiling applies to collections too, not only to repetition.
+
+    The ceiling is lowered here rather than building a million-entry literal:
+    the guard is what's under test, not the machine's memory. Without this the
+    check would be unreachable in a test and could rot unnoticed.
+    """
+    import src.workflow.nodes.base as base
+
+    monkeypatch.setattr(base, "_MAX_SEQ_LEN", 3)
+    for expr in ("[1, 2, 3, 4]", "(1, 2, 3, 4)", "{'a': 1, 'b': 2, 'c': 3, 'd': 4}"):
+        with pytest.raises(ValueError, match="maximum allowed size"):
+            _safe_eval(expr, {})
+    # A merge that overflows the ceiling is caught the same way.
+    ns = {"x": {"a": 1, "b": 2}, "y": {"c": 3, "d": 4}}
+    with pytest.raises(ValueError, match="maximum allowed size"):
+        _safe_eval("{**x, **y}", ns)
+    # And anything within the ceiling still evaluates.
+    assert _safe_eval("[1, 2]", {}) == [1, 2]
