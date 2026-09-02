@@ -178,6 +178,7 @@ def test_format_cannot_traverse_private_attributes():
 
 
 def test_format_map_is_denied_too():
+    """format_map has the same unrestricted traversal as format."""
     with pytest.raises(ValueError, match="unrestricted attribute access"):
         _safe_eval("'{a}'.format_map({'a': 1})", {})
 
@@ -193,11 +194,13 @@ def test_chained_multiplication_cannot_exceed_the_size_ceiling():
 
 
 def test_single_oversized_repetition_is_rejected_before_allocating():
+    """One large repetition is refused without first building the sequence."""
     with pytest.raises(ValueError, match="maximum allowed size"):
         _safe_eval("'a' * 2000000", {})
 
 
 def test_modest_repetition_still_works():
+    """The ceiling does not interfere with ordinary sequence repetition."""
     assert len(_safe_eval("'a' * 100", {})) == 100
 
 
@@ -261,6 +264,7 @@ def test_keyword_unpacking_is_merged_not_dropped():
 
 
 def test_unpacking_a_non_mapping_is_refused():
+    """A non-mapping operand raises rather than being silently skipped."""
     ns = {"n": 5, "items": [1, 2]}
     for expr in ("{**n}", "dict(**n)", "{**items}"):
         with pytest.raises(ValueError, match="Only a mapping can be unpacked"):
@@ -361,6 +365,7 @@ def test_mutating_methods_cannot_change_workflow_state():
 
 
 def test_read_only_collection_methods_still_work():
+    """Denying mutators must not take the read-only collection API with it."""
     ns = {"inputs": {"a": 1, "b": 2}, "rows": [3, 1, 2]}
     assert _safe_eval("inputs.get('a')", ns) == 1
     assert _safe_eval("list(inputs.keys())", ns) == ["a", "b"]

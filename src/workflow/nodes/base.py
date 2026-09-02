@@ -347,6 +347,7 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
         kwargs: Dict[str, Any] = {}
 
         def _bind(name: str, value: Any) -> None:
+            """Bind one keyword argument, refusing a name that is already bound."""
             # Python raises TypeError for "f(z=1, **{'z': 2})" rather than
             # letting one win. A plain dict.update() silently kept the last
             # value, which is a different answer from the one the same
