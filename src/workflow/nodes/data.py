@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from Dimensional.error_handlers import safe_error_detail
 
-from .base import BaseNode, NodeResult, _deep_get
+from .base import BaseNode, NodeResult, _deep_get, safe_eval
 
 
 class TransformNode(BaseNode):
@@ -31,7 +31,7 @@ class TransformNode(BaseNode):
         if expression:
             try:
                 local_ns = {"data": output, "inputs": inputs, "context": context}
-                eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307
+                eval_result = safe_eval(expression, local_ns)
                 output = eval_result if isinstance(eval_result, dict) else {"result": eval_result}
             except Exception as exc:
                 duration_ms = (time.monotonic() - t0) * 1000
