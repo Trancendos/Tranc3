@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import logging
+import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -142,7 +143,35 @@ def _guard_repeat(length: int, count: int) -> None:
 # reaches straight past the dunder-attribute rule below and reads private
 # state off any object in scope. Blocking the names is the only reliable
 # defence: the traversal happens inside CPython, not in the AST we walk.
-_DENIED_METHODS = frozenset({"format", "format_map"})
+# Methods that mutate their receiver. `inputs` and `context` enter the
+# namespace by reference, so "context.clear()" wiped the running workflow's
+# execution_id and workflow_id, and "inputs.pop(k)" removed data before
+# downstream nodes saw it. An expression evaluator has no business changing
+# its operands, so these are refused on any receiver — which also covers
+# nested mutation like inputs['rows'].clear(), where copying the namespace
+# would not.
+_MUTATING_METHODS = frozenset(
+    {
+        "append",
+        "extend",
+        "insert",
+        "remove",
+        "pop",
+        "clear",
+        "sort",
+        "reverse",
+        "add",
+        "discard",
+        "update",
+        "setdefault",
+        "popitem",
+        "difference_update",
+        "intersection_update",
+        "symmetric_difference_update",
+    }
+)
+
+_DENIED_METHODS = frozenset({"format", "format_map"}) | _MUTATING_METHODS
 
 # Builtins an expression may name and call. Name resolution consults this map
 # and the call allowlist is derived from it, so the two cannot drift. Without
@@ -169,174 +198,224 @@ _SAFE_BUILTINS: Dict[str, Any] = {
 }
 
 
+# Operator tables. Keeping these out of the evaluator keeps _eval a dispatch
+# over node types rather than a single function carrying every operator's
+# branch as well.
+_UNARY_OPS: Dict[type, Any] = {
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+    ast.Not: operator.not_,
+    ast.Invert: operator.invert,
+}
+
+_COMPARE_OPS: Dict[type, Any] = {
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+    ast.In: lambda a, b: a in b,
+    ast.NotIn: lambda a, b: a not in b,
+}
+
+
+def _apply_binop(op: ast.operator, left: Any, right: Any) -> Any:
+    """Apply a binary operator, enforcing the size ceilings as it goes."""
+    if isinstance(op, ast.Add):
+        return _guard_size(left + right)
+    if isinstance(op, ast.Sub):
+        return left - right
+    if isinstance(op, ast.Mult):
+        # Bound the *result*, not the operand. Guarding only the right-hand
+        # operand ("repeat count <= 1000") is bypassed by chaining, because
+        # each step's count stays under the limit while the sequence itself
+        # keeps growing: 'a'*1000*1000*100 passes three such checks and
+        # allocates 100 MB.
+        if isinstance(left, (str, bytes, list, tuple)) and isinstance(right, int):
+            _guard_repeat(len(left), right)
+        if isinstance(right, (str, bytes, list, tuple)) and isinstance(left, int):
+            _guard_repeat(len(right), left)
+        return _guard_size(left * right)
+    if isinstance(op, ast.Div):
+        return left / right
+    if isinstance(op, ast.Mod):
+        return left % right
+    if isinstance(op, ast.Pow):
+        if (isinstance(left, (int, float)) and left > 1000) or (
+            isinstance(right, (int, float)) and right > 1000
+        ):
+            raise ValueError("Power operation limit exceeded")
+        return _guard_size(left**right)
+    if isinstance(op, ast.FloorDiv):
+        return left // right
+    raise ValueError(f"Unsupported binary operator: {type(op)}")
+
+
+def _check_callable(func: Any) -> None:
+    """Refuse a callable the evaluator must not invoke."""
+    fname = getattr(func, "__name__", "")
+    if fname in _MUTATING_METHODS:
+        raise ValueError(f"Call to '{fname}' is denied: it mutates its receiver")
+    if fname in _DENIED_METHODS:
+        raise ValueError(
+            f"Call to '{fname}' is denied: it performs its own unrestricted attribute access"
+        )
+    receiver = getattr(func, "__self__", None)
+    if receiver is not None:
+        # A bound method. Allow it only on the ordinary data types a workflow
+        # carries, or on the builtins module.
+        safe_types = (str, dict, list, set, int, float, bool, tuple)
+        if not isinstance(receiver, safe_types) and getattr(receiver, "__name__", "") != "builtins":
+            raise ValueError("Method call on non-standard type is denied")
+    elif func not in set(_SAFE_BUILTINS.values()):
+        raise ValueError("Function call is denied")
+
+
 def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
-    """Safely evaluates mathematical and logical expressions, supporting basic literals, unary ops, attributes and limited calls."""
+    """Evaluate a workflow expression under an allowlist of AST node types.
+
+    Only literals, collections, arithmetic, comparison, boolean logic,
+    subscripting, public attribute access and a fixed set of builtins are
+    permitted. Anything else raises ValueError rather than being evaluated.
+    """
     if len(expr) > _MAX_EXPR_CHARS:
         raise ValueError("Expression exceeds the maximum allowed length")
     tree = ast.parse(expr, mode="eval")
 
+    def _eval_name(node: ast.Name) -> Any:
+        """Resolve a bare name from the caller namespace, then the safe builtins."""
+        if node.id in local_ns:
+            return local_ns[node.id]
+        if node.id == "True":
+            return True
+        if node.id == "False":
+            return False
+        if node.id == "None":
+            return None
+        if node.id in _SAFE_BUILTINS:
+            return _SAFE_BUILTINS[node.id]
+        raise ValueError(f"Unknown variable: {node.id}")
+
+    def _eval_dict(node: ast.Dict) -> Dict[Any, Any]:
+        """Build a dict literal, merging any `**mapping` entries."""
+        # A None key is `**mapping`. Skipping those silently returned an
+        # incomplete dict — "{**data}" evaluated to {} — so a TransformNode
+        # merging inputs produced empty output and reported success. The
+        # entries are merged instead, and a non-mapping operand is refused
+        # rather than dropped.
+        out: Dict[Any, Any] = {}
+        for k, v in zip(node.keys, node.values, strict=False):
+            if k is None:
+                spread = _eval(v)
+                if not isinstance(spread, dict):
+                    raise ValueError("Only a mapping can be unpacked with '**'")
+                out.update(spread)
+            else:
+                out[_eval(k)] = _eval(v)
+        return _guard_size(out)
+
+    def _eval_boolop(node: ast.BoolOp) -> Any:
+        """Evaluate and/or with short-circuiting, returning the deciding operand."""
+        # all()/any() collapse the result to a bool. Python returns the
+        # operand that decided the expression, and workflow transforms lean
+        # on that: "data.get('name') or 'unknown'" is meant to yield the
+        # name or the fallback, and returned True for both instead —
+        # a silently wrong value rather than an error.
+        if not isinstance(node.op, (ast.And, ast.Or)):
+            raise ValueError(f"Unsupported boolean operator: {type(node.op)}")
+        is_and = isinstance(node.op, ast.And)
+        result = _eval(node.values[0])
+        for operand in node.values[1:]:
+            # Short-circuit, so the remaining operands are never evaluated.
+            if is_and and not result:
+                return result
+            if not is_and and result:
+                return result
+            result = _eval(operand)
+        return result
+
+    def _eval_call(node: ast.Call) -> Any:
+        """Invoke a permitted callable, merging any `**kwargs` entries."""
+        func = _eval(node.func)
+        if not callable(func):
+            raise ValueError(f"Unsupported function call: {ast.dump(node)}")
+        _check_callable(func)
+        args = [_eval(arg) for arg in node.args]
+        # kw.arg is None for `**kwargs`. Filtering those out called the
+        # function with the arguments silently missing; they are merged.
+        kwargs: Dict[str, Any] = {}
+        for kw in node.keywords:
+            if kw.arg is None:
+                spread = _eval(kw.value)
+                if not isinstance(spread, dict):
+                    raise ValueError("Only a mapping can be unpacked with '**'")
+                kwargs.update(spread)
+            else:
+                kwargs[kw.arg] = _eval(kw.value)
+        return func(*args, **kwargs)
+
+    def _eval_attribute(node: ast.Attribute) -> Any:
+        """Read a public attribute; private and dunder names are refused."""
+        val = _eval(node.value)
+        # Avoid private/dunder attribute access
+        if node.attr.startswith("_"):
+            raise ValueError(f"Access to private attribute '{node.attr}' is denied")
+        if not hasattr(val, node.attr):
+            raise ValueError(f"Attribute '{node.attr}' not found")
+        return getattr(val, node.attr)
+
+    def _eval_compare(node: ast.Compare) -> Any:
+        """Apply a single comparison operator; chained comparisons are refused."""
+        if len(node.ops) != 1 or len(node.comparators) != 1:
+            raise ValueError("Multiple comparisons not supported")
+        op = node.ops[0]
+        handler = _COMPARE_OPS.get(type(op))
+        if handler is None:
+            raise ValueError(f"Unsupported comparison operator: {type(op)}")
+        return handler(_eval(node.left), _eval(node.comparators[0]))
+
+    def _eval_subscript(node: ast.Subscript) -> Any:
+        """Index into a value, across the Index-node shapes Python has used."""
+        value = _eval(node.value)
+        if isinstance(node.slice, getattr(ast, "Index", type(None))):
+            slice_val = _eval(node.slice.value)  # type: ignore[attr-defined]
+        else:
+            slice_val = _eval(node.slice)
+        return value[slice_val]
+
     def _eval(node: ast.AST) -> Any:
+        """Dispatch one AST node to its handler, refusing any type not listed."""
         if isinstance(node, ast.Expression):
             return _eval(node.body)
-        elif isinstance(node, ast.Constant):
-            return node.value
-        elif isinstance(node, ast.List):
+        if isinstance(node, ast.Constant):
+            return _guard_size(node.value)
+        if isinstance(node, ast.List):
             return _guard_size([_eval(elt) for elt in node.elts])
-        elif isinstance(node, ast.Tuple):
+        if isinstance(node, ast.Tuple):
             return _guard_size(tuple(_eval(elt) for elt in node.elts))
-        elif isinstance(node, ast.Dict):
-            # A None key is `**mapping`. Skipping those silently returned an
-            # incomplete dict — "{**data}" evaluated to {} — so a TransformNode
-            # merging inputs produced empty output and reported success. The
-            # entries are merged instead, and a non-mapping operand is refused
-            # rather than dropped.
-            out: Dict[Any, Any] = {}
-            for k, v in zip(node.keys, node.values, strict=False):
-                if k is None:
-                    spread = _eval(v)
-                    if not isinstance(spread, dict):
-                        raise ValueError("Only a mapping can be unpacked with '**'")
-                    out.update(spread)
-                else:
-                    out[_eval(k)] = _eval(v)
-            return _guard_size(out)
-        elif isinstance(node, ast.Name):
-            if node.id in local_ns:
-                return local_ns[node.id]
-            if node.id == "True":
-                return True
-            if node.id == "False":
-                return False
-            if node.id == "None":
-                return None
-            if node.id in _SAFE_BUILTINS:
-                return _SAFE_BUILTINS[node.id]
-            raise ValueError(f"Unknown variable: {node.id}")
-        elif isinstance(node, ast.UnaryOp):
-            operand = _eval(node.operand)
-            if isinstance(node.op, ast.USub):
-                return -operand
-            elif isinstance(node.op, ast.UAdd):
-                return +operand
-            elif isinstance(node.op, ast.Not):
-                return not operand
-            elif isinstance(node.op, ast.Invert):
-                return ~operand
-            raise ValueError(f"Unsupported unary operator: {type(node.op)}")
-        elif isinstance(node, ast.BinOp):
-            left = _eval(node.left)
-            right = _eval(node.right)
-            if isinstance(node.op, ast.Add):
-                return _guard_size(left + right)
-            elif isinstance(node.op, ast.Sub):
-                return left - right
-            elif isinstance(node.op, ast.Mult):
-                # Bound the *result*, not the operand. Guarding only the
-                # right-hand operand ("repeat count <= 1000") is bypassed by
-                # chaining, because each step's count stays under the limit
-                # while the sequence itself keeps growing: 'a'*1000*1000*100
-                # passes three such checks and allocates 100 MB.
-                if isinstance(left, (str, bytes, list, tuple)) and isinstance(right, int):
-                    _guard_repeat(len(left), right)
-                if isinstance(right, (str, bytes, list, tuple)) and isinstance(left, int):
-                    _guard_repeat(len(right), left)
-                return _guard_size(left * right)
-            elif isinstance(node.op, ast.Div):
-                return left / right
-            elif isinstance(node.op, ast.Mod):
-                return left % right
-            elif isinstance(node.op, ast.Pow):
-                if (isinstance(left, (int, float)) and left > 1000) or (
-                    isinstance(right, (int, float)) and right > 1000
-                ):
-                    raise ValueError("Power operation limit exceeded")
-                return _guard_size(left**right)
-            elif isinstance(node.op, ast.FloorDiv):
-                return left // right
-            raise ValueError(f"Unsupported binary operator: {type(node.op)}")
-        elif isinstance(node, ast.Compare):
-            left = _eval(node.left)
-            if len(node.ops) != 1 or len(node.comparators) != 1:
-                raise ValueError("Multiple comparisons not supported")
-            op = node.ops[0]
-            right = _eval(node.comparators[0])
-            if isinstance(op, ast.Eq):
-                return left == right
-            elif isinstance(op, ast.NotEq):
-                return left != right
-            elif isinstance(op, ast.Lt):
-                return left < right
-            elif isinstance(op, ast.LtE):
-                return left <= right
-            elif isinstance(op, ast.Gt):
-                return left > right
-            elif isinstance(op, ast.GtE):
-                return left >= right
-            elif isinstance(op, ast.In):
-                return left in right
-            elif isinstance(op, ast.NotIn):
-                return left not in right
-            raise ValueError(f"Unsupported comparison operator: {type(op)}")
-        elif isinstance(node, ast.BoolOp):
-            if isinstance(node.op, ast.And):
-                return all(_eval(v) for v in node.values)
-            elif isinstance(node.op, ast.Or):
-                return any(_eval(v) for v in node.values)
-            raise ValueError(f"Unsupported boolean operator: {type(node.op)}")
-        elif isinstance(node, ast.Subscript):
-            value = _eval(node.value)
-            if isinstance(node.slice, getattr(ast, "Index", type(None))):
-                slice_val = _eval(node.slice.value)  # type: ignore
-            else:
-                slice_val = _eval(node.slice)
-            return value[slice_val]
-        elif isinstance(node, ast.Attribute):
-            val = _eval(node.value)
-            # Avoid private/dunder attribute access
-            if node.attr.startswith("_"):
-                raise ValueError(f"Access to private attribute '{node.attr}' is denied")
-            if not hasattr(val, node.attr):
-                raise ValueError(f"Attribute '{node.attr}' not found")
-            return getattr(val, node.attr)
-        elif isinstance(node, ast.Call):
-            func = _eval(node.func)
-            # Protect against built-in dangerous functions if they somehow slip through
-            # Only allow calling methods of standard objects or specific whitelisted functions.
-            # E.g. strings, dicts, ints, etc. We can check if it's a built-in method or safe callable.
-            if callable(func):
-                if getattr(func, "__name__", "") in _DENIED_METHODS:
-                    raise ValueError(
-                        f"Call to '{func.__name__}' is denied: it performs its own "
-                        "unrestricted attribute access"
-                    )
-                # Extra safety: limit calls to specific types
-                safe_types = (str, dict, list, set, int, float, bool, tuple)
-                if getattr(func, "__self__", None) is not None:
-                    # Allow built-in module functions (like len which has __self__ = module)
-                    if (
-                        not isinstance(func.__self__, safe_types)
-                        and getattr(func.__self__, "__name__", "") != "builtins"
-                    ):
-                        raise ValueError("Method call on non-standard type is denied")
-                elif func not in set(_SAFE_BUILTINS.values()):
-                    raise ValueError("Function call is denied")
-
-                args = [_eval(arg) for arg in node.args]
-                # kw.arg is None for `**kwargs`. Filtering those out called the
-                # function with the arguments silently missing; they are merged.
-                kwargs: Dict[str, Any] = {}
-                for kw in node.keywords:
-                    if kw.arg is None:
-                        spread = _eval(kw.value)
-                        if not isinstance(spread, dict):
-                            raise ValueError("Only a mapping can be unpacked with '**'")
-                        kwargs.update(spread)
-                    else:
-                        kwargs[kw.arg] = _eval(kw.value)
-                return func(*args, **kwargs)
-            raise ValueError(f"Unsupported function call: {ast.dump(node)}")
-        else:
-            raise ValueError(f"Unsupported node type: {type(node)}")
+        if isinstance(node, ast.Dict):
+            return _eval_dict(node)
+        if isinstance(node, ast.Name):
+            return _eval_name(node)
+        if isinstance(node, ast.UnaryOp):
+            handler = _UNARY_OPS.get(type(node.op))
+            if handler is None:
+                raise ValueError(f"Unsupported unary operator: {type(node.op)}")
+            return handler(_eval(node.operand))
+        if isinstance(node, ast.BinOp):
+            return _apply_binop(node.op, _eval(node.left), _eval(node.right))
+        if isinstance(node, ast.Compare):
+            return _eval_compare(node)
+        if isinstance(node, ast.BoolOp):
+            return _eval_boolop(node)
+        if isinstance(node, ast.Subscript):
+            return _eval_subscript(node)
+        if isinstance(node, ast.Attribute):
+            return _eval_attribute(node)
+        if isinstance(node, ast.Call):
+            return _eval_call(node)
+        raise ValueError(f"Unsupported node type: {type(node)}")
 
     return _eval(tree)
 

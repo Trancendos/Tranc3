@@ -293,3 +293,78 @@ def test_collection_literals_are_size_guarded(monkeypatch):
         _safe_eval("{**x, **y}", ns)
     # And anything within the ceiling still evaluates.
     assert _safe_eval("[1, 2]", {}) == [1, 2]
+
+
+# ── Findings from CodeRabbit's review of this evaluator ───────────────────────
+
+
+def test_boolean_operators_return_the_operand_not_a_bool():
+    """`all()`/`any()` collapsed and/or to True or False.
+
+    Python returns the operand that decided the expression, and workflow
+    transforms depend on it: "x or default" is the ordinary way to supply a
+    fallback, and it evaluated to True whichever side won — a silently wrong
+    value that a TransformNode passed downstream as data.
+    """
+    ns = {"data": {"name": "bob"}, "empty": {}, "n": 0, "items": [1, 2]}
+    assert _safe_eval("data.get('name') or 'unknown'", ns) == "bob"
+    assert _safe_eval("empty.get('name') or 'unknown'", ns) == "unknown"
+    assert _safe_eval("data.get('name') and 'yes'", ns) == "yes"
+    assert _safe_eval("n or 42", ns) == 42
+    assert _safe_eval("n and 42", ns) == 0
+    assert _safe_eval("1 and 2 and 3", ns) == 3
+    assert _safe_eval("0 or '' or 'last'", ns) == "last"
+    # Still usable as a condition, which is what ConditionNode does with it.
+    assert bool(_safe_eval("items and 'has'", ns)) is True
+
+
+def test_boolean_operators_short_circuit():
+    """The operand after a decided result is never evaluated.
+
+    `missing` is not in the namespace, so evaluating it would raise. That it
+    does not proves the right-hand side was skipped.
+    """
+    # The operands are chosen so bool-coercion cannot masquerade as a pass:
+    # all()/any() would return False/True here, and "" != False, "keep" != True.
+    ns = {"truthy": "keep", "falsy": ""}
+    assert _safe_eval("falsy and missing", ns) == ""
+    assert _safe_eval("truthy or missing", ns) == "keep"
+    with pytest.raises(ValueError, match="Unknown variable: missing"):
+        _safe_eval("truthy and missing", ns)
+
+
+def test_mutating_methods_cannot_change_workflow_state():
+    """`inputs` and `context` enter the namespace by reference.
+
+    An expression could call context.clear(), wiping execution_id and
+    workflow_id from a running workflow, or inputs.pop(k) to remove data
+    before downstream nodes saw it — reachable from an unauthenticated
+    POST /grid/workflows.
+    """
+    context = {"execution_id": "abc", "workflow_id": "wf1"}
+    inputs = {"a": 1, "b": 2, "rows": [1, 2]}
+    ns = {"inputs": inputs, "context": context, **inputs}
+    for expr in (
+        "context.clear()",
+        "inputs.pop('a')",
+        "inputs.update({'z': 9})",
+        "inputs.setdefault('q', 1)",
+        "rows.append(3)",
+        "rows.sort()",
+        # Nested, which copying the namespace would not have covered.
+        "inputs['rows'].clear()",
+    ):
+        with pytest.raises(ValueError, match="mutates its receiver"):
+            _safe_eval(expr, ns)
+    assert context == {"execution_id": "abc", "workflow_id": "wf1"}
+    assert inputs == {"a": 1, "b": 2, "rows": [1, 2]}
+
+
+def test_read_only_collection_methods_still_work():
+    ns = {"inputs": {"a": 1, "b": 2}, "rows": [3, 1, 2]}
+    assert _safe_eval("inputs.get('a')", ns) == 1
+    assert _safe_eval("list(inputs.keys())", ns) == ["a", "b"]
+    assert _safe_eval("sorted(rows)", ns) == [1, 2, 3]
+    assert _safe_eval("len(rows)", ns) == 3
+    assert _safe_eval("rows.count(1)", ns) == 1
+    assert _safe_eval("rows.index(1)", ns) == 1
