@@ -439,3 +439,20 @@ def test_non_dict_mappings_are_deliberately_refused_for_unpacking():
         _safe_eval("{**m}", {"m": CustomMapping()})
     with pytest.raises(ValueError, match="Only a mapping can be unpacked"):
         _safe_eval("dict(**m)", {"m": CustomMapping()})
+
+
+def test_calling_a_non_callable_is_refused():
+    """`x()` where x is data reaches the call path with nothing to call."""
+    with pytest.raises(ValueError, match="Unsupported function call"):
+        _safe_eval("x()", {"x": 1})
+
+
+def test_literal_keywords_still_evaluate():
+    """True/False/None parse as constants, not names — pinned after removing
+    the unreachable ast.Name branch that used to handle them."""
+    assert _safe_eval("True", {}) is True
+    assert _safe_eval("False", {}) is False
+    assert _safe_eval("None", {}) is None
+    assert _safe_eval("True and 'yes'", {}) == "yes"
+    # A namespace entry never shadows them, because they are not names.
+    assert _safe_eval("True", {"True": "shadowed"}) is True

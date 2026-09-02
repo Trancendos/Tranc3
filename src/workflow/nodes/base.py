@@ -285,14 +285,12 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
 
     def _eval_name(node: ast.Name) -> Any:
         """Resolve a bare name from the caller namespace, then the safe builtins."""
+        # No True/False/None handling here on purpose: since Python 3.8 those
+        # parse as ast.Constant, never ast.Name, so the branches that used to
+        # sit here could not run. The repo requires >=3.11 (pyproject), so
+        # there is no version left where they would.
         if node.id in local_ns:
             return local_ns[node.id]
-        if node.id == "True":
-            return True
-        if node.id == "False":
-            return False
-        if node.id == "None":
-            return None
         if node.id in _SAFE_BUILTINS:
             return _SAFE_BUILTINS[node.id]
         raise ValueError(f"Unknown variable: {node.id}")
@@ -391,13 +389,11 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
         return handler(_eval(node.left), _eval(node.comparators[0]))
 
     def _eval_subscript(node: ast.Subscript) -> Any:
-        """Index into a value, across the Index-node shapes Python has used."""
-        value = _eval(node.value)
-        if isinstance(node.slice, getattr(ast, "Index", type(None))):
-            slice_val = _eval(node.slice.value)  # type: ignore[attr-defined]
-        else:
-            slice_val = _eval(node.slice)
-        return value[slice_val]
+        """Index into a value."""
+        # ast.Index still exists as a deprecated alias but the parser has not
+        # produced it since 3.9, so the compatibility branch that used to be
+        # here was unreachable on every Python this repo supports.
+        return _eval(node.value)[_eval(node.slice)]
 
     def _eval(node: ast.AST) -> Any:
         """Dispatch one AST node to its handler, refusing any type not listed."""
