@@ -186,3 +186,19 @@ Reviewed quarterly alongside `.trivyignore`, and whenever
 `scripts/security_score.py` or the pre-deploy quality gate reports a new
 medium-or-above finding. Any entry past its **Next review** date should be
 treated as expired rather than still-accepted.
+
+### SEC-006 — nltk ReDoS vulnerability
+
+| Field | Value |
+|---|---|
+| **Disposition** | **ACCEPT** |
+| **ID** | PYSEC-2026-3740 (CVE-2026-81726) |
+| **Scanner** | pip-audit |
+| **Component** | `nltk==3.10.3` — transitive |
+| **Blocked-by** | Version `3.10.4` is not available in our environments |
+| **Recorded** | 2026-09-02 |
+| **Owner** | The Guardian (Sentinel) |
+| **Next review** | 2026-12-02 |
+| **Re-evaluate** | On next requirements bump |
+
+NLTK version 3.10.3 has a known ReDoS vulnerability. While a fix exists (3.10.4+), it cannot be currently resolved by `pip` in our CI environment constraints. The risk is accepted because `nltk` is only used locally via `query_expansion.py` and not exposed to arbitrary external regex compilation directly. Will upgrade once the package is resolvable.
