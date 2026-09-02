@@ -345,15 +345,29 @@ def _safe_eval(expr: str, local_ns: Dict[str, Any]) -> Any:
         # kw.arg is None for `**kwargs`. Filtering those out called the
         # function with the arguments silently missing; they are merged.
         kwargs: Dict[str, Any] = {}
+
+        def _bind(name: str, value: Any) -> None:
+            # Python raises TypeError for "f(z=1, **{'z': 2})" rather than
+            # letting one win. A plain dict.update() silently kept the last
+            # value, which is a different answer from the one the same
+            # expression gives outside the evaluator.
+            if name in kwargs:
+                raise ValueError(f"Got multiple values for keyword argument '{name}'")
+            kwargs[name] = value
+
         for kw in node.keywords:
             if kw.arg is None:
                 spread = _eval(kw.value)
                 if not isinstance(spread, dict):
                     raise ValueError("Only a mapping can be unpacked with '**'")
-                kwargs.update(spread)
+                for key, value in spread.items():
+                    _bind(key, value)
             else:
-                kwargs[kw.arg] = _eval(kw.value)
-        return func(*args, **kwargs)
+                _bind(kw.arg, _eval(kw.value))
+        # A permitted builtin can still return more than the ceiling allows —
+        # list(s) over a long string, or dict(**big) — so the result is bounded
+        # like every other value the evaluator produces.
+        return _guard_size(func(*args, **kwargs))
 
     def _eval_attribute(node: ast.Attribute) -> Any:
         """Read a public attribute; private and dunder names are refused."""

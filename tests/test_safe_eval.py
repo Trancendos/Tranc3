@@ -368,3 +368,69 @@ def test_read_only_collection_methods_still_work():
     assert _safe_eval("len(rows)", ns) == 3
     assert _safe_eval("rows.count(1)", ns) == 1
     assert _safe_eval("rows.index(1)", ns) == 1
+
+
+# ── Findings from cubic's review of this evaluator ───────────────────────────
+
+
+def test_duplicate_keyword_across_explicit_and_unpacked_is_refused():
+    """Python raises for `f(z=1, **{'z': 2})`; a plain update() silently kept one.
+
+    The evaluator was giving a different answer from the same expression
+    outside it — the caller could not tell which value the function received.
+    """
+    with pytest.raises(ValueError, match="multiple values for keyword argument 'z'"):
+        _safe_eval("dict(z=1, **values)", {"values": {"z": 2}})
+    # Collisions between two unpacked mappings count too.
+    with pytest.raises(ValueError, match="multiple values for keyword argument 'k'"):
+        _safe_eval("dict(**a, **b)", {"a": {"k": 1}, "b": {"k": 2}})
+    # Non-colliding names are unaffected.
+    assert _safe_eval("dict(z=1, **values)", {"values": {"y": 2}}) == {"z": 1, "y": 2}
+
+
+def test_call_results_are_size_guarded(monkeypatch):
+    """A permitted builtin could return more than the ceiling allows.
+
+    Namespace values are not bounded by _MAX_EXPR_CHARS — they arrive in the
+    request body — so `list(s)` over a long input string built an unbounded
+    list even though every other path was guarded.
+    """
+    import src.workflow.nodes.base as base
+
+    monkeypatch.setattr(base, "_MAX_SEQ_LEN", 10)
+    for expr, ns in (
+        ("list(s)", {"s": "a" * 50}),
+        ("sorted(xs)", {"xs": list(range(50))}),
+        ("dict(**big)", {"big": {str(i): i for i in range(50)}}),
+    ):
+        with pytest.raises(ValueError, match="maximum allowed size"):
+            _safe_eval(expr, ns)
+    # Within the ceiling, calls behave normally.
+    assert _safe_eval("list(s)", {"s": "abc"}) == ["a", "b", "c"]
+
+
+def test_non_dict_mappings_are_deliberately_refused_for_unpacking():
+    """Widening this to collections.abc.Mapping would run the operand's own code.
+
+    dict.update() on a non-dict mapping calls that object's keys() and
+    __getitem__, so accepting arbitrary Mapping implementations would hand
+    execution back to the operand — the opposite of what this evaluator is
+    for. Workflow namespaces are built from JSON-decoded input, so every real
+    mapping reaching here is already a plain dict.
+    """
+    import collections.abc
+
+    class CustomMapping(collections.abc.Mapping):
+        def __getitem__(self, key):  # pragma: no cover - must never be called
+            raise AssertionError("operand code must not run during unpacking")
+
+        def __iter__(self):  # pragma: no cover - must never be called
+            raise AssertionError("operand code must not run during unpacking")
+
+        def __len__(self):
+            return 0
+
+    with pytest.raises(ValueError, match="Only a mapping can be unpacked"):
+        _safe_eval("{**m}", {"m": CustomMapping()})
+    with pytest.raises(ValueError, match="Only a mapping can be unpacked"):
+        _safe_eval("dict(**m)", {"m": CustomMapping()})
