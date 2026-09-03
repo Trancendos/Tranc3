@@ -508,7 +508,7 @@ def main() -> int:
             ok, note = calibrate(guard)
         except CalibrationError as exc:
             # Not "the guard was detected" — the run never reached a verdict.
-            ok, note = False, str(exc).splitlines()[0]
+            ok, note = False, str(exc)
         if ok:
             print(f"OK   {guard.id:28} {note}")
         else:
