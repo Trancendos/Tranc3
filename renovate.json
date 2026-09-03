@@ -8,9 +8,16 @@
     "group:monorepos",
     "workarounds:all"
   ],
-  "labels": ["dependencies", "automated"],
-  "reviewers": ["Trancendos"],
-  "assignees": ["Trancendos"],
+  "labels": [
+    "dependencies",
+    "automated"
+  ],
+  "reviewers": [
+    "Trancendos"
+  ],
+  "assignees": [
+    "Trancendos"
+  ],
   "baseBranchPatterns": [
     "main"
   ],
@@ -21,56 +28,78 @@
   "automerge": false,
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security", "urgent"],
+    "labels": [
+      "security",
+      "urgent"
+    ],
     "automerge": true,
     "automergeType": "pr"
   },
   "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
-      "matchManagers": ["pip_requirements", "poetry", "pep621"],
-      "matchUpdateTypes": ["patch"],
+      "matchManagers": [
+        "pip_requirements",
+        "poetry",
+        "pep621"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "groupName": "Python patch updates",
       "automerge": true
     },
     {
-      "matchManagers": ["pip_requirements", "poetry", "pep621"],
-      "matchUpdateTypes": ["minor"],
+      "matchManagers": [
+        "pip_requirements",
+        "poetry",
+        "pep621"
+      ],
+      "matchUpdateTypes": [
+        "minor"
+      ],
       "groupName": "Python minor updates",
       "automerge": false
     },
     {
-      "matchManagers": ["dockerfile"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "Docker base image updates",
       "automerge": true
     },
     {
-      "matchManagers": ["docker-compose"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "Docker Compose service updates",
       "automerge": false
     },
     {
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["patch"],
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "groupName": "Node.js patch updates",
       "automerge": true
     },
     {
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major",
+        "minor"
+      ],
       "enabled": false,
-      "description": "Block major FastAPI/Uvicorn/Pydantic upgrades — require manual review",
-      "matchPackageNames": [
-        "/^fastapi$/",
-        "/^uvicorn$/",
-        "/^pydantic$/"
-      ]
-    },
-    {
-      "matchUpdateTypes": ["major", "minor"],
-      "enabled": false,
-      "description": "Block ML library upgrades — require manual compatibility testing",
+      "description": "Block ML library upgrades \u2014 require manual compatibility testing",
       "matchPackageNames": [
         "/^torch$/",
         "/^transformers$/",
@@ -78,18 +107,28 @@
       ]
     },
     {
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "enabled": false,
-      "description": "Block database major version upgrades — require migration planning",
+      "description": "Block database major version upgrades \u2014 require migration planning",
       "matchPackageNames": [
         "/^postgres$/",
         "/^clickhouse$/"
       ]
     },
     {
-      "matchManagers": ["terraform", "opentofu"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "terraform",
+        "opentofu"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "OpenTofu provider updates",
       "automerge": false
     },
@@ -97,7 +136,10 @@
       "groupName": "AI frameworks (LangChain / LlamaIndex / Haystack / DSPy)",
       "minimumReleaseAge": "7 days",
       "automerge": false,
-      "labels": ["dependencies", "ai-framework"],
+      "labels": [
+        "dependencies",
+        "ai-framework"
+      ],
       "matchPackageNames": [
         "/^langchain/",
         "/^llama-index/",
@@ -109,19 +151,42 @@
       ]
     },
     {
-      "matchPackageNames": ["fastapi", "uvicorn", "pydantic", "httpx", "starlette"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "FastAPI stack",
+      "matchPackageNames": [
+        "httpx"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "httpx",
       "minimumReleaseAge": "3 days",
-      "automerge": true
+      "automerge": true,
+      "description": "Only httpx remains here. fastapi/starlette/pydantic/uvicorn/redis are governed centrally by scripts/align_framework_pins.py and are disabled below; automerging them here would have pushed a 63-file framework pin change to main unreviewed."
     },
     {
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
       "groupName": "GitHub Actions",
       "automerge": true,
       "minimumReleaseAge": "1 day",
       "pinDigests": true
+    },
+    {
+      "description": "Centrally governed pins \u2014 do not propose. These five are restated in 63 requirements files, so one version decision arrives as 63 identical line changes. scripts/align_framework_pins.py applies them in one reviewed pass and its CANONICAL dict is the single place the decision is made; any PR that moves some files without that script fails the Framework pin check in ci.yml and is unmergeable by construction. To bump one, edit CANONICAL and run with --write. Kept last so no later rule can re-enable it.",
+      "matchPackageNames": [
+        "fastapi",
+        "starlette",
+        "pydantic",
+        "uvicorn",
+        "redis"
+      ],
+      "enabled": false
     }
   ],
   "ignorePaths": [
@@ -144,6 +209,8 @@
       "description": "Parse inline Renovate annotations in CI workflows"
     }
   ],
-  "schedule": ["after 2am and before 6am on monday"],
+  "schedule": [
+    "after 2am and before 6am on monday"
+  ],
   "timezone": "Europe/London"
 }

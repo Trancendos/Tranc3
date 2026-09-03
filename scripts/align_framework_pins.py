@@ -79,7 +79,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CANONICAL: dict[str, str] = {
     "fastapi": "0.141.1",
     "starlette": "1.6.0",
-    "pydantic": "2.13.4",
+    "pydantic": "2.13.5",
     "uvicorn": "0.52.4",
     "redis": "8.1.0",
 }

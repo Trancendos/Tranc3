@@ -36,6 +36,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # The five framework pins governed centrally by
+      # scripts/align_framework_pins.py are held here. They are restated in 63
+      # requirements files, so a single version decision arrives as 63 identical
+      # line changes; that script applies all of them in one reviewed pass, and
+      # its CANONICAL dict is the one place the decision is made.
+      #
+      # Without this, every bump of one of these packages produces a PR that
+      # CANNOT pass CI: the `Framework pin check` in ci.yml fails any tree whose
+      # pins disagree with CANONICAL, so a bot PR that moves some files and not
+      # the script is unmergeable by construction. Three such PRs (#1139, #1140,
+      # #1141) were open on 2026-09-03 for exactly this reason, and Renovate's
+      # #1054 proposed the same pydantic bump across all 63 files with automerge
+      # enabled — the pin gate was the only thing holding it.
+      #
+      # To bump one of these: edit CANONICAL in that script and run it with
+      # --write. Not here.
+      - dependency-name: "fastapi"
+      - dependency-name: "starlette"
+      - dependency-name: "pydantic"
+      - dependency-name: "uvicorn"
+      - dependency-name: "redis"
 
   - package-ecosystem: "pip"
     directory: "/tranc3-bots"
@@ -54,6 +76,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # The five framework pins governed centrally by
+      # scripts/align_framework_pins.py are held here. They are restated in 63
+      # requirements files, so a single version decision arrives as 63 identical
+      # line changes; that script applies all of them in one reviewed pass, and
+      # its CANONICAL dict is the one place the decision is made.
+      #
+      # Without this, every bump of one of these packages produces a PR that
+      # CANNOT pass CI: the `Framework pin check` in ci.yml fails any tree whose
+      # pins disagree with CANONICAL, so a bot PR that moves some files and not
+      # the script is unmergeable by construction. Three such PRs (#1139, #1140,
+      # #1141) were open on 2026-09-03 for exactly this reason, and Renovate's
+      # #1054 proposed the same pydantic bump across all 63 files with automerge
+      # enabled — the pin gate was the only thing holding it.
+      #
+      # To bump one of these: edit CANONICAL in that script and run it with
+      # --write. Not here.
+      - dependency-name: "fastapi"
+      - dependency-name: "starlette"
+      - dependency-name: "pydantic"
+      - dependency-name: "uvicorn"
+      - dependency-name: "redis"
 
   - package-ecosystem: "pip"
     directory: "/workers"
@@ -72,6 +116,28 @@ updates:
           - "patch"
     labels:
       - "dependencies"
+    ignore:
+      # The five framework pins governed centrally by
+      # scripts/align_framework_pins.py are held here. They are restated in 63
+      # requirements files, so a single version decision arrives as 63 identical
+      # line changes; that script applies all of them in one reviewed pass, and
+      # its CANONICAL dict is the one place the decision is made.
+      #
+      # Without this, every bump of one of these packages produces a PR that
+      # CANNOT pass CI: the `Framework pin check` in ci.yml fails any tree whose
+      # pins disagree with CANONICAL, so a bot PR that moves some files and not
+      # the script is unmergeable by construction. Three such PRs (#1139, #1140,
+      # #1141) were open on 2026-09-03 for exactly this reason, and Renovate's
+      # #1054 proposed the same pydantic bump across all 63 files with automerge
+      # enabled — the pin gate was the only thing holding it.
+      #
+      # To bump one of these: edit CANONICAL in that script and run it with
+      # --write. Not here.
+      - dependency-name: "fastapi"
+      - dependency-name: "starlette"
+      - dependency-name: "pydantic"
+      - dependency-name: "uvicorn"
+      - dependency-name: "redis"
 
   - package-ecosystem: "npm"
     directory: "/"

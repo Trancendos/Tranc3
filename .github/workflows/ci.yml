@@ -105,6 +105,15 @@ jobs:
       - name: Framework pin alignment
         run: python scripts/align_framework_pins.py --check
 
+      # The pin check above only sees the tree. It cannot see that both
+      # dependency bots were configured to propose the very packages that
+      # script governs, which made those PRs unmergeable by construction
+      # (#1139/#1140/#1141) and set automerge on a 63-file framework change
+      # (#1054). Both configs are fixed; this keeps them fixed, including the
+      # ordering rule -- a Renovate block undone by a rule placed below it.
+      - name: Canonical pin governance
+        run: python scripts/check_canonical_pin_governance.py
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every
