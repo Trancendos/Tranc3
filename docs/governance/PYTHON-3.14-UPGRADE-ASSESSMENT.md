@@ -85,9 +85,10 @@ digest per Dockerfile, not a mechanical tag edit.
 ### CI `python-version` matrix entries
 
 ```
-.github/workflows/*.yml     : 8 files hardcode "3.11" (test.yml, ci.yml, codecov.yml,
+.github/workflows/*.yml     : 7 files hardcode "3.11" (test.yml, ci.yml,
                                production-gate.yml, publish-matrix-site.yml, rust.yml,
                                submodule-pins.yml, and python.yml's lint/install-check jobs)
+                               -- was 8 until codecov.yml was retired on 2026-09-03
 .github/workflows/python.yml: test job matrix = ['3.10','3.11','3.12'], PLUS a '3.14' entry
                                with experimental:true / continue-on-error:true (already landed,
                                see §3) — scoped to aeonmind/python/** only, not the main backend

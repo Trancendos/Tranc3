@@ -244,11 +244,38 @@ jobs:
         run: |
           pip install -r requirements-test.txt || true
           pip install -r requirements.txt || true
-          pip install pytest pytest-asyncio || true
+          pip install pytest pytest-asyncio pytest-cov || true
 
-      - name: Run tests
+      # Coverage is produced here rather than in a second workflow. `codecov.yml`
+      # ran the whole suite again, on every PR and every push to main, purely to
+      # attach --cov flags and upload the result -- a second full-suite run whose
+      # only difference was the flags, and which was suppressed with `|| true`
+      # just like this one, so it gated nothing either. Measuring coverage over
+      # the run that already happens costs nothing extra.
+      #
+      # This selection is narrower than codecov.yml's was: `integration` is
+      # documented in pyproject.toml as "requires live external services", which
+      # CI does not have, so those tests could only ever error. They contributed
+      # no coverage there and their absence costs none here.
+      #
+      # Also strictly better than codecov.yml's run: that job checked out
+      # WITHOUT `submodules: recursive`, so every test reading real
+      # compliance/magna-carta content saw an empty gitlink and silently took a
+      # "no suites"/404 path. This job checks them out.
+      - name: Run tests with coverage
         run: |
           python -m pytest tests/ -x -q --tb=short \
             -m "not integration and not chaos" \
             --ignore=tests/test_full_suite.py \
+            --cov=src --cov=workers \
+            --cov-report=xml --cov-report=term-missing \
             || true  # Don't block PRs on test failures yet
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: tranc3-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

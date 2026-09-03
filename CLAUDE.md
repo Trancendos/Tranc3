@@ -467,10 +467,19 @@ pipelines — but it is dormant, so today GitHub Actions is the only CI that act
 an act-runner on the Citadel host that the cloud-only phase defers standing back up. None of them
 execute. Describe them as the target state, not as a system currently gating anything.
 
-`.github/workflows/` has **20** files (this said 12 until 2026-08-28; it had not been recounted
-since eight more were added). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint and
-Service Topology checks, `codeql.yml`, `test.yml`, `trivy.yml`, `codecov.yml`, `python.yml`,
-`rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`). Two are
+`.github/workflows/` has **19** files (this said 12 until 2026-08-28 and 20 until 2026-09-03,
+when `codecov.yml` was retired). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint,
+Service Topology and Pytest jobs, `codeql.yml`, `trivy.yml`, `python.yml`, `rust.yml`, `go.yml`,
+`production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`).
+
+**`codecov.yml` was retired on 2026-09-03**, not dropped: coverage is now produced by `ci.yml`'s
+Pytest job, which already ran the same suite. The retired workflow existed only to run that suite
+a second time with `--cov` flags attached, on every PR and every push to `main`, and it was
+suppressed with `|| true` exactly as `ci.yml`'s run is — so it gated nothing either way. Its
+checkout also omitted `submodules: recursive`, so tests reading real `compliance/magna-carta`
+content silently took a "no suites"/404 path; the job coverage now runs in does not. `test.yml`'s
+`Ruff Lint + Format` job went at the same time: it ran the identical ruff command at the identical
+pin as `ci.yml`'s `lint`, and both fire on a push to `main`. Two are
 deliberate, narrow exceptions for GitHub-native features with no Forgejo equivalent —
 `publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
 `docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
