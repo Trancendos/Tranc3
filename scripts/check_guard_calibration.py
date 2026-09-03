@@ -87,6 +87,13 @@ class Guard:
 _EVAL = "src/workflow/nodes/base.py"
 _EVAL_TESTS = "tests/test_safe_eval.py"
 
+# The evaluator is not the only place this defect class has appeared. Each of
+# the three below is a control that shipped inert, was found, and was fixed --
+# and each is now held in place by a mutation that proves the fix still bites.
+_WIRING = "src/event_bus/wiring.py"
+_TRANQUILLITY = "src/tranquility/wellbeing.py"
+_MC_MIDDLEWARE = "src/compliance/middleware.py"
+
 GUARDS: tuple[Guard, ...] = (
     Guard(
         id="format-traversal",
@@ -270,6 +277,61 @@ GUARDS: tuple[Guard, ...] = (
             "                raise ValueError(f\"Got multiple values for keyword argument '{name}'\")\n"
         ),
         tests=(f"{_EVAL_TESTS}::test_duplicate_keyword_across_explicit_and_unpacked_is_refused",),
+    ),
+    Guard(
+        id="sentinel-security-routing",
+        path=_WIRING,
+        why=(
+            "`security.*` fell through to the 'platform' default. That is a "
+            "VALID channel, so nothing rejected it and nothing logged it -- "
+            "threat detections and CVE ingestions were delivered, just not to "
+            "anyone subscribed to security. Validity is not correctness."
+        ),
+        removes='        or event_type.startswith("security.")\n',
+        # NOT test_sentinel_forward_posts_to_correct_url: that forwards an
+        # `ai.*` event, so it never reaches the security branch. It only looked
+        # like coverage because it was failing at baseline for an unrelated
+        # reason, and this tool's baseline check is what exposed that.
+        tests=(
+            "tests/test_event_bus_wiring.py::test_sentinel_channel_mapping"
+            "[security.threat.detected-security]",
+        ),
+    ),
+    Guard(
+        id="tranquility-safeguarding-escalation",
+        path=_TRANQUILLITY,
+        why=(
+            "a safeguarding assessment was compared against a synthetic string "
+            "that could never match, and the result discarded inside a bare "
+            "except -- a crisis disclosure recorded a mood and reached nobody."
+        ),
+        removes=(
+            "        if not assessment.escalate:\n            return\n",
+            "        return\n",
+        ),
+        tests=(
+            "tests/test_safeguarding.py::TestACrisisReachesAPerson"
+            "::test_crisis_text_in_the_notes_raises_an_incident",
+            "tests/test_safeguarding.py::TestACrisisReachesAPerson"
+            "::test_self_harm_text_raises_an_incident",
+        ),
+    ),
+    Guard(
+        id="compliance-fail-closed",
+        path=_MC_MIDDLEWARE,
+        why=(
+            "with fail_closed_on_violation set, the middleware logged the "
+            "high-severity violation and passed the request through anyway. "
+            "The policy was configured, reported, and did not block."
+        ),
+        removes=(
+            '        if fail_closed and any(v.get("severity") == "high" for v in violations):\n',
+            '        if False and any(v.get("severity") == "high" for v in violations):\n',
+        ),
+        tests=(
+            "tests/test_magna_carta_compliance.py::TestMagnaCartaMiddleware"
+            "::test_fail_closed_blocks_high_severity_violation",
+        ),
     ),
 )
 
