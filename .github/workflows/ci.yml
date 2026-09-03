@@ -114,6 +114,16 @@ jobs:
       - name: Canonical pin governance
         run: python scripts/check_canonical_pin_governance.py
 
+      # production-gate.yml's own comment claims the 0.15.8 pin means "the gate
+      # and the lint checks cannot disagree about what passes". True across the
+      # workflows; false across the full lint surface, because
+      # .pre-commit-config.yaml pinned ruff v0.16.4 -- a second formatter running
+      # on every commit and as a PR status. 0.16.x formats Python inside Markdown
+      # fences and 0.15.8 does not, a ten-file difference here. Latent only
+      # because the ruff hooks are typed to Python, which is not a guarantee.
+      - name: Ruff pin alignment
+        run: python scripts/check_ruff_pin_alignment.py
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every
