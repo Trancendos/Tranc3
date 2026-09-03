@@ -124,6 +124,18 @@ jobs:
       - name: Ruff pin alignment
         run: python scripts/check_ruff_pin_alignment.py
 
+      # conftest.py guards four shared auth env vars, and that guard works -- but
+      # it is module-scoped, so it can only report which module FINISHED with a
+      # value wrong, not which one set it. When the write is at import time, the
+      # module it blames is chosen by collection order. On 2026-09-03 it blamed
+      # tests/core/test_dependencies.py for a write in tests/test_backup_service.py,
+      # and because the Pytest job then ran with `-x`, that single teardown error
+      # stopped the run after four tests while `|| true` reported the job green.
+      # tests/test_encrypted_sqlite.py had the same bug, was fixed, and the sibling
+      # was missed -- which is the argument for a check rather than a comment.
+      - name: Test env isolation
+        run: python scripts/check_test_env_isolation.py
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every
@@ -262,9 +274,15 @@ jobs:
       # WITHOUT `submodules: recursive`, so every test reading real
       # compliance/magna-carta content saw an empty gitlink and silently took a
       # "no suites"/404 path. This job checks them out.
+      # No `-x`. With it, this job ran FOUR tests and one error, stopped, and
+      # `|| true` reported success -- measured on run 33808374262, whose entire
+      # pytest output was `....E` followed by "stopping after 1 failures". The
+      # suppression was not "run everything and ignore failures"; it was "run
+      # five tests and ignore the result", and coverage folded in here would
+      # have been measured over those five.
       - name: Run tests with coverage
         run: |
-          python -m pytest tests/ -x -q --tb=short \
+          python -m pytest tests/ -q --tb=short \
             -m "not integration and not chaos" \
             --ignore=tests/test_full_suite.py \
             --cov=src --cov=workers \

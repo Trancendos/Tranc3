@@ -11,9 +11,6 @@ from pathlib import Path
 
 import pytest
 
-os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
-os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
-
 from src.backup.engine import BackupEngine, _decrypt_bytes, _encrypt_bytes
 from src.backup.registry import (
     REGISTRY_BY_TIER,
@@ -22,6 +19,41 @@ from src.backup.registry import (
     BackupTier,
     WorkerDB,
 )
+
+# This module needs SECRET_KEY set and TRANC3_DB_ENCRYPTION_DISABLED unset, and
+# it must leave both exactly as it found them. It previously set them at MODULE
+# level, which is executed during *collection* -- before any fixture runs and
+# before every other test module pytest imports afterwards. So the changed
+# SECRET_KEY was live for the whole session, and conftest.py's
+# _assert_shared_env_unchanged guard duly failed at teardown of
+# tests/core/test_dependencies.py, which is not this module and had done nothing
+# wrong. That misattribution is inherent: the guard can only report which module
+# *finished* with the value wrong, not which one set it.
+#
+# tests/test_encrypted_sqlite.py had exactly this bug, was fixed, and carries a
+# comment explaining it -- this file was missed. Both reads in the backup engine
+# are inside function bodies (`_derive_key` reads SECRET_KEY at call time, and
+# there is no key cache to invalidate), so nothing is captured at import and the
+# fixture below is sufficient.
+_PRIOR_ENV: dict[str, str | None] = {}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _shared_env():
+    """Apply this module's env, then put it back exactly as it was."""
+    for name in ("SECRET_KEY", "TRANC3_DB_ENCRYPTION_DISABLED"):
+        _PRIOR_ENV[name] = os.environ.get(name)
+    os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
+    os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
+    try:
+        yield
+    finally:
+        for name, prior in _PRIOR_ENV.items():
+            if prior is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = prior
+
 
 # ---------------------------------------------------------------------------
 # Fixtures

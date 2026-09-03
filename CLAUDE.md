@@ -479,9 +479,17 @@ suppressed with `|| true` exactly as `ci.yml`'s run is — so it gated nothing e
 checkout also omitted `submodules: recursive`, so tests reading real `compliance/magna-carta`
 content silently took a "no suites"/404 path; the job coverage now runs in does not. `test.yml`'s
 `Ruff Lint + Format` job went at the same time: it ran the identical ruff command at the identical
-pin as `ci.yml`'s `lint`, and both fire on a push to `main`. Two are
-deliberate, narrow exceptions for GitHub-native features with no Forgejo equivalent —
-`publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
+pin as `ci.yml`'s `lint`, and both fire on a push to `main`.
+
+**`ci.yml`'s Pytest job no longer runs with `-x`.** With it, one teardown error stopped the run
+after four tests and `|| true` reported the job green — measured on run 33808374262, whose entire
+pytest output was `....E`. The suppression was not "run everything and ignore failures"; it was
+"run five tests and ignore the result". The error itself was a module-level `os.environ` write in
+`tests/test_backup_service.py` executing during collection; `scripts/check_test_env_isolation.py`
+now fails CI on that pattern.
+
+Two of the 19 are deliberate, narrow exceptions for GitHub-native features with no Forgejo
+equivalent — `publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
 `docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
 deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run
 (PR status checks, CodeQL, Pages/Wiki) rather than being phased out.
