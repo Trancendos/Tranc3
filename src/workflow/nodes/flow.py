@@ -12,7 +12,7 @@ from typing import Any, Dict, List
 
 from Dimensional.error_handlers import safe_error_detail
 
-from .base import BaseNode, NodeConfig, NodeResult, NodeType
+from .base import BaseNode, NodeConfig, NodeResult, NodeType, _safe_eval
 
 
 class ConditionNode(BaseNode):
@@ -23,7 +23,7 @@ class ConditionNode(BaseNode):
         expression = self.config.config.get("expression", "True")
         local_ns: Dict[str, Any] = {"inputs": inputs, "context": context, **inputs}
         try:
-            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307
+            result = bool(_safe_eval(expression, local_ns))
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
                 {"condition": result, "branch": "true" if result else "false"},
