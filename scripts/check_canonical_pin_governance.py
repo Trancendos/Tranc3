@@ -214,7 +214,9 @@ def check_dependabot(packages: set[str]) -> list[str]:
         ignored = {
             entry.get("dependency-name")
             for entry in block.get("ignore", []) or []
-if isinstance(entry, dict) and not entry.get("update-types") and not entry.get("versions")
+            if isinstance(entry, dict)
+            and not entry.get("update-types")
+            and not entry.get("versions")
         }
         missing = sorted(packages - ignored)
         if missing:
