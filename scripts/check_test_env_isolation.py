@@ -116,11 +116,13 @@ def violations(guarded: set[str]) -> list[str]:
 
         for node in tree.body:  # module level only; fixtures are fine
             targets: list[ast.expr] = []
+            targets: list[ast.expr] = []
             if isinstance(node, ast.Assign):
                 targets = list(node.targets)
             elif isinstance(node, ast.AugAssign):
                 targets = [node.target]
-
+            elif isinstance(node, ast.Delete):
+                targets = list(node.targets)
             for target in targets:
                 if (
                     isinstance(target, ast.Subscript)
