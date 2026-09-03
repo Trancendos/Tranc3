@@ -87,6 +87,7 @@ jobs:
             tests/test_orchestrator_effective.py \
             tests/test_zero_cost_registry.py \
             tests/test_url_validation.py \
+            tests/test_safe_eval.py \
             tests/test_adaptive_rotator.py \
             tests/test_api_startup_readiness.py \
             tests/test_production_readiness_stack.py \
@@ -94,6 +95,19 @@ jobs:
             tests/test_p0_health_syntax.py \
             tests/test_p0_metrics_mount.py \
             -q --tb=short
+
+      # The step above proves the RCE regression suite passes. It cannot prove
+      # the suite would notice if a guard were removed -- and during #1145 one
+      # would not have: `_guard_repeat`'s documented purpose is refusing an
+      # oversized repeat *before* allocating it, and deleting the guard left
+      # the suite green because nothing measured the allocation. This runs
+      # targeted mutation testing over the evaluator's security guards:
+      # each guard is deleted in turn and its named tests must FAIL. A guard
+      # whose removal keeps the suite green is not protecting anything.
+      #
+      # Not `|| true`. The whole point is that a decorative guard blocks here.
+      - name: Guard calibration (security guards must be load-bearing)
+        run: python3 scripts/check_guard_calibration.py
 
       - name: API import gate
         run: python -c "import api; print('api OK')"
