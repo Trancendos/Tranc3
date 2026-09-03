@@ -47,6 +47,7 @@ Usage:
 from __future__ import annotations
 
 import ast
+import fnmatch
 import json
 import re
 import sys
@@ -93,36 +94,94 @@ def canonical_packages() -> set[str]:
     raise SystemExit(1)
 
 
-def _rule_names(rule: dict) -> list[str]:
-    """Package names a Renovate rule targets, as written.
+# Renovate accepts several package selectors. Reading only `matchPackageNames`
+# meant a rule written with any of the others was treated as matching nothing --
+# so a later rule could re-enable a governed pin and this check would pass.
+# `matchPackagePatterns` and `matchPackagePrefixes` are deprecated upstream but
+# still honoured, so they still have to be read.
+_NAME_SELECTORS = ("matchPackageNames", "matchDepNames")
+_PATTERN_SELECTORS = ("matchPackagePatterns",)
+_PREFIX_SELECTORS = ("matchPackagePrefixes",)
+_ALL_SELECTORS = _NAME_SELECTORS + _PATTERN_SELECTORS + _PREFIX_SELECTORS
 
-    Renovate accepts both bare names and `/regex/` forms in
-    `matchPackageNames`. Both are returned verbatim; matching is done by
-    `_rule_matches`.
-    """
-    names = rule.get("matchPackageNames")
-    if names is None:
+
+def _as_list(value: object) -> list[str]:
+    """Normalise a Renovate selector value to a list of written patterns."""
+    if value is None:
         return []
-    if isinstance(names, str):
-        return [names]
-    if isinstance(names, list):
-        return [str(n) for n in names]
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [str(v) for v in value]
     return []
 
 
-def _rule_matches(rule: dict, package: str) -> bool:
-    for written in _rule_names(rule):
-        if written.startswith("/") and written.endswith("/") and len(written) > 1:
-            try:
-                if re.search(written[1:-1], package):
-                    return True
-            except re.error:
-                # An unparseable pattern is treated as matching, so a broken
-                # rule surfaces here rather than being skipped over.
-                return True
-        elif written == package:
+def _one_pattern_matches(written: str, package: str) -> bool:
+    """Does one written selector value match `package`?
+
+    Renovate's `matchPackageNames` accepts `/regex/`, a minimatch glob, or a
+    bare name, and any of them may be negated with a leading `!`. Matching is
+    case-insensitive. A bare name is just a glob with no wildcards, so globs
+    subsume the exact case.
+    """
+    if written.startswith("/") and written.endswith("/") and len(written) > 1:
+        try:
+            return re.search(written[1:-1], package, re.IGNORECASE) is not None
+        except re.error:
+            # An unparseable pattern surfaces here rather than being skipped.
             return True
-    return False
+    return fnmatch.fnmatchcase(package.lower(), written.lower())
+
+
+def _rule_matches(rule: dict, package: str) -> bool:
+    """Does this Renovate rule apply to `package`?
+
+    Renovate's documented semantics: with positive matchers present at least
+    one must match; with negative matchers present none may match. A rule
+    carrying NO package selector at all applies to every dependency -- treating
+    that as "matches nothing" was the hole that let a selectorless rule through.
+    """
+    positives: list[str] = []
+    negatives: list[str] = []
+
+    for key in _NAME_SELECTORS:
+        for written in _as_list(rule.get(key)):
+            (negatives if written.startswith("!") else positives).append(
+                written[1:] if written.startswith("!") else written
+            )
+    for key in _PATTERN_SELECTORS:
+        for written in _as_list(rule.get(key)):
+            neg = written.startswith("!")
+            body = written[1:] if neg else written
+            # matchPackagePatterns values are bare regexes, not /slash/ wrapped.
+            (negatives if neg else positives).append(f"/{body}/")
+    for key in _PREFIX_SELECTORS:
+        for written in _as_list(rule.get(key)):
+            neg = written.startswith("!")
+            body = written[1:] if neg else written
+            (negatives if neg else positives).append(f"{body}*")
+
+    if not any(key in rule for key in _ALL_SELECTORS):
+        return True  # selectorless: applies to everything
+
+    if any(_one_pattern_matches(w, package) for w in negatives):
+        return False
+    if not positives:
+        return True
+    return any(_one_pattern_matches(w, package) for w in positives)
+
+
+def _covers_pypi(rule: dict) -> bool:
+    """True unless the rule is explicitly scoped away from the pypi datasource.
+
+    The governed pins are Python packages. A disabling rule scoped to `pypi` is
+    correct and preferred -- an unscoped one also suppresses the `redis` Docker
+    image, whose digest bumps carry real fixes.
+    """
+    datasources = _as_list(rule.get("matchDatasources"))
+    if not datasources:
+        return True
+    return any(d.lower() == "pypi" for d in datasources)
 
 
 def check_dependabot(packages: set[str]) -> list[str]:
@@ -148,10 +207,14 @@ def check_dependabot(packages: set[str]) -> list[str]:
 
     for block in pip_blocks:
         directory = block.get("directory", "?")
+        # An `update-types`-scoped ignore is NOT a full ignore: a major-only
+        # entry still lets minor and patch PRs through, which is the whole
+        # class of PR this governance exists to stop. Only unrestricted
+        # entries count.
         ignored = {
             entry.get("dependency-name")
             for entry in block.get("ignore", []) or []
-            if isinstance(entry, dict)
+            if isinstance(entry, dict) and not entry.get("update-types")
         }
         missing = sorted(packages - ignored)
         if missing:
@@ -168,6 +231,11 @@ def check_renovate(packages: set[str]) -> list[str]:
         config = json.loads(RENOVATE.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return [f"renovate.json is not valid JSON ({exc.msg})"]
+    # Valid JSON is not the same as a valid config. A top-level list or scalar
+    # parses fine and then raises AttributeError on `.get` -- a crash, which is
+    # not the same as a reported failure and reads very differently in CI.
+    if not isinstance(config, dict):
+        return [f"renovate.json is not a JSON object (got {type(config).__name__})"]
     rules = config.get("packageRules")
     if not isinstance(rules, list):
         return ["renovate.json has no packageRules list"]
@@ -181,24 +249,33 @@ def check_renovate(packages: set[str]) -> list[str]:
             and rule.get("enabled") is False
             and _rule_matches(rule, package)
             and not rule.get("matchUpdateTypes")
+            and _covers_pypi(rule)
         ]
         if not disabling:
             problems.append(
                 f"renovate.json does not disable {package!r} for all update types "
-                "(a rule scoped to matchUpdateTypes leaves the rest enabled)"
+                "on the pypi datasource (a rule scoped to matchUpdateTypes, or to a "
+                "datasource other than pypi, leaves the rest enabled)"
             )
             continue
-        # Renovate applies rules in order; a later match wins. A disabling rule
-        # undone by a rule below it is the defect this half exists to catch.
+        # Renovate evaluates every rule and merges the matches, with later rules
+        # overriding earlier ones OPTION BY OPTION. So a later rule that merely
+        # groups or sets automerge does not re-enable a disabled package -- only
+        # one that sets `enabled: true` does. Flagging every later match would
+        # reject legitimate grouping rules and train people to weaken the check.
         last_disable = max(disabling)
         for i in range(last_disable + 1, len(rules)):
             rule = rules[i]
-            if isinstance(rule, dict) and _rule_matches(rule, package):
+            if (
+                isinstance(rule, dict)
+                and rule.get("enabled") is True
+                and _rule_matches(rule, package)
+            ):
                 label = rule.get("groupName") or rule.get("description") or f"rule {i}"
                 problems.append(
-                    f"renovate.json rule {i} ({label!r}) matches governed package "
+                    f"renovate.json rule {i} ({label!r}) re-enables governed package "
                     f"{package!r} after it was disabled at rule {last_disable}; a "
-                    "later match overrides the block"
+                    "later `enabled: true` overrides the block"
                 )
     return problems
 

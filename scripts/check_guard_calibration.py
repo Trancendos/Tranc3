@@ -119,6 +119,19 @@ GUARDS: tuple[Guard, ...] = (
             "    if fname in _MUTATING_METHODS:\n"
             "        raise ValueError(f\"Call to '{fname}' is denied: it mutates its receiver\")\n"
         ),
+        # Removing that branch alone proves nothing: _DENIED_METHODS is a
+        # SUPERSET of _MUTATING_METHODS, so every mutator was still refused and
+        # the test failed only because the error text changed. The guard read as
+        # load-bearing while its removal changed no behaviour -- exactly the
+        # defect this tool exists to catch, occurring inside the tool. The
+        # mutant must therefore drop the mutators from _DENIED_METHODS too, so
+        # `context.clear()` genuinely executes.
+        extra=(
+            (
+                '_DENIED_METHODS = frozenset({"format", "format_map"}) | _MUTATING_METHODS',
+                '_DENIED_METHODS = frozenset({"format", "format_map"})',
+            ),
+        ),
         tests=(f"{_EVAL_TESTS}::test_mutating_methods_cannot_change_workflow_state",),
     ),
     Guard(
@@ -272,22 +285,90 @@ def _apply(text: str, edit: str | tuple[str, str]) -> str:
     return text.replace(before, after, 1)
 
 
+# pytest's documented exit codes. Only these two mean "the suite ran and
+# reached a verdict"; everything else (2 interrupted, 3 internal error,
+# 4 usage error, 5 nothing collected, or a signal) means it never got that far.
+_PYTEST_PASSED = 0
+_PYTEST_TESTS_FAILED = 1
+
+
+class CalibrationError(RuntimeError):
+    """pytest did not run to a verdict, so its exit status proves nothing."""
+
+
 def _run_tests(tests: tuple[str, ...]) -> bool:
-    """True if the tests all passed."""
-    # Inherit the real environment and overlay PYTHONPATH rather than replacing
-    # it. A hand-built env worked locally and would have been a landmine on a
-    # CI runner, where the interpreter, its site-packages and the tool cache all
-    # live at paths this process has no way to guess.
+    """True if the tests all passed; raises if pytest never reached a verdict.
+
+    The distinction is the whole point. This tool reads "non-zero" as "the
+    guard's removal was detected" -- but a mutation that breaks collection, or
+    a pytest killed by the OOM killer, also exits non-zero while detecting
+    nothing. Treating those as success is the precise failure this tool exists
+    to catch, so they raise instead.
+    """
+    # Inherit the real environment and PREPEND to PYTHONPATH rather than
+    # replacing it. A hand-built env worked locally and would have been a
+    # landmine on a CI runner, where the interpreter, its site-packages and the
+    # tool cache live at paths this process cannot guess; replacing the
+    # variable outright would also drop a workspace's own import paths.
     env = dict(os.environ)
-    env["PYTHONPATH"] = str(REPO_ROOT)
-    proc = subprocess.run(
+    env["PYTHONPATH"] = os.pathsep.join(
+        part for part in (str(REPO_ROOT), env.get("PYTHONPATH", "")) if part
+    )
+    # Do not let the MUTATED source be written to __pycache__. Python validates
+    # cached bytecode on (mtime, size), and restoring the original gives back
+    # the identical size within the same second -- so the stale .pyc keeps
+    # looking fresh and a later import silently executes the mutation from a
+    # file that reads correctly on disk. That is not hypothetical: it happened
+    # during this tool's own development and cost an hour, with `git diff`
+    # clean and the source visibly right the whole time.
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+    # argv is a list (no shell), and every element is either a literal or comes
+    # from the GUARDS manifest above -- module constants in this file, not input.
+    proc = subprocess.run(  # noqa: S603
         [sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", *tests],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
         env=env,
+        check=False,
     )
-    return proc.returncode == 0
+    if proc.returncode not in (_PYTEST_PASSED, _PYTEST_TESTS_FAILED):
+        raise CalibrationError(
+            f"pytest exited {proc.returncode} without reaching a verdict on "
+            f"{', '.join(tests)} — this is not evidence the guard was detected.\n"
+            f"--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}"
+        )
+    if proc.returncode == _PYTEST_TESTS_FAILED:
+        # Keep the diagnostics: without them a red gate cannot be repaired.
+        _last_failure_output.clear()
+        _last_failure_output.append(proc.stdout + proc.stderr)
+    return proc.returncode == _PYTEST_PASSED
+
+
+# Output of the most recent failing pytest run, surfaced when the BASELINE
+# fails -- at that point the suite is broken and the operator needs to see why.
+_last_failure_output: list[str] = []
+
+
+def _purge_bytecode(source: Path) -> None:
+    """Drop cached bytecode for `source`, so a restore cannot leave a mutant behind.
+
+    Belt and braces alongside PYTHONDONTWRITEBYTECODE: any interpreter that
+    imported the file before this ran may already have cached the mutation, and
+    the cache would still validate because the restored file has the same size
+    and, very often, the same mtime second.
+    """
+    cache = source.parent / "__pycache__"
+    if not cache.is_dir():
+        return
+    for stale in cache.glob(f"{source.stem}.*.pyc"):
+        try:
+            stale.unlink()
+        except OSError:
+            # Best effort: a cache we cannot remove is not worth failing the
+            # run over, and PYTHONDONTWRITEBYTECODE already prevents new ones.
+            pass
 
 
 def calibrate(guard: Guard) -> tuple[bool, str]:
@@ -323,6 +404,7 @@ def calibrate(guard: Guard) -> tuple[bool, str]:
         # The original bytes, held in memory. Not `git checkout --`, which
         # restores from the index and would discard uncommitted work.
         target.write_text(original, encoding="utf-8")
+        _purge_bytecode(target)
 
 
 def main() -> int:
@@ -352,11 +434,19 @@ def main() -> int:
             "first, or every 'removal detected' below would be meaningless.",
             file=sys.stderr,
         )
+        # Print what pytest said. A gate that reports only "the baseline failed"
+        # cannot be repaired from its own output.
+        for captured in _last_failure_output:
+            print(captured, file=sys.stderr)
         return 1
 
     failures = 0
     for guard in guards:
-        ok, note = calibrate(guard)
+        try:
+            ok, note = calibrate(guard)
+        except CalibrationError as exc:
+            # Not "the guard was detected" — the run never reached a verdict.
+            ok, note = False, str(exc).splitlines()[0]
         if ok:
             print(f"OK   {guard.id:28} {note}")
         else:

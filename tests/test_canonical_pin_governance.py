@@ -43,21 +43,39 @@ DISABLE_RULE = {
 }
 
 
-def _write_configs(tmp_path, *, dependabot_ignore=("fastapi", "pydantic"), rules=None):
+# The real config declares three pip ecosystems. Modelling only one meant a
+# regression in `/tranc3-bots` or `/workers` could not be caught, so every
+# fixture builds all three and faults can be injected into a non-root block.
+PIP_DIRECTORIES = ("/", "/tranc3-bots", "/workers")
+
+
+def _write_configs(
+    tmp_path,
+    *,
+    dependabot_ignore=("fastapi", "pydantic"),
+    per_directory=None,
+    rules=None,
+):
     (tmp_path / "scripts").mkdir(exist_ok=True)
     (tmp_path / ".github").mkdir(exist_ok=True)
     pin = tmp_path / "scripts" / "align_framework_pins.py"
     pin.write_text(CANONICAL_SRC, encoding="utf-8")
 
-    ignore = "\n".join(f'      - dependency-name: "{n}"' for n in dependabot_ignore)
+    per_directory = per_directory or {}
+    blocks = []
+    for directory in PIP_DIRECTORIES:
+        names = per_directory.get(directory, dependabot_ignore)
+        entries = "".join(
+            f'      - dependency-name: "{n}"\n'
+            if isinstance(n, str)
+            else f'      - dependency-name: "{n[0]}"\n        update-types: {n[1]}\n'
+            for n in names
+        )
+        blocks.append(
+            f'  - package-ecosystem: "pip"\n    directory: "{directory}"\n    ignore:\n' + entries
+        )
     dependabot = tmp_path / ".github" / "dependabot.yml"
-    dependabot.write_text(
-        "version: 2\nupdates:\n"
-        '  - package-ecosystem: "pip"\n'
-        '    directory: "/"\n'
-        "    ignore:\n" + (ignore + "\n" if ignore else ""),
-        encoding="utf-8",
-    )
+    dependabot.write_text("version: 2\nupdates:\n" + "".join(blocks), encoding="utf-8")
 
     renovate = tmp_path / "renovate.json"
     renovate.write_text(
@@ -114,6 +132,7 @@ def test_fails_when_a_later_rule_overrides_the_block(tmp_path, checker):
                     "groupName": "FastAPI stack",
                     "matchPackageNames": ["fastapi", "pydantic", "httpx"],
                     "matchUpdateTypes": ["minor", "patch"],
+                    "enabled": True,
                     "automerge": True,
                 },
             ],
@@ -177,11 +196,130 @@ def test_regex_rule_forms_are_matched(tmp_path, checker):
             tmp_path,
             rules=[
                 DISABLE_RULE,
-                {"groupName": "late", "matchPackageNames": ["/^pydan/"]},
+                {"groupName": "late", "matchPackageNames": ["/^pydan/"], "enabled": True},
             ],
         )
     )
     assert module.main() == 1
+
+
+def test_a_later_rule_that_does_not_re_enable_is_allowed(tmp_path, checker):
+    """Renovate merges matching rules option by option.
+
+    A later rule that groups or sets `automerge` does NOT re-enable a disabled
+    package -- only `enabled: true` does. Flagging every later match would
+    reject legitimate grouping rules, and a check people have to weaken to ship
+    is a check that stops being trusted.
+    """
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            rules=[
+                DISABLE_RULE,
+                {
+                    "groupName": "grouping only, no enabled key",
+                    "matchPackageNames": ["fastapi", "pydantic"],
+                    "automerge": True,
+                },
+            ],
+        )
+    )
+    assert module.main() == 0
+
+
+def test_fails_when_a_later_glob_rule_re_enables_a_governed_package(tmp_path, checker):
+    """`matchPackageNames` accepts minimatch globs, not just exact names.
+
+    A rule written `["pyd*"]` re-enables pydantic. Reading only exact names
+    treated it as matching nothing, so the block looked intact.
+    """
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            rules=[
+                DISABLE_RULE,
+                {"groupName": "glob", "matchPackageNames": ["pyd*"], "enabled": True},
+            ],
+        )
+    )
+    assert module.main() == 1
+
+
+def test_fails_when_a_selectorless_rule_re_enables_everything(tmp_path, checker):
+    """A rule with no package selector at all applies to every dependency."""
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            rules=[DISABLE_RULE, {"description": "catch-all", "enabled": True}],
+        )
+    )
+    assert module.main() == 1
+
+
+def test_fails_when_a_deprecated_selector_re_enables_a_governed_package(tmp_path, checker):
+    """`matchPackagePatterns` and `matchPackagePrefixes` are still honoured."""
+    for rule in (
+        {"matchPackagePatterns": ["^pydan"], "enabled": True},
+        {"matchPackagePrefixes": ["pyd"], "enabled": True},
+        {"matchDepNames": ["pydantic"], "enabled": True},
+    ):
+        module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, dict(rule)]))
+        assert module.main() == 1, rule
+
+
+def test_a_negated_glob_excludes_the_package_from_a_later_rule(tmp_path, checker):
+    """`!pattern` is a negative matcher: a rule that excludes the package does not re-enable it."""
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            rules=[
+                DISABLE_RULE,
+                {"matchPackageNames": ["*", "!pydantic", "!fastapi"], "enabled": True},
+            ],
+        )
+    )
+    assert module.main() == 0
+
+
+def test_the_disabling_rule_must_cover_the_pypi_datasource(tmp_path, checker):
+    """A block scoped to a non-pypi datasource does not govern the Python pins."""
+    scoped_away = dict(DISABLE_RULE, matchDatasources=["docker"])
+    module = checker(*_write_configs(tmp_path, rules=[scoped_away]))
+    assert module.main() == 1
+
+    scoped_right = dict(DISABLE_RULE, matchDatasources=["pypi"])
+    module = checker(*_write_configs(tmp_path, rules=[scoped_right]))
+    assert module.main() == 0
+
+
+def test_fails_when_a_dependabot_ignore_is_scoped_to_update_types(tmp_path, checker):
+    """A major-only ignore still lets minor and patch PRs through.
+
+    That is the exact PR shape this governance exists to stop, so an
+    `update-types`-scoped entry must not count as ignoring the package.
+    """
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            dependabot_ignore=("fastapi", ("pydantic", '["version-update:semver-major"]')),
+        )
+    )
+    assert module.main() == 1
+
+
+def test_fails_when_a_non_root_pip_ecosystem_misses_a_pin(tmp_path, checker):
+    """The root block passing says nothing about /tranc3-bots or /workers."""
+    module = checker(*_write_configs(tmp_path, per_directory={"/workers": ("fastapi",)}))
+    assert module.main() == 1
+
+
+def test_fails_closed_on_a_renovate_config_that_is_not_an_object(tmp_path, checker):
+    """Valid JSON is not a valid config: a list parses, then crashes on `.get`."""
+    for body in ("[]", '"just a string"', "42"):
+        pin, dependabot, renovate = _write_configs(tmp_path)
+        renovate.write_text(body, encoding="utf-8")
+        module = checker(pin, dependabot, renovate)
+        assert module.main() == 1, body
 
 
 def test_the_real_repo_configs_pass():

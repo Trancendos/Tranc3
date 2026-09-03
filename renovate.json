@@ -33,7 +33,9 @@
       "urgent"
     ],
     "automerge": true,
-    "automergeType": "pr"
+    "automergeType": "pr",
+    "minimumReleaseAge": false,
+    "description": "Security remediation is exempt from the 7-day supply-chain cooldown: the cooldown exists to let a compromised release be discovered before it is taken, and applying it to a published CVE fix would delay remediation for exactly as long."
   },
   "osvVulnerabilityAlerts": true,
   "packageRules": [
@@ -47,7 +49,8 @@
         "patch"
       ],
       "groupName": "Python patch updates",
-      "automerge": true
+      "automerge": true,
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchManagers": [
@@ -59,7 +62,8 @@
         "minor"
       ],
       "groupName": "Python minor updates",
-      "automerge": false
+      "automerge": false,
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchManagers": [
@@ -70,7 +74,8 @@
         "patch"
       ],
       "groupName": "Docker base image updates",
-      "automerge": true
+      "automerge": true,
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchManagers": [
@@ -81,7 +86,8 @@
         "patch"
       ],
       "groupName": "Docker Compose service updates",
-      "automerge": false
+      "automerge": false,
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchManagers": [
@@ -91,7 +97,8 @@
         "patch"
       ],
       "groupName": "Node.js patch updates",
-      "automerge": true
+      "automerge": true,
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchUpdateTypes": [
@@ -104,7 +111,8 @@
         "/^torch$/",
         "/^transformers$/",
         "/^sentence-transformers$/"
-      ]
+      ],
+      "minimumReleaseAge": false
     },
     {
       "matchDatasources": [
@@ -118,7 +126,8 @@
       "matchPackageNames": [
         "/^postgres$/",
         "/^clickhouse$/"
-      ]
+      ],
+      "minimumReleaseAge": false
     },
     {
       "matchManagers": [
@@ -130,7 +139,8 @@
         "patch"
       ],
       "groupName": "OpenTofu provider updates",
-      "automerge": false
+      "automerge": false,
+      "minimumReleaseAge": "7 days"
     },
     {
       "groupName": "AI frameworks (LangChain / LlamaIndex / Haystack / DSPy)",
@@ -159,7 +169,7 @@
         "patch"
       ],
       "groupName": "httpx",
-      "minimumReleaseAge": "3 days",
+      "minimumReleaseAge": "7 days",
       "automerge": true,
       "description": "Only httpx remains here. fastapi/starlette/pydantic/uvicorn/redis are governed centrally by scripts/align_framework_pins.py and are disabled below; automerging them here would have pushed a 63-file framework pin change to main unreviewed."
     },
@@ -174,11 +184,11 @@
       ],
       "groupName": "GitHub Actions",
       "automerge": true,
-      "minimumReleaseAge": "1 day",
+      "minimumReleaseAge": "7 days",
       "pinDigests": true
     },
     {
-      "description": "Centrally governed pins \u2014 do not propose. These five are restated in 63 requirements files, so one version decision arrives as 63 identical line changes. scripts/align_framework_pins.py applies them in one reviewed pass and its CANONICAL dict is the single place the decision is made; any PR that moves some files without that script fails the Framework pin check in ci.yml and is unmergeable by construction. To bump one, edit CANONICAL and run with --write. Kept last so no later rule can re-enable it.",
+      "description": "Centrally governed pins \u2014 do not propose. These five are restated in 63 requirements files, so one version decision arrives as 63 identical line changes. scripts/align_framework_pins.py applies them in one reviewed pass and its CANONICAL dict is the single place the decision is made; any PR that moves some files without that script fails the Framework pin check in ci.yml and is unmergeable by construction. To bump one, edit CANONICAL and run with --write. Kept last so no later rule can re-enable it. Scoped to the pypi datasource so the redis Docker image still receives digest and patch updates.",
       "matchPackageNames": [
         "fastapi",
         "starlette",
@@ -186,7 +196,11 @@
         "uvicorn",
         "redis"
       ],
-      "enabled": false
+      "enabled": false,
+      "matchDatasources": [
+        "pypi"
+      ],
+      "minimumReleaseAge": false
     }
   ],
   "ignorePaths": [
