@@ -308,8 +308,8 @@ def _existing_fingerprints(itsm) -> set:
             continue
         try:
             records = reader()
-        except Exception:  # pragma: no cover - store shape is not this module's
-            continue
+        except Exception:
+            raise
         for record in records or []:
             title = getattr(record, "title", "") or ""
             start = title.find(FINGERPRINT_PREFIX)
