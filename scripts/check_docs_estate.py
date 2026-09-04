@@ -28,6 +28,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import yaml
+
 REPO = Path(__file__).resolve().parent.parent
 ESTATE = REPO / "config" / "estate" / "documentation_estate.yaml"
 
@@ -50,8 +52,6 @@ def _resolve(patterns: list[str]) -> Path | None:
 
 def audit() -> tuple[list[dict], list[str]]:
     """Return (entries, broken) — broken being live entries whose file is gone."""
-    import yaml  # noqa: PLC0415
-
     estate = yaml.safe_load(ESTATE.read_text())
     entries: list[dict] = []
     broken: list[str] = []
@@ -60,7 +60,18 @@ def audit() -> tuple[list[dict], list[str]]:
         for item in items:
             declared = item.get("satisfied_by") or []
             found = _resolve(declared) if declared else None
-            status = item.get("status", "missing")
+            # A missing or misspelled status defaulted to `missing`, and a
+            # `missing` entry is the one thing --check deliberately does not
+            # fail on — so a typo silently exempted an entry from the only
+            # rule this file has. It has to be declared, and it has to be one
+            # of the three.
+            status = item.get("status")
+            if status not in _STATUS_ORDER:
+                broken.append(
+                    f"{item['id']} declares status {status!r}; expected one of: "
+                    f"{', '.join(_STATUS_ORDER)}"
+                )
+                status = "missing"
             entries.append(
                 {
                     "section": section,

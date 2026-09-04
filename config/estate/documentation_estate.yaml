@@ -131,7 +131,7 @@ sections:
   operations:
     - id: OPS-RUNBOOKS
       title: Operational runbooks
-      satisfied_by: ["docs/runbooks/*.md", "DEPLOYMENT_RUNBOOK.md"]
+      satisfied_by: ["docs/runbooks/*.md", "docs/DEPLOYMENT_RUNBOOK.md"]
       status: live
     - id: OPS-OBSERVABILITY
       title: Observability standard

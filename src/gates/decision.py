@@ -95,9 +95,16 @@ def _rank(decision: Decision) -> int:
 _FAIL_CLOSED_TIERS = frozenset({RiskTier.HIGH, RiskTier.UNACCEPTABLE})
 
 
-def fails_closed(tier: RiskTier) -> bool:
-    """Does an unreadable policy refuse this tier, or degrade it?"""
-    return tier in _FAIL_CLOSED_TIERS
+def fails_closed(tier: Any) -> bool:
+    """Does an unreadable policy refuse this tier, or degrade it?
+
+    Coerces first. This is exported, so a caller can reach it with a tier
+    read from JSON or from a newer policy version — and a bare membership
+    test answers False for anything it does not recognise, sending the one
+    request nobody classified down the degrade path. Coercion resolves an
+    unknown tier to the highest, so the unclassified case refuses.
+    """
+    return _coerce_tier(tier) in _FAIL_CLOSED_TIERS
 
 
 @dataclass(frozen=True)
@@ -161,9 +168,32 @@ class GateOutcome:
     reasons: tuple[str, ...] = ()
     policy_available: bool = True
 
+    #: Decisions under which the request goes on to happen, in some form.
+    #: REDACT and DEGRADE both continue it; BLOCK and HOLD do not.
+    _CONTINUING = (Decision.ALLOW, Decision.REDACT, Decision.DEGRADE)
+
     @property
-    def allowed(self) -> bool:
+    def proceeds(self) -> bool:
+        """Does the request continue at all?
+
+        There is no `allowed`, deliberately. The word is read two
+        incompatible ways and each reading is a real bug: a caller treating
+        `allowed == False` as "refuse" would reject a REDACT the resolver
+        meant to let through, and a caller treating `allowed == True` as
+        "pass it on untouched" would emit unredacted content. `proceeds` and
+        `unmodified` cannot be confused for one another.
+        """
+        return self.decision in self._CONTINUING
+
+    @property
+    def unmodified(self) -> bool:
+        """Does it continue with nothing done to it? Only ALLOW does."""
         return self.decision is Decision.ALLOW
+
+    @property
+    def refused(self) -> bool:
+        """BLOCK outright, or HOLD for a human. Either way it does not run."""
+        return not self.proceeds
 
     def to_dict(self) -> dict[str, Any]:
         return {

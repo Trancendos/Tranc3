@@ -229,3 +229,75 @@ class TestTheGateItReplaces:
         assert "app.add_middleware(MagnaCartaMiddleware)" in (repo / "api.py").read_text()
         magna = (repo / "src/compliance/magna_carta.py").read_text()
         assert 'os.getenv("MAGNA_CARTA_ENABLED", "false")' in magna
+
+
+class TestTheExportedFailClosedHelper:
+    """`fails_closed` is exported, so it is reached with whatever a caller has."""
+
+    @pytest.mark.parametrize("tier", ["", None, "wat", "critical", 7])
+    def test_an_unrecognised_tier_fails_closed(self, tier):
+        """Calibrated: a bare membership test fails this.
+
+        `tier in _FAIL_CLOSED_TIERS` answers False for anything it does not
+        recognise, which sends the one request nobody classified down the
+        degrade path — the same fail-open `decide` coerces away internally,
+        reachable through the front door.
+        """
+        assert fails_closed(tier) is True
+
+    @pytest.mark.parametrize("tier", ["high", "HIGH", " unacceptable "])
+    def test_a_serialized_tier_is_read(self, tier):
+        assert fails_closed(tier) is True
+
+    @pytest.mark.parametrize("tier", [RiskTier.MINIMAL, RiskTier.LIMITED, "minimal"])
+    def test_a_low_tier_still_degrades(self, tier):
+        """The fix must not turn every tier into a refusal."""
+        assert fails_closed(tier) is False
+
+
+class TestWhatAnOutcomeSaysAboutItself:
+    """There is no `allowed`, and its absence is the point.
+
+    The word reads two incompatible ways. `allowed == False` treated as
+    "refuse" rejects a REDACT the resolver meant to let through; `allowed ==
+    True` treated as "pass it on untouched" emits unredacted content. One
+    over-refuses, the other leaks. Two named properties cannot be confused.
+    """
+
+    def _outcome(self, decision):
+        from src.gates.decision import GateOutcome
+
+        return GateOutcome(decision=decision, context=_ctx())
+
+    @pytest.mark.parametrize("decision", [Decision.ALLOW, Decision.REDACT, Decision.DEGRADE])
+    def test_a_continuing_decision_proceeds(self, decision):
+        """Calibrated: restricting this to ALLOW fails this.
+
+        REDACT and DEGRADE both continue the request; only what it carries
+        changes.
+        """
+        assert self._outcome(decision).proceeds is True
+        assert self._outcome(decision).refused is False
+
+    @pytest.mark.parametrize("decision", [Decision.BLOCK, Decision.HOLD])
+    def test_a_refusing_decision_does_not_proceed(self, decision):
+        assert self._outcome(decision).proceeds is False
+        assert self._outcome(decision).refused is True
+
+    @pytest.mark.parametrize("decision", [Decision.REDACT, Decision.DEGRADE])
+    def test_a_continuing_decision_is_not_unmodified(self, decision):
+        """Calibrated: making `unmodified` an alias of `proceeds` fails this.
+
+        This is the leak half: a caller that skips redaction because the
+        request 'proceeds' emits the content the resolver told it to redact.
+        """
+        assert self._outcome(decision).unmodified is False
+
+    def test_only_allow_is_unmodified(self):
+        assert self._outcome(Decision.ALLOW).unmodified is True
+
+    def test_no_property_named_allowed_survives(self):
+        """A name that reads two ways is worse than no name at all."""
+        from src.gates.decision import GateOutcome
+
+        assert not hasattr(GateOutcome, "allowed")

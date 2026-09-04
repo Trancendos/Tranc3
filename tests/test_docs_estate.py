@@ -68,6 +68,49 @@ class TestTheContractHolds:
             if entry["status"] == "missing":
                 assert entry["found"] is None, entry["id"]
 
+    def test_an_undeclared_status_fails_the_check(self, monkeypatch, tmp_path):
+        """Calibrated: defaulting an absent status to `missing` fails this.
+
+        `missing` is the one status --check deliberately never fails on —
+        it is the backlog. So a typo or an omitted key silently exempted an
+        entry from the only rule this file has, and the exemption looked
+        exactly like a normal backlog item in the report.
+        """
+        estate = tmp_path / "estate.yaml"
+        estate.write_text(
+            "sections:\n"
+            "  governance:\n"
+            "    - id: X-1\n"
+            "      title: A thing\n"
+            '      satisfied_by: ["CLAUDE.md"]\n'
+            "      status: liv\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(check_docs_estate, "ESTATE", estate)
+        _, broken = check_docs_estate.audit()
+        assert any("declares status 'liv'" in problem for problem in broken)
+
+    def test_an_omitted_status_fails_the_check(self, monkeypatch, tmp_path):
+        estate = tmp_path / "estate.yaml"
+        estate.write_text(
+            "sections:\n  governance:\n    - id: X-1\n      title: A thing\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(check_docs_estate, "ESTATE", estate)
+        _, broken = check_docs_estate.audit()
+        assert any("expected one of" in problem for problem in broken)
+
+    def test_the_runbook_entry_points_at_the_file_that_exists(self):
+        """The second declared path was `DEPLOYMENT_RUNBOOK.md` at the root.
+
+        No such file is there — it is under docs/. The preceding glob
+        satisfied the entry, so the wrong path went unnoticed and would only
+        have surfaced as a false "missing" the day docs/runbooks/ emptied.
+        """
+        estate = check_docs_estate.ESTATE.read_text(encoding="utf-8")
+        assert '"docs/DEPLOYMENT_RUNBOOK.md"' in estate
+        assert (REPO / "docs" / "DEPLOYMENT_RUNBOOK.md").exists()
+
     def test_entry_ids_are_unique(self):
         entries, _ = check_docs_estate.audit()
         ids = [e["id"] for e in entries]
@@ -132,3 +175,33 @@ class TestTheGateEngineDocument:
         ci = (REPO / ".github/workflows/ci.yml").read_text()
         assert "scripts/generate_gate_engine_doc.py --check" in ci
         assert "scripts/check_docs_estate.py --check" in ci
+
+
+class TestTheOutcomeFieldInventory:
+    def test_every_recorded_field_appears_in_the_document(self):
+        """Calibrated: hand-writing the inventory fails this.
+
+        A prose list of what an audit record carries is the first thing to
+        go stale, and a governance document claiming a field the outcome
+        stopped recording is worse than one that says nothing — an auditor
+        plans around it.
+        """
+        from src.compliance.ai_governance import RiskTier
+        from src.gates.decision import GateContext, decide
+
+        sample = decide(
+            GateContext(
+                trace_id="t",
+                tenant_id="x",
+                actor_id="a",
+                action="b",
+                risk_tier=RiskTier.MINIMAL,
+            )
+        ).to_dict()
+        rendered = generate_gate_engine_doc.render()
+        for field in sample:
+            if field == "context":
+                continue
+            assert f"| `{field}` | outcome |" in rendered, field
+        for field in sample["context"]:
+            assert f"| `{field}` | outcome.context |" in rendered, field

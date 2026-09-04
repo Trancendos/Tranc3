@@ -183,15 +183,43 @@ def render() -> str:
     for label, outcome in examples:
         out.append(f"| {label} | `{outcome.decision.value}` |")
 
+    # The field list is read off a real outcome rather than written out. A
+    # prose inventory of an audit record is the first thing to go stale, and
+    # a governance document claiming a field the outcome stopped recording is
+    # worse than one that says nothing: an auditor plans around it.
+    sample = decide(
+        GateContext(
+            trace_id="trace-doc",
+            tenant_id="tenant-doc",
+            actor_id="actor-doc",
+            action="doc.render",
+            risk_tier=RiskTier.MINIMAL,
+            purpose="documentation",
+            policy_version="v1",
+        )
+    ).to_dict()
+    top_level = [k for k in sample if k != "context"]
+    context_fields = list(sample["context"])
+
     out += [
         "",
         "## What an outcome carries",
         "",
-        "Every decision records the trace id, tenant, actor, action, resolved",
-        "risk tier, policy version, the control ids of every rule that fired —",
-        "not only the strongest — and whether policy was readable at all. An",
+        "Rendered from a real `GateOutcome.to_dict()`, so this list cannot",
+        "outlive the record it describes.",
+        "",
+        "| Field | Where |",
+        "|---|---|",
+    ]
+    out += [f"| `{field}` | outcome |" for field in top_level]
+    out += [f"| `{field}` | outcome.context |" for field in context_fields]
+    out += [
+        "",
+        "`control_ids` holds every rule that fired, not only the strongest. An",
         "operator fixing a blocked request needs the whole set; the winning rule",
         "alone tells them to fix one thing and hit the next block immediately.",
+        "`policy_available` records whether policy was readable at all, which is",
+        "what separates a refusal the policy asked for from one the outage forced.",
         "",
     ]
     return "\n".join(out)

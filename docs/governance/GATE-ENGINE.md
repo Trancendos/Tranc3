@@ -98,8 +98,27 @@ a mutated context is not the decision that was taken.
 
 ## What an outcome carries
 
-Every decision records the trace id, tenant, actor, action, resolved
-risk tier, policy version, the control ids of every rule that fired —
-not only the strongest — and whether policy was readable at all. An
+Rendered from a real `GateOutcome.to_dict()`, so this list cannot
+outlive the record it describes.
+
+| Field | Where |
+|---|---|
+| `decision` | outcome |
+| `control_ids` | outcome |
+| `reasons` | outcome |
+| `policy_available` | outcome |
+| `trace_id` | outcome.context |
+| `tenant_id` | outcome.context |
+| `actor_id` | outcome.context |
+| `action` | outcome.context |
+| `risk_tier` | outcome.context |
+| `purpose` | outcome.context |
+| `policy_version` | outcome.context |
+| `data_tags` | outcome.context |
+| `agent_id` | outcome.context |
+
+`control_ids` holds every rule that fired, not only the strongest. An
 operator fixing a blocked request needs the whole set; the winning rule
 alone tells them to fix one thing and hit the next block immediately.
+`policy_available` records whether policy was readable at all, which is
+what separates a refusal the policy asked for from one the outage forced.
