@@ -64,8 +64,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install PyYAML
-        run: pip install PyYAML
+      # PyYAML for the compose checks; pydantic because the guards below now
+      # import real platform modules rather than re-parsing them. That is what
+      # lets them check the thing itself — check_lab_languages.py reads the
+      # language registry, generate_plm_docs.py renders from the gate criteria
+      # — and src/event_bus/types.py, which the PLM imports for its event
+      # enum, is built on pydantic.
+      - name: Install PyYAML and pydantic
+        run: pip install PyYAML pydantic
 
       - name: Cross-service URL check
         run: python scripts/check_service_urls.py
@@ -182,6 +188,15 @@ jobs:
       # the container actually executes.
       - name: Creative routes exist in the deployed image
         run: python scripts/check_creative_routes.py
+
+      # This job's own pip install line, checked against what its steps
+      # actually import. The guards here read real platform modules now —
+      # that is what lets them check the thing rather than a copy of it —
+      # so the day one of those modules grows a dependency, this job breaks
+      # several import hops from anything the change touched. It broke
+      # exactly that way when the PLM started importing the event-type enum.
+      - name: CI job installs what its scripts import
+        run: python scripts/check_ci_job_dependencies.py
 
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze

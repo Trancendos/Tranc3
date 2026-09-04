@@ -18,8 +18,15 @@ httpx==0.28.1
 # Python from parse to test, and SQL and YAML from none to lint. Everything
 # else — node, go, rustc, javac — needs a real toolchain and belongs in a
 # verification sidecar rather than in this image.
+#
+# Versions carry their own history: Trivy flagged the first pass of this block
+# on the PR that added it. sqlfluff 3.4.2 carried CVE-2026-46373 and
+# CVE-2026-46374 (both HIGH, fixed in 4.1.0 and 4.2.0), and pytest 8.4.2
+# carried CVE-2025-71176 (MEDIUM, insecure temporary directory handling, fixed
+# in 9.0.3). Adding a verification toolchain that ships known-vulnerable
+# packages would have traded one gap for another.
 ruff==0.15.8
 mypy==1.14.1
-pytest==8.4.2
-sqlfluff==3.4.2
+pytest==9.0.3
+sqlfluff==4.2.0
 yamllint==1.37.1
