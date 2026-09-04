@@ -90,9 +90,20 @@ class DispatchItem:
         """
         return bool(self.responsible)
 
+    @property
+    def fingerprint(self) -> str:
+        """A stable identity for this record: kind, surface, and its findings.
+
+        Stable across runs over an unchanged census and different the moment
+        the findings change, which is exactly when a NEW record is wanted.
+        """
+        advisories = ",".join(sorted(str(finding.get("id")) for finding in self.findings))
+        return f"{FINGERPRINT_PREFIX}{self.kind}:{self.surface}:{advisories}]"
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "kind": self.kind,
+            "fingerprint": self.fingerprint,
             "priority": self.priority,
             "location": self.location,
             "responsible": self.responsible,
@@ -105,6 +116,12 @@ class DispatchItem:
 
 
 _ORDER = {P1: 0, P2: 1, P3: 2, P4: 3}
+
+# Marks a record as raised by this dispatcher, and says which finding raised it.
+# `apply()` had no such key, so running it twice over an unchanged census filed
+# a second copy of every record -- and a queue that grows every time somebody
+# asks it a question is one people stop reading.
+FINGERPRINT_PREFIX = "[dvms:"
 
 
 def _describe(findings: List[Dict[str, Any]], limit: int = 6) -> str:
@@ -242,19 +259,55 @@ def apply(items: List[DispatchItem], service=None) -> List[Dict[str, Any]]:
     from src.townhall.itsm import IncidentPriority, get_itsm_service
 
     itsm = service or get_itsm_service()
+    already = _existing_fingerprints(itsm)
     written: List[Dict[str, Any]] = []
     for item in items:
         if not item.is_routable:
             written.append({"skipped": item.surface, "reason": "no Location answers for it"})
             continue
+        if item.fingerprint in already:
+            written.append({"skipped": item.surface, "reason": "already filed"})
+            continue
+        # The title carries the packages and advisories. Without them the
+        # record says a count and a path, and whoever picks it up has to
+        # re-run the census to find out what to upgrade.
+        title = f"{item.title} — {_describe(item.findings)}" if item.findings else item.title
+        title = f"{title} {item.fingerprint}"
         if item.kind == KIND_CHANGE:
-            record = itsm.create_change(item.title, change_type="normal", service=item.responsible)
+            record = itsm.create_change(title, change_type="normal", service=item.responsible)
         else:
             record = itsm.create_incident(
-                item.title,
+                title,
                 item.detail,
                 priority=IncidentPriority(item.priority),
                 service=item.responsible,
             )
+        already.add(item.fingerprint)
         written.append(record.to_dict())
     return written
+
+
+def _existing_fingerprints(itsm) -> set:
+    """Fingerprints already present in the ITSM store.
+
+    Read from the store rather than from a file this module keeps, so a record
+    somebody closed and a record this never filed are told apart by the same
+    source of truth the operator sees. An unreadable store returns an empty
+    set: filing a duplicate is a worse outcome than not filing at all, but not
+    filing BECAUSE the store could not be read would silently drop the queue.
+    """
+    found: set = set()
+    for lister in ("list_incidents", "list_changes"):
+        reader = getattr(itsm, lister, None)
+        if reader is None:
+            continue
+        try:
+            records = reader()
+        except Exception:  # pragma: no cover - store shape is not this module's
+            continue
+        for record in records or []:
+            title = getattr(record, "title", "") or ""
+            start = title.find(FINGERPRINT_PREFIX)
+            if start != -1 and "]" in title[start:]:
+                found.add(title[start : title.index("]", start) + 1])
+    return found

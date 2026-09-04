@@ -186,3 +186,69 @@ def test_the_shared_backend_manifests_are_not_claimed_by_a_location(surface):
     largest manifest on a Location that owns a fraction of it.
     """
     assert resolve_surface(surface).kind == "shared"
+
+
+def test_the_compose_ladder_is_an_optimisation_not_a_dependency(monkeypatch):
+    """Every surface resolves with PyYAML absent, exactly as with it present.
+
+    Not hypothetical: a reviewer's checkout had no PyYAML, `_compose_ports()`
+    swallowed the ModuleNotFoundError and returned {}, and the gate reported
+    ten surfaces UNOWNED and failed — for a reason that had nothing to do with
+    ownership. Those ten are declared explicitly now, so the ladder can go dark
+    without changing the verdict.
+    """
+    import builtins
+
+    from src.dvms import surface_owner as module
+
+    real_import = builtins.__import__
+
+    def _no_yaml(name, *args, **kwargs):
+        if name == "yaml":
+            raise ModuleNotFoundError("No module named 'yaml'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _no_yaml)
+    module.reset_cache()
+    try:
+        gate = _gate()
+        surfaces = gate.scanned_surfaces()
+        kinds = [module.resolve_surface(s).kind for s in surfaces]
+        assert "unmapped" not in kinds, "the compose ladder is load-bearing again"
+        assert module.compose_ladder_status(), "a dark ladder must say so"
+    finally:
+        monkeypatch.undo()
+        module.reset_cache()
+
+
+def test_a_dark_compose_ladder_is_reported_not_silent(monkeypatch):
+    """A ladder that cannot be consulted is a fact somebody needs."""
+    from src.dvms import surface_owner as module
+
+    module.reset_cache()
+    monkeypatch.setattr(module, "COMPOSE", "/does/not/exist.yml")
+    try:
+        assert any("could not be read" in reason for reason in module.compose_ladder_status())
+    finally:
+        monkeypatch.undo()
+        module.reset_cache()
+
+
+def test_a_malformed_compose_file_degrades_rather_than_raising(monkeypatch, tmp_path):
+    """`yaml.safe_load` raises YAMLError, which `ValueError` did not catch.
+
+    Ownership resolution runs inside the census, so an exception here would
+    turn a routing gap into a failed security scan.
+    """
+    from src.dvms import surface_owner as module
+
+    broken = tmp_path / "docker-compose.production.yml"
+    broken.write_text("services:\n  a: [unclosed\n", encoding="utf-8")
+    module.reset_cache()
+    monkeypatch.setattr(module, "COMPOSE", str(broken))
+    try:
+        assert module._compose_ports() == {}
+        assert any("not valid YAML" in reason for reason in module.compose_ladder_status())
+    finally:
+        monkeypatch.undo()
+        module.reset_cache()

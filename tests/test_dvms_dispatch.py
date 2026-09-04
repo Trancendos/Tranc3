@@ -174,13 +174,131 @@ def test_apply_skips_an_unroutable_record_rather_than_filing_a_placeholder():
     recorder = _Recorder()
     written = apply(plan(census), service=recorder)
     assert recorder.incidents == []
-    assert recorder.changes == [
-        (
-            "Upgrade 1 vulnerable dependency in workers/the-studio/requirements.txt",
-            "The Studio",
-        )
-    ]
+    assert len(recorder.changes) == 1
+    title, service_name = recorder.changes[0]
+    assert service_name == "The Studio"
+    assert "workers/the-studio/requirements.txt" in title
     assert any("skipped" in entry for entry in written)
+
+
+def test_the_filed_title_names_the_packages_and_advisories():
+    """A record that says only a count and a path cannot be worked.
+
+    Whoever picks it up would have to re-run the census to find out what to
+    upgrade, which is the census's job done twice.
+    """
+
+    class _Recorder:
+        def __init__(self):
+            self.changes = []
+
+        def create_change(self, title, change_type="normal", service=None):
+            self.changes.append(title)
+            return _Fake({"title": title})
+
+        def list_changes(self):
+            return []
+
+    class _Fake:
+        def __init__(self, data):
+            self._data = data
+
+        def to_dict(self):
+            return self._data
+
+    census = {
+        "surfaces": [
+            _surface(
+                "workers/the-studio/requirements.txt", [_finding("pillow", "fixable", "PYSEC-42")]
+            )
+        ]
+    }
+    recorder = _Recorder()
+    apply(plan(census), service=recorder)
+    assert "pillow" in recorder.changes[0]
+    assert "PYSEC-42" in recorder.changes[0]
+
+
+def test_applying_the_same_census_twice_files_one_record():
+    """A queue that grows every time somebody asks it a question is unread.
+
+    `apply()` had no stable key, so a second run over an unchanged census
+    filed a second copy of everything.
+    """
+
+    class _Store:
+        def __init__(self):
+            self.changes = []
+
+        def create_change(self, title, change_type="normal", service=None):
+            self.changes.append(_Record(title))
+            return _Record(title)
+
+        def list_changes(self):
+            return list(self.changes)
+
+    class _Record:
+        def __init__(self, title):
+            self.title = title
+
+        def to_dict(self):
+            return {"title": self.title}
+
+    census = {
+        "surfaces": [
+            _surface("workers/the-studio/requirements.txt", [_finding("pillow", "fixable")])
+        ]
+    }
+    store = _Store()
+    apply(plan(census), service=store)
+    second = apply(plan(census), service=store)
+    assert len(store.changes) == 1
+    assert any(entry.get("reason") == "already filed" for entry in second)
+
+
+def test_a_new_finding_on_the_same_surface_files_a_new_record():
+    """Idempotency must not become deafness: new findings are new work."""
+
+    class _Store:
+        def __init__(self):
+            self.changes = []
+
+        def create_change(self, title, change_type="normal", service=None):
+            self.changes.append(_Record(title))
+            return _Record(title)
+
+        def list_changes(self):
+            return list(self.changes)
+
+    class _Record:
+        def __init__(self, title):
+            self.title = title
+
+        def to_dict(self):
+            return {"title": self.title}
+
+    store = _Store()
+    first = {
+        "surfaces": [
+            _surface(
+                "workers/the-studio/requirements.txt", [_finding("pillow", "fixable", "PYSEC-1")]
+            )
+        ]
+    }
+    later = {
+        "surfaces": [
+            _surface(
+                "workers/the-studio/requirements.txt",
+                [
+                    _finding("pillow", "fixable", "PYSEC-1"),
+                    _finding("requests", "fixable", "PYSEC-2"),
+                ],
+            )
+        ]
+    }
+    apply(plan(first), service=store)
+    apply(plan(later), service=store)
+    assert len(store.changes) == 2
 
 
 def test_the_owner_embedded_by_the_census_is_used_when_present():

@@ -141,6 +141,11 @@ not the Cloud Only one.
   `src/dvms/surface_owner.py` supplies the join — 97 surfaces, 68 owned across 37 Locations,
   29 cross-cutting and stewarded, 0 unowned, enforced by
   `scripts/check_surface_ownership.py`. See `DVMS-ENTITY-FLOW.md`.
+  A review measured 58 owned and 10 unowned against the same tree and was right about what
+  it ran: the compose-port ladder resolved those ten, `_compose_ports()` swallowed a missing
+  PyYAML, and the gate failed for a reason unrelated to ownership. All ten are now declared
+  explicitly, so the numbers above hold with the ladder dark — which is the property that
+  should have been true when they were first written down.
 
 ### Opportunities
 - **OpenVEX is the missing wire, and it is free.** Trivy, grype and OSV-Scanner — all three

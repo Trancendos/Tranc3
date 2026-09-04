@@ -232,3 +232,65 @@ def test_a_traversal_shaped_id_is_never_queried(checker, monkeypatch):
     fixed, note = checker.upstream_fixed("CVE-../../etc/passwd")
     assert not fixed
     assert "not in a form safe to query" in note
+
+
+def test_a_published_fix_fails_the_upstream_run(checker, monkeypatch, capsys):
+    """The scheduled job's whole point is surfacing an expired suppression.
+
+    Printing FIX AVAILABLE to stdout and exiting 0 is the pattern this checker
+    exists to reject — nobody reads a green scheduled job, so a fix shipping
+    would go unnoticed until a PR happened to re-run the offline gate.
+    """
+    monkeypatch.setattr(checker, "upstream_fixed", lambda _entry: (True, "PyPI/x fixed in 2.0"))
+    assert checker.main(["--check-upstream"]) == 1
+    assert "a fixed release has shipped" in capsys.readouterr().err
+
+
+def test_an_unreachable_osv_does_not_fail_the_upstream_run(checker, monkeypatch):
+    """A verdict that depends on somebody else's uptime is not a verdict.
+
+    `upstream_fixed` returns distinct tuples for "fixed" and "unreachable"
+    precisely so this distinction can be made.
+    """
+    monkeypatch.setattr(
+        checker, "upstream_fixed", lambda _entry: (False, "OSV unreachable (URLError)")
+    )
+    assert checker.main(["--check-upstream"]) == 0
+
+
+def test_a_malformed_review_by_value_is_reported(checker):
+    """`Review-By: soon` satisfies the trigger words and no date check.
+
+    The label alone made a suppression look dated when nothing could compare
+    it, so it could never lapse.
+    """
+    text = GOOD.replace("Re-check trigger:", "Review-By: soon — trigger:")
+    problems = checker.check(text, {"CVE-2025-11111"})
+    assert any("not an ISO date" in p for p in problems)
+
+
+def test_a_temp_advisory_can_be_registered(checker):
+    """VULN_ID required TEMP ids to be registered; the register scan could not
+    find one, so every valid TEMP suppression was rejected."""
+    text = GOOD.replace("CVE-2025-11111", "TEMP-2025-0001")
+    assert checker.check(text, {"TEMP-2025-0001"}) == []
+
+
+def test_an_unexpected_osv_payload_shape_is_treated_as_unavailable(checker, monkeypatch):
+    """Valid JSON is not the expected JSON, and a crash reports nothing."""
+
+    class _Response:
+        def read(self):
+            import json
+
+            return json.dumps({"affected": {"not": "a list"}}).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    monkeypatch.setattr(checker.urllib.request, "urlopen", lambda *a, **k: _Response())
+    fixed, _note = checker.upstream_fixed("CVE-2025-11111")
+    assert fixed is False

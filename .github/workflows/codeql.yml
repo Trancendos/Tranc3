@@ -80,9 +80,17 @@ jobs:
       # is adjudicated AND the rule is a path-injection rule, prints what it
       # dropped, keeps and reports anything else those files raise, and fails
       # if an adjudicated path no longer exists.
+      #
+      # `--strict-surprises` because the alternative is the failure this
+      # replaced, one step removed: an unadjudicated rule in an adjudicated file
+      # would be kept and printed while the job went green, and nobody reads a
+      # green job. A new rule in one of these three files is a decision
+      # somebody has to make, so it stops the run until they make it.
       - name: Filter adjudicated path-injection false positives
         if: matrix.language == 'python'
-        run: python3 scripts/filter_codeql_alerts.py sarif-results/python.sarif
+        run: |
+          python3 scripts/filter_codeql_alerts.py \
+            sarif-results/python.sarif --strict-surprises
 
       - name: Upload SARIF results
         id: upload_sarif

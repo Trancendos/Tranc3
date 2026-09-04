@@ -70,6 +70,10 @@ VULN_ID = re.compile(r"^(?:CVE|GHSA|PYSEC|OSV|GO|RUSTSEC|TEMP)[-:]", re.IGNORECA
 # URL. VULN_ID above only checks the PREFIX, which `CVE-../../x` also satisfies.
 SAFE_ID = re.compile(r"^[A-Za-z]+-[A-Za-z0-9._-]+$")
 
+# The LABEL, whatever follows it. Used to catch a Review-By whose value is not
+# a date at all; REVIEW_BY below only matches a well-formed one.
+REVIEW_BY_LABEL = re.compile(r"Review-By:", re.IGNORECASE)
+
 REVIEW_BY = re.compile(r"Review-By:\s*(\d{4}-\d{2}-\d{2})", re.IGNORECASE)
 
 # Words that make a comment block a re-check trigger rather than a description.
@@ -128,7 +132,10 @@ def _registered_ids() -> set[str]:
             continue
         found.update(
             match.upper()
-            for match in re.findall(r"\b(?:CVE|GHSA|PYSEC|OSV|GO|RUSTSEC)[-:][\w.-]+", text)
+            # Same prefixes as VULN_ID. They were two lists and drifted: VULN_ID
+            # required a TEMP- id to be registered and this could never find one,
+            # so every valid TEMP suppression would have been rejected.
+            for match in re.findall(r"\b(?:CVE|GHSA|PYSEC|OSV|GO|RUSTSEC|TEMP)[-:][\w.-]+", text)
         )
     return found
 
@@ -156,6 +163,14 @@ def _justification_problems(number: int, entry: str, block: list[str]) -> list[s
             "'no fixed version exists' stops being true the day one ships"
         )
 
+    # A malformed value satisfies the trigger check (the words "Review-By" are
+    # present) and then never reaches the date check, so `Review-By: soon` and
+    # `Review-By:` both read as a dated suppression that is not one.
+    if REVIEW_BY_LABEL.search(prose) and not REVIEW_BY.search(prose):
+        problems.append(
+            f".trivyignore:{number} has a Review-By for {entry} that is not an ISO date "
+            "(YYYY-MM-DD) — a date nothing can compare is not a review date"
+        )
     match = REVIEW_BY.search(prose)
     if match:
         try:
@@ -226,8 +241,17 @@ def upstream_fixed(entry: str, timeout: int = 15) -> tuple[bool, str]:
             data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
         return False, f"OSV unreachable ({type(exc).__name__})"
-    for affected in data.get("affected", []):
-        for entry_range in affected.get("ranges", []):
+    # Valid JSON is not the expected JSON. OSV returning an object where a list
+    # belongs would raise here, and a scheduled job that crashes on somebody
+    # else's response shape reports nothing about our suppressions.
+    if not isinstance(data, dict):
+        return False, "OSV returned a payload that is not an object"
+    for affected in data.get("affected") or []:
+        if not isinstance(affected, dict):
+            continue
+        for entry_range in affected.get("ranges") or []:
+            if not isinstance(entry_range, dict):
+                continue
             # GIT ranges name a COMMIT, not a release. A fix that exists only
             # as a commit is not a version anybody can pin, and reporting it as
             # "FIX AVAILABLE" sends a reader looking for a release that has not
@@ -235,10 +259,12 @@ def upstream_fixed(entry: str, timeout: int = 15) -> tuple[bool, str]:
             # version exists" have a GIT-range fix in OSV and are still correct.
             if str(entry_range.get("type", "")).upper() == "GIT":
                 continue
-            for event in entry_range.get("events", []):
-                if event.get("fixed"):
-                    package = (affected.get("package") or {}).get("name", "?")
-                    ecosystem = (affected.get("package") or {}).get("ecosystem", "?")
+            for event in entry_range.get("events") or []:
+                if isinstance(event, dict) and event.get("fixed"):
+                    package_info = affected.get("package")
+                    package_info = package_info if isinstance(package_info, dict) else {}
+                    package = package_info.get("name", "?")
+                    ecosystem = package_info.get("ecosystem", "?")
                     return True, f"{ecosystem}/{package} fixed in {event['fixed']}"
     return False, "no fixed RELEASE published (a commit-only fix does not count)"
 
@@ -266,17 +292,28 @@ def main(argv: list[str] | None = None) -> int:
     for number, entry, _block in entries:
         print(f"  .trivyignore:{number:<3} {entry}")
 
+    expired: list[str] = []
     if args.check_upstream:
         print("\nUpstream check (OSV):")
         for _number, entry, _block in entries:
             fixed, note = upstream_fixed(entry)
             marker = "FIX AVAILABLE" if fixed else "still suppressed"
             print(f"  {entry:<20} {marker:<15} {note}")
-        print(
-            "\nA FIX AVAILABLE line does not fail this run. It means the reason for "
-            "the suppression may have expired — take the fix, or rewrite the entry to "
-            "say why the published fix does not apply here."
-        )
+            if fixed:
+                expired.append(
+                    f"{entry} is suppressed but a fixed release has shipped ({note}) — "
+                    "take the fix, or rewrite the entry to say why the published fix "
+                    "does not apply here"
+                )
+
+    # An expired suppression FAILS. Printing it to a scheduled job's stdout and
+    # exiting 0 is the pattern this whole checker exists to reject: the job's
+    # sole purpose is surfacing suppressions whose reason has expired, and a
+    # green run surfaces nothing. An unreachable OSV is deliberately NOT a
+    # failure -- `upstream_fixed` distinguishes the two -- because a job whose
+    # verdict depends on somebody else's uptime goes red for reasons unrelated
+    # to this repository.
+    problems += expired
 
     if problems:
         print()

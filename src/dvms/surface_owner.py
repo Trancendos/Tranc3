@@ -112,7 +112,7 @@ class SurfaceOwner:
 # from a guess six months later.
 #
 # Keys are matched longest-first, so a more specific prefix always wins.
-DECLARED_OWNERS: Dict[str, Tuple[str, str]] = {
+DECLARED_OWNERS: Dict[str, Tuple[Optional[str], str]] = {
     # ── a Location's second (or third) directory ──────────────────────────
     "workers/lab-service": ("The Lab", "The Lab's extended service layer (port 8066)"),
     "workers/chaos-party": ("The Chaos Party", "the testing platform's standalone worker"),
@@ -139,6 +139,22 @@ DECLARED_OWNERS: Dict[str, Tuple[str, str]] = {
     "workers/blender-worker": ("TranceFlow", "Blender render worker for the 3D studio"),
     "workers/triposr-worker": ("TranceFlow", "image-to-3D worker for the 3D studio"),
     "workers/ffmpeg-worker": ("TateKing", "FFmpeg worker behind video creation"),
+    # ── reachable through compose, declared here so they do not DEPEND on it ──
+    # Each of these resolved only through the compose-port ladder, which goes
+    # dark when PyYAML is absent -- and it was absent in a reviewer's checkout,
+    # where the gate reported 58 owned and 10 UNOWNED and failed. The ladder is
+    # an optimisation, not a dependency; the port that established each mapping
+    # is recorded so the claim can be re-checked without running anything.
+    "workers/analytics-service": ("The Observatory", "compose port 8016 — metrics store"),
+    "workers/audit-service": ("The Observatory", "compose port 8025 — the audit trail"),
+    "workers/cache-service": ("The HIVE", "compose port 8023 — the distributed cache"),
+    "workers/cdn-service": ("The Studio", "compose port 8028 — static asset delivery"),
+    "workers/email-service": ("Arcadia", "compose port 8018 — Arcadia's email hub"),
+    "workers/notifications": ("Arcadia", "compose port 8008 — the notification service"),
+    "workers/products-service": ("Arcadian Exchange", "compose port 8011 — products catalogue"),
+    "workers/sms-service": ("The Nexus", "compose port 8019 — the SMS gateway"),
+    "workers/storage-service": ("DocUtari", "compose port 8020 — IPFS and blob storage"),
+    "workers/users-service": ("Infinity", "compose port 8006 — user management"),
     # ── cross-cutting: no single Location, steward acts ───────────────────
     "requirements.txt": (None, "the FastAPI backend every in-process router shares"),
     "requirements-ai.txt": (None, "shared AI dependencies for the backend"),
@@ -181,6 +197,26 @@ def _entity_paths() -> Tuple[Tuple[str, str], ...]:
         if entity.worker_path
     ]
     return tuple(sorted(pairs, key=lambda pair: (-len(pair[0]), pair[0])))
+
+
+# Why the compose ladder is unavailable, when it is. Silence here was a real
+# defect: `_compose_ports()` swallowed a missing PyYAML and returned {}, so in a
+# checkout without it the gate reported ten surfaces as UNOWNED and failed for a
+# reason that had nothing to do with ownership. Every one of those ten is now
+# declared above, so this is diagnostic rather than load-bearing -- but a ladder
+# that has gone dark must say so.
+_COMPOSE_UNAVAILABLE: list = []
+
+
+def _note_compose_unavailable(reason: str) -> None:
+    if reason not in _COMPOSE_UNAVAILABLE:
+        _COMPOSE_UNAVAILABLE.append(reason)
+
+
+def compose_ladder_status() -> list:
+    """Reasons the compose ladder could not be consulted; empty when it worked."""
+    _compose_ports()  # ensure the attempt has been made
+    return list(_COMPOSE_UNAVAILABLE)
 
 
 def _compose_port(cfg: dict) -> Optional[int]:
@@ -227,11 +263,19 @@ def _compose_ports() -> Dict[str, int]:
     try:
         import yaml
     except ModuleNotFoundError:
+        _note_compose_unavailable("PyYAML is not installed")
         return {}
     try:
         with open(COMPOSE, encoding="utf-8") as handle:
             document = yaml.safe_load(handle)
-    except (OSError, ValueError):
+    except OSError as exc:
+        _note_compose_unavailable(f"{COMPOSE} could not be read ({type(exc).__name__})")
+        return {}
+    except yaml.YAMLError as exc:
+        # `yaml.YAMLError`, not `ValueError`: a malformed compose file raises the
+        # former, which the old clause did not catch, so ownership resolution
+        # crashed the census instead of degrading.
+        _note_compose_unavailable(f"{COMPOSE} is not valid YAML ({type(exc).__name__})")
         return {}
     if not isinstance(document, dict):
         return {}
@@ -348,3 +392,4 @@ def reset_cache() -> None:
     """Drop the compose/entity caches. For tests that rewrite either source."""
     _entity_paths.cache_clear()
     _compose_ports.cache_clear()
+    _COMPOSE_UNAVAILABLE.clear()

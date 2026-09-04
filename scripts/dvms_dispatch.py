@@ -49,7 +49,14 @@ def _fresh_census(scope: str) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--census", help="read a saved census JSON instead of running one")
-    parser.add_argument("--scope", default="core", help="census scope when running one")
+    # Restricted, not free text: a typo silently ran the CORE subset and
+    # presented the reduced plan as the whole estate's.
+    parser.add_argument(
+        "--scope",
+        choices=("core", "all"),
+        default="core",
+        help="census scope when running one",
+    )
     parser.add_argument("--json", action="store_true", help="emit the plan as JSON")
     parser.add_argument(
         "--apply",
@@ -68,8 +75,23 @@ def main(argv: list[str] | None = None) -> int:
     else:
         census = _fresh_census(args.scope)
 
+    # Valid JSON is not a valid census. A list, a scalar, or an object with no
+    # `surfaces` key produces an EMPTY plan, which reads exactly like "nothing
+    # to raise" — a malformed file would silently suppress every dispatch.
+    if not isinstance(census, dict) or not isinstance(census.get("surfaces"), list):
+        print(
+            "FAIL the census must be a JSON object containing a `surfaces` list; "
+            "an empty plan from a malformed file is indistinguishable from a clean estate",
+            file=sys.stderr,
+        )
+        return 1
+
     items = plan(census)
     summary = summarise(items)
+
+    # In JSON mode stdout carries the document and nothing else, so it can be
+    # piped. Status text goes to stderr.
+    status = sys.stderr if args.json else sys.stdout
 
     if args.json:
         print(json.dumps({"summary": summary, "items": [i.to_dict() for i in items]}, indent=2))
@@ -92,14 +114,18 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     if not args.apply:
-        print("\n(dry run — pass --apply to write these into the ITSM store)")
+        print("\n(dry run — pass --apply to write these into the ITSM store)", file=status)
         return 0
 
     from src.dvms import apply as apply_plan
 
     written = apply_plan(items)
     filed = [w for w in written if "skipped" not in w]
-    print(f"\nFiled {len(filed)} record(s); skipped {len(written) - len(filed)} unroutable.")
+    print(
+        f"\nFiled {len(filed)} record(s); skipped {len(written) - len(filed)} "
+        "(unroutable, or already filed).",
+        file=status,
+    )
     return 0
 
 
