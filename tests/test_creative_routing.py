@@ -363,7 +363,15 @@ class TestCommission:
 
         A durable write with no identity lets anyone fill the register, and
         the register's value is being able to say who asked.
+
+        REQUIRE_AUTH is pinned to true rather than inherited: with it false
+        the auth facade returns an anonymous user and this test passes for a
+        reason that has nothing to do with the route. A test that flips
+        meaning with an environment variable proves whatever the environment
+        happens to be.
         """
+        monkeypatch.setenv("REQUIRE_AUTH", "true")
+
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 

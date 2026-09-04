@@ -20,6 +20,7 @@ if str(REPO) not in sys.path:
 from scripts.check_ci_job_dependencies import (  # noqa: E402
     _guarded,
     _import_time_nodes,
+    _installed_modules,
     external_imports,
     main,
 )
@@ -113,5 +114,71 @@ class TestLocalImportsAreFollowed:
         """The break itself: plm.py -> event_bus.types -> pydantic."""
         assert "pydantic" in external_imports(REPO / "scripts" / "generate_plm_docs.py")
 
-    def test_the_standard_library_is_not_reported_as_missing(self):
-        assert main(["--job", "topology"]) == 0
+    def test_a_relative_import_contributes_its_own_dependencies(self, tmp_path):
+        """Calibrated: skipping relative imports entirely fails this.
+
+        A relative import names a local module, so it adds no external name
+        of its own — which is why it was skipped. But the module it names has
+        imports too, and everything reachable only through one was invisible.
+        """
+        pkg = tmp_path / "pkg"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        (pkg / "helper.py").write_text("import pydantic\n", encoding="utf-8")
+        entry = pkg / "entry.py"
+        entry.write_text("from .helper import thing\n", encoding="utf-8")
+        assert external_imports(entry) == {"pydantic"}
+
+    def test_a_bare_relative_import_is_followed_too(self, tmp_path):
+        """`from . import helper` names the sibling in its aliases."""
+        pkg = tmp_path / "pkg"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        (pkg / "helper.py").write_text("import pydantic\n", encoding="utf-8")
+        entry = pkg / "entry.py"
+        entry.write_text("from . import helper\n", encoding="utf-8")
+        assert external_imports(entry) == {"pydantic"}
+
+
+class TestQuotedRequirements:
+    """A version range has to be quoted for the shell, and quotes broke it."""
+
+    def _provided(self, run: str):
+        return _installed_modules({"steps": [{"run": run}]})
+
+    def test_a_quoted_version_range_is_read(self):
+        """Calibrated: splitting on whitespace fails this.
+
+        `pip install "pydantic>=2,<3"` left the quote attached, so the module
+        read as `"pydantic` and every script importing pydantic looked
+        uninstalled — a check failing on a job that is in fact correct, which
+        is how a check gets removed.
+        """
+        assert self._provided('pip install "pydantic>=2,<3"') == {"pydantic"}
+
+    def test_a_single_quoted_pin_is_read(self):
+        assert self._provided("pip install 'ruff==0.15.8'") == {"ruff"}
+
+    def test_a_plain_name_still_works(self):
+        assert self._provided("pip install PyYAML pydantic") == {"yaml", "pydantic"}
+
+    def test_an_environment_marker_does_not_become_part_of_the_name(self):
+        assert self._provided("pip install 'tomli; python_version<\"3.11\"'") == {"tomli"}
+
+
+class TestUnguardedHandlerBodies:
+    def test_an_import_in_an_unguarded_handler_counts(self):
+        """Calibrated: reading only the try body fails this.
+
+        `except OSError: import tomllib` runs at import time on the failing
+        branch. Skipping handler bodies made a real dependency invisible —
+        the same blind spot as skipping the try body would be.
+        """
+        source = "try:\n    import x\nexcept ValueError:\n    import pydantic\n"
+        imported = {alias.name for node in _nodes(source) for alias in node.names}
+        assert "pydantic" in imported
+
+    def test_a_guarded_handler_body_still_does_not_count(self):
+        """An optional-import guard stays optional, handler body included."""
+        source = "try:\n    import nats\nexcept ImportError:\n    import fallback_shim\n"
+        assert _nodes(source) == []

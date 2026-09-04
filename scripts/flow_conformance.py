@@ -63,6 +63,7 @@ REPO = Path(__file__).resolve().parent.parent
 CONTRACT = REPO / "config" / "estate" / "flow_contract.yaml"
 BASELINE = REPO / "config" / "estate" / "flow_baseline.json"
 REPORT = REPO / "logs" / "flow_conformance.json"
+CONTRACT_DOC = REPO / "docs" / "governance" / "LOCATION-FLOW-CONTRACT.md"
 
 # Verdicts ordered worst -> best. Used to decide what counts as a regression.
 VERDICT_RANK = {"unknown": 0, "absent": 1, "unwired": 2, "partial": 3, "enforced": 4}
@@ -369,6 +370,64 @@ def check_against_baseline(report: dict[str, Any]) -> list[str]:
     return failures
 
 
+#: The document bolds a verdict for emphasis in some rows and not others,
+#: which is a presentation choice and must not change what is read.
+_DOC_VERDICT_ROW = re.compile(
+    r"^\|\s*`(?P<id>FLOW-\d+)`\s*\|[^|]*\|[^|]*\|\s*\*{0,2}(?P<verdict>\w+)\*{0,2}\s*\|"
+)
+_DOC_COUNT_ROW = re.compile(r"^\|\s*`(?P<verdict>\w+)`\s*\|\s*(?P<count>\d+)\s*\|\s*$")
+
+
+def check_contract_document(baseline: dict[str, str]) -> list[str]:
+    """Fail when the written contract and the recorded baseline disagree.
+
+    LOCATION-FLOW-CONTRACT.md states each flow's verdict and a count table,
+    by hand. The baseline is refreshed by `--write-baseline`, the document is
+    not, and the two had already parted: FLOW-064 reached `enforced` and the
+    document still called it `unwired`, with counts of 22/12 against the
+    baseline's 23/11. A governance document that a reader trusts instead of
+    the code is worse than none, and the drift is silent by construction —
+    nothing reads the document.
+    """
+    if not CONTRACT_DOC.exists():
+        return [f"{CONTRACT_DOC.relative_to(REPO)} is missing"]
+
+    text = CONTRACT_DOC.read_text(encoding="utf-8")
+    failures: list[str] = []
+
+    stated: dict[str, str] = {}
+    counts: dict[str, int] = {}
+    for line in text.splitlines():
+        row = _DOC_VERDICT_ROW.match(line.strip())
+        if row:
+            stated[row.group("id")] = row.group("verdict")
+            continue
+        count = _DOC_COUNT_ROW.match(line.strip())
+        if count:
+            counts[count.group("verdict")] = int(count.group("count"))
+
+    for rule_id, verdict in sorted(baseline.items()):
+        if rule_id not in stated:
+            failures.append(f"{rule_id}: recorded as {verdict} but the contract document omits it")
+        elif stated[rule_id] != verdict:
+            failures.append(
+                f"{rule_id}: document says {stated[rule_id]}, baseline records {verdict}"
+            )
+    for rule_id in sorted(set(stated) - set(baseline)):
+        failures.append(f"{rule_id}: in the contract document but not in the baseline")
+
+    actual: dict[str, int] = {}
+    for verdict in baseline.values():
+        actual[verdict] = actual.get(verdict, 0) + 1
+    for verdict in VERDICT_RANK:
+        expected = actual.get(verdict, 0)
+        if counts.get(verdict, 0) != expected:
+            failures.append(
+                f"count table says {counts.get(verdict, 0)} {verdict}, baseline holds {expected}"
+            )
+    return failures
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -410,6 +469,7 @@ def main() -> int:
 
     if args.check:
         failures = check_against_baseline(report)
+        failures += check_contract_document(json.loads(BASELINE.read_text(encoding="utf-8")))
         if failures:
             print("FLOW CONFORMANCE FAILED", file=sys.stderr)
             for f in failures:

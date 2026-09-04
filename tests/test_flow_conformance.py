@@ -188,3 +188,75 @@ class TestBaselineComparison:
     def test_a_missing_baseline_file_fails_rather_than_passes(self, monkeypatch, tmp_path):
         monkeypatch.setattr(fc, "BASELINE", tmp_path / "absent.json")
         assert fc.check_against_baseline(self._report(**{"FLOW-001": "enforced"}))
+
+
+class TestTheContractDocument:
+    """The written contract, checked against the recorded baseline.
+
+    The document is hand-maintained and the baseline is refreshed by
+    `--write-baseline`, so the two drift in exactly one direction: the
+    document keeps stating a verdict that stopped being true. It did — for a
+    fortnight it called FLOW-064 `unwired` after the Town Hall's PLM gate was
+    wired, with counts of 22/12 against a baseline holding 23/11. Nothing
+    read the document, so nothing could say so.
+    """
+
+    def _doc(self, monkeypatch, tmp_path, body: str) -> None:
+        path = tmp_path / "contract.md"
+        path.write_text(body, encoding="utf-8")
+        monkeypatch.setattr(fc, "CONTRACT_DOC", path)
+
+    def _rows(self, verdicts: dict[str, str]) -> str:
+        rows = "\n".join(
+            f"| `{rule}` | A Hub | a claim | **{verdict}** |" for rule, verdict in verdicts.items()
+        )
+        counts: dict[str, int] = {}
+        for verdict in verdicts.values():
+            counts[verdict] = counts.get(verdict, 0) + 1
+        table = "\n".join(f"| `{v}` | {n} |" for v, n in counts.items())
+        return f"{table}\n\n{rows}\n"
+
+    def test_a_document_matching_the_baseline_passes(self, monkeypatch, tmp_path):
+        baseline = {"FLOW-001": "enforced", "FLOW-002": "unwired"}
+        self._doc(monkeypatch, tmp_path, self._rows(baseline))
+        assert fc.check_contract_document(baseline) == []
+
+    def test_a_stale_verdict_fails(self, monkeypatch, tmp_path):
+        """Calibrated: not reading the document at all fails this."""
+        self._doc(monkeypatch, tmp_path, self._rows({"FLOW-001": "unwired"}))
+        failures = fc.check_contract_document({"FLOW-001": "enforced"})
+        assert any("document says unwired" in f for f in failures)
+
+    def test_a_stale_count_fails(self, monkeypatch, tmp_path):
+        """The counts drift on their own, being a second hand-kept copy."""
+        self._doc(
+            monkeypatch,
+            tmp_path,
+            "| `enforced` | 9 |\n\n| `FLOW-001` | A Hub | a claim | **enforced** |\n",
+        )
+        failures = fc.check_contract_document({"FLOW-001": "enforced"})
+        assert any("count table says 9 enforced" in f for f in failures)
+
+    def test_a_flow_the_document_omits_fails(self, monkeypatch, tmp_path):
+        self._doc(monkeypatch, tmp_path, self._rows({"FLOW-001": "enforced"}))
+        failures = fc.check_contract_document({"FLOW-001": "enforced", "FLOW-002": "unwired"})
+        assert any("omits it" in f for f in failures)
+
+    def test_an_unbolded_verdict_reads_the_same(self, monkeypatch, tmp_path):
+        """Calibrated: requiring the bold markers fails this.
+
+        The document bolds some verdicts and not others. Presentation must
+        not decide what a checker sees, or four `partial`/`absent` rows go
+        unread and the check silently covers less than it claims.
+        """
+        self._doc(
+            monkeypatch,
+            tmp_path,
+            "| `partial` | 1 |\n\n| `FLOW-001` | A Hub | a claim | partial |\n",
+        )
+        assert fc.check_contract_document({"FLOW-001": "partial"}) == []
+
+    def test_the_live_document_matches_the_live_baseline(self):
+        import json
+
+        assert fc.check_contract_document(json.loads(fc.BASELINE.read_text(encoding="utf-8"))) == []

@@ -43,6 +43,7 @@ from __future__ import annotations
 import argparse
 import ast
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -65,10 +66,23 @@ def _installed_modules(job: dict) -> set[str]:
     for step in job.get("steps", []):
         run = step.get("run") or ""
         for match in re.finditer(r"pip install\s+([^\n&|]+)", run):
-            for token in match.group(1).split():
+            # shlex, not str.split: a version range has to be quoted for the
+            # shell — `pip install "pydantic>=2,<3"` — and splitting on
+            # whitespace leaves the quote attached, so the module read as
+            # `"pydantic` and the package looked uninstalled.
+            try:
+                tokens = shlex.split(match.group(1))
+            except ValueError:
+                # An unbalanced quote is the shell's problem, not this
+                # check's; fall back rather than fail on a line pip will
+                # reject anyway.
+                tokens = match.group(1).split()
+            for token in tokens:
                 if token.startswith("-") or token.endswith(".txt"):
                     continue
-                name = re.split(r"[=<>\[]", token)[0].strip().lower()
+                name = re.split(r"[=<>\[!~;]", token)[0].strip().lower()
+                if not name:
+                    continue
                 provided.add(_DISTRIBUTION_MODULES.get(name, name.replace("-", "_")))
     return provided
 
@@ -123,7 +137,15 @@ def _import_time_nodes(body: list[ast.stmt]) -> list[ast.stmt]:
         if isinstance(node, ast.Try):
             if _guarded(node.handlers):
                 continue
-            found.extend(_import_time_nodes(node.body + node.orelse + node.finalbody))
+            # The handlers of an UNguarded try run at import time too — a
+            # `except OSError: import tomllib` is a real import-time
+            # dependency, and skipping the handler bodies made it invisible.
+            handler_bodies: list[ast.stmt] = []
+            for handler in node.handlers:
+                handler_bodies.extend(handler.body)
+            found.extend(
+                _import_time_nodes(node.body + handler_bodies + node.orelse + node.finalbody)
+            )
             continue
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             found.append(node)
@@ -132,6 +154,33 @@ def _import_time_nodes(body: list[ast.stmt]) -> list[ast.stmt]:
             nested = getattr(node, field, None)
             if isinstance(nested, list):
                 found.extend(_import_time_nodes(nested))
+    return found
+
+
+def _relative_module_files(entry: Path, node: ast.ImportFrom) -> list[Path]:
+    """Files a relative import names, resolved against the importing file.
+
+    A relative import is local by construction, which is why it contributes
+    no external name of its own — but the module it names has imports too,
+    and skipping it dropped every dependency reachable only that way.
+    """
+    base = entry.parent
+    for _ in range(max(node.level - 1, 0)):
+        base = base.parent
+    if node.module:
+        stems = [node.module.split(".")]
+    else:
+        # `from . import x, y` — each alias is a sibling module.
+        stems = [[alias.name] for alias in node.names]
+    found: list[Path] = []
+    for parts in stems:
+        for candidate in (
+            base.joinpath(*parts).with_suffix(".py"),
+            base.joinpath(*parts, "__init__.py"),
+        ):
+            if candidate.exists():
+                found.append(candidate)
+                break
     return found
 
 
@@ -147,9 +196,14 @@ def external_imports(entry: Path, _seen: set[Path] | None = None) -> set[str]:
     for node in _import_time_nodes(tree.body):
         if isinstance(node, ast.Import):
             names = [alias.name for alias in node.names]
+        elif node.level:
+            # Local by construction, so it adds no external name itself —
+            # but what it imports still has to be followed.
+            for local_file in _relative_module_files(entry, node):
+                external |= external_imports(local_file, seen)
+            continue
         else:
-            # A relative import is local by construction.
-            if node.level or not node.module:
+            if not node.module:
                 continue
             names = [node.module]
         for dotted in names:
