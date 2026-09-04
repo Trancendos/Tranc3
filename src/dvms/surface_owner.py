@@ -183,6 +183,37 @@ DECLARED_OWNERS: Dict[str, Tuple[Optional[str], str]] = {
     "workers/sentinel-station-service": (None, "a platform-wide guardian, not one of the 43"),
     "workers/swarm-coordinator-service": (None, "agent swarm management, estate-wide"),
     "workers/dimensional-nexus-service": (None, "multi-dimensional data routing, estate-wide"),
+    # ── Go and Rust, unscanned until 2026-09-04 ───────────────────────────
+    # These twelve surfaces were invisible to the census, so nothing had ever
+    # needed to say who owns them. `workers/nexus-ws-rs` resolves through the
+    # compose port on its own; it is declared anyway, for the same reason the
+    # block above is — the compose ladder goes dark when PyYAML is absent.
+    "workers/vault-service-rs": ("The Void", "the Rust vault beside workers/vault-service"),
+    "workers/nexus-ws-rs": ("The Nexus", "compose port 8004 — the Rust WebSocket hub"),
+    "rust_extensions/tranc3_snn": (
+        "Turing's Hub",
+        "INT8 SNN tensor ops for personality signal extraction, behind src/personality/snn_qat.py",
+    ),
+    "rust_extensions/tranc3_crypto": (
+        None,
+        "the AES-256-GCM primitive behind src/security/rust_crypto.py — used by "
+        "anything that encrypts, not by one Location",
+    ),
+    "workers/rate-limit-service-rs": (
+        None,
+        "the Rust token bucket beside workers/rate-limit-service, in front of every worker",
+    ),
+    "src/nanoservices": (
+        None,
+        "the nanoservice layer (port 8001) — the NSA broker, its clients and the "
+        "DNF orchestrator serve every Location, not one",
+    ),
+    "aeonmind": (
+        None,
+        "a generic polyglot agent-framework specification, explicitly NOT one of "
+        "the 43 and not deployed — only its Python bridge is live, so its Go, "
+        "Rust and WASM trees answer to no Location and The Lab acts on findings",
+    ),
     # The npm root. Matched exactly, never as a prefix — see _declared_match.
     ".": (None, "the repository root's own package.json"),
 }

@@ -63,15 +63,21 @@ def _census():
 
 
 def scanned_surfaces() -> list[str]:
-    """Every surface the census actually scans, both ecosystems.
+    """Every surface the census actually scans, all four ecosystems.
 
     Read from the census's own discovery rather than re-globbed here, so the
     two cannot disagree about what the estate contains. A second walk would be
     a second answer, and the whole point is that there is one.
+
+    Go and Rust joined the census on 2026-09-04 and are included from the same
+    day. A surface the census scans but this gate does not check is a surface
+    that can lose its owner without anything failing -- which is precisely the
+    rot this script exists to catch, so widening the census without widening
+    this would have rebuilt the gap one layer up.
     """
     census = _census()
     pip = {m for group in census.PY_MANIFEST_GROUPS.values() for m in group}
-    return sorted(pip | set(census.NPM_DIRS))
+    return sorted(pip | set(census.NPM_DIRS) | set(census.GO_MODULES) | set(census.RUST_CRATES))
 
 
 def stale_declarations() -> list[str]:
