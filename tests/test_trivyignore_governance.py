@@ -273,6 +273,8 @@ def test_a_temp_advisory_can_be_registered(checker):
     """VULN_ID required TEMP ids to be registered; the register scan could not
     find one, so every valid TEMP suppression was rejected."""
     text = GOOD.replace("CVE-2025-11111", "TEMP-2025-0001")
+
+
 def test_a_temp_advisory_can_be_registered(checker, monkeypatch, tmp_path):
     """VULN_ID required TEMP ids to be registered; the register scan could not
     find one, so every valid TEMP suppression was rejected."""
