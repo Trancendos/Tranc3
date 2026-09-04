@@ -198,6 +198,20 @@ jobs:
       - name: CI job installs what its scripts import
         run: python scripts/check_ci_job_dependencies.py
 
+      # The gate-engine specification is rendered from the resolver, so the
+      # document cannot describe decisions the code does not take.
+      - name: Gate engine documentation is current
+        run: python scripts/generate_gate_engine_doc.py --check
+
+      # The documentation estate is declared as a contract in
+      # config/estate/documentation_estate.yaml. This fails when an artefact
+      # declared live or descriptive has lost its file — leaving the estate
+      # claiming coverage it no longer has. It does not fail on the known
+      # gaps: a gate red on day one for reasons nobody can fix that day
+      # teaches people to wave it through.
+      - name: Documentation estate coverage
+        run: python scripts/check_docs_estate.py --check
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every
