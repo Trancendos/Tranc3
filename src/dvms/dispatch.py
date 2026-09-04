@@ -260,11 +260,15 @@ def apply(items: List[DispatchItem], service=None) -> List[Dict[str, Any]]:
     `resolve_ownership` already refuses to guess an owner for the same reason —
     an incident with a plausible-looking owner routes the page to somebody who
     is not on the hook, and then everybody believes it is handled.
+
+    If the existing-record listing fails, filing continues and every written
+    record carries `duplicate_check: incomplete`. Aborting instead would leave
+    the whole queue unrouted because a read failed.
     """
     from src.townhall.itsm import IncidentPriority, get_itsm_service
 
     itsm = service or get_itsm_service()
-    already = _existing_fingerprints(itsm)
+    already, deduplicated = _existing_fingerprints(itsm)
     written: List[Dict[str, Any]] = []
     for item in items:
         if not item.is_routable:
@@ -288,31 +292,49 @@ def apply(items: List[DispatchItem], service=None) -> List[Dict[str, Any]]:
                 service=item.responsible,
             )
         already.add(item.fingerprint)
-        written.append(record.to_dict())
+        entry = record.to_dict()
+        if not deduplicated:
+            # The store could not be listed, so this may repeat a record that
+            # already exists. Said on the record rather than in a log nobody
+            # reads back, because the duplicate is what somebody will be
+            # looking at when they want to know why.
+            entry["duplicate_check"] = "incomplete — the ITSM store could not be listed"
+        written.append(entry)
     return written
 
 
-def _existing_fingerprints(itsm) -> set:
-    """Fingerprints already present in the ITSM store.
+def _existing_fingerprints(itsm) -> tuple:
+    """(fingerprints already in the ITSM store, whether the read was complete).
 
-    Read from the store rather than from a file this module keeps, so a record
-    somebody closed and a record this never filed are told apart by the same
-    source of truth the operator sees. An unreadable store returns an empty
-    set: filing a duplicate is a worse outcome than not filing at all, but not
-    filing BECAUSE the store could not be read would silently drop the queue.
+    Two reviewers disagreed about the failure case and both were half right, so
+    it returns both facts instead of picking one.
+
+    Raising on an unreadable store aborts `apply()` before it files ANYTHING:
+    every routable finding stays unrouted because a listing call failed, and an
+    unremediated vulnerability is a worse outcome than a duplicate ticket.
+    Returning an empty set silently is not right either — the store then looks
+    like one holding no matching records, and the duplicates that follow have
+    no stated cause.
+
+    So the read continues with what it has and says it was partial. `apply()`
+    stamps that on every record it writes, which is where somebody looking at
+    two identical Changes will actually see it.
     """
     found: set = set()
+    complete = True
     for lister in ("list_incidents", "list_changes"):
         reader = getattr(itsm, lister, None)
         if reader is None:
             continue
         try:
             records = reader()
-        except Exception:
-            raise
+        except Exception:  # noqa: BLE001 - the store's failure modes are its own
+            # Not swallowed: `complete` carries it out, and the caller reports it.
+            complete = False
+            continue
         for record in records or []:
             title = getattr(record, "title", "") or ""
             start = title.find(FINGERPRINT_PREFIX)
             if start != -1 and "]" in title[start:]:
                 found.add(title[start : title.index("]", start) + 1])
-    return found
+    return found, complete

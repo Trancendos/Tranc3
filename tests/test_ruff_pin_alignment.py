@@ -639,3 +639,78 @@ def test_a_tab_between_the_package_and_the_command_is_handled(checker):
         files={"tools/Dockerfile": "RUN uv run --with ruff==0.15.8\truff check .\n"},
     )
     assert module.main() == 0
+
+
+def test_a_step_name_mentioning_ruff_is_not_unwrapped_as_a_command(checker):
+    """The scalar pattern accepted ANY `key:`, not only command keys.
+
+    `name: "pip install ruff"` was unwrapped and read as a command, so a job
+    title describing what a step does produced a finding about a command
+    nobody runs — a false failure on a correct workflow, which is how a gate
+    earns a suppression instead of a fix.
+    """
+    module = checker(
+        files={
+            ".github/workflows/named.yml": (
+                "jobs:\n  x:\n    steps:\n"
+                '      - name: "pip install ruff"\n'
+                "        run: pip install ruff==0.15.8 && ruff check .\n"
+            )
+        }
+    )
+    assert module.main() == 0
+
+
+def test_a_shell_comment_inside_a_quoted_scalar_is_still_a_comment(checker):
+    """YAML strips its quotes before the shell ever sees the line.
+
+    `run: 'echo hi # pip install ruff'` runs `echo hi`; the rest is a shell
+    comment. Stripping comments BEFORE unwrapping left the `#` intact (it
+    looked quoted), and unwrapping then exposed it as command text — an
+    unpinned-install finding for a command that never runs.
+    """
+    module = checker(
+        files={
+            ".github/workflows/commented.yml": (
+                "jobs:\n  x:\n    steps:\n"
+                "      - run: 'echo hi # pip install ruff'\n"
+                "      - run: pip install ruff==0.15.8 && ruff check .\n"
+            )
+        }
+    )
+    assert module.main() == 0
+
+
+def test_an_unterminated_quoted_scalar_is_reported_not_skipped(checker, capsys):
+    """A quoted scalar spanning lines is one this reader cannot join.
+
+    Left alone it fails OPEN: the shell-quote analysis sees an unclosed quote,
+    treats everything after it as quoted, and an unpinned install inside
+    becomes invisible. Reported instead, with the block-scalar form to use.
+    """
+    module = checker(
+        files={
+            ".github/workflows/multiline.yml": (
+                "jobs:\n  x:\n    steps:\n"
+                "      - run: 'pip install ruff\n"
+                "          && ruff check .'\n"
+            )
+        }
+    )
+    assert module.main() == 1
+    assert "quoted YAML scalar that does not close" in capsys.readouterr().err
+
+
+def test_a_block_scalar_is_read_normally(checker):
+    """`run: |` is the supported multi-line form and needs no special case."""
+    module = checker(
+        files={
+            ".github/workflows/block.yml": (
+                "jobs:\n  x:\n    steps:\n"
+                "      - run: |\n"
+                "          pip install ruff==0.15.8\n"
+                "          ruff check .\n"
+            )
+        }
+    )
+    assert module.main() == 0

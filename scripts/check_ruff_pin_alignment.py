@@ -236,9 +236,41 @@ def _is_continuation(line: str) -> bool:
 # A YAML `key: 'value'` scalar. The quotes are YAML's, not the shell's -- YAML
 # removes them before the runner ever sees a command -- so `run: 'pip install
 # ruff'` is an ordinary unquoted install.
+#: Keys whose value is a shell command. Restricted deliberately: the pattern
+#: used to accept ANY `key:`, so `name: "lint with ruff"` was unwrapped and read
+#: as a command, and a job title mentioning an install produced a finding about
+#: a command nobody runs. A false failure on a correct workflow is how this
+#: gate earns a suppression instead of a fix.
+_COMMAND_KEYS = ("run", "cmd", "command", "commands", "script", "entrypoint")
+
 _YAML_SCALAR = re.compile(
-    r"""^(?P<lead>\s*(?:-\s*)?[\w.\-]+:\s*)(?P<quote>['"])(?P<body>.*)(?P=quote)\s*$"""
+    r"""^(?P<lead>\s*(?:-\s*)?(?:"""
+    + "|".join(_COMMAND_KEYS)
+    + r""")\s*:\s*)(?P<quote>['"])(?P<body>.*)(?P=quote)\s*$""",
+    re.IGNORECASE,
 )
+
+#: A command key whose quoted value does NOT close on the same line. The scalar
+#: continues onto following lines, which this line-based reader cannot join, and
+#: the shell-quote analysis then sees an unclosed quote and treats the rest as
+#: quoted — hiding an install rather than reporting it. Reported instead.
+_YAML_SCALAR_OPENER = re.compile(
+    r"""^\s*(?:-\s*)?(?:"""
+    + "|".join(_COMMAND_KEYS)
+    + r""")\s*:\s*(?P<quote>['"])(?P<body>(?:[^'"]|(?!(?P=quote)).)*)$""",
+    re.IGNORECASE,
+)
+
+
+def unterminated_yaml_scalar(line: str) -> bool:
+    """True when a command key opens a quoted scalar it does not close.
+
+    No `_YAML_SCALAR.match(...)` guard, because it would be dead: the opener's
+    body can consume neither the closing quote nor anything after it, so a
+    properly closed scalar cannot match it in the first place. Measured — with
+    the guard removed, every closed scalar in the suite still reads False.
+    """
+    return bool(_YAML_SCALAR_OPENER.match(line))
 
 
 def _unwrap_yaml_scalar(line: str) -> str:
@@ -335,10 +367,14 @@ def _logical_lines(
         # carried across the join. Both halves matter and they pull opposite
         # ways: a string can span a continuation, so the state has to survive
         # it, while a comment cannot, so the boundary must not.
-        line, quote = _strip_comment(raw.rstrip(), quote)
+        # YAML quoting comes off FIRST. The other order let a `#` inside a
+        # quoted scalar survive `_strip_comment` (which saw it as quoted), and
+        # unwrapping then exposed the comment as command text -- so
+        # `run: 'echo hi # pip install ruff'` reported an unpinned install of a
+        # command the shell never runs.
+        raw_line = _unwrap_yaml_scalar(raw.rstrip()) if yaml_scalars else raw.rstrip()
+        line, quote = _strip_comment(raw_line, quote)
         line = line.rstrip()
-        if yaml_scalars:
-            line = _unwrap_yaml_scalar(line)
         line_map.append((len(buffer), number))
         if _is_continuation(line):
             buffer += line[:-1] + " "
@@ -426,11 +462,17 @@ def _install_spans(segment: str) -> list[tuple[int, str]]:
     return list({offset: (offset, text) for offset, text in spans}.values())
 
 
-def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]:
-    """Ruff installs found in one file, and whether it also invokes ruff.
+def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool, list[str]]:
+    """Ruff installs found in one file, whether it invokes ruff, and any problems.
 
     Each install is `(location, version or None)`; None means the install did
     not pin a version.
+
+    The problems are lines this reader cannot honestly parse. There is exactly
+    one shape today — a command key opening a quoted scalar it does not close —
+    and it is reported rather than skipped because skipping it is fail-OPEN:
+    the shell-quote analysis sees an unclosed quote, treats everything after it
+    as quoted, and an unpinned install inside becomes invisible.
     """
     try:
         text = path.read_text(encoding="utf-8")
@@ -440,9 +482,19 @@ def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]
 
     installs: list[tuple[str, str | None]] = []
     invokes = False
+    problems: list[str] = []
     # YAML surfaces need their scalar quoting removed first; a Dockerfile's
     # quotes are the shell's and must be left in place.
     is_yaml = path.suffix.lower() in {".yml", ".yaml"}
+    if is_yaml:
+        for number, raw in enumerate(text.splitlines(), start=1):
+            if unterminated_yaml_scalar(raw.rstrip()):
+                problems.append(
+                    f"{rel}:{number} opens a quoted YAML scalar that does not close on "
+                    "the same line — this reader joins shell continuations, not YAML "
+                    "ones, and would treat the rest as quoted and miss an install "
+                    "inside it. Use a block scalar (`run: |`)."
+                )
     for line, line_map in _logical_lines(text, yaml_scalars=is_yaml):
         for offset, segment in _segments(line):
             for base, text in _install_spans(segment):
@@ -461,7 +513,7 @@ def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]
             # invocation is measured against.
             if RUFF_INVOCATION.search(segment) or EXEC_FORM_RUFF.search(segment):
                 invokes = True
-    return installs, invokes
+    return installs, invokes, problems
 
 
 def ruff_surfaces() -> tuple[dict[str, str], list[str]]:
@@ -478,7 +530,8 @@ def ruff_surfaces() -> tuple[dict[str, str], list[str]]:
                 continue
             seen.add(path)
             rel = str(path.relative_to(REPO_ROOT))
-            installs, invokes = scan_file(path, rel)
+            installs, invokes, unreadable = scan_file(path, rel)
+            problems.extend(unreadable)
 
             for location, version in installs:
                 if version is None:

@@ -379,3 +379,63 @@ def test_a_chained_alias_is_found_regardless_of_statement_order(checker):
     )
     module = checker({"test_bad.py": body})
     assert module.main() == 1
+
+
+def test_a_postponed_annotation_is_not_a_mutation(checker):
+    """`from __future__ import annotations` makes annotations strings.
+
+    `x: os.environ.pop("SECRET_KEY")` under that import evaluates nothing at
+    all, and reporting it fails a correct module — the kind of false failure
+    that gets a gate suppressed rather than fixed.
+    """
+    module = checker(
+        {
+            "test_ok.py": (
+                'from __future__ import annotations\nimport os\n\nx: os.environ.pop("SECRET_KEY")\n'
+            )
+        }
+    )
+    assert module.main() == 0
+
+
+def test_a_valued_annotation_still_runs_under_postponed_annotations(checker):
+    """Only the ANNOTATION is deferred. The value is assigned as normal.
+
+    Skipping the whole `AnnAssign` lost this: `x: T = os.environ.pop("K")`
+    mutates the environment at import exactly like a bare line.
+    """
+    module = checker(
+        {
+            "test_bad.py": (
+                "from __future__ import annotations\n"
+                "import os\n\n"
+                'x: str = os.environ.pop("SECRET_KEY")\n'
+            )
+        }
+    )
+    assert module.main() == 1
+
+
+def test_an_annotation_target_still_evaluates_under_postponed_annotations(checker):
+    """An attribute or subscript TARGET is evaluated even with no value.
+
+    `env.pop("SECRET_KEY").field: int` runs `pop` before Python decides there
+    is nothing to assign, so the statement mutates the environment while
+    looking like a pure annotation.
+    """
+    module = checker(
+        {
+            "test_bad.py": (
+                "from __future__ import annotations\n"
+                "import os\n\n"
+                'os.environ.pop("SECRET_KEY").field: int\n'
+            )
+        }
+    )
+    assert module.main() == 1
+
+
+def test_without_the_future_import_an_annotation_does_run(checker):
+    """No postponed annotations means the annotation expression evaluates."""
+    module = checker({"test_bad.py": ('import os\n\nx: os.environ.pop("SECRET_KEY")\n')})
+    assert module.main() == 1

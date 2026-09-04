@@ -213,19 +213,71 @@ _MINIMATCH_ONLY = re.compile(r"[{}]|[?*+@!]\(")
 # escaped literal backslash (`\\1`) is not mistaken for one.
 _BACKREFERENCE = re.compile(r"(?<!\\)(?:\\\\)*\\[1-9]")
 
-_RE2_INCOMPATIBLE = (
-    (r"(?=", "a lookahead"),
-    (r"(?!", "a negative lookahead"),
-    (r"(?<=", "a lookbehind"),
-    (r"(?<!", "a negative lookbehind"),
-    (r"(?P=", "a named backreference"),
-    # Python 3.11+ accepts both; RE2 accepts neither.
-    (r"(?>", "an atomic group"),
-    (r"*+", "a possessive quantifier"),
-    (r"++", "a possessive quantifier"),
-    (r"?+", "a possessive quantifier"),
-    (r"}+", "a possessive quantifier"),
+#: Structural constructs RE2 rejects, keyed by the literal that opens them.
+#: Matched only OUTSIDE a character class and only unescaped — see
+#: `re2_incompatibility`.
+_RE2_GROUP_OPENERS = (
+    ("(?=", "a lookahead"),
+    ("(?!", "a negative lookahead"),
+    ("(?<=", "a lookbehind"),
+    ("(?<!", "a negative lookbehind"),
+    ("(?P=", "a named backreference"),
+    # Python 3.11+ accepts this; RE2 does not.
+    ("(?>", "an atomic group"),
 )
+
+#: A quantifier followed by `+` is possessive. Python 3.11+ accepts these too.
+_QUANTIFIERS = "*+?}"
+
+
+def re2_incompatibility(body: str) -> str | None:
+    """The label of the first RE2-incompatible construct, or None.
+
+    Scanned rather than substring-matched, and the difference is not
+    pedantry — it is the direction the check fails in.
+
+    `[*+]` is a character class holding an asterisk and a plus. `a\\*+b` is an
+    escaped literal asterisk, one or more times. `[(?=]` is a class holding
+    three ordinary characters. Every one of them is valid RE2, and every one
+    contains a marker literal. A raw `in` test rejects all three, which fails a
+    correct config — a fail-CLOSED false positive, and the kind that gets a
+    gate switched off rather than obeyed.
+
+    So this tracks two things and only two: whether the previous character was
+    an escape, and whether we are inside `[...]`. That is enough to tell a
+    quantifier from a class member, and it stays a known-bad list rather than
+    an RE2 grammar — a construct it does not yet know is still evaluated and
+    still reported by the checks around it, whereas reimplementing RE2's parser
+    would be wrong in ways nobody could audit.
+    """
+    index = 0
+    in_class = False
+    class_start = -1
+    while index < len(body):
+        char = body[index]
+        if char == "\\":
+            index += 2
+            continue
+        if in_class:
+            # `]` is literal when it is the first member, or first after `^`.
+            if char == "]" and index not in (class_start + 1, class_start + 2):
+                in_class = False
+            elif char == "]" and index == class_start + 2 and body[class_start + 1] != "^":
+                in_class = False
+            index += 1
+            continue
+        if char == "[":
+            in_class = True
+            class_start = index
+            index += 1
+            continue
+        for marker, label in _RE2_GROUP_OPENERS:
+            if body.startswith(marker, index):
+                return label
+        if char in _QUANTIFIERS and body.startswith("+", index + 1):
+            return "a possessive quantifier"
+        index += 1
+    return None
 
 
 class SelectorError(ValueError):
@@ -294,13 +346,13 @@ def _one_pattern_matches(written: str, package: str) -> bool:
                     "compiles selector regexes with RE2 and refuses the whole config, "
                     "so no rule in this file would apply"
                 )
-            for marker, label in _RE2_INCOMPATIBLE:
-                if marker in body:
-                    raise SelectorError(
-                        f"{written!r} uses {label}, which RE2 rejects — Renovate "
-                        "compiles selector regexes with RE2 and refuses the whole "
-                        "config, so no rule in this file would apply"
-                    )
+            label = re2_incompatibility(body)
+            if label is not None:
+                raise SelectorError(
+                    f"{written!r} uses {label}, which RE2 rejects — Renovate "
+                    "compiles selector regexes with RE2 and refuses the whole "
+                    "config, so no rule in this file would apply"
+                )
             return re.search(body, package, flags) is not None
         except re.error as exc:
             # Returning True here meant an unparseable selector READ AS a match,
@@ -506,7 +558,13 @@ def check_renovate(packages: set[str]) -> list[str]:
                 if isinstance(rule, dict)
                 and rule.get("enabled") is False
                 and _rule_matches(rule, package)
-                and not rule.get("matchUpdateTypes")
+                # ABSENT, not falsy. `"matchUpdateTypes": []` is an explicitly
+                # empty selector: Renovate applies that rule to no update type
+                # at all, so it blocks nothing — while `not rule.get(...)` reads
+                # it as the all-update-types block and lets governance pass with
+                # no effective block in place. The same empty-selector reading
+                # `_field_matches` already applies to `matchPackageNames`.
+                and "matchUpdateTypes" not in rule
                 and _covers_pypi(rule)
                 and _scope_is_unrestricted(rule)
             ]

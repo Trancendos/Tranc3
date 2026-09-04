@@ -273,15 +273,100 @@ def test_a_temp_advisory_can_be_registered(checker, monkeypatch, tmp_path):
     """VULN_ID required TEMP ids to be registered; the register scan could not
     find one, so every valid TEMP suppression was rejected.
 
-    Exercised through `_registered_ids()` rather than a hand-built set, because
-    the two regexes drifting apart IS the defect: one required the prefix and
-    the other could not discover it. A literal set would pass either way.
+    Exercised through `_registered_ids()` reading a real register file rather
+    than a hand-built set, because the two regexes drifting apart IS the
+    defect: one required the prefix and the other could not discover it. A
+    literal set would pass either way.
     """
-    register = tmp_path / "SECURITY.md"
-    register.write_text("TEMP-2025-0001", encoding="utf-8")
-    monkeypatch.setattr(checker, "REGISTERS", (str(register),))
+    register = tmp_path / "SECURITY_ALERT_REGISTER.md"
+    register.write_text(
+        "### SEC-999 — a temporary advisory\n\n"
+        "| Field | Value |\n|---|---|\n"
+        "| **Disposition** | **SUPPRESS** |\n"
+        "| **ID** | TEMP-2025-0001 |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(checker.accepted_risk_register, "REPO_ROOT", str(tmp_path))
     text = GOOD.replace("CVE-2025-11111", "TEMP-2025-0001")
     assert checker.check(text, checker._registered_ids()) == []
+
+
+def test_an_id_in_a_fix_entry_does_not_license_a_suppression(checker, monkeypatch, tmp_path):
+    """The fail-open this reader replaced.
+
+    `_registered_ids()` used to grep both register files whole, so an id
+    mentioned in a FIX entry — a vulnerability that WAS remediated — counted as
+    registered. A `.trivyignore` line naming it then passed on a decision
+    nobody had made about it. Reachable, not theoretical: SEC-001 is a FIX
+    entry and `.trivyignore` suppresses its id.
+    """
+    register = tmp_path / "SECURITY_ALERT_REGISTER.md"
+    register.write_text(
+        "### SEC-900 — already patched\n\n"
+        "| Field | Value |\n|---|---|\n"
+        "| **Disposition** | **FIX** |\n"
+        "| **ID** | CVE-2025-11111 |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(checker.accepted_risk_register, "REPO_ROOT", str(tmp_path))
+    problems = checker.check(GOOD, checker._registered_ids())
+    assert any("not named in" in p for p in problems)
+
+
+def test_a_fix_entry_with_a_suppressed_in_row_does_license_it(checker, monkeypatch, tmp_path):
+    """SEC-001's actual situation, and why the rule is not simply "ACCEPT only".
+
+    `sentencepiece==0.2.1` IS the patched release. The vulnerability is fixed;
+    Trivy's database has not recorded which release fixed it, so a residual
+    SCANNER finding still needs silencing. Forcing the entry to SUPPRESS would
+    claim a carried risk that is not carried, and letting any FIX id license a
+    suppression would reopen the hole above — so the entry states it.
+    """
+    register = tmp_path / "SECURITY_ALERT_REGISTER.md"
+    register.write_text(
+        "### SEC-901 — patched, scanner stale\n\n"
+        "| Field | Value |\n|---|---|\n"
+        "| **Disposition** | **FIX** |\n"
+        "| **ID** | CVE-2025-11111 |\n"
+        "| **Suppressed-in** | `.trivyignore` — the pinned release is the fix |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(checker.accepted_risk_register, "REPO_ROOT", str(tmp_path))
+    assert checker.check(GOOD, checker._registered_ids()) == []
+
+
+def test_a_suppressed_in_row_does_not_widen_the_census(checker, monkeypatch, tmp_path):
+    """The licence is for `.trivyignore`, not for the vulnerability census.
+
+    A remediated advisory that resurfaces as unfixable must still fail the
+    census; `registered_ids` stays strictly ACCEPT/SUPPRESS so the extra state
+    cannot leak into the classifier that decides whether a merge is blocked.
+    """
+    register = tmp_path / "SECURITY_ALERT_REGISTER.md"
+    register.write_text(
+        "### SEC-902 — patched, scanner stale\n\n"
+        "| Field | Value |\n|---|---|\n"
+        "| **Disposition** | **FIX** |\n"
+        "| **ID** | CVE-2025-11111 |\n"
+        "| **Suppressed-in** | `.trivyignore` — the pinned release is the fix |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(checker.accepted_risk_register, "REPO_ROOT", str(tmp_path))
+    assert "CVE-2025-11111" in checker.accepted_risk_register.suppression_licensed_ids()
+    assert "CVE-2025-11111" not in checker.accepted_risk_register.registered_ids()
+
+
+def test_a_malformed_review_by_is_reported_once_not_twice(checker):
+    """`Review-By: 2020-01-01-extra` has a valid date PREFIX.
+
+    The strict check rejects it, and the lapsed check below used to parse that
+    prefix and report the same line again as "past its Review-By date" — two
+    problems, contradictory reasons, one value that is not a date at all.
+    """
+    text = GOOD.replace("Re-check trigger:", "Review-By: 2020-01-01-extra — trigger:")
+    problems = checker.check(text, {"CVE-2025-11111"})
+    assert len(problems) == 1
+    assert "not an ISO date" in problems[0]
 
 
 def test_an_unexpected_osv_payload_shape_is_treated_as_unavailable(checker, monkeypatch):

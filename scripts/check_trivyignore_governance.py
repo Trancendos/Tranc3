@@ -58,6 +58,10 @@ import urllib.error
 import urllib.request
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
+
+from src.security import accepted_risk_register  # noqa: E402
+
 TRIVYIGNORE = os.path.join(REPO_ROOT, ".trivyignore")
 REGISTERS = ("SECURITY.md", "SECURITY_ALERT_REGISTER.md")
 
@@ -121,23 +125,26 @@ def parse_entries(text: str) -> list[tuple[int, str, list[str]]]:
 
 
 def _registered_ids() -> set[str]:
-    """Every id named anywhere in the accepted-risk registers, uppercased."""
-    found: set[str] = set()
-    for name in REGISTERS:
-        path = os.path.join(REPO_ROOT, name)
-        try:
-            with open(path, encoding="utf-8") as handle:
-                text = handle.read()
-        except OSError:
-            continue
-        found.update(
-            match.upper()
-            # Same prefixes as VULN_ID. They were two lists and drifted: VULN_ID
-            # required a TEMP- id to be registered and this could never find one,
-            # so every valid TEMP suppression would have been rejected.
-            for match in re.findall(r"\b(?:CVE|GHSA|PYSEC|OSV|GO|RUSTSEC|TEMP)[-:][\w.-]+", text)
-        )
-    return found
+    """Advisory ids carrying an explicit ACCEPT or SUPPRESS decision.
+
+    Delegated to `src.security.accepted_risk_register`, which is also what the
+    vulnerability census reads. This function used to grep both register files
+    whole, so ANY id mentioned anywhere counted — including ids in FIX entries,
+    which record a vulnerability that was remediated. A `.trivyignore` line
+    naming one of those passed this gate on a decision nobody had made about
+    it, and the register carries such ids today, so it was reachable rather
+    than theoretical.
+
+    Two parsers answering one question is how the weaker one becomes the one
+    that matters. There is one now.
+
+    It asks the slightly wider question `suppression_licensed_ids`: an ACCEPT
+    or SUPPRESS decision, OR an entry carrying an explicit `Suppressed-in` row.
+    The second exists because a remediated advisory can still need its stale
+    scanner finding silenced — see that function for why neither collapsing
+    nor widening was the right answer.
+    """
+    return accepted_risk_register.suppression_licensed_ids()
 
 
 def _justification_problems(number: int, entry: str, block: list[str]) -> list[str]:
@@ -173,6 +180,11 @@ def _justification_problems(number: int, entry: str, block: list[str]) -> list[s
             f".trivyignore:{number} has a Review-By for {entry} that is not an ISO date "
             "(YYYY-MM-DD) — a date nothing can compare is not a review date"
         )
+        # Stop here. `Review-By: 2020-01-01-extra` reaches the lapsed check
+        # below, which parses the valid PREFIX and reports the same entry a
+        # second time as "past its Review-By date" — two problems for one
+        # line, with contradictory reasons, about a value that has no date.
+        return problems
     match = REVIEW_BY.search(prose)
     if match:
         try:

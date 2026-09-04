@@ -256,9 +256,19 @@ def _import_time_nodes(tree: ast.Module):
     stack: list[ast.AST] = list(tree.body)
     while stack:
         node = stack.pop()
-        if isinstance(node, ast.AnnAssign) and skip_annotations and node.value is None:
-            # `x: os.environ.pop("SECRET_KEY")` with no value assigns nothing
-            # and, under postponed annotations, evaluates nothing.
+        if isinstance(node, ast.AnnAssign) and skip_annotations:
+            # Under postponed annotations the ANNOTATION is a string that never
+            # evaluates, so `x: os.environ.pop("SECRET_KEY")` mutates nothing.
+            # The rest of the statement is not deferred, and skipping the whole
+            # node lost both halves of that:
+            #   * a value still runs -- `x: T = os.environ.pop("K")` assigns.
+            #   * an attribute or subscript TARGET still evaluates its own
+            #     sub-expressions, so `env.pop("K").field: int` runs `pop`.
+            # Walk both, skip only the annotation.
+            yield node
+            stack.append(node.target)
+            if node.value is not None:
+                stack.append(node.value)
             continue
         if isinstance(node, _DEFERRED):
             # The BODY is deferred; the definition itself is not. Decorators,

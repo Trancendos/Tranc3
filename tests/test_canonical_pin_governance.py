@@ -651,6 +651,74 @@ def test_an_re2_incompatible_selector_is_reported(tmp_path, checker):
     assert module.main() == 1
 
 
+def test_a_possessive_quantifier_is_reported(tmp_path, checker):
+    """Python 3.11+ accepts `a*+`; RE2 does not, and rejects the whole config.
+
+    Asserted on the raised SelectorError rather than on `main()`'s exit code.
+    A selector Python evaluates simply fails to match `fastapi`, so the run
+    exits 1 for "no disabling rule" whether or not the RE2 check fires —
+    measured, and a test that cannot tell those apart proves nothing about
+    this check.
+    """
+    module = _load()
+    with pytest.raises(module.SelectorError) as raised:
+        module._one_pattern_matches("/^fast.*+api$/", "fastapi")
+    assert "possessive quantifier" in str(raised.value)
+
+
+def test_a_lookahead_selector_names_the_construct(tmp_path, checker):
+    """Same reason: the exit code alone does not distinguish the two failures."""
+    module = _load()
+    with pytest.raises(module.SelectorError) as raised:
+        module._one_pattern_matches("/^fast(?=api)$/", "fastapi")
+    assert "lookahead" in str(raised.value)
+
+
+def test_a_marker_inside_a_character_class_is_not_a_finding(tmp_path, checker):
+    """`[*+]` is a class holding an asterisk and a plus, and RE2 accepts it.
+
+    A raw substring test finds `*+` there and fails a correct config. That is
+    the fail-CLOSED false positive that gets a gate switched off rather than
+    fixed, so the constructs are scanned with escape and character-class state
+    instead of matched as literals.
+    """
+    module = _load()
+    assert module.re2_incompatibility("[*+]x") is None
+    assert module.re2_incompatibility("[(?=]x") is None
+    assert module.re2_incompatibility("[?+]x") is None
+
+
+def test_an_escaped_quantifier_is_not_possessive(tmp_path, checker):
+    r"""`a\*+b` is an escaped literal asterisk followed by an ordinary `+`.
+
+    RE2 accepts it. Only an UNESCAPED quantifier followed by `+` is possessive,
+    and the distinction is exactly one backslash.
+    """
+    module = _load()
+    assert module.re2_incompatibility(r"a\*+b") is None
+    assert module.re2_incompatibility(r"a\?+b") is None
+    assert module.re2_incompatibility(r"a\\*+b") == "a possessive quantifier"
+
+
+def test_an_ordinary_selector_is_not_reported(tmp_path, checker):
+    """The shape every real selector in renovate.json actually takes."""
+    module = _load()
+    assert module.re2_incompatibility("^(pydantic|fastapi)$") is None
+
+
+def test_an_empty_match_update_types_is_not_the_all_types_block(tmp_path, checker):
+    """`"matchUpdateTypes": []` applies the rule to NO update type.
+
+    Renovate blocks nothing with it, while `not rule.get("matchUpdateTypes")`
+    read it as the all-types block and let governance pass with no effective
+    block in place — the same empty-selector fail-open already closed for
+    `matchPackageNames`.
+    """
+    empty = dict(DISABLE_RULE, matchUpdateTypes=[])
+    module = checker(*_write_configs(tmp_path, rules=[empty]))
+    assert module.main() == 1
+
+
 def test_a_backreference_selector_is_reported(tmp_path, checker):
     backref = dict(DISABLE_RULE, matchPackageNames=[r"/(fast)\1/"])
     module = checker(*_write_configs(tmp_path, rules=[backref]))

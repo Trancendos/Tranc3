@@ -33,6 +33,7 @@ a reason no fix is possible and a trigger for revisiting.
 | **ID** | CVE-2026-1260 (GHSA-38vq-g6vr-w8wf) |
 | **Scanner** | Trivy / pip-audit |
 | **Component** | `sentencepiece` |
+| **Suppressed-in** | `.trivyignore` — the vulnerability is FIXED at the pinned 0.2.1; what is silenced is Trivy's stale view of which release carries the fix |
 | **Recorded** | 2026-07-31 |
 
 Remediated by pinning `sentencepiece==0.2.1` in `requirements.txt`; the 0.2.1

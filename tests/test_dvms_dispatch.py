@@ -328,3 +328,74 @@ def test_every_raised_record_names_the_findings_behind_it(classification):
     (item,) = plan(census)
     assert "pillow" in item.detail
     assert item.findings
+
+
+def test_an_unreadable_store_still_files_and_says_the_check_was_partial():
+    """Two reviewers disagreed here and both were half right.
+
+    Raising on a failed listing aborts `apply()` before it files anything:
+    every routable finding stays unrouted because a read failed, and an
+    unremediated vulnerability beats a duplicate ticket for cost. Returning an
+    empty set silently is not right either — the duplicates that follow then
+    have no stated cause. The record carries the reason instead.
+    """
+
+    class _Record:
+        def __init__(self, title):
+            self.title = title
+
+        def to_dict(self):
+            return {"title": self.title}
+
+    class _BrokenReads:
+        def __init__(self):
+            self.changes = []
+
+        def create_change(self, title, change_type="normal", service=None):
+            self.changes.append(title)
+            return _Record(title)
+
+        def list_changes(self):
+            raise RuntimeError("database is locked")
+
+    census = {
+        "surfaces": [
+            _surface("workers/the-studio/requirements.txt", [_finding("pillow", "fixable")])
+        ]
+    }
+    store = _BrokenReads()
+    written = apply(plan(census), service=store)
+    assert len(store.changes) == 1, "a failed listing must not drop the queue"
+    assert any(entry.get("duplicate_check", "").startswith("incomplete") for entry in written), (
+        "a partial duplicate check must be stated on the record, not left silent"
+    )
+
+
+def test_a_readable_store_does_not_stamp_the_partial_marker():
+    """Otherwise the marker is on every record and means nothing."""
+
+    class _Record:
+        def __init__(self, title):
+            self.title = title
+
+        def to_dict(self):
+            return {"title": self.title}
+
+    class _Store:
+        def __init__(self):
+            self.changes = []
+
+        def create_change(self, title, change_type="normal", service=None):
+            self.changes.append(_Record(title))
+            return _Record(title)
+
+        def list_changes(self):
+            return list(self.changes)
+
+    census = {
+        "surfaces": [
+            _surface("workers/the-studio/requirements.txt", [_finding("pillow", "fixable")])
+        ]
+    }
+    written = apply(plan(census), service=_Store())
+    assert not any("duplicate_check" in entry for entry in written)
