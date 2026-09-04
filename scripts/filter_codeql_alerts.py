@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drop the path-injection alerts that were adjudicated false positives — and only those.
+"""Drop the CodeQL alerts adjudicated false positives for a given file — and only those.
 
 WHY THIS EXISTS
 
@@ -42,28 +42,65 @@ import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Adjudicated false positives, each with the reason it is here. The reason is
-# not decoration: without it, a reader six months from now cannot tell a
-# considered suppression from somebody silencing a red build.
-SUPPRESSED_PATHS: dict[str, str] = {
-    "Dimensional/path_validation.py": (
-        "the module IS the path validator — CodeQL flags the very code that "
-        "performs the containment check it is asking for"
-    ),
-    "Dimensional/orchestration/heartbeat_aggregator.py": (
-        "paths here are built from an internal service registry, never from request data"
-    ),
-    "src/agents/goal_manager.py": (
-        "goal ids are validated against a fixed allow-list before they reach any path expression"
-    ),
+# Adjudicated false positives: which FILE, under which RULE, and why.
+#
+# Nested per path rather than a path list crossed with one global rule list.
+# The flat shape read as "these three files are adjudicated for these rules",
+# which is not what anybody decided: each file was adjudicated for its own
+# reason, and adding a rule for one of them silently extended it to the other
+# two. That is the same over-broad suppression this module was written to
+# replace, one layer up — and the `py/non-iterable-in-for-loop` entry below
+# would have introduced it, because that reason applies to exactly one file
+# and to no path-injection alert anywhere.
+#
+# Rule keys are substring markers, not exact ids: CodeQL renames and re-scopes
+# query ids between releases, and a suppression keyed to an exact id silently
+# stops applying — which fails in the SAFE direction (the alert reappears) and
+# so is the right way round to be imprecise.
+#
+# The reason is not decoration. Without it, a reader six months from now cannot
+# tell a considered suppression from somebody silencing a red build.
+ADJUDICATED: dict[str, dict[str, str]] = {
+    "Dimensional/path_validation.py": {
+        "path-injection": (
+            "the module IS the path validator — CodeQL flags the very code that "
+            "performs the containment check it is asking for"
+        ),
+        "path-traversal": (
+            "the same module and the same reason: the traversal containment check "
+            "is itself the code being flagged"
+        ),
+    },
+    "Dimensional/orchestration/heartbeat_aggregator.py": {
+        "path-injection": (
+            "paths here are built from an internal service registry, never from request data"
+        ),
+        "path-traversal": (
+            "the same module and the same registry-sourced paths, which never "
+            "carry a component taken from a request"
+        ),
+    },
+    "src/agents/goal_manager.py": {
+        "path-injection": (
+            "goal ids are validated against a fixed allow-list before they reach "
+            "any path expression"
+        ),
+        "path-traversal": (
+            "the same fixed allow-list validating the same goal ids before they "
+            "reach a path expression"
+        ),
+        "non-iterable-in-for-loop": (
+            "`for state in GoalState:` — an Enum CLASS is iterable through "
+            "EnumMeta.__iter__, which CodeQL's Python model does not carry, so it "
+            "reads the class as a non-iterable. Verified by running it. Adjudicated "
+            "rather than rewritten because iterating the enum is the idiomatic form "
+            "and contorting correct code to satisfy a scanner is how the code gets "
+            "worse and the scanner stays wrong. The inline `# codeql[...]` comment "
+            "this replaces did nothing: inline suppressions are not honoured by the "
+            "SARIF upload path this repository uses, so the alert arrived anyway."
+        ),
+    },
 }
-
-# Only these rules are covered by the adjudication above. Substring match
-# rather than exact ids, because CodeQL renames and re-scopes query ids between
-# releases and a suppression keyed to an exact id silently stops applying —
-# which fails in the SAFE direction (the alert reappears) and so is the right
-# way round to be imprecise.
-SUPPRESSED_RULE_MARKERS = ("path-injection", "path-traversal")
 
 
 def _rule_id(result: dict) -> str:
@@ -79,9 +116,13 @@ def _paths(result: dict) -> list[str]:
     return out
 
 
-def _is_suppressed_rule(rule_id: str) -> bool:
+def adjudication_for(path: str, rule_id: str) -> str | None:
+    """The written reason this path/rule pair is suppressed, or None."""
     lowered = rule_id.lower()
-    return any(marker in lowered for marker in SUPPRESSED_RULE_MARKERS)
+    for marker, reason in ADJUDICATED.get(path, {}).items():
+        if marker in lowered:
+            return reason
+    return None
 
 
 def filter_sarif(sarif: dict) -> tuple[dict, list[str], list[str]]:
@@ -92,19 +133,20 @@ def filter_sarif(sarif: dict) -> tuple[dict, list[str], list[str]]:
         kept = []
         for result in run.get("results", []):
             rule_id = _rule_id(result)
-            hit = [p for p in _paths(result) if p in SUPPRESSED_PATHS]
+            hit = [p for p in _paths(result) if p in ADJUDICATED]
             if not hit:
                 kept.append(result)
                 continue
-            if _is_suppressed_rule(rule_id):
-                dropped.append(f"{hit[0]} — {rule_id}")
+            reason = adjudication_for(hit[0], rule_id)
+            if reason is not None:
+                dropped.append(f"{hit[0]} — {rule_id} ({reason})")
                 continue
-            # A listed file, a rule nobody adjudicated. Keep it and say so: the
-            # decision covered path injection, not everything that file might
-            # ever trip.
+            # A listed file, a rule nobody adjudicated for THAT file. Keep it
+            # and say so: each decision covers the rules written beside it, not
+            # everything the file might ever trip.
             surprises.append(
-                f"{hit[0]} raised {rule_id}, which is NOT covered by the "
-                "path-injection adjudication — kept, and it needs a decision"
+                f"{hit[0]} raised {rule_id}, which is NOT adjudicated for that "
+                "file — kept, and it needs a decision"
             )
             kept.append(result)
         run["results"] = kept
@@ -114,7 +156,7 @@ def filter_sarif(sarif: dict) -> tuple[dict, list[str], list[str]]:
 def stale_paths() -> list[str]:
     return [
         f"{path} is listed as an adjudicated false positive but no longer exists"
-        for path in SUPPRESSED_PATHS
+        for path in ADJUDICATED
         if not os.path.exists(os.path.join(REPO_ROOT, path))
     ]
 
@@ -147,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     with open(args.sarif, "w", encoding="utf-8") as handle:
         json.dump(sarif, handle)
 
-    print(f"Suppressed path-injection alerts dropped: {len(dropped)}")
+    print(f"Adjudicated alerts dropped: {len(dropped)}")
     for line in dropped:
         print(f"  {line}")
     for line in surprises:

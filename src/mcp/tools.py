@@ -829,7 +829,6 @@ class SparkToolRegistry:
                 "status": "timeout",
                 "error": f"Workflow did not complete within {timeout_seconds}s.",
             }
-        return None
 
     async def _handle_register_workflow(self, params: Dict[str, Any]) -> Dict[str, Any]:
         workflow_dict = params.get("workflow")
@@ -963,6 +962,12 @@ class SparkToolRegistry:
         try:
 
             async def _run() -> Any:
+                # Executing supplied code IS this tool: The Spark exposes a
+                # sandboxed run-code capability, so the finding restates the
+                # feature rather than reporting a defect. Already dispositioned
+                # for ruff (S102) and bandit (B102); semgrep does not read
+                # either marker, so it needs its own.
+                # nosemgrep: python.lang.security.audit.exec-detected.exec-detected
                 exec(compile(code, "<mcp_code>", "exec"), namespace)  # noqa: S102  # nosec B102
                 lines = code.strip().splitlines()
                 if lines:
@@ -980,6 +985,10 @@ class SparkToolRegistry:
                         )
                     ):
                         try:
+                            # Same tool, same disposition: the last expression
+                            # of the supplied snippet is evaluated so the caller
+                            # gets its value back.
+                            # nosemgrep: python.lang.security.audit.eval-detected.eval-detected
                             return eval(last_line, namespace)  # noqa: S307  # nosec B307
                         except Exception:
                             return None
@@ -1062,7 +1071,6 @@ class SparkToolRegistry:
                 "total_searched": 0,
                 "error": safe_error_detail(exc, 500),
             }
-        return None
 
     async def _handle_ingest_document(self, params: Dict[str, Any]) -> Dict[str, Any]:
         texts = params.get("texts") or []
@@ -1262,7 +1270,6 @@ class SparkToolRegistry:
                 "plan": None,
                 "error": safe_error_detail(exc, 500)[:120],
             }
-        return None
 
     # ── The Citadel handler ───────────────────────────────────────────────
 

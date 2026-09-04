@@ -190,7 +190,6 @@ class GoalManager:
                 priority,
             )
             return goal.goal_id
-        return None
 
     async def get_goal(self, goal_id: str) -> Optional[Goal]:
         """Retrieve a goal by ID."""
@@ -203,7 +202,6 @@ class GoalManager:
                 del self._goals[goal_id]
                 return True
             return False
-        return None
 
     # -------------------------------------------------------------------
     # State transitions
@@ -219,7 +217,6 @@ class GoalManager:
             goal.updated_at = time.time()
             logger.debug("Goal activated: %s", goal_id)
             return True
-        return None
 
     async def mark_completed(self, goal_id: str) -> bool:
         """Transition a goal to COMPLETED."""
@@ -233,7 +230,6 @@ class GoalManager:
             goal.updated_at = time.time()
             logger.info("Goal completed: %s (%s)", goal.description, goal_id)
             return True
-        return None
 
     async def mark_failed(self, goal_id: str, error: str = "") -> bool:
         """Transition a goal to FAILED."""
@@ -246,7 +242,6 @@ class GoalManager:
             goal.updated_at = time.time()
             logger.warning("Goal failed: %s (%s) — %s", goal.description, goal_id, error)
             return True
-        return None
 
     async def mark_cancelled(self, goal_id: str, reason: str = "") -> bool:
         """Transition a goal to CANCELLED."""
@@ -259,7 +254,6 @@ class GoalManager:
             goal.updated_at = time.time()
             logger.info("Goal cancelled: %s (%s) — %s", goal.description, goal_id, reason)
             return True
-        return None
 
     # -------------------------------------------------------------------
     # Progress tracking
@@ -293,7 +287,6 @@ class GoalManager:
 
             goal.updated_at = time.time()
             return True
-        return None
 
     # -------------------------------------------------------------------
     # Goal selection
@@ -331,7 +324,6 @@ class GoalManager:
             active = [g for g in self._goals.values() if g.state == GoalState.ACTIVE]
             active.sort(key=lambda g: -g.effective_priority)
             return active
-        return None
 
     async def get_pending_goals(self) -> List[Goal]:
         """Return all PENDING goals, sorted by priority."""
@@ -339,7 +331,6 @@ class GoalManager:
             pending = [g for g in self._goals.values() if g.state == GoalState.PENDING]
             pending.sort(key=lambda g: -g.effective_priority)
             return pending
-        return None
 
     # -------------------------------------------------------------------
     # Queries
@@ -349,13 +340,16 @@ class GoalManager:
         """Return all overdue goals."""
         async with self._lock:
             return [g for g in self._goals.values() if g.is_overdue]
-        return None
 
     async def get_goal_summary(self) -> Dict[str, Any]:
         """Return a summary of all goals by state."""
         async with self._lock:
             by_state: Dict[str, int] = {}
-            for state in GoalState:  # codeql[py/non-iterable-in-for-loop] – Enum is iterable
+            # CodeQL reads an Enum CLASS as non-iterable (its Python model does not
+            # carry EnumMeta.__iter__). Adjudicated with the reason in
+            # scripts/filter_codeql_alerts.py — an inline `# codeql[...]` comment
+            # here did nothing, because the SARIF upload path does not honour them.
+            for state in GoalState:
                 by_state[state.value] = 0
             for goal in self._goals.values():
                 by_state[goal.state.value] += 1
@@ -370,13 +364,11 @@ class GoalManager:
                     else 0.0
                 ),
             }
-        return None
 
     async def get_all_goals(self) -> List[Dict[str, Any]]:
         """Return serialized representations of all goals."""
         async with self._lock:
             return [g.to_dict() for g in self._goals.values()]
-        return None
 
     # -------------------------------------------------------------------
     # Internal

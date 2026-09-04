@@ -66,7 +66,54 @@ def test_a_non_path_injection_alert_in_a_listed_file_survives(filterer):
     assert len(sarif["runs"][0]["results"]) == 1
     assert dropped == []
     assert len(surprises) == 1
-    assert "NOT covered" in surprises[0]
+    assert "NOT adjudicated" in surprises[0]
+
+
+def test_an_adjudication_does_not_leak_to_another_file(filterer):
+    """The reason lives with the file it was written about.
+
+    `non-iterable-in-for-loop` is adjudicated for `goal_manager.py` because an
+    Enum class is iterable and CodeQL's model does not know it. That reasoning
+    says nothing about `path_validation.py`, and under the flat path-list x
+    rule-list shape this replaced, adding it for one file would have suppressed
+    it in all three — the over-broad suppression this module exists to end,
+    reintroduced one layer up.
+    """
+    other = "Dimensional/path_validation.py"
+    assert filterer.adjudication_for(LISTED, "py/non-iterable-in-for-loop")
+    assert filterer.adjudication_for(other, "py/non-iterable-in-for-loop") is None
+    sarif, dropped, surprises = filterer.filter_sarif(
+        _sarif(_result("py/non-iterable-in-for-loop", other))
+    )
+    assert len(sarif["runs"][0]["results"]) == 1
+    assert dropped == []
+    assert len(surprises) == 1
+
+
+def test_the_enum_iteration_alert_is_adjudicated_for_goal_manager(filterer):
+    """The alert that actually failed the gate, pinned.
+
+    Twelve `py/unreachable-statement` alerts in this file were real dead code
+    and were deleted. This thirteenth is a false positive — `for state in
+    GoalState:` is valid, EnumMeta.__iter__ makes an Enum class iterable — and
+    is suppressed by decision rather than by rewriting correct code.
+    """
+    sarif, dropped, surprises = filterer.filter_sarif(
+        _sarif(_result("py/non-iterable-in-for-loop", LISTED))
+    )
+    assert sarif["runs"][0]["results"] == []
+    assert len(dropped) == 1
+    assert surprises == []
+
+
+def test_an_unreachable_statement_alert_is_not_adjudicated_anywhere(filterer):
+    """The twelve real ones were fixed at source, not silenced.
+
+    Adjudicating the rule would have turned a dead-code cleanup into a
+    permanent blind spot for the next twelve.
+    """
+    for path in filterer.ADJUDICATED:
+        assert filterer.adjudication_for(path, "py/unreachable-statement") is None
 
 
 def test_a_path_injection_alert_in_an_unlisted_file_survives(filterer):
@@ -90,10 +137,12 @@ def test_a_renamed_path_traversal_rule_is_still_covered(filterer):
     assert len(dropped) == 1
 
 
-def test_every_suppressed_path_carries_a_reason(filterer):
+def test_every_adjudication_carries_a_reason(filterer):
     """A suppression without a reason cannot be told from silencing a red build."""
-    for path, reason in filterer.SUPPRESSED_PATHS.items():
-        assert len(reason.split()) >= 8, path
+    for path, rules in filterer.ADJUDICATED.items():
+        assert rules, f"{path} is listed with no adjudicated rule at all"
+        for marker, reason in rules.items():
+            assert len(reason.split()) >= 8, f"{path}/{marker}"
 
 
 def test_every_suppressed_path_still_exists(filterer):
@@ -102,7 +151,11 @@ def test_every_suppressed_path_still_exists(filterer):
 
 
 def test_a_stale_path_fails_the_run(filterer, tmp_path, monkeypatch, capsys):
-    monkeypatch.setitem(filterer.SUPPRESSED_PATHS, "gone/away.py", "a written reason here ok")
+    monkeypatch.setitem(
+        filterer.ADJUDICATED,
+        "gone/away.py",
+        {"path-injection": "a written reason with at least eight words in it"},
+    )
     target = tmp_path / "python.sarif"
     target.write_text(json.dumps(_sarif()), encoding="utf-8")
     assert filterer.main([str(target)]) == 1

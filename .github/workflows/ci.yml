@@ -157,6 +157,16 @@ jobs:
       - name: Trivy suppression governance
         run: python scripts/check_trivyignore_governance.py
 
+      # CodeQL raised twelve py/unreachable-statement alerts in
+      # src/agents/goal_manager.py and the SARIF filter's --strict-surprises is
+      # the only reason anybody looked. A sweep found fifteen more in six other
+      # files and api.py -- twenty-seven bare `return None`s after a block that
+      # always leaves the frame, several under a `-> bool` they contradicted.
+      # CodeQL had been raising most of them into a tab that gates nothing.
+      # This runs in about a second and FAILS, which is the whole difference.
+      - name: Unreachable code
+        run: python scripts/check_unreachable_code.py
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every

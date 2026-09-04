@@ -42,7 +42,6 @@ async def is_available() -> bool:
             return resp.status_code == 200
     except Exception:
         return False
-    return None
 
 
 async def list_models() -> List[str]:
@@ -56,7 +55,6 @@ async def list_models() -> List[str]:
     except Exception as exc:
         logger.debug("ollama.list_models failed: %s", exc)
         return []
-    return None
 
 
 async def generate(
@@ -99,6 +97,11 @@ async def generate(
             data = resp.json()
             content = data["choices"][0]["message"]["content"]
             usage = data.get("usage", {})
+            # The rule fires on the literal, reading "model=%s tokens=%s" as a
+            # hardcoded secret. It is a format string; the interpolated values
+            # are a model name and an integer token count, and neither the
+            # prompt nor the completion is logged here.
+            # nosemgrep: python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure
             logger.debug(
                 "ollama.generate model=%s tokens=%s", chosen_model, usage.get("total_tokens", 0)
             )
@@ -115,7 +118,6 @@ async def generate(
     except Exception as exc:
         logger.warning("ollama.generate error model=%s: %s", chosen_model, exc)
         return {}
-    return None
 
 
 async def embed(text: str, model: Optional[str] = None) -> List[float]:
@@ -135,4 +137,3 @@ async def embed(text: str, model: Optional[str] = None) -> List[float]:
     except Exception as exc:
         logger.debug("ollama.embed failed: %s", exc)
         return []
-    return None

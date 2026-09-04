@@ -1909,7 +1909,6 @@ async def chat(
         )  # codeql[py/cleartext-logging]
         record_request("/chat", "POST", 500, tier, time.time() - start)
         raise HTTPException(status_code=500, detail="Internal server error")
-    return None
 
 
 # ── Streaming chat endpoint ───────────────────────────────────────────────────
@@ -2157,7 +2156,6 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
         return {"phi": round(phi, 4), "is_conscious": phi > 2.0, "text": text, "report": report}
     except Exception as e:
         raise HTTPException(status_code=500, detail=safe_error_detail(e, 500))
-    return None
 
 
 # ── Billing ───────────────────────────────────────────────────────────────────
@@ -2508,7 +2506,6 @@ async def error_docs(error_code: str):
         }
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Error code '{error_code}' not found")
-    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
