@@ -34,7 +34,7 @@
     ],
     "automerge": true,
     "automergeType": "pr",
-    "minimumReleaseAge": false,
+    "minimumReleaseAge": null,
     "description": "Security remediation is exempt from the 7-day supply-chain cooldown: the cooldown exists to let a compromised release be discovered before it is taken, and applying it to a published CVE fix would delay remediation for exactly as long."
   },
   "osvVulnerabilityAlerts": true,
@@ -112,7 +112,7 @@
         "/^transformers$/",
         "/^sentence-transformers$/"
       ],
-      "minimumReleaseAge": false
+      "minimumReleaseAge": null
     },
     {
       "matchDatasources": [
@@ -127,7 +127,7 @@
         "/^postgres$/",
         "/^clickhouse$/"
       ],
-      "minimumReleaseAge": false
+      "minimumReleaseAge": null
     },
     {
       "matchManagers": [
@@ -200,7 +200,7 @@
       "matchDatasources": [
         "pypi"
       ],
-      "minimumReleaseAge": false
+      "minimumReleaseAge": null
     }
   ],
   "ignorePaths": [

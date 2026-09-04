@@ -116,6 +116,19 @@ def _as_list(value: object) -> list[str]:
     return []
 
 
+def _regex_body(written: str) -> str | None:
+    """The pattern inside a Renovate `/regex/` selector, or None if it is a glob.
+
+    Renovate wraps regexes in slashes and allows a trailing `i` flag.
+    """
+    if not written.startswith("/"):
+        return None
+    for suffix in ("/i", "/"):
+        if written.endswith(suffix) and len(written) > len(suffix):
+            return written[1 : -len(suffix)]
+    return None
+
+
 def _one_pattern_matches(written: str, package: str) -> bool:
     """Does one written selector value match `package`?
 
@@ -123,10 +136,16 @@ def _one_pattern_matches(written: str, package: str) -> bool:
     bare name, and any of them may be negated with a leading `!`. Matching is
     case-insensitive. A bare name is just a glob with no wildcards, so globs
     subsume the exact case.
+
+    The regex form may carry a trailing `i` flag -- `/^py.*/i`. Without
+    accepting it, `/^py.*/i` fell through to the glob branch, where a literal
+    match against a name containing slashes is impossible, so the selector
+    silently matched nothing and any rule using it was read as inert.
     """
-    if written.startswith("/") and written.endswith("/") and len(written) > 1:
+    body = _regex_body(written)
+    if body is not None:
         try:
-            return re.search(written[1:-1], package, re.IGNORECASE) is not None
+            return re.search(body, package, re.IGNORECASE) is not None
         except re.error:
             # An unparseable pattern surfaces here rather than being skipped.
             return True
@@ -226,6 +245,38 @@ def check_dependabot(packages: set[str]) -> list[str]:
     return problems
 
 
+def _bad_release_ages(config: dict, rules: list) -> list[str]:
+    """`minimumReleaseAge` must be a duration string or null -- never `false`.
+
+    Renovate's schema types it `string | null`. `false` was written in four
+    places here, meaning "no cooldown", and Renovate rejects the whole config
+    on a schema violation -- so the cooldown those rules exist to express, and
+    every other rule in the file with it, stops being applied at all. A config
+    that does not load is the loudest possible version of a control that does
+    not act, and nothing in this repository read the file closely enough to say
+    so.
+    """
+    problems: list[str] = []
+    blocks: list[tuple[str, object]] = [("top level", config)]
+    for key in ("vulnerabilityAlerts", "osvVulnerabilityAlerts"):
+        if isinstance(config.get(key), dict):
+            blocks.append((key, config[key]))
+    blocks.extend((f"packageRules[{i}]", rule) for i, rule in enumerate(rules))
+
+    for where, block in blocks:
+        if not isinstance(block, dict) or "minimumReleaseAge" not in block:
+            continue
+        value = block["minimumReleaseAge"]
+        if value is None or isinstance(value, str):
+            continue
+        problems.append(
+            f"renovate.json {where} sets minimumReleaseAge to {value!r} — the schema "
+            'accepts a duration string ("7 days") or null; anything else makes Renovate '
+            "reject the entire config, so no rule in this file applies"
+        )
+    return problems
+
+
 def check_renovate(packages: set[str]) -> list[str]:
     if not RENOVATE.is_file():
         return [f"{RENOVATE.relative_to(REPO_ROOT)} is missing"]
@@ -242,7 +293,7 @@ def check_renovate(packages: set[str]) -> list[str]:
     if not isinstance(rules, list):
         return ["renovate.json has no packageRules list"]
 
-    problems: list[str] = []
+    problems: list[str] = _bad_release_ages(config, rules)
     for package in sorted(packages):
         disabling = [
             i

@@ -353,6 +353,11 @@ def _apply(text: str, edit: str | tuple[str, str]) -> str:
 _PYTEST_PASSED = 0
 _PYTEST_TESTS_FAILED = 1
 
+# Per-guard wall clock. The slowest guard's suite runs in seconds; five minutes
+# is generous enough never to fire on a slow runner and short enough that a
+# hang is reported as a hang rather than as the whole job timing out.
+_PYTEST_TIMEOUT_SECONDS = 300
+
 
 class CalibrationError(RuntimeError):
     """pytest did not run to a verdict, so its exit status proves nothing."""
@@ -387,14 +392,28 @@ def _run_tests(tests: tuple[str, ...]) -> bool:
     # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
     # argv is a list (no shell), and every element is either a literal or comes
     # from the GUARDS manifest above -- module constants in this file, not input.
-    proc = subprocess.run(  # noqa: S603
-        [sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", *tests],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        env=env,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(  # noqa: S603
+            [sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", *tests],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+            timeout=_PYTEST_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        # A mutated guard can turn a bounded test into an unbounded one -- a
+        # removed loop bound, a disabled circuit breaker, a fail-closed branch
+        # that no longer returns. Without a timeout that hangs the job until the
+        # runner kills it, which reads as infrastructure flake rather than as
+        # this tool holding a mutation on disk. Raising here still unwinds
+        # through calibrate()'s `finally`, so the source is restored either way.
+        raise CalibrationError(
+            f"pytest did not finish within {_PYTEST_TIMEOUT_SECONDS}s on "
+            f"{', '.join(tests)} — no verdict was reached, so this is not evidence "
+            "the guard was detected."
+        ) from exc
     if proc.returncode not in (_PYTEST_PASSED, _PYTEST_TESTS_FAILED):
         raise CalibrationError(
             f"pytest exited {proc.returncode} without reaching a verdict on "

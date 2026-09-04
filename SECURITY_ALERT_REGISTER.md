@@ -238,12 +238,27 @@ CI is unaffected by the ERESOLVE because `frontend-build.yml` runs `npm ci
 today. Resolving that peer conflict is the prerequisite for *any* automated dependency
 remediation in `web/`, this one included.
 
-Not exploitable as used. The advisory is an infinite loop in `unzipSync` when parsing
-malformed ZIP64 archives. `posthog-js` uses fflate only to compress outbound payloads:
-grepping the shipped package finds 18 references each to `strToU8` and `gzipSync`, and
-**zero** to `unzipSync`, `inflateSync`, `gunzipSync` or `unzlibSync`. `npm audit`
-independently reports `effects: []`, confirming fflate is a leaf with no dependent
-relying on the vulnerable path. No attacker-supplied archive is ever unzipped.
+**Not exploitable as used.** The advisory is an infinite loop in `unzipSync` when
+parsing malformed ZIP64 archives. `posthog-js` uses fflate only to compress *outbound*
+payloads, and the evidence for that is the shipped code, not the dependency graph:
+
+| Evidence | Measured on `web/node_modules/posthog-js@1.422.5` |
+|---|---|
+| Sites that import fflate at all | 2 — `lib/src/request.js:77` and `lib/src/extensions/replay/external/lazy-loaded-session-recorder.js:97`, both `require("fflate")` |
+| Symbols those sites call | `gzipSync`, `strToU8`, `strFromU8` (`request.js:143`, `lazy-loaded-session-recorder.js:170`) — compression and UTF-8 conversion only |
+| Decompression entry points reached | **zero** — no `unzipSync`, `inflateSync`, `gunzipSync` or `unzlibSync` anywhere in the package |
+
+No attacker-supplied archive is ever unzipped, so the vulnerable function is never
+called.
+
+An earlier revision of this entry cited "18 references each to `strToU8` and
+`gzipSync`" and `npm audit`'s `effects: []`. Both are corrected here. The 18 counted
+`.js.map` source maps alongside the 2 real call sites, inflating the figure ninefold
+without adding evidence. And `effects: []` does not mean what it was read to mean: it
+lists the packages npm reports as vulnerable *because of* this one, so an empty list
+says only that no dependent was separately flagged — `posthog-js` does depend on
+fflate, and always did. The direct call-site evidence above is what carries this
+disposition; the audit field never did.
 
 
 ---

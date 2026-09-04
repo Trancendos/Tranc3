@@ -106,7 +106,13 @@ jobs:
       # whose removal keeps the suite green is not protecting anything.
       #
       # Not `|| true`. The whole point is that a decorative guard blocks here.
+      #
+      # Step-level timeout, not job-level: Forgejo's act-runner does not honour
+      # a job `timeout-minutes` the way GitHub Actions does, so the GitHub copy
+      # of this gate is bounded by its job header and this copy has to bound the
+      # one step that shells out to pytest itself.
       - name: Guard calibration (security guards must be load-bearing)
+        timeout-minutes: 30
         run: python3 scripts/check_guard_calibration.py
 
       - name: API import gate

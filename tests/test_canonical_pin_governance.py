@@ -55,6 +55,7 @@ def _write_configs(
     dependabot_ignore=("fastapi", "pydantic"),
     per_directory=None,
     rules=None,
+    renovate_extra=None,
 ):
     (tmp_path / "scripts").mkdir(exist_ok=True)
     (tmp_path / ".github").mkdir(exist_ok=True)
@@ -78,10 +79,9 @@ def _write_configs(
     dependabot.write_text("version: 2\nupdates:\n" + "".join(blocks), encoding="utf-8")
 
     renovate = tmp_path / "renovate.json"
-    renovate.write_text(
-        json.dumps({"packageRules": rules if rules is not None else [DISABLE_RULE]}),
-        encoding="utf-8",
-    )
+    config = {"packageRules": rules if rules is not None else [DISABLE_RULE]}
+    config.update(renovate_extra or {})
+    renovate.write_text(json.dumps(config), encoding="utf-8")
     return pin, dependabot, renovate
 
 
@@ -268,17 +268,44 @@ def test_fails_when_a_deprecated_selector_re_enables_a_governed_package(tmp_path
 
 
 def test_a_negated_glob_excludes_the_package_from_a_later_rule(tmp_path, checker):
-    """`!pattern` is a negative matcher: a rule that excludes the package does not re-enable it."""
+    """`!pattern` is a negative matcher: a rule that excludes the package does not re-enable it.
+
+    Written as negations alone. Renovate requires `*` to be the only value in
+    `matchPackageNames`, so `["*", "!pydantic", "!fastapi"]` -- how this fixture
+    read until 2026-09-04 -- is schema-invalid and could never have run. A rule
+    carrying only negations already matches everything they do not exclude,
+    which is the same intent expressed legally.
+    """
     module = checker(
         *_write_configs(
             tmp_path,
             rules=[
                 DISABLE_RULE,
-                {"matchPackageNames": ["*", "!pydantic", "!fastapi"], "enabled": True},
+                {"matchPackageNames": ["!pydantic", "!fastapi"], "enabled": True},
             ],
         )
     )
     assert module.main() == 0
+
+
+def test_a_regex_selector_with_the_i_flag_is_honoured(tmp_path, checker):
+    """`/^py.*/i` is a Renovate regex, not a glob.
+
+    Without the flag-aware branch it fell through to glob matching, where a
+    literal `/^py.*/i` matches no package name at all -- so a rule re-enabling
+    the governed pins read as inert and the check passed on a tree where it
+    should have failed.
+    """
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            rules=[
+                DISABLE_RULE,
+                {"matchPackageNames": ["/^PYD.*/i"], "enabled": True},
+            ],
+        )
+    )
+    assert module.main() == 1
 
 
 def test_the_disabling_rule_must_cover_the_pypi_datasource(tmp_path, checker):
@@ -326,3 +353,42 @@ def test_the_real_repo_configs_pass():
     """The estate's actual configs, not a synthetic stand-in."""
     module = _load()
     assert module.main() == 0
+
+
+def test_a_boolean_minimum_release_age_is_rejected(tmp_path, checker):
+    """Renovate types `minimumReleaseAge` as `string | null`; `false` is invalid.
+
+    This is not cosmetic. A schema violation makes Renovate reject the WHOLE
+    config, so the 7-day supply-chain cooldown every other rule sets stops being
+    applied — including on the governed pins. The real file carried `false` in
+    four places.
+    """
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            renovate_extra={"vulnerabilityAlerts": {"minimumReleaseAge": False}},
+        )
+    )
+    assert module.main() == 1
+
+
+def test_a_null_minimum_release_age_is_the_documented_way_to_waive_the_cooldown(tmp_path, checker):
+    """`null` expresses the same intent legally, so it must not be reported."""
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            renovate_extra={"vulnerabilityAlerts": {"minimumReleaseAge": None}},
+        )
+    )
+    assert module.main() == 0
+
+
+def test_a_boolean_minimum_release_age_inside_a_package_rule_is_rejected(tmp_path, checker):
+    """The same violation is fatal wherever in the config it appears."""
+    module = checker(
+        *_write_configs(
+            tmp_path,
+            rules=[DISABLE_RULE, {"matchPackageNames": ["torch"], "minimumReleaseAge": False}],
+        )
+    )
+    assert module.main() == 1

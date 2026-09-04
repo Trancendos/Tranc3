@@ -24,7 +24,15 @@ jobs:
 
       - name: Install uv (fast Python package manager)
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          # Downloaded to a file and then run, never piped straight into a
+          # shell: a truncated or reset transfer piped into `sh` executes the
+          # prefix that did arrive, and the exit status seen is the shell's,
+          # not curl's. `--fail` plus a separate invocation makes a partial
+          # download a failed step instead of a half-run installer.
+          curl -LsSf --proto '=https' --tlsv1.2 \
+            https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+          sh /tmp/uv-install.sh
+          rm -f /tmp/uv-install.sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version
 
@@ -36,7 +44,7 @@ jobs:
       - name: Lint (ruff)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system ruff --quiet
+          uv pip install --system "ruff==0.15.8" --quiet
           ruff check src/ api.py --select E,F,W --ignore E501 || true
 
       - name: Validate EA workbook CSVs
@@ -136,7 +144,15 @@ jobs:
 
       - name: Install uv (fast Python package manager)
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          # Downloaded to a file and then run, never piped straight into a
+          # shell: a truncated or reset transfer piped into `sh` executes the
+          # prefix that did arrive, and the exit status seen is the shell's,
+          # not curl's. `--fail` plus a separate invocation makes a partial
+          # download a failed step instead of a half-run installer.
+          curl -LsSf --proto '=https' --tlsv1.2 \
+            https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+          sh /tmp/uv-install.sh
+          rm -f /tmp/uv-install.sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version
 
@@ -180,8 +196,14 @@ jobs:
 
       - name: Notify The Citadel on failure
         if: failure()
+        env:
+          # Passed as an environment variable rather than interpolated into the
+          # script body: `${{ }}` is substituted as text before the shell ever
+          # runs, so a branch name containing shell metacharacters would be
+          # executed rather than printed.
+          BRANCH: ${{ github.ref_name }}
         run: |
-          echo "CI failed on branch ${{ github.ref_name }} — check logs"
+          echo "CI failed on branch $BRANCH — check logs"
           # When Citadel webhook is live this will auto-create an incident
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -202,7 +224,15 @@ jobs:
 
       - name: Install uv (fast Python package manager)
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          # Downloaded to a file and then run, never piped straight into a
+          # shell: a truncated or reset transfer piped into `sh` executes the
+          # prefix that did arrive, and the exit status seen is the shell's,
+          # not curl's. `--fail` plus a separate invocation makes a partial
+          # download a failed step instead of a half-run installer.
+          curl -LsSf --proto '=https' --tlsv1.2 \
+            https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+          sh /tmp/uv-install.sh
+          rm -f /tmp/uv-install.sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version
 
