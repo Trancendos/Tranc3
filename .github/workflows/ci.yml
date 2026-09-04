@@ -309,8 +309,14 @@ jobs:
       # ran the whole suite again, on every PR and every push to main, purely to
       # attach --cov flags and upload the result -- a second full-suite run whose
       # only difference was the flags, and which was suppressed with `|| true`
-      # just like this one, so it gated nothing either. Measuring coverage over
-      # the run that already happens costs nothing extra.
+      # exactly as this one was at the time, so it gated nothing either.
+      # Measuring coverage over the run that already happens costs nothing
+      # extra.
+      #
+      # That suppression is gone as of f98aadb4: this step now fails the job
+      # when a test fails. The paragraph above is history, not a description
+      # of the current run — kept because it explains why codecov.yml was
+      # retired rather than fixed.
       #
       # This selection is narrower than codecov.yml's was: `integration` is
       # documented in pyproject.toml as "requires live external services", which
