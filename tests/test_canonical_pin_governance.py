@@ -600,3 +600,87 @@ def test_a_later_rule_scoped_to_an_unknown_manager_is_reported(tmp_path, checker
     }
     module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, reenable]))
     assert module.main() == 1
+
+
+def test_an_explicitly_empty_selector_matches_nothing(tmp_path, checker):
+    """`matchPackageNames: []` applies to no dependency in Renovate.
+
+    It reached the "negations alone mean everything except these" branch and
+    returned True, so a rule that governs nothing read as governing every
+    package. The block would be accepted, CI would go green, and PyPI updates
+    would stay enabled — the exact outcome this checker exists to prevent.
+    """
+    empty = dict(DISABLE_RULE, matchPackageNames=[])
+    module = checker(*_write_configs(tmp_path, rules=[empty]))
+    assert module.main() == 1
+
+
+def test_a_registry_scoped_rule_is_not_the_estate_wide_block(tmp_path, checker):
+    """`matchRegistryUrls` narrows a rule to one registry (Renovate 43.81.0+).
+
+    A rule scoped to a private registry leaves everything resolved from
+    pypi.org enabled, so accepting it as the block certifies governance that
+    does not exist.
+    """
+    scoped = dict(DISABLE_RULE, matchRegistryUrls=["https://private.example.com/simple"])
+    module = checker(*_write_configs(tmp_path, rules=[scoped]))
+    assert module.main() == 1
+
+
+def test_a_later_opentofu_rule_is_not_an_override(tmp_path, checker):
+    """OpenTofu is as unrelated to a PyPI pin as Terraform is."""
+    tofu = {
+        "description": "opentofu modules may update freely",
+        "matchManagers": ["opentofu"],
+        "matchPackageNames": ["fastapi"],
+        "enabled": True,
+    }
+    module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, tofu]))
+    assert module.main() == 0
+
+
+def test_an_re2_incompatible_selector_is_reported(tmp_path, checker):
+    """Renovate compiles selector regexes with RE2, which has no lookahead.
+
+    Python's engine accepts it, so the checker evaluated the pattern and
+    certified the block — while Renovate rejects the whole config on it and
+    applies no rule in the file at all.
+    """
+    lookahead = dict(DISABLE_RULE, matchPackageNames=["/^fast(?=api)$/"])
+    module = checker(*_write_configs(tmp_path, rules=[lookahead]))
+    assert module.main() == 1
+
+
+def test_a_backreference_selector_is_reported(tmp_path, checker):
+    backref = dict(DISABLE_RULE, matchPackageNames=[r"/(fast)\1/"])
+    module = checker(*_write_configs(tmp_path, rules=[backref]))
+    assert module.main() == 1
+
+
+def test_an_escaped_backslash_is_not_read_as_a_backreference(tmp_path, checker):
+    r"""`\\1` is a literal backslash then a 1, and RE2 accepts it.
+
+    Reporting it would be a false failure on a valid config, which is how a
+    check earns a suppression rather than a fix.
+    """
+    module = _load()
+    assert module._one_pattern_matches(r"/a\\1b/", "fastapi") is False
+
+
+def test_a_later_rule_matching_on_either_selector_family_is_an_override(tmp_path, checker):
+    """The override check reads the selector families with OR, deliberately.
+
+    How Renovate combines several package-identifier fields is genuinely
+    ambiguous between its documentation and its general selector rule, so each
+    caller picks the reading that fails CLOSED for its own question. For an
+    override that is OR: report it if it re-enables the pin under either
+    reading, because a missed override is a lifted block nobody sees.
+    """
+    reenable = {
+        "description": "matches fastapi under the OR reading only",
+        "matchPackageNames": ["fastapi"],
+        "matchDepNames": ["an-unrelated-package"],
+        "enabled": True,
+    }
+    module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, reenable]))
+    assert module.main() == 1

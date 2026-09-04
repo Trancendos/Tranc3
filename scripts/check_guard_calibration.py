@@ -374,7 +374,21 @@ class CalibrationError(RuntimeError):
     """pytest did not run to a verdict, so its exit status proves nothing."""
 
 
-def _run_tests(tests: tuple[str, ...]) -> bool:
+def _attempt_timeout(budget: float | None) -> float:
+    """The per-run pytest timeout, clamped to what is left of the run budget.
+
+    Without the clamp the two budgets are independent: a baseline that takes
+    the full 300 s, then a guard starting just under the 20-minute deadline and
+    allowed another 300 s, can push the process past the 30-minute production
+    gate. The runner then kills calibration before it prints WHICH guard failed
+    -- and a killed job carries none of the information a failed one does.
+    """
+    if budget is None:
+        return _PYTEST_TIMEOUT_SECONDS
+    return max(1.0, min(_PYTEST_TIMEOUT_SECONDS, budget))
+
+
+def _run_tests(tests: tuple[str, ...], budget: float | None = None) -> bool:
     """True if the tests all passed; raises if pytest never reached a verdict.
 
     The distinction is the whole point. This tool reads "non-zero" as "the
@@ -411,7 +425,7 @@ def _run_tests(tests: tuple[str, ...]) -> bool:
             text=True,
             env=env,
             check=False,
-            timeout=_PYTEST_TIMEOUT_SECONDS,
+            timeout=_attempt_timeout(budget),
         )
     except subprocess.TimeoutExpired as exc:
         # A mutated guard can turn a bounded test into an unbounded one -- a
@@ -547,7 +561,7 @@ def _assert_targets_clean() -> list[str]:
     return [line for line in proc.stdout.splitlines() if line.strip()]
 
 
-def calibrate(guard: Guard) -> tuple[bool, str]:
+def calibrate(guard: Guard, budget: float | None = None) -> tuple[bool, str]:
     """Remove the guard, require its tests to fail, restore. Returns (ok, note)."""
     target = REPO_ROOT / guard.path
     original = target.read_text(encoding="utf-8")
@@ -570,7 +584,7 @@ def calibrate(guard: Guard) -> tuple[bool, str]:
         _IN_FLIGHT[target] = original
         target.write_text(mutated, encoding="utf-8")
 
-        if _run_tests(guard.tests):
+        if _run_tests(guard.tests, budget):
             return (
                 False,
                 "guard removed and the suite still PASSED — these tests do not "
@@ -628,11 +642,18 @@ def main() -> int:
 
     _install_restore_handlers()
 
+    # ONE deadline for the whole run, started before the baseline rather than
+    # after it. Two independent budgets — a 300 s baseline, then a guard
+    # starting just inside a 20-minute deadline and allowed another 300 s —
+    # can carry the process past the 30-minute production gate, and a runner
+    # that kills calibration takes the report of WHICH guard failed with it.
+    deadline = time.monotonic() + _RUN_BUDGET_SECONDS
+
     # A baseline failure would make every result meaningless: the suite must
     # pass before anything is mutated, or "removal detected" means nothing.
     all_tests = tuple(sorted({t for g in guards for t in g.tests}))
     try:
-        baseline_passed = _run_tests(all_tests)
+        baseline_passed = _run_tests(all_tests, deadline - time.monotonic())
     except CalibrationError as exc:
         # The per-guard loop already handles this; the baseline call did not, so
         # a pytest usage or collection error here escaped main() as a raw
@@ -654,7 +675,6 @@ def main() -> int:
         return 1
 
     failures = 0
-    deadline = time.monotonic() + _RUN_BUDGET_SECONDS
     for guard in guards:
         if time.monotonic() >= deadline:
             print(
@@ -665,7 +685,7 @@ def main() -> int:
             )
             return 1
         try:
-            ok, note = calibrate(guard)
+            ok, note = calibrate(guard, deadline - time.monotonic())
         except CalibrationError as exc:
             # Not "the guard was detected" — the run never reached a verdict.
             ok, note = False, str(exc)

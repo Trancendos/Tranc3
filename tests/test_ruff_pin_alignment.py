@@ -584,3 +584,58 @@ def test_installing_another_package_does_not_hide_a_ruff_invocation(checker, cap
     )
     assert module.main() == 1
     assert "runs ruff" in capsys.readouterr().err
+
+
+def test_an_install_inside_quotes_is_not_an_install(checker, capsys):
+    """`echo 'pip install ruff==0.15.8' && ruff check .` installs nothing.
+
+    The quoted text was matched as a real install, so the file recorded a
+    pinned install that never happens and the actual invocation beside it
+    passed on whatever ruff the runner already had — the exact drift this check
+    exists to catch, written as a string literal.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": "RUN echo 'pip install ruff==0.15.8' && ruff check .\n"},
+    )
+    assert module.main() == 1
+    assert "runs ruff" in capsys.readouterr().err
+
+
+def test_a_quoted_package_on_a_real_install_is_still_read(checker):
+    """The other side of the same change: quoting is normal on the ARGUMENT.
+
+    Placing the verb by quote position must not stop the pin being read —
+    `pip install "ruff==0.15.8"` is the ordinary way to write it.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": 'RUN pip install "ruff==0.15.8"\n'},
+    )
+    assert module.main() == 0
+
+
+def test_an_option_before_the_package_option_is_tolerated(checker):
+    """`uv run --project . --with ruff==0.15.8 ruff check .` is valid usage.
+
+    Requiring `--with` to follow the runner immediately missed the install and
+    failed a correctly pinned command.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": "RUN uv run --project . --with ruff==0.15.8 ruff check .\n"},
+    )
+    assert module.main() == 0
+
+
+def test_a_tab_between_the_package_and_the_command_is_handled(checker):
+    """`split(" ")` put `ruff check .` inside the package span.
+
+    That reported a second, unpinned install on a line that had pinned it —
+    a false failure on valid usage.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": "RUN uv run --with ruff==0.15.8\truff check .\n"},
+    )
+    assert module.main() == 0

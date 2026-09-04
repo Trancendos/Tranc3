@@ -121,6 +121,11 @@ _UNMODELLED_SCOPES = (
     # `matchCurrentAge` narrows a rule to dependencies older/newer than a given
     # age. Missing from this list, an age-restricted block read as estate-wide.
     "matchCurrentAge",
+    # Added in Renovate 43.81.0. It narrows a rule to dependencies resolved
+    # from a particular registry, so a rule scoped to a private registry is not
+    # the estate-wide block -- it leaves everything on pypi.org enabled while
+    # reading here as full coverage.
+    "matchRegistryUrls",
     "matchCurrentVersion",
     "matchCurrentValue",
     "matchNewValue",
@@ -152,6 +157,7 @@ _NON_PYTHON_MANAGERS = frozenset(
         "bundler",
         "composer",
         "terraform",
+        "opentofu",
         "helm-values",
         "helmv3",
         "helmfile",
@@ -190,6 +196,30 @@ def _may_cover_python(rule: dict) -> bool:
 # Brace expansion and extglob are valid minimatch and mean nothing to fnmatch,
 # which would silently report "no match" for a selector Renovate does match.
 _MINIMATCH_ONLY = re.compile(r"[{}]|[?*+@!]\(")
+
+
+# Constructs Python's `re` accepts and RE2 does not. Renovate compiles selector
+# regexes with RE2, so a pattern using any of these makes Renovate reject the
+# WHOLE config -- and a config that does not load applies none of its rules,
+# including the block this checker just certified. Evaluating such a selector
+# with Python's engine and reporting a pass is the loudest possible version of
+# a control that does not act.
+#
+# This is a known-bad list, not a full RE2 grammar, and it is the right way
+# round: an RE2-incompatible construct it does not yet know about is still
+# evaluated and still reported by the rest of the checks, whereas a full
+# reimplementation of RE2's parser would be wrong in ways nobody could audit.
+# A numeric backreference: an odd run of backslashes followed by 1-9, so an
+# escaped literal backslash (`\\1`) is not mistaken for one.
+_BACKREFERENCE = re.compile(r"(?<!\\)(?:\\\\)*\\[1-9]")
+
+_RE2_INCOMPATIBLE = (
+    (r"(?=", "lookahead"),
+    (r"(?!", "negative lookahead"),
+    (r"(?<=", "lookbehind"),
+    (r"(?<!", "negative lookbehind"),
+    (r"(?P=", "named backreference"),
+)
 
 
 class SelectorError(ValueError):
@@ -252,6 +282,19 @@ def _one_pattern_matches(written: str, package: str) -> bool:
     if body is not None:
         try:
             flags = re.IGNORECASE if ignore_case else 0
+            if _BACKREFERENCE.search(body):
+                raise SelectorError(
+                    f"{written!r} uses a backreference, which RE2 rejects — Renovate "
+                    "compiles selector regexes with RE2 and refuses the whole config, "
+                    "so no rule in this file would apply"
+                )
+            for marker, label in _RE2_INCOMPATIBLE:
+                if marker in body:
+                    raise SelectorError(
+                        f"{written!r} uses a {label}, which RE2 rejects — Renovate "
+                        "compiles selector regexes with RE2 and refuses the whole "
+                        "config, so no rule in this file would apply"
+                    )
             return re.search(body, package, flags) is not None
         except re.error as exc:
             # Returning True here meant an unparseable selector READ AS a match,
@@ -268,7 +311,18 @@ def _one_pattern_matches(written: str, package: str) -> bool:
 
 
 def _field_matches(written_values: list[str], package: str) -> bool:
-    """Renovate's within-a-field semantics: any positive, no negative."""
+    """Renovate's within-a-field semantics: any positive, no negative.
+
+    An explicitly EMPTY list matches nothing. It reached the "negations alone
+    mean everything except these" branch below and returned True, so
+    `matchPackageNames: []` -- which Renovate applies to no dependency at all --
+    read here as a rule covering every governed package. The block would be
+    accepted, CI would pass, and PyPI updates would stay enabled. A field that
+    is absent is a different thing and never reaches this function: only
+    present fields are collected by the caller.
+    """
+    if not written_values:
+        return False
     # `!(fastapi)` is a minimatch negative EXTGLOB, not a `!`-negated selector.
     # Stripping the leading `!` handed `(fastapi)` to the matcher, which fnmatch
     # matches against nothing, so the negation never fired and a block Renovate
@@ -283,15 +337,27 @@ def _field_matches(written_values: list[str], package: str) -> bool:
     return any(_one_pattern_matches(w, package) for w in positives)
 
 
-def _rule_matches(rule: dict, package: str) -> bool:
+def _rule_matches(rule: dict, package: str, mode: str = "all") -> bool:
     """Does this Renovate rule apply to `package`?
 
-    Renovate ANDs the selector FIELDS and ORs the values inside one field. This
-    function used to flatten every field into a single list, so a rule reading
-    `matchPackageNames: ["fastapi"], matchDepNames: ["something-else"]` -- which
-    Renovate applies to nothing, because both must match -- was read here as
-    applying to `fastapi`. An ineffective disabling rule would then satisfy
-    governance.
+    Renovate ORs the values inside one selector field. How it combines several
+    package-identifier FIELDS is the part this checker will not bet on: the
+    documentation describes matchPackageNames, matchDepNames,
+    matchPackagePatterns and matchPackagePrefixes as one OR'd family, while the
+    general rule for selectors of different kinds is AND, and the two readings
+    disagree for any rule carrying more than one of them.
+
+    So the combination is chosen by the CALLER, and each caller picks the
+    reading that fails CLOSED for what it is asking:
+
+      mode="all"  -- for a DISABLING rule. Credit it as the block only if it
+                     covers the package under both readings. Guessing "any"
+                     here would accept `matchPackageNames: ["fastapi"],
+                     matchDepNames: ["unrelated"]` as governance for fastapi
+                     when Renovate may apply it to nothing at all.
+      mode="any"  -- for a later `enabled: true` OVERRIDE. Report it if it
+                     re-enables the package under either reading, because a
+                     missed override is a lifted block nobody sees.
 
     A rule carrying NO package selector at all applies to every dependency;
     treating that as "matches nothing" was the earlier hole that let a
@@ -317,6 +383,8 @@ def _rule_matches(rule: dict, package: str) -> bool:
     if not fields:
         return True  # selectorless: applies to everything
 
+    if mode == "any":
+        return any(_field_matches(values, package) for values in fields)
     return all(_field_matches(values, package) for values in fields)
 
 
@@ -471,7 +539,9 @@ def check_renovate(packages: set[str]) -> list[str]:
                 # skipped the very shape that undoes the block. Only a rule
                 # whose managers are all provably non-Python is safe to ignore.
                 overrides = (
-                    _covers_pypi(rule) and _may_cover_python(rule) and _rule_matches(rule, package)
+                    _covers_pypi(rule)
+                    and _may_cover_python(rule)
+                    and _rule_matches(rule, package, mode="any")
                 )
             except SelectorError as exc:
                 problems.append(

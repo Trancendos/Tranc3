@@ -139,6 +139,7 @@ class _EnvironNames:
     def __init__(self, tree: ast.Module) -> None:
         self.os_modules: set[str] = set()
         self.environs: set[str] = set()
+        assignments: list[tuple[list[str], ast.expr]] = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -148,11 +149,26 @@ class _EnvironNames:
                 for alias in node.names:
                     if alias.name == "environ":
                         self.environs.add(alias.asname or "environ")
-            elif isinstance(node, ast.Assign) and self._is_environ_expr(node.value):
-                # `env = os.environ` — a second name for the same mapping.
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        self.environs.add(target.id)
+            elif isinstance(node, ast.Assign):
+                names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+                if names:
+                    assignments.append((names, node.value))
+
+        # Aliases chain, and `ast.walk` is not source order, so one pass over
+        # the assignments is not enough: `copy = env` may be visited before
+        # `env = os.environ`. Repeat until the alias set stops growing.
+        # Without this, `env = os.environ; copy = env; copy["SECRET_KEY"] = "x"`
+        # was a two-line way around a gate the one-line version already caught.
+        changed = True
+        while changed:
+            changed = False
+            for names, value in assignments:
+                if not self.matches(value):
+                    continue
+                for name in names:
+                    if name not in self.environs:
+                        self.environs.add(name)
+                        changed = True
 
     def _is_environ_expr(self, node: ast.AST) -> bool:
         return (
@@ -173,6 +189,31 @@ class _EnvironNames:
 _DEFERRED = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
 
 
+def _definition_time_children(node: ast.AST):
+    """The parts of a `def`/`lambda` that run when the definition is executed.
+
+    Everything except the body: decorators, default values (positional and
+    keyword-only), annotations, and a function's return annotation.
+    """
+    children: list[ast.AST] = []
+    children.extend(getattr(node, "decorator_list", []) or [])
+    args = getattr(node, "args", None)
+    if args is not None:
+        children.extend(args.defaults or [])
+        children.extend(d for d in (args.kw_defaults or []) if d is not None)
+        for group in ("posonlyargs", "args", "kwonlyargs"):
+            for arg in getattr(args, group, []) or []:
+                if arg.annotation is not None:
+                    children.append(arg.annotation)
+        for extra in (args.vararg, args.kwarg):
+            if extra is not None and extra.annotation is not None:
+                children.append(extra.annotation)
+    returns = getattr(node, "returns", None)
+    if returns is not None:
+        children.append(returns)
+    return children
+
+
 def _import_time_nodes(tree: ast.Module):
     """Every node evaluated when the module is imported.
 
@@ -190,6 +231,12 @@ def _import_time_nodes(tree: ast.Module):
     while stack:
         node = stack.pop()
         if isinstance(node, _DEFERRED):
+            # The BODY is deferred; the definition itself is not. Decorators,
+            # default values and annotations are all evaluated when the `def`
+            # statement runs -- so `def test_x(v=os.environ.pop("SECRET_KEY")):`
+            # mutates the environment during collection exactly like a bare
+            # line, and skipping the whole node made that invisible.
+            stack.extend(_definition_time_children(node))
             continue
         yield node
         stack.extend(ast.iter_child_nodes(node))

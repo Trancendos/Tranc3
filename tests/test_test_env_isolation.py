@@ -303,3 +303,87 @@ def test_a_dunder_call_on_an_unguarded_name_is_allowed(checker):
     body = 'import os\n\nos.environ.__setitem__("SOME_OTHER", "x")\n'
     module = checker({"test_ok.py": body})
     assert module.main() == 0
+
+
+def test_a_function_default_is_evaluated_at_import(checker):
+    """`def f(v=os.environ.pop("SECRET_KEY")):` mutates during collection.
+
+    The body is deferred; the DEFINITION is not. Skipping the whole
+    `FunctionDef` node made every default value, decorator and annotation
+    invisible — all of which run when the `def` statement executes.
+    """
+    body = 'import os\n\n\ndef test_x(v=os.environ.pop("SECRET_KEY", None)):\n    assert v\n'
+    module = checker({"test_bad.py": body})
+    assert module.main() == 1
+
+
+def test_a_decorator_argument_is_evaluated_at_import(checker):
+    """Same statement, a different part of it."""
+    body = (
+        "import os\n\nimport pytest\n\n\n"
+        '@pytest.mark.parametrize("v", [os.environ.pop("SECRET_KEY", None)])\n'
+        "def test_x(v):\n    assert v\n"
+    )
+    module = checker({"test_bad.py": body})
+    assert module.main() == 1
+
+
+def test_a_lambda_default_is_evaluated_at_import(checker):
+    body = 'import os\n\nf = lambda v=os.environ.pop("JWT_SECRET", None): v  # noqa: E731\n'
+    module = checker({"test_bad.py": body})
+    assert module.main() == 1
+
+
+def test_a_function_body_is_still_deferred(checker):
+    """The boundary has to stay where it was: bodies do not run at import."""
+    body = 'import os\n\n\ndef test_x():\n    os.environ["SECRET_KEY"] = "x"\n'
+    module = checker({"test_ok.py": body})
+    assert module.main() == 0
+
+
+def test_a_harmless_default_is_not_reported(checker):
+    """Scanning definitions must not turn every `def` into a finding."""
+    module = checker({"test_ok.py": "import os\n\n\ndef test_x(v=os.getcwd()):\n    assert v\n"})
+    assert module.main() == 0
+
+
+def test_a_chained_alias_does_not_bypass_the_check(checker):
+    """`env = os.environ` was resolved; `copy = env` was not.
+
+    Two lines instead of one, and the gate stopped seeing the mutation.
+    """
+    body = 'import os\n\nenv = os.environ\ncopy = env\ncopy["SECRET_KEY"] = "x"\n'
+    module = checker({"test_bad.py": body})
+    assert module.main() == 1
+
+
+def test_a_chained_alias_is_found_regardless_of_statement_order(checker):
+    """`ast.walk` is not source order, so one pass over assignments is not enough.
+
+    A single pass resolved the chain only when the walk happened to visit the
+    root assignment first — which makes the gate's verdict depend on tree shape
+    rather than on the code.
+    """
+    body = (
+        "import os\n\n\n"
+        "def _unrelated():\n    pass\n\n\n"
+        "copy = env\nenv = os.environ\n"
+        'copy["SECRET_KEY"] = "x"\n'
+    )
+    module = checker({"test_bad.py": body})
+    assert module.main() == 1
+
+
+def test_setdefault_remains_allowed_because_conftest_always_sets_the_value(checker):
+    """Reviewed and deliberately kept as-is, with the evidence.
+
+    A review argued `setdefault` should be flagged because "conftest permits an
+    absent baseline". It does not: conftest.py runs
+    `os.environ[var] = os.environ.get(var) or default` for all four guarded
+    vars, unconditionally, before any test module is collected. The value is
+    therefore always present and non-empty, and `setdefault` is provably a
+    no-op. Twenty modules use it correctly; flagging them would make this check
+    noise, and a noisy check gets weakened rather than obeyed.
+    """
+    module = checker({"test_ok.py": 'import os\n\nos.environ.setdefault("SECRET_KEY", "x")\n'})
+    assert module.main() == 0
