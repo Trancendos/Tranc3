@@ -280,3 +280,26 @@ def test_the_real_repo_is_clean():
     """The estate's actual tests, not a synthetic stand-in."""
     module = _load()
     assert module.main() == 0
+
+
+def test_the_dunder_setitem_form_is_detected(checker):
+    """`os.environ.__setitem__("SECRET_KEY", "x")` bypassed the target scan.
+
+    The target scan catches subscript assignment; written as a call, the same
+    mutation was a one-line way around this gate.
+    """
+    body = 'import os\n\nos.environ.__setitem__("SECRET_KEY", "x")\n'
+    module = checker({"test_bad.py": body})
+    assert module.main() == 1
+
+
+def test_the_dunder_delitem_form_is_detected(checker):
+    body = 'import os\n\nos.environ.__delitem__("JWT_SECRET")\n'
+    module = checker({"test_bad.py": body})
+    assert module.main() == 1
+
+
+def test_a_dunder_call_on_an_unguarded_name_is_allowed(checker):
+    body = 'import os\n\nos.environ.__setitem__("SOME_OTHER", "x")\n'
+    module = checker({"test_ok.py": body})
+    assert module.main() == 0

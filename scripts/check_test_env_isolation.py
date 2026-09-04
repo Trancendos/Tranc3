@@ -63,7 +63,11 @@ CONFTEST = REPO_ROOT / "conftest.py"
 # Mutating calls. `setdefault` is deliberately absent -- see the module docstring.
 # `setitem` was in this set and could never match: the dunder is `__setitem__`,
 # and a subscript assignment is caught by the target scan instead.
-MUTATING_CALLS = frozenset({"pop", "popitem", "update", "clear"})
+# `__setitem__` and `__delitem__` are the dunder forms of the subscript
+# assignment and `del` the target scan already catches. Written as calls they
+# bypassed that scan entirely, so `os.environ.__setitem__("SECRET_KEY", "x")`
+# was a one-line way around this gate.
+MUTATING_CALLS = frozenset({"pop", "popitem", "update", "clear", "__setitem__", "__delitem__"})
 
 
 def _fail(msg: str) -> None:
@@ -273,12 +277,15 @@ def violations(guarded: set[str]) -> list[str]:
                 detail = "update(...)"
             elif func.attr in ("clear", "popitem"):
                 detail = f"{func.attr}()"  # removes guarded vars along with the rest
-            else:  # pop
+            else:  # pop, __setitem__, __delitem__ — all take the name first
                 arg = node.args[0] if node.args else None
                 name = arg.value if isinstance(arg, ast.Constant) else None
                 if arg is not None and name not in guarded and isinstance(arg, ast.Constant):
                     continue  # a literal, unguarded name
-                detail = f"pop({name!r})"
+                # Name the method that was actually called. Reporting every one
+                # of these as `pop(...)` would send the reader to a line that
+                # does not contain the word.
+                detail = f"{func.attr}({name!r})"
 
             found.append(f"{rel}:{node.lineno} calls os.environ.{detail} at import time")
     return found

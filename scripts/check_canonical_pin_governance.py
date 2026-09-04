@@ -118,6 +118,9 @@ _UNMODELLED_SCOPES = (
     "matchCategories",
     "matchSourceUrls",
     "matchSourceUrlPrefixes",
+    # `matchCurrentAge` narrows a rule to dependencies older/newer than a given
+    # age. Missing from this list, an age-restricted block read as estate-wide.
+    "matchCurrentAge",
     "matchCurrentVersion",
     "matchCurrentValue",
     "matchNewValue",
@@ -156,17 +159,22 @@ def _as_list(value: object) -> list[str]:
     return []
 
 
-def _regex_body(written: str) -> str | None:
-    """The pattern inside a Renovate `/regex/` selector, or None if it is a glob.
+def _regex_body(written: str) -> tuple[str | None, bool]:
+    """`(pattern, ignore_case)` for a Renovate `/regex/` selector, else `(None, False)`.
 
-    Renovate wraps regexes in slashes and allows a trailing `i` flag.
+    Renovate wraps regexes in slashes and treats them as CASE SENSITIVE unless
+    the `i` flag is present. Applying `re.IGNORECASE` unconditionally, as this
+    did, made `/^PYDANTIC$/` match `pydantic` -- over-matching, which for a
+    DISABLING rule is fail-open: a rule that does not actually cover the package
+    read as covering it, and governance passed on a block that was not there.
     """
     if not written.startswith("/"):
-        return None
-    for suffix in ("/i", "/"):
-        if written.endswith(suffix) and len(written) > len(suffix):
-            return written[1 : -len(suffix)]
-    return None
+        return None, False
+    if written.endswith("/i") and len(written) > 2:
+        return written[1:-2], True
+    if written.endswith("/") and len(written) > 1:
+        return written[1:-1], False
+    return None, False
 
 
 def _one_pattern_matches(written: str, package: str) -> bool:
@@ -182,10 +190,11 @@ def _one_pattern_matches(written: str, package: str) -> bool:
     match against a name containing slashes is impossible, so the selector
     silently matched nothing and any rule using it was read as inert.
     """
-    body = _regex_body(written)
+    body, ignore_case = _regex_body(written)
     if body is not None:
         try:
-            return re.search(body, package, re.IGNORECASE) is not None
+            flags = re.IGNORECASE if ignore_case else 0
+            return re.search(body, package, flags) is not None
         except re.error as exc:
             # Returning True here meant an unparseable selector READ AS a match,
             # which for the disabling rule is fail-OPEN: a typo in the block
@@ -202,8 +211,13 @@ def _one_pattern_matches(written: str, package: str) -> bool:
 
 def _field_matches(written_values: list[str], package: str) -> bool:
     """Renovate's within-a-field semantics: any positive, no negative."""
-    positives = [w for w in written_values if not w.startswith("!")]
-    negatives = [w[1:] for w in written_values if w.startswith("!")]
+    # `!(fastapi)` is a minimatch negative EXTGLOB, not a `!`-negated selector.
+    # Stripping the leading `!` handed `(fastapi)` to the matcher, which fnmatch
+    # matches against nothing, so the negation never fired and a block Renovate
+    # does not apply to `fastapi` was accepted. Classify it as an unsupported
+    # pattern instead, which raises SelectorError and is reported.
+    positives = [w for w in written_values if not w.startswith("!") or w.startswith("!(")]
+    negatives = [w[1:] for w in written_values if w.startswith("!") and not w.startswith("!(")]
     if any(_one_pattern_matches(w, package) for w in negatives):
         return False
     if not positives:
@@ -393,7 +407,16 @@ def check_renovate(packages: set[str]) -> list[str]:
             if not (isinstance(rule, dict) and rule.get("enabled") is True):
                 continue
             try:
-                overrides = _covers_pypi(rule) and _rule_matches(rule, package)
+                # A later rule scoped to another manager, path or dep-type
+                # cannot re-enable a pypi pin, and reporting it as an override
+                # is a false failure on a correct config. `_scope_is_unrestricted`
+                # is the same test the disabling rule has to pass, used here in
+                # the opposite direction.
+                overrides = (
+                    _covers_pypi(rule)
+                    and _scope_is_unrestricted(rule)
+                    and _rule_matches(rule, package)
+                )
             except SelectorError as exc:
                 problems.append(
                     f"renovate.json rule {i} has a selector that cannot be evaluated: {exc}"

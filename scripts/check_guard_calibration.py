@@ -508,6 +508,11 @@ def _install_restore_handlers() -> None:
             continue
 
 
+# Returned when `git diff` could not run at all -- distinct from "no files
+# differ", which is what an empty list used to mean in both cases.
+_UNVERIFIABLE = "<could not compare against HEAD>"
+
+
 def _assert_targets_clean() -> list[str]:
     """Refuse to start if a previous run left a mutant on disk.
 
@@ -526,7 +531,11 @@ def _assert_targets_clean() -> list[str]:
         timeout=60,
     )
     if proc.returncode != 0:
-        return []  # not a git checkout, or git unavailable — not this tool's call
+        # Returning [] here read as "the tree is clean" when the truth was "I
+        # could not tell" -- the precheck's own fail-open path, in the function
+        # written to catch a mutant a SIGKILL left behind. A sentinel makes
+        # main() refuse to start instead.
+        return [_UNVERIFIABLE]
     return [line for line in proc.stdout.splitlines() if line.strip()]
 
 
@@ -590,6 +599,15 @@ def main() -> int:
     # mutant against a mutant would report "removal detected" for a guard that
     # was never there.
     dirty = _assert_targets_clean()
+    if dirty == [_UNVERIFIABLE]:
+        print(
+            "FAIL the guard sources could not be compared against HEAD (git is "
+            "unavailable, or this is not a git checkout), so a mutant left behind "
+            "by a killed run cannot be ruled out. Calibrating on top of one would "
+            "compare a mutant against a mutant.",
+            file=sys.stderr,
+        )
+        return 1
     if dirty:
         print(
             "FAIL a guard source differs from HEAD before any mutation — a previous "

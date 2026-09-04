@@ -98,12 +98,19 @@ digest per Dockerfile, not a mechanical tag edit.
 .github/workflows/python.yml: test job matrix = ['3.10','3.11','3.12'], PLUS a '3.14' entry
                                with experimental:true / continue-on-error:true (already landed,
                                see §3) — scoped to aeonmind/python/** only, not the main backend
-.forgejo/workflows/*.yml    : 19 of 33 files hardcode python-version: "3.11" (adaptive-ci.yml x4,
-                               audit-key-check.yml, benchmark-eval.yml x4, ci.yml x3,
-                               citadel-preflight.yml, compliance-gate.yml, dependency-audit.yml x4,
-                               dependency-scanner.yml x4, deploy-self-hosted.yml, e2e-playwright.yml,
-                               nightly.yml, phase7-nanoservices.yml x3, phase8-trancex.yml x3,
-                               proactive-health.yml, proactive-security.yml x2, production-gate.yml)
+.forgejo/workflows/*.yml    : 19 of 33 files hardcode python-version: "3.11" — this
+                               enumeration is generated from the tree, not typed:
+                               adaptive-ci.yml x4, audit-key-check.yml, benchmark-eval.yml x4,
+                               bot-health-watchdog.yml, ci.yml x3, citadel-preflight.yml,
+                               compliance-gate.yml, dependency-audit.yml x5,
+                               dependency-scanner.yml x4, deploy-self-hosted.yml,
+                               e2e-playwright.yml, matrix-suites-cranbania-sync.yml,
+                               nightly.yml, perf-smoke.yml, phase7-nanoservices.yml x3,
+                               phase8-trancex.yml x3, proactive-health.yml,
+                               proactive-security.yml x2, production-gate.yml
+                               (the count said 19 against a list of 16 until 2026-09-04:
+                               bot-health-watchdog.yml, matrix-suites-cranbania-sync.yml and
+                               perf-smoke.yml were counted but never written down)
 compliance/magna-carta       : both .github/workflows/layer-b-ci.yml and
   (submodule)                  .forgejo/workflows/layer-b-ci.yml hardcode python-version: "3.11"
 ```

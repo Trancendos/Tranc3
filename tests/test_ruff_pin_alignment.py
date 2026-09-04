@@ -402,3 +402,86 @@ def test_two_installs_on_one_line_do_not_overwrite_each_other(checker):
         },
     )
     assert module.main() == 1
+
+
+# ── forms review found the scanner still could not see ───────────────────────
+
+
+def test_a_dockerfile_run_invocation_is_detected(checker):
+    """`RUN ruff check .` carries no colon, so the YAML `key:` prefix missed it.
+
+    A Dockerfile could run ruff without installing it and still pass the gate.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"lint.Dockerfile": "FROM python:3.11\nRUN ruff check .\n"},
+    )
+    assert module.main() == 1
+
+
+def test_an_exec_form_python_dash_m_invocation_is_detected(checker):
+    """`CMD ["python", "-m", "ruff", …]` runs ruff without `ruff` as argv[0]."""
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"lint.Dockerfile": 'FROM python:3.11\nCMD ["python", "-m", "ruff", "check", "."]\n'},
+    )
+    assert module.main() == 1
+
+
+def test_uv_run_with_an_unpinned_package_is_an_install(checker, capsys):
+    """`uv run --with ruff` installs into a throwaway env — unpinned is drift.
+
+    The word "install" never appears, and the option sits between the wrapper
+    and ruff, so neither the install nor the invocation was seen.
+
+    The assertion is on the REASON, not just the exit code. Both "unpinned
+    install" and "runs ruff but never installs it" exit 1, so an exit-code-only
+    test passes even when the install is not recognised at all — which is
+    exactly what the calibration run showed.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            ".github/workflows/uvrun.yml": (
+                "jobs:\n  lint:\n    steps:\n      - run: uv run --with ruff ruff check .\n"
+            )
+        },
+    )
+    assert module.main() == 1
+    assert "installs ruff without pinning a version" in capsys.readouterr().err
+
+
+def test_uv_run_with_a_pinned_package_is_not_reported_twice(checker):
+    """The second `ruff` on that line is the COMMAND, not a second install.
+
+    Scanning to the end of the segment counted it as an unpinned install and
+    failed a correctly pinned line — a false positive on valid usage.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            ".github/workflows/uvrun.yml": (
+                "jobs:\n  lint:\n    steps:\n"
+                '      - run: uv run --with "ruff==0.15.8" ruff check .\n'
+            )
+        },
+    )
+    assert module.main() == 0
+
+
+def test_an_escaped_quote_does_not_hide_a_later_install(checker):
+    r"""In `echo "a\" # b" && pip install ruff` the backslash closes nothing.
+
+    A stripper that ignores escapes thinks the string is still open and keeps
+    the whole line; one that ignores quotes cuts at the hash. Either way an
+    install goes missing.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            ".github/workflows/esc.yml": (
+                'jobs:\n  lint:\n    steps:\n      - run: echo "a\\" # b" && pip install ruff\n'
+            )
+        },
+    )
+    assert module.main() == 1

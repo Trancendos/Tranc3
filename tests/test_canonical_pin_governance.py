@@ -491,3 +491,57 @@ def test_a_later_docker_rule_for_the_same_name_does_not_fail_governance(tmp_path
     # wrong reason: an ungoverned package is never evaluated at all.
     assert "redis" in module.canonical_packages()
     assert module.main() == 0
+
+
+def test_a_regex_selector_is_case_sensitive_without_the_i_flag(tmp_path, checker):
+    """Renovate treats `/^PYDANTIC$/` as case SENSITIVE; it matches nothing here.
+
+    Applying re.IGNORECASE unconditionally made it match `pydantic`, so a
+    disabling rule that does not actually cover the package read as covering
+    it — over-matching, which on a block is fail-open.
+    """
+    wrong_case = dict(DISABLE_RULE, matchPackageNames=["/^FASTAPI$/", "/^PYDANTIC$/"])
+    module = checker(*_write_configs(tmp_path, rules=[wrong_case]))
+    assert module.main() == 1
+
+
+def test_the_i_flag_still_matches(tmp_path, checker):
+    """`/i` is how Renovate asks for case-insensitivity, and it must work."""
+    flagged = dict(DISABLE_RULE, matchPackageNames=["/^FASTAPI$/i", "/^PYDANTIC$/i"])
+    module = checker(*_write_configs(tmp_path, rules=[flagged]))
+    assert module.main() == 0
+
+
+def test_a_negative_extglob_is_reported_not_read_as_a_negation(tmp_path, checker):
+    """`!(fastapi)` is a minimatch extglob, not a `!`-negated selector.
+
+    Stripping the `!` handed `(fastapi)` to the matcher, which matches nothing,
+    so the negation never fired and a block Renovate does not apply to
+    `fastapi` was accepted.
+    """
+    extglob = dict(DISABLE_RULE, matchPackageNames=["!(fastapi)"])
+    module = checker(*_write_configs(tmp_path, rules=[extglob]))
+    assert module.main() == 1
+
+
+def test_an_age_scoped_rule_is_not_the_estate_wide_block(tmp_path, checker):
+    """`matchCurrentAge` narrows the rule; it cannot be the whole block."""
+    aged = dict(DISABLE_RULE, matchCurrentAge="> 30 days")
+    module = checker(*_write_configs(tmp_path, rules=[aged]))
+    assert module.main() == 1
+
+
+def test_a_later_rule_scoped_to_another_manager_is_not_an_override(tmp_path, checker):
+    """An npm-scoped rule cannot re-enable a pypi pin.
+
+    Flagging it was a false failure on a correct config — the same noise that
+    gets a check deleted rather than obeyed.
+    """
+    npm_rule = {
+        "description": "npm packages may update freely",
+        "matchManagers": ["npm"],
+        "matchPackageNames": ["fastapi"],
+        "enabled": True,
+    }
+    module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, npm_rule]))
+    assert module.main() == 0

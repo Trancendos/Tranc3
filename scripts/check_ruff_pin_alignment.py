@@ -103,8 +103,12 @@ EXCLUDED_DIRS = frozenset({".git", "node_modules", ".venv", "venv", "__pycache__
 # bare package list on a continuation line is only read as an install once the
 # continuation has been joined back onto the verb that owns it.
 INSTALL_VERB = re.compile(
-    r"""(?:uv\s+pip\s+install|uv\s+tool\s+install|pipx\s+install"""
-    r"""|python3?\s+-m\s+pip\s+install|pip3?\s+install|poetry\s+add)\b"""
+    r"(?:uv\s+pip\s+install|uv\s+tool\s+install|pipx\s+install"
+    r"|python3?\s+-m\s+pip\s+install|pip3?\s+install|poetry\s+add"
+    # `uv run --with ruff` and `pipx run --spec ruff` install into a
+    # throwaway environment. They are installs even though the word
+    # "install" never appears, and an unpinned one drifts like any other.
+    r"|(?:uv\s+run|uvx|pipx\s+run)\s+(?:--with|--spec))\b"
 )
 
 # `ruff` as its own token: not `ruff-pre-commit`, not `logs/ruff-results.json`,
@@ -134,13 +138,27 @@ _WRAPPERS = (
 # and a bare line inside a `run: |` block -- so an invocation is recognised in
 # both without `- name: ruff-lint results` counting as one, and any of the
 # wrappers above may sit between.
+# Options may sit between the wrapper and ruff: `uv run --with ruff ruff
+# check .` puts `--with ruff` in the gap, and requiring ruff to follow the
+# wrapper immediately meant neither the temporary install nor the
+# invocation was seen.
+_OPTIONS = r"(?:-{1,2}[\w][\w\-]*(?:=\S+)?(?:\s+(?!ruff\b)\S+)?\s+)*"
+
+# `RUN ruff check .` is a Dockerfile's shell form. It carries no colon, so
+# the YAML `key:` prefix never matched it, and a Dockerfile could run ruff
+# without installing it and still pass this gate.
 RUFF_INVOCATION = re.compile(
-    r"""^\s*(?:-\s*)?(?:[\w.\-]+:\s*)?(?:(?:""" + "|".join(_WRAPPERS) + r""")\s+)?ruff(?![\w\-])"""
+    r"^\s*(?:-\s*)?(?:(?:[\w.\-]+:\s*)|(?:RUN\s+))?"
+    r"(?:(?:" + "|".join(_WRAPPERS) + r")\s+" + _OPTIONS + r")?"
+    r"ruff(?![\w\-])"
 )
 
 # Dockerfile exec form: `CMD ["ruff", "check", "."]` / `ENTRYPOINT ["ruff", …]`.
 # No shell is involved, so the segment never begins with a bare `ruff`.
-EXEC_FORM_RUFF = re.compile(r'(?:CMD|ENTRYPOINT|RUN)\s*\[\s*"ruff"')
+EXEC_FORM_RUFF = re.compile(
+    r"(?:CMD|ENTRYPOINT|RUN)\s*\[\s*"
+    r'(?:"ruff"|"python3?"\s*,\s*"-m"\s*,\s*"ruff")'
+)
 
 # The ruff-pre-commit repo block's `rev:`. Anchored to the repo URL so an
 # unrelated `rev:` in the file cannot be mistaken for ruff's.
@@ -150,15 +168,28 @@ PRE_COMMIT_REV = re.compile(
 
 
 def _strip_comment(line: str) -> str:
-    """Drop a trailing comment, honouring quotes.
+    """Drop a trailing comment, honouring quotes AND backslash escapes.
 
     A naive "cut at the first ` #`" truncated `run: echo "a # b" && pip install
-    ruff` at the quoted hash and never saw the install — a fail-open path in a
-    check whose entire job is to fail closed. `#` opens a comment in YAML and in
-    Dockerfiles only outside quotes.
+    ruff` at the quoted hash and never saw the install -- a fail-open path in a
+    check whose entire job is to fail closed. Escapes matter for the same
+    reason: in `echo "a\\" # b" && pip install ruff` the backslash escapes the
+    quote, so the `#` is NOT inside a string and everything after it really is a
+    comment -- while a stripper that ignores escapes thinks the string is still
+    open and keeps the whole line. Either way round, guessing loses an install.
+
+    Applied to the JOINED logical line, so a quoted string carried across a
+    `\\`-continuation is tracked through the join rather than reset at it.
     """
     quote: str | None = None
+    escaped = False
     for index, char in enumerate(line):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
         if quote:
             if char == quote:
                 quote = None
@@ -191,17 +222,21 @@ def _logical_lines(text: str) -> list[tuple[str, list[tuple[int, int]]]]:
     buffer = ""
     line_map: list[tuple[int, int]] = []
     for number, raw in enumerate(text.splitlines(), start=1):
-        line = _strip_comment(raw).rstrip()
+        line = raw.rstrip()
         line_map.append((len(buffer), number))
         if line.endswith("\\"):
             buffer += line[:-1] + " "
             continue
         buffer += line
-        joined.append((buffer, line_map))
+        # Comments are stripped from the JOINED line. Stripping each physical
+        # line first reset the quote state at every continuation, so a string
+        # spanning a `\\`-join looked closed and a `#` inside it read as a
+        # comment -- cutting away any install that followed.
+        joined.append((_strip_comment(buffer).rstrip(), line_map))
         buffer = ""
         line_map = []
     if buffer:
-        joined.append((buffer, line_map))
+        joined.append((_strip_comment(buffer).rstrip(), line_map))
     return joined
 
 
@@ -242,8 +277,19 @@ def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]
         for offset, segment in _segments(line):
             verb = INSTALL_VERB.search(segment)
             if verb:
-                for token in RUFF_TOKEN.finditer(segment, verb.end()):
-                    number = _line_at(line_map, offset + token.start())
+                # `uv run --with ruff ruff check .` names the package ONCE, in
+                # the token straight after `--with`; the second `ruff` is the
+                # command being run. Scanning to the end of the segment counted
+                # that command as a second, unpinned install and failed a line
+                # that was correctly pinned -- a false positive on valid usage,
+                # which is how a check earns a suppression instead of a fix.
+                tail = segment[verb.end() :]
+                if verb.group(0).rstrip().endswith(("--with", "--spec")):
+                    stripped = tail.lstrip()
+                    lead = len(tail) - len(stripped)
+                    tail = tail[: lead + len(stripped.split(" ")[0])]
+                for token in RUFF_TOKEN.finditer(tail):
+                    number = _line_at(line_map, offset + verb.end() + token.start())
                     installs.append((f"{rel}:{number}", token.group("pin")))
             elif RUFF_INVOCATION.search(segment) or EXEC_FORM_RUFF.search(segment):
                 invokes = True
