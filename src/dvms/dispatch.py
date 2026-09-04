@@ -97,7 +97,12 @@ class DispatchItem:
         Stable across runs over an unchanged census and different the moment
         the findings change, which is exactly when a NEW record is wanted.
         """
-        advisories = ",".join(sorted(str(finding.get("id")) for finding in self.findings))
+        advisories = ",".join(
+            sorted(
+                f"{finding.get('package')}:{finding.get('version')}:{finding.get('id')}"
+                for finding in self.findings
+            )
+        )
         return f"{FINGERPRINT_PREFIX}{self.kind}:{self.surface}:{advisories}]"
 
     def to_dict(self) -> Dict[str, Any]:
