@@ -234,6 +234,17 @@ jobs:
       - name: Solution packs are current
         run: python scripts/build_solution_packs.py --check
 
+      # FastAPI 0.141 stopped copying a router's routes into `app.routes` on
+      # include_router — it appends a lazy marker and resolves them at request
+      # time. Routing is unaffected; what changed is what the attribute shows,
+      # from 342 route objects to 83. Three mount assertions failed loudly on
+      # a working application, and two scans (RBAC's mutable-default sweep,
+      # test_api's handler search) kept passing while inspecting a quarter of
+      # the surface. tests/support/routes.py reads the real thing; this stops
+      # the raw attribute coming back.
+      - name: Tests read the real route surface
+        run: python scripts/check_route_surface_reads.py
+
       # Nine tests raised PermissionError on `/app` during collection, before
       # a single assertion ran, because three workers created their output
       # directory at module level. That works in the container and nowhere

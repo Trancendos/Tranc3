@@ -133,17 +133,16 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
 
     mod = _import_worker(f"{module_name}_worker", file_path)
 
-    # Check /health route exists
-    if hasattr(mod, "app"):
-        routes = [route.path for route in mod.app.routes if hasattr(route, "path")]
-        if "/health" not in routes:
-            # Note: infinity-ai routes are added dynamically by routers, some workers don't have health in root app.
-            pass
-    elif hasattr(mod, "get_app"):
-        app = mod.get_app()
-        routes = [route.path for route in app.routes if hasattr(route, "path")]
-    else:
-        assert False, f"Worker {module_name} missing 'app' attribute"
+    # The worker has to expose an app; whether it serves /health is asserted
+    # by the request below, not by reading the route table. Two inventories
+    # used to be built here and thrown away — one behind an `if` whose body
+    # was `pass`, the other assigned and never read — which is a check that
+    # runs, reports nothing, and excuses itself in a comment. The excuse
+    # ("routes are added dynamically by routers") was also the reason the
+    # read could not have worked: FastAPI 0.141 keeps a router's routes
+    # behind a lazy marker, so `app.routes` would not have shown them anyway.
+    if not hasattr(mod, "app") and not hasattr(mod, "get_app"):
+        raise AssertionError(f"Worker {module_name} missing 'app' attribute")
 
     # Set up test client with patched database if needed
     patches = []

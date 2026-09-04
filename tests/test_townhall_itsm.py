@@ -18,6 +18,7 @@ from src.townhall.itsm import (
     UnknownIncidentError,
     resolve_ownership,
 )
+from tests.support.routes import mounted_paths
 
 
 @pytest.fixture
@@ -347,7 +348,7 @@ class TestTheRoutesAreReachableAndWritesAreGated:
     def test_the_itsm_routes_are_mounted(self, client):
         import api
 
-        paths = {r.path for r in api.app.routes if "/townhall/itsm" in getattr(r, "path", "")}
+        paths = mounted_paths(api.app)
         assert "/townhall/itsm/incidents" in paths
         assert "/townhall/itsm/ownership/{service}" in paths
 
