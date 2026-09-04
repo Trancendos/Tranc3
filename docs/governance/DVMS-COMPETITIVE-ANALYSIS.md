@@ -5,7 +5,12 @@
 assessed against the commercial and open-source platforms in the same category.
 
 Every number below about *our* system was measured against the tree, not estimated. Every
-claim about a *competitor* is attributed. Where a competitor's marketing figure is quoted it
+claim about a *competitor* is attributed.
+
+That promise was broken on the first draft and is worth recording rather than quietly
+patching: this document described "no history, therefore no trends" as a weakness while the
+very commit that carried it implemented census history. A governance record that claims to be
+measured has to be re-measured when the tree moves under it, including by its own author. Where a competitor's marketing figure is quoted it
 is labelled as theirs, because a vendor's own noise-reduction percentage is a claim, not a
 measurement.
 
@@ -116,9 +121,13 @@ not the Cloud Only one.
 - **The register is machine-unreadable.** It is, functionally, a VEX document that no tool
   can consume. Trivy, grype and OSV-Scanner run in our own workflows and re-report findings
   we have already dispositioned, because the disposition cannot reach them.
-- **No history, therefore no trends.** `logs/` is gitignored; the census JSON is a 90-day
-  CI artifact. There is no MTTR, no "is our exposure growing", no pattern detection — which
-  is precisely the capability asked for.
+- **History exists but is thin, and CI does not contribute to it.** Closed on 2026-09-04:
+  the census now appends one record per run to `vulnerability-census-history.jsonl`, keyed by
+  surface + package + advisory so a turnover is visible rather than averaged away. What
+  remains: the scheduled sweep holds no write token by design, so it uploads its record as an
+  artifact instead of committing it, and the tracked file records only the runs a human
+  landed. One line of history supports no trend yet — this becomes an answer over weeks, not
+  on the day it was built.
 - **Point-in-time, not continuous.** A CVE published against an unchanged manifest is found
   on the next daily run at best. Dependency-Track's "no rescan required" property is the
   thing we structurally lack.
@@ -135,8 +144,9 @@ not the Cloud Only one.
   machine-readable once, and three scanners stop re-litigating settled findings.
 - **`vulnerable_code_not_in_execute_path` is already our reasoning.** SEC-007's disposition
   is that exact justification, written in prose. The standard has a slot for it.
-- **History is a five-line change** with a large payoff: append each census run to a tracked
-  JSONL and trends, MTTR and pattern analysis all become possible.
+- **The history file is now the substrate for the analysis nobody has written yet.** MTTR,
+  recurrence-per-package and "is exposure growing" are all reads over a file that exists;
+  none of them are implemented.
 - **The manifest→ServiceID join** is the CMDB link, and the machinery for it already exists
   (`identity.resolve()` accepts ServiceID/PID/Location/port).
 
@@ -159,7 +169,8 @@ not the Cloud Only one.
 
 | # | Change | Value | Risk | Cost |
 |---|---|---|---|---|
-| 1 | **Census history** — append every run to a tracked JSONL | Unlocks trends, MTTR, pattern detection | None: adds data, suppresses nothing | Small |
+| ~~1~~ | ~~**Census history**~~ — **done 2026-09-04**, same commit as this document | Substrate for trends, MTTR, recurrence | None: adds data, suppresses nothing | Done |
+| 1a | **Trend readers over that history** — MTTR, recurrence-per-package, exposure direction | Turns the record into an answer | None | Small |
 | 2 | **VEX status as an explicit register field** — `VEX-Status` + `VEX-Justification` rows, from the OpenVEX enums | Makes #3 safe | None on its own | Small |
 | 3 | **OpenVEX exporter** wired into Trivy/grype/OSV | Dispositions propagate to three scanners | **High if done naively** — see Threats | Medium |
 | 4 | **manifest → ServiceID join** | A finding can name the Locations it affects | None | Medium |
