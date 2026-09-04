@@ -947,6 +947,17 @@ from src.roles.routes import (
 
 app.include_router(_roles_router)
 
+# ── Creative route table (which Location answers a creative request) ─────────
+# The front door for creative work. /creative/resolve names the Location and
+# endpoint; it deliberately does not dispatch, so it can report a capability
+# nobody implements without having to call something that would succeed at
+# doing the wrong thing.
+from src.creative.routes import (
+    router as _creative_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_creative_router)
+
 # ── Arcadian Exchange opportunity book (external/sell-side mandate) ──────────
 # The front half of monetisation: what the estate could sell, what it is worth,
 # and what the eligibility gate refuses. Realised income still books through

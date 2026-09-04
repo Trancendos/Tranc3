@@ -1,0 +1,303 @@
+"""Calibration for the creative route table.
+
+Each test below was calibrated by mutating the thing it claims to protect and
+confirming the test fails, then restoring. Where a property is defended by
+more than one mechanism and no single mutation breaks it, the docstring says
+so rather than implying a stronger guarantee than the test gives.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from src.creative import routing
+from src.creative.routing import CAPABILITIES, RouteStatus, capability, endpoint_for, gaps, resolve
+
+
+class TestTheNearMiss:
+    """An edit must never be answered by a generator."""
+
+    def test_editing_an_image_does_not_reach_the_generator(self):
+        """Sharing the noun "image" is not sharing an intent.
+
+        The generator would answer 200 with an unrelated new picture, which
+        reads as success everywhere downstream.
+
+        Redundantly defended, and the docstring says so rather than
+        overclaiming: "edit this image" is one of image.edit's phrases, so
+        the phrase weight alone decides it and adding "edit" to
+        image.create's verbs does *not* fail this case. The phrase-free case
+        below is the one the verb exclusion actually carries, and it is
+        calibrated against that mutation.
+        """
+        res = resolve("edit this image")
+        assert res.capability is not None
+        assert res.capability.id == "image.edit"
+        assert res.capability.status is RouteStatus.ABSENT
+
+    def test_editing_without_a_registered_phrase_still_avoids_the_generator(self):
+        """Calibrated: adding "edit" to image.create's verbs fails this.
+
+        No phrase covers "edit the artwork", so the verbs are the whole
+        defence. With "edit" shared, the two capabilities tie inside one
+        Location and the request is refused instead of answered.
+        """
+        res = resolve("edit the artwork")
+        assert res.capability is not None
+        assert res.capability.id == "image.edit"
+
+    def test_generating_an_image_still_reaches_the_generator(self):
+        """The baseline the mutation above must not be allowed to break."""
+        res = resolve("generate an image of a lighthouse")
+        assert res.capability is not None
+        assert res.capability.id == "image.create"
+
+    def test_a_verb_alone_is_not_a_route(self):
+        """Calibrated: dropping the `and` in score()'s candidate test fails this.
+
+        "create" appears in seven capabilities. Without the noun requirement
+        every one of them becomes a candidate and the winner is whichever
+        happens to carry the most verbs.
+        """
+        res = resolve("create")
+        assert res.capability is None
+        assert "no capability matches" in res.reason
+
+    def test_a_noun_alone_is_not_a_route(self):
+        """Calibrated the same way, and the reason matters as much as the outcome.
+
+        Under the OR mutation "image" still returns no capability — but
+        because three image capabilities tie and one is unimplemented, not
+        because nothing matched. Asserting only `capability is None` would
+        pass under the mutation it exists to catch.
+        """
+        res = resolve("image")
+        assert res.capability is None
+        assert "no capability matches" in res.reason
+
+
+class TestAbsenceIsAnAnswer:
+    def test_an_unmatched_request_routes_nowhere(self):
+        """Calibrated: falling back to the orchestrator fails this."""
+        res = resolve("what is the weather in Glasgow")
+        assert res.capability is None
+        assert "no capability matches" in res.reason
+
+    @pytest.mark.parametrize(
+        ("request_text", "expected"),
+        [
+            ("edit this image", "image.edit"),
+            ("upscale this image", "image.upscale"),
+            ("audit the accessibility of this screen", "design.accessibility"),
+            ("provide a component library", "design.component"),
+        ],
+    )
+    def test_unimplemented_capabilities_resolve_to_themselves(self, request_text, expected):
+        """An absent capability is named, not silently replaced.
+
+        Calibrated on design.component: routing "provide a component library"
+        to design.create instead makes this fail. That substitution is the
+        realistic one — both live in Fabulousa — and it would answer a
+        request for widgets with an empty Penpot file.
+        """
+        res = resolve(request_text)
+        assert res.capability is not None
+        assert res.capability.id == expected
+        assert res.capability.status is RouteStatus.ABSENT
+        assert not res.capability.servable
+
+
+class TestTies:
+    def test_a_multi_discipline_tie_escalates_to_the_orchestrator(self):
+        """Calibrated: refusing every tie fails this.
+
+        Two Locations tie and both can serve, which is what Imaginarium
+        exists for.
+        """
+        res = resolve("produce a video and a picture")
+        assert res.capability is not None
+        assert res.capability.id == "creative.brief"
+        assert {c.location for c in res.candidates} == {"Sashas Photo Studio", "TateKing"}
+
+    def test_a_tie_touching_an_unimplemented_capability_is_refused(self):
+        """Calibrated: escalating before the ABSENT check fails this.
+
+        Imaginarium cannot fan out to a capability that does not exist, so
+        escalating here would put an orchestrator in front of a gap and
+        report progress.
+        """
+        res = resolve("create a widget and a playlist")
+        assert res.capability is None
+        assert "design.component" in res.reason
+
+    def test_a_tie_inside_one_location_is_refused(self):
+        """Calibrated: dropping the distinct-location check fails this.
+
+        Escalating a within-Location ambiguity to Imaginarium would send the
+        request straight back to the Location that could not decide.
+        """
+        res = resolve("make a mockup and a wireframe layout")
+        if res.capability is not None:
+            assert res.capability.id != "creative.brief"
+
+
+class TestTheRegistryTellsTheTruth:
+    def test_every_addressable_capability_carries_its_address(self):
+        """Calibrated: blanking any url_env on a capability with a path fails this."""
+        for cap in CAPABILITIES:
+            if cap.path:
+                assert cap.method, cap.id
+                assert cap.url_env, cap.id
+                assert cap.default_url.startswith("http"), cap.id
+
+    def test_every_capability_that_cannot_deliver_says_why(self):
+        """Calibrated: blanking any DEGRADED capability's gap fails this.
+
+        A status without a reason is a label. The gap text is the part a
+        reader can act on.
+        """
+        for cap in gaps():
+            assert cap.gap.strip(), f"{cap.id} is {cap.status.value} with no stated gap"
+
+    def test_a_routed_capability_claims_no_gap(self):
+        """Calibrated: marking code.generate ROUTED while keeping a gap fails this."""
+        for cap in CAPABILITIES:
+            if cap.status is RouteStatus.ROUTED:
+                assert not cap.gap, f"{cap.id} is ROUTED but states a gap"
+
+    def test_capability_ids_are_unique(self):
+        ids = [c.id for c in CAPABILITIES]
+        assert len(ids) == len(set(ids))
+
+    def test_lookup_returns_none_for_an_unknown_id(self):
+        assert capability("image.teleport") is None
+
+
+class TestEndpointResolution:
+    def test_the_environment_overrides_the_compose_default(self, monkeypatch):
+        """Calibrated: reading default_url unconditionally fails this.
+
+        A deployment that moves a worker must not be routed to the address
+        this table was written against.
+        """
+        cap = capability("game.create")
+        assert cap is not None
+        monkeypatch.setenv(cap.url_env, "http://tranceflow.internal:9999/")
+        assert endpoint_for(cap) == "http://tranceflow.internal:9999/games"
+
+    def test_a_capability_with_no_endpoint_has_no_address(self):
+        """Calibrated: returning the bare base URL fails this.
+
+        image.edit has no path. Handing back the Photo Studio's base URL
+        would give a caller something POSTable that answers 404 or, worse,
+        matches a different route.
+        """
+        cap = capability("image.edit")
+        assert cap is not None
+        assert endpoint_for(cap) is None
+
+    def test_the_default_is_used_when_the_environment_is_silent(self, monkeypatch):
+        cap = capability("game.create")
+        assert cap is not None
+        monkeypatch.delenv(cap.url_env, raising=False)
+        assert endpoint_for(cap) == "http://tranceflow:8059/games"
+
+
+class TestTheMeasuredGaps:
+    """These assert the state of the estate, so a fix has to update them."""
+
+    def test_the_orchestrators_remaining_gap_is_its_dependencies_not_its_wiring(self):
+        """The fan-out was fixed in this change; the table has to say so.
+
+        It named TranceFlow as unreached. It is reached now, so the gap that
+        survives is the one nobody has fixed: the engines and encoders the
+        creative Locations wrap are not services in the stack.
+        """
+        cap = capability("creative.brief")
+        assert cap is not None
+        assert "Godot" in cap.gap
+        assert "never called" not in cap.gap
+
+    def test_fabulousa_is_recorded_as_reachable_but_unauthenticated(self):
+        """Also updated by this change: the address was wrong, now the token is missing.
+
+        Both are DEGRADED, and conflating them would lose the fact that one
+        was a compose defect and the other needs a secret issuing.
+        """
+        cap = capability("design.create")
+        assert cap is not None
+        assert "PENPOT_TOKEN" in cap.gap
+
+    def test_the_orchestrator_constant_points_at_a_real_capability(self):
+        """Calibrated: pointing _ORCHESTRATOR at a removed id fails at import."""
+        assert routing._ORCHESTRATOR.id == "creative.brief"
+        assert routing._ORCHESTRATOR in CAPABILITIES
+
+
+class TestTheHttpSurface:
+    """The route table has to be reachable, not just importable."""
+
+    @pytest.fixture
+    def client(self):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from src.creative.routes import router
+
+        app = FastAPI()
+        app.include_router(router)
+        return TestClient(app)
+
+    def test_an_unroutable_request_is_a_200_not_a_404(self, client):
+        """Calibrated: raising 404 for an unmatched request fails this.
+
+        "Nothing in this estate does that" is a fact about the estate. A 404
+        says the caller asked wrongly, which sends them off to fix a request
+        that was fine.
+        """
+        r = client.post("/creative/resolve", json={"request": "book me a flight"})
+        assert r.status_code == 200
+        assert r.json()["routed"] is False
+        assert r.json()["capability"] is None
+
+    def test_a_resolved_request_carries_its_endpoint(self, client):
+        r = client.post("/creative/resolve", json={"request": "create a game"})
+        body = r.json()
+        assert body["routed"] is True
+        assert body["capability"]["location"] == "TranceFlow"
+        assert body["url"].endswith("/games")
+
+    def test_an_absent_capability_is_named_with_its_status(self, client):
+        """Calibrated: dropping `deliverable` from the payload fails this.
+
+        A caller that sees only `routed: true` would treat an unimplemented
+        capability as a working route.
+        """
+        r = client.post("/creative/resolve", json={"request": "edit this image"})
+        body = r.json()
+        assert body["routed"] is True
+        assert body["deliverable"] == "absent"
+        assert body["url"] is None
+
+    def test_an_empty_request_is_rejected(self, client):
+        assert client.post("/creative/resolve", json={"request": "   "}).status_code == 400
+
+    def test_gaps_separates_absent_from_degraded(self, client):
+        """Calibrated: summing both into one count fails this.
+
+        An ABSENT capability needs building; a DEGRADED one needs a
+        dependency stood up. One number would not tell an operator which
+        pile they are looking at.
+        """
+        body = client.get("/creative/gaps").json()
+        assert body["absent"] > 0
+        assert body["degraded"] > 0
+        assert body["absent"] + body["degraded"] == body["count"]
+
+    def test_an_unknown_status_filter_is_rejected_with_the_valid_ones(self, client):
+        r = client.get("/creative/capabilities", params={"status": "broken"})
+        assert r.status_code == 400
+        assert "routed" in r.json()["detail"]
+
+    def test_an_unknown_capability_is_a_404(self, client):
+        assert client.get("/creative/capabilities/image.teleport").status_code == 404

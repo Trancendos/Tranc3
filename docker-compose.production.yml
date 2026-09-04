@@ -3243,7 +3243,7 @@ services:
       - "traefik.http.middlewares.strip-imaginarium.stripprefix.prefixes=/imaginarium"
       - "traefik.http.services.imaginarium.loadbalancer.server.port=8064"
 
-  # ── TateKing — video creation / editing (Port 8066) ──────────────────────────────────────────────
+  # ── TateKing — video creation / editing (Port 8061) ──────────────────────────────────────────────
   tateking:
     build:
       context: ./workers/tateking
@@ -4136,6 +4136,14 @@ services:
     <<: *worker-common
     environment:
       - PORT=8048
+      # Penpot runs in this same stack. Without this, the worker's default
+      # is http://localhost:9001 — which inside a container is the Fabulousa
+      # container itself, so the one Location whose job is design could not
+      # reach the design tool the platform hosts. The address matches what
+      # penpot-exporter already uses for the same instance
+      # (PENPOT_PUBLIC_URI: http://penpot-frontend); the frontend serves the
+      # API on port 80 in-container and proxies it to penpot-backend.
+      - PENPOT_URL=http://penpot-frontend
     expose:
       - "8048"
     ports:
