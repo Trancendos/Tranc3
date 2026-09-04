@@ -38,7 +38,19 @@ PORT: int = int(os.environ.get("PORT", 8029))
 WORKER_NAME = "health-aggregator"
 INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 DB_PATH = Path(os.environ.get("DB_PATH", "/data/health_aggregator.db"))
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure_parent(path: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the container's path is absent or unwritable —
+    every CI runner, for a start. Three sibling workers already turned nine
+    collected tests into `PermissionError` that way before an assertion ran.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 POLL_INTERVAL = 30  # seconds between full polls
@@ -143,7 +155,7 @@ _poll_count: int = 0
 
 
 def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    c = sqlite3.connect(str(_ensure_parent(DB_PATH)), check_same_thread=False)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL")
     c.execute("PRAGMA synchronous=NORMAL")

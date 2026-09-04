@@ -52,8 +52,21 @@ INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 
 _data_dir = Path(os.environ.get("DATA_DIR", "/data"))
-_data_dir.mkdir(parents=True, exist_ok=True)
 DB_PATH = _data_dir / "audit.db"
+
+
+def _ensure_parent(path: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the container's path is absent or unwritable —
+    every CI runner, for a start. Three sibling workers already turned nine
+    collected tests into `PermissionError` that way before an assertion ran.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
 
 # Serialise chain-tip reads + inserts to prevent concurrent hash-chain forks
 _chain_lock = threading.Lock()
@@ -118,7 +131,7 @@ _INDEXES = [
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=15)
+    conn = sqlite3.connect(str(_ensure_parent(DB_PATH)), check_same_thread=False, timeout=15)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=FULL")  # append-only log: durability matters

@@ -47,7 +47,20 @@ from Dimensional.service_auth_fastapi import guard_internal_secret
 WORKER_PORT = int(os.getenv("PORT") or "8021")
 WORKER_NAME = "cron-service"
 DB_PATH = Path(os.environ.get("CRON_DB_PATH", "/data/cron.db"))
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure_parent(path: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the container's path is absent or unwritable —
+    every CI runner, for a start. Three sibling workers already turned nine
+    collected tests into `PermissionError` that way before an assertion ran.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
@@ -333,7 +346,7 @@ async def route_job(job: dict) -> str:
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3.connect(str(_ensure_parent(DB_PATH)), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

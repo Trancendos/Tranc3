@@ -234,6 +234,17 @@ jobs:
       - name: Solution packs are current
         run: python scripts/build_solution_packs.py --check
 
+      # Nine tests raised PermissionError on `/app` during collection, before
+      # a single assertion ran, because three workers created their output
+      # directory at module level. That works in the container and nowhere
+      # else. The baseline started at eight such writes and is now empty, so
+      # this holds a closed invariant rather than a backlog: one new entry is
+      # unambiguous. It fails on an unrecorded improvement too — an
+      # improvement nobody records lets the next regression slip in under the
+      # old count.
+      - name: No import-time writes outside the repo
+        run: python scripts/check_import_time_filesystem.py
+
       # The defect class this whole job exists for, turned on the job itself: a
       # guard that is written, reviewed, merged and never invoked.
       # check_lab_languages.py shipped exactly that way — its docstring and its

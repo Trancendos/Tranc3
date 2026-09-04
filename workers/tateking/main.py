@@ -55,7 +55,21 @@ INTERNAL_SECRET: str = _internal_secret_raw.strip()
 FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
 REMOTION_SERVE_URL = os.getenv("REMOTION_SERVE_URL", "")
 OUTPUT_DIR = Path(os.getenv("VIDEO_OUTPUT_DIR", "/tmp/tateking-output"))
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _output_dir() -> Path:
+    """Create the output directory on first write, not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the path is absent or unwritable. The
+    containment checks below use `resolve()`, which does not require the
+    directory to exist, so nothing else depends on it being made early.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from
+    returning.
+    """
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    return OUTPUT_DIR
+
 
 STARTED_AT = datetime.now(timezone.utc)
 START_TIME = time.time()
@@ -234,7 +248,7 @@ async def status() -> dict[str, Any]:
 async def create_video(req: VideoCreateRequest) -> dict[str, Any]:
     """Create a new video job using FFmpeg or Remotion."""
     job_id = str(uuid.uuid4())
-    output_path = OUTPUT_DIR / f"{job_id}.mp4"
+    output_path = _output_dir() / f"{job_id}.mp4"
 
     # Primary: local FFmpeg — generate test card if no input
     if _ffmpeg_available():
@@ -328,7 +342,7 @@ async def compose_video(req: ComposeRequest) -> dict[str, Any]:
     if not _SAFE_OUTPUT_NAME.match(raw_name):
         raise HTTPException(status_code=400, detail="output_name must match [A-Za-z0-9_.-]+.mp4")
     output_name = raw_name
-    output_path = OUTPUT_DIR / output_name
+    output_path = _output_dir() / output_name
 
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="FFmpeg not available")
@@ -492,7 +506,7 @@ async def add_subtitles(req: SubtitleRequest) -> dict[str, Any]:
         f.write(req.srt_content)
         srt_file = f.name
 
-    subtitled_path = OUTPUT_DIR / f"{req.job_id}_subtitled.mp4"
+    subtitled_path = _output_dir() / f"{req.job_id}_subtitled.mp4"
     escaped_srt = srt_file.replace("\\", "/").replace("'", "\\'").replace(":", "\\:")
     success, err = _run_ffmpeg(
         [

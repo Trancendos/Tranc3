@@ -41,7 +41,20 @@ WORKER_NAME = "cache-service"
 DB_PATH = Path(os.environ.get("CACHE_DB_PATH", "/data/cache.db"))
 DUCKDB_PATH = os.environ.get("CACHE_DUCKDB_PATH", "/data/cache.duckdb")
 DISKCACHE_DIR = os.environ.get("CACHE_DISKCACHE_DIR", "/data/diskcache")
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure_parent(path: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the container's path is absent or unwritable —
+    every CI runner, for a start. Three sibling workers already turned nine
+    collected tests into `PermissionError` that way before an assertion ran.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
 
 VALKEY_URL = os.environ.get("VALKEY_URL", "redis://valkey:6379/0")
 VALKEY_ENABLED = os.environ.get("CACHE_VALKEY", "1") == "1"
@@ -136,7 +149,7 @@ _mem: Dict[str, Tuple[Any, Optional[float]]] = {}  # key → (value, expires_at)
 
 
 def _db_conn() -> sqlite3.Connection:
-    c = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    c = sqlite3.connect(str(_ensure_parent(DB_PATH)), check_same_thread=False)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL")
     return c

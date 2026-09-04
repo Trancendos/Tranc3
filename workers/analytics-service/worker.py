@@ -39,7 +39,20 @@ WORKER_PORT = int(os.environ.get("ANALYTICS_PORT", "8016"))
 WORKER_NAME = "analytics-service"
 DB_PATH = Path(os.environ.get("ANALYTICS_DB_PATH", "/data/analytics.db"))
 DUCKDB_PATH = os.environ.get("ANALYTICS_DUCKDB_PATH", "/data/analytics.duckdb")
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure_parent(path: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the container's path is absent or unwritable —
+    every CI runner, for a start. Three sibling workers already turned nine
+    collected tests into `PermissionError` that way before an assertion ran.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
 
 MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "http://minio:9000")
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ROOT_USER", "minioadmin")
@@ -134,7 +147,7 @@ def _select_backend() -> str:
 
 
 def _db_conn() -> sqlite3.Connection:
-    c = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    c = sqlite3.connect(str(_ensure_parent(DB_PATH)), check_same_thread=False)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL")
     return c
