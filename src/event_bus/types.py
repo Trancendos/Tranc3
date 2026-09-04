@@ -127,6 +127,14 @@ class PlatformEventType(str, enum.Enum):
     IMPROVEMENT_REALISED = "improvement.realised"
     IMPROVEMENT_ACCEPTED_AS_RISK = "improvement.accepted_as_risk"
 
+    # ── Product lifecycle (The Town Hall PLM) ──────────────────
+    PLM_DELIVERABLE_RAISED = "plm.deliverable.raised"
+    PLM_EVIDENCE_RECORDED = "plm.evidence.recorded"
+    PLM_GATE_PASSED = "plm.gate.passed"
+    PLM_GATE_BLOCKED = "plm.gate.blocked"
+    PLM_CRITERION_WAIVED = "plm.criterion.waived"
+    PLM_DELIVERABLE_CLOSED = "plm.deliverable.closed"
+
 
 class DeliveryStatus(str, enum.Enum):
     """Event delivery status."""

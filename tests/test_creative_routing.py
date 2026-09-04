@@ -301,3 +301,88 @@ class TestTheHttpSurface:
 
     def test_an_unknown_capability_is_a_404(self, client):
         assert client.get("/creative/capabilities/image.teleport").status_code == 404
+
+
+class TestCommission:
+    """A creative request that opens a Town Hall deliverable rather than bypassing it."""
+
+    @pytest.fixture
+    def client(self, tmp_path, monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from src.creative.routes import router
+        from src.townhall import plm as plm_module
+
+        service = plm_module.PlmService(db_path=tmp_path / "plm.db")
+        monkeypatch.setattr(plm_module, "_service", service)
+        app = FastAPI()
+        app.include_router(router)
+        yield TestClient(app)
+        service.close()
+
+    def test_a_game_request_opens_a_gated_deliverable(self, client):
+        """Calibrated: returning the resolution without creating a deliverable fails this.
+
+        This is the brief in one test: work goes *through* the lifecycle. A
+        resolve-only answer lets a caller read the address and then call the
+        worker directly, which is the state the estate was already in.
+        """
+        r = client.post("/creative/commission", json={"request": "create a game"})
+        assert r.status_code == 201
+        body = r.json()
+        assert body["deliverable"]["kind"] == "game"
+        assert body["deliverable"]["location"] == "TranceFlow"
+        assert body["deliverable"]["stage"] == "concept"
+        assert body["gate"]["can_advance"] is False
+        assert body["gate"]["unmet"] == ["concept.business-case"]
+
+    def test_an_unroutable_request_opens_nothing(self, client):
+        """Calibrated: creating a deliverable before the None check fails this.
+
+        A deliverable naming no Location would sit in the register blocked
+        forever at a gate nobody can evidence, which reads as governance and
+        is a leak.
+        """
+        from src.townhall.plm import get_plm
+
+        r = client.post("/creative/commission", json={"request": "book me a flight"})
+        assert r.status_code == 422
+        assert get_plm().list_deliverables() == []
+
+    def test_the_kind_follows_the_capability_not_the_location(self, client):
+        """Calibrated: mapping kind by Location fails this.
+
+        Sashas Photo Studio only ever makes images, but Fabulousa produces
+        both design systems and templates, and The Lab produces both
+        applications and modules. A Location-keyed map would gate them
+        identically.
+        """
+        game = client.post("/creative/commission", json={"request": "create a game"}).json()
+        app = client.post("/creative/commission", json={"request": "build an app"}).json()
+        assert game["deliverable"]["kind"] == "game"
+        assert app["deliverable"]["kind"] == "application"
+
+    def test_commissioning_a_degraded_capability_says_so(self, client):
+        """Calibrated: dropping deliverable_status from the payload fails this.
+
+        The lifecycle would stop this at the build gate eventually. Saying it
+        at commission time costs nothing and saves the round trip.
+        """
+        body = client.post("/creative/commission", json={"request": "create a game"}).json()
+        assert body["deliverable_status"] == "degraded"
+        assert "Godot" in body["gap"]
+
+    def test_every_capability_has_a_deliverable_kind(self, client):
+        """Calibrated: removing any entry from _DELIVERABLE_KIND fails this.
+
+        An unmapped capability would resolve, pass every check, and then 500
+        at the last step — after the caller had been told their request was
+        routable.
+        """
+        from src.creative.routes import _DELIVERABLE_KIND
+        from src.townhall.plm import DeliverableKind
+
+        for cap in CAPABILITIES:
+            assert cap.id in _DELIVERABLE_KIND, cap.id
+            DeliverableKind(_DELIVERABLE_KIND[cap.id])  # raises on a bad value

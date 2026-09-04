@@ -167,6 +167,13 @@ jobs:
       - name: Unreachable code
         run: python scripts/check_unreachable_code.py
 
+      # The PLM policy and procedure are rendered from the gate criteria in
+      # src/townhall/plm.py, because a hand-written governance document drifts
+      # in exactly the situation where somebody reads it instead of the code.
+      # This fails when the committed copy no longer matches.
+      - name: PLM gate documentation is current
+        run: python scripts/generate_plm_docs.py --check
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every

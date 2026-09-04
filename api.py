@@ -947,6 +947,16 @@ from src.roles.routes import (
 
 app.include_router(_roles_router)
 
+# ── Town Hall product lifecycle gates (PRINCE2-shaped, and they refuse) ──────
+# governance.py registers PRINCE2 as a policy with a hardcoded score and no
+# check function. This is the lifecycle: deliverables, stages, evidenced gate
+# criteria, and an advance() that raises rather than warns.
+from src.townhall.plm_routes import (
+    router as _plm_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_plm_router)
+
 # ── Creative route table (which Location answers a creative request) ─────────
 # The front door for creative work. /creative/resolve names the Location and
 # endpoint; it deliberately does not dispatch, so it can report a capability

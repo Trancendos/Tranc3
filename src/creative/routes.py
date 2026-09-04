@@ -89,3 +89,72 @@ async def resolve_request(request: str = Body(..., embed=True)) -> dict[str, Any
     payload["url"] = endpoint_for(res.capability) if res.capability else None
     payload["deliverable"] = res.capability.status.value if res.capability else None
     return payload
+
+
+# The Location a capability belongs to builds the thing; the deliverable kind
+# is what the Town Hall gates it as. An image faces no build gate and a game
+# faces every one, so the mapping has to be per capability rather than per
+# Location — Fabulousa alone produces both a design system and a template.
+_DELIVERABLE_KIND: dict[str, str] = {
+    "image.create": "image",
+    "image.edit": "image",
+    "image.upscale": "image",
+    "game.create": "game",
+    "game.asset.add": "game",
+    "model3d.create": "game",
+    "video.create": "video",
+    "design.create": "design_system",
+    "design.component": "design_system",
+    "design.accessibility": "design_system",
+    "code.generate": "application",
+    "music.create": "document",
+    "creative.brief": "application",
+}
+
+
+@router.post("/commission", status_code=201)
+async def commission(
+    request: str = Body(..., embed=True),
+    requested_by: str = Body("system", embed=True),
+) -> dict[str, Any]:
+    """Resolve a creative request *and* open its Town Hall deliverable.
+
+    The brief's actual ask: work of every kind — an app, a game, an image —
+    goes through the lifecycle rather than around it. Resolving alone does
+    not do that, because a caller can read the answer and then call the
+    worker directly.
+
+    An unroutable request opens nothing. A deliverable naming a Location
+    that cannot build it would enter the lifecycle and stall at a gate whose
+    evidence nobody can produce, which is worse than a plain refusal: it
+    puts a permanent blocked item in the register and calls it governance.
+    """
+    if not request.strip():
+        raise HTTPException(400, "request text required")
+    res = resolve(request)
+    if res.capability is None:
+        raise HTTPException(422, {"error": "unroutable", "reason": res.reason})
+
+    kind = _DELIVERABLE_KIND.get(res.capability.id)
+    if kind is None:  # pragma: no cover - the registry test forbids this
+        raise HTTPException(500, f"no deliverable kind mapped for {res.capability.id}")
+
+    from src.townhall.plm import get_plm  # noqa: PLC0415 - avoids an import cycle at startup
+
+    item = get_plm().create(
+        title=request.strip()[:200],
+        kind=kind,
+        location=res.capability.location,
+        requested_by=requested_by,
+    )
+    return {
+        "deliverable": item.to_dict(),
+        "gate": get_plm().gate_status(item.id).to_dict(),
+        "capability": res.capability.to_dict(),
+        "url": endpoint_for(res.capability),
+        # Carried forward so a caller cannot commission a DEGRADED or ABSENT
+        # capability without having been told. The lifecycle will stop it at
+        # a gate later; saying so now is cheaper.
+        "deliverable_status": res.capability.status.value,
+        "gap": res.capability.gap,
+    }
