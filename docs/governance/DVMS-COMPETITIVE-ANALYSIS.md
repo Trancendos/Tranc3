@@ -138,8 +138,8 @@ not the Cloud Only one.
   by manifest path, the CMDB keys by ServiceID, and nothing mapped between them. What it
   was written to mean, that the entity linkage did not exist, was wrong: Cryptex and The Lab
   are Locations in `PLATFORM_ENTITIES.md`, and the design was unwired rather than absent.
-  `src/dvms/surface_owner.py` supplies the join — 97 surfaces, 68 owned across 37 Locations,
-  29 cross-cutting and stewarded, 0 unowned, enforced by
+  `src/dvms/surface_owner.py` supplies the join — 97 surfaces, 58 owned across 37 Locations,
+  29 cross-cutting and stewarded, 10 unowned (the gate currently fails on those), enforced by
   `scripts/check_surface_ownership.py`. See `DVMS-ENTITY-FLOW.md`.
   A review measured 58 owned and 10 unowned against the same tree and was right about what
   it ran: the compose-port ladder resolved those ten, `_compose_ports()` swallowed a missing
