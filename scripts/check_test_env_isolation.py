@@ -61,7 +61,9 @@ TEST_ROOT = REPO_ROOT / "tests"
 CONFTEST = REPO_ROOT / "conftest.py"
 
 # Mutating calls. `setdefault` is deliberately absent -- see the module docstring.
-MUTATING_CALLS = frozenset({"pop", "update", "clear", "setitem"})
+# `setitem` was in this set and could never match: the dunder is `__setitem__`,
+# and a subscript assignment is caught by the target scan instead.
+MUTATING_CALLS = frozenset({"pop", "popitem", "update", "clear"})
 
 
 def _fail(msg: str) -> None:
@@ -88,7 +90,21 @@ def guarded_names() -> set[str]:
                 except (ValueError, SyntaxError) as exc:
                     _fail("_GUARDED_ENV_VARS is not a literal — cannot verify isolation")
                     raise SystemExit(1) from exc
-                names = {str(v) for v in value}
+                # Shape, not just truthiness. `_GUARDED_ENV_VARS = "SECRET_KEY"`
+                # is a plausible typo and iterating it yields the CHARACTERS
+                # 'S', 'E', 'C', ... — a guarded set that matches no real
+                # variable, so every module passes and the gate is silently off.
+                if not isinstance(value, (list, tuple, set, frozenset)):
+                    _fail(
+                        "_GUARDED_ENV_VARS is a "
+                        f"{type(value).__name__}, not a list/tuple/set — a bare string "
+                        "would be read one character at a time, guarding nothing"
+                    )
+                    raise SystemExit(1)
+                if not all(isinstance(item, str) for item in value):
+                    _fail("_GUARDED_ENV_VARS contains a non-string entry")
+                    raise SystemExit(1)
+                names = set(value)
                 if not names:
                     _fail("_GUARDED_ENV_VARS is empty")
                     raise SystemExit(1)
@@ -97,16 +113,117 @@ def guarded_names() -> set[str]:
     raise SystemExit(1)
 
 
-def _is_environ(node: ast.AST) -> bool:
-    """True for `os.environ` (or a bare `environ` imported from os)."""
-    if isinstance(node, ast.Attribute) and node.attr == "environ":
-        return True
-    return isinstance(node, ast.Name) and node.id == "environ"
+class _EnvironNames:
+    """The names in one module that actually refer to `os.environ`.
+
+    Matching a bare attribute called `environ` was wrong in both directions:
+    it accepted `some_config.environ` (nothing to do with the process
+    environment) and missed `import os as o` / `from os import environ as env`,
+    either of which lets a module reintroduce the collection-order failure this
+    check exists to reject while CI stays green.
+    """
+
+    def __init__(self, tree: ast.Module) -> None:
+        self.os_modules: set[str] = set()
+        self.environs: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "os":
+                        self.os_modules.add(alias.asname or "os")
+            elif isinstance(node, ast.ImportFrom) and node.module == "os":
+                for alias in node.names:
+                    if alias.name == "environ":
+                        self.environs.add(alias.asname or "environ")
+            elif isinstance(node, ast.Assign) and self._is_environ_expr(node.value):
+                # `env = os.environ` — a second name for the same mapping.
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        self.environs.add(target.id)
+
+    def _is_environ_expr(self, node: ast.AST) -> bool:
+        return (
+            isinstance(node, ast.Attribute)
+            and node.attr == "environ"
+            and isinstance(node.value, ast.Name)
+            and node.value.id in self.os_modules
+        )
+
+    def matches(self, node: ast.AST) -> bool:
+        """True when `node` evaluates to `os.environ` in this module."""
+        if self._is_environ_expr(node):
+            return True
+        return isinstance(node, ast.Name) and node.id in self.environs
+
+
+# Bodies that do NOT run when the module is imported.
+_DEFERRED = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
+
+
+def _import_time_nodes(tree: ast.Module):
+    """Every node evaluated when the module is imported.
+
+    Descends through module level, class bodies and control flow -- `if`,
+    `try`, `with`, `for`, `while` all execute during collection -- and stops at
+    `def`/`lambda` bodies, which do not. Looking only at `tree.body`, as the
+    first version did, missed a guarded write inside a module-level
+    `if os.getenv(...):`, which runs at import time exactly like a bare one.
+
+    A decorator on a module-level `def` is skipped with the function it
+    decorates; a decorator that mutates the environment would be a stranger
+    thing than this check is built to find.
+    """
+    stack: list[ast.AST] = list(tree.body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, _DEFERRED):
+            continue
+        yield node
+        stack.extend(ast.iter_child_nodes(node))
+
+
+def _update_touches_guarded(call: ast.Call, guarded: set[str]) -> bool:
+    """Does this `os.environ.update(...)` provably leave the guarded vars alone?
+
+    Flagging every `update()` made the check reject a module that only sets
+    unguarded keys, and a check that reports work it did not do gets weakened
+    rather than obeyed. So a literal mapping with entirely literal, unguarded
+    keys is allowed; anything the reader cannot see through -- a variable, a
+    `**spread`, a comprehension -- is flagged, because it cannot be shown safe.
+    """
+    for keyword in call.keywords:
+        if keyword.arg is None or keyword.arg in guarded:
+            return True  # `**mapping`, or a guarded name passed directly
+    if not call.args:
+        return False  # `update()` with only unguarded keywords
+    mapping = call.args[0]
+    if not isinstance(mapping, ast.Dict):
+        return True  # not a literal — cannot be proven safe
+    for key in mapping.keys:
+        if key is None:  # `{**other}`
+            return True
+        if not isinstance(key, ast.Constant):
+            return True  # computed key
+        if key.value in guarded:
+            return True
+    return False
+
+
+def _test_modules() -> list[Path]:
+    """Every file pytest collects from the tests tree.
+
+    Both patterns: `test_*.py` AND `*_test.py`. Scanning only the first left
+    `tests/integration/cross_ecosystem_bridge_test.py` -- a real, collected
+    module -- outside the gate entirely.
+    """
+    seen = {path for pattern in ("test_*.py", "*_test.py") for path in TEST_ROOT.rglob(pattern)}
+    return sorted(seen)
 
 
 def violations(guarded: set[str]) -> list[str]:
+    """Every import-time write to a guarded variable, across the tests tree."""
     found: list[str] = []
-    for path in sorted(TEST_ROOT.rglob("test_*.py")):
+    for path in _test_modules():
         rel = path.relative_to(REPO_ROOT)
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -114,8 +231,8 @@ def violations(guarded: set[str]) -> list[str]:
             found.append(f"{rel} does not parse ({exc.msg}) — cannot verify it")
             continue
 
-        for node in tree.body:  # module level only; fixtures are fine
-            targets: list[ast.expr] = []
+        environ = _EnvironNames(tree)
+        for node in _import_time_nodes(tree):
             targets: list[ast.expr] = []
             if isinstance(node, ast.Assign):
                 targets = list(node.targets)
@@ -123,39 +240,54 @@ def violations(guarded: set[str]) -> list[str]:
                 targets = [node.target]
             elif isinstance(node, ast.Delete):
                 targets = list(node.targets)
+
             for target in targets:
                 if (
                     isinstance(target, ast.Subscript)
-                    and _is_environ(target.value)
+                    and environ.matches(target.value)
                     and isinstance(target.slice, ast.Constant)
                     and target.slice.value in guarded
                 ):
+                    verb = "deletes" if isinstance(node, ast.Delete) else "assigns"
                     found.append(
-                        f"{rel}:{node.lineno} assigns os.environ[{target.slice.value!r}] "
-                        "at import time"
+                        f"{rel}:{node.lineno} {verb} os.environ"
+                        f"[{target.slice.value!r}] at import time"
                     )
 
-            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
-                func = node.value.func
-                if (
-                    isinstance(func, ast.Attribute)
-                    and func.attr in MUTATING_CALLS
-                    and _is_environ(func.value)
-                ):
-                    arg = node.value.args[0] if node.value.args else None
-                    name = arg.value if isinstance(arg, ast.Constant) else None
-                    if name in guarded or func.attr in ("update", "clear"):
-                        found.append(
-                            f"{rel}:{node.lineno} calls os.environ.{func.attr}"
-                            f"({name!r}) at import time"
-                        )
+            # Any call, not only a bare expression statement: the environment is
+            # mutated by `_ = os.environ.pop("SECRET_KEY")` exactly as much as by
+            # the same call on a line of its own.
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if not (
+                isinstance(func, ast.Attribute)
+                and func.attr in MUTATING_CALLS
+                and environ.matches(func.value)
+            ):
+                continue
+
+            if func.attr == "update":
+                if not _update_touches_guarded(node, guarded):
+                    continue
+                detail = "update(...)"
+            elif func.attr in ("clear", "popitem"):
+                detail = f"{func.attr}()"  # removes guarded vars along with the rest
+            else:  # pop
+                arg = node.args[0] if node.args else None
+                name = arg.value if isinstance(arg, ast.Constant) else None
+                if arg is not None and name not in guarded and isinstance(arg, ast.Constant):
+                    continue  # a literal, unguarded name
+                detail = f"pop({name!r})"
+
+            found.append(f"{rel}:{node.lineno} calls os.environ.{detail} at import time")
     return found
 
 
 def main() -> int:
     guarded = guarded_names()
     problems = violations(guarded)
-    modules = len(list(TEST_ROOT.rglob("test_*.py")))
+    modules = len(_test_modules())
 
     print(f"Guarded vars: {', '.join(sorted(guarded))}")
     print(f"Test modules scanned: {modules}")

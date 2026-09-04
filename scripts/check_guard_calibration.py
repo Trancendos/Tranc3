@@ -61,7 +61,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import atexit
 import os
+import signal
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -452,6 +454,73 @@ def _purge_bytecode(source: Path) -> None:
             pass
 
 
+# Sources this process has mutated and not yet put back, as {path: original}.
+# `finally` covers an exception and a Ctrl-C; it does NOT cover SIGKILL, and the
+# OOM killer is a live threat here precisely because a removed ceiling is what
+# some of these guards enforce. If this process dies between writing the mutant
+# and restoring it, the mutated file is left in the working tree and the NEXT CI
+# step runs it -- a security guard silently absent from a green build, which is
+# the exact failure this tool exists to detect.
+_IN_FLIGHT: dict[Path, str] = {}
+
+
+def _restore_in_flight(*_args: object) -> None:
+    """Put back every source this process mutated. Safe to call twice."""
+    while _IN_FLIGHT:
+        path, original = _IN_FLIGHT.popitem()
+        try:
+            path.write_text(original, encoding="utf-8")
+            _purge_bytecode(path)
+        except OSError:  # nothing useful left to do while unwinding
+            pass
+
+
+def _install_restore_handlers() -> None:
+    """Restore on normal exit and on the signals a runner actually sends.
+
+    SIGKILL cannot be caught by anything; `_assert_targets_clean` is the guard
+    for that case, on the next run.
+    """
+    atexit.register(_restore_in_flight)
+    for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        try:
+            previous = signal.getsignal(signum)
+
+            def _handler(sig: int, frame: object, _previous: object = previous) -> None:
+                _restore_in_flight()
+                if callable(_previous):
+                    _previous(sig, frame)
+                else:
+                    raise SystemExit(128 + sig)
+
+            signal.signal(signum, _handler)
+        except (ValueError, OSError):
+            # Not the main thread, or the platform has no such signal.
+            continue
+
+
+def _assert_targets_clean() -> list[str]:
+    """Refuse to start if a previous run left a mutant on disk.
+
+    Only a SIGKILL can get past the restore paths above, and when it does the
+    evidence is a guard source that differs from HEAD. Calibrating on top of
+    that would compare a mutant against a mutant.
+    """
+    paths = sorted({guard.path for guard in GUARDS})
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+    proc = subprocess.run(  # noqa: S603
+        ["git", "diff", "--name-only", "--", *paths],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    if proc.returncode != 0:
+        return []  # not a git checkout, or git unavailable — not this tool's call
+    return [line for line in proc.stdout.splitlines() if line.strip()]
+
+
 def calibrate(guard: Guard) -> tuple[bool, str]:
     """Remove the guard, require its tests to fail, restore. Returns (ok, note)."""
     target = REPO_ROOT / guard.path
@@ -472,6 +541,7 @@ def calibrate(guard: Guard) -> tuple[bool, str]:
                 )
         if mutated == original:
             return False, "mutation changed nothing — the manifest entry is empty"
+        _IN_FLIGHT[target] = original
         target.write_text(mutated, encoding="utf-8")
 
         if _run_tests(guard.tests):
@@ -486,6 +556,7 @@ def calibrate(guard: Guard) -> tuple[bool, str]:
         # restores from the index and would discard uncommitted work.
         target.write_text(original, encoding="utf-8")
         _purge_bytecode(target)
+        _IN_FLIGHT.pop(target, None)
 
 
 def main() -> int:
@@ -506,10 +577,36 @@ def main() -> int:
             print(f"no guard with id {args.only!r}", file=sys.stderr)
             return 1
 
+    # Refuse to start on a tree a killed run already mutated. Comparing a
+    # mutant against a mutant would report "removal detected" for a guard that
+    # was never there.
+    dirty = _assert_targets_clean()
+    if dirty:
+        print(
+            "FAIL a guard source differs from HEAD before any mutation — a previous "
+            "run was killed mid-calibration and left a mutant on disk:\n  "
+            + "\n  ".join(dirty)
+            + "\nRestore these files (git checkout --) and run again.",
+            file=sys.stderr,
+        )
+        return 1
+
+    _install_restore_handlers()
+
     # A baseline failure would make every result meaningless: the suite must
     # pass before anything is mutated, or "removal detected" means nothing.
     all_tests = tuple(sorted({t for g in guards for t in g.tests}))
-    if not _run_tests(all_tests):
+    try:
+        baseline_passed = _run_tests(all_tests)
+    except CalibrationError as exc:
+        # The per-guard loop already handles this; the baseline call did not, so
+        # a pytest usage or collection error here escaped main() as a raw
+        # traceback — the opposite of the fail-closed message this tool promises.
+        print(f"FAIL the baseline run never reached a verdict:\n{exc}", file=sys.stderr)
+        for captured in _last_failure_output:
+            print(captured, file=sys.stderr)
+        return 1
+    if not baseline_passed:
         print(
             "FAIL the guard tests do not pass before any mutation — fix the suite "
             "first, or every 'removal detected' below would be meaningless.",

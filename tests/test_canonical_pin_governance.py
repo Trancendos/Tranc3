@@ -56,11 +56,12 @@ def _write_configs(
     per_directory=None,
     rules=None,
     renovate_extra=None,
+    canonical_src=None,
 ):
     (tmp_path / "scripts").mkdir(exist_ok=True)
     (tmp_path / ".github").mkdir(exist_ok=True)
     pin = tmp_path / "scripts" / "align_framework_pins.py"
-    pin.write_text(CANONICAL_SRC, encoding="utf-8")
+    pin.write_text(canonical_src or CANONICAL_SRC, encoding="utf-8")
 
     per_directory = per_directory or {}
     blocks = []
@@ -392,3 +393,101 @@ def test_a_boolean_minimum_release_age_inside_a_package_rule_is_rejected(tmp_pat
         )
     )
     assert module.main() == 1
+
+
+def test_selector_fields_are_anded_not_flattened(tmp_path, checker):
+    """Renovate requires EVERY selector field to match, not any one of them.
+
+    `matchPackageNames: ["fastapi", "pydantic"]` combined with
+    `matchDepNames: ["something-else"]` matches nothing at all in Renovate. The
+    earlier implementation flattened both fields into one list and read the rule
+    as covering `fastapi`, so an entirely ineffective block satisfied
+    governance.
+    """
+    ineffective = {
+        "description": "Looks like a block, matches nothing",
+        "matchPackageNames": ["fastapi", "pydantic"],
+        "matchDepNames": ["a-package-that-is-not-governed"],
+        "enabled": False,
+    }
+    module = checker(*_write_configs(tmp_path, rules=[ineffective]))
+    assert module.main() == 1
+
+
+def test_a_rule_scoped_to_another_manager_is_not_the_pypi_block(tmp_path, checker):
+    """`matchManagers: ["npm"]` disables npm updates, not the Python pins.
+
+    Accepting it as the estate-wide block let the tree pass with no pypi block
+    at all.
+    """
+    scoped_away = dict(DISABLE_RULE, matchManagers=["npm"])
+    module = checker(*_write_configs(tmp_path, rules=[scoped_away]))
+    assert module.main() == 1
+
+    module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE]))
+    assert module.main() == 0
+
+
+def test_a_rule_scoped_to_a_file_path_is_not_the_pypi_block(tmp_path, checker):
+    """Same reasoning for `matchFileNames`: it narrows the block to one file."""
+    scoped_away = dict(DISABLE_RULE, matchFileNames=["web/package.json"])
+    module = checker(*_write_configs(tmp_path, rules=[scoped_away]))
+    assert module.main() == 1
+
+
+def test_an_unparseable_regex_selector_is_reported_not_treated_as_a_match(tmp_path, checker):
+    """Returning True for a bad regex was fail-OPEN on the disabling rule.
+
+    A typo in the block would have read as "this rule covers the package" and
+    satisfied governance. It is a config error and is now reported as one.
+    """
+    broken = dict(DISABLE_RULE, matchPackageNames=["/^(fastapi/"])
+    module = checker(*_write_configs(tmp_path, rules=[broken]))
+    assert module.main() == 1
+
+
+def test_a_minimatch_brace_selector_is_reported_rather_than_guessed(tmp_path, checker):
+    """`{fastapi,pydantic}` is valid minimatch and means nothing to fnmatch.
+
+    fnmatch would report "no match" for a selector Renovate does match, so the
+    checker says it cannot model it instead of guessing.
+    """
+    braced = dict(DISABLE_RULE, matchPackageNames=["{fastapi,pydantic}"])
+    module = checker(*_write_configs(tmp_path, rules=[braced]))
+    assert module.main() == 1
+
+
+def test_a_later_docker_rule_for_the_same_name_does_not_fail_governance(tmp_path, checker):
+    """`redis` is both a governed PyPI pin and a Docker image on this estate.
+
+    A later rule enabling the Docker image was reported as re-enabling the PyPI
+    pin — a false failure on a correct config, and the kind of noise that gets a
+    check deleted rather than obeyed.
+    """
+    docker_rule = {
+        "description": "Redis image digests carry real fixes",
+        "matchDatasources": ["docker"],
+        "matchPackageNames": ["redis"],
+        "enabled": True,
+    }
+    with_redis = (
+        "\nCANONICAL: dict[str, str] = {\n"
+        '    "fastapi": "0.141.1",\n'
+        '    "pydantic": "2.13.5",\n'
+        '    "redis": "6.4.0",\n'
+        "}\n"
+    )
+    args = _write_configs(
+        tmp_path,
+        canonical_src=with_redis,
+        dependabot_ignore=("fastapi", "pydantic", "redis"),
+        rules=[
+            dict(DISABLE_RULE, matchPackageNames=["fastapi", "pydantic", "redis"]),
+            docker_rule,
+        ],
+    )
+    module = checker(*args)
+    # The fixture must actually govern `redis`, or this test passes for the
+    # wrong reason: an ungoverned package is never evaluated at all.
+    assert "redis" in module.canonical_packages()
+    assert module.main() == 0

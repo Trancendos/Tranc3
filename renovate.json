@@ -106,7 +106,7 @@
         "minor"
       ],
       "enabled": false,
-      "description": "Block ML library upgrades \u2014 require manual compatibility testing",
+      "description": "Block ML library upgrades \u2014 require manual compatibility testing. minimumReleaseAge is null, not absent: the rule is disabled so a cooldown could never apply, but the estate's semgrep supply-chain rule requires every packageRules entry to state a release-age posture, and null is the schema-valid way to say 'no cooldown' (Renovate types it string|null; false is invalid and would make Renovate reject the whole config, which is what this said until 2026-09-04).",
       "matchPackageNames": [
         "/^torch$/",
         "/^transformers$/",
@@ -122,7 +122,7 @@
         "major"
       ],
       "enabled": false,
-      "description": "Block database major version upgrades \u2014 require migration planning",
+      "description": "Block database major version upgrades \u2014 require migration planning. minimumReleaseAge is null, not absent: the rule is disabled so a cooldown could never apply, but the estate's semgrep supply-chain rule requires every packageRules entry to state a release-age posture, and null is the schema-valid way to say 'no cooldown' (Renovate types it string|null; false is invalid and would make Renovate reject the whole config, which is what this said until 2026-09-04).",
       "matchPackageNames": [
         "/^postgres$/",
         "/^clickhouse$/"
