@@ -1,6 +1,3 @@
-## 2024-05-26 - [Python Cosine Similarity Optimization]
-**Learning:** In pure Python (when `numpy` is unavailable), calculating dot product and vector norms in three separate `sum(...)` generator expressions requires three passes over the vector and three generator overheads. Doing it in a single loop (`for x, y in zip(a, b)`) is 30%+ faster.
-**Action:** When calculating vector similarity in pure Python, use a single loop to calculate dot product and norms simultaneously instead of multiple generator expressions.
-## 2024-05-26 - [Fast dot product]
-**Learning:** `sum(map(operator.mul, a, b))` is ~1.3-1.6x faster than `sum(x * y for x, y in zip(a, b))` for pure Python dot products.
-**Action:** Use `sum(map(operator.mul, a, b))` for vector dot products in Python code without numpy.
+## 2026-09-04 - Fast C-Level Iterator Math Replaces Python Loops
+**Learning:** For performance optimization in pure Python numerical operations (without NumPy), operations using `map(operator.mul, a, b)` execute in C and are significantly faster (~1.3-1.6x speedup) than explicitly writing out the loops natively using generators like `(x * y for x, y in zip(a, b))`. However, because `map()` is lazy and returns an iterator, any multi-pass usage (e.g. `sum(map(operator.mul, diffs, diffs))` where `diffs` is a mapped generator) requires that the inner map be eagerly materialized into a `list()` first, otherwise it gets exhausted silently and returns 0.
+**Action:** When migrating math logic away from native loops or `zip()` toward `operator` mapped functions for C-level speedups, carefully check if the sequence will be iterated over multiple times. If so, cast it to `list` first.

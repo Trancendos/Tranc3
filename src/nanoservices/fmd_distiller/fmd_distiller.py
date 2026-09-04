@@ -289,8 +289,11 @@ class DistillationLoss:
         """Simple MSE task loss for regression / cross-entropy approximation."""
         if not predictions or not targets:
             return 0.0
+        import operator
+
         n = min(len(predictions), len(targets))
-        return sum((p - t) ** 2 for p, t in zip(predictions[:n], targets[:n])) / n
+        diffs = list(map(operator.sub, predictions[:n], targets[:n]))
+        return sum(map(operator.mul, diffs, diffs)) / n
 
     @staticmethod
     def combined_loss(
