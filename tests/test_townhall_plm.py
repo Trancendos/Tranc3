@@ -374,6 +374,45 @@ class TestTheHttpSurface:
             == 409
         )
 
+    def test_a_lost_advance_race_is_a_409_not_a_500(self, client):
+        """Calibrated: dropping the GateAlreadyPassed handler fails this.
+
+        Two operators can press the same gate at once; the conditional UPDATE
+        picks a winner and the loser raises. Unhandled, that reaches the
+        client as a 500 — an operator reading it as a platform fault and
+        re-filing evidence that is already filed. The gate worked, so the
+        answer is the same 409 the blocked case gets, naming the stage the
+        deliverable actually reached.
+        """
+        from src.townhall import plm as plm_module
+        from src.townhall.plm import GateAlreadyPassed, Stage
+
+        item = self._deliverable(client)
+
+        def _lose_the_race(deliverable_id, approver="system"):
+            raise GateAlreadyPassed(deliverable_id, Stage.CONCEPT, Stage.INITIATION)
+
+        plm_module._service.advance = _lose_the_race
+        r = client.post(f"/townhall/plm/deliverables/{item['id']}/advance", json={})
+        assert r.status_code == 409
+        detail = r.json()["detail"]
+        assert detail["error"] == "gate already passed"
+        assert detail["current_stage"] == "initiation"
+
+    def test_blank_evidence_metadata_is_a_400_not_a_500(self, client):
+        """Calibrated: dropping the ValueError handler fails this.
+
+        `submit_evidence` refuses a blank reference, because evidence nobody
+        can look up is not evidence. That refusal is the caller's fault and
+        has to read as one over HTTP.
+        """
+        item = self._deliverable(client)
+        r = client.post(
+            f"/townhall/plm/deliverables/{item['id']}/evidence",
+            json={"criterion_id": "concept.business-case", "reference": "   "},
+        )
+        assert r.status_code == 400
+
     def test_an_unknown_criterion_is_a_400_not_a_stored_record(self, client):
         item = self._deliverable(client)
         r = client.post(
@@ -513,8 +552,11 @@ class TestReviewFindings:
         source = (
             __import__("pathlib").Path(__file__).resolve().parent.parent / "src/townhall/plm.py"
         ).read_text()
+        from src.event_bus.types import PlatformEventType
+
+        plm_members = [m for m in PlatformEventType if m.name.startswith("PLM_")]
         assert '_emit("plm.' not in source
-        assert source.count("PlatformEventType.PLM_") == 6
+        assert source.count("PlatformEventType.PLM_") == len(plm_members)
 
     def test_every_plm_event_member_is_actually_emitted(self):
         """A member nothing emits is a name, not an event."""

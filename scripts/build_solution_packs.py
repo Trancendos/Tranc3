@@ -269,18 +269,25 @@ def readiness(ent, j: Joined) -> tuple[int, list[str]]:
     if j.path_exists:
         score += 2
         why.append(f"code path `{ent.worker_path}` exists on disk (+2)")
+    # The reasons name the threshold each point was earned at, not the exact
+    # file count. The score buckets at 1 and 3 files, so an exact count adds
+    # nothing a reader can act on — and it made every pack stale on any commit
+    # that added a file anywhere beneath a Location's path. A generated
+    # document that churns on facts which do not change its meaning trains
+    # people to regenerate without reading, which is how real drift gets
+    # committed unseen.
     if j.py_files >= 3:
         score += 2
-        why.append(f"{j.py_files} Python files present (+2)")
+        why.append("three or more Python files present (+2)")
     elif j.py_files:
         score += 1
-        why.append(f"{j.py_files} Python file(s) present (+1)")
+        why.append("at least one Python file present (+1)")
     if j.compose_service:
         score += 2
         why.append(f"compose service `{j.compose_service}` defined (+2)")
     if j.test_files:
         score += 1
-        why.append(f"{j.test_files} test file(s) (+1)")
+        why.append("at least one test file present (+1)")
     return min(score, 10), why
 
 

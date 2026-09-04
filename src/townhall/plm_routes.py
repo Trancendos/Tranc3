@@ -14,6 +14,7 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from src.townhall.plm import (
     CRITERIA,
     DeliverableKind,
+    GateAlreadyPassed,
     GateBlocked,
     Outcome,
     Stage,
@@ -154,6 +155,19 @@ async def advance(
                 "error": "gate blocked",
                 "stage": exc.stage.value,
                 "unmet": [c.to_dict() for c in exc.unmet],
+            },
+        ) from exc
+    except GateAlreadyPassed as exc:
+        # Two callers advanced the same deliverable; the conditional UPDATE in
+        # advance() let exactly one win. The loser is not a server fault — the
+        # gate did its job — so it gets the same 409 the blocked case gets,
+        # carrying the stage it is now actually at.
+        raise HTTPException(
+            409,
+            {
+                "error": "gate already passed",
+                "stage": exc.expected.value,
+                "current_stage": exc.actual.value,
             },
         ) from exc
     return item.to_dict()

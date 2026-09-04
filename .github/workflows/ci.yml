@@ -66,10 +66,9 @@ jobs:
 
       # PyYAML for the compose checks; pydantic because the guards below now
       # import real platform modules rather than re-parsing them. That is what
-      # lets them check the thing itself — check_lab_languages.py reads the
-      # language registry, generate_plm_docs.py renders from the gate criteria
-      # — and src/event_bus/types.py, which the PLM imports for its event
-      # enum, is built on pydantic.
+      # lets them check the thing itself — generate_plm_docs.py renders the
+      # policy from the gate criteria, and src/event_bus/types.py, which the
+      # PLM imports for its event enum, is built on pydantic.
       - name: Install PyYAML and pydantic
         run: pip install PyYAML pydantic
 
@@ -189,6 +188,16 @@ jobs:
       - name: Creative routes exist in the deployed image
         run: python scripts/check_creative_routes.py
 
+      # The Lab's accepted-language list lives in two places by necessity:
+      # src/lab/languages.py is the registry, and workers/the-lab mirrors the
+      # ids and aliases because its Docker build context cannot import the
+      # registry. A drifted mirror fails in the worst direction — a language
+      # the capability matrix advertises, refused by the running service with
+      # a 400. This checker existed unwired for one commit, which is the same
+      # defect class it was written to catch.
+      - name: Lab language registry matches the worker
+        run: python scripts/check_lab_languages.py
+
       # This job's own pip install line, checked against what its steps
       # actually import. The guards here read real platform modules now —
       # that is what lets them check the thing rather than a copy of it —
@@ -211,6 +220,28 @@ jobs:
       # teaches people to wave it through.
       - name: Documentation estate coverage
         run: python scripts/check_docs_estate.py --check
+
+      # The 43 solution packs are regenerated from the entity register, the
+      # compose file and the tree, so they answer questions about readiness and
+      # code paths with facts rather than recollection. They went stale the day
+      # The Lab's registered path moved from src/lab/ to workers/the-lab/, and
+      # the packs kept reporting the retired path with a readiness point it no
+      # longer earned. A generated document nobody regenerates is a stale
+      # document that looks authoritative. The readiness reasons name the
+      # threshold each point was earned at rather than an exact file count, so
+      # this fails on drift that changes what a pack says and not on every
+      # commit that adds a file somewhere beneath a Location.
+      - name: Solution packs are current
+        run: python scripts/build_solution_packs.py --check
+
+      # The defect class this whole job exists for, turned on the job itself: a
+      # guard that is written, reviewed, merged and never invoked.
+      # check_lab_languages.py shipped exactly that way — its docstring and its
+      # commit message both said it ran here, and it did not. This fails when a
+      # guard in scripts/ is named in no workflow and carries no written reason
+      # for staying out.
+      - name: Every guard is wired into a workflow
+        run: python scripts/check_guards_are_wired.py
 
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze

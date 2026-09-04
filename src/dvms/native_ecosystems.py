@@ -145,15 +145,38 @@ def parse_go_mod(text: str) -> List[Tuple[str, str]]:
     return out
 
 
-#: Every `[[package]]` stanza Cargo writes carries both of these keys. All
-#: three together mean the file holds at least one complete package entry —
-#: which distinguishes a broken file from a valid lockfile whose dependencies
-#: are all path-, git- or workspace-local and therefore absent from crates.io.
-_STANZA_MARKERS = ("[[package]]", "name = ", "version = ")
-
-
 def _has_package_stanza(text: str) -> bool:
-    return all(marker in text for marker in _STANZA_MARKERS)
+    """True when at least one complete `[[package]]` stanza is present.
+
+    Complete means `name` and `version` appear *inside the same stanza*. A
+    substring test over the whole file would accept a truncated lockfile,
+    because Cargo.lock's own header carries a bare `version = 3` that can
+    stand in for a package's missing version key. Only a whole stanza
+    distinguishes a valid lockfile whose dependencies are all path-, git- or
+    workspace-local (and so absent from crates.io) from a broken one, so a
+    malformed file still fails closed.
+    """
+    in_stanza = False
+    have_name = False
+    have_version = False
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line == "[[package]]":
+            in_stanza = True
+            have_name = have_version = False
+            continue
+        if line.startswith("[") and line != "[[package]]":
+            in_stanza = False
+            continue
+        if not in_stanza:
+            continue
+        if _LOCK_NAME.match(line):
+            have_name = True
+        elif _LOCK_VERSION.match(line):
+            have_version = True
+        if have_name and have_version:
+            return True
+    return False
 
 
 def parse_cargo_lock(text: str) -> List[Tuple[str, str]]:
