@@ -269,20 +269,23 @@ def test_a_malformed_review_by_value_is_reported(checker):
     assert any("not an ISO date" in p for p in problems)
 
 
-def test_a_temp_advisory_can_be_registered(checker):
-    """VULN_ID required TEMP ids to be registered; the register scan could not
-    find one, so every valid TEMP suppression was rejected."""
-    text = GOOD.replace("CVE-2025-11111", "TEMP-2025-0001")
-
-
 def test_a_temp_advisory_can_be_registered(checker, monkeypatch, tmp_path):
     """VULN_ID required TEMP ids to be registered; the register scan could not
-    find one, so every valid TEMP suppression was rejected."""
+    find one, so every valid TEMP suppression was rejected.
+
+    Exercised through `_registered_ids()` rather than a hand-built set, because
+    the two regexes drifting apart IS the defect: one required the prefix and
+    the other could not discover it. A literal set would pass either way.
+    """
     register = tmp_path / "SECURITY.md"
     register.write_text("TEMP-2025-0001", encoding="utf-8")
     monkeypatch.setattr(checker, "REGISTERS", (str(register),))
     text = GOOD.replace("CVE-2025-11111", "TEMP-2025-0001")
     assert checker.check(text, checker._registered_ids()) == []
+
+
+def test_an_unexpected_osv_payload_shape_is_treated_as_unavailable(checker, monkeypatch):
+    """Valid JSON is not the expected JSON, and a crash reports nothing."""
 
     class _Response:
         def read(self):
