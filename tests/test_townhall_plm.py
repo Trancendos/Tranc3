@@ -528,3 +528,47 @@ class TestReviewFindings:
         emitted = set(re.findall(r"PlatformEventType\.(PLM_\w+)", source))
         declared = {m.name for m in PlatformEventType if m.name.startswith("PLM_")}
         assert declared == emitted
+
+
+class TestLogInjection:
+    def test_a_newline_in_a_location_cannot_forge_a_log_record(self, plm, caplog, monkeypatch):
+        """Calibrated: logging the raw value fails this.
+
+        `location` arrives in a request body. An unsanitised newline in it
+        splits the log line, so an attacker writes whatever second record
+        they like — into the file an auditor reads to find out what
+        happened.
+
+        The resolver has to be made to raise. It answers an unknown location
+        with an *unresolved* ownership record rather than an exception —
+        deliberately, so a bad service string never becomes a plausible
+        owner — and the log line lives only on the failure path. A test that
+        did not force it asserted over zero log records and passed under the
+        mutation it names.
+        """
+        import logging
+
+        from src.townhall import itsm
+
+        def _raise(_service):
+            raise RuntimeError("identity spine down")
+
+        monkeypatch.setattr(itsm, "resolve_ownership", _raise)
+
+        forged = "TranceFlow\nplm: ownership for Infinity: granted"
+        with caplog.at_level(logging.DEBUG, logger="tranc3.townhall.plm"):
+            plm.create(title="A game", kind=DeliverableKind.GAME, location=forged)
+
+        messages = [r.getMessage() for r in caplog.records if "ownership" in r.getMessage()]
+        assert messages, "the failure path did not log, so nothing was tested"
+        for message in messages:
+            assert "\n" not in message
+
+    def test_the_deliverable_still_records_the_location_it_was_given(self, plm):
+        """Sanitising the log must not sanitise the record.
+
+        The log is a narrative; the row is the fact. Scrubbing the stored
+        value would lose what the caller actually asked for.
+        """
+        item = plm.create(title="A game", kind=DeliverableKind.GAME, location="TranceFlow")
+        assert plm.get(item.id).location == "TranceFlow"

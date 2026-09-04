@@ -54,6 +54,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
+from Dimensional.sanitize import sanitize_for_log
 from src.event_bus.types import PlatformEventType
 
 logger = logging.getLogger("tranc3.townhall.plm")
@@ -430,7 +431,7 @@ def _emit(event_type: PlatformEventType, data: dict[str, Any]) -> None:
 
         get_event_bus().emit_async(event_type=event_type.value, data=data, source="townhall.plm")
     except Exception as exc:  # noqa: BLE001 - a notification must not fail the write
-        logger.debug("plm: emit %s: %s", event_type.value, exc)
+        logger.debug("plm: emit %s: %s", event_type.value, sanitize_for_log(exc))
 
 
 class PlmService:
@@ -540,9 +541,17 @@ class PlmService:
 
             return resolve_ownership(location).to_dict()
         except Exception as exc:  # noqa: BLE001 - a missing owner is recorded, not fatal
-            # %r, not %s: `location` arrives in a request body, and a raw newline
-            # in it would forge a second log record.
-            logger.debug("plm: ownership for %r: %r", location, exc)
+            # `location` arrives in a request body, so a raw newline in it
+            # would forge a second log record. %r would neutralise that —
+            # repr escapes the newline — but only a reader who knows repr's
+            # behaviour can see it, and CodeQL's dataflow cannot, so it kept
+            # flagging the line. The estate's own sanitiser is explicit about
+            # what it removes, which is what both audiences need.
+            logger.debug(
+                "plm: ownership for %s: %s",
+                sanitize_for_log(location),
+                sanitize_for_log(exc),
+            )
             return None
 
     def get(self, deliverable_id: str) -> Deliverable:
