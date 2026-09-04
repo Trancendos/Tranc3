@@ -201,8 +201,16 @@ def test_woodpecker_is_scanned(checker):
 
 
 def test_a_dockerfile_pin_is_scanned_across_line_continuations(checker):
-    """`deploy/forgejo/runner.Dockerfile` pinned 0.4.4 inside a multi-line RUN."""
+    """`deploy/forgejo/runner.Dockerfile` pinned 0.4.4 inside a multi-line RUN.
+
+    The agreeing workflow surface is what makes this test discriminate. Without
+    it the Dockerfile was the ONLY possible surface, so `main()` returned 1
+    whether the Dockerfile was scanned (0.4.4 diverges) or not scanned at all
+    (the "nothing installs ruff" fallback) — a test that could not fail for the
+    reason it names.
+    """
     module = checker(
+        workflow_versions=("0.15.8",),
         files={
             "deploy/forgejo/runner.Dockerfile": (
                 "FROM python:3.11\n"
@@ -211,7 +219,7 @@ def test_a_dockerfile_pin_is_scanned_across_line_continuations(checker):
                 "        ruff==0.4.4 \\\n"
                 "        mypy==1.10.0\n"
             )
-        }
+        },
     )
     assert module.main() == 1
 
@@ -315,3 +323,82 @@ def test_the_real_repo_surfaces_agree():
     """The estate's actual files, not a synthetic stand-in."""
     module = _load()
     assert module.main() == 0
+
+
+# ── fail-open paths found by review on the rewritten scanner ─────────────────
+
+
+def test_a_quoted_hash_does_not_hide_a_later_install(checker):
+    """`echo "a # b" && pip install ruff` — the naive comment strip cut here.
+
+    Truncating at the quoted hash meant the unpinned install after it was never
+    seen: a fail-open path in the one check whose whole job is to fail closed.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            ".github/workflows/quoted.yml": (
+                'jobs:\n  lint:\n    steps:\n      - run: echo "a # b" && pip install ruff\n'
+            )
+        },
+    )
+    assert module.main() == 1
+
+
+def test_a_wrapped_invocation_counts_as_running_ruff(checker):
+    """`uv run ruff check .` runs ruff; requiring the segment to START with
+    `ruff` meant a file doing this and installing nothing looked inert."""
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            ".forgejo/workflows/wrapped.yml": (
+                "jobs:\n  lint:\n    steps:\n      - run: uv run ruff check src/\n"
+            )
+        },
+    )
+    assert module.main() == 1
+
+
+def test_a_python_dash_m_invocation_counts_too(checker):
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            ".forgejo/workflows/dashm.yml": (
+                "jobs:\n  lint:\n    steps:\n      - run: python -m ruff check src/\n"
+            )
+        },
+    )
+    assert module.main() == 1
+
+
+def test_a_dockerfile_exec_form_invocation_counts(checker):
+    """`CMD ["ruff", "check", "."]` starts no shell, so no segment begins with ruff."""
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"lint.Dockerfile": 'FROM python:3.11\nCMD ["ruff", "check", "."]\n'},
+    )
+    assert module.main() == 1
+
+
+def test_two_installs_on_one_line_do_not_overwrite_each_other(checker):
+    """Keying the report by location alone hid the second version entirely.
+
+    `pip install ruff==0.15.8 && pip install ruff==0.16.4` is one line, so the
+    later pin overwrote the earlier one in the map and the divergence vanished
+    from the very report meant to show it.
+    """
+    # pre-commit is pinned to the SECOND version deliberately. With the bug the
+    # second install overwrote the first, leaving one surface on 0.16.4 that
+    # agreed with pre-commit — the check returned 0 on a file pinning two ruffs.
+    # Any other rev would make this test pass either way.
+    module = checker(
+        workflow_versions=(),
+        rev="v0.16.4",
+        files={
+            ".github/workflows/both.yml": (
+                "jobs:\n  lint:\n    steps:\n"
+                '      - run: pip install "ruff==0.15.8" && pip install "ruff==0.16.4"\n'
+            )
+        },
+    )
+    assert module.main() == 1

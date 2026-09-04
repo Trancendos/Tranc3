@@ -548,14 +548,14 @@ jobs:
           # written to the dashboard.
           RUN_NUMBER: ${{ github.run_number }}
           BRANCH: ${{ github.ref_name }}
-          PYTHON_SECURITY: $PYTHON_SECURITY
-          NODE_SECURITY: $NODE_SECURITY
-          TRIVY: $TRIVY
-          SEMGREP: $SEMGREP
-          SECRET_DETECTION: $SECRET_DETECTION
-          OSV_SCANNER: $OSV_SCANNER
-          CHECKOV: $CHECKOV
-          SBOM_GENERATION: $SBOM_GENERATION
+          PYTHON_SECURITY: ${{ needs.python-security.result }}
+          NODE_SECURITY: ${{ needs.node-security.result }}
+          TRIVY: ${{ needs.trivy.result }}
+          SEMGREP: ${{ needs.semgrep.result }}
+          SECRET_DETECTION: ${{ needs.secret-detection.result }}
+          OSV_SCANNER: ${{ needs.osv-scanner.result }}
+          CHECKOV: ${{ needs.checkov.result }}
+          SBOM_GENERATION: ${{ needs.sbom-generation.result }}
         run: |
           mkdir -p logs
           echo "=== Security Dashboard Summary ===" | tee logs/security-dashboard.txt

@@ -66,6 +66,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -360,6 +361,14 @@ _PYTEST_TESTS_FAILED = 1
 # hang is reported as a hang rather than as the whole job timing out.
 _PYTEST_TIMEOUT_SECONDS = 300
 
+# Run-wide budget. The per-call timeout alone does not bound the run: 13 guards
+# that each hang cost 13 x 300s = 65 minutes, which blows straight through the
+# 30-minute step timeout on both production gates — so the job is killed by the
+# runner and NO calibration report is produced at all. That is the worst
+# outcome available: no verdict, and no explanation of why. The budget below is
+# checked before each guard and stops the run with a report of what did finish.
+_RUN_BUDGET_SECONDS = 20 * 60
+
 
 class CalibrationError(RuntimeError):
     """pytest did not run to a verdict, so its exit status proves nothing."""
@@ -619,7 +628,16 @@ def main() -> int:
         return 1
 
     failures = 0
+    deadline = time.monotonic() + _RUN_BUDGET_SECONDS
     for guard in guards:
+        if time.monotonic() >= deadline:
+            print(
+                f"FAIL the run exceeded its {_RUN_BUDGET_SECONDS // 60}-minute budget "
+                f"before reaching {guard.id!r}. Guards calibrated so far are reported "
+                "above; the remainder were not run, so this is not a pass.",
+                file=sys.stderr,
+            )
+            return 1
         try:
             ok, note = calibrate(guard)
         except CalibrationError as exc:

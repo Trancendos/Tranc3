@@ -111,11 +111,36 @@ INSTALL_VERB = re.compile(
 # not `ruff-lint` (a step name). Captures an exact pin when one is present.
 RUFF_TOKEN = re.compile(r"""(?<![\w.\-/])ruff(?![\w\-])(?:\s*==\s*(?P<pin>\d+\.\d+(?:\.\d+)?))?""")
 
+# Runners that put another command in front of ruff. Requiring the segment to
+# START with `ruff` meant `uv run ruff check .` and `python -m ruff check .`
+# were not invocations at all, so a file using one and installing nothing
+# inherited the runner's ruff without this check noticing.
+_WRAPPERS = (
+    r"uv\s+run",
+    r"uvx",
+    r"uv\s+tool\s+run",
+    r"poetry\s+run",
+    r"pipx\s+run",
+    r"pdm\s+run",
+    r"hatch\s+run",
+    r"npx(?:\s+--yes)?",
+    r"python3?\s+-m",
+    r"nox\s+-s",
+    r"tox\s+-e",
+)
+
 # A segment that runs the ruff binary rather than installing it. The leading
 # prefix absorbs YAML's two ways of introducing a command -- `- run: ruff check`
 # and a bare line inside a `run: |` block -- so an invocation is recognised in
-# both without `- name: ruff-lint results` counting as one.
-RUFF_INVOCATION = re.compile(r"""^\s*(?:-\s*)?(?:[\w.\-]+:\s*)?ruff(?![\w\-])""")
+# both without `- name: ruff-lint results` counting as one, and any of the
+# wrappers above may sit between.
+RUFF_INVOCATION = re.compile(
+    r"""^\s*(?:-\s*)?(?:[\w.\-]+:\s*)?(?:(?:""" + "|".join(_WRAPPERS) + r""")\s+)?ruff(?![\w\-])"""
+)
+
+# Dockerfile exec form: `CMD ["ruff", "check", "."]` / `ENTRYPOINT ["ruff", …]`.
+# No shell is involved, so the segment never begins with a bare `ruff`.
+EXEC_FORM_RUFF = re.compile(r'(?:CMD|ENTRYPOINT|RUN)\s*\[\s*"ruff"')
 
 # The ruff-pre-commit repo block's `rev:`. Anchored to the repo URL so an
 # unrelated `rev:` in the file cannot be mistaken for ruff's.
@@ -123,8 +148,27 @@ PRE_COMMIT_REV = re.compile(
     r"""-\s*repo:\s*https://github\.com/astral-sh/ruff-pre-commit\s*\n(?:\s*#.*\n)*\s*rev:\s*v?(\d+\.\d+\.\d+)""",
 )
 
-# `#` at line start or after whitespace opens a comment in YAML and Dockerfiles.
-COMMENT = re.compile(r"(?:^|\s)#")
+
+def _strip_comment(line: str) -> str:
+    """Drop a trailing comment, honouring quotes.
+
+    A naive "cut at the first ` #`" truncated `run: echo "a # b" && pip install
+    ruff` at the quoted hash and never saw the install — a fail-open path in a
+    check whose entire job is to fail closed. `#` opens a comment in YAML and in
+    Dockerfiles only outside quotes.
+    """
+    quote: str | None = None
+    for index, char in enumerate(line):
+        if quote:
+            if char == quote:
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+        elif char == "#" and (index == 0 or line[index - 1].isspace()):
+            return line[:index]
+    return line
+
 
 # Shell separators. Splitting on these keeps `pip install "ruff==0.15.8" &&
 # ruff check .` from reading its own invocation as a second, unpinned install.
@@ -147,8 +191,7 @@ def _logical_lines(text: str) -> list[tuple[str, list[tuple[int, int]]]]:
     buffer = ""
     line_map: list[tuple[int, int]] = []
     for number, raw in enumerate(text.splitlines(), start=1):
-        match = COMMENT.search(raw)
-        line = (raw[: match.start()] if match else raw).rstrip()
+        line = _strip_comment(raw).rstrip()
         line_map.append((len(buffer), number))
         if line.endswith("\\"):
             buffer += line[:-1] + " "
@@ -202,7 +245,7 @@ def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]
                 for token in RUFF_TOKEN.finditer(segment, verb.end()):
                     number = _line_at(line_map, offset + token.start())
                     installs.append((f"{rel}:{number}", token.group("pin")))
-            elif RUFF_INVOCATION.search(segment):
+            elif RUFF_INVOCATION.search(segment) or EXEC_FORM_RUFF.search(segment):
                 invokes = True
     return installs, invokes
 
@@ -229,8 +272,17 @@ def ruff_surfaces() -> tuple[dict[str, str], list[str]]:
                         f"{location} installs ruff without pinning a version — it will "
                         "run whatever ruff is latest on the day the job runs"
                     )
-                else:
-                    pins[location] = version
+                    continue
+                # Two installs can share a location: `pip install ruff==0.15.8 &&
+                # pip install ruff==0.16.4` is one line, so keying the map by
+                # location alone let the second silently overwrite the first and
+                # the divergence vanished from the very report meant to show it.
+                key = location
+                suffix = 2
+                while key in pins and pins[key] != version:
+                    key = f"{location} (#{suffix})"
+                    suffix += 1
+                pins[key] = version
 
             if invokes and not installs:
                 problems.append(
