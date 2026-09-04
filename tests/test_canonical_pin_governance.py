@@ -545,3 +545,58 @@ def test_a_later_rule_scoped_to_another_manager_is_not_an_override(tmp_path, che
     }
     module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, npm_rule]))
     assert module.main() == 0
+
+
+def test_a_later_rule_scoped_to_a_python_manager_is_an_override(tmp_path, checker):
+    """`matchManagers: ["pip_requirements"]` + `enabled: true` undoes the block.
+
+    The override check reused `_scope_is_unrestricted`, the same predicate the
+    DISABLING rule has to pass. The two directions fail opposite ways: a narrow
+    disable does not govern the estate, but a narrow ENABLE re-enables the pin
+    for everything it reaches. Requiring the override to be unrestricted meant
+    the one shape most likely to be written — a rule aimed squarely at Python
+    manifests — was the one shape never reported.
+    """
+    reenable = {
+        "description": "python requirements may update freely",
+        "matchManagers": ["pip_requirements"],
+        "matchPackageNames": ["fastapi"],
+        "enabled": True,
+    }
+    module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, reenable]))
+    assert module.main() == 1
+
+
+def test_a_later_rule_scoped_to_a_file_path_is_an_override(tmp_path, checker):
+    """A path-scoped `enabled: true` re-enables the pin for that path.
+
+    Only `matchManagers` can be evaluated against the Python surface. Every
+    other narrowing selector is left as an overlap, because a rule scoped to
+    `requirements.txt` lifts the block just as effectively as an unscoped one.
+    """
+    reenable = {
+        "description": "root requirements may update freely",
+        "matchFileNames": ["requirements.txt"],
+        "matchPackageNames": ["fastapi"],
+        "enabled": True,
+    }
+    module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, reenable]))
+    assert module.main() == 1
+
+
+def test_a_later_rule_scoped_to_an_unknown_manager_is_reported(tmp_path, checker):
+    """An unrecognised manager is treated as overlapping, not as harmless.
+
+    `_NON_PYTHON_MANAGERS` is an allow-list rather than a list of Python
+    managers on purpose: a manager Renovate adds after this file was written
+    produces a loud false report that someone fixes, instead of a silent miss
+    that nobody sees.
+    """
+    reenable = {
+        "description": "some future manager",
+        "matchManagers": ["a-manager-that-does-not-exist-yet"],
+        "matchPackageNames": ["fastapi"],
+        "enabled": True,
+    }
+    module = checker(*_write_configs(tmp_path, rules=[DISABLE_RULE, reenable]))
+    assert module.main() == 1

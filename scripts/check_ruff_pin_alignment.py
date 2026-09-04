@@ -105,11 +105,23 @@ EXCLUDED_DIRS = frozenset({".git", "node_modules", ".venv", "venv", "__pycache__
 INSTALL_VERB = re.compile(
     r"(?:uv\s+pip\s+install|uv\s+tool\s+install|pipx\s+install"
     r"|python3?\s+-m\s+pip\s+install|pip3?\s+install|poetry\s+add"
-    # `uv run --with ruff` and `pipx run --spec ruff` install into a
-    # throwaway environment. They are installs even though the word
-    # "install" never appears, and an unpinned one drifts like any other.
-    r"|(?:uv\s+run|uvx|pipx\s+run)\s+(?:--with|--spec))\b"
+    # `uv run --with ruff`, `uvx --from ruff` and `pipx run --spec ruff`
+    # install into a throwaway environment. They are installs even though the
+    # word "install" never appears, and an unpinned one drifts like any other.
+    #
+    # `--from` belongs here with the other two. Without it `uvx --from
+    # ruff==0.15.8 ruff check .` -- the documented way to pin uvx -- was read as
+    # an invocation with no install anywhere in the file, and the gate failed a
+    # correctly pinned command. A check that rejects the right answer is one
+    # people route around.
+    r"|(?:uv\s+run|uvx|uv\s+tool\s+run|pipx\s+run)\s+(?:--with|--spec|--from))\b"
 )
+
+# The ephemeral runners take their package in a repeatable option, and any one
+# of the repeats can be ruff: `uv run --with black --with ruff==0.15.8 ruff
+# check .`. Reading only the option the verb itself matched saw `black`, found
+# no ruff install in the file, and failed a command that had pinned it.
+EPHEMERAL_PKG = re.compile(r"(?:--with|--spec|--from)(?:\s+|=)(?P<pkg>\S+)")
 
 # `ruff` as its own token: not `ruff-pre-commit`, not `logs/ruff-results.json`,
 # not `ruff-lint` (a step name). Captures an exact pin when one is present.
@@ -167,7 +179,7 @@ PRE_COMMIT_REV = re.compile(
 )
 
 
-def _strip_comment(line: str) -> str:
+def _strip_comment(line: str, quote: str | None = None) -> tuple[str, str | None]:
     """Drop a trailing comment, honouring quotes AND backslash escapes.
 
     A naive "cut at the first ` #`" truncated `run: echo "a # b" && pip install
@@ -178,10 +190,14 @@ def _strip_comment(line: str) -> str:
     comment -- while a stripper that ignores escapes thinks the string is still
     open and keeps the whole line. Either way round, guessing loses an install.
 
-    Applied to the JOINED logical line, so a quoted string carried across a
-    `\\`-continuation is tracked through the join rather than reset at it.
+    Applied to each PHYSICAL line, carrying the open-quote state in and back
+    out, so a quoted string spanning a `\\`-continuation is tracked through the
+    join rather than reset at it -- while a comment still ends where its own
+    line does. Stripping the joined line instead got the quote state right and
+    the comment boundary wrong: a comment ending in `\\` swallowed the command
+    on the next line, which in a check that exists to find unpinned installs
+    means it stops seeing one.
     """
-    quote: str | None = None
     escaped = False
     for index, char in enumerate(line):
         if escaped:
@@ -197,8 +213,18 @@ def _strip_comment(line: str) -> str:
         if char in "'\"":
             quote = char
         elif char == "#" and (index == 0 or line[index - 1].isspace()):
-            return line[:index]
-    return line
+            return line[:index], quote
+    return line, quote
+
+
+def _is_continuation(line: str) -> bool:
+    """Does this stripped line end in a continuation backslash?
+
+    An ODD number of trailing backslashes continues the line; an even number is
+    an escaped backslash that ends it. `RUN echo a\\\\` is a complete command.
+    """
+    trailing = len(line) - len(line.rstrip("\\"))
+    return trailing % 2 == 1
 
 
 # Shell separators. Splitting on these keeps `pip install "ruff==0.15.8" &&
@@ -221,22 +247,25 @@ def _logical_lines(text: str) -> list[tuple[str, list[tuple[int, int]]]]:
     joined: list[tuple[str, list[tuple[int, int]]]] = []
     buffer = ""
     line_map: list[tuple[int, int]] = []
+    quote: str | None = None
     for number, raw in enumerate(text.splitlines(), start=1):
-        line = raw.rstrip()
+        # Comment stripped per physical line, but with the open-quote state
+        # carried across the join. Both halves matter and they pull opposite
+        # ways: a string can span a continuation, so the state has to survive
+        # it, while a comment cannot, so the boundary must not.
+        line, quote = _strip_comment(raw.rstrip(), quote)
+        line = line.rstrip()
         line_map.append((len(buffer), number))
-        if line.endswith("\\"):
+        if _is_continuation(line):
             buffer += line[:-1] + " "
             continue
         buffer += line
-        # Comments are stripped from the JOINED line. Stripping each physical
-        # line first reset the quote state at every continuation, so a string
-        # spanning a `\\`-join looked closed and a `#` inside it read as a
-        # comment -- cutting away any install that followed.
-        joined.append((_strip_comment(buffer).rstrip(), line_map))
+        joined.append((buffer.rstrip(), line_map))
         buffer = ""
         line_map = []
+        quote = None
     if buffer:
-        joined.append((_strip_comment(buffer).rstrip(), line_map))
+        joined.append((buffer.rstrip(), line_map))
     return joined
 
 
@@ -275,23 +304,52 @@ def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]
     invokes = False
     for line, line_map in _logical_lines(text):
         for offset, segment in _segments(line):
-            verb = INSTALL_VERB.search(segment)
-            if verb:
+            # EVERY install verb in the segment, not just the first. The
+            # ephemeral forms repeat: `uv run --with black --with ruff==0.15.8
+            # ruff check .` is one segment carrying two of them, and stopping
+            # at the first read only `black`, found no ruff install, and failed
+            # a pinned command for not installing what it had just pinned.
+            verbs = list(INSTALL_VERB.finditer(segment))
+            for index, verb in enumerate(verbs):
+                # Each verb owns the text up to the next one, so a package
+                # list is never counted twice.
+                end = verbs[index + 1].start() if index + 1 < len(verbs) else len(segment)
                 # `uv run --with ruff ruff check .` names the package ONCE, in
                 # the token straight after `--with`; the second `ruff` is the
                 # command being run. Scanning to the end of the segment counted
                 # that command as a second, unpinned install and failed a line
                 # that was correctly pinned -- a false positive on valid usage,
                 # which is how a check earns a suppression instead of a fix.
-                tail = segment[verb.end() :]
-                if verb.group(0).rstrip().endswith(("--with", "--spec")):
+                tail = segment[verb.end() : end]
+                if verb.group(0).rstrip().endswith(("--with", "--spec", "--from")):
+                    # The verb swallowed the first option, so its package is the
+                    # token straight after it; every further `--with`/`--spec`/
+                    # `--from` in the tail names another. Only those tokens are
+                    # packages -- the trailing `ruff check .` is the command
+                    # being run, and counting it was a false positive on valid
+                    # usage, which is how a check earns a suppression.
                     stripped = tail.lstrip()
                     lead = len(tail) - len(stripped)
-                    tail = tail[: lead + len(stripped.split(" ")[0])]
-                for token in RUFF_TOKEN.finditer(tail):
-                    number = _line_at(line_map, offset + verb.end() + token.start())
-                    installs.append((f"{rel}:{number}", token.group("pin")))
-            elif RUFF_INVOCATION.search(segment) or EXEC_FORM_RUFF.search(segment):
+                    spans = [(verb.end() + lead, stripped.split(" ")[0])]
+                    spans += [
+                        (verb.end() + extra.start("pkg"), extra.group("pkg"))
+                        for extra in EPHEMERAL_PKG.finditer(tail)
+                    ]
+                else:
+                    spans = [(verb.end(), tail)]
+                for base, text in spans:
+                    for token in RUFF_TOKEN.finditer(text):
+                        number = _line_at(line_map, offset + base + token.start())
+                        installs.append((f"{rel}:{number}", token.group("pin")))
+            # Checked whether or not the segment installed something. It was an
+            # `elif`, so `uv run --with black ruff check .` -- an install of a
+            # different package, then ruff run from whatever the runner already
+            # had -- recorded no ruff install and no invocation either, and a
+            # file whose only use of ruff was that line passed the gate.
+            # A segment that installs ruff and runs it in the same breath is
+            # both, and reporting both is correct: the install is what the
+            # invocation is measured against.
+            if RUFF_INVOCATION.search(segment) or EXEC_FORM_RUFF.search(segment):
                 invokes = True
     return installs, invokes
 

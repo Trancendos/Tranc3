@@ -521,15 +521,23 @@ def _assert_targets_clean() -> list[str]:
     that would compare a mutant against a mutant.
     """
     paths = sorted({guard.path for guard in GUARDS})
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-    proc = subprocess.run(  # noqa: S603
-        ["git", "diff", "--name-only", "--", *paths],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=60,
-    )
+    try:
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        proc = subprocess.run(  # noqa: S603
+            ["git", "diff", "--name-only", "--", *paths],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        # `git` missing from PATH raises before a return code exists, and so
+        # does a hung `git diff` hitting the timeout. Both are the same fact
+        # this function reports -- the comparison did not happen -- and letting
+        # them escape as a traceback turns a refusal to start into a crash,
+        # which reads in CI as a broken checker rather than an unverifiable one.
+        return [_UNVERIFIABLE]
     if proc.returncode != 0:
         # Returning [] here read as "the tree is clean" when the truth was "I
         # could not tell" -- the precheck's own fail-open path, in the function

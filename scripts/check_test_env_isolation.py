@@ -28,9 +28,18 @@ WHAT COUNTS AS A VIOLATION
 
 Only writes that actually change a value already set:
 
-  * `os.environ["SECRET_KEY"] = ...`  -- overwrites unconditionally
-  * `os.environ.pop("SECRET_KEY")`    -- removes it
-  * `os.environ.update({...})`        -- may overwrite
+  * `os.environ["SECRET_KEY"] = ...`          -- overwrites unconditionally
+  * `del os.environ["SECRET_KEY"]`            -- removes it
+  * `os.environ.pop("SECRET_KEY")`            -- removes it
+  * `os.environ.popitem()` / `.clear()`       -- takes it out with the rest
+  * `os.environ.update({...})`                -- may overwrite
+  * `os.environ.__setitem__("SECRET_KEY", …)` -- the subscript forms written
+  * `os.environ.__delitem__("SECRET_KEY")`       as calls, which skipped the
+                                                 target scan entirely
+
+The alias forms count too: `import os as o`, `from os import environ as env`
+and `env = os.environ` all reach the same mapping, and each was a one-line way
+around this check before `_EnvironNames` resolved them.
 
 `os.environ.setdefault(...)` is NOT a violation. `conftest.py` sets all four
 before collection, so setdefault is a no-op there; 20 test modules use it and

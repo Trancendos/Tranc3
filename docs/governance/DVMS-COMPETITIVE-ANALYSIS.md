@@ -8,12 +8,11 @@ Every number below about *our* system was measured against the tree, not estimat
 claim about a *competitor* is attributed.
 
 That promise was broken on the first draft and is worth recording rather than quietly
-patching: this document described "no history, therefore no trends" as a weakness while the
-very commit that carried it implemented census history. A governance record that claims to be
-measured has to be re-measured when the tree moves under it, including by its own author. Where a competitor's marketing figure is quoted it
-is labelled as theirs, because a vendor's own noise-reduction percentage is a claim, not a
-measurement.
-
+patching: this document described "no history, therefore no trends" as a weakness while
+the very commit that carried it implemented census history. A governance record that
+claims to be measured has to be re-measured when the tree moves under it, including by its
+own author. Where a competitor's marketing figure is quoted it is labelled as theirs,
+because a vendor's own noise-reduction percentage is a claim, not a measurement.
 ---
 
 ## 1. What the DVMS actually is

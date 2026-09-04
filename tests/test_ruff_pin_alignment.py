@@ -485,3 +485,102 @@ def test_an_escaped_quote_does_not_hide_a_later_install(checker):
         },
     )
     assert module.main() == 1
+
+
+def test_a_comment_ending_in_a_backslash_does_not_swallow_the_next_line(checker, capsys):
+    r"""`# note \` is a comment, not a line continuation.
+
+    A regression introduced when comment stripping moved to the JOINED logical
+    line: the raw line ended in `\`, so the following command was appended to
+    the comment and then cut away with it. The unpinned install on the next
+    line became invisible — a fail-open path in the check whose whole job is to
+    find unpinned installs.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            "tools/Dockerfile": ("RUN true\n# a trailing note \\\nRUN pip install ruff\n"),
+        },
+    )
+    assert module.main() == 1
+    assert "installs ruff without pinning a version" in capsys.readouterr().err
+
+
+def test_a_quoted_hash_still_survives_a_continuation(checker, capsys):
+    r"""The other half of the same fix: quote state must cross the join.
+
+    Stripping each physical line independently reset the quote at every `\`,
+    so a string carried across a continuation looked closed and the `#` inside
+    it read as a comment. Both halves are needed and they pull opposite ways.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={
+            "tools/Dockerfile": ('RUN echo "a # b \\\n  more" && pip install ruff\n'),
+        },
+    )
+    assert module.main() == 1
+    assert "installs ruff without pinning a version" in capsys.readouterr().err
+
+
+def test_uvx_from_is_an_install_not_a_bare_invocation(checker):
+    """`uvx --from ruff==X ruff check .` is the documented way to pin uvx.
+
+    `--with` and `--spec` were install verbs and `--from` was not, so this read
+    as an invocation with no install anywhere in the file and the gate failed a
+    correctly pinned command. A check that rejects the right answer is one
+    people route around.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": "RUN uvx --from ruff==0.15.8 ruff check .\n"},
+    )
+    assert module.main() == 0
+
+
+def test_a_second_with_option_is_still_read(checker, capsys):
+    """`--with black --with ruff` names two packages; only the first was read.
+
+    Stopping at the first install verb in a segment saw `black`, found no ruff
+    install, and reported the line as running ruff without installing it —
+    while an unpinned ruff sat in the option right next to it.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": "RUN uv run --with black --with ruff ruff check .\n"},
+    )
+    assert module.main() == 1
+    assert "installs ruff without pinning a version" in capsys.readouterr().err
+
+
+def test_a_second_with_option_that_pins_is_accepted(checker, capsys):
+    """The same shape, pinned: accepted AND recorded as a surface.
+
+    Exit 0 alone proves nothing here. Before the fix this line also exited 0 --
+    the first verb matched, so the invocation branch was skipped as an `elif`,
+    and the file was reported as neither installing nor running ruff. Asserting
+    the surface appears in the listing is what separates "recognised and
+    pinned" from "not seen at all".
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": "RUN uv run --with black --with ruff==0.15.8 ruff check .\n"},
+    )
+    assert module.main() == 0
+    assert "tools/Dockerfile" in capsys.readouterr().out
+
+
+def test_installing_another_package_does_not_hide_a_ruff_invocation(checker, capsys):
+    """`uv run --with black ruff check .` runs ruff from the ambient env.
+
+    The invocation check was an `elif` on "this segment installed something",
+    so a segment that installed a DIFFERENT package recorded neither a ruff
+    install nor a ruff invocation, and a file whose only use of ruff was that
+    line passed the gate on whatever version the runner happened to have.
+    """
+    module = checker(
+        workflow_versions=("0.15.8",),
+        files={"tools/Dockerfile": "RUN uv run --with black ruff check .\n"},
+    )
+    assert module.main() == 1
+    assert "runs ruff" in capsys.readouterr().err

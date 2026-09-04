@@ -129,6 +129,64 @@ _UNMODELLED_SCOPES = (
     "matchConfidence",
 )
 
+# Managers that provably cannot touch a PyPI dependency. Used ONLY in the
+# override direction, and deliberately an allow-list rather than a list of
+# Python managers: an unrecognised manager is treated as overlapping, so a
+# manager Renovate adds after this file was written produces a loud false
+# report rather than a silent miss. Adding a name here is a decision with a
+# reason; forgetting one is not.
+_NON_PYTHON_MANAGERS = frozenset(
+    {
+        "npm",
+        "nvm",
+        "dockerfile",
+        "docker-compose",
+        "github-actions",
+        "gitlabci",
+        "gomod",
+        "cargo",
+        "nuget",
+        "gradle",
+        "gradle-wrapper",
+        "maven",
+        "bundler",
+        "composer",
+        "terraform",
+        "helm-values",
+        "helmv3",
+        "helmfile",
+        "kubernetes",
+        "git-submodules",
+        "html",
+        "swift",
+        "cocoapods",
+    }
+)
+
+
+def _may_cover_python(rule: dict) -> bool:
+    """Could this rule reach the governed PyPI pins?
+
+    The mirror of `_scope_is_unrestricted`, and it has to be a DIFFERENT test
+    because the two directions fail opposite ways. For the rule that DISABLES a
+    pin, a narrow scope means the estate is not actually governed, so anything
+    narrow is rejected -- fail closed. For a later rule that RE-ENABLES one, a
+    narrow scope is exactly how the block gets undone: `matchManagers:
+    ["pip_requirements"]` with `enabled: true` re-enables the pin for every
+    Python manifest in the estate. Requiring THAT rule to be unrestricted meant
+    the one shape most likely to be written was the one shape never reported.
+
+    So: overlap unless the rule's managers are all provably non-Python. Every
+    other narrowing selector -- paths, file names, dep types, age -- is left as
+    an overlap, because a rule scoped to `requirements.txt` re-enables the pin
+    just as effectively as an unscoped one.
+    """
+    managers = _as_list(rule.get("matchManagers"))
+    if not managers:
+        return True
+    return not all(m.lower() in _NON_PYTHON_MANAGERS for m in managers)
+
+
 # Brace expansion and extglob are valid minimatch and mean nothing to fnmatch,
 # which would silently report "no match" for a selector Renovate does match.
 _MINIMATCH_ONLY = re.compile(r"[{}]|[?*+@!]\(")
@@ -407,15 +465,13 @@ def check_renovate(packages: set[str]) -> list[str]:
             if not (isinstance(rule, dict) and rule.get("enabled") is True):
                 continue
             try:
-                # A later rule scoped to another manager, path or dep-type
-                # cannot re-enable a pypi pin, and reporting it as an override
-                # is a false failure on a correct config. `_scope_is_unrestricted`
-                # is the same test the disabling rule has to pass, used here in
-                # the opposite direction.
+                # Overlap, not unrestrictedness. A later rule narrowed to a
+                # Python manager or a path still re-enables the pin for
+                # everything it reaches, so requiring it to be unrestricted
+                # skipped the very shape that undoes the block. Only a rule
+                # whose managers are all provably non-Python is safe to ignore.
                 overrides = (
-                    _covers_pypi(rule)
-                    and _scope_is_unrestricted(rule)
-                    and _rule_matches(rule, package)
+                    _covers_pypi(rule) and _may_cover_python(rule) and _rule_matches(rule, package)
                 )
             except SelectorError as exc:
                 problems.append(
