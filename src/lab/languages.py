@@ -9,20 +9,32 @@ language, and the **verification tier** The Lab can actually reach for it —
 measured from the binaries on PATH at the moment you ask, not declared.
 
 Measured, not declared, is the whole design. `workers/the-lab` builds from
-`python:3.11-slim` with fastapi, starlette, uvicorn and httpx. There is no
-compiler, no node, no go, no rustc, no formatter, no linter and no test
-runner in that image, and `/lab/run` answers 501 because AST import-blocking
-was never a sandbox. A declared matrix would say The Lab supports twelve
-languages. The measured one says it can parse one and prove nothing about
-any of them, which is the fact an operator needs.
+`python:3.11-slim`. When this module was written that image held fastapi,
+starlette, uvicorn and httpx and nothing else: no compiler, no node, no go,
+no rustc, no formatter, no linter and no test runner. A declared matrix
+claimed twelve supported languages; the measured one could parse one and
+prove nothing about any of them.
+
+Where that stands now
+---------------------
+The image ships ruff, mypy, pytest, sqlfluff and yamllint through
+requirements.txt and shellcheck through apt, so 5 of the 29 declared
+languages are verifiable in it — Python at TEST, shell/SQL/YAML at LINT,
+JSON at PARSE. The other 24 are at `none`: The Lab can write them and prove
+nothing about them. `/lab/run` still answers 501, because AST
+import-blocking was never a sandbox. Run
+`scripts/lab_capability_report.py` for the current numbers rather than
+trusting these — it reads the Dockerfile, so it cannot go stale the way a
+sentence can.
 
 What replaced what
 ------------------
-`workers/the-lab/main.py` defines `ALLOWED_LANGUAGES`, a set of twelve
-strings, and references it exactly once — at its own definition. Nothing
-validates against it, nothing exposes it, and a request naming any other
-language is interpolated straight into a prompt. It was a capability claim
-with no capability behind it.
+`workers/the-lab/main.py` defined `ALLOWED_LANGUAGES`, a set of twelve
+strings, and referenced it exactly once — at its own definition. Nothing
+validated against it, nothing exposed it, and a request naming any other
+language was interpolated straight into a prompt. It was a capability claim
+with no capability behind it. It now holds the registry's 29 ids, every
+handler validates against it, and `GET /lab/languages` publishes it.
 
 Verification tiers
 ------------------
@@ -86,9 +98,24 @@ class Tool:
     binary: str
     purpose: str
     unlocks: Verification
+    #: Binaries that must ALSO be on PATH for this unlock to hold. Some tools
+    #: cannot reach their tier alone: `node` runs JavaScript, but it cannot
+    #: run TypeScript without `tsc` to compile it first. Without this, a box
+    #: with node and no tsc reported TypeScript at TEST — the highest tier —
+    #: for a language it could not so much as compile.
+    requires: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
-        return {"binary": self.binary, "purpose": self.purpose, "unlocks": self.unlocks.value}
+        return {
+            "binary": self.binary,
+            "purpose": self.purpose,
+            "unlocks": self.unlocks.value,
+            "requires": list(self.requires),
+        }
+
+    def usable(self, look) -> bool:
+        """Present, and every binary it depends on present too."""
+        return bool(look(self.binary)) and all(look(dep) for dep in self.requires)
 
 
 @dataclass(frozen=True)
@@ -118,7 +145,7 @@ class Language:
         look = which or shutil.which
         best = self.intrinsic
         for tool in self.toolchain:
-            if look(tool.binary) and _rank(tool.unlocks) > _rank(best):
+            if tool.usable(look) and _rank(tool.unlocks) > _rank(best):
                 best = tool.unlocks
         return best
 
@@ -160,7 +187,11 @@ LANGUAGES: tuple[Language, ...] = (
             _t("mypy", "static types", Verification.TYPE),
             _t("pytest", "run the tests", Verification.TEST),
         ),
-        notes="The only language whose syntax The Lab can check with no binary at all.",
+        notes=(
+            "Syntax is checkable with no binary at all, because `ast` is in the "
+            "standard library of the process doing the asking. JSON is the only "
+            "other language here with an intrinsic tier, via `json`."
+        ),
     ),
     Language(
         id="javascript",
@@ -182,7 +213,16 @@ LANGUAGES: tuple[Language, ...] = (
         toolchain=(
             _t("eslint", "lint", Verification.LINT),
             _t("tsc", "type-check and compile", Verification.TYPE),
-            _t("node", "run and test", Verification.TEST),
+            Tool(
+                binary="node",
+                purpose="run and test the compiled output",
+                unlocks=Verification.TEST,
+                requires=("tsc",),
+            ),
+        ),
+        notes=(
+            "node alone proves nothing about TypeScript: it runs JavaScript, so "
+            "without tsc there is nothing for it to run."
         ),
     ),
     Language(

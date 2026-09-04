@@ -59,15 +59,51 @@ _PIP_CONSOLE_SCRIPTS: dict[str, tuple[str, ...]] = {
 }
 
 
+def _image_binaries(reference: str) -> set[str]:
+    """Binaries a known base image provides, from an image reference."""
+    image = reference.split("@")[0].split(":")[0]
+    for prefix, binaries in _BASE_IMAGE_BINARIES.items():
+        if image == prefix or image.endswith(f"/{prefix}"):
+            return set(binaries)
+    return set()
+
+
+def final_stage(dockerfile: str) -> str:
+    """The lines belonging to the last build stage.
+
+    A multi-stage Dockerfile installs toolchains in a builder stage that is
+    then discarded — nothing it apt-gets or pip-installs is in the shipped
+    image unless a later stage copies it across. Scanning the whole file
+    credited those binaries to the running container and would have reported
+    verification tiers for tools that are not there, which is the exact
+    over-claim this whole module exists to prevent. The Lab's own Dockerfile
+    has one stage today; that is a fact about today, not a property to rely on.
+    """
+    lines = dockerfile.splitlines()
+    starts = [i for i, line in enumerate(lines) if line.strip().upper().startswith("FROM ")]
+    if not starts:
+        return dockerfile
+    return "\n".join(lines[starts[-1] :])
+
+
 def _base_binaries(dockerfile: str) -> set[str]:
+    """The final stage's own base, plus any toolchain image it copies from.
+
+    `COPY --from=<image>` in the final stage does put that image's contents
+    into the shipped one, so a recognised toolchain image counts. A
+    `--from=<earlier stage>` names a stage rather than an image and matches
+    nothing, which errs toward under-reporting.
+    """
+    stage = final_stage(dockerfile)
     found: set[str] = set()
-    for line in dockerfile.splitlines():
-        if not line.strip().upper().startswith("FROM "):
+    for line in stage.splitlines():
+        stripped = line.strip()
+        if stripped.upper().startswith("FROM "):
+            found |= _image_binaries(line.split()[1])
             continue
-        image = line.split()[1].split("@")[0].split(":")[0]
-        for prefix, binaries in _BASE_IMAGE_BINARIES.items():
-            if image == prefix or image.endswith(f"/{prefix}"):
-                found.update(binaries)
+        match = re.search(r"COPY\s+--from=(\S+)", stripped, re.IGNORECASE)
+        if match:
+            found |= _image_binaries(match.group(1))
     return found
 
 
@@ -79,7 +115,9 @@ def _apt_binaries(dockerfile: str) -> set[str]:
     absent, which errs toward under-reporting capability.
     """
     found: set[str] = set()
-    for match in re.finditer(r"apt-get\s+(?:-\S+\s+)*install\s+([^\n&|]+)", dockerfile):
+    for match in re.finditer(
+        r"apt-get\s+(?:-\S+\s+)*install\s+([^\n&|]+)", final_stage(dockerfile)
+    ):
         for token in match.group(1).split():
             if token.startswith("-") or token in {"\\", "&&"}:
                 continue
@@ -90,7 +128,7 @@ def _apt_binaries(dockerfile: str) -> set[str]:
 def _pip_binaries(dockerfile: str, requirements: str) -> set[str]:
     found: set[str] = set()
     names: set[str] = set()
-    for match in re.finditer(r"pip\s+install\s+([^\n&|]+)", dockerfile):
+    for match in re.finditer(r"pip\s+install\s+([^\n&|]+)", final_stage(dockerfile)):
         for token in match.group(1).split():
             if token.startswith("-") or token.endswith(".txt"):
                 continue
@@ -124,7 +162,12 @@ def report(worker_dir: Path = WORKER) -> dict[str, object]:
 
     matrix = skills_matrix(which)
     matrix["image_toolchain"] = sorted(available)
-    matrix["worker"] = str(worker_dir.relative_to(REPO))
+    try:
+        matrix["worker"] = str(worker_dir.relative_to(REPO))
+    except ValueError:
+        # A caller pointing at a checkout outside this repo gets the path it
+        # gave. Reporting is not worth raising over.
+        matrix["worker"] = str(worker_dir)
     return matrix
 
 

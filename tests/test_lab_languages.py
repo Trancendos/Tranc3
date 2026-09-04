@@ -148,6 +148,23 @@ class TestTheRegistryIsCoherent:
             if entry.intrinsic is not Verification.NONE and not entry.toolchain:
                 assert entry.notes.strip(), entry.id
 
+    def test_a_runtime_without_its_compiler_unlocks_nothing(self):
+        """Calibrated: dropping Tool.requires fails this.
+
+        node runs JavaScript. Given TypeScript it has nothing to run until
+        tsc has compiled it, so a box with node and no tsc used to report
+        TypeScript at TEST — the highest tier there is — for a language it
+        could not compile. Written on TypeScript because it is the only
+        language here whose runtime is not its own: on Python or Go the same
+        mutation changes nothing.
+        """
+        assert verification_for("typescript", _has("node")) is Verification.NONE
+        assert verification_for("typescript", _has("node", "tsc")) is Verification.TEST
+
+    def test_a_prerequisite_does_not_suppress_a_lower_tier(self):
+        """tsc alone still type-checks; only the TEST claim needed the pair."""
+        assert verification_for("typescript", _has("tsc")) is Verification.TYPE
+
     def test_missing_tools_lists_only_what_is_absent(self):
         entry = language("python")
         assert entry is not None
@@ -156,14 +173,18 @@ class TestTheRegistryIsCoherent:
 
 class TestTheImageReport:
     def test_the_report_measures_the_image_not_the_host(self):
-        """Calibrated: using shutil.which fails this on any dev machine.
+        """Calibrated: using shutil.which fails this.
 
-        A developer box has node, go and gcc, so the host answer and the
-        image answer differ by an order of magnitude. Only one of them is
-        about the platform.
+        The anchor is a fully-equipped machine, not this one. Comparing
+        against the live host was the first version of this test and it
+        proved nothing reliably: a dev box has node, go and gcc and beats the
+        image, but a lean CI runner has none of them and loses to it, so the
+        assertion changed meaning with the runner. Every binary present is a
+        fixed upper bound that no host can move.
         """
-        matrix = lab_capability_report.report()
-        assert matrix["verifiable"] < skills_matrix()["verifiable"]
+        everything = skills_matrix(lambda binary: f"/usr/bin/{binary}")
+        assert everything["verifiable"] == len(LANGUAGES)
+        assert lab_capability_report.report()["verifiable"] < everything["verifiable"]
 
     def test_the_image_toolchain_comes_from_the_dockerfile_and_requirements(self):
         """Calibrated: dropping the pip parse fails this.
@@ -173,6 +194,33 @@ class TestTheImageReport:
         """
         toolchain = lab_capability_report.image_toolchain()
         assert {"ruff", "mypy", "pytest", "shellcheck"} <= toolchain
+
+    def test_a_builder_stage_toolchain_is_not_credited_to_the_image(self):
+        """Calibrated: scanning the whole Dockerfile fails this.
+
+        A multi-stage build installs a toolchain in a stage that is then
+        discarded. Crediting it to the shipped image reports verification
+        tiers for tools the running container does not have — the over-claim
+        this report exists to prevent, reintroduced by the report itself.
+        """
+        dockerfile = (
+            "FROM golang:1.22 AS builder\n"
+            "RUN apt-get install -y shellcheck\n"
+            "RUN pip install ruff\n"
+            "FROM python:3.11-slim\n"
+            "COPY --from=builder /app /app\n"
+        )
+        stage = lab_capability_report.final_stage(dockerfile)
+        assert "golang" not in stage
+        assert "shellcheck" not in stage
+        assert "ruff" not in stage
+
+    def test_a_single_stage_dockerfile_is_read_whole(self):
+        """The baseline the multi-stage rule must not be allowed to break."""
+        stage = lab_capability_report.final_stage(
+            (lab_capability_report.WORKER / "Dockerfile").read_text()
+        )
+        assert "shellcheck" in stage
 
     def test_an_uninstalled_toolchain_is_not_claimed(self):
         """Calibrated: defaulting unknown binaries to present fails this."""
@@ -215,3 +263,89 @@ class TestTheWorkerMirror:
         """A caller refused for guessing wrong must be able to stop guessing."""
         source = (REPO / "workers" / "the-lab" / "main.py").read_text()
         assert '@app.get("/lab/languages")' in source
+
+
+class TestTheChatEndpointUsesTheLanguage:
+    """Validating a value and then dropping it is validation theatre.
+
+    `/lab/chat` resolved the language, refused an unknown one, and then made
+    every backend call without it: a Rust question reached a model that had
+    never been told it was Rust, and came back in a body that did not say
+    what it had answered in. Every sibling handler interpolates the language;
+    this one now does too.
+    """
+
+    @pytest.fixture
+    def client(self, monkeypatch):
+        import importlib.util
+
+        from fastapi.testclient import TestClient
+
+        monkeypatch.setenv("INTERNAL_SECRET", "a" * 64)
+        path = REPO / "workers" / "the-lab" / "main.py"
+        spec = importlib.util.spec_from_file_location("the_lab_main_under_test", path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        return module, TestClient(module.app)
+
+    def _post(self, client, body):
+        module, http = client
+        return http.post("/lab/chat", json=body, headers={"X-Internal-Secret": "a" * 64})
+
+    def test_the_language_reaches_the_backend(self, client, monkeypatch):
+        """Calibrated: passing req.messages straight through fails this."""
+        module, _ = client
+        seen: dict[str, object] = {}
+
+        async def _capture(messages, max_tokens):
+            seen["messages"] = messages
+            return "ok"
+
+        monkeypatch.setattr(module, "_tabby_chat", _capture)
+        r = self._post(
+            client, {"messages": [{"role": "user", "content": "hi"}], "language": "rust"}
+        )
+        assert r.status_code == 200
+        assert seen["messages"][0] == {
+            "role": "system",
+            "content": "You are a rust code assistant.",
+        }
+
+    def test_the_response_says_what_it_answered_in(self, client, monkeypatch):
+        module, _ = client
+
+        async def _ok(messages, max_tokens):
+            return "ok"
+
+        monkeypatch.setattr(module, "_tabby_chat", _ok)
+        r = self._post(client, {"messages": [{"role": "user", "content": "hi"}], "language": "go"})
+        assert r.json()["language"] == "go"
+
+    def test_a_caller_system_message_is_not_overridden(self, client, monkeypatch):
+        """The caller's own framing is more specific than the worker's."""
+        module, _ = client
+        seen: dict[str, object] = {}
+
+        async def _capture(messages, max_tokens):
+            seen["messages"] = messages
+            return "ok"
+
+        monkeypatch.setattr(module, "_tabby_chat", _capture)
+        self._post(
+            client,
+            {
+                "messages": [
+                    {"role": "system", "content": "You are terse."},
+                    {"role": "user", "content": "hi"},
+                ],
+                "language": "go",
+            },
+        )
+        assert seen["messages"][0]["content"] == "You are terse."
+
+    def test_an_unknown_language_is_still_refused(self, client):
+        r = self._post(
+            client, {"messages": [{"role": "user", "content": "hi"}], "language": "brainfuck"}
+        )
+        assert r.status_code == 400

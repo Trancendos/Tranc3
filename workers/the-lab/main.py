@@ -345,23 +345,48 @@ async def lab_complete(req: CompleteRequest) -> dict[str, Any]:
     return {"completion": _offline_stub("complete", req.language, req.prompt), "source": "offline"}
 
 
+def _with_language(messages: list[dict[str, str]], language: str) -> list[dict[str, str]]:
+    """Put the validated language in front of the conversation.
+
+    A caller's own system message wins — it is more specific than anything
+    this worker can say — so one is only prepended when there is none.
+    """
+    if any(m.get("role") == "system" for m in messages):
+        return messages
+    return [{"role": "system", "content": f"You are a {language} code assistant."}, *messages]
+
+
 @app.post("/lab/chat", dependencies=[Depends(_require_internal_auth)])
 async def lab_chat(req: ChatRequest) -> dict[str, Any]:
-    """Code chat via TabbyML -> Ollama -> LiteLLM -> offline."""
+    """Code chat via TabbyML -> Ollama -> LiteLLM -> offline.
+
+    The language is validated and then actually used. It was validated and
+    dropped: a request naming Rust was refused if Rust were unsupported, and
+    otherwise answered by a model that had never been told it was Rust, in a
+    response body that did not say what it had answered in. Every other
+    handler here puts the language in the prompt; this one is no different.
+    """
     req.language = _validate_language(req.language)
-    result = await _tabby_chat(req.messages, req.max_tokens)
-    if result:
-        return {"response": result, "source": "tabby"}
+    messages = _with_language(req.messages, req.language)
 
-    result = await _ollama_generate(req.messages[-1].get("content", ""))
+    result = await _tabby_chat(messages, req.max_tokens)
     if result:
-        return {"response": result, "source": "ollama"}
+        return {"response": result, "source": "tabby", "language": req.language}
 
-    result = await _litellm_chat(req.messages, max_tokens=req.max_tokens)
+    last = req.messages[-1].get("content", "") if req.messages else ""
+    result = await _ollama_generate(f"About this {req.language} code:\n{last}")
     if result:
-        return {"response": result, "source": "litellm"}
+        return {"response": result, "source": "ollama", "language": req.language}
 
-    return {"response": _offline_stub("chat", req.language, str(req.messages)), "source": "offline"}
+    result = await _litellm_chat(messages, max_tokens=req.max_tokens)
+    if result:
+        return {"response": result, "source": "litellm", "language": req.language}
+
+    return {
+        "response": _offline_stub("chat", req.language, str(req.messages)),
+        "source": "offline",
+        "language": req.language,
+    }
 
 
 @app.post("/lab/explain", dependencies=[Depends(_require_internal_auth)])
