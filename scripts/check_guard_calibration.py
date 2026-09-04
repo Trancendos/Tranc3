@@ -385,7 +385,7 @@ def _attempt_timeout(budget: float | None) -> float:
     """
     if budget is None:
         return _PYTEST_TIMEOUT_SECONDS
-    return max(1.0, min(_PYTEST_TIMEOUT_SECONDS, budget))
+    return max(0.0, min(_PYTEST_TIMEOUT_SECONDS, budget))
 
 
 def _run_tests(tests: tuple[str, ...], budget: float | None = None) -> bool:
