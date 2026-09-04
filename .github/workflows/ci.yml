@@ -333,8 +333,7 @@ jobs:
             -m "not integration and not chaos" \
             --ignore=tests/test_full_suite.py \
             --cov=src --cov=workers \
-            --cov-report=xml --cov-report=term-missing \
-            || true  # Don't block PRs on test failures yet
+            --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
