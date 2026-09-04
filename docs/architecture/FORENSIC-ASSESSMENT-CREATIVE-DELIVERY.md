@@ -28,7 +28,7 @@ output that looks like success. That is precisely why it survives:
 | `ALLOWED_LANGUAGES` in The Lab | A 12-language capability list | Referenced once, at its own definition. Nothing validated against it |
 | Imaginarium's image leg | A fan-out call | Tested `status_code == 202` against a service answering 200, so the result was discarded with no error recorded |
 | Imaginarium's project status | `completed` | Written unconditionally, including when every leg failed |
-| Cargo.lock marker guard | A malformed-file check | Unreachable for every non-empty file |
+| Cargo.lock marker guard | A malformed-file check | Unreachable for every non-empty file. Its replacement was fail-open in a second way — see register item 19 |
 | `.trivyignore` suppression | A governed acceptance | Silenced a CVE on a register entry dispositioned FIX |
 | CI's Pytest job (until `f98aadb4`) | A test run | `-x` plus `\|\| true`: five tests, result ignored |
 
@@ -206,6 +206,8 @@ Ordered by value per unit of effort. "Done" entries are on this branch.
 | 16 | Lab verification sidecar (node/go/rustc/javac) | **Open** | 5 → ~20 verifiable languages |
 | 17 | Deploy TranceFlow / TateKing / Warp Radio `worker.py` | **Open** | Each needs its own volume + review |
 | 18 | Godot, ffmpeg, ComfyUI as services | **Funding-gated** | The DEGRADED tier cannot close without them |
+| 19 | Make the Cargo.lock guard fail closed on a truncated file | **Done** | Row 31 of §1. A stanza-local `name`+`version` test; the substring form let the lockfile header's own `version = 3` complete a package cut off after its name |
+| 20 | Fail when a guard exists and no workflow runs it | **Done** | `scripts/check_guards_are_wired.py`. Written because `check_lab_languages.py` (row 9) shipped unwired while its docstring said otherwise; it found two more on its first run |
 
 ---
 
