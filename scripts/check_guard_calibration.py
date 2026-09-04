@@ -617,27 +617,7 @@ def main() -> int:
             print(f"no guard with id {args.only!r}", file=sys.stderr)
             return 1
 
-    # Refuse to start on a tree a killed run already mutated. Comparing a
-    # mutant against a mutant would report "removal detected" for a guard that
-    # was never there.
-    dirty = _assert_targets_clean()
-    if dirty == [_UNVERIFIABLE]:
-        print(
-            "FAIL the guard sources could not be compared against HEAD (git is "
-            "unavailable, or this is not a git checkout), so a mutant left behind "
-            "by a killed run cannot be ruled out. Calibrating on top of one would "
-            "compare a mutant against a mutant.",
-            file=sys.stderr,
-        )
-        return 1
-    if dirty:
-        print(
-            "FAIL a guard source differs from HEAD before any mutation — a previous "
-            "run was killed mid-calibration and left a mutant on disk:\n  "
-            + "\n  ".join(dirty)
-            + "\nRestore these files (git checkout --) and run again.",
-            file=sys.stderr,
-        )
+    if _refuse_on_a_dirty_tree():
         return 1
 
     _install_restore_handlers()
@@ -649,8 +629,46 @@ def main() -> int:
     # that kills calibration takes the report of WHICH guard failed with it.
     deadline = time.monotonic() + _RUN_BUDGET_SECONDS
 
-    # A baseline failure would make every result meaningless: the suite must
-    # pass before anything is mutated, or "removal detected" means nothing.
+    if _baseline_failed(guards, deadline):
+        return 1
+
+    return _calibrate_all(guards, deadline)
+
+
+def _refuse_on_a_dirty_tree() -> bool:
+    """True when a previous run left a mutant on disk, or that cannot be told.
+
+    Comparing a mutant against a mutant would report "removal detected" for a
+    guard that was never there.
+    """
+    dirty = _assert_targets_clean()
+    if dirty == [_UNVERIFIABLE]:
+        print(
+            "FAIL the guard sources could not be compared against HEAD (git is "
+            "unavailable, or this is not a git checkout), so a mutant left behind "
+            "by a killed run cannot be ruled out. Calibrating on top of one would "
+            "compare a mutant against a mutant.",
+            file=sys.stderr,
+        )
+        return True
+    if dirty:
+        print(
+            "FAIL a guard source differs from HEAD before any mutation — a previous "
+            "run was killed mid-calibration and left a mutant on disk:\n  "
+            + "\n  ".join(dirty)
+            + "\nRestore these files (git checkout --) and run again.",
+            file=sys.stderr,
+        )
+        return True
+    return False
+
+
+def _baseline_failed(guards, deadline: float) -> bool:
+    """True when the suite does not pass BEFORE anything is mutated.
+
+    A baseline failure makes every later result meaningless: "removal detected"
+    means nothing if the tests were already red.
+    """
     all_tests = tuple(sorted({t for g in guards for t in g.tests}))
     try:
         baseline_passed = _run_tests(all_tests, deadline - time.monotonic())
@@ -661,7 +679,7 @@ def main() -> int:
         print(f"FAIL the baseline run never reached a verdict:\n{exc}", file=sys.stderr)
         for captured in _last_failure_output:
             print(captured, file=sys.stderr)
-        return 1
+        return True
     if not baseline_passed:
         print(
             "FAIL the guard tests do not pass before any mutation — fix the suite "
@@ -672,8 +690,12 @@ def main() -> int:
         # cannot be repaired from its own output.
         for captured in _last_failure_output:
             print(captured, file=sys.stderr)
-        return 1
+        return True
+    return False
 
+
+def _calibrate_all(guards, deadline: float) -> int:
+    """Mutate each guard in turn and report; the process exit code."""
     failures = 0
     for guard in guards:
         if time.monotonic() >= deadline:

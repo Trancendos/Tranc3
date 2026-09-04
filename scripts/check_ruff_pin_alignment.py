@@ -335,6 +335,60 @@ def _segments(line: str):
     yield position, line[position:]
 
 
+def _install_spans(segment: str) -> list[tuple[int, str]]:
+    """(offset, text) for every stretch of a segment that names an installed package.
+
+    Two shapes, and the difference is where the package is:
+
+      `pip install ruff==0.15.8 black` -- everything after the verb is packages.
+      `uv run --with ruff==0.15.8 ruff check .` -- ONLY the token named by the
+      package option is a package; the trailing `ruff` is the command being run,
+      and counting it reported a second, unpinned install on a correctly pinned
+      line.
+
+    Verbs inside quotes are excluded. `echo 'pip install ruff==0.15.8' && ruff
+    check .` recorded an install that never happens, and the real invocation
+    beside it then passed on whatever ruff the runner already had.
+    """
+    quoted = _quoted_spans(segment)
+    spans: list[tuple[int, str]] = []
+
+    # EVERY install verb, not just the first: `uv run --with black --with
+    # ruff==0.15.8` is one segment carrying two, and stopping at the first read
+    # only `black`.
+    verbs = [v for v in INSTALL_VERB.finditer(segment) if not _inside(v.start(), quoted)]
+    for index, verb in enumerate(verbs):
+        # Each verb owns the text up to the next, so a package list is never
+        # counted twice.
+        end_at = verbs[index + 1].start() if index + 1 < len(verbs) else len(segment)
+        tail = segment[verb.end() : end_at]
+        if not verb.group(0).rstrip().endswith(("--with", "--spec", "--from")):
+            spans.append((verb.end(), tail))
+            continue
+        # The verb swallowed one option, so its package is the token straight
+        # after it. `split()` not `split(" ")`: a tab between the package and
+        # the command put `ruff check .` inside the package span.
+        stripped = tail.lstrip()
+        if stripped:
+            spans.append((verb.end() + (len(tail) - len(stripped)), stripped.split()[0]))
+
+    # An ephemeral runner may carry ordinary options before its package option
+    # (`uv run --project . --with ruff==0.15.8`), so it is located separately
+    # and every package option after it is read.
+    for runner in EPHEMERAL_RUNNER.finditer(segment):
+        if _inside(runner.start(), quoted):
+            continue
+        tail = segment[runner.end() :]
+        spans.extend(
+            (runner.end() + extra.start("pkg"), extra.group("pkg"))
+            for extra in EPHEMERAL_PKG.finditer(tail)
+            if not _inside(runner.end() + extra.start("pkg"), quoted)
+        )
+
+    # A verb and a runner can name the same package; keep one span per offset.
+    return list({offset: (offset, text) for offset, text in spans}.values())
+
+
 def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]:
     """Ruff installs found in one file, and whether it also invokes ruff.
 
@@ -351,62 +405,9 @@ def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]
     invokes = False
     for line, line_map in _logical_lines(text):
         for offset, segment in _segments(line):
-            quoted = _quoted_spans(segment)
-
-            # EVERY install verb in the segment, not just the first, and none
-            # of them inside quotes. The ephemeral forms repeat: `uv run --with
-            # black --with ruff==0.15.8 ruff check .` is one segment carrying
-            # two, and stopping at the first read only `black`. A verb inside
-            # quotes is not a command at all -- `echo 'pip install ruff==0.15.8'
-            # && ruff check .` recorded an install that never happens.
-            verbs = [v for v in INSTALL_VERB.finditer(segment) if not _inside(v.start(), quoted)]
-
-            # An ephemeral runner may carry ordinary options before its package
-            # option, so it is located separately and every `--with`/`--spec`/
-            # `--from` after it is read as an install.
-            runners = [
-                r for r in EPHEMERAL_RUNNER.finditer(segment) if not _inside(r.start(), quoted)
-            ]
-
-            spans: list[tuple[int, str]] = []
-            for index, verb in enumerate(verbs):
-                # Each verb owns the text up to the next one, so a package list
-                # is never counted twice.
-                end_at = verbs[index + 1].start() if index + 1 < len(verbs) else len(segment)
-                tail = segment[verb.end() : end_at]
-                if verb.group(0).rstrip().endswith(("--with", "--spec", "--from")):
-                    # The verb swallowed one option, so its package is the token
-                    # straight after it. `split()` not `split(" ")`: a tab
-                    # between the package and the command put `ruff check .`
-                    # inside the package span and reported it as a second,
-                    # unpinned install of a line that was correctly pinned.
-                    stripped = tail.lstrip()
-                    lead = len(tail) - len(stripped)
-                    if stripped:
-                        spans.append((verb.end() + lead, stripped.split()[0]))
-                else:
-                    spans.append((verb.end(), tail))
-
-            for runner in runners:
-                # Only the tokens named by a package option. The trailing `ruff
-                # check .` is the command being run, and counting it was a false
-                # positive on valid usage -- which is how a check earns a
-                # suppression instead of a fix.
-                tail = segment[runner.end() :]
-                spans.extend(
-                    (runner.end() + extra.start("pkg"), extra.group("pkg"))
-                    for extra in EPHEMERAL_PKG.finditer(tail)
-                    if not _inside(runner.end() + extra.start("pkg"), quoted)
-                )
-
-            seen_positions: set[int] = set()
-            for base, text in spans:
+            for base, text in _install_spans(segment):
                 for token in RUFF_TOKEN.finditer(text):
                     position = offset + base + token.start()
-                    # A runner and its verb can both name the same package.
-                    if position in seen_positions:
-                        continue
-                    seen_positions.add(position)
                     number = _line_at(line_map, position)
                     installs.append((f"{rel}:{number}", token.group("pin")))
 

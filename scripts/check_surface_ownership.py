@@ -109,6 +109,18 @@ def missing_reasons() -> list[str]:
     ]
 
 
+def _print_rollup(surfaces: list[str], kinds, by_location) -> None:
+    """The human-readable coverage summary."""
+    print(f"Dependency surfaces scanned: {len(surfaces)}")
+    print(f"  owned by a Location: {kinds['location']} across {len(by_location)} Locations")
+    print(f"  cross-cutting (shared, stewarded): {kinds['shared']}")
+    print(f"  unowned: {kinds['unmapped']}")
+    if by_location:
+        print("\nSurfaces per Location:")
+        for location, count in sorted(by_location.items()):
+            print(f"  {location:28} {count}")
+
+
 def main(argv: list[str] | None = None) -> int:
     # `argv` explicit rather than implicit sys.argv: a test importing this
     # module and calling main() would otherwise be handed pytest's own
@@ -149,14 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1 if problems else 0
 
-    print(f"Dependency surfaces scanned: {len(surfaces)}")
-    print(f"  owned by a Location: {kinds['location']} across {len(by_location)} Locations")
-    print(f"  cross-cutting (shared, stewarded): {kinds['shared']}")
-    print(f"  unowned: {kinds['unmapped']}")
-    if by_location:
-        print("\nSurfaces per Location:")
-        for location, count in sorted(by_location.items()):
-            print(f"  {location:28} {count}")
+    _print_rollup(surfaces, kinds, by_location)
     if problems:
         print()
         for problem in problems:
