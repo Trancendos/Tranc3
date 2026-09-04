@@ -78,7 +78,19 @@ def main(argv: list[str] | None = None) -> int:
     # Valid JSON is not a valid census. A list, a scalar, or an object with no
     # `surfaces` key produces an EMPTY plan, which reads exactly like "nothing
     # to raise" — a malformed file would silently suppress every dispatch.
-    if not isinstance(census, dict) or not isinstance(census.get("surfaces"), list):
+    if (
+        not isinstance(census, dict)
+        or not isinstance(census.get("surfaces"), list)
+        or not census["surfaces"]
+        or not all(
+            isinstance(surface, dict)
+            and bool(surface.get("surface"))
+            and isinstance(surface.get("errored"), bool)
+            and isinstance(surface.get("findings"), list)
+            and all(isinstance(finding, dict) for finding in surface["findings"])
+            for surface in census["surfaces"]
+        )
+    ):
         print(
             "FAIL the census must be a JSON object containing a `surfaces` list; "
             "an empty plan from a malformed file is indistinguishable from a clean estate",
