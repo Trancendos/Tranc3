@@ -233,6 +233,39 @@ def _is_continuation(line: str) -> bool:
     return trailing % 2 == 1
 
 
+# A YAML `key: 'value'` scalar. The quotes are YAML's, not the shell's -- YAML
+# removes them before the runner ever sees a command -- so `run: 'pip install
+# ruff'` is an ordinary unquoted install.
+_YAML_SCALAR = re.compile(
+    r"""^(?P<lead>\s*(?:-\s*)?[\w.\-]+:\s*)(?P<quote>['"])(?P<body>.*)(?P=quote)\s*$"""
+)
+
+
+def _unwrap_yaml_scalar(line: str) -> str:
+    """Blank the YAML scalar quotes so shell-quote analysis sees the real command.
+
+    Closing the "an install inside quotes is not an install" hole opened a worse
+    one: `run: 'pip install ruff'` is valid YAML for an UNQUOTED shell command,
+    and treating the delimiters as shell quotes made the install invisible
+    altogether. That is a fail-open in the direction this check exists to guard.
+
+    The quotes are replaced with spaces rather than removed, so every offset --
+    and therefore every reported line number -- is unchanged. Only a value that
+    is quoted end to end is unwrapped; `run: echo "a" && pip install ruff` is
+    shell quoting and is left alone.
+
+    YAML's own escape inside a single-quoted scalar ('' for a literal quote) is
+    not decoded. It would shift offsets, and a command containing one is not a
+    shape this estate writes; the quotes still come off, so the install is seen.
+    """
+    match = _YAML_SCALAR.match(line)
+    if not match:
+        return line
+    start = match.start("quote")
+    end = match.end("body")
+    return line[:start] + " " + line[start + 1 : end] + " " + line[end + 1 :]
+
+
 def _quoted_spans(text: str) -> list[tuple[int, int]]:
     """Index ranges inside single or double quotes, escape-aware.
 
@@ -283,7 +316,9 @@ def _fail(msg: str) -> None:
     print(f"FAIL {msg}", file=sys.stderr)
 
 
-def _logical_lines(text: str) -> list[tuple[str, list[tuple[int, int]]]]:
+def _logical_lines(
+    text: str, yaml_scalars: bool = False
+) -> list[tuple[str, list[tuple[int, int]]]]:
     """Comment-stripped lines with `\\` continuations joined, plus a line map.
 
     The map is `[(offset, line number), ...]` marking where each physical line
@@ -302,6 +337,8 @@ def _logical_lines(text: str) -> list[tuple[str, list[tuple[int, int]]]]:
         # it, while a comment cannot, so the boundary must not.
         line, quote = _strip_comment(raw.rstrip(), quote)
         line = line.rstrip()
+        if yaml_scalars:
+            line = _unwrap_yaml_scalar(line)
         line_map.append((len(buffer), number))
         if _is_continuation(line):
             buffer += line[:-1] + " "
@@ -403,7 +440,10 @@ def scan_file(path: Path, rel: str) -> tuple[list[tuple[str, str | None]], bool]
 
     installs: list[tuple[str, str | None]] = []
     invokes = False
-    for line, line_map in _logical_lines(text):
+    # YAML surfaces need their scalar quoting removed first; a Dockerfile's
+    # quotes are the shell's and must be left in place.
+    is_yaml = path.suffix.lower() in {".yml", ".yaml"}
+    for line, line_map in _logical_lines(text, yaml_scalars=is_yaml):
         for offset, segment in _segments(line):
             for base, text in _install_spans(segment):
                 for token in RUFF_TOKEN.finditer(text):

@@ -385,6 +385,10 @@ def _attempt_timeout(budget: float | None) -> float:
     """
     if budget is None:
         return _PYTEST_TIMEOUT_SECONDS
+    # Clamped to ZERO, not to one second. A floor of 1.0 hands back time the
+    # shared deadline has already spent, so the last guard could finish after
+    # the budget and the run still print PASSED -- a deadline that can be
+    # exceeded is not a deadline.
     return max(0.0, min(_PYTEST_TIMEOUT_SECONDS, budget))
 
 
@@ -435,7 +439,11 @@ def _run_tests(tests: tuple[str, ...], budget: float | None = None) -> bool:
         # this tool holding a mutation on disk. Raising here still unwinds
         # through calibrate()'s `finally`, so the source is restored either way.
         raise CalibrationError(
-            f"pytest did not finish within {_PYTEST_TIMEOUT_SECONDS}s on "
+            # The timeout ACTUALLY used, not the constant: with the shared budget
+            # nearly spent this run may have been given 12 seconds, and
+            # reporting 300 sends whoever reads it looking for a slow test
+            # instead of an exhausted budget.
+            f"pytest did not finish within {_attempt_timeout(budget):.0f}s on "
             f"{', '.join(tests)} — no verdict was reached, so this is not evidence "
             "the guard was detected."
         ) from exc

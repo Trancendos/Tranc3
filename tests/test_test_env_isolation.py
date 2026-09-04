@@ -66,6 +66,13 @@ def test_setdefault_is_not_a_violation(checker):
 
     Twenty real modules use it correctly. Flagging them would make this check
     noise, and a noisy check gets weakened rather than obeyed.
+
+    Reviewed and deliberately kept. A review asked for setdefault to be flagged
+    on the grounds that conftest permits an absent baseline. It does not:
+    conftest.py runs `os.environ[var] = os.environ.get(var) or default` for all
+    four guarded vars, unconditionally, before any test module is collected, so
+    the value is always present and non-empty and setdefault is PROVABLY a
+    no-op -- not merely usually safe.
     """
     module = checker({"test_ok.py": 'import os\n\nos.environ.setdefault("SECRET_KEY", "x")\n'})
     assert module.main() == 0
@@ -372,18 +379,3 @@ def test_a_chained_alias_is_found_regardless_of_statement_order(checker):
     )
     module = checker({"test_bad.py": body})
     assert module.main() == 1
-
-
-def test_setdefault_remains_allowed_because_conftest_always_sets_the_value(checker):
-    """Reviewed and deliberately kept as-is, with the evidence.
-
-    A review argued `setdefault` should be flagged because "conftest permits an
-    absent baseline". It does not: conftest.py runs
-    `os.environ[var] = os.environ.get(var) or default` for all four guarded
-    vars, unconditionally, before any test module is collected. The value is
-    therefore always present and non-empty, and `setdefault` is provably a
-    no-op. Twenty modules use it correctly; flagging them would make this check
-    noise, and a noisy check gets weakened rather than obeyed.
-    """
-    module = checker({"test_ok.py": 'import os\n\nos.environ.setdefault("SECRET_KEY", "x")\n'})
-    assert module.main() == 0

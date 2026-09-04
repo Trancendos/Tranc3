@@ -214,11 +214,17 @@ _MINIMATCH_ONLY = re.compile(r"[{}]|[?*+@!]\(")
 _BACKREFERENCE = re.compile(r"(?<!\\)(?:\\\\)*\\[1-9]")
 
 _RE2_INCOMPATIBLE = (
-    (r"(?=", "lookahead"),
-    (r"(?!", "negative lookahead"),
-    (r"(?<=", "lookbehind"),
-    (r"(?<!", "negative lookbehind"),
-    (r"(?P=", "named backreference"),
+    (r"(?=", "a lookahead"),
+    (r"(?!", "a negative lookahead"),
+    (r"(?<=", "a lookbehind"),
+    (r"(?<!", "a negative lookbehind"),
+    (r"(?P=", "a named backreference"),
+    # Python 3.11+ accepts both; RE2 accepts neither.
+    (r"(?>", "an atomic group"),
+    (r"*+", "a possessive quantifier"),
+    (r"++", "a possessive quantifier"),
+    (r"?+", "a possessive quantifier"),
+    (r"}+", "a possessive quantifier"),
 )
 
 
@@ -291,7 +297,7 @@ def _one_pattern_matches(written: str, package: str) -> bool:
             for marker, label in _RE2_INCOMPATIBLE:
                 if marker in body:
                     raise SelectorError(
-                        f"{written!r} uses a {label}, which RE2 rejects — Renovate "
+                        f"{written!r} uses {label}, which RE2 rejects — Renovate "
                         "compiles selector regexes with RE2 and refuses the whole "
                         "config, so no rule in this file would apply"
                     )

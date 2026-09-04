@@ -140,6 +140,12 @@ class _EnvironNames:
         self.os_modules: set[str] = set()
         self.environs: set[str] = set()
         assignments: list[tuple[list[str], ast.expr]] = []
+        # Imports from anywhere -- a function-local `import os` still binds the
+        # name it uses. Alias ASSIGNMENTS only from module and class level,
+        # because a name bound inside a function is not the same name as one
+        # bound outside it: a local `env = os.environ` in a helper made an
+        # unrelated module-level `env` dict look like the environment, and the
+        # gate rejected a module that never touched it.
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -149,7 +155,8 @@ class _EnvironNames:
                 for alias in node.names:
                     if alias.name == "environ":
                         self.environs.add(alias.asname or "environ")
-            elif isinstance(node, ast.Assign):
+        for node in _import_time_nodes(tree):
+            if isinstance(node, ast.Assign):
                 names = [t.id for t in node.targets if isinstance(t, ast.Name)]
                 if names:
                     assignments.append((names, node.value))
@@ -189,7 +196,21 @@ class _EnvironNames:
 _DEFERRED = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
 
 
-def _definition_time_children(node: ast.AST):
+def _postponed_annotations(tree: ast.Module) -> bool:
+    """Does this module carry `from __future__ import annotations`?
+
+    Under it, every annotation is stored as a STRING and never evaluated, so an
+    expression inside one runs at no point during collection. Scanning them
+    anyway rejected a module for a mutation that cannot happen.
+    """
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module == "__future__":
+            if any(alias.name == "annotations" for alias in node.names):
+                return True
+    return False
+
+
+def _definition_time_children(node: ast.AST, skip_annotations: bool = False):
     """The parts of a `def`/`lambda` that run when the definition is executed.
 
     Everything except the body: decorators, default values (positional and
@@ -199,18 +220,22 @@ def _definition_time_children(node: ast.AST):
     children.extend(getattr(node, "decorator_list", []) or [])
     args = getattr(node, "args", None)
     if args is not None:
+        # Defaults and decorators ALWAYS run when the `def` executes, whatever
+        # the annotation setting is.
         children.extend(args.defaults or [])
         children.extend(d for d in (args.kw_defaults or []) if d is not None)
-        for group in ("posonlyargs", "args", "kwonlyargs"):
-            for arg in getattr(args, group, []) or []:
-                if arg.annotation is not None:
-                    children.append(arg.annotation)
-        for extra in (args.vararg, args.kwarg):
-            if extra is not None and extra.annotation is not None:
-                children.append(extra.annotation)
-    returns = getattr(node, "returns", None)
-    if returns is not None:
-        children.append(returns)
+        if not skip_annotations:
+            for group in ("posonlyargs", "args", "kwonlyargs"):
+                for arg in getattr(args, group, []) or []:
+                    if arg.annotation is not None:
+                        children.append(arg.annotation)
+            for extra in (args.vararg, args.kwarg):
+                if extra is not None and extra.annotation is not None:
+                    children.append(extra.annotation)
+    if not skip_annotations:
+        returns = getattr(node, "returns", None)
+        if returns is not None:
+            children.append(returns)
     return children
 
 
@@ -227,16 +252,21 @@ def _import_time_nodes(tree: ast.Module):
     decorates; a decorator that mutates the environment would be a stranger
     thing than this check is built to find.
     """
+    skip_annotations = _postponed_annotations(tree)
     stack: list[ast.AST] = list(tree.body)
     while stack:
         node = stack.pop()
+        if isinstance(node, ast.AnnAssign) and skip_annotations and node.value is None:
+            # `x: os.environ.pop("SECRET_KEY")` with no value assigns nothing
+            # and, under postponed annotations, evaluates nothing.
+            continue
         if isinstance(node, _DEFERRED):
             # The BODY is deferred; the definition itself is not. Decorators,
             # default values and annotations are all evaluated when the `def`
             # statement runs -- so `def test_x(v=os.environ.pop("SECRET_KEY")):`
             # mutates the environment during collection exactly like a bare
             # line, and skipping the whole node made that invisible.
-            stack.extend(_definition_time_children(node))
+            stack.extend(_definition_time_children(node, skip_annotations))
             continue
         yield node
         stack.extend(ast.iter_child_nodes(node))
