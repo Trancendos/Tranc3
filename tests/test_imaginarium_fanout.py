@@ -73,15 +73,18 @@ class _StubEstate:
         return [u for u, _ in self.calls]
 
 
-def _run(worker, stub, project_id, brief, project_type, title=""):
+def _run(monkeypatch, worker, stub, project_id, brief, project_type, title=""):
+    """Run the fan-out against a stub estate.
+
+    The patch goes through monkeypatch rather than assigning httpx.AsyncClient
+    directly: a bare assignment mutates the class for the whole process, so
+    any other client constructed while it is in place gets the stub, and a
+    parallel runner would see it across tests.
+    """
     import httpx
 
-    original = httpx.AsyncClient
-    httpx.AsyncClient = lambda *a, **k: stub  # noqa: ARG005
-    try:
-        asyncio.run(worker._fan_out_creation(project_id, brief, project_type, title))
-    finally:
-        httpx.AsyncClient = original
+    monkeypatch.setattr(httpx, "AsyncClient", lambda *a, **k: stub)  # noqa: ARG005
+    asyncio.run(worker._fan_out_creation(project_id, brief, project_type, title))
 
 
 def _seed(worker, project_type="mixed") -> int:
@@ -101,7 +104,7 @@ def _row(worker, project_id) -> sqlite3.Row:
 
 
 class TestTheDroppedResult:
-    def test_a_200_from_the_image_service_is_recorded(self, imaginarium):
+    def test_a_200_from_the_image_service_is_recorded(self, monkeypatch, imaginarium):
         """Calibrated: restoring `status_code == 202` fails this.
 
         Sashas Photo Studio's /photo/generate answers 200. The old check
@@ -110,20 +113,20 @@ class TestTheDroppedResult:
         """
         stub = _StubEstate({"sashas": _Response(200, {"job_id": "abc", "source": "comfyui"})})
         pid = _seed(imaginarium, "game_assets")
-        _run(imaginarium, stub, pid, "a lighthouse at dusk", "game_assets")
+        _run(monkeypatch, imaginarium, stub, pid, "a lighthouse at dusk", "game_assets")
 
         results = json.loads(_row(imaginarium, pid)["results"])
         assert results["image"]["ok"] is True
         assert results["image"]["result"]["job_id"] == "abc"
 
-    def test_a_202_is_still_recorded(self, imaginarium):
+    def test_a_202_is_still_recorded(self, monkeypatch, imaginarium):
         """The old behaviour must keep working, not be traded for the new one."""
         stub = _StubEstate({"sashas": _Response(202, {"job_id": "queued"})})
         pid = _seed(imaginarium, "game_assets")
-        _run(imaginarium, stub, pid, "brief", "game_assets")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "game_assets")
         assert json.loads(_row(imaginarium, pid)["results"])["image"]["ok"] is True
 
-    def test_a_2xx_with_no_json_body_is_still_a_success(self, imaginarium):
+    def test_a_2xx_with_no_json_body_is_still_a_success(self, monkeypatch, imaginarium):
         """Calibrated: letting resp.json() raise out of _call_leg fails this.
 
         A 204, or a 200 with an empty body, is a service that did the work.
@@ -131,12 +134,12 @@ class TestTheDroppedResult:
         """
         stub = _StubEstate({"sashas": _Response(204, None)})
         pid = _seed(imaginarium, "game_assets")
-        _run(imaginarium, stub, pid, "brief", "game_assets")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "game_assets")
         image = json.loads(_row(imaginarium, pid)["results"])["image"]
         assert image["ok"] is True
         assert image["result"] == {}
 
-    def test_a_non_2xx_is_recorded_as_a_failure_with_its_status(self, imaginarium):
+    def test_a_non_2xx_is_recorded_as_a_failure_with_its_status(self, monkeypatch, imaginarium):
         """Calibrated: recording only `ok` without the status fails this.
 
         A 401 and a 503 need different responses from an operator, so
@@ -145,14 +148,14 @@ class TestTheDroppedResult:
         """
         stub = _StubEstate({"fabulousa": _Response(401, None, text="unauthorised")})
         pid = _seed(imaginarium, "brand")
-        _run(imaginarium, stub, pid, "brief", "brand")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "brand")
         design = json.loads(_row(imaginarium, pid)["results"])["design"]
         assert design["ok"] is False
         assert design["status"] == 401
 
 
 class TestEveryAddressedLocationIsCalled:
-    def test_a_game_brief_reaches_tranceflow(self, imaginarium):
+    def test_a_game_brief_reaches_tranceflow(self, monkeypatch, imaginarium):
         """Calibrated: removing the game leg fails this.
 
         This is the finding in one line: `game_assets` used to produce an
@@ -160,36 +163,53 @@ class TestEveryAddressedLocationIsCalled:
         """
         stub = _StubEstate()
         pid = _seed(imaginarium, "game_assets")
-        _run(imaginarium, stub, pid, "a platformer set in a lighthouse", "game_assets")
+        _run(monkeypatch, imaginarium, stub, pid, "a platformer set in a lighthouse", "game_assets")
         assert any("tranceflow" in u for u in stub.urls)
         assert json.loads(_row(imaginarium, pid)["results"])["game"]["ok"] is True
 
-    def test_a_mixed_brief_reaches_every_addressed_location(self, imaginarium):
+    def test_a_mixed_brief_reaches_every_location_that_can_serve_one(
+        self, monkeypatch, imaginarium
+    ):
         """Calibrated: dropping any leg from FAN_OUT_LEGS fails this.
 
-        Every URL in SERVICE_URLS is an address the deployment configures.
-        One that is never called is a promise compose keeps and the code
-        does not.
+        This assertion used to be "every URL in SERVICE_URLS is called", and
+        it was wrong in a way worth recording. Warp Radio's *deployed* image
+        serves no POST at all — the playlist API is in a worker.py the
+        Dockerfile does not run — so a soundtrack leg would fail on every
+        mixed brief and mark it partial forever. That reads as an outage
+        rather than as an unbuilt feature, so the leg is deliberately absent
+        and scripts/check_creative_routes.py is what keeps the remaining five
+        pointed at routes that exist.
         """
         stub = _StubEstate()
         pid = _seed(imaginarium, "mixed")
-        _run(imaginarium, stub, pid, "brief", "mixed")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "mixed")
         called = {
             name
             for name, base in imaginarium.SERVICE_URLS.items()
             if any(base in u for u in stub.urls)
         }
-        assert called == set(imaginarium.SERVICE_URLS)
+        assert called == set(imaginarium.SERVICE_URLS) - {"warp_radio"}
 
-    def test_the_studio_opens_a_workspace_for_every_project_type(self, imaginarium):
+    def test_the_only_uncalled_address_is_the_one_with_no_endpoint(self, imaginarium):
+        """Calibrated: silently dropping a second leg fails this.
+
+        An address compose configures and the code never calls is the exact
+        defect this file exists for. Exactly one is allowed to be uncalled,
+        and only because nothing is listening.
+        """
+        fanned = {leg["service"] for leg in imaginarium.FAN_OUT_LEGS}
+        assert set(imaginarium.SERVICE_URLS) - fanned == {"warp_radio"}
+
+    def test_the_studio_opens_a_workspace_for_every_project_type(self, monkeypatch, imaginarium):
         """Calibrated: giving the workspace leg a non-empty `types` fails this."""
         for project_type in ("mixed", "brand", "music_visual", "game_assets", "video_image"):
             stub = _StubEstate()
             pid = _seed(imaginarium, project_type)
-            _run(imaginarium, stub, pid, "brief", project_type)
+            _run(monkeypatch, imaginarium, stub, pid, "brief", project_type)
             assert any("the-studio" in u for u in stub.urls), project_type
 
-    def test_each_leg_sends_the_body_its_service_expects(self, imaginarium):
+    def test_each_leg_sends_the_body_its_service_expects(self, monkeypatch, imaginarium):
         """Calibrated: reusing one payload shape across legs fails this.
 
         TranceFlow's GameIn requires `title`; Warp Radio's PlaylistIn
@@ -198,16 +218,20 @@ class TestEveryAddressedLocationIsCalled:
         """
         stub = _StubEstate()
         pid = _seed(imaginarium, "mixed")
-        _run(imaginarium, stub, pid, "brief text", "mixed", title="A Title")
+        _run(monkeypatch, imaginarium, stub, pid, "brief text", "mixed", title="A Title")
         sent = {url: body for url, body in stub.calls}
         game = next(b for u, b in sent.items() if "tranceflow" in u)
-        radio = next(b for u, b in sent.items() if "warp-radio" in u)
-        assert game["title"] == "A Title"
-        assert radio["name"] == "A Title"
+        video = next(b for u, b in sent.items() if "tateking" in u)
+        image = next(b for u, b in sent.items() if "sashas" in u)
+        # TranceFlow's deployed ProjectCreate wants `name`; TateKing's
+        # VideoCreateRequest wants `title`; the Photo Studio wants `prompt`.
+        assert game["name"] == "A Title"
+        assert video["title"] == "A Title"
+        assert image["prompt"] == "brief text"
 
 
 class TestTheStatusTellsTheTruth:
-    def test_every_leg_failing_is_not_a_completed_project(self, imaginarium):
+    def test_every_leg_failing_is_not_a_completed_project(self, monkeypatch, imaginarium):
         """Calibrated: hardcoding status='completed' fails this.
 
         The old code wrote 'completed' unconditionally. A brief whose every
@@ -215,33 +239,33 @@ class TestTheStatusTellsTheTruth:
         """
         stub = _StubEstate(default=_Response(503, None, text="down"))
         pid = _seed(imaginarium, "mixed")
-        _run(imaginarium, stub, pid, "brief", "mixed")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "mixed")
         assert _row(imaginarium, pid)["status"] == "failed"
 
-    def test_some_legs_failing_is_partial(self, imaginarium):
+    def test_some_legs_failing_is_partial(self, monkeypatch, imaginarium):
         stub = _StubEstate({"sashas": _Response(503, None, text="down")})
         pid = _seed(imaginarium, "mixed")
-        _run(imaginarium, stub, pid, "brief", "mixed")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "mixed")
         assert _row(imaginarium, pid)["status"] == "partial"
 
-    def test_every_leg_succeeding_is_completed(self, imaginarium):
+    def test_every_leg_succeeding_is_completed(self, monkeypatch, imaginarium):
         stub = _StubEstate()
         pid = _seed(imaginarium, "mixed")
-        _run(imaginarium, stub, pid, "brief", "mixed")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "mixed")
         assert _row(imaginarium, pid)["status"] == "completed"
 
-    def test_a_transport_error_on_one_leg_does_not_end_the_brief(self, imaginarium):
+    def test_a_transport_error_on_one_leg_does_not_end_the_brief(self, monkeypatch, imaginarium):
         """Calibrated: letting the exception escape _call_leg fails this.
 
         One unreachable Location must not stop the other five, and the
         project must still be written rather than left pending forever.
         """
-        stub = _StubEstate({"warp-radio": ConnectionError("no route to host")})
+        stub = _StubEstate({"tateking": ConnectionError("no route to host")})
         pid = _seed(imaginarium, "mixed")
-        _run(imaginarium, stub, pid, "brief", "mixed")
+        _run(monkeypatch, imaginarium, stub, pid, "brief", "mixed")
         row = _row(imaginarium, pid)
         results = json.loads(row["results"])
         assert row["status"] == "partial"
-        assert results["soundtrack"]["ok"] is False
-        assert "no route to host" in results["soundtrack"]["error"]
+        assert results["video"]["ok"] is False
+        assert "no route to host" in results["video"]["error"]
         assert results["image"]["ok"] is True

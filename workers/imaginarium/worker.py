@@ -182,36 +182,39 @@ FAN_OUT_LEGS: tuple[dict, ...] = (
     {
         "key": "game",
         "service": "tranceflow",
-        "path": "/games",
+        "path": "/tranceflow/projects",
         "types": ("mixed", "game_assets"),
+        # The deployed TranceFlow is main.py -> router.py, whose ProjectCreate
+        # wants `name`. worker.py's GameIn wants `title` and is not in any
+        # image, so a body shaped for it would 422 against the running service.
         "payload": lambda title, brief: {
-            "title": title[:200],
+            "name": title[:200],
             "description": brief,
-            "created_by": "imaginarium",
+            "project_type": "game_3d",
         },
     },
     {
         "key": "video",
         "service": "tateking",
-        "path": "/projects",
+        "path": "/video/create",
         "types": ("mixed", "video_image"),
+        # VideoCreateRequest caps title at 200 characters and requires at
+        # least one, so a blank brief would 422 rather than fan out.
         "payload": lambda title, brief: {
-            "title": title[:200],
+            "title": title[:200] or "Untitled",
             "description": brief,
-            "created_by": "imaginarium",
         },
     },
-    {
-        "key": "soundtrack",
-        "service": "warp_radio",
-        "path": "/playlists",
-        "types": ("mixed", "music_visual"),
-        "payload": lambda title, brief: {
-            "name": title[:200],
-            "description": brief,
-            "owner": "imaginarium",
-        },
-    },
+    # Warp Radio has no soundtrack leg, and the omission is deliberate rather
+    # than the oversight this table was written to fix. Its deployed image is
+    # 54 lines of read-only routes — /now-playing and /stations — and serves
+    # no POST at all. The playlist API lives in a worker.py the Dockerfile
+    # does not run. A leg pointing at it would fail on every music_visual and
+    # mixed brief, marking each one "partial" forever, which is a worse lie
+    # than the missing leg: it would look like an outage instead of an
+    # unbuilt feature. scripts/check_creative_routes.py enforces that every
+    # leg below targets a route the deployed entrypoint actually serves, so
+    # this one comes back the day Warp Radio ships its create endpoint.
     {
         # The Studio is the creativity centre's hub, so every brief opens a
         # workspace there regardless of discipline — that is what makes the

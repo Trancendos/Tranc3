@@ -94,6 +94,9 @@ class Capability:
     path: str = ""
     url_env: str = ""
     default_url: str = ""
+    # The worker directory, so scripts/check_creative_routes.py can verify the
+    # path above against the module the Dockerfile CMD actually runs.
+    worker_dir: str = ""
     phrases: tuple[str, ...] = ()
     gap: str = ""
 
@@ -140,7 +143,14 @@ class Resolution:
 
     @property
     def routed(self) -> bool:
-        return self.capability is not None
+        """True only when something can actually serve this.
+
+        A named ABSENT capability is a *resolution* — it says which Location
+        owns the gap — but it is not a route, and reporting it as one lets a
+        caller treat unimplemented work as dispatchable. `capability` still
+        carries the name; `routed` answers the different question.
+        """
+        return self.capability is not None and self.capability.servable
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -166,6 +176,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         path="/photo/generate",
         url_env="PHOTO_STUDIO_URL",
         default_url="http://sashas-photo-studio:8062",
+        worker_dir="workers/sashas-photo-studio",
         verbs=("create", "generate", "make", "draw", "paint", "render", "produce"),
         nouns=("image", "picture", "photo", "photograph", "artwork", "illustration", "art"),
         phrases=("generate an image", "create a picture", "make me a picture"),
@@ -200,6 +211,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         path="/photo/upscale",
         url_env="PHOTO_STUDIO_URL",
         default_url="http://sashas-photo-studio:8062",
+        worker_dir="workers/sashas-photo-studio",
         verbs=("upscale", "enlarge", "enhance"),
         nouns=("image", "picture", "photo", "resolution"),
         phrases=("upscale this image",),
@@ -211,44 +223,47 @@ CAPABILITIES: tuple[Capability, ...] = (
         delivers="A game record with engine, scenes, entities and assets.",
         status=RouteStatus.DEGRADED,
         method="POST",
-        path="/games",
+        path="/tranceflow/projects",
         url_env="TRANCEFLOW_URL",
         default_url="http://tranceflow:8059",
+        worker_dir="workers/tranceflow",
         verbs=("create", "build", "make", "develop", "start"),
         nouns=("game", "level", "gameplay"),
         phrases=("create a game", "build a game", "make a game"),
         gap=(
-            "TranceFlow keeps records. POST /builds writes a build_events row; "
-            "it does not invoke an engine, and Godot is not a service in "
-            "docker-compose.production.yml. A game is designed here and built "
-            "nowhere."
+            "The deployed image runs main.py, which serves a generic project "
+            "record at /tranceflow/projects. The games, scenes, entities and "
+            "build_events API is in the sibling worker.py that no container "
+            "runs. Even that one only writes rows: Godot is not a service in "
+            "docker-compose.production.yml, so a game is designed here and "
+            "built nowhere."
         ),
     ),
     Capability(
         id="game.asset.add",
         location="TranceFlow",
-        delivers="An asset row attached to a game.",
-        status=RouteStatus.ROUTED,
-        method="POST",
-        path="/assets",
-        url_env="TRANCEFLOW_URL",
-        default_url="http://tranceflow:8059",
+        delivers="Nothing — the deployed TranceFlow image serves no asset route.",
+        status=RouteStatus.ABSENT,
         verbs=("add", "attach", "register", "upload"),
-        nouns=("asset", "sprite", "mesh", "texture"),
+        nouns=("asset", "sprite", "texture"),
+        gap=(
+            "POST /assets exists in workers/tranceflow/worker.py. The "
+            "Dockerfile runs main.py, which does not include it."
+        ),
     ),
     Capability(
         id="model3d.create",
         location="TranceFlow",
-        delivers="A scene and entity records for a 3D model.",
-        status=RouteStatus.DEGRADED,
-        method="POST",
-        path="/scenes",
-        url_env="TRANCEFLOW_URL",
-        default_url="http://tranceflow:8059",
+        delivers="Nothing — the deployed TranceFlow image serves no scene route.",
+        status=RouteStatus.ABSENT,
         verbs=("create", "model", "build", "make", "sculpt"),
         nouns=("model", "mesh", "scene", "3d"),
         phrases=("3d model", "three dimensional model"),
-        gap="Same as game.create — records only; no modelling or export runs.",
+        gap=(
+            "POST /scenes and POST /entities exist in "
+            "workers/tranceflow/worker.py, which the Dockerfile does not run. "
+            "The deployed /tranceflow/export is an export, not a create."
+        ),
     ),
     Capability(
         id="video.create",
@@ -256,13 +271,20 @@ CAPABILITIES: tuple[Capability, ...] = (
         delivers="A video project, clips and a render job record.",
         status=RouteStatus.DEGRADED,
         method="POST",
-        path="/projects",
+        path="/video/create",
         url_env="TATEKING_URL",
         default_url="http://tateking:8061",
+        worker_dir="workers/tateking",
         verbs=("create", "edit", "cut", "make", "produce", "render"),
         nouns=("video", "clip", "film", "footage", "movie", "trailer"),
         phrases=("edit this video", "make a video"),
-        gap="FFmpeg is not a service in docker-compose.production.yml.",
+        gap=(
+            "The deployed main.py is a real FFmpeg implementation and shells "
+            "out to the ffmpeg binary, which its image does not install — "
+            "_ffmpeg_available() is the branch that decides. The project and "
+            "clip API named in the entity table is in the un-deployed "
+            "worker.py."
+        ),
     ),
     Capability(
         id="design.create",
@@ -273,6 +295,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         path="/fabulousa/projects",
         url_env="FABULOUSA_URL",
         default_url="http://fabulousa-service:8048",
+        worker_dir="workers/fabulousa-service",
         verbs=("design", "create", "mock", "mockup", "wireframe", "prototype", "style"),
         nouns=("design", "mockup", "wireframe", "layout", "ui", "ux", "screen", "prototype"),
         phrases=("mock up", "design system", "style guide"),
@@ -323,6 +346,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         path="/lab/generate",
         url_env="LAB_URL",
         default_url="http://the-lab:8055",
+        worker_dir="workers/the-lab",
         verbs=("write", "generate", "implement", "code", "scaffold", "refactor"),
         nouns=("code", "function", "module", "script", "class", "api", "app", "application"),
         phrases=("write code", "build an app", "generate a module"),
@@ -330,14 +354,15 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="music.create",
         location="Warp Radio",
-        delivers="A playlist and track records.",
-        status=RouteStatus.ROUTED,
-        method="POST",
-        path="/playlists",
-        url_env="WARP_RADIO_URL",
-        default_url="http://warp-radio:8073",
-        verbs=("create", "make", "compile", "curate", "play"),
+        delivers="Nothing — the deployed Warp Radio image serves no POST at all.",
+        status=RouteStatus.ABSENT,
+        verbs=("create", "make", "compile", "curate"),
         nouns=("playlist", "music", "soundtrack", "track", "audio", "song"),
+        gap=(
+            "main.py is 54 lines of read-only routes: /now-playing and "
+            "/stations. The playlist and track API is in worker.py, which the "
+            "Dockerfile does not run."
+        ),
     ),
     Capability(
         id="creative.brief",
@@ -348,16 +373,19 @@ CAPABILITIES: tuple[Capability, ...] = (
         path="/create",
         url_env="IMAGINARIUM_URL",
         default_url="http://imaginarium:8064",
+        worker_dir="workers/imaginarium",
         verbs=("create", "produce", "launch", "design", "build"),
         nouns=("campaign", "brand", "brief", "package", "masterpiece"),
         phrases=("brand package", "creative brief", "whole campaign"),
         gap=(
-            "The fan-out now reaches all six Locations it addresses, and no "
-            "longer discards a 200 it expected to be a 202. What it fans out "
-            "*to* is still degraded — no ComfyUI, no Godot, no FFmpeg — so a "
-            "brief produces records and placeholders, and the project status "
-            "says partial or failed rather than completed when a leg does not "
-            "answer."
+            "The fan-out reaches all six Locations, no longer discards a 200 "
+            "it expected to be a 202, and — since this change put worker.py in "
+            "the image — actually runs. What it fans out *to* is still "
+            "degraded: no ComfyUI, no Godot, no ffmpeg binary, and three of "
+            "the six Locations serve their create route only from an "
+            "un-deployed worker.py. So a brief produces records and "
+            "placeholders, and the project status says partial or failed "
+            "rather than completed when a leg does not answer."
         ),
     ),
 )

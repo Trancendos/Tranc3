@@ -11,7 +11,15 @@ from __future__ import annotations
 import pytest
 
 from src.creative import routing
-from src.creative.routing import CAPABILITIES, RouteStatus, capability, endpoint_for, gaps, resolve
+from src.creative.routing import (
+    CAPABILITIES,
+    Capability,
+    RouteStatus,
+    capability,
+    endpoint_for,
+    gaps,
+    resolve,
+)
 
 
 class TestTheNearMiss:
@@ -130,15 +138,38 @@ class TestTies:
         assert res.capability is None
         assert "design.component" in res.reason
 
-    def test_a_tie_inside_one_location_is_refused(self):
+    def test_a_tie_inside_one_location_is_refused(self, monkeypatch):
         """Calibrated: dropping the distinct-location check fails this.
 
-        Escalating a within-Location ambiguity to Imaginarium would send the
-        request straight back to the Location that could not decide.
+        The registry is patched rather than phrased around, and the reason is
+        worth recording. No Location in the real table currently holds two
+        *servable* capabilities — every Location has exactly one, with its
+        siblings ABSENT — so every within-Location tie today is caught by the
+        earlier unimplemented-candidate branch instead. An earlier version of
+        this test used a real request and claimed calibration it could not
+        deliver: the request had a single winner, and the mutation changed
+        nothing.
+
+        The branch is still correct and still worth keeping, because
+        escalating a within-Location ambiguity to Imaginarium would send the
+        request straight back to the Location that could not decide. So it is
+        exercised against a registry that can reach it.
         """
-        res = resolve("make a mockup and a wireframe layout")
-        if res.capability is not None:
-            assert res.capability.id != "creative.brief"
+        twins = tuple(
+            Capability(
+                id=f"studio.thing{n}",
+                location="Sashas Photo Studio",
+                delivers="A thing.",
+                status=RouteStatus.ROUTED,
+                verbs=("make",),
+                nouns=("thing",),
+            )
+            for n in (1, 2)
+        )
+        monkeypatch.setattr(routing, "CAPABILITIES", twins)
+        res = routing.resolve("make a thing")
+        assert res.capability is None
+        assert "ambiguous within Sashas Photo Studio" in res.reason
 
 
 class TestTheRegistryTellsTheTruth:
@@ -183,7 +214,7 @@ class TestEndpointResolution:
         cap = capability("game.create")
         assert cap is not None
         monkeypatch.setenv(cap.url_env, "http://tranceflow.internal:9999/")
-        assert endpoint_for(cap) == "http://tranceflow.internal:9999/games"
+        assert endpoint_for(cap) == "http://tranceflow.internal:9999/tranceflow/projects"
 
     def test_a_capability_with_no_endpoint_has_no_address(self):
         """Calibrated: returning the bare base URL fails this.
@@ -200,7 +231,7 @@ class TestEndpointResolution:
         cap = capability("game.create")
         assert cap is not None
         monkeypatch.delenv(cap.url_env, raising=False)
-        assert endpoint_for(cap) == "http://tranceflow:8059/games"
+        assert endpoint_for(cap) == "http://tranceflow:8059/tranceflow/projects"
 
 
 class TestTheMeasuredGaps:
@@ -265,7 +296,7 @@ class TestTheHttpSurface:
         body = r.json()
         assert body["routed"] is True
         assert body["capability"]["location"] == "TranceFlow"
-        assert body["url"].endswith("/games")
+        assert body["url"].endswith("/tranceflow/projects")
 
     def test_an_absent_capability_is_named_with_its_status(self, client):
         """Calibrated: dropping `deliverable` from the payload fails this.
@@ -275,7 +306,11 @@ class TestTheHttpSurface:
         """
         r = client.post("/creative/resolve", json={"request": "edit this image"})
         body = r.json()
-        assert body["routed"] is True
+        # Named, but not routed. The capability says which Location owns the
+        # gap; `routed` answers whether anything can serve it, and answering
+        # yes here would let a caller treat unimplemented work as dispatchable.
+        assert body["capability"]["id"] == "image.edit"
+        assert body["routed"] is False
         assert body["deliverable"] == "absent"
         assert body["url"] is None
 
