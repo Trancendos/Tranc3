@@ -136,6 +136,15 @@ jobs:
       - name: Test env isolation
         run: python scripts/check_test_env_isolation.py
 
+      # Every dependency surface the census scans must have a Location that
+      # answers for it. Without the join, a finding names a manifest path and
+      # nobody -- and an unrouted finding is indistinguishable from no finding
+      # at all in a summary, so exposure disappears rather than being reported.
+      # Fails on an unowned surface, on a mapping whose path has moved, and on
+      # one naming a Location that is not among the 43.
+      - name: DVMS surface ownership
+        run: python scripts/check_surface_ownership.py
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every

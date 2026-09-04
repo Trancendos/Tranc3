@@ -133,9 +133,14 @@ not the Cloud Only one.
 - **Two ecosystems.** pip and npm only. The Rust/Go code under `aeonmind/` is covered by a
   Forgejo workflow that does not currently execute.
 - **No malicious-package detection.** See Socket, above.
-- **DVMS ↔ CMDB overlap is zero.** Established earlier in this engagement: the census keys
-  findings by manifest path, the CMDB keys by ServiceID, and nothing joins them. A finding
-  cannot answer "which Locations does this affect".
+- ~~**DVMS ↔ CMDB overlap is zero.**~~ **Closed 2026-09-04.** This was recorded here as a
+  weakness and it was half right. What was measured was the JOIN — the census keys findings
+  by manifest path, the CMDB keys by ServiceID, and nothing mapped between them. What it
+  was written to mean, that the entity linkage did not exist, was wrong: Cryptex and The Lab
+  are Locations in `PLATFORM_ENTITIES.md`, and the design was unwired rather than absent.
+  `src/dvms/surface_owner.py` supplies the join — 97 surfaces, 68 owned across 37 Locations,
+  29 cross-cutting and stewarded, 0 unowned, enforced by
+  `scripts/check_surface_ownership.py`. See `DVMS-ENTITY-FLOW.md`.
 
 ### Opportunities
 - **OpenVEX is the missing wire, and it is free.** Trivy, grype and OSV-Scanner — all three
@@ -146,8 +151,10 @@ not the Cloud Only one.
 - **The history file is now the substrate for the analysis nobody has written yet.** MTTR,
   recurrence-per-package and "is exposure growing" are all reads over a file that exists;
   none of them are implemented.
-- **The manifest→ServiceID join** is the CMDB link, and the machinery for it already exists
-  (`identity.resolve()` accepts ServiceID/PID/Location/port).
+- ~~**The manifest→ServiceID join**~~ — **done 2026-09-04.** It opened a larger one: with an
+  owner on every finding, `src/dvms/dispatch.py` can raise the Change or Incident against the
+  Location that answers for it, which is the Cryptex → The Lab handoff the platform's entity
+  architecture always described and never had a first step for.
 
 ### Threats
 - **A naive VEX export would be a fail-open control.** This is the single most important
@@ -172,7 +179,7 @@ not the Cloud Only one.
 | 1a | **Trend readers over that history** — MTTR, recurrence-per-package, exposure direction | Turns the record into an answer | None | Small |
 | 2 | **VEX status as an explicit register field** — `VEX-Status` + `VEX-Justification` rows, from the OpenVEX enums | Makes #3 safe | None on its own | Small |
 | 3 | **OpenVEX exporter** wired into Trivy/grype/OSV | Dispositions propagate to three scanners | **High if done naively** — see Threats | Medium |
-| 4 | **manifest → ServiceID join** | A finding can name the Locations it affects | None | Medium |
+| ~~4~~ | ~~**manifest → ServiceID join**~~ — **done 2026-09-04**, plus the dispatcher it unblocked | A finding names its Location and becomes a Change or Incident there | None: refuses to guess, `unmapped` is a gate failure | Done |
 | 5 | **Ecosystem coverage** — Rust/Go into the census | Closes a real blind spot | None | Medium |
 | 6 | **Malicious-package signal** | New detection category | Low | Medium |
 | 7 | **Dependency-Track** | Continuous correlation, no rescan | Migration risk | **Blocked on server funding** |

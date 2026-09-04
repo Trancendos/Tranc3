@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""Hand The Lab the priority order of Requests and Changes a census implies.
+
+This is the step that was missing between assessment and remediation. The
+census says what is wrong and, since `src/dvms/surface_owner.py`, whose it is.
+This turns that into ITSM records against the Location that answers for each
+surface: a Change where a patch exists and is reachable, an Incident where one
+does not, and an Incident at the top of the queue for a surface that could not
+be scanned at all.
+
+DRY RUN IS THE DEFAULT, and deliberately. `--apply` writes into The Town Hall's
+ITSM store, which is shared state other people work from; filing a queue's
+worth of tickets is not something to do as a side effect of asking what the
+queue looks like.
+
+Usage:
+    python scripts/dvms_dispatch.py                     # plan from a fresh census
+    python scripts/dvms_dispatch.py --census run.json   # plan from a saved one
+    python scripts/dvms_dispatch.py --json              # the plan, machine-readable
+    python scripts/dvms_dispatch.py --apply             # write the records
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
+
+from src.dvms import plan, summarise  # noqa: E402
+
+
+def _fresh_census(scope: str) -> dict:
+    """Run the census in-process rather than shelling out to it."""
+    path = os.path.join(REPO_ROOT, "scripts", "vulnerability_census.py")
+    spec = importlib.util.spec_from_file_location("_census_for_dispatch", path)
+    if spec is None or spec.loader is None:  # pragma: no cover - defensive
+        raise SystemExit("vulnerability_census.py could not be loaded")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["_census_for_dispatch"] = module
+    spec.loader.exec_module(module)
+    return module.build_census(scope)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--census", help="read a saved census JSON instead of running one")
+    parser.add_argument("--scope", default="core", help="census scope when running one")
+    parser.add_argument("--json", action="store_true", help="emit the plan as JSON")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="write the records into The Town Hall's ITSM store (default is a dry run)",
+    )
+    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
+
+    if args.census:
+        try:
+            with open(args.census, encoding="utf-8") as handle:
+                census = json.load(handle)
+        except (OSError, ValueError) as exc:
+            print(f"FAIL could not read {args.census}: {exc}", file=sys.stderr)
+            return 1
+    else:
+        census = _fresh_census(args.scope)
+
+    items = plan(census)
+    summary = summarise(items)
+
+    if args.json:
+        print(json.dumps({"summary": summary, "items": [i.to_dict() for i in items]}, indent=2))
+    else:
+        print(
+            f"Dispatch plan: {summary['total']} records "
+            f"({summary['changes']} changes, {summary['incidents']} incidents)"
+        )
+        if not items:
+            print("Nothing to raise — no fixable, blocked or unscannable surface.")
+        for item in items:
+            who = item.responsible or "UNROUTED"
+            print(f"  {item.priority.upper()} {item.kind:8} {who:26} {item.title}")
+        if summary["unroutable"]:
+            print(
+                f"\n{summary['unroutable']} record(s) have no Location to route to and "
+                "will be SKIPPED rather than filed against a placeholder. Run "
+                "scripts/check_surface_ownership.py to see which.",
+                file=sys.stderr,
+            )
+
+    if not args.apply:
+        print("\n(dry run — pass --apply to write these into the ITSM store)")
+        return 0
+
+    from src.dvms import apply as apply_plan
+
+    written = apply_plan(items)
+    filed = [w for w in written if "skipped" not in w]
+    print(f"\nFiled {len(filed)} record(s); skipped {len(written) - len(filed)} unroutable.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
