@@ -286,7 +286,7 @@ class TestSurfaceScanning:
         )
         surface = native.scan_go_module(str(tmp_path), "go.mod", opener=_opener(None, {}))
         assert surface.errored
-        assert "OSV unreachable" in surface.reason
+        assert "OSV unusable" in surface.reason
 
     def test_a_go_module_with_no_requirements_is_clean_not_errored(self, tmp_path):
         """Zero dependencies is a real answer. Erroring on it would make every
