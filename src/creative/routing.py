@@ -378,9 +378,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         nouns=("campaign", "brand", "brief", "package", "masterpiece"),
         phrases=("brand package", "creative brief", "whole campaign"),
         gap=(
-            "The fan-out reaches all six Locations, no longer discards a 200 "
-            "it expected to be a 202, and — since this change put worker.py in "
-            "the image — actually runs. What it fans out *to* is still "
+            "The fan-out has five legs — every Location it addresses except "
+            "Warp Radio, whose deployed image serves no POST at all — no "
+            "longer discards a 200 it expected to be a 202, and now actually "
+            "runs, since worker.py reached the image. What it fans out *to* is "
             "degraded: no ComfyUI, no Godot, no ffmpeg binary, and three of "
             "the six Locations serve their create route only from an "
             "un-deployed worker.py. So a brief produces records and "

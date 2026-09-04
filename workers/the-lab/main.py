@@ -62,20 +62,98 @@ _http_timeout = httpx.Timeout(60.0, connect=5.0)
 # Models
 # ---------------------------------------------------------------------------
 
+# The canonical list lives in src/lab/languages.py, which also records each
+# language's toolchain and the verification tier it unlocks. This worker's
+# image cannot import that module — its build context holds main.py and the
+# shared core, nothing else — so the ids are mirrored here and
+# scripts/check_lab_languages.py fails CI if the two ever disagree.
+#
+# This set previously held twelve entries and was referenced exactly once, at
+# its own definition. Nothing validated against it and nothing exposed it, so
+# a request naming any language at all was interpolated straight into a
+# prompt. It was a capability claim with no capability behind it.
 ALLOWED_LANGUAGES = {
-    "python",
-    "javascript",
-    "typescript",
-    "go",
-    "rust",
-    "java",
     "c",
     "cpp",
+    "csharp",
+    "css",
+    "dockerfile",
+    "elixir",
+    "go",
+    "haskell",
+    "html",
+    "java",
+    "javascript",
+    "json",
+    "julia",
+    "kotlin",
+    "lua",
+    "markdown",
+    "perl",
+    "php",
+    "python",
+    "r",
+    "ruby",
+    "rust",
+    "scala",
     "shell",
     "sql",
-    "markdown",
-    "json",
+    "swift",
+    "terraform",
+    "typescript",
+    "yaml",
 }
+
+#: Spellings a caller is likely to use for a language the registry knows.
+#: Refusing "golang" or "c++" would push callers back to the free-form string
+#: this validation replaced.
+LANGUAGE_ALIASES = {
+    "bash": "shell",
+    "c#": "csharp",
+    "c++": "cpp",
+    "cplusplus": "cpp",
+    "cs": "csharp",
+    "docker": "dockerfile",
+    "ex": "elixir",
+    "golang": "go",
+    "hcl": "terraform",
+    "hs": "haskell",
+    "jl": "julia",
+    "js": "javascript",
+    "kt": "kotlin",
+    "md": "markdown",
+    "node": "javascript",
+    "pl": "perl",
+    "py": "python",
+    "python3": "python",
+    "rb": "ruby",
+    "rs": "rust",
+    "sh": "shell",
+    "tf": "terraform",
+    "ts": "typescript",
+    "yml": "yaml",
+    "zsh": "shell",
+}
+
+
+def _validate_language(language: str) -> str:
+    """Resolve a language name, or refuse it.
+
+    Refusing is the point. An unrecognised language used to be interpolated
+    into the prompt unchanged, so The Lab would confidently answer for a
+    language nobody had decided it supports, and the response carried no sign
+    that it had happened.
+    """
+    canonical = LANGUAGE_ALIASES.get(language.strip().lower(), language.strip().lower())
+    if canonical not in ALLOWED_LANGUAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported language {language!r}. The Lab supports "
+                f"{len(ALLOWED_LANGUAGES)}: {', '.join(sorted(ALLOWED_LANGUAGES))}"
+            ),
+        )
+    return canonical
 
 
 class CompleteRequest(BaseModel):
@@ -245,6 +323,7 @@ async def status() -> dict[str, Any]:
 @app.post("/lab/complete", dependencies=[Depends(_require_internal_auth)])
 async def lab_complete(req: CompleteRequest) -> dict[str, Any]:
     """Code completion via TabbyML -> Ollama -> LiteLLM -> offline."""
+    req.language = _validate_language(req.language)
     result = await _tabby_complete(req.prompt, req.language, req.max_tokens)
     if result:
         return {"completion": result, "source": "tabby", "language": req.language}
@@ -269,6 +348,7 @@ async def lab_complete(req: CompleteRequest) -> dict[str, Any]:
 @app.post("/lab/chat", dependencies=[Depends(_require_internal_auth)])
 async def lab_chat(req: ChatRequest) -> dict[str, Any]:
     """Code chat via TabbyML -> Ollama -> LiteLLM -> offline."""
+    req.language = _validate_language(req.language)
     result = await _tabby_chat(req.messages, req.max_tokens)
     if result:
         return {"response": result, "source": "tabby"}
@@ -287,6 +367,7 @@ async def lab_chat(req: ChatRequest) -> dict[str, Any]:
 @app.post("/lab/explain", dependencies=[Depends(_require_internal_auth)])
 async def lab_explain(req: ExplainRequest) -> dict[str, Any]:
     """Explain code via AI chain."""
+    req.language = _validate_language(req.language)
     prompt = f"Explain this {req.language} code clearly and concisely:\n\n```{req.language}\n{req.code}\n```"
     messages = [
         {"role": "system", "content": "You are an expert code reviewer."},
@@ -310,6 +391,7 @@ async def lab_explain(req: ExplainRequest) -> dict[str, Any]:
 @app.post("/lab/review", dependencies=[Depends(_require_internal_auth)])
 async def lab_review(req: ReviewRequest) -> dict[str, Any]:
     """Code review — security, quality, performance."""
+    req.language = _validate_language(req.language)
     focus_str = ", ".join(req.focus)
     prompt = (
         f"Review this {req.language} code focusing on: {focus_str}.\n"
@@ -345,6 +427,7 @@ async def lab_review(req: ReviewRequest) -> dict[str, Any]:
 @app.post("/lab/generate", dependencies=[Depends(_require_internal_auth)])
 async def lab_generate(req: GenerateRequest) -> dict[str, Any]:
     """Generate code from description."""
+    req.language = _validate_language(req.language)
     prompt = (
         f"Write {req.style} {req.language} code that does the following:\n{req.description}\n\n"
         f"Return only the code, no explanation."
@@ -369,6 +452,26 @@ async def lab_generate(req: GenerateRequest) -> dict[str, Any]:
         "code": _offline_stub("generate", req.language, req.description),
         "language": req.language,
         "source": "offline",
+    }
+
+
+@app.get("/lab/languages")
+async def lab_languages() -> dict[str, Any]:
+    """The languages The Lab accepts, and the spellings it resolves.
+
+    Unauthenticated on purpose: this is the same information a 400 already
+    returns, and making a caller guess at a set they will be refused for
+    getting wrong is not a security boundary.
+    """
+    return {
+        "languages": sorted(ALLOWED_LANGUAGES),
+        "total": len(ALLOWED_LANGUAGES),
+        "aliases": dict(sorted(LANGUAGE_ALIASES.items())),
+        "verification": (
+            "Acceptance is not verification. src/lab/languages.py records the "
+            "toolchain each language needs and scripts/lab_capability_report.py "
+            "reports which of it this image actually contains."
+        ),
     }
 
 

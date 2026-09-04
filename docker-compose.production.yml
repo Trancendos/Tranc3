@@ -4484,6 +4484,7 @@ volumes:
   basement-data:
     driver: local
   the-studio-data:
+    driver: local
   imaginarium-data:
     driver: local
   imind-data:

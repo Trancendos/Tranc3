@@ -346,6 +346,7 @@ class TestCommission:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
+        from auth import get_current_user
         from src.creative.routes import router
         from src.townhall import plm as plm_module
 
@@ -353,8 +354,58 @@ class TestCommission:
         monkeypatch.setattr(plm_module, "_service", service)
         app = FastAPI()
         app.include_router(router)
+        app.dependency_overrides[get_current_user] = lambda: {"username": "lilli-sc"}
         yield TestClient(app)
         service.close()
+
+    def test_commission_requires_authentication(self, tmp_path, monkeypatch):
+        """Calibrated: dropping the Depends(get_current_user) fails this.
+
+        A durable write with no identity lets anyone fill the register, and
+        the register's value is being able to say who asked.
+        """
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from src.creative.routes import router
+        from src.townhall import plm as plm_module
+
+        service = plm_module.PlmService(db_path=tmp_path / "plm.db")
+        monkeypatch.setattr(plm_module, "_service", service)
+        app = FastAPI()
+        app.include_router(router)
+        try:
+            unauthenticated = TestClient(app)
+            r = unauthenticated.post("/creative/commission", json={"request": "create a game"})
+            assert r.status_code in (401, 403), r.status_code
+            assert plm_module.get_plm().list_deliverables() == []
+        finally:
+            service.close()
+
+    def test_the_requester_comes_from_the_token_not_the_body(self, client):
+        """Calibrated: reading requested_by from the body fails this.
+
+        An attribution the caller supplies is one anyone can forge.
+        """
+        body = client.post(
+            "/creative/commission",
+            json={"request": "create a game", "requested_by": "someone-else"},
+        ).json()
+        assert body["deliverable"]["requested_by"] == "lilli-sc"
+
+    def test_an_unimplemented_capability_is_not_commissioned(self, client):
+        """Calibrated: checking only `capability is None` fails this.
+
+        `resolve` returns a Capability for an ABSENT one — that is how the
+        gap gets named — so the None check alone lets image.edit open a
+        deliverable whose gate no Location can ever evidence.
+        """
+        from src.townhall.plm import get_plm
+
+        r = client.post("/creative/commission", json={"request": "edit this image"})
+        assert r.status_code == 422
+        assert r.json()["detail"]["capability"] == "image.edit"
+        assert get_plm().list_deliverables() == []
 
     def test_a_game_request_opens_a_gated_deliverable(self, client):
         """Calibrated: returning the resolution without creating a deliverable fails this.

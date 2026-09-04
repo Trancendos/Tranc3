@@ -16,8 +16,9 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
+from auth import get_current_user
 from src.creative.routing import (
     CAPABILITIES,
     RouteStatus,
@@ -115,7 +116,7 @@ _DELIVERABLE_KIND: dict[str, str] = {
 @router.post("/commission", status_code=201)
 async def commission(
     request: str = Body(..., embed=True),
-    requested_by: str = Body("system", embed=True),
+    current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Resolve a creative request *and* open its Town Hall deliverable.
 
@@ -124,16 +125,37 @@ async def commission(
     not do that, because a caller can read the answer and then call the
     worker directly.
 
-    An unroutable request opens nothing. A deliverable naming a Location
-    that cannot build it would enter the lifecycle and stall at a gate whose
-    evidence nobody can produce, which is worse than a plain refusal: it
-    puts a permanent blocked item in the register and calls it governance.
+    Authenticated, because this is a durable write. `requested_by` comes
+    from the token rather than the body: an attribution the caller supplies
+    is one anyone can forge, and knowing who asked is most of what the
+    register is for.
+
+    An unroutable request opens nothing, and neither does a request that
+    resolves to a capability nothing implements. Either would enter the
+    lifecycle and stall at a gate whose evidence nobody can produce, which
+    is worse than a plain refusal: it puts a permanent blocked item in the
+    register and calls it governance.
     """
     if not request.strip():
         raise HTTPException(400, "request text required")
     res = resolve(request)
     if res.capability is None:
         raise HTTPException(422, {"error": "unroutable", "reason": res.reason})
+    if not res.capability.servable:
+        # Named, but nothing serves it. Opening a deliverable here would put a
+        # permanently blocked item in the register — its gate needs evidence
+        # from a Location that has no endpoint to produce any — and call that
+        # governance. The refusal names the capability so the gap stays
+        # visible instead of becoming a stalled record.
+        raise HTTPException(
+            422,
+            {
+                "error": "unimplemented",
+                "capability": res.capability.id,
+                "location": res.capability.location,
+                "gap": res.capability.gap,
+            },
+        )
 
     kind = _DELIVERABLE_KIND.get(res.capability.id)
     if kind is None:  # pragma: no cover - the registry test forbids this
@@ -145,7 +167,10 @@ async def commission(
         title=request.strip()[:200],
         kind=kind,
         location=res.capability.location,
-        requested_by=requested_by,
+        # Taken from the authenticated identity, never from the body. A
+        # caller-supplied requester is an attribution anyone can forge, and
+        # the register's whole value is being able to say who asked.
+        requested_by=str(current_user.get("username") or current_user.get("sub") or "unknown"),
     )
     return {
         "deliverable": item.to_dict(),

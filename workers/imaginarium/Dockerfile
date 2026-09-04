@@ -10,6 +10,11 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 # the six-Location fan-out — and it was never in the image, so none of it ran.
 # Same shape as workers/the-studio/Dockerfile, which already ships worker.py.
 COPY worker.py .
+# Docker initialises a new named volume from the image directory it is
+# mounted over, ownership included, so this chown reaches imaginarium-data
+# on its first mount. It would NOT fix an already-populated volume — but
+# imaginarium-data is introduced by the same change that added this line,
+# so there is none. The-studio ships the identical pattern.
 RUN mkdir -p /app/data && chown appuser:appuser /app/data
 # --- Shared Functional Services Core (SFSC) — named build contexts ---
 # Not copied into this directory — there is one copy of the core, at the

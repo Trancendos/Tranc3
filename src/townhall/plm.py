@@ -54,6 +54,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
+from src.event_bus.types import PlatformEventType
+
 logger = logging.getLogger("tranc3.townhall.plm")
 
 DEFAULT_DB_PATH = Path("data/townhall_plm.db")
@@ -131,6 +133,24 @@ class GateBlocked(RuntimeError):
         self.unmet = unmet
         names = ", ".join(c.id for c in unmet)
         super().__init__(f"{deliverable_id} cannot leave {stage.value}: unmet criteria: {names}")
+
+
+class GateAlreadyPassed(RuntimeError):
+    """Raised when another caller crossed this boundary first.
+
+    Distinct from `GateBlocked`: nothing is missing, the work simply already
+    happened. Collapsing the two would tell an operator to go and find
+    evidence that is already filed.
+    """
+
+    def __init__(self, deliverable_id: str, expected: "Stage", actual: "Stage") -> None:
+        self.deliverable_id = deliverable_id
+        self.expected = expected
+        self.actual = actual
+        super().__init__(
+            f"{deliverable_id} was at {expected.value} when the gate was evaluated "
+            f"and is now at {actual.value}: another caller advanced it first"
+        )
 
 
 class UnknownDeliverableError(KeyError):
@@ -398,7 +418,7 @@ class GateStatus:
         }
 
 
-def _emit(event_type: str, data: dict[str, Any]) -> None:
+def _emit(event_type: PlatformEventType, data: dict[str, Any]) -> None:
     """Announce a transition that has already been committed.
 
     Best-effort, exactly as `src/townhall/itsm.py` documents: the SQLite write
@@ -408,9 +428,9 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
     try:
         from src.event_bus import get_event_bus  # noqa: PLC0415
 
-        get_event_bus().emit_async(event_type=event_type, data=data, source="townhall.plm")
+        get_event_bus().emit_async(event_type=event_type.value, data=data, source="townhall.plm")
     except Exception as exc:  # noqa: BLE001 - a notification must not fail the write
-        logger.debug("plm: emit %s: %s", event_type, exc)
+        logger.debug("plm: emit %s: %s", event_type.value, exc)
 
 
 class PlmService:
@@ -509,7 +529,7 @@ class PlmService:
                 ),
             )
             self._conn.commit()
-        _emit("plm.deliverable.raised", item.to_dict())
+        _emit(PlatformEventType.PLM_DELIVERABLE_RAISED, item.to_dict())
         return item
 
     @staticmethod
@@ -520,7 +540,9 @@ class PlmService:
 
             return resolve_ownership(location).to_dict()
         except Exception as exc:  # noqa: BLE001 - a missing owner is recorded, not fatal
-            logger.debug("plm: ownership for %s: %s", location, exc)
+            # %r, not %s: `location` arrives in a request body, and a raw newline
+            # in it would forge a second log record.
+            logger.debug("plm: ownership for %r: %r", location, exc)
             return None
 
     def get(self, deliverable_id: str) -> Deliverable:
@@ -572,6 +594,13 @@ class PlmService:
         self.get(deliverable_id)  # raises for an unknown deliverable
         if criterion_id not in _CRITERIA_BY_ID:
             raise UnknownCriterionError(criterion_id)
+        if not reference.strip():
+            # Evidence is a pointer to the thing that was done — a run id, a
+            # digest, a document. Without one the gate opens on an assertion,
+            # which is the state this module exists to end.
+            raise ValueError("evidence needs a reference to what was produced")
+        if not recorded_by.strip():
+            raise ValueError("evidence needs to say who recorded it")
         outcome = Outcome(outcome)
         ev = Evidence(
             id=f"EV-{uuid.uuid4().hex[:10].upper()}",
@@ -599,7 +628,7 @@ class PlmService:
                 ),
             )
             self._conn.commit()
-        _emit("plm.evidence.recorded", ev.to_dict())
+        _emit(PlatformEventType.PLM_EVIDENCE_RECORDED, ev.to_dict())
         return ev
 
     def waive(self, deliverable_id: str, criterion_id: str, reason: str, approver: str) -> Waiver:
@@ -625,7 +654,7 @@ class PlmService:
             )
             self._conn.commit()
         _emit(
-            "plm.criterion.waived",
+            PlatformEventType.PLM_CRITERION_WAIVED,
             dict(waiver.to_dict(), deliverable_id=deliverable_id),
         )
         return waiver
@@ -668,7 +697,18 @@ class PlmService:
 
     def gate_status(self, deliverable_id: str) -> GateStatus:
         """What this deliverable still needs before it can leave its stage."""
-        item = self.get(deliverable_id)
+        return self._gate_status_for(self.get(deliverable_id))
+
+    def _gate_status_for(self, item: Deliverable) -> GateStatus:
+        """Gate status for an already-read deliverable, against *its* stage.
+
+        `advance` evaluates the gate and then writes conditionally on the
+        same stage. If this re-read the row instead, a caller acting on a
+        stale view would be judged against a boundary it was not trying to
+        cross, and would be told a criterion is missing when the real answer
+        is that somebody else already advanced it.
+        """
+        deliverable_id = item.id
         statuses = []
         for crit in criteria_for(item.kind, item.stage):
             ev = self._latest_evidence(deliverable_id, crit.id)
@@ -692,15 +732,26 @@ class PlmService:
         Raises `GateBlocked` rather than returning a warning. A gate a caller
         can ignore is a report, and this platform has enough of those.
         """
-        item = self.get(deliverable_id)
+        return self._advance_from(self.get(deliverable_id), approver=approver)
+
+    def _advance_from(self, item: Deliverable, approver: str = "system") -> Deliverable:
+        """Advance from an already-read deliverable.
+
+        Split out from `advance` so the stale-read case is reachable in a
+        test: the race this guards against is exactly "act on a view of the
+        stage that another caller has already moved past", and a test that
+        can only go through `advance` re-reads the fresh stage every time and
+        can never construct it.
+        """
+        deliverable_id = item.id
         following = next_stage(item.stage)
         if following is None:
             raise GateBlocked(deliverable_id, item.stage, [])
 
-        status = self.gate_status(deliverable_id)
+        status = self._gate_status_for(item)
         if not status.can_advance:
             _emit(
-                "plm.gate.blocked",
+                PlatformEventType.PLM_GATE_BLOCKED,
                 {
                     "deliverable_id": deliverable_id,
                     "stage": item.stage.value,
@@ -713,9 +764,23 @@ class PlmService:
         decision = GateDecision.WAIVED if waived else GateDecision.PASSED
         now = time.time()
         with self._lock:
-            self._conn.execute(
-                "UPDATE deliverables SET stage=? WHERE id=?", (following.value, deliverable_id)
+            # The stage read above happened outside this lock, so two callers
+            # can both see `concept` and both arrive here. The UPDATE is
+            # therefore conditional on the stage still being what was
+            # evaluated: whichever transaction lands second changes no row,
+            # and is refused rather than writing a second gate decision for a
+            # boundary that was already crossed.
+            #
+            # `self._lock` alone would not do it — it coordinates threads in
+            # one process, and this worker can run under several.
+            cursor = self._conn.execute(
+                "UPDATE deliverables SET stage=? WHERE id=? AND stage=?",
+                (following.value, deliverable_id, item.stage.value),
             )
+            if cursor.rowcount == 0:
+                self._conn.rollback()
+                current = self.get(deliverable_id)
+                raise GateAlreadyPassed(deliverable_id, item.stage, current.stage)
             self._conn.execute(
                 "INSERT INTO gate_decisions "
                 "(id, deliverable_id, stage, decision, approver, decided_at, waived_criteria) "
@@ -740,9 +805,9 @@ class PlmService:
             "waived_criteria": waived,
             "approver": approver,
         }
-        _emit("plm.gate.passed", payload)
+        _emit(PlatformEventType.PLM_GATE_PASSED, payload)
         if following is Stage.CLOSED:
-            _emit("plm.deliverable.closed", payload)
+            _emit(PlatformEventType.PLM_DELIVERABLE_CLOSED, payload)
         return self.get(deliverable_id)
 
     def history(self, deliverable_id: str) -> list[dict[str, Any]]:

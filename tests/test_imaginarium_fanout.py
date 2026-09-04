@@ -212,9 +212,11 @@ class TestEveryAddressedLocationIsCalled:
     def test_each_leg_sends_the_body_its_service_expects(self, monkeypatch, imaginarium):
         """Calibrated: reusing one payload shape across legs fails this.
 
-        TranceFlow's GameIn requires `title`; Warp Radio's PlaylistIn
-        requires `name`. A single shared body would 422 at whichever service
-        it did not fit.
+        The deployed services disagree about field names, so there is no one
+        body that fits them all. TranceFlow's main.py builds its app from
+        router.py, whose ProjectCreate wants `name`; TateKing's
+        VideoCreateRequest wants `title`; the Photo Studio wants `prompt`. A
+        single shared shape would 422 at whichever service it did not fit.
         """
         stub = _StubEstate()
         pid = _seed(imaginarium, "mixed")

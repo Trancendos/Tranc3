@@ -145,6 +145,17 @@ def parse_go_mod(text: str) -> List[Tuple[str, str]]:
     return out
 
 
+#: Every `[[package]]` stanza Cargo writes carries both of these keys. All
+#: three together mean the file holds at least one complete package entry —
+#: which distinguishes a broken file from a valid lockfile whose dependencies
+#: are all path-, git- or workspace-local and therefore absent from crates.io.
+_STANZA_MARKERS = ("[[package]]", "name = ", "version = ")
+
+
+def _has_package_stanza(text: str) -> bool:
+    return all(marker in text for marker in _STANZA_MARKERS)
+
+
 def parse_cargo_lock(text: str) -> List[Tuple[str, str]]:
     """(crate, version) pairs for registry packages in a Cargo.lock.
 
@@ -464,22 +475,23 @@ def scan_rust_crate(
         surface.reason = f"Cargo.lock unreadable: {type(exc).__name__}"
         return surface
     packages = parse_cargo_lock(text)
-    if not packages:
-        # A present Cargo.lock that yields no registry packages is never
-        # honest, so the test is simply the package count.
+    if not packages and not _has_package_stanza(text):
+        # Zero registry packages has two causes and they need opposite
+        # answers. A malformed, truncated or empty file parses to nothing and
+        # would otherwise scan clean. But a crate whose dependencies are all
+        # `path`, `git` or workspace-local is perfectly valid and genuinely
+        # has nothing on crates.io to query — OSV cannot tell us about it and
+        # calling that unscannable would put a permanent error on a crate
+        # with no exposure.
         #
-        # The first version of this guard tested the file for marker strings
-        # instead, on the theory that a crate with no registry dependencies
-        # would produce an empty-but-valid lockfile. It would not: Cargo
-        # writes a [[package]] stanza for the workspace root itself, so a
-        # real lockfile always yields at least one. Worse, the marker test
-        # was already dead — the surrounding condition made it unreachable
-        # for every non-empty file — which is precisely the class of defect
-        # this module exists to catch, sitting in the guard that catches it.
+        # `parse_cargo_lock` returns only `registry+` entries, so the count
+        # alone cannot separate the two. The file's own structure can: every
+        # lockfile Cargo writes carries at least one complete [[package]]
+        # stanza, including for the workspace root.
         surface.errored = True
         surface.reason = (
-            "Cargo.lock yielded no registry packages — malformed, truncated "
-            "or empty — and zero packages reads as a clean scan"
+            "Cargo.lock holds no complete [[package]] stanza — malformed, "
+            "truncated or empty — and zero packages reads as a clean scan"
         )
         return surface
     surface.queried = len(packages)

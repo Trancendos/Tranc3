@@ -448,3 +448,83 @@ class TestTheGeneratedDocumentation:
 
         ci = pathlib.Path(__file__).resolve().parent.parent / ".github/workflows/ci.yml"
         assert "scripts/generate_plm_docs.py --check" in ci.read_text()
+
+
+class TestReviewFindings:
+    """Behaviour added after review. Each names the defect it closes."""
+
+    def test_blank_evidence_is_refused(self, plm):
+        """Calibrated: dropping the reference check fails this.
+
+        Evidence is a pointer to the thing that was done. Without one the
+        gate opens on an assertion, which is the state this module exists to
+        end.
+        """
+        item = _game(plm)
+        with pytest.raises(ValueError, match="reference"):
+            plm.submit_evidence(item.id, "concept.business-case", "   ", Outcome.PASS, "tester")
+
+    def test_evidence_with_no_recorder_is_refused(self, plm):
+        item = _game(plm)
+        with pytest.raises(ValueError, match="who recorded"):
+            plm.submit_evidence(item.id, "concept.business-case", "BC-1", Outcome.PASS, " ")
+
+    def test_a_second_advance_over_the_same_boundary_is_refused(self, plm):
+        """Calibrated: making the UPDATE unconditional fails this.
+
+        The stage is read before the lock, so two callers can both evaluate
+        the same gate as open. The UPDATE is conditional on the stage still
+        being what was evaluated, so the second one changes no row. Without
+        that, both write a gate decision for a boundary crossed once.
+        """
+        from src.townhall.plm import GateAlreadyPassed
+
+        item = _game(plm)
+        _pass(plm, item, "concept.business-case")
+        plm.advance(item.id, approver="tristuran")
+
+        # A caller holding the pre-advance view, replayed.
+        stale = plm.get(item.id)
+        object.__setattr__(stale, "stage", Stage.CONCEPT)
+        with pytest.raises(GateAlreadyPassed):
+            plm._advance_from(stale, approver="tristuran")
+
+        assert len(plm.history(item.id)) == 1
+
+    def test_a_refused_second_advance_does_not_move_the_stage(self, plm):
+        from src.townhall.plm import GateAlreadyPassed
+
+        item = _game(plm)
+        _pass(plm, item, "concept.business-case")
+        plm.advance(item.id, approver="tristuran")
+        stale = plm.get(item.id)
+        object.__setattr__(stale, "stage", Stage.CONCEPT)
+        with pytest.raises(GateAlreadyPassed):
+            plm._advance_from(stale, approver="tristuran")
+        assert plm.get(item.id).stage is Stage.INITIATION
+
+    def test_events_use_the_enum_not_parallel_string_literals(self):
+        """Calibrated: reverting to raw strings fails this.
+
+        The enum is the bus's canonical naming. A producer holding its own
+        copies lets the two drift, and a rename in one silences the other
+        with no error.
+        """
+        source = (
+            __import__("pathlib").Path(__file__).resolve().parent.parent / "src/townhall/plm.py"
+        ).read_text()
+        assert '_emit("plm.' not in source
+        assert source.count("PlatformEventType.PLM_") == 6
+
+    def test_every_plm_event_member_is_actually_emitted(self):
+        """A member nothing emits is a name, not an event."""
+        import re
+
+        from src.event_bus.types import PlatformEventType
+
+        source = (
+            __import__("pathlib").Path(__file__).resolve().parent.parent / "src/townhall/plm.py"
+        ).read_text()
+        emitted = set(re.findall(r"PlatformEventType\.(PLM_\w+)", source))
+        declared = {m.name for m in PlatformEventType if m.name.startswith("PLM_")}
+        assert declared == emitted

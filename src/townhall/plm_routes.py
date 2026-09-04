@@ -102,6 +102,8 @@ async def submit_evidence(
         raise HTTPException(404, f"no deliverable {deliverable_id!r}") from exc
     except UnknownCriterionError as exc:
         raise HTTPException(400, f"no criterion {criterion_id!r}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     return ev.to_dict()
 
 

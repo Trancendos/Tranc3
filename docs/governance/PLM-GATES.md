@@ -12,8 +12,8 @@ is raised in The Town Hall as a lifecycle record and moves through the
 stages below in order. A stage boundary is a gate.
 
 A gate opens only when every mandatory criterion for that deliverable's
-kind carries **passing** evidence. Three consequences follow, and they
-are the whole point of the control:
+kind carries **passing** evidence, or an approved waiver. Three
+consequences follow, and they are the whole point of the control:
 
 1. **Evidence that failed does not satisfy a criterion.** A test suite
    that ran and went red is evidence against the gate. The most recent
@@ -156,4 +156,4 @@ All paths are relative to the platform API.
 - Leaving **validation** needs: `validation.tested`
 - Leaving **release** needs: `release.documented`, `release.authorised`
 
-Which is why a request to make a game cannot reach release without Fabulousa having reviewed its design and audited its accessibility, Cryptex having scanned its build, The Chaos Party having tested it, and The Library holding its documentation.
+Read that as boundaries, not as a checklist: each line is what the deliverable needs to *leave* that stage. So a game cannot reach the release stage at all without a business case, initiation approval, Fabulousa's design review and accessibility audit, an Artifactory build and Cryptex's scan, and The Chaos Party's test run — and it cannot leave release without The Library holding its documentation and The Town Hall approving the release itself.
