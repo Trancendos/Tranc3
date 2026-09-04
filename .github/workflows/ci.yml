@@ -145,6 +145,18 @@ jobs:
       - name: DVMS surface ownership
         run: python scripts/check_surface_ownership.py
 
+      # .trivyignore silences findings in three scanners at once, and a bare id
+      # on a line is valid Trivy syntax. This requires every entry to carry a
+      # written justification, a re-check trigger, and -- for a vulnerability
+      # id -- a matching record in the accepted-risk register, so a suppression
+      # stays a decision rather than becoming a blind spot. Two of the four
+      # existing entries had no trigger when this was added.
+      # Offline only: the upstream OSV check is opt-in and runs on the Trivy
+      # schedule, because a gate whose verdict depends on a third party's
+      # uptime fails for reasons unrelated to the tree.
+      - name: Trivy suppression governance
+        run: python scripts/check_trivyignore_governance.py
+
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
       # rejects a config from a different one, so every

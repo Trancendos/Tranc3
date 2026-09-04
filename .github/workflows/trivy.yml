@@ -42,6 +42,33 @@ jobs:
           restore-keys: |
             trivy-db-${{ runner.os }}-
 
+  # Every entry in .trivyignore suppresses a finding on a claim about the world
+  # -- most often "no fixed release exists". That claim expires the day one
+  # ships, and nothing was asking. This does, weekly, against OSV.
+  #
+  # It reports and does not fail. A published fix is a prompt to take it or to
+  # rewrite the entry saying why it does not apply, not a broken build -- and a
+  # scheduled job whose verdict depends on somebody else's API uptime would
+  # otherwise go red for reasons that have nothing to do with this repository.
+  # The offline half of the same checker IS a gate, and runs in ci.yml.
+  suppression-freshness:
+    name: Trivy suppression freshness
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+
+      - name: Ask OSV whether any suppression has expired
+        run: python scripts/check_trivyignore_governance.py --check-upstream
+
   trivy-config:
     name: Trivy Misconfiguration Scan
     runs-on: ubuntu-latest
