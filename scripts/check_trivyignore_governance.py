@@ -166,7 +166,9 @@ def _justification_problems(number: int, entry: str, block: list[str]) -> list[s
     # A malformed value satisfies the trigger check (the words "Review-By" are
     # present) and then never reaches the date check, so `Review-By: soon` and
     # `Review-By:` both read as a dated suppression that is not one.
-    if REVIEW_BY_LABEL.search(prose) and not REVIEW_BY.search(prose):
+    if REVIEW_BY_LABEL.search(prose) and not re.search(
+        r"Review-By:\s*\d{4}-\d{2}-\d{2}(?![\w-])", prose, re.IGNORECASE
+    ):
         problems.append(
             f".trivyignore:{number} has a Review-By for {entry} that is not an ISO date "
             "(YYYY-MM-DD) — a date nothing can compare is not a review date"
