@@ -19,29 +19,36 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
+from src.observability.observatory import EventCategory, EventSeverity
+
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from fastapi import Request
 
-    from src.observability.observatory import EventCategory, EventSeverity
-
-# Neither `fastapi` nor The Observatory is imported at module level. This
-# module's validators are small pure functions used by CI scripts and by
-# workers whose build context excludes the web framework, and a top-level
-# `from fastapi import Request` made all of them unimportable without it —
-# which is how the backlog generator came to fail on a GitHub runner that
-# installs only PyYAML and pydantic.
+# `fastapi` is NOT imported at module level. This module's validators are
+# small pure functions used by CI scripts and by workers whose build context
+# excludes the web framework, and a top-level `from fastapi import Request`
+# made all of them unimportable without it — which is how the backlog
+# generator came to fail on a GitHub runner that installs only PyYAML and
+# pydantic. `audit_action` needs the real class at request time and imports
+# it inside the wrapper; `from __future__ import annotations` keeps the
+# annotation a string, so nothing else needs it.
 #
-# Moving the pure functions into `primitives.py` was only half the fix. The
-# four modules that import them from *here* — `src/auth/db_user_manager.py`,
+# The Observatory import above IS at module level, and deliberately so.
+# Moving the pure validators into `primitives.py` was only half that fix:
+# the four modules importing them from *here* — `src/auth/db_user_manager.py`,
 # `src/relations/registry.py`, `src/notebooks/registry.py` and
-# `src/roles/registry.py` — still executed this module, and the
-# `EventCategory`/`EventSeverity` import at the top of it still ended at
-# `aiohttp` and `structlog`. So the re-export below did not make this module
-# importable without the chain; it only meant no caller had to change its
-# import line. The enum import is now deferred to `decorator()`, which runs
-# when a route module applies `@audit_action` — and a route module has
-# FastAPI and The Observatory by definition. `from __future__ import
-# annotations` keeps every annotation a string, so nothing else needs them.
+# `src/roles/registry.py` — still executed this module, and this import
+# still ended at `aiohttp` and `structlog`. Deferring it into `decorator()`
+# fixed that but broke the public signature: with the enums out of the
+# module namespace, `typing.get_type_hints(audit_action)` raised NameError,
+# because `EventCategory` in the annotation no longer resolved.
+#
+# Both are fixed at the actual source. `observatory.py` is standard library
+# plus one in-repo helper; the weight was entirely in `src/observability/
+# __init__.py`, which eagerly imported metrics, tracing and health to offer
+# 25 convenience names that nothing in the repository imports. Those are now
+# resolved on demand (PEP 562), so this import costs what it always looked
+# like it cost, and the annotations resolve at runtime again.
 
 # The pure validators live in `primitives.py` so they can be imported without
 # this module's FastAPI and Observatory chain — which ends at aiohttp and
@@ -73,8 +80,8 @@ __all__ = [
 def audit_action(
     event_type: str,
     *,
-    category: Optional["EventCategory"] = None,
-    severity: Optional["EventSeverity"] = None,
+    category: EventCategory = EventCategory.DATA,
+    severity: EventSeverity = EventSeverity.INFO,
     service: str = "tranc3-backend",
     target_fn: Optional[Callable[..., str]] = None,
 ) -> Callable:
@@ -87,28 +94,13 @@ def audit_action(
 
     Args:
         event_type: dot-notation event identifier, e.g. "secret.retrieve"
-        category: Observatory EventCategory; None means EventCategory.DATA
-        severity: Observatory EventSeverity; None means EventSeverity.INFO
+        category: Observatory EventCategory
+        severity: Observatory EventSeverity
         service: Trancendos service name
         target_fn: Optional callable(kwargs) → str to derive the target from route args
     """
 
     def decorator(fn: Callable) -> Callable:
-        # Resolved here, not in the signature: a default of
-        # `EventCategory.DATA` would need the enum at *this* module's import
-        # time, which is exactly the dependency chain this module now avoids.
-        # `decorator` runs when a route module applies the decorator, and a
-        # route module already imports The Observatory.
-        from src.observability.observatory import (  # noqa: PLC0415
-            EventCategory as _EventCategory,
-        )
-        from src.observability.observatory import (  # noqa: PLC0415
-            EventSeverity as _EventSeverity,
-        )
-
-        resolved_category = _EventCategory.DATA if category is None else category
-        resolved_severity = _EventSeverity.INFO if severity is None else severity
-
         @functools.wraps(fn)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             from fastapi import Request  # noqa: PLC0415 - see the note above
@@ -150,8 +142,8 @@ def audit_action(
                         actor=actor,
                         actor_ip=actor_ip,
                         target=target,
-                        category=resolved_category,
-                        severity=resolved_severity,
+                        category=category,
+                        severity=severity,
                         service=service,
                         outcome=outcome,
                         session_id=session_id,

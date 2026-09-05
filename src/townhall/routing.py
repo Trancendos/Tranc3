@@ -409,8 +409,19 @@ def load_decisions(path: Path | str | None = None) -> dict[str, dict[str, str]]:
             # or one carrying an injection pattern is refused there, and an
             # export is exactly the surface where such a value arrives by
             # hand rather than through the route that validates it.
+            #
+            # The normalized value is assigned back, not discarded.
+            # `_checked` strips, exactly as `route()` does before it stores,
+            # so a decision exported and then hand-indented — or one whose
+            # YAML block scalar carries a trailing newline — kept its
+            # whitespace here while `route()` would have removed it. The
+            # consequences were both directions of wrong: `"  Cryptex  "`
+            # is not in `PLATFORM_ENTITIES`, so a valid decision was
+            # *rejected*; and a padded `item_key` never matches the
+            # `source:line` the backlog looks up, so a valid decision was
+            # silently *ignored*.
             try:
-                _checked(required, value)
+                entry[required] = _checked(required, value)
             except ValueError as exc:
                 raise InvalidExport(f"{where}: {exc}") from exc
         location = entry["location"]

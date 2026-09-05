@@ -142,17 +142,23 @@ def _reraises(handler: ast.ExceptHandler) -> bool:
 
 
 def _same_scope(node: ast.AST) -> Iterator[ast.AST]:
-    """Every node reachable from `node` without entering a nested scope.
+    """Every node reachable from `node` that runs when `node` runs.
 
-    A `def`, `async def`, `class` or `lambda` inside an except handler opens
-    a new scope: its body does not run when the handler runs, so nothing in
-    it can re-raise the exception being handled.
+    A `def`, `async def` or `lambda` inside an except handler is deferred:
+    its body does not run when the handler runs, so nothing in it can
+    re-raise the exception being handled.
+
+    A **class body is not deferred.** `class Fallback: raise RuntimeError`
+    inside a handler executes the moment the `class` statement is reached,
+    and the raise propagates. Skipping `ast.ClassDef` here therefore read a
+    handler that does re-raise as one that swallows, and marked a required
+    dependency optional — the same class of miss this function was added to
+    close, one construct over. `check_import_time_filesystem.py` already
+    states the rule correctly for the import-time case; this file had it
+    backwards.
     """
     for child in ast.iter_child_nodes(node):
-        if isinstance(
-            child,
-            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda),
-        ):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
             continue
         yield child
         yield from _same_scope(child)
