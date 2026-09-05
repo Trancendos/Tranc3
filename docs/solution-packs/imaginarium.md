@@ -182,6 +182,7 @@ has to name.
     environment: [ PORT=8064 ]
     ports: [ "8064:8064" ]
     labels:
+      - "traefik.http.routers.imaginarium.rule=Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`)"
       - "traefik.http.routers.imaginarium.middlewares=strip-imaginarium@docker"
       - "traefik.http.middlewares.strip-imaginarium.stripprefix.prefixes=/imaginarium"
 ```

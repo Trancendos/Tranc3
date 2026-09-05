@@ -182,6 +182,7 @@ has to name.
     environment: [ PORT=8073 ]
     ports: [ "8073:8073" ]
     labels:
+      - "traefik.http.routers.warp-radio.rule=Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`)"
       - "traefik.http.routers.warp-radio.middlewares=strip-warp-radio@docker"
       - "traefik.http.middlewares.strip-warp-radio.stripprefix.prefixes=/warp-radio"
 ```

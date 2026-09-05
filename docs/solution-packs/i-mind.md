@@ -54,7 +54,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/i-mind` routing; without the middleware
+- **Traefik `stripprefix` is mandatory** for `/imind` routing; without the middleware
   the router matches and the worker 404s on every path. This has bitten the estate
   before (resonate, imind).
 
@@ -101,7 +101,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /i-mind
+1. Request arrives  →  Traefik strips /imind
 2. The Counselor — Leads reflection sessions, parsing input to measure emotional fatigue.
 3. The Listener — Passively monitors workspace text patterns for high stress or frustration.
 4. Bots fire: Journal-Bot, Mood-Bot, Reflect-Bot, Soothe-Bot
@@ -182,8 +182,9 @@ has to name.
     environment: [ PORT=8075 ]
     ports: [ "8075:8075" ]
     labels:
-      - "traefik.http.routers.i-mind.middlewares=strip-i-mind@docker"
-      - "traefik.http.middlewares.strip-i-mind.stripprefix.prefixes=/i-mind"
+      - "traefik.http.routers.imind.rule=Host(`imind.trancendos.com`) && PathPrefix(`/imind`)"
+      - "traefik.http.routers.imind.middlewares=strip-imind@docker"
+      - "traefik.http.middlewares.strip-imind.stripprefix.prefixes=/imind"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -193,7 +194,7 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/i-mind` reach the worker with the prefix stripped.
+- As a client, requests to `/imind` reach the worker with the prefix stripped.
 - As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities

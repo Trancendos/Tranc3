@@ -141,7 +141,12 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
     # ("routes are added dynamically by routers") was also the reason the
     # read could not have worked: FastAPI 0.141 keeps a router's routes
     # behind a lazy marker, so `app.routes` would not have shown them anyway.
-    if not hasattr(mod, "app") and not hasattr(mod, "get_app"):
+    # `app`, specifically: every path below builds TestClient(mod.app). An
+    # earlier version also accepted `get_app`, which no worker in ALL_WORKERS
+    # defines — so a worker with only `get_app` would have passed this guard
+    # and then died on `mod.app` with an AttributeError instead of the
+    # assertion written for it.
+    if not hasattr(mod, "app"):
         raise AssertionError(f"Worker {module_name} missing 'app' attribute")
 
     # Set up test client with patched database if needed

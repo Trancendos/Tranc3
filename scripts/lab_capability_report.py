@@ -86,13 +86,34 @@ def final_stage(dockerfile: str) -> str:
     return "\n".join(lines[starts[-1] :])
 
 
-def _base_binaries(dockerfile: str) -> set[str]:
-    """The final stage's own base, plus any toolchain image it copies from.
+#: Paths that, when copied wholesale from a toolchain image, actually bring
+#: its executables with them. Anything narrower copies data, not tools.
+_TOOLCHAIN_ROOTS = ("/", "/usr", "/usr/local", "/usr/bin", "/usr/local/bin", "/bin")
 
-    `COPY --from=<image>` in the final stage does put that image's contents
-    into the shipped one, so a recognised toolchain image counts. A
-    `--from=<earlier stage>` names a stage rather than an image and matches
-    nothing, which errs toward under-reporting.
+
+def _copies_the_toolchain(source_paths: list[str]) -> bool:
+    """Does this COPY bring the source image's executables across?
+
+    `COPY --from=golang:1.22 /app/binary /app/binary` copies one file. It
+    does not put `go` and `gofmt` in the shipped image, and crediting them
+    because the source image happens to contain them is the over-claim this
+    whole report exists to prevent — reintroduced through the back door.
+    """
+    return any(
+        path.rstrip("/") in {root.rstrip("/") for root in _TOOLCHAIN_ROOTS}
+        or path.rstrip("/") == ""
+        for path in source_paths
+    )
+
+
+def _base_binaries(dockerfile: str) -> set[str]:
+    """The final stage's own base, plus a toolchain image it copies wholesale.
+
+    `COPY --from=<image> <src> <dst>` only puts `<src>` into the shipped
+    image. A narrow source copies data; only a copy rooted at a toolchain
+    directory brings the executables. A `--from=<earlier stage>` names a
+    stage rather than an image and matches no known base, which errs toward
+    under-reporting.
     """
     stage = final_stage(dockerfile)
     found: set[str] = set()
@@ -101,9 +122,11 @@ def _base_binaries(dockerfile: str) -> set[str]:
         if stripped.upper().startswith("FROM "):
             found |= _image_binaries(line.split()[1])
             continue
-        match = re.search(r"COPY\s+--from=(\S+)", stripped, re.IGNORECASE)
+        match = re.search(r"COPY\s+--from=(\S+)\s+(.*)$", stripped, re.IGNORECASE)
         if match:
-            found |= _image_binaries(match.group(1))
+            sources = [t for t in match.group(2).split() if not t.startswith("--")][:-1]
+            if _copies_the_toolchain(sources):
+                found |= _image_binaries(match.group(1))
     return found
 
 
@@ -125,18 +148,31 @@ def _apt_binaries(dockerfile: str) -> set[str]:
     return found
 
 
+#: `pip install -r requirements.txt`, in any of its spellings.
+_REQUIREMENTS_INSTALL = re.compile(r"pip\s+install\b[^\n&|]*?(?:-r|--requirement)\s+\S*\.txt")
+
+
 def _pip_binaries(dockerfile: str, requirements: str) -> set[str]:
+    """Console scripts pip puts on PATH — in the FINAL stage only.
+
+    requirements.txt is credited only when the final stage actually installs
+    from it. A multi-stage build that pip-installs in a discarded builder
+    ships none of those tools, and crediting the file regardless would report
+    verification tiers for a toolchain the running container does not have.
+    """
+    stage = final_stage(dockerfile)
     found: set[str] = set()
     names: set[str] = set()
-    for match in re.finditer(r"pip\s+install\s+([^\n&|]+)", final_stage(dockerfile)):
+    for match in re.finditer(r"pip\s+install\s+([^\n&|]+)", stage):
         for token in match.group(1).split():
             if token.startswith("-") or token.endswith(".txt"):
                 continue
             names.add(re.split(r"[=<>\[]", token)[0].strip().lower())
-    for line in requirements.splitlines():
-        line = line.split("#")[0].strip()
-        if line and not line.startswith("-"):
-            names.add(re.split(r"[=<>\[]", line)[0].strip().lower())
+    if _REQUIREMENTS_INSTALL.search(stage):
+        for line in requirements.splitlines():
+            line = line.split("#")[0].strip()
+            if line and not line.startswith("-"):
+                names.add(re.split(r"[=<>\[]", line)[0].strip().lower())
     for name in names:
         found.update(_PIP_CONSOLE_SCRIPTS.get(name, ()))
     return found

@@ -49,13 +49,13 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/ice-box-service`**, so `src/` is *not* in the image. This Location
-  cannot `from src.* import ...` — ported logic must be self-contained. This is the
-  single most common cause of a worker that passes tests and dies in the container.
+- **Build context is `.`** (the repo root), so `src/` *is* in the image and
+  this worker's Dockerfile may COPY from it. Narrowing the context to the worker
+  directory would break the build — check the Dockerfile before changing it.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/the-ice-box` routing; without the middleware
+- **Traefik `stripprefix` is mandatory** for `/ice-box` routing; without the middleware
   the router matches and the worker 404s on every path. This has bitten the estate
   before (resonate, imind).
 
@@ -102,7 +102,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /the-ice-box
+1. Request arrives  →  Traefik strips /ice-box
 2. The Jailer — Manages secure quarantine zones, keeping malicious payloads isolated.
 3. The Interrogator — Triggers/monitors quarantine code execution to document behaviors.
 4. Bots fire: Frostbite-Bot, Icicle-Bot, Glacier-Bot, Permafrost-Bot
@@ -179,12 +179,13 @@ has to name.
 
 ```yaml
   ice-box-service:
-    build: { context: ./workers/ice-box-service, dockerfile: Dockerfile }
+    build: { context: ., dockerfile: workers/ice-box-service/Dockerfile }
     environment: [ PORT=8046 ]
     ports: [ "8046:8046" ]
     labels:
-      - "traefik.http.routers.the-ice-box.middlewares=strip-the-ice-box@docker"
-      - "traefik.http.middlewares.strip-the-ice-box.stripprefix.prefixes=/the-ice-box"
+      - "traefik.http.routers.ice-box-service.rule=Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`)"
+      - "traefik.http.routers.ice-box-service.middlewares=strip-ice-box@docker"
+      - "traefik.http.middlewares.strip-ice-box.stripprefix.prefixes=/ice-box"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -194,7 +195,7 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/the-ice-box` reach the worker with the prefix stripped.
+- As a client, requests to `/ice-box` reach the worker with the prefix stripped.
 - As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities

@@ -75,6 +75,19 @@ class Joined:
     oss_licence: str = ""
     compose_service: str = ""
     traefik_rule: str = ""
+    #: The router's name in compose, and its stripprefix middleware if any.
+    #: The scaffold below uses these rather than the Location's slug: the two
+    #: differ for eight Locations (`the-ice-box` vs `ice-box-service`,
+    #: `fabulousa` vs `fabulousa-service`, …), and a template built on the
+    #: slug wires a middleware to a router that does not exist.
+    traefik_router: str = ""
+    traefik_strip: str = ""
+    #: The build context and Dockerfile compose actually uses. Inferring the
+    #: context from the worker directory was wrong for every service built
+    #: with `context: .` — ice-box's Dockerfile COPYs `src/`, so the inferred
+    #: `./workers/ice-box-service` context would fail the build outright.
+    build_context: str = ""
+    build_dockerfile: str = ""
     compose_port: str = ""
     volumes: list[str] = None
     priority: str = ""
@@ -143,12 +156,32 @@ def parse_compose() -> dict:
         m = re.match(r"^  ([a-z0-9][a-z0-9_-]*):\s*$", line)
         if m:
             current = m.group(1)
-            services[current] = {"traefik": "", "port": "", "volumes": []}
+            services[current] = {
+                "traefik": "",
+                "router": "",
+                "strip": "",
+                "port": "",
+                "context": "",
+                "dockerfile": "",
+                "volumes": [],
+            }
             continue
         if not current:
             continue
         if "rule=" in line and "routers." in line:
             services[current]["traefik"] = line.split("rule=", 1)[1].strip().rstrip('"')
+            router = re.search(r"routers\.([A-Za-z0-9_.-]+)\.rule", line)
+            if router:
+                services[current]["router"] = router.group(1)
+        ctx = re.match(r"^\s+context:\s*(\S+)\s*$", line)
+        if ctx and not services[current]["context"]:
+            services[current]["context"] = ctx.group(1)
+        dkf = re.match(r"^\s+dockerfile:\s*(\S+)\s*$", line)
+        if dkf and not services[current]["dockerfile"]:
+            services[current]["dockerfile"] = dkf.group(1)
+        strip = re.search(r"middlewares\.([A-Za-z0-9_.-]+)\.stripprefix\.prefixes=(\S+)", line)
+        if strip:
+            services[current]["strip"] = f"{strip.group(1)}|{strip.group(2).rstrip(chr(34))}"
         pm = re.search(r'^\s+- "(\d+):(\d+)"', line)
         if pm:
             services[current]["port"] = pm.group(1)
@@ -185,6 +218,10 @@ def join_entity(name: str, ent, entity_md, priority_md, oss_md, compose) -> Join
         if c in compose:
             j.compose_service = c
             j.traefik_rule = compose[c]["traefik"]
+            j.traefik_router = compose[c]["router"]
+            j.traefik_strip = compose[c]["strip"]
+            j.build_context = compose[c]["context"]
+            j.build_dockerfile = compose[c]["dockerfile"]
             j.compose_port = compose[c]["port"]
             j.volumes = compose[c]["volumes"]
             break
@@ -331,6 +368,15 @@ def render_pack(
     agents = [ent.agent_alpha, ent.agent_beta]
     bots = [ent.bot_01, ent.bot_02, ent.bot_03, ent.bot_04]
     sl = slug(name)
+    # Routing names come from compose when compose has them. The Location's
+    # slug and its deployed router name differ for several Locations —
+    # `the-ice-box` vs `ice-box-service`, `fabulousa` vs `fabulousa-service`,
+    # `/the-warp-tunnel` vs `/warp-tunnel` — and a scaffold built on the slug
+    # attaches a middleware to a router that does not exist, or strips a
+    # prefix the router never matches. Both produce a 404 that looks like a
+    # code fault, which is the exact failure this pack warns about elsewhere.
+    router_name, strip_name, route_prefix = route_names(j, sl)
+    dockerfile = j.build_dockerfile or "Dockerfile"
 
     L: list[str] = []
     add = L.append
@@ -402,23 +448,41 @@ def render_pack(
     add("")
     add("**Hard constraints — these come from the estate, not from preference.**")
     add("")
-    ctx = (
+    # DERIVED from compose where compose says; inferred only where it is
+    # silent. Inferring it unconditionally produced a template that fails the
+    # build for every service compose builds with `context: .` — ice-box's
+    # Dockerfile COPYs `src/`, which a worker-directory context does not hold.
+    ctx = j.build_context or (
         f"./{ent.worker_path.rstrip('/')}"
         if ent.worker_path and ent.worker_path.startswith("workers/")
         else "."
     )
-    if ent.worker_path and ent.worker_path.startswith("workers/"):
+    if ctx not in (".", "./") and ent.worker_path and ent.worker_path.startswith("workers/"):
         add(f"- **Build context is `{ctx}`**, so `src/` is *not* in the image. This Location")
         add("  cannot `from src.* import ...` — ported logic must be self-contained. This is the")
         add("  single most common cause of a worker that passes tests and dies in the container.")
+    elif ent.worker_path and ent.worker_path.startswith("workers/"):
+        add(f"- **Build context is `{ctx}`** (the repo root), so `src/` *is* in the image and")
+        add("  this worker's Dockerfile may COPY from it. Narrowing the context to the worker")
+        add("  directory would break the build — check the Dockerfile before changing it.")
     else:
         add(f"- Runs in-process under `api.py` (path `{ent.worker_path or 'n/a'}`), so it *may*")
         add("  import from `src/` — but that also means it shares the backend's failure domain.")
     add("- **SQLite over shared state** — each worker owns its own database file (principle 1).")
     add("- **In-memory token-bucket rate limiting** — no external KV (principle 2).")
     add("- **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.")
-    if j.traefik_rule:
-        add(f"- **Traefik `stripprefix` is mandatory** for `/{sl}` routing; without the middleware")
+    if j.traefik_rule and not j.traefik_strip:
+        add(f"- **No `stripprefix` on `{route_prefix}`** — and that is deliberate: this")
+        add(
+            "  worker serves the prefixed paths itself, so stripping would route "
+            f"`{route_prefix}/x`"
+        )
+        add("  to `/x`, which it does not serve. Adding the middleware would break it.")
+    elif j.traefik_rule:
+        add(
+            f"- **Traefik `stripprefix` is mandatory** for `{route_prefix}` routing; "
+            "without the middleware"
+        )
         add("  the router matches and the worker 404s on every path. This has bitten the estate")
         add("  before (resonate, imind).")
     add("")
@@ -478,7 +542,10 @@ def render_pack(
     add("journey once a user has actually walked it.")
     add("")
     add("```")
-    add(f"1. Request arrives  →  {'Traefik strips /' + sl if j.traefik_rule else 'api.py routes'}")
+    add(
+        f"1. Request arrives  →  "
+        f"{'Traefik strips ' + route_prefix if j.traefik_rule else 'api.py routes'}"
+    )
     add(f"2. {agents[0].code_name} — {agents[0].description}")
     add(f"3. {agents[1].code_name} — {agents[1].description}")
     add(f"4. Bots fire: {', '.join(b.code_name for b in bots)}")
@@ -573,13 +640,18 @@ def render_pack(
     add("")
     add("```yaml")
     add(f"  {j.compose_service or sl}:")
-    add(f"    build: {{ context: {ctx}, dockerfile: Dockerfile }}")
+    add(f"    build: {{ context: {ctx}, dockerfile: {dockerfile} }}")
     add(f"    environment: [ PORT={port or 'TBD'} ]")
     add(f'    ports: [ "{port or "TBD"}:{port or "TBD"}" ]')
     if j.traefik_rule:
         add("    labels:")
-        add(f'      - "traefik.http.routers.{sl}.middlewares=strip-{sl}@docker"')
-        add(f'      - "traefik.http.middlewares.strip-{sl}.stripprefix.prefixes=/{sl}"')
+        add(f'      - "traefik.http.routers.{router_name}.rule={j.traefik_rule}"')
+        if j.traefik_strip:
+            add(f'      - "traefik.http.routers.{router_name}.middlewares={strip_name}@docker"')
+            add(
+                f'      - "traefik.http.middlewares.{strip_name}.stripprefix.'
+                f'prefixes={route_prefix}"'
+            )
     add("```")
     add("")
 
@@ -669,7 +741,25 @@ def render_pack(
     return _document(L)
 
 
+def route_names(j: "Joined", sl: str) -> tuple[str, str, str]:
+    """(router, stripprefix middleware, path prefix) — from compose where it says.
+
+    The Location's slug and its deployed router name differ for several
+    Locations, and a scaffold built on the slug wires a middleware to a
+    router that does not exist or strips a prefix the router never matches.
+    Either way the worker 404s, which is the failure these packs warn about.
+    """
+    router = j.traefik_router or sl
+    if j.traefik_strip:
+        strip, prefix = j.traefik_strip.split("|", 1)
+        return router, strip, prefix
+    match = re.search(r"PathPrefix\(`([^`]+)`\)", j.traefik_rule or "")
+    prefix = match.group(1) if match else f"/{sl}"
+    return router, f"strip-{prefix.lstrip('/')}", prefix
+
+
 def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
+    _, _, route_prefix = route_names(j, slug(name))
     e: list[tuple[str, list[str]]] = []
     if not j.path_exists:
         e.append(
@@ -698,7 +788,8 @@ def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
             (
                 "Verify routing end to end",
                 [
-                    f"As a client, requests to `/{slug(name)}` reach the worker with the prefix stripped.",
+                    f"As a client, requests to `{route_prefix}` reach the worker "
+                    "with the prefix stripped.",
                     "As a reviewer, a stripprefix middleware exists and is referenced by the router.",
                 ],
             )

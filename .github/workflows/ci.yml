@@ -245,6 +245,16 @@ jobs:
       - name: Documentation links resolve
         run: python scripts/check_doc_links.py
 
+      # The CMDB register and the canonical entity register had parted on 22
+      # of 43 Locations. Six Creativity Locations all claimed `src/studio/`, a
+      # router recorded as unmounted and removed; worse, four named a
+      # different LIVE service — The Void at config-service, Cryptex at
+      # rate-limit-service, Section 7 at geo-service, DevOcity at
+      # health-aggregator. A configuration item pointing at another service's
+      # code answers every dependency question about the wrong thing.
+      - name: CMDB and entity registers agree
+        run: python scripts/check_id_registry_alignment.py
+
       # Two documents claiming to be the same thing drift, and each stays blind
       # to the other. `SECURITY_ALERT_REGISTER.md` (read by security_score.py)
       # had a wiki copy that carried two advisories the canonical register had

@@ -44,13 +44,33 @@ TESTS = REPO / "tests"
 _EXEMPT = {"tests/support/routes.py", "tests/test_route_surface.py"}
 
 
-def _reads_app_routes(node: ast.AST) -> bool:
-    """`<anything ending in `app`>.routes` — bare, `api.app`, `mod.app`."""
-    if not (isinstance(node, ast.Attribute) and node.attr == "routes"):
-        return False
-    base = node.value
-    name = getattr(base, "id", None) or getattr(base, "attr", None)
+def _is_app(node: ast.AST) -> bool:
+    """Does this expression name something called `app`?"""
+    name = getattr(node, "id", None) or getattr(node, "attr", None)
     return name == "app"
+
+
+def _reads_app_routes(node: ast.AST) -> bool:
+    """`app.routes`, however it is spelled.
+
+    Covers the direct attribute — bare, `api.app`, `mod.app` — and
+    `getattr(app, "routes")`, which reaches the same object and would
+    otherwise walk straight past a check that only looked for attributes.
+    A guard with a documented spelling is a guard with a documented bypass.
+    """
+    if isinstance(node, ast.Attribute) and node.attr == "routes":
+        return _is_app(node.value)
+    if isinstance(node, ast.Call):
+        func = node.func
+        if (getattr(func, "id", None) or getattr(func, "attr", None)) != "getattr":
+            return False
+        if len(node.args) < 2:
+            return False
+        target, attribute = node.args[0], node.args[1]
+        return (
+            _is_app(target) and isinstance(attribute, ast.Constant) and attribute.value == "routes"
+        )
+    return False
 
 
 def offenders() -> list[str]:

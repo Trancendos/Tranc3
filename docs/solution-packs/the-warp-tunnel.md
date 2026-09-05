@@ -54,7 +54,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/the-warp-tunnel` routing; without the middleware
+- **Traefik `stripprefix` is mandatory** for `/warp-tunnel` routing; without the middleware
   the router matches and the worker 404s on every path. This has bitten the estate
   before (resonate, imind).
 
@@ -101,7 +101,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /the-warp-tunnel
+1. Request arrives  →  Traefik strips /warp-tunnel
 2. The Warden — Oversees integrity scans for mutated or corrupted system files.
 3. The Inspector — Compares active database hashes against secure Lighthouse standards.
 4. Bots fire: Scan-Bot, Sniffer-Bot, Beam-Bot, Portal-Bot
@@ -182,8 +182,9 @@ has to name.
     environment: [ PORT=8072 ]
     ports: [ "8072:8072" ]
     labels:
-      - "traefik.http.routers.the-warp-tunnel.middlewares=strip-the-warp-tunnel@docker"
-      - "traefik.http.middlewares.strip-the-warp-tunnel.stripprefix.prefixes=/the-warp-tunnel"
+      - "traefik.http.routers.warp-tunnel.rule=Host(`warp-tunnel.trancendos.com`) && PathPrefix(`/warp-tunnel`)"
+      - "traefik.http.routers.warp-tunnel.middlewares=strip-warp-tunnel@docker"
+      - "traefik.http.middlewares.strip-warp-tunnel.stripprefix.prefixes=/warp-tunnel"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -193,7 +194,7 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/the-warp-tunnel` reach the worker with the prefix stripped.
+- As a client, requests to `/warp-tunnel` reach the worker with the prefix stripped.
 - As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities

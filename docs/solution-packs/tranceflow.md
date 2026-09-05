@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/tranceflow` routing; without the middleware
-  the router matches and the worker 404s on every path. This has bitten the estate
-  before (resonate, imind).
+- **No `stripprefix` on `/tranceflow`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/tranceflow/x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -183,8 +183,7 @@ has to name.
     environment: [ PORT=8059 ]
     ports: [ "8059:8059" ]
     labels:
-      - "traefik.http.routers.tranceflow.middlewares=strip-tranceflow@docker"
-      - "traefik.http.middlewares.strip-tranceflow.stripprefix.prefixes=/tranceflow"
+      - "traefik.http.routers.tranceflow.rule=Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD

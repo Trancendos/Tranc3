@@ -113,6 +113,67 @@ class TestWhatCountsAsAnImportTimeWrite:
         assert "/data" in found[0]
 
 
+class TestTheShapesItMustNotMiss:
+    """Every way the estate can write at import, and one it must not flag."""
+
+    def _scan(self, guard, source: str):
+        target = REPO / "logs" / "_import_write_probe.py"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source, encoding="utf-8")
+        try:
+            return guard.scan_file(target)
+        finally:
+            target.unlink()
+
+    def test_a_literal_receiver_is_seen(self, guard):
+        """Calibrated: resolving only named variables fails this.
+
+        `Path("/app/renders").mkdir()` anchors on a call, not a name, so a
+        scanner that looked up an assignment table found nothing and reported
+        the file clean.
+        """
+        found = self._scan(guard, 'from pathlib import Path\nPath("/app/renders").mkdir()\n')
+        assert len(found) == 1
+
+    def test_a_class_body_write_is_seen(self, guard):
+        """Calibrated: skipping ClassDef fails this.
+
+        A class body executes on import exactly as module level does.
+        Skipping it left a bypass that reads as perfectly ordinary code.
+        """
+        source = 'from pathlib import Path\nD = Path("/app/x")\nclass C:\n    D.mkdir()\n'
+        assert len(self._scan(guard, source)) == 1
+
+    def test_a_write_in_an_exception_handler_is_seen(self, guard):
+        """Calibrated: walking only body/orelse/finalbody fails this."""
+        source = (
+            'from pathlib import Path\nD = Path("/app/y")\n'
+            "try:\n    pass\nexcept OSError:\n    D.mkdir()\n"
+        )
+        assert len(self._scan(guard, source)) == 1
+
+    def test_an_open_for_writing_is_seen(self, guard):
+        """Calibrated: covering only pathlib methods fails this."""
+        assert len(self._scan(guard, 'f = open("/app/z.txt", "w")\n')) == 1
+
+    def test_an_open_inside_a_with_is_seen(self, guard):
+        source = 'with open("/app/w.txt", "a") as fh:\n    pass\n'
+        assert len(self._scan(guard, source)) == 1
+
+    def test_an_open_for_reading_is_not_flagged(self, guard):
+        """Calibrated: treating every open() as a write fails this.
+
+        Reading a file at import is ordinary and harmless. Flagging it would
+        make the gate noise, and noise is how a gate gets removed.
+        """
+        assert self._scan(guard, 'f = open("/app/r.txt")\n') == []
+
+    def test_a_function_body_write_is_still_not_flagged(self, guard):
+        """The remedy itself must not read as the defect."""
+        source = 'from pathlib import Path\nD = Path("/app/q")\ndef go():\n    D.mkdir()\n'
+        assert self._scan(guard, source) == []
+
+
 class TestTheRatchet:
     def test_a_new_write_fails(self, guard, monkeypatch, tmp_path):
         baseline = tmp_path / "baseline.json"

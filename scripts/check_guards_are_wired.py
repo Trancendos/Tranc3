@@ -37,6 +37,8 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 REPO = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO / "scripts"
 WORKFLOW_DIRS = (REPO / ".github" / "workflows", REPO / ".forgejo" / "workflows")
@@ -80,25 +82,59 @@ def discover_guards() -> list[str]:
     """Every script whose job is to fail when the tree is wrong."""
     guards = set()
     for path in sorted(SCRIPTS.glob("*.py")):
+        # This checker is NOT excluded. Excluding it was the first version,
+        # and it meant the one guard that detects an unwired guard could not
+        # detect its own — the failure mode it exists for, applied to itself.
         name = path.name
-        if name == Path(__file__).name:
-            continue
         if name.startswith("check_") or _accepts_check_flag(path):
             guards.add(name)
     return sorted(guards)
 
 
+def _run_bodies(workflow: dict) -> list[str]:
+    """Every `run:` shell body in a workflow, at any job."""
+    bodies: list[str] = []
+    for job in (workflow.get("jobs") or {}).values():
+        if not isinstance(job, dict):
+            continue
+        for step in job.get("steps") or []:
+            if isinstance(step, dict) and isinstance(step.get("run"), str):
+                bodies.append(step["run"])
+    return bodies
+
+
 def wired_guards() -> set[str]:
-    """Guard filenames named in a workflow step's shell body."""
+    """Guard filenames a workflow step actually executes.
+
+    Reads `run:` bodies, and within them the *invocation* shape
+    (`python scripts/<guard>`) rather than the bare filename. Searching the
+    whole file counted a guard as wired when a workflow merely named it in a
+    comment; searching the body alone still counted an `echo` that mentioned
+    it. Both are the defect this checker exists to catch, one level up: a
+    mention that looks like a control and runs nothing. The steps in this
+    estate carry long explanatory comments naming neighbouring guards, so
+    neither case was theoretical.
+
+    The honest limit: `echo "python scripts/x.py"` would still read as wired.
+    That is a contrived line nobody writes, and chasing it would mean parsing
+    shell rather than reading it.
+    """
+    guards = discover_guards()
     named: set[str] = set()
     for directory in WORKFLOW_DIRS:
         if not directory.is_dir():
             continue
-        for workflow in sorted(directory.glob("*.yml")) + sorted(directory.glob("*.yaml")):
-            text = workflow.read_text(encoding="utf-8")
-            for guard in discover_guards():
-                if f"scripts/{guard}" in text:
-                    named.add(guard)
+        for path in sorted(directory.glob("*.yml")) + sorted(directory.glob("*.yaml")):
+            try:
+                workflow = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            except yaml.YAMLError:
+                continue
+            if not isinstance(workflow, dict):
+                continue
+            for body in _run_bodies(workflow):
+                for guard in guards:
+                    if re.search(rf"python3?\s+(?:-\S+\s+)*scripts/{re.escape(guard)}\b", body):
+                        named.add(guard)
     return named
 
 

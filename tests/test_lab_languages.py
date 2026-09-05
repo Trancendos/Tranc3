@@ -222,6 +222,46 @@ class TestTheImageReport:
         )
         assert "shellcheck" in stage
 
+    def test_a_narrow_copy_from_does_not_credit_the_source_image(self):
+        """Calibrated: crediting every COPY --from fails this.
+
+        `COPY --from=golang:1.22 /app/binary /app/binary` copies one file. It
+        does not put `go` and `gofmt` in the shipped image, and crediting
+        them because the source image contains them is the same over-claim
+        this report exists to prevent, coming back through the back door.
+        """
+        dockerfile = "FROM python:3.11-slim\nCOPY --from=golang:1.22 /app/binary /app/binary\n"
+        assert not {"go", "gofmt"} & lab_capability_report._base_binaries(dockerfile)
+
+    def test_a_wholesale_copy_from_does_credit_it(self):
+        """Calibrated: refusing every COPY --from fails this.
+
+        A copy rooted at a toolchain directory genuinely does bring the
+        executables across, and under-reporting is a fault too.
+        """
+        dockerfile = "FROM python:3.11-slim\nCOPY --from=golang:1.22 /usr/local /usr/local\n"
+        assert {"go", "gofmt"} <= lab_capability_report._base_binaries(dockerfile)
+
+    def test_requirements_installed_only_in_a_builder_are_not_credited(self):
+        """Calibrated: parsing requirements unconditionally fails this.
+
+        Filtering the Dockerfile to its final stage does nothing for
+        requirements.txt, which was read whatever the stages said — so a
+        build installing them in a discarded builder still reported the
+        tools as present in the shipped image.
+        """
+        dockerfile = (
+            "FROM python:3.11-slim AS b\n"
+            "RUN pip install -r requirements.txt\n"
+            "FROM python:3.11-slim\n"
+            "COPY --from=b /app /app\n"
+        )
+        assert lab_capability_report._pip_binaries(dockerfile, "ruff==0.15.8\n") == set()
+
+    def test_requirements_installed_in_the_final_stage_are_credited(self):
+        dockerfile = "FROM python:3.11-slim\nRUN pip install --no-cache-dir -r requirements.txt\n"
+        assert lab_capability_report._pip_binaries(dockerfile, "ruff==0.15.8\n") == {"ruff"}
+
     def test_an_uninstalled_toolchain_is_not_claimed(self):
         """Calibrated: defaulting unknown binaries to present fails this."""
         toolchain = lab_capability_report.image_toolchain()

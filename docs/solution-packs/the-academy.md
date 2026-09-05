@@ -182,6 +182,7 @@ has to name.
     environment: [ PORT=8056 ]
     ports: [ "8056:8056" ]
     labels:
+      - "traefik.http.routers.the-academy.rule=Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`)"
       - "traefik.http.routers.the-academy.middlewares=strip-the-academy@docker"
       - "traefik.http.middlewares.strip-the-academy.stripprefix.prefixes=/the-academy"
 ```

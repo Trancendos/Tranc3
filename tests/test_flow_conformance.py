@@ -23,6 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import flow_conformance as fc  # noqa: E402
 
+REPO = Path(__file__).resolve().parent.parent
+
 
 class TestClassify:
     """The five verdicts, one test per branch. `classify` is total by design."""
@@ -187,7 +189,11 @@ class TestBaselineComparison:
 
     def test_a_missing_baseline_file_fails_rather_than_passes(self, monkeypatch, tmp_path):
         monkeypatch.setattr(fc, "BASELINE", tmp_path / "absent.json")
-        assert fc.check_against_baseline(self._report(**{"FLOW-001": "enforced"}))
+        report = {"rules": [{"id": "FLOW-001", "verdict": "enforced", "claim": "c"}]}
+        failures = fc.check_against_baseline(report)
+        assert failures, "a missing baseline must be reported, not raised"
+        source = (REPO / "scripts" / "flow_conformance.py").read_text(encoding="utf-8")
+        assert "if BASELINE.exists():" in source
 
 
 class TestTheContractDocument:
@@ -260,3 +266,45 @@ class TestTheContractDocument:
         import json
 
         assert fc.check_contract_document(json.loads(fc.BASELINE.read_text(encoding="utf-8"))) == []
+
+    def test_a_duplicated_row_is_rejected_not_collapsed(self, monkeypatch, tmp_path):
+        """Calibrated: last-write-wins on the dict fails this.
+
+        A document stating a flow twice validated only its final mention, so
+        a stale row could sit above a correct one and pass — the drift this
+        check exists to stop, hiding inside the check.
+        """
+        self._doc(
+            monkeypatch,
+            tmp_path,
+            "| `enforced` | 1 |\n\n"
+            "| `FLOW-001` | A Hub | a claim | **enforced** |\n"
+            "| `FLOW-001` | A Hub | a claim | **unwired** |\n",
+        )
+        failures = fc.check_contract_document({"FLOW-001": "enforced"})
+        assert any("stated more than once" in f for f in failures)
+
+    def test_a_duplicated_count_is_rejected(self, monkeypatch, tmp_path):
+        self._doc(
+            monkeypatch,
+            tmp_path,
+            "| `enforced` | 1 |\n| `enforced` | 2 |\n\n"
+            "| `FLOW-001` | A Hub | a claim | **enforced** |\n",
+        )
+        failures = fc.check_contract_document({"FLOW-001": "enforced"})
+        assert any("more than once" in f for f in failures)
+
+    def test_a_missing_baseline_reports_rather_than_raises(self, monkeypatch, tmp_path):
+        """Calibrated: rereading the baseline unconditionally fails this.
+
+        check_against_baseline already returns an actionable failure for a
+        missing baseline; an unguarded reread raised FileNotFoundError before
+        that message could be printed, so the operator saw a traceback
+        instead of the sentence telling them what to do.
+        """
+        monkeypatch.setattr(fc, "BASELINE", tmp_path / "absent.json")
+        report = {"rules": [{"id": "FLOW-001", "verdict": "enforced", "claim": "c"}]}
+        failures = fc.check_against_baseline(report)
+        assert failures, "a missing baseline must be reported, not raised"
+        source = (REPO / "scripts" / "flow_conformance.py").read_text(encoding="utf-8")
+        assert "if BASELINE.exists():" in source

@@ -54,9 +54,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/section-7` routing; without the middleware
-  the router matches and the worker 404s on every path. This has bitten the estate
-  before (resonate, imind).
+- **No `stripprefix` on `/the-dutchy`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/the-dutchy/x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -101,7 +101,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /section-7
+1. Request arrives  →  Traefik strips /the-dutchy
 2. The Spy — Gathers sentiment data from public channels to gauge market trends.
 3. The Oracle — Converts intelligence records into structured development blueprints.
 4. Bots fire: Scraper-Bot, Parser-Bot, Crawler-Bot, Whisper-Bot
@@ -182,8 +182,7 @@ has to name.
     environment: [ PORT=8057 ]
     ports: [ "8057:8057" ]
     labels:
-      - "traefik.http.routers.section-7.middlewares=strip-section-7@docker"
-      - "traefik.http.middlewares.strip-section-7.stripprefix.prefixes=/section-7"
+      - "traefik.http.routers.the-dutchy.rule=Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -193,7 +192,7 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/section-7` reach the worker with the prefix stripped.
+- As a client, requests to `/the-dutchy` reach the worker with the prefix stripped.
 - As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities

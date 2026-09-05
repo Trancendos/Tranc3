@@ -54,9 +54,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/the-studio` routing; without the middleware
-  the router matches and the worker 404s on every path. This has bitten the estate
-  before (resonate, imind).
+- **No `stripprefix` on `/the-studio`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/the-studio/x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -182,8 +182,7 @@ has to name.
     environment: [ PORT=8069 ]
     ports: [ "8069:8069" ]
     labels:
-      - "traefik.http.routers.the-studio.middlewares=strip-the-studio@docker"
-      - "traefik.http.middlewares.strip-the-studio.stripprefix.prefixes=/the-studio"
+      - "traefik.http.routers.the-studio.rule=Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD

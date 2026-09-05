@@ -182,6 +182,7 @@ has to name.
     environment: [ PORT=8074 ]
     ports: [ "8074:8074" ]
     labels:
+      - "traefik.http.routers.taimra.rule=Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`)"
       - "traefik.http.routers.taimra.middlewares=strip-taimra@docker"
       - "traefik.http.middlewares.strip-taimra.stripprefix.prefixes=/taimra"
 ```

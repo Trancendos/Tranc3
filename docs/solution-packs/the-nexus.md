@@ -48,15 +48,15 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/infinity-ws`**, so `src/` is *not* in the image. This Location
-  cannot `from src.* import ...` — ported logic must be self-contained. This is the
-  single most common cause of a worker that passes tests and dies in the container.
+- **Build context is `.`** (the repo root), so `src/` *is* in the image and
+  this worker's Dockerfile may COPY from it. Narrowing the context to the worker
+  directory would break the build — check the Dockerfile before changing it.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/the-nexus` routing; without the middleware
-  the router matches and the worker 404s on every path. This has bitten the estate
-  before (resonate, imind).
+- **No `stripprefix` on `/ws`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/ws/x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -101,7 +101,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /the-nexus
+1. Request arrives  →  Traefik strips /ws
 2. Pathfinder — Maps fast system data communication routes.
 3. Omni-Router — Routes user prompts to the correct AI/Bot.
 4. Bots fire: Ping-Bot, Ack-Bot, Syn-Bot, Fin-Bot
@@ -178,12 +178,11 @@ has to name.
 
 ```yaml
   infinity-ws:
-    build: { context: ./workers/infinity-ws, dockerfile: Dockerfile }
+    build: { context: ., dockerfile: workers/infinity-ws/Dockerfile }
     environment: [ PORT=8004 ]
     ports: [ "8004:8004" ]
     labels:
-      - "traefik.http.routers.the-nexus.middlewares=strip-the-nexus@docker"
-      - "traefik.http.middlewares.strip-the-nexus.stripprefix.prefixes=/the-nexus"
+      - "traefik.http.routers.infinity-ws.rule=Host(`api.trancendos.com`) && PathPrefix(`/ws`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -193,7 +192,7 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/the-nexus` reach the worker with the prefix stripped.
+- As a client, requests to `/ws` reach the worker with the prefix stripped.
 - As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities

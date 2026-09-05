@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/fabulousa` routing; without the middleware
-  the router matches and the worker 404s on every path. This has bitten the estate
-  before (resonate, imind).
+- **No `stripprefix` on `/fabulousa`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/fabulousa/x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -183,8 +183,7 @@ has to name.
     environment: [ PORT=8048 ]
     ports: [ "8048:8048" ]
     labels:
-      - "traefik.http.routers.fabulousa.middlewares=strip-fabulousa@docker"
-      - "traefik.http.middlewares.strip-fabulousa.stripprefix.prefixes=/fabulousa"
+      - "traefik.http.routers.fabulousa-service.rule=Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD

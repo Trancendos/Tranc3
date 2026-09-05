@@ -190,6 +190,7 @@ has to name.
     environment: [ PORT=8061 ]
     ports: [ "8061:8061" ]
     labels:
+      - "traefik.http.routers.tateking.rule=Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`)"
       - "traefik.http.routers.tateking.middlewares=strip-tateking@docker"
       - "traefik.http.middlewares.strip-tateking.stripprefix.prefixes=/tateking"
 ```

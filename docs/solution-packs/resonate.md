@@ -182,6 +182,7 @@ has to name.
     environment: [ PORT=8076 ]
     ports: [ "8076:8076" ]
     labels:
+      - "traefik.http.routers.resonate.rule=Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`)"
       - "traefik.http.routers.resonate.middlewares=strip-resonate@docker"
       - "traefik.http.middlewares.strip-resonate.stripprefix.prefixes=/resonate"
 ```

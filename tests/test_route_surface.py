@@ -105,3 +105,24 @@ class TestTheGuard:
         monkeypatch.setattr(guard, "TESTS", tmp_path)
         monkeypatch.setattr(guard, "REPO", tmp_path)
         assert len(guard.offenders()) == 1
+
+    def test_a_getattr_bypass_is_caught(self, guard, tmp_path, monkeypatch):
+        """Calibrated: matching only attribute nodes fails this.
+
+        `getattr(app, "routes")` reaches the same object and reads the same
+        truncated surface. A guard with a documented spelling is a guard with
+        a documented bypass.
+        """
+        probe = tmp_path / "test_probe.py"
+        probe.write_text('X = getattr(app, "routes")\n', encoding="utf-8")
+        monkeypatch.setattr(guard, "TESTS", tmp_path)
+        monkeypatch.setattr(guard, "REPO", tmp_path)
+        assert len(guard.offenders()) == 1
+
+    def test_an_unrelated_getattr_is_not_caught(self, guard, tmp_path, monkeypatch):
+        """Calibrated: flagging every getattr on `app` fails this."""
+        probe = tmp_path / "test_probe.py"
+        probe.write_text('X = getattr(app, "title")\n', encoding="utf-8")
+        monkeypatch.setattr(guard, "TESTS", tmp_path)
+        monkeypatch.setattr(guard, "REPO", tmp_path)
+        assert guard.offenders() == []

@@ -182,6 +182,7 @@ has to name.
     environment: [ PORT=8077 ]
     ports: [ "8077:8077" ]
     labels:
+      - "traefik.http.routers.tranquility.rule=Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`)"
       - "traefik.http.routers.tranquility.middlewares=strip-tranquility@docker"
       - "traefik.http.middlewares.strip-tranquility.stripprefix.prefixes=/tranquility"
 ```

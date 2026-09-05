@@ -395,16 +395,32 @@ def check_contract_document(baseline: dict[str, str]) -> list[str]:
     text = CONTRACT_DOC.read_text(encoding="utf-8")
     failures: list[str] = []
 
+    # A duplicate row is rejected, not overwritten. Last-write-wins made a
+    # document stating a flow twice validate only its final mention, so a
+    # stale row could sit above a correct one and pass — which is precisely
+    # the drift this check exists to stop.
     stated: dict[str, str] = {}
     counts: dict[str, int] = {}
     for line in text.splitlines():
         row = _DOC_VERDICT_ROW.match(line.strip())
         if row:
-            stated[row.group("id")] = row.group("verdict")
+            rule_id, verdict = row.group("id"), row.group("verdict")
+            if rule_id in stated:
+                failures.append(
+                    f"{rule_id}: stated more than once in the contract document "
+                    f"({stated[rule_id]}, then {verdict}); one row per flow"
+                )
+            stated[rule_id] = verdict
             continue
         count = _DOC_COUNT_ROW.match(line.strip())
         if count:
-            counts[count.group("verdict")] = int(count.group("count"))
+            verdict, value = count.group("verdict"), int(count.group("count"))
+            if verdict in counts:
+                failures.append(
+                    f"count for {verdict} given more than once "
+                    f"({counts[verdict]}, then {value}); one row per verdict"
+                )
+            counts[verdict] = value
 
     for rule_id, verdict in sorted(baseline.items()):
         if rule_id not in stated:
@@ -469,7 +485,11 @@ def main() -> int:
 
     if args.check:
         failures = check_against_baseline(report)
-        failures += check_contract_document(json.loads(BASELINE.read_text(encoding="utf-8")))
+        # Guarded: check_against_baseline already reports a missing baseline
+        # with an actionable message, and an unconditional reread here would
+        # raise FileNotFoundError before that message was ever printed.
+        if BASELINE.exists():
+            failures += check_contract_document(json.loads(BASELINE.read_text(encoding="utf-8")))
         if failures:
             print("FLOW CONFORMANCE FAILED", file=sys.stderr)
             for f in failures:

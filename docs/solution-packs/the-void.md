@@ -54,9 +54,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/the-void` routing; without the middleware
-  the router matches and the worker 404s on every path. This has bitten the estate
-  before (resonate, imind).
+- **No `stripprefix` on `/api/void`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/api/void/x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -101,7 +101,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /the-void
+1. Request arrives  →  Traefik strips /api/void
 2. Crypt-Keeper — Coordinates zero-knowledge DB access; splits/protects keys.
 3. The Silencer — Sanitizes outbound streams so sensitive data avoids general logs.
 4. Bots fire: Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot
@@ -182,8 +182,7 @@ has to name.
     environment: [ PORT=8002 ]
     ports: [ "8002:8002" ]
     labels:
-      - "traefik.http.routers.the-void.middlewares=strip-the-void@docker"
-      - "traefik.http.middlewares.strip-the-void.stripprefix.prefixes=/the-void"
+      - "traefik.http.routers.infinity-void.rule=Host(`api.trancendos.com`) && PathPrefix(`/api/void`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -193,7 +192,7 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/the-void` reach the worker with the prefix stripped.
+- As a client, requests to `/api/void` reach the worker with the prefix stripped.
 - As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities

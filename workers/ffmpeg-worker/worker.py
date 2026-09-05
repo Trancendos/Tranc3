@@ -13,6 +13,7 @@ import logging
 import os
 import shutil
 import uuid
+from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional
@@ -51,10 +52,37 @@ def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Prove the workdir is writable at startup, and refuse to serve if not.
+
+    The `mkdir` used to run at import, which made importing this module a
+    filesystem write and broke every CI collection. Moving it to first use
+    fixed that and cost something real: a mis-mounted or read-only workdir
+    then let the worker start clean, answer /health 200, accept every job
+    with a 202, and fail each one asynchronously — a broken deployment
+    degrading silently instead of failing loudly.
+
+    Startup is the right place for the check. It is not import, so the module
+    still loads anywhere; and it is before the first request, so an
+    unwritable workdir stops the container rather than being discovered one
+    job at a time.
+    """
+    try:
+        _ensure(WORKDIR)
+    except OSError as exc:
+        raise RuntimeError(
+            f"FFMPEG_WORKDIR {WORKDIR} is not writable: {exc}. "
+            "The worker cannot process any job without it."
+        ) from exc
+    yield
+
+
 app = FastAPI(
     title="FFmpeg Worker",
     description="TateKing — Video processing worker (transcode, thumbnail, compress)",
     version="1.0.0",
+    lifespan=_lifespan,
 )
 
 # OpenTelemetry instrumentation
@@ -414,6 +442,11 @@ async def health() -> dict:
         "service": "ffmpeg-worker",
         "available": available,
         "ffmpeg_version": _ffmpeg_version(),
+        # Reported as well as enforced at startup: a volume can be remounted
+        # read-only under a running container, and the jobs would then fail
+        # one at a time with nothing saying why.
+        "workdir": str(WORKDIR),
+        "workdir_writable": os.access(WORKDIR, os.W_OK) if WORKDIR.exists() else False,
     }
 
 

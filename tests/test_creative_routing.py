@@ -364,11 +364,15 @@ class TestCommission:
         A durable write with no identity lets anyone fill the register, and
         the register's value is being able to say who asked.
 
-        REQUIRE_AUTH is pinned to true rather than inherited: with it false
-        the auth facade returns an anonymous user and this test passes for a
-        reason that has nothing to do with the route. A test that flips
-        meaning with an environment variable proves whatever the environment
-        happens to be.
+        REQUIRE_AUTH is pinned to true rather than inherited. With it false
+        the auth facade authorises an anonymous user, the unauthenticated
+        POST succeeds with 201, and this test fails — on a route whose auth
+        is perfectly intact. The calibration it claims (removing
+        `Depends(get_current_user)` should fail it) only holds where auth
+        actually refuses; where anonymous access is accepted, removing the
+        dependency changes nothing and the test could not detect it either
+        way. Pinning makes the assertion mean the same thing on every
+        machine.
         """
         monkeypatch.setenv("REQUIRE_AUTH", "true")
 

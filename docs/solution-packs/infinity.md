@@ -49,15 +49,15 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/infinity-auth`**, so `src/` is *not* in the image. This Location
-  cannot `from src.* import ...` — ported logic must be self-contained. This is the
-  single most common cause of a worker that passes tests and dies in the container.
+- **Build context is `.`** (the repo root), so `src/` *is* in the image and
+  this worker's Dockerfile may COPY from it. Narrowing the context to the worker
+  directory would break the build — check the Dockerfile before changing it.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **Traefik `stripprefix` is mandatory** for `/infinity` routing; without the middleware
-  the router matches and the worker 404s on every path. This has bitten the estate
-  before (resonate, imind).
+- **No `stripprefix` on `/auth/`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/auth//x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -102,7 +102,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /infinity
+1. Request arrives  →  Traefik strips /auth/
 2. The Gatekeeper — Checks incoming user logins, issuing secure, temporary keys.
 3. The Bouncer — Monitors login origins and activities, blocking suspicious IPs.
 4. Bots fire: Token-Minter-Bot, Auth-Check-Bot, Key-Gen-Bot, Sentry-Bot
@@ -186,12 +186,11 @@ has to name.
 
 ```yaml
   infinity-auth:
-    build: { context: ./workers/infinity-auth, dockerfile: Dockerfile }
+    build: { context: ., dockerfile: workers/infinity-auth/Dockerfile }
     environment: [ PORT=8005 ]
     ports: [ "8005:8005" ]
     labels:
-      - "traefik.http.routers.infinity.middlewares=strip-infinity@docker"
-      - "traefik.http.middlewares.strip-infinity.stripprefix.prefixes=/infinity"
+      - "traefik.http.routers.infinity-auth.rule=Host(`api.trancendos.com`) && PathPrefix(`/auth/`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -201,7 +200,7 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/infinity` reach the worker with the prefix stripped.
+- As a client, requests to `/auth/` reach the worker with the prefix stripped.
 - As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities

@@ -183,6 +183,7 @@ has to name.
     environment: [ PORT=8062 ]
     ports: [ "8062:8062" ]
     labels:
+      - "traefik.http.routers.sashas-photo-studio.rule=Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`)"
       - "traefik.http.routers.sashas-photo-studio.middlewares=strip-sashas-photo-studio@docker"
       - "traefik.http.middlewares.strip-sashas-photo-studio.stripprefix.prefixes=/sashas-photo-studio"
 ```

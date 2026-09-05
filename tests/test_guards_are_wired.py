@@ -99,3 +99,52 @@ class TestThisRepository:
             guard.evaluate(guard.discover_guards(), guard.wired_guards(), guard.UNWIRED_BY_DESIGN)
             == []
         )
+
+
+class TestItReadsWhatRuns:
+    """A mention is not an invocation, and this guard used to accept one."""
+
+    def _wired(self, guard, monkeypatch, tmp_path, workflow: str):
+        (tmp_path / "w.yml").write_text(workflow, encoding="utf-8")
+        monkeypatch.setattr(guard, "WORKFLOW_DIRS", (tmp_path,))
+        monkeypatch.setattr(guard, "discover_guards", lambda: ["check_thing.py"])
+        return guard.wired_guards()
+
+    def test_a_run_step_counts_as_wired(self, guard, monkeypatch, tmp_path):
+        workflow = (
+            "jobs:\n  a:\n    steps:\n      - name: x\n        run: python scripts/check_thing.py\n"
+        )
+        assert self._wired(guard, monkeypatch, tmp_path, workflow) == {"check_thing.py"}
+
+    def test_a_comment_does_not_count_as_wired(self, guard, monkeypatch, tmp_path):
+        """Calibrated: searching the whole file fails this.
+
+        This job's steps carry long explanatory comments naming the guards
+        around them, so a substring search over the file counted a guard as
+        wired because a comment discussed it — the same defect this checker
+        exists to catch, one level up.
+        """
+        workflow = (
+            "jobs:\n  a:\n    steps:\n"
+            "      # scripts/check_thing.py explains the rule below\n"
+            "      - name: x\n        run: echo ok\n"
+        )
+        assert self._wired(guard, monkeypatch, tmp_path, workflow) == set()
+
+    def test_an_echo_does_not_count_as_wired(self, guard, monkeypatch, tmp_path):
+        """Naming a guard in output is not running it."""
+        workflow = (
+            "jobs:\n  a:\n    steps:\n      - name: x\n"
+            '        run: echo "see scripts/check_thing.py"\n'
+        )
+        assert self._wired(guard, monkeypatch, tmp_path, workflow) == set()
+
+    def test_the_checker_does_not_exempt_itself(self, guard):
+        """Calibrated: skipping its own filename fails this.
+
+        Excluded from its own discovery, the one guard that detects an
+        unwired guard could not detect its own — the failure it exists for,
+        applied to itself.
+        """
+        assert "check_guards_are_wired.py" in guard.discover_guards()
+        assert "check_guards_are_wired.py" in guard.wired_guards()

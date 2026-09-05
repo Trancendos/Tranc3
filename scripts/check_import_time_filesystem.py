@@ -29,6 +29,17 @@ and this check fails on:
   * a NEW import-time write to an absolute path, and
   * a baselined one that has been fixed without refreshing the baseline.
 
+What it can and cannot see
+--------------------------
+It resolves a path only when the default is visible in the source: a string
+literal, or `Path(os.environ.get("X", "/default"))`. A path assembled at run
+time — from a config object, a function call, an f-string — is invisible to
+it, and it says so rather than implying the invariant is total. What it does
+cover is every shape the estate actually writes: `mkdir`/`makedirs`/`touch`/
+`write_text`/`write_bytes`/`unlink`/`rmtree` on a module- or class-level
+name, on a `Path("...")` built in place, and `open(..., "w")` including as a
+`with` subject.
+
 The second direction matters as much as the first: an improvement that is not
 recorded lets the next regression slip in under the old count. Refreshing is
 `--write-baseline`, a visible act in the diff.
@@ -71,16 +82,27 @@ _WRITE_METHODS = frozenset(
 
 
 def _module_level(body: list[ast.stmt]) -> list[ast.stmt]:
-    """Statements that run on import: everything but function and class bodies."""
+    """Statements that run on import.
+
+    Function bodies do not run on import and are skipped — creating the
+    directory in one is the remedy, so flagging it would reject the fix.
+    Class bodies DO run on import and are walked: a class-level write is as
+    much an import-time write as a module-level one, and skipping them left
+    a way past the guard that looked like ordinary code.
+
+    A `try`'s handlers run on import too, on the branch the exception takes.
+    """
     found: list[ast.stmt] = []
     for node in body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         found.append(node)
         for field in ("body", "orelse", "finalbody"):
             nested = getattr(node, field, None)
             if isinstance(nested, list):
                 found.extend(_module_level(nested))
+        for handler in getattr(node, "handlers", []) or []:
+            found.extend(_module_level(handler.body))
     return found
 
 
@@ -118,6 +140,66 @@ def _base_name(node: ast.AST) -> str | None:
     return node.id if isinstance(node, ast.Name) else None
 
 
+def _calls_in(node: ast.stmt) -> list[tuple[ast.Call, int]]:
+    """Calls this statement makes directly — expression, assignment, or `with`.
+
+    `Path(...).mkdir()` as a bare expression was the only shape the first
+    version looked at. A write can also be the subject of a `with` (an
+    `open(..., "w")` context manager) or the right-hand side of an
+    assignment, and neither is any less an import-time write.
+    """
+    found: list[tuple[ast.Call, int]] = []
+    if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+        found.append((node.value, node.lineno))
+    elif isinstance(node, (ast.Assign, ast.AnnAssign)) and isinstance(node.value, ast.Call):
+        found.append((node.value, node.lineno))
+    elif isinstance(node, (ast.With, ast.AsyncWith)):
+        for item in node.items:
+            if isinstance(item.context_expr, ast.Call):
+                found.append((item.context_expr, node.lineno))
+    return found
+
+
+#: `open(path, "w")` and friends. Reading is not a write; appending is.
+_WRITE_MODES = ("w", "a", "x", "+")
+
+
+def _write_target(call: ast.Call, defaults: dict[str, str]) -> tuple[str, str] | None:
+    """(method, literal path) when this call writes to a path we can resolve."""
+    func = call.func
+    method = getattr(func, "attr", None) or getattr(func, "id", None)
+
+    if method in {"open"} or (method == "open" and isinstance(func, ast.Attribute)):
+        # Only a write mode counts. `open(p)` and `open(p, "r")` read.
+        mode = ""
+        if len(call.args) >= 2 and isinstance(call.args[1], ast.Constant):
+            mode = str(call.args[1].value)
+        for keyword in call.keywords:
+            if keyword.arg == "mode" and isinstance(keyword.value, ast.Constant):
+                mode = str(keyword.value.value)
+        if not any(flag in mode for flag in _WRITE_MODES):
+            return None
+        target = call.args[0] if call.args else None
+        literal = _literal_default(target) if target is not None else None
+        if literal is None and isinstance(target, ast.Name):
+            literal = defaults.get(target.id)
+        return ("open", literal) if literal else None
+
+    if method not in _WRITE_METHODS:
+        return None
+
+    literal: str | None = None
+    if isinstance(func, ast.Attribute):
+        anchor = _base_name(func)
+        literal = defaults.get(anchor or "")
+        if literal is None:
+            # `Path("/app/renders").mkdir()` anchors on a call, not a name.
+            literal = _literal_default(func.value)
+    if literal is None and call.args:
+        literal = _literal_default(call.args[0])
+    return (method or "", literal) if literal else None
+
+
 def scan_file(path: Path) -> list[str]:
     """Absolute-path import-time writes in one file, as `path:line: method`."""
     try:
@@ -139,19 +221,14 @@ def scan_file(path: Path) -> list[str]:
 
     found: list[str] = []
     for node in statements:
-        if not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)):
-            continue
-        func = node.value.func
-        method = getattr(func, "attr", None) or getattr(func, "id", None)
-        if method not in _WRITE_METHODS:
-            continue
-        anchor = _base_name(func) if isinstance(func, ast.Attribute) else None
-        literal = defaults.get(anchor or "")
-        if literal is None and node.value.args:
-            literal = _literal_default(node.value.args[0])
-        if literal is None or not literal.startswith("/"):
-            continue
-        found.append(f"{path.relative_to(REPO).as_posix()}:{node.lineno}: {method} {literal}")
+        for call, lineno in _calls_in(node):
+            report = _write_target(call, defaults)
+            if report is None:
+                continue
+            method, literal = report
+            if not literal.startswith("/"):
+                continue
+            found.append(f"{path.relative_to(REPO).as_posix()}:{lineno}: {method} {literal}")
     return found
 
 

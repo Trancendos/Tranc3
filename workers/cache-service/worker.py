@@ -43,8 +43,14 @@ DUCKDB_PATH = os.environ.get("CACHE_DUCKDB_PATH", "/data/cache.duckdb")
 DISKCACHE_DIR = os.environ.get("CACHE_DISKCACHE_DIR", "/data/diskcache")
 
 
+#: Directories already created in this process. `_conn()` opens a fresh
+#: connection for nearly every request, so without this the lazy-once intent
+#: became a per-request mkdir syscall on a directory that already exists.
+_ensured_parents: set[str] = set()
+
+
 def _ensure_parent(path: Path) -> Path:
-    """Create the directory on first use, not at import.
+    """Create the directory once, on first use — not at import.
 
     A module-level `mkdir` makes importing this module a filesystem write, so
     the import fails wherever the container's path is absent or unwritable —
@@ -52,7 +58,10 @@ def _ensure_parent(path: Path) -> Path:
     collected tests into `PermissionError` that way before an assertion ran.
     `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
     """
-    path.parent.mkdir(parents=True, exist_ok=True)
+    parent = str(path.parent)
+    if parent not in _ensured_parents:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _ensured_parents.add(parent)
     return path
 
 
