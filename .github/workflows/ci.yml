@@ -245,6 +245,16 @@ jobs:
       - name: Documentation links resolve
         run: python scripts/check_doc_links.py
 
+      # The estate records outstanding work in 44 separate registers, each
+      # correct about its own domain and blind to the rest — so nobody can
+      # answer "what is outstanding across the platform" without reading 320
+      # documents, and an action in a register nobody sweeps is an action
+      # nobody does. docs/governance/ACTION-BACKLOG.md is that sweep,
+      # generated with derived story points and one Definition of
+      # Ready/Done. This fails when it drifts from the registers it reads.
+      - name: Action backlog is current
+        run: python scripts/build_action_backlog.py --check
+
       # The CMDB register and the canonical entity register had parted on 22
       # of 43 Locations. Six Creativity Locations all claimed `src/studio/`, a
       # router recorded as unmounted and removed; worse, four named a
