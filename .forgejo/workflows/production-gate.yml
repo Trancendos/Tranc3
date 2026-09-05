@@ -171,6 +171,16 @@ jobs:
       - name: Dependency vulnerability census
         run: python3 scripts/vulnerability_census.py --check --scope core
 
+      # Kept in step with the GitHub copy deliberately. A disposition in
+      # SECURITY_ALERT_REGISTER.md silences a finding the census would otherwise
+      # block on, and two of them are justified by how this repository uses the
+      # component rather than by the advisory. If that usage changes the
+      # justification is void while the suppression keeps working, and this step
+      # is what notices. Omitting it here is precisely the divergence that let
+      # the Forgejo gate lose the census step once already.
+      - name: Disposition premises still hold
+        run: python3 scripts/check_disposition_premises.py
+
       - name: Security dimension score
         run: python3 scripts/security_score.py --min-percent 90
 
