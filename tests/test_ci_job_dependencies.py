@@ -21,6 +21,7 @@ from scripts.check_ci_job_dependencies import (  # noqa: E402
     _guarded,
     _import_time_nodes,
     _installed_modules,
+    _module_files,
     external_imports,
     main,
 )
@@ -182,3 +183,122 @@ class TestUnguardedHandlerBodies:
         """An optional-import guard stays optional, handler body included."""
         source = "try:\n    import nats\nexcept ImportError:\n    import fallback_shim\n"
         assert _nodes(source) == []
+
+
+class TestTheThreeHolesThatLetRealBreaksThrough:
+    """Each of these reported PASSED on a run that failed.
+
+    Three consecutive Service Topology failures came through this check, in
+    three different ways, and none of them had a test. They do now: the
+    check exists to be the thing that notices, and being wrong three times
+    without a regression pinning any of it is the same defect one level up.
+    """
+
+    def test_a_function_level_import_counts_for_a_script(self):
+        """Calibrated: dropping `functions=True` for scripts fails this.
+
+        `scripts/build_action_backlog.py` imports the routing registry from
+        inside `_apply_routing`, on the unconditional path from `main()`.
+        Skipping it reported PASSED on a job that died there. For a script
+        the question is not "does it import" but "does it run".
+        """
+        source = "def go():\n    import aiohttp\n"
+        assert _import_time_nodes(ast.parse(source).body, functions=True)
+
+    def test_the_script_walk_reaches_a_function_level_dependency(self, tmp_path):
+        """The mechanism, exercised through `external_imports` as callers use it."""
+        script = tmp_path / "entry.py"
+        script.write_text("def go():\n    import aiohttp\n", encoding="utf-8")
+        assert "aiohttp" in external_imports(script, script=True)
+        assert "aiohttp" not in external_imports(script)
+
+    def test_main_walks_its_scripts_as_scripts(self, monkeypatch):
+        """Calibrated: `main` passing the default fails this.
+
+        The two tests above prove the mechanism works. Neither proves it is
+        used — and a control that exists and is never invoked is the exact
+        defect this check was written to catch, so leaving its own wiring
+        unasserted would be the joke telling itself.
+        """
+        import scripts.check_ci_job_dependencies as checker
+
+        seen: list[bool] = []
+        real = checker.external_imports
+
+        def record(entry, _seen=None, *, script=False):
+            # Only the entry call — `external_imports` recurses through
+            # itself for library modules, and those correctly pass the
+            # default. It is the call `main` makes that must say script.
+            if _seen is None:
+                seen.append(script)
+            return real(entry, _seen, script=script)
+
+        monkeypatch.setattr(checker, "external_imports", record)
+        checker.main(["--job", "topology"])
+        assert seen and all(seen), "main() walked a script without script=True"
+
+    def test_a_function_level_import_still_does_not_count_for_a_library(self):
+        """The exemption survives where it was right: `src/event_bus/bus.py`
+        imports httpx in a webhook branch a documentation render never
+        reaches, and failing on that reports a break that cannot happen."""
+        assert _nodes("def go():\n    import httpx\n") == []
+
+    def test_a_handler_that_can_reraise_is_not_an_optional_dependency(self):
+        """Calibrated: reading only the exception type fails this.
+
+        The backlog generator swallows a missing `src` and re-raises
+        everything else, so a missing `fastapi` propagates and the job dies.
+        Counting that as a declared-optional dependency is how this check
+        reported PASSED while CI was red.
+        """
+        reraises = ast.parse(
+            "try:\n"
+            "    import fastapi\n"
+            "except ModuleNotFoundError as exc:\n"
+            "    if exc.name != 'src':\n"
+            "        raise\n"
+        ).body[0]
+        swallows = ast.parse(
+            "try:\n    import fastapi\nexcept ModuleNotFoundError:\n    pass\n"
+        ).body[0]
+        assert _guarded(reraises.handlers) is False
+        assert _guarded(swallows.handlers) is True
+
+    def test_a_package_init_on_the_path_is_followed(self):
+        """Calibrated: resolving only the leaf module fails this.
+
+        Importing `src.observability.observatory` runs
+        `src/observability/__init__.py` first, and that one imports
+        `.health`, which imports aiohttp. Following only the leaf made the
+        whole chain invisible — the third break, and the one that took two
+        commits to find.
+        """
+        resolved = _module_files("src.observability.observatory")
+        assert REPO / "src" / "observability" / "__init__.py" in resolved
+        assert REPO / "src" / "observability" / "observatory.py" in resolved
+
+    def test_a_type_checking_block_does_not_count(self):
+        """`if TYPE_CHECKING:` is false at runtime, so its imports never run.
+
+        Moving a heavyweight import there is the remedy; a check that cannot
+        see the difference punishes the fix.
+        """
+        source = "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    import fastapi\n"
+        names = [
+            alias.name
+            for node in _nodes(source)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        ]
+        assert "fastapi" not in names
+
+    def test_the_pure_validators_import_without_the_web_stack(self):
+        """The break itself, as an invariant rather than an anecdote.
+
+        `src/validation/primitives.py` exists so a CI script and a slim
+        worker can validate input without dragging in FastAPI, aiohttp and
+        structlog. Asserting it has no repository-external dependency at all
+        is what stops the chain being reattached by a convenience import.
+        """
+        stdlib = set(sys.stdlib_module_names) | {"__future__"}
+        assert external_imports(REPO / "src" / "validation" / "primitives.py") - stdlib == set()
