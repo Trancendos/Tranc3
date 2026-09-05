@@ -22,12 +22,15 @@ on:
     branches: [ "main" ]
   schedule:
     - cron: '41 14 * * 3'
+  workflow_dispatch: {}
 
 permissions:
   contents: read
 
 jobs:
   zscaler-iac-scan:
+    # Only run when scanner secrets are present and PR is same-repo
+    if: ${{ secrets.ZSCANNER_CLIENT_ID != '' && secrets.ZSCANNER_CLIENT_SECRET != '' && (github.event.pull_request == null || github.event.pull_request.head.repo.full_name == github.repository) }}
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
