@@ -30,6 +30,7 @@ on:
     branches: [ "main" ]
   schedule:
     - cron: '32 6 * * 6'
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -40,6 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # Only run when NS_TOKEN is configured and app_file path has been updated (avoid fork failures)
+    if: ${{ secrets.NS_TOKEN != '' && (github.event.pull_request == null || github.event.pull_request.head.repo.full_name == github.repository) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
