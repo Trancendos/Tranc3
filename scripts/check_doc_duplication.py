@@ -51,8 +51,33 @@ REPO = Path(__file__).resolve().parent.parent
 _SKIP = ("compliance/magna-carta", "workers/cranbania", "node_modules")
 
 #: A pointer page: short, and it names where the real document is.
+#:
+#: The markers used to be loose prose — "canonical document is", "lives at" —
+#: matched anywhere in the body. Both are ordinary English. A 40-line duplicate
+#: register that happened to say "the canonical document is the one in the
+#: repository root" earned the exemption without pointing anywhere, which is
+#: the opposite of what the exemption is for. A pointer now has to do two
+#: things: use one of the explicit forms below, AND name a markdown path that
+#: exists.
 _POINTER_MAX_LINES = 60
-_POINTER_MARKERS = ("This page is a pointer", "canonical document is", "lives at")
+#: Every marker is a declaration a page makes ABOUT ITSELF. "The canonical
+#: document is" was tried and dropped: it is ordinary prose, and a second copy
+#: writing "the canonical document is important" earned the exemption while
+#: pointing at nothing — the same looseness, one phrase over.
+_POINTER_MARKERS = (
+    "This page is a pointer",
+    "This document is a pointer",
+    "The canonical version lives at",
+)
+
+#: A markdown path named inside a pointer page, whether bare or in a link.
+_POINTER_PATH = re.compile(r"[\w./-]+\.md")
+
+#: A GitHub blob URL into this repository, which is how the wiki pages point
+#: home. Resolving only bare paths worked by accident — both pointer pages
+#: happen to use the bare filename as the link TEXT — and would have broken
+#: the moment someone wrote a link with a prose label instead.
+_BLOB_URL = re.compile(r"github\.com/[^/\s]+/[^/\s]+/blob/[^/\s]+/([\w./-]+\.md)")
 
 #: Titles that are generic by nature — a per-service README is not a duplicate
 #: of another service's README.
@@ -72,27 +97,67 @@ def _normalise(title: str) -> str:
 
 
 def _title(text: str) -> str:
-    for line in text.splitlines():
+    """The document's H1, in either markdown spelling.
+
+    ATX (`# Title`) is what this repository writes, but setext — a title
+    followed by a line of `=` — is equally valid markdown and renders
+    identically on GitHub. Reading only ATX meant a setext copy of a document
+    carried no title at all here and was skipped, so the one spelling the
+    checker could not see was the one that got past it.
+    """
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
         if line.startswith("# "):
             return line[2:]
+        following = lines[index + 1] if index + 1 < len(lines) else ""
+        if line.strip() and set(following.strip()) == {"="} and len(following.strip()) >= 2:
+            return line
     return ""
 
 
 def _is_pointer(text: str) -> bool:
+    """Short, explicitly a pointer, and pointing at a document that exists.
+
+    All three are required. Length alone lets a short second copy through;
+    a phrase alone lets incidental prose claim the exemption; and a phrase
+    naming a path that does not resolve is a pointer to nowhere, which leaves
+    the reader exactly where a duplicate would.
+    """
     if len(text.splitlines()) > _POINTER_MAX_LINES:
         return False
-    return any(marker in text for marker in _POINTER_MARKERS)
+    if not any(marker in text for marker in _POINTER_MARKERS):
+        return False
+    named = set(_POINTER_PATH.findall(text)) | set(_BLOB_URL.findall(text))
+    return any(candidate and (REPO / candidate).is_file() for candidate in named)
 
 
 def duplicates() -> dict[str, list[str]]:
-    listed = subprocess.run(
-        ["git", "ls-files", "*.md"], cwd=REPO, capture_output=True, text=True, check=True
-    ).stdout.split()
+    # -z and a NUL split, not .split(): a path containing a space is one path,
+    # and whitespace splitting turns it into two names that resolve to nothing,
+    # so the document silently drops out of the comparison.
+    listed = [
+        entry
+        for entry in subprocess.run(
+            ["git", "ls-files", "-z", "*.md"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split("\0")
+        if entry
+    ]
     by_title: dict[str, list[str]] = defaultdict(list)
     for rel in listed:
         if any(skip in rel for skip in _SKIP):
             continue
-        text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
+        source = REPO / rel
+        if not source.is_file():
+            # `git ls-files` lists staged paths, including ones deleted from
+            # the working tree. Reading one raised FileNotFoundError and took
+            # the whole check down with a traceback, which is a fail with no
+            # usable message rather than a finding.
+            continue
+        text = source.read_text(encoding="utf-8", errors="replace")
         title = _normalise(_title(text))
         if not title or title in _GENERIC or _is_pointer(text):
             continue
@@ -100,7 +165,45 @@ def duplicates() -> dict[str, list[str]]:
     return {title: paths for title, paths in by_title.items() if len(paths) > 1}
 
 
+#: `### SEC-001 — …` in the security alert register. The register is the only
+#: document in the estate that numbers its entries, so the check is scoped to
+#: it rather than pattern-matching headings everywhere.
+_REGISTER = "SECURITY_ALERT_REGISTER.md"
+_ENTRY_ID = re.compile(r"^#{2,4}\s+(SEC-\d+)\b", re.MULTILINE)
+
+
+def repeated_entry_ids() -> dict[str, int]:
+    """Entry IDs the register uses more than once.
+
+    Two open entries filed as SEC-006 is the title problem one level down: a
+    disposition recorded "against SEC-006" lands on whichever entry the reader
+    reaches first, and the other finding keeps the status of a decision that
+    was never about it. It happened — the esbuild/ws entry was filed under the
+    nltk entry's number and stood that way until a review caught it.
+    """
+    source = REPO / _REGISTER
+    if not source.is_file():
+        return {}
+    counts: dict[str, int] = defaultdict(int)
+    for entry_id in _ENTRY_ID.findall(source.read_text(encoding="utf-8", errors="replace")):
+        counts[entry_id] += 1
+    return {entry_id: count for entry_id, count in counts.items() if count > 1}
+
+
 def main() -> int:
+    repeated = repeated_entry_ids()
+    if repeated:
+        print("Documentation duplication check: FAILED")
+        for entry_id, count in sorted(repeated.items()):
+            print(f"  {_REGISTER} files {count} entries as {entry_id}")
+        print()
+        print("  An entry ID is how a disposition, a suppression comment and a")
+        print("  scanner exclusion all refer back to one finding. Two entries")
+        print("  sharing one means a decision recorded against it applies to")
+        print("  whichever the reader found first. Give the newer one the next")
+        print("  free number.")
+        return 1
+
     found = duplicates()
     if found:
         print("Documentation duplication check: FAILED")

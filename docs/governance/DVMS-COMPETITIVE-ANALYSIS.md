@@ -105,7 +105,7 @@ not the Cloud Only one.
 ### Strengths
 - **Fail-closed by construction.** A scan that errors counts as an unscanned surface, not a
   clean one. `--check` distinguishes "0 fixable" from "0 scanned".
-- **Written dispositions with owners and review dates.** Seven entries, each carrying an
+- **Written dispositions with owners and review dates.** Eight entries, each carrying an
   owner and a `Next review`. An accepted risk that nobody owns does not exist here.
 - **`blocked` as a first-class, separately-counted state.** Most tools conflate "we cannot
   fix it" with "we have accepted it". Conflating them is how a fixable finding goes quiet.
@@ -164,14 +164,14 @@ not the Cloud Only one.
 ### Threats
 - **A naive VEX export would be a fail-open control.** This is the single most important
   finding in this document. Marking every dispositioned entry `not_affected` would suppress
-  real vulnerabilities in three scanners at once. Of our seven entries, **only SEC-007** is
+  real vulnerabilities in three scanners at once. Of our eight entries, **only SEC-007** is
   genuinely `not_affected` (the vulnerable function is never called). SEC-006 is the
   opposite: no patch exists and reachability was never established — it is `affected` with
   an action statement. Exporting it as `not_affected` would hide a live issue behind a
   standards-compliant file.
 - **Dependency on a dormant runner.** Fourteen scheduled Forgejo supply-chain jobs need the
   self-hosted act-runner. They are built, wired, and do not fire.
-- **Register drift.** Seven entries are maintainable by hand; seventy are not. Field naming
+- **Register drift.** Eight entries are maintainable by hand; seventy are not. Field naming
   is already inconsistent (`Component` vs `Components` vs `Location`).
 
 ---

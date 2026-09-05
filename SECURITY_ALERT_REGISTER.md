@@ -264,7 +264,7 @@ disposition; the audit field never did.
 
 ---
 
-## SEC-006 — `esbuild` and `ws` in the Cloudflare workers' dev toolchain
+### SEC-008 — `esbuild` and `ws` in the Cloudflare workers' dev toolchain
 
 Recovered from a second, divergent copy of this register that lived at
 `wiki-content/Security-SECURITY_ALERT_REGISTER.md` until 2026-09-04. These
@@ -277,7 +277,7 @@ of them at all.
 | **IDs** | GHSA-67mh-4wv8-2f99 (`esbuild`), GHSA-3h5v-q93c-6h6q (`ws`) |
 | **Scanner** | npm audit — `cloudflare/*` surfaces |
 | **Component** | Both transitive through `wrangler`/`miniflare`, a devDependency. Neither reaches the Workers runtime. |
-| **Remedy** | `overrides: {"esbuild": ">=0.25.0", "ws": ">=8.21.0"}` in every `cloudflare/*/package.json` that depends on wrangler |
+| **Remedy** | `overrides: {"esbuild": "0.28.2", "ws": "8.21.3"}` in every `cloudflare/*/package.json` that depends on wrangler, and the three committed `package-lock.json` files regenerated so `npm ci` resolves those versions |
 | **Recorded** | 2026-09-04 (finding itself predates this register entry) |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-04 |
@@ -297,6 +297,29 @@ incomplete: the copy nobody read asserted a remediation that the copy people
 did read had never heard of, and neither was checked against the packages.
 `scripts/check_doc_duplication.py` now fails on a second document claiming to
 be the same register.
+
+**Second correction, 2026-09-05: this entry was filed as SEC-006, which is
+already the nltk entry above.** Two open findings sharing an ID is the same
+failure mode one level down — a reference to "SEC-006" resolves to whichever
+entry the reader reaches first, and a disposition recorded against it lands on
+the wrong finding. Renumbered to SEC-008, and `scripts/check_doc_duplication.py`
+— already a blocking step in `ci.yml`'s Service Topology job — now fails on a
+repeated entry ID, so the next one cannot be filed silently. It goes there
+rather than in `scripts/security_score.py` on purpose: the score docks points,
+and a register whose IDs collide needs to stop a merge, not lose twelve.
+
+**Third: the overrides were floors, not pins, and the lockfiles predated
+them.** `>=0.25.0` and `>=8.21.0` clear the advisories, but they are ranges,
+and `deploy-cloudflare.yml` runs `npm ci` — which installs the resolved tree
+in `package-lock.json` and does not re-resolve against `overrides` at all. All
+three committed locks carried esbuild 0.28.1 and ws 8.21.0/8.21.3: versions
+that happened to satisfy the ranges, so nothing forced them and nothing would
+have reported it if a future `npm install` had picked something else. The
+overrides are now exact pins matching the repository root (`esbuild 0.28.2`,
+`ws 8.21.3`) and the three locks are regenerated against them, so the version
+that deploys is the version the record names. `tests/test_doc_duplication.py`
+asserts both halves — that each override clears the advisory floor, and that
+every locked resolution does too.
 
 ---
 

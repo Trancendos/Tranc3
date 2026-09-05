@@ -64,11 +64,37 @@ class TestBothConventionsResolve:
             "../../compliance/magna-carta/docs/compliance/EU-CRA-PROFILE.md",
         )
 
-    def test_an_external_link_is_never_fetched(self, checker):
+    def test_an_external_link_is_never_fetched(self, checker, monkeypatch):
         """A gate whose verdict depends on a third party fails for reasons
-        unrelated to the tree."""
-        source = (REPO / "scripts" / "check_doc_links.py").read_text(encoding="utf-8")
-        assert "requests" not in source and "urllib.request" not in source
+        unrelated to the tree.
+
+        This used to grep the checker's source for `requests` and
+        `urllib.request`, which asserts nothing: `import urllib.request as u`,
+        `http.client`, `subprocess.run(["curl", ...])` and a bare socket all
+        pass that test while making the call. What has to hold is behavioural,
+        so the socket itself is taken away and the whole estate — every
+        external link in 300-odd documents, not one constructed example — is
+        scanned with no network underneath it.
+        """
+        import socket
+
+        def refuse(*args, **kwargs):
+            raise AssertionError("check_doc_links.py opened a socket")
+
+        monkeypatch.setattr(socket, "socket", refuse)
+        monkeypatch.setattr(socket, "create_connection", refuse)
+
+        assert checker.broken() == []
+
+    def test_an_external_target_resolves_without_touching_the_filesystem(self, checker):
+        """`resolve()` must not be reached for an external target at all.
+
+        A URL that happened to contain a path fragment matching a real file
+        would otherwise resolve for the wrong reason, and one that did not
+        would be reported as a broken internal link.
+        """
+        assert "https://example.invalid/not/a/file.md".startswith(checker._EXTERNAL)
+        assert not "docs/AI-BOM.md".startswith(checker._EXTERNAL)
 
 
 class TestTheEstate:

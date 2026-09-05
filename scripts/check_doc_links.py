@@ -47,16 +47,63 @@ _SKIP = ("compliance/magna-carta", "workers/cranbania", "node_modules")
 _LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)")
 _EXTERNAL = ("http://", "https://", "mailto:", "tel:", "#")
 
+#: A fenced block, ``` or ~~~, with whatever language tag follows the fence.
+_FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+
+#: Inline code spans. Backtick runs must match in length, so ``a `b` c`` is one
+#: span rather than two.
+_INLINE_CODE = re.compile(r"(?P<ticks>`+)(?:(?!(?P=ticks)).)*(?P=ticks)", re.DOTALL)
+
 #: Links into a submodule's tree: the file is real, it just is not checked out
 #: here. Reporting them would make the gate depend on submodule state.
 _SUBMODULE_PREFIXES = ("compliance/magna-carta/", "workers/cranbania/")
 
 
 def documents() -> list[Path]:
-    listed = subprocess.run(
-        ["git", "ls-files", "*.md"], cwd=REPO, capture_output=True, text=True, check=True
-    ).stdout.split()
+    # -z and a NUL split: whitespace splitting turns one path containing a
+    # space into two names that resolve to nothing, dropping the document.
+    listed = [
+        entry
+        for entry in subprocess.run(
+            ["git", "ls-files", "-z", "*.md"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split("\0")
+        if entry
+    ]
     return [REPO / p for p in listed if not any(skip in p for skip in _SKIP)]
+
+
+def prose(text: str) -> str:
+    """The document with its code removed, so links inside code are not links.
+
+    Documentation about linking has to show a link that does not resolve —
+    `[label](docs/example.md)` in a fenced block explaining the syntax, an
+    inline `[x](path)` in a checker's own docstring. Those are illustrations,
+    not references, and failing on them makes the gate punish the documents
+    most likely to explain it. Removing code rather than skipping the whole
+    line keeps a real link that shares a line with a code span checkable.
+
+    Code is replaced with blank lines and spaces rather than deleted, so the
+    surviving text keeps its original line numbers for the report.
+    """
+    kept: list[str] = []
+    fence: str | None = None
+    for line in text.splitlines():
+        opener = _FENCE.match(line)
+        if fence is None and opener:
+            fence = opener.group(1)[0] * 3
+            kept.append("")
+            continue
+        if fence is not None:
+            if opener and opener.group(1).startswith(fence):
+                fence = None
+            kept.append("")
+            continue
+        kept.append(_INLINE_CODE.sub(lambda m: " " * len(m.group(0)), line))
+    return "\n".join(kept)
 
 
 def resolve(source: Path, target: str) -> bool:
@@ -83,7 +130,9 @@ def resolve(source: Path, target: str) -> bool:
 def broken() -> list[str]:
     found: list[str] = []
     for document in documents():
-        text = document.read_text(encoding="utf-8", errors="replace")
+        if not document.is_file():
+            continue  # `git ls-files` lists staged paths, deletions included
+        text = prose(document.read_text(encoding="utf-8", errors="replace"))
         for number, line in enumerate(text.splitlines(), 1):
             for target in _LINK.findall(line):
                 if target.startswith(_EXTERNAL):

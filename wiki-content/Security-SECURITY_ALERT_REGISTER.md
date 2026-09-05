@@ -19,7 +19,7 @@ that the `overrides` remedy was applied in *all* Cloudflare `package.json`
 files. It was in one of seven. Six surfaces stood unremediated behind a
 record that said otherwise, in a document the scanner never read.
 
-Both advisories now live in the root register as **SEC-006**, with the
+Both advisories now live in the root register as **SEC-008**, with the
 measured state rather than the claimed one, and all seven packages carry the
 overrides. `scripts/check_doc_duplication.py` fails the build if a second
 document starts claiming to be this register again.
