@@ -221,6 +221,14 @@ jobs:
       - name: Documentation estate coverage
         run: python scripts/check_docs_estate.py --check
 
+      # 52 of 321 documents were named by nothing anywhere in the repository
+      # on 2026-09-05 — including five SWOT and forensic assessments, so when
+      # the owner asked for one the honest answer was that five existed and
+      # none could be found. A ratchet, because failing all of them today
+      # would put the build red for work nobody can do today.
+      - name: Documents are reachable
+        run: python scripts/check_doc_reachability.py
+
       # The 43 solution packs are regenerated from the entity register, the
       # compose file and the tree, so they answer questions about readiness and
       # code paths with facts rather than recollection. They went stale the day
