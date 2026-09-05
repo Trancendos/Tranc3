@@ -17,7 +17,6 @@ Usage:
 from __future__ import annotations
 
 import functools
-import re
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from src.observability.observatory import EventCategory, EventSeverity
@@ -34,59 +33,31 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 # it there; `from __future__ import annotations` keeps the annotations
 # strings, so nothing else needs it.
 
-# ── Input validators ──────────────────────────────────────────────────────────
-
-_DANGEROUS_PATTERNS = re.compile(
-    r"(<script|javascript:|on\w+=|DROP\s+TABLE|SELECT\s+\*|INSERT\s+INTO"
-    r"|DELETE\s+FROM|UNION\s+SELECT|eval\(|exec\(|__import__"
-    r"|ignore\s+previous\s+instructions|disregard\s+previous)",
-    re.IGNORECASE,
+# The pure validators live in `primitives.py` so they can be imported without
+# this module's FastAPI and Observatory chain — which ends at aiohttp and
+# structlog, and made them unusable from a CI script or a slim worker. They
+# are re-exported here so no caller had to change.
+from src.validation.primitives import (  # noqa: E402
+    _DANGEROUS_PATTERNS,
+    validate_email,
+    validate_non_empty,
+    validate_port,
+    validate_safe_string,
+    validate_username,
 )
 
-
-def validate_non_empty(value: str, field_name: str = "field") -> str:
-    """Raise ValueError if value is blank after stripping."""
-    stripped = value.strip()
-    if not stripped:
-        raise ValueError(f"{field_name} must not be empty")
-    return stripped
-
-
-def validate_safe_string(value: str, field_name: str = "field", max_length: int = 10_000) -> str:
-    """Raise ValueError if value contains injection patterns or exceeds max_length."""
-    if len(value) > max_length:
-        raise ValueError(f"{field_name} exceeds maximum length of {max_length} characters")
-    if _DANGEROUS_PATTERNS.search(value):
-        raise ValueError(f"{field_name} contains disallowed content")
-    return value
+__all__ = [
+    "_DANGEROUS_PATTERNS",
+    "audit_action",
+    "validate_email",
+    "validate_non_empty",
+    "validate_port",
+    "validate_safe_string",
+    "validate_username",
+]
 
 
-def validate_username(username: str) -> str:
-    """Alphanumeric + underscore/hyphen, 3–64 chars."""
-    username = validate_non_empty(username, "username")
-    if not re.fullmatch(r"[a-zA-Z0-9_\-]{3,64}", username):
-        raise ValueError(
-            "username must be 3–64 alphanumeric characters (underscores and hyphens allowed)"
-        )
-    return username
-
-
-def validate_email(email: str) -> str:
-    """Basic RFC-5322-ish email check."""
-    email = validate_non_empty(email, "email")
-    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
-        raise ValueError("email address is not valid")
-    return email.lower()
-
-
-def validate_port(port: int) -> int:
-    """1–65535 range check."""
-    if not (1 <= port <= 65535):
-        raise ValueError(f"port {port} is out of valid range (1–65535)")
-    return port
-
-
-# ── @audit_action decorator ───────────────────────────────────────────────────
+# ── Audit decorator ───────────────────────────────────────────────────────────
 
 
 def audit_action(

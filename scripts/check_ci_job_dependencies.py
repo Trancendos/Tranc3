@@ -97,16 +97,26 @@ def _scripts_run(job: dict) -> list[Path]:
     return scripts
 
 
-def _module_file(dotted: str) -> Path | None:
-    """Resolve a dotted name to a file in this repository, or None."""
+def _module_files(dotted: str) -> list[Path]:
+    """Every file in this repository that importing `dotted` executes.
+
+    Importing `src.observability.observatory` runs `src/observability/
+    __init__.py` first — and that one imports `.health`, which imports
+    aiohttp. Resolving only the leaf module made the whole package
+    `__init__` chain invisible, so the check reported PASSED on a job that
+    died three hops inside it. Every package `__init__.py` on the path is
+    part of the import, so every one of them is followed.
+    """
     parts = dotted.split(".")
-    for candidate in (
-        REPO.joinpath(*parts).with_suffix(".py"),
-        REPO.joinpath(*parts, "__init__.py"),
-    ):
-        if candidate.exists():
-            return candidate
-    return None
+    found: list[Path] = []
+    for depth in range(1, len(parts) + 1):
+        package_init = REPO.joinpath(*parts[:depth], "__init__.py")
+        if package_init.exists() and package_init not in found:
+            found.append(package_init)
+    leaf = REPO.joinpath(*parts).with_suffix(".py")
+    if leaf.exists() and leaf not in found:
+        found.append(leaf)
+    return found
 
 
 def _reraises(handler: ast.ExceptHandler) -> bool:
@@ -251,9 +261,10 @@ def external_imports(
                 continue
             names = [node.module]
         for dotted in names:
-            local = _module_file(dotted)
-            if local is not None:
-                external |= external_imports(local, seen)
+            local = _module_files(dotted)
+            if local:
+                for module in local:
+                    external |= external_imports(module, seen)
             else:
                 external.add(dotted.split(".")[0])
     return external
