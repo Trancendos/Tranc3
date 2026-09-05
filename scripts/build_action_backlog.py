@@ -216,13 +216,94 @@ def _action_column(header: list[str]) -> int | None:
     return None
 
 
+#: An unchecked markdown task: `- [ ] do the thing`.
+_UNCHECKED = re.compile(r"^\s*[-*]\s*\[ \]\s+(.+?)\s*$")
+
+#: Documents whose `- [ ]` items are NOT outstanding work.
+#:
+#: The distinction is a property of the document's role, not of the item's
+#: wording, so it is drawn by path and stated rather than guessed per line:
+#:
+#:   * `config/townhall/templates/` — blanks to fill in when instantiating a
+#:     template. `- [ ] Authentication via Infinity` there is a prompt, not a
+#:     task somebody has failed to do.
+#:   * `docs/runbooks/` and `*RUNBOOK*` — steps performed *during* an
+#:     incident or a drill. `- [ ] PRAGMA integrity_check returns ok` is a
+#:     verification to run then, not work outstanding now.
+#:   * The CAB approval workflow and change-request process — process forms
+#:     whose items are literally "Step 1:", "Step 2:", "Verification:".
+#:
+#: Sweeping these would put ~50 procedure steps into the backlog as though
+#: they were unbuilt features, which is worse than missing them: it buries the
+#: real ones and makes the total meaningless.
+_PROCEDURE_DOCUMENTS = (
+    "config/townhall/templates/",
+    "docs/runbooks/",
+    "runbook",
+    "docs/cab/approval_workflow",
+    "docs/change-request-process",
+)
+
+
+def _is_procedure(rel: str) -> bool:
+    """Are this document's checkboxes steps to follow rather than work to do?"""
+    lowered = rel.lower()
+    return any(marker in lowered for marker in _PROCEDURE_DOCUMENTS)
+
+
+def _checkbox_items(rel: str, text: str, locations: dict[str, str]) -> list[dict]:
+    """Unchecked task-list items in one document.
+
+    The sweep read markdown TABLES only, and 81 unchecked `- [ ]` items across
+    13 documents therefore reached no register at all — including all three
+    `wiki-content/Todo-*` lists, which exist for no other purpose. A backlog
+    claiming "every outstanding item the estate records" that cannot see the
+    single most common way of recording one was overstating its coverage.
+
+    A checkbox carries no status column, so its status is the checkbox: it is
+    unchecked, therefore open. `Open` is recorded rather than inferring
+    something richer that the source does not say.
+    """
+    if _is_procedure(rel):
+        return []
+    found: list[dict] = []
+    for number, line in enumerate(text.splitlines(), 1):
+        match = _UNCHECKED.match(line)
+        if not match:
+            continue
+        action = match.group(1).strip("* `").strip()
+        if len(action) < 12:
+            # Too short to be an action anybody could act on — "Step 2:",
+            # "TBD", a stray bullet. The same floor the table sweep uses.
+            continue
+        named = [name for name in locations if name.lower() in action.lower()]
+        found.append(
+            {
+                "source": rel,
+                "line": number,
+                "action": action,
+                "status": "Open",
+                "location": named[0] if named else "",
+            }
+        )
+    return found
+
+
 def harvest() -> list[dict]:
-    """Every open register row in the documentation estate."""
+    """Every open register row in the documentation estate.
+
+    Two shapes are swept: rows in a markdown table carrying an open status,
+    and unchecked task-list items. Tables were the only shape until
+    2026-09-05; see `_checkbox_items` for what that missed.
+    """
     locations = _locations()
     items: list[dict] = []
 
     for document in _documents():
         rel = document.relative_to(REPO).as_posix()
+        items.extend(
+            _checkbox_items(rel, document.read_text(encoding="utf-8", errors="replace"), locations)
+        )
         header: list[str] = []
         action_index: int | None = None
         for number, line in enumerate(

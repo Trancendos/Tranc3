@@ -54,9 +54,12 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/basement`** — and that is deliberate: this
-  worker serves the prefixed paths itself, so stripping would route `/basement/x`
-  to `/x`, which it does not serve. Adding the middleware would break it.
+- **ROUTING DEFECT — `/basement` has no `stripprefix` and this worker
+  does not serve the prefixed path.** Verified against its own source: every
+  route it registers sits below `/`, not below `/basement`, so Traefik
+  forwards `/basement/x` unchanged and the worker 404s on all of them.
+  Either add a stripprefix middleware to the compose labels, or give the
+  worker's router the prefix. **Fix this before building anything on it.**
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -101,7 +104,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /basement
+1. Request arrives  →  Traefik forwards /basement unchanged (no stripprefix)
 2. The Undertaker — Finds stale databases, archiving them in cold storage.
 3. The Miner — Searches deep archive catalogs, pulling up requested documents.
 4. Bots fire: Compressor-Bot, Extractor-Bot, Dust-Bunny-Bot, Mothball-Bot
@@ -192,8 +195,9 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/basement` reach the worker with the prefix stripped.
-- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+- As a client, requests to `/basement` reach a route the worker actually serves — today they do not, and this epic is that fix.
+- As an implementer, EITHER a stripprefix middleware for `/basement` is added to the compose labels, OR the worker's router is given the prefix. One of the two, not neither.
+- As a reviewer, a request through Traefik returns something other than 404.
 
 ### Epic 2 — Implement the abilities
 

@@ -357,6 +357,40 @@ def quadrant(c: int, r: int, c_split: float, r_split: float) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def worker_serves_prefix(build_context: str, prefix: str) -> bool | None:
+    """Does the worker itself serve paths under `prefix`?
+
+    `None` when it cannot be determined — a third-party image (Forgejo, n8n,
+    Paperless) with no Python in the build context. Unknown is reported as
+    unknown; the whole point of this function is that absence of evidence was
+    previously reported as evidence of design.
+
+    Why this exists
+    ---------------
+    An earlier version of this generator saw "no stripprefix middleware" and
+    wrote, in 20-odd packs, that the omission was **deliberate** — that the
+    worker served the prefixed paths itself and adding the middleware would
+    break it. For most of them the opposite is true: `workers/cryptex/router.py`
+    registers `/scan`, `/intel`, `/engines` with no prefix, compose routes
+    ``PathPrefix(`/cryptex`)`` with no strip, so `/cryptex/scan` reaches the
+    worker unchanged and 404s. The absence was a defect, and the pack called
+    it a design decision — inverting a real routing fault into a reassurance,
+    in the document an implementer is told to trust.
+
+    So intent is no longer inferred from absence. This checks the one thing
+    that is checkable: whether any route or router prefix in the worker's own
+    source begins with the external prefix.
+    """
+    directory = Path(build_context.lstrip("./")) if build_context else None
+    if directory is None or not directory.is_dir():
+        return None
+    sources = list(directory.glob("*.py")) + list(directory.glob("*/*.py"))
+    if not sources:
+        return None  # a third-party image; its routing is not ours to read
+    text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in sources)
+    return f'"{prefix}' in text or f"'{prefix}" in text
+
+
 def render_pack(
     name: str, ent, j: Joined, crit, ready, quad, dependents, c_split, r_split, priority_md
 ) -> str:
@@ -472,12 +506,22 @@ def render_pack(
     add("- **In-memory token-bucket rate limiting** — no external KV (principle 2).")
     add("- **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.")
     if j.traefik_rule and not j.traefik_strip:
-        add(f"- **No `stripprefix` on `{route_prefix}`** — and that is deliberate: this")
-        add(
-            "  worker serves the prefixed paths itself, so stripping would route "
-            f"`{route_prefix}/x`"
-        )
-        add("  to `/x`, which it does not serve. Adding the middleware would break it.")
+        serves = worker_serves_prefix(j.build_context, route_prefix)
+        if serves is True:
+            add(f"- **No `stripprefix` on `{route_prefix}`, and none is needed** — verified:")
+            add(f"  this worker's own source registers paths under `{route_prefix}`, so the")
+            add("  prefix must reach it intact. Adding the middleware would break it.")
+        elif serves is False:
+            add(f"- **ROUTING DEFECT — `{route_prefix}` has no `stripprefix` and this worker")
+            add("  does not serve the prefixed path.** Verified against its own source: every")
+            add(f"  route it registers sits below `/`, not below `{route_prefix}`, so Traefik")
+            add(f"  forwards `{route_prefix}/x` unchanged and the worker 404s on all of them.")
+            add("  Either add a stripprefix middleware to the compose labels, or give the")
+            add("  worker's router the prefix. **Fix this before building anything on it.**")
+        else:
+            add(f"- **No `stripprefix` on `{route_prefix}`, and this could not be verified** —")
+            add("  the build context holds no Python to read (a third-party image). Confirm")
+            add("  against that image's own routing before relying on either behaviour.")
     elif j.traefik_rule:
         add(
             f"- **Traefik `stripprefix` is mandatory** for `{route_prefix}` routing; "
@@ -542,10 +586,18 @@ def render_pack(
     add("journey once a user has actually walked it.")
     add("")
     add("```")
-    add(
-        f"1. Request arrives  →  "
-        f"{'Traefik strips ' + route_prefix if j.traefik_rule else 'api.py routes'}"
-    )
+    if not j.traefik_rule:
+        arrival = "api.py routes"
+    elif j.traefik_strip:
+        arrival = f"Traefik strips {route_prefix}"
+    else:
+        # No middleware: the prefix reaches the worker unchanged. Whether that
+        # works is section 3's verified finding, and this line must not
+        # contradict it — the earlier version said "strips" regardless, so a
+        # pack could declare a routing defect on one page and describe the
+        # stripping that does not happen on the next.
+        arrival = f"Traefik forwards {route_prefix} unchanged (no stripprefix)"
+    add(f"1. Request arrives  →  {arrival}")
     add(f"2. {agents[0].code_name} — {agents[0].description}")
     add(f"3. {agents[1].code_name} — {agents[1].description}")
     add(f"4. Bots fire: {', '.join(b.code_name for b in bots)}")
@@ -784,16 +836,34 @@ def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
             )
         )
     if j.traefik_rule and j.compose_service:
-        e.append(
-            (
-                "Verify routing end to end",
-                [
-                    f"As a client, requests to `{route_prefix}` reach the worker "
-                    "with the prefix stripped.",
-                    "As a reviewer, a stripprefix middleware exists and is referenced by the router.",
-                ],
-            )
-        )
+        if j.traefik_strip:
+            criteria = [
+                f"As a client, requests to `{route_prefix}` reach the worker "
+                "with the prefix stripped.",
+                "As a reviewer, a stripprefix middleware exists and is referenced by the router.",
+            ]
+        elif worker_serves_prefix(j.build_context, route_prefix) is True:
+            criteria = [
+                f"As a client, requests to `{route_prefix}` reach the worker with the "
+                "prefix intact, which is what its own routes expect.",
+                "As a reviewer, NO stripprefix middleware is attached — adding one "
+                "would break every route.",
+            ]
+        else:
+            # The acceptance criterion for a defect is the fix, not a
+            # description of the broken state. Asking a reviewer to confirm a
+            # middleware "exists" when section 3 has just proven it does not,
+            # and that its absence 404s the service, is how a pack sends
+            # somebody to re-add the thing it told them was deliberate.
+            criteria = [
+                f"As a client, requests to `{route_prefix}` reach a route the worker "
+                "actually serves — today they do not, and this epic is that fix.",
+                f"As an implementer, EITHER a stripprefix middleware for `{route_prefix}` "
+                "is added to the compose labels, OR the worker's router is given the "
+                "prefix. One of the two, not neither.",
+                "As a reviewer, a request through Traefik returns something other than 404.",
+            ]
+        e.append(("Verify routing end to end", criteria))
     e.append(
         (
             "Implement the abilities",

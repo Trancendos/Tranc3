@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/auth/`** — and that is deliberate: this
-  worker serves the prefixed paths itself, so stripping would route `/auth//x`
-  to `/x`, which it does not serve. Adding the middleware would break it.
+- **No `stripprefix` on `/auth/`, and none is needed** — verified:
+  this worker's own source registers paths under `/auth/`, so the
+  prefix must reach it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -102,7 +102,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /auth/
+1. Request arrives  →  Traefik forwards /auth/ unchanged (no stripprefix)
 2. The Gatekeeper — Checks incoming user logins, issuing secure, temporary keys.
 3. The Bouncer — Monitors login origins and activities, blocking suspicious IPs.
 4. Bots fire: Token-Minter-Bot, Auth-Check-Bot, Key-Gen-Bot, Sentry-Bot
@@ -200,8 +200,8 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/auth/` reach the worker with the prefix stripped.
-- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+- As a client, requests to `/auth/` reach the worker with the prefix intact, which is what its own routes expect.
+- As a reviewer, NO stripprefix middleware is attached — adding one would break every route.
 
 ### Epic 2 — Implement the abilities
 

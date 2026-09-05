@@ -23,7 +23,7 @@ and `wiki-content/Home.md` and `wiki-content/_Sidebar.md` index the entire
 `wiki-content/` tree in exactly that form. My test could not see the one link
 syntax those files use, so the whole tree read as orphaned.
 
-**Corrected: 11 of 322 documents are named by nothing.** And all five prior
+**Corrected: 8 of 322 documents are named by nothing.** And all five prior
 assessments are indexed, from both the wiki Home page and its sidebar. They
 were never lost.
 
@@ -137,7 +137,7 @@ a list somebody can clear in a week, and unlike fifty-two, a true one.
   converts an unowned item into an item with a Location, a pack, and an
   accountable name. This is the largest single improvement to the estate's
   answerability.
-- **Link the 11.** A week's work, not a programme. Two of them are an index
+- **Link the 8.** A week's work, not a programme. Two of them are an index
   nothing indexes (`docs/DEPLOYMENT_INDEX.md`) and two are architecture
   documents no architecture document references.
 - **Turn the entrypoint audit into a standing guard.** It is currently green
@@ -242,7 +242,7 @@ the nltk entry's ID. A disposition recorded "against SEC-006" lands on
 whichever entry the reader reaches first. Renumbered SEC-008;
 `scripts/check_doc_duplication.py` now fails on a repeated entry ID.
 
-### F7 — 81 checkbox work items are outside every sweep (open)
+### F7 — 81 checkbox work items were outside every sweep (fixed)
 
 | Document | Unchecked items |
 |---|---|
@@ -255,9 +255,28 @@ whichever entry the reader reaches first. Renumbered SEC-008;
 | `docs/runbooks/disaster-recovery.md` | 7 |
 | six others | 16 |
 
-Not all 81 are backlog items — some are runbook procedure steps and template
-placeholders, which are checklists rather than outstanding work. Separating
-the two is the work; the current state is that none of them are visible.
+Not all 81 were backlog items, and separating the two was the work. The
+discriminator turned out to be a property of the **document's role**, not of
+the item's wording: `- [ ] PRAGMA integrity_check returns ok` in
+`docs/runbooks/disaster-recovery.md` is a step performed during a drill,
+`- [ ] Step 2:` in the CAB form is a blank, and `- [ ] Authentication via
+Infinity` in a Town Hall template is a prompt for whoever instantiates it.
+None is work somebody has failed to do.
+
+So the exclusion is drawn by path and written down —
+`config/townhall/templates/`, `docs/runbooks/`, anything named `*RUNBOOK*`,
+the CAB approval workflow and the change-request process — rather than guessed
+per line. Sweeping those would have added roughly fifty procedure steps to the
+backlog as unbuilt features, which is worse than missing the real ones: it
+buries them and makes the total meaningless.
+
+**38 genuine items now reach the backlog**, from seven documents: 13 unbuilt
+middleware components in the architecture update, 9 zero-cost hosting setup
+steps, 7 HIPAA alignment items, 4 vault-security items, and the three
+`Todo-*` lists that exist for no other purpose and had been contributing
+nothing. Zero come from the four procedure documents. The total moves
+**163 → 201**, and the routed share **29/163 → 31/201**, which is the more
+honest denominator.
 
 ### F8 — GitHub state (open, see the hygiene section)
 

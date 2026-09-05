@@ -1,12 +1,12 @@
 # Action Backlog — every outstanding item the estate records
 
-**Generated** by `scripts/build_action_backlog.py` from 44 registers across the documentation estate. Do not edit by hand — a hand-kept backlog becomes one more register nobody sweeps.
+**Generated** by `scripts/build_action_backlog.py` from 51 registers across the documentation estate. Do not edit by hand — a hand-kept backlog becomes one more register nobody sweeps.
 
 The estate records outstanding work in dozens of separate registers, each correct about its own domain and blind to the rest. Nobody can answer *what is outstanding across the platform* without reading 320 documents, so nobody asks — and an action in a register nobody sweeps is an action nobody does. This is that sweep.
 
-**163 open items** across **10 epics**.
+**201 open items** across **10 epics**.
 
-**29 of 163 are routed to a Location** and link to that Location's solution pack — its architecture, compose-derived routing, user journey and acceptance criteria. The other 134 name no Location, so they have no design material and no one accountable; routing them is the first story in each case, which is what the +1 in their sizing says. That ratio is the single most useful number in this document.
+**31 of 201 are routed to a Location** and link to that Location's solution pack — its architecture, compose-derived routing, user journey and acceptance criteria. The other 170 name no Location, so they have no design material and no one accountable; routing them is the first story in each case, which is what the +1 in their sizing says. That ratio is the single most useful number in this document.
 
 ## Definition of Ready
 
@@ -133,7 +133,7 @@ Trust-services criteria awaiting an evidence artefact.
 
 FCA, AI governance and other regulatory registers.
 
-**17 stories · 51 points**
+**24 stories · 72 points**
 
 | Story | Location | Design | Status | Pts | Sized because | Source |
 |---|---|---|---|---|---|---|
@@ -153,6 +153,13 @@ FCA, AI governance and other regulatory registers.
 | Internal audit programme — first audit | _unrouted_ | — | Planned | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/COMPLIANCE-ACTION-TRACKER.md:20` |
 | Consumer Duty outcomes | _unrouted_ | — | PARTIAL | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/FCA-ALIGNMENT.md:140` |
 | Supplier resilience | _unrouted_ | — | PARTIAL | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/FCA-ALIGNMENT.md:143` |
+| Legal review of PHI data flows | _unrouted_ | — | Open | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/HIPAA-ALIGNMENT.md:81` |
+| BAA executed with all relevant providers | _unrouted_ | — | Open | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/HIPAA-ALIGNMENT.md:82` |
+| PHI-specific access controls tested | _unrouted_ | — | Open | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/HIPAA-ALIGNMENT.md:83` |
+| Staff trained on HIPAA obligations | _unrouted_ | — | Open | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/HIPAA-ALIGNMENT.md:84` |
+| Breach notification procedure documented (72-hour notice requirement) | _unrouted_ | — | Open | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/HIPAA-ALIGNMENT.md:85` |
+| Annual HIPAA risk assessment scheduled | _unrouted_ | — | Open | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/HIPAA-ALIGNMENT.md:86` |
+| Incident response plan updated for PHI breach scenarios | _unrouted_ | — | Open | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/HIPAA-ALIGNMENT.md:87` |
 | Partially implemented | _unrouted_ | — | PARTIAL | 3 | baseline (+1); no Location named — routing first (+1); evidence/attestation register, not a code change (+2) | `docs/compliance/TRANC3-REGISTER-BRIDGE.md:83` |
 
 ## Epic — Assurance programmes
@@ -242,7 +249,7 @@ Items carried from earlier assessments — verify before working.
 
 Everything else the estate has recorded as outstanding.
 
-**52 stories · 93 points**
+**83 stories · 153 points**
 
 | Story | Location | Design | Status | Pts | Sized because | Source |
 |---|---|---|---|---|---|---|
@@ -294,13 +301,44 @@ Everything else the estate has recorded as outstanding.
 | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `turings-hub-service` worker is… | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `docs/services/turings-hub/README.md:114` |
 | the `api` service in `docker-compose.development.yml` runs the monolith router — the standalone `vrar3d` wo… | VRAR3D | [pack](../solution-packs/vrar3d.md) | Partial | 1 | baseline (+1) | `docs/services/vrar3d/README.md:149` |
 | same monolith router via `api` in `docker-compose.uat.yml` — the standalone `vrar3d` worker is **not** in t… | VRAR3D | [pack](../solution-packs/vrar3d.md) | Partial | 1 | baseline (+1) | `docs/services/vrar3d/README.md:150` |
+| Shamir's Secret Sharing for multi-party key recovery | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `docs/vault_security.md:300` |
+| TPM 2.0 integration for platform-bound keys (available on most modern hardware) | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `docs/vault_security.md:301` |
+| Secret scanning integration with GitHub Advanced Security (requires GitHub Enterprise) | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `docs/vault_security.md:304` |
+| Automated compliance reporting (SOC 2, ISO 27001) (requires commercial tooling) | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `docs/vault_security.md:305` |
+| TelemetryMiddleware` — trace ID propagation, metrics collection | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:375` |
+| RateLimitMiddleware` — sliding window, tier multipliers, header injection | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:376` |
+| AuthMiddleware` — JWT validation, API key, public path whitelist | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:377` |
+| DefenseEngine` — rule evaluation, incident lifecycle, threat assessment | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:378` |
+| HeartbeatAggregator` — scoring, alerting, trend analysis, deduplication | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:379` |
+| GroqProvider` — complete(), health_check(), fallback | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:380` |
+| DeepSeekProvider` — complete(), health_check(), fallback | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:381` |
+| ZeroCostConfig` — provider discovery, chain selection, model catalog | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:382` |
+| OCIStorageProvider` — upload, download, health check | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:383` |
+| Full middleware stack — request through all middleware layers | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:386` |
+| Ecosystem API — all new endpoints with authentication | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:387` |
+| AI Gateway routing — failover through zero-cost chain | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:388` |
+| Hybrid storage auto-sync — background task lifecycle | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-ARCHITECTURE_UPDATE.md:389` |
 | Auth middleware, resilience patterns, compliance scanner | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-CROSS_REPO_SYNERGY.md:21` |
 | Docker configs, deployment scripts | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-CROSS_REPO_SYNERGY.md:34` |
 | Documentation | _unrouted_ | — | Partial | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Architecture-CROSS_REPO_SYNERGY.md:39` |
+| Dashboard tile in Infinity Admin OS (future) | Infinity | [pack](../solution-packs/infinity.md) | Open | 1 | baseline (+1) | `wiki-content/Strategy-ADAPTIVE_PLATFORM_ROTATION.md:170` |
+| Observatory alerts on failover (future) | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-ADAPTIVE_PLATFORM_ROTATION.md:171` |
 | React Native app | _unrouted_ | — | Not started | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-13-Strategic-Analysis.md:169` |
+| Stripe account created and verified | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:89` |
+| Pro tier price created (£29/mo) | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:90` |
+| Business tier price created (£149/mo) | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:91` |
+| Webhook endpoint configured | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:92` |
+| Free tier rate limits enforced | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:93` |
+| Upgrade prompts in frontend when limits hit | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:94` |
+| RapidAPI listing created (API marketplace) | API Marketplace | [pack](../solution-packs/api-marketplace.md) | Open | 1 | baseline (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:95` |
+| GitHub Sponsors profile set up | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:96` |
+| Affiliate programme page live | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Strategy-DOC-14-Zero-Cost-Hosting.md:97` |
+| Git commit & push to main | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Todo-todo.md:51` |
+| Git commit and push | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Todo-todo.md:78` |
+| Push to GitHub — ⚠️ Token expired; commit ready locally on branch feat/phase28-advanced-bridge-systems | _unrouted_ | — | Open | 2 | baseline (+1); no Location named — routing first (+1) | `wiki-content/Todo-tranc3-ts-todo.md:22` |
 
 ---
 
-**Total: 163 stories, 388 points.**
+**Total: 201 stories, 469 points.**
 
 Velocity is not asserted here. This estate has no measured throughput to divide by, and a sprint count derived from an invented velocity would be the kind of confident, unfounded number the rest of these documents exist to avoid.

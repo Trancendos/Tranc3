@@ -55,9 +55,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/tranceflow`** — and that is deliberate: this
-  worker serves the prefixed paths itself, so stripping would route `/tranceflow/x`
-  to `/x`, which it does not serve. Adding the middleware would break it.
+- **No `stripprefix` on `/tranceflow`, and none is needed** — verified:
+  this worker's own source registers paths under `/tranceflow`, so the
+  prefix must reach it intact. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -102,7 +102,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /tranceflow
+1. Request arrives  →  Traefik forwards /tranceflow unchanged (no stripprefix)
 2. Mesh-Weaver — Synthesizes wireframes and converts data to meshes.
 3. The Physicist — Calculates rigid body dynamics and object collision.
 4. Bots fire: Voxel-1-Bot, Collider-Bot, Ray-Tracer-Bot, Sprite-Bot
@@ -193,8 +193,8 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/tranceflow` reach the worker with the prefix stripped.
-- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+- As a client, requests to `/tranceflow` reach the worker with the prefix intact, which is what its own routes expect.
+- As a reviewer, NO stripprefix middleware is attached — adding one would break every route.
 
 ### Epic 2 — Implement the abilities
 

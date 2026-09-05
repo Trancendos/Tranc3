@@ -112,6 +112,66 @@ class TestSizingIsDerived:
                     assert points in builder._FIBONACCI
 
 
+class TestItSweepsCheckboxWorkToo:
+    """Tables were the only shape swept until 2026-09-05.
+
+    81 unchecked `- [ ]` items across 13 documents reached no register —
+    including all three `wiki-content/Todo-*` lists, which exist for no other
+    purpose. A backlog claiming "every outstanding item" that cannot see the
+    commonest way of recording one was overstating its coverage.
+    """
+
+    def test_an_unchecked_item_is_harvested(self, builder):
+        """The shape that was invisible."""
+        items = builder._checkbox_items(
+            "wiki-content/Todo-example.md",
+            "- [ ] Wire the notification service into The Nexus\n",
+            {"The Nexus": "workers/infinity-ws/"},
+        )
+        assert len(items) == 1
+        assert items[0]["action"] == "Wire the notification service into The Nexus"
+        assert items[0]["status"] == "Open"
+        assert items[0]["location"] == "The Nexus"
+        assert items[0]["line"] == 1
+
+    def test_a_checked_item_is_not_outstanding(self, builder):
+        """`- [x]` is done. Sweeping it would report finished work as open."""
+        items = builder._checkbox_items(
+            "wiki-content/Todo-example.md", "- [x] Already shipped this weeks ago\n", {}
+        )
+        assert items == []
+
+    def test_a_runbook_step_is_not_outstanding_work(self, builder):
+        """`- [ ] PRAGMA integrity_check returns ok` is a step in a drill.
+
+        Sweeping the runbooks, the CAB form and the Town Hall templates would
+        add roughly fifty procedure steps to the backlog as though they were
+        unbuilt features — worse than missing the real ones, because it buries
+        them and makes the total meaningless.
+        """
+        step = "- [ ] `PRAGMA integrity_check` returns ok on the restored file\n"
+        assert builder._checkbox_items("docs/runbooks/disaster-recovery.md", step, {}) == []
+        assert builder._checkbox_items("docs/DEPLOYMENT_RUNBOOK.md", step, {}) == []
+        assert builder._checkbox_items("docs/cab/APPROVAL_WORKFLOW.md", step, {}) == []
+        assert builder._checkbox_items("config/townhall/templates/policy.md", step, {}) == []
+        # ...and the same text in an ordinary document IS swept, so the
+        # exclusion is doing the discriminating, not the wording.
+        assert builder._checkbox_items("wiki-content/Todo-todo.md", step, {})
+
+    def test_a_stub_item_is_not_an_action(self, builder):
+        """ "Step 2:" and "TBD" clear no bar the table sweep does not also set."""
+        assert builder._checkbox_items("wiki-content/Todo-x.md", "- [ ] Step 2:\n", {}) == []
+
+    def test_the_todo_lists_now_reach_the_backlog(self, builder):
+        """The three documents that exist only to record outstanding work.
+
+        They were the clearest evidence the sweep was incomplete: a file named
+        `Todo-todo.md` contributing nothing to the backlog.
+        """
+        harvested = {item["source"] for item in builder.harvest()}
+        assert "wiki-content/Todo-todo.md" in harvested
+
+
 class TestTheSweepDoesNotReadItself:
     """The generated backlog must not be one of the registers it sweeps."""
 

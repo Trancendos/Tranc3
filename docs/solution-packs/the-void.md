@@ -54,9 +54,12 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/api/void`** — and that is deliberate: this
-  worker serves the prefixed paths itself, so stripping would route `/api/void/x`
-  to `/x`, which it does not serve. Adding the middleware would break it.
+- **ROUTING DEFECT — `/api/void` has no `stripprefix` and this worker
+  does not serve the prefixed path.** Verified against its own source: every
+  route it registers sits below `/`, not below `/api/void`, so Traefik
+  forwards `/api/void/x` unchanged and the worker 404s on all of them.
+  Either add a stripprefix middleware to the compose labels, or give the
+  worker's router the prefix. **Fix this before building anything on it.**
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -101,7 +104,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /api/void
+1. Request arrives  →  Traefik forwards /api/void unchanged (no stripprefix)
 2. Crypt-Keeper — Coordinates zero-knowledge DB access; splits/protects keys.
 3. The Silencer — Sanitizes outbound streams so sensitive data avoids general logs.
 4. Bots fire: Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot
@@ -192,8 +195,9 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/api/void` reach the worker with the prefix stripped.
-- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+- As a client, requests to `/api/void` reach a route the worker actually serves — today they do not, and this epic is that fix.
+- As an implementer, EITHER a stripprefix middleware for `/api/void` is added to the compose labels, OR the worker's router is given the prefix. One of the two, not neither.
+- As a reviewer, a request through Traefik returns something other than 404.
 
 ### Epic 2 — Implement the abilities
 

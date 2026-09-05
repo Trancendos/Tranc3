@@ -52,9 +52,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/the-workshop`** — and that is deliberate: this
-  worker serves the prefixed paths itself, so stripping would route `/the-workshop/x`
-  to `/x`, which it does not serve. Adding the middleware would break it.
+- **No `stripprefix` on `/the-workshop`, and this could not be verified** —
+  the build context holds no Python to read (a third-party image). Confirm
+  against that image's own routing before relying on either behaviour.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -99,7 +99,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik strips /the-workshop
+1. Request arrives  →  Traefik forwards /the-workshop unchanged (no stripprefix)
 2. Branch-Manager — Tracks active code branches, conflicts, and pull requests.
 3. Merge-Master — Safely merges code branches, guiding users through conflicts.
 4. Bots fire: Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot
@@ -190,8 +190,9 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/the-workshop` reach the worker with the prefix stripped.
-- As a reviewer, a stripprefix middleware exists and is referenced by the router.
+- As a client, requests to `/the-workshop` reach a route the worker actually serves — today they do not, and this epic is that fix.
+- As an implementer, EITHER a stripprefix middleware for `/the-workshop` is added to the compose labels, OR the worker's router is given the prefix. One of the two, not neither.
+- As a reviewer, a request through Traefik returns something other than 404.
 
 ### Epic 2 — Implement the abilities
 
