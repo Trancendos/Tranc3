@@ -45,6 +45,7 @@ import ast
 import re
 import shlex
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -128,8 +129,33 @@ def _reraises(handler: ast.ExceptHandler) -> bool:
     everything else, so a missing `fastapi` propagates and the job dies;
     treating that as an optional dependency is how this check reported
     PASSED on a run that failed.
+
+    Only `raise` statements in the handler's *own* body count. `ast.walk`
+    descends into functions and classes defined inside the handler, so a
+    handler that defines a fallback helper containing any `raise` at all —
+    a stub that raises `NotImplementedError` when called, say — read as
+    re-raising, and the dependency it genuinely tolerates was reported as
+    fatal. That is a false alarm in a blocking gate, which costs the gate
+    its credibility as surely as a miss does.
     """
-    return any(isinstance(node, ast.Raise) for node in ast.walk(handler))
+    return any(isinstance(node, ast.Raise) for node in _same_scope(handler))
+
+
+def _same_scope(node: ast.AST) -> Iterator[ast.AST]:
+    """Every node reachable from `node` without entering a nested scope.
+
+    A `def`, `async def`, `class` or `lambda` inside an except handler opens
+    a new scope: its body does not run when the handler runs, so nothing in
+    it can re-raise the exception being handled.
+    """
+    for child in ast.iter_child_nodes(node):
+        if isinstance(
+            child,
+            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda),
+        ):
+            continue
+        yield child
+        yield from _same_scope(child)
 
 
 def _guarded(handlers: list[ast.ExceptHandler]) -> bool:
@@ -203,10 +229,26 @@ def _import_time_nodes(body: list[ast.stmt], functions: bool = False) -> list[as
     return found
 
 
+#: The modules `TYPE_CHECKING` legitimately comes from. Anything else
+#: spelled `.TYPE_CHECKING` is a different name that happens to collide.
+_TYPING_MODULES = {"typing", "typing_extensions", "t", "tp"}
+
+
 def _typing_only(test: ast.expr) -> bool:
-    """Is this the `TYPE_CHECKING` guard, in either of its spellings?"""
-    name = getattr(test, "id", None) or getattr(test, "attr", None)
-    return name == "TYPE_CHECKING"
+    """Is this the `TYPE_CHECKING` guard, in either of its spellings?
+
+    A bare `TYPE_CHECKING` is accepted — the name is only ever imported from
+    `typing` or `typing_extensions`. An attribute access has to name one of
+    those modules: matching any `<anything>.TYPE_CHECKING` meant a project
+    constant such as `settings.TYPE_CHECKING` or `flags.TYPE_CHECKING`
+    silenced the check for every import beneath it, which is a hole in a
+    guard rather than a convenience.
+    """
+    if isinstance(test, ast.Name):
+        return test.id == "TYPE_CHECKING"
+    if isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING":
+        return getattr(test.value, "id", None) in _TYPING_MODULES
+    return False
 
 
 def _relative_module_files(entry: Path, node: ast.ImportFrom) -> list[Path]:

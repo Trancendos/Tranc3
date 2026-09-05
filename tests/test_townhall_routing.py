@@ -242,18 +242,86 @@ class TestTheExportIsValidatedNotTrusted:
         with pytest.raises(InvalidExport, match="not one of the"):
             load_decisions(path)
 
-    @pytest.mark.parametrize("missing", ["item_key", "location", "reason", "authority"])
-    def test_a_missing_or_blank_field_is_refused(self, tmp_path, missing):
+    @pytest.mark.parametrize("field", ["item_key", "location", "reason", "authority"])
+    @pytest.mark.parametrize("how", ["blank", "absent", "not-a-string"])
+    def test_a_missing_or_blank_field_is_refused(self, tmp_path, field, how):
+        """Three ways a field fails, because the check has three branches.
+
+        The parametrization used to set whitespace only, so `not
+        isinstance(value, str)` — the branch that catches a deleted key
+        (`None`) and a value YAML parsed as an int or a list — was never
+        executed by any test. A check whose branches are untested is a check
+        whose branches can be deleted without a test noticing.
+        """
         entry = {
             "item_key": "a:1",
             "location": "Cryptex",
             "reason": "because",
             "authority": "The Town Hall",
         }
-        entry[missing] = "   "
+        if how == "blank":
+            entry[field] = "   "
+        elif how == "absent":
+            del entry[field]
+        else:
+            entry[field] = 7
         path = self._write(tmp_path, entry)
-        with pytest.raises(InvalidExport, match=f"has no {missing}"):
+        with pytest.raises(InvalidExport, match=f"has no {field}"):
             load_decisions(path)
+
+    @pytest.mark.parametrize(
+        ("field", "value", "expected"),
+        [
+            ("item_key", "x" * 401, "exceeds maximum length"),
+            ("reason", "y" * 2001, "exceeds maximum length"),
+            ("authority", "z" * 201, "exceeds maximum length"),
+            ("reason", "<script>alert(1)</script>", "disallowed content"),
+            ("authority", "DROP TABLE routing", "disallowed content"),
+        ],
+    )
+    def test_a_field_route_would_refuse_is_refused_here_too(self, tmp_path, field, value, expected):
+        """Presence is not what `route()` enforces, so presence is not enough.
+
+        `route()` runs each of the four fields through `validate_safe_string`
+        with a per-field limit. The loader only checked that each was a
+        non-blank string, so an over-long field or one carrying an injection
+        pattern — precisely the values that arrive by hand-editing rather
+        than through the validated route — loaded cleanly and reached the
+        backlog. Calibrated: drop the `_checked` call in `load_decisions`
+        and every case here loads without raising.
+        """
+        entry = {
+            "item_key": "a:1",
+            "location": "Cryptex",
+            "reason": "because",
+            "authority": "The Town Hall",
+        }
+        entry[field] = value
+        path = self._write(tmp_path, entry)
+        with pytest.raises(InvalidExport, match=expected):
+            load_decisions(path)
+
+    def test_a_file_with_no_decisions_key_is_refused(self, tmp_path):
+        """An absent key is a truncated export, not an empty register.
+
+        Defaulting it to `[]` read a half-written or badly merged file as
+        "the Town Hall has decided nothing", which silently unroutes every
+        item it had in fact decided — the same failure mode as the broken
+        import this module's reader already guards against, one layer in.
+        An empty register is written by `export()` as `decisions: []`.
+        """
+        path = tmp_path / "backlog_routing.yaml"
+        path.write_text("generated_at: 2026-09-05\n", encoding="utf-8")
+        with pytest.raises(InvalidExport, match="has no `decisions` key"):
+            load_decisions(path)
+
+    def test_an_empty_register_round_trips(self, tmp_path):
+        """The refusal above must not refuse what `export()` actually writes."""
+        from src.townhall.routing import RoutingRegistry
+
+        registry = RoutingRegistry(tmp_path / "routing.db")
+        path = registry.export(tmp_path / "backlog_routing.yaml")
+        assert load_decisions(path) == {}
 
     def test_a_design_pack_that_is_not_the_locations_is_refused(self, tmp_path):
         path = self._write(

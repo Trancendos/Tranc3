@@ -36,7 +36,7 @@ skipped is the one nobody had to name.
 ## Location codes are derived once, then allocated
 
 `location_code()` cuts a Location's name to four letters, dropping a leading
-"The" — twenty of the forty-three begin with it. That derivation is how a
+"The" — nineteen of the forty-three begin with it. That derivation is how a
 code is *first chosen*; it is not consulted again once the code is issued.
 See "Codes are allocated once" below for why, and note the distinction: the
 allocation file is not a hand-maintained naming table anyone edits to their

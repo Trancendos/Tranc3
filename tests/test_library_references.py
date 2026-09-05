@@ -9,6 +9,8 @@ administrative view or the user view, or whether they were cleared to read it.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from src.entities.platform import PLATFORM_ENTITIES
@@ -245,3 +247,38 @@ class TestZeroIsNotAReference:
     def test_a_zero_numbered_reference_is_refused(self, text):
         with pytest.raises(InvalidReference, match="start at 1"):
             parse(text)
+
+
+class TestTheDocumentedCountsAreMeasured:
+    """A number written in prose is a claim, and claims drift silently.
+
+    `docs/governance/REFERENCE-NUMBERING.md` said "twenty of the forty-three"
+    Locations begin with "The". Nineteen do. Nothing was wrong with the code
+    — the derivation drops a leading "The" whatever the count — but the
+    governance document that explains the scheme was stating a measurement
+    it had never taken, in a file whose whole purpose is to be the reference
+    other documents cite. These assertions make the register the source and
+    the sentence the thing that has to keep up.
+    """
+
+    DOC = Path(__file__).resolve().parents[1] / "docs/governance/REFERENCE-NUMBERING.md"
+
+    #: English for the two counts the document states in words.
+    WORDS = {
+        19: "nineteen",
+        43: "forty-three",
+    }
+
+    def test_the_stated_counts_match_the_register(self):
+        leading_the = sum(1 for name in PLATFORM_ENTITIES if name.startswith("The "))
+        assert leading_the in self.WORDS, (
+            f"{leading_the} Locations now begin with 'The'; add the English word for it "
+            "here and update docs/governance/REFERENCE-NUMBERING.md to match"
+        )
+        assert len(PLATFORM_ENTITIES) in self.WORDS
+
+        text = self.DOC.read_text(encoding="utf-8")
+        expected = (
+            f"{self.WORDS[leading_the]} of the {self.WORDS[len(PLATFORM_ENTITIES)]} begin with it"
+        )
+        assert expected in text, f"REFERENCE-NUMBERING.md does not say {expected!r}"

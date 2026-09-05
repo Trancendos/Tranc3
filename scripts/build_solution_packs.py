@@ -441,6 +441,33 @@ def worker_serves_prefix(j: "Joined", prefix: str) -> tuple[bool | None, str]:
     # paths under the prefix" — true for the Python workers, false for
     # Forgejo, where the evidence is a configured base URL. Saying the wrong
     # reason for a right answer is how a reader learns to distrust the pack.
+    #
+    # Source first, env URL second. The comment on the fallback said it was
+    # "consulted only when the source cannot be", and the code consulted it
+    # first — so for any worker that had both, the weaker evidence decided,
+    # and the pack cited a base URL where it could have read the routes. A
+    # worker whose own source is readable and does not register the prefix
+    # is not rescued by an environment variable: the source is the thing
+    # that answers the request.
+    build_context = j.build_context
+    directory: Path | None = None
+    if build_context:
+        # Resolved against the repository, not the caller's cwd. A relative
+        # context read from `os.getcwd()` makes every routing verdict depend
+        # on where the generator happened to be invoked from: run it from
+        # anywhere but the repo root and 24 real routing defects silently
+        # become "unverifiable", while `--check` fails on a diff nobody
+        # introduced.
+        candidate = Path(build_context)
+        resolved = candidate if candidate.is_absolute() else ROOT / build_context.lstrip("./")
+        directory = resolved if resolved.is_dir() else None
+
+    sources = list(directory.glob("*.py")) + list(directory.glob("*/*.py")) if directory else []
+    if sources:
+        text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in sources)
+        serves = f'"{prefix}' in text or f"'{prefix}" in text
+        return serves, "this worker's own source registers paths under it"
+
     for url in j.env_urls:
         # A base URL whose own path carries the prefix is the deployment
         # saying the image is rooted there. It is weaker evidence than
@@ -451,25 +478,13 @@ def worker_serves_prefix(j: "Joined", prefix: str) -> tuple[bool | None, str]:
         path = path[path.find("/") :] if "/" in path else ""
         if path.rstrip("/").endswith(prefix.rstrip("/")):
             return True, f"its compose environment configures the base URL `{url}`"
-    build_context = j.build_context
+
     if not build_context:
         return None, "it declares no build context"
-    # Resolved against the repository, not the caller's cwd. A relative
-    # context read from `os.getcwd()` makes every routing verdict depend on
-    # where the generator happened to be invoked from: run it from anywhere
-    # but the repo root and 24 real routing defects silently become
-    # "unverifiable", while `--check` fails on a diff nobody introduced.
-    candidate = Path(build_context)
-    directory = candidate if candidate.is_absolute() else ROOT / build_context.lstrip("./")
-    if not directory.is_dir():
+    if directory is None:
         return None, f"its build context `{build_context}` is not a directory here"
-    sources = list(directory.glob("*.py")) + list(directory.glob("*/*.py"))
-    if not sources:
-        # A third-party image; its routing is not ours to read.
-        return None, "its build context holds no Python to read (a third-party image)"
-    text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in sources)
-    serves = f'"{prefix}' in text or f"'{prefix}" in text
-    return serves, "this worker's own source registers paths under it"
+    # A third-party image; its routing is not ours to read.
+    return None, "its build context holds no Python to read (a third-party image)"
 
 
 def render_pack(

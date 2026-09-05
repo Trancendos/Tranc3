@@ -13,6 +13,7 @@ Covers:
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -405,3 +406,54 @@ class TestErrorCodeValidation:
         count = len(list(ErrorCode))
         _log.info("val.error_codes total_count=%d", count)
         assert count >= 20, f"Expected ≥20 error codes, found {count}"
+
+
+class TestTheValidatorsImportWithoutTheWebStack:
+    """The point of splitting `primitives.py` out was importability.
+
+    Four modules import the pure validators from `validators.py` —
+    `src/auth/db_user_manager.py`, `src/relations/registry.py`,
+    `src/notebooks/registry.py`, `src/roles/registry.py` — and a CI script
+    imports them through `src.townhall.routing`. Moving the functions into
+    `primitives.py` and re-exporting them meant no caller had to change its
+    import line, but it did not make `validators.py` itself importable
+    without the chain: the module still did `from src.observability.observatory
+    import EventCategory, EventSeverity` at the top, to build the decorator's
+    default arguments, and that ends at `aiohttp` and `structlog`.
+
+    Calibrated: restore the module-level enum import and both assertions
+    below fail. A subprocess is used because an earlier test in the session
+    may already have imported the chain for its own reasons.
+    """
+
+    #: The result is tagged and read off its own line. Importing the chain
+    #: also emits a structlog warning on stdout, which an untagged parse
+    #: folded into the module list — so the failure message named a log line
+    #: as a leaked module, and a *passing* run would have been misread just
+    #: as easily had anything else printed.
+    MARKER = "LEAKED:"
+
+    SNIPPET = (
+        "import sys; import {module}; "
+        "leaked = sorted(m for m in sys.modules "
+        "if m.split('.')[0] in {{'aiohttp', 'structlog', 'fastapi'}} "
+        "or m.startswith('src.observability')); "
+        "print('" + MARKER + "' + ','.join(leaked))"
+    )
+
+    @pytest.mark.parametrize("module", ["src.validation.primitives", "src.validation.validators"])
+    def test_importing_it_pulls_in_no_web_or_observatory_module(self, module):
+        import subprocess
+        import sys
+
+        result = subprocess.run(
+            [sys.executable, "-c", self.SNIPPET.format(module=module)],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=str(Path(__file__).resolve().parents[1]),
+        )
+        tagged = [line for line in result.stdout.splitlines() if line.startswith(self.MARKER)]
+        assert len(tagged) == 1, f"expected one {self.MARKER} line, got {result.stdout!r}"
+        leaked = [name for name in tagged[0][len(self.MARKER) :].split(",") if name]
+        assert not leaked, f"{module} dragged in {len(leaked)} module(s): {leaked[:8]}"

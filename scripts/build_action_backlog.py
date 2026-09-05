@@ -343,14 +343,18 @@ def _apply_routing(items: list[dict]) -> list[dict]:
     try:
         from src.townhall.routing import load_decisions  # noqa: PLC0415
     except ModuleNotFoundError as exc:
-        # Only the case this fallback is for: `src/` is not on the path at
-        # all. Catching every exception meant a broken import — a missing
-        # dependency, a syntax error, a regression in the registry — read as
-        # "no decisions recorded" and produced a backlog that looked valid
-        # and was entirely unrouted. A control that fails quietly into the
-        # answer you would have got anyway is the defect this file's own
-        # subject matter is about.
-        if (exc.name or "").split(".")[0] != "src":
+        # Only the case this fallback is for: `src/` itself is not on the
+        # path. The comparison is exact, not a prefix match on the first
+        # dotted segment, because `src.townhall.routing` failing to import
+        # is a broken registry and not the optional case — a prefix test
+        # read both as "no `src`" and returned every item unrouted.
+        # Catching every exception was the same defect one level up: a
+        # missing dependency, a syntax error, a regression in the registry
+        # read as "no decisions recorded" and produced a backlog that
+        # looked valid and was entirely unrouted. A control that fails
+        # quietly into the answer you would have got anyway is the defect
+        # this file's own subject matter is about.
+        if exc.name != "src":
             raise
         return items
     decisions = load_decisions()

@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 
 _DANGEROUS_PATTERNS = re.compile(
-    r"(<script|javascript:|on\w+=|DROP\s+TABLE|SELECT\s+\*|INSERT\s+INTO"
+    r"(<script|javascript:|on\w+\s*=|DROP\s+TABLE|SELECT\s+\*|INSERT\s+INTO"
     r"|DELETE\s+FROM|UNION\s+SELECT|eval\(|exec\(|__import__"
     r"|ignore\s+previous\s+instructions|disregard\s+previous)",
     re.IGNORECASE,
@@ -62,10 +62,16 @@ def validate_email(email: str) -> str:
 
 
 def validate_port(port: int) -> int:
-    """1–65535 range check."""
+    """1–65535 range check.
+
+    The type test comes first and is not decoration. `1 <= port <= 65535`
+    is true for `8080.5` and for `True`, so a float read from a parsed
+    config and a boolean flag both passed a check whose whole job is to
+    say "this is a port number". `bool` is excluded explicitly because it
+    is a subclass of `int` and would otherwise satisfy the isinstance test.
+    """
+    if isinstance(port, bool) or not isinstance(port, int):
+        raise ValueError(f"port must be an integer, got {type(port).__name__}")
     if not (1 <= port <= 65535):
         raise ValueError(f"port {port} is out of valid range (1–65535)")
     return port
-
-
-# ── @audit_action decorator ───────────────────────────────────────────────────

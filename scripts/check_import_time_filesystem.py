@@ -87,8 +87,9 @@ def _same_scope(body: list[ast.stmt]) -> list[ast.stmt]:
     Function bodies do not run on import and are skipped — creating the
     directory in one is the remedy, so flagging it would reject the fix.
     Class bodies DO run on import, but they are a different *scope*, so they
-    are not gathered here; `_scopes` walks them separately with their own
-    name table. An `if`/`try`/`with` body is the same scope and is gathered.
+    are not gathered here; `_classes` collects them and `scan_file`'s `walk`
+    recurses into each with its own name table. An `if`/`try`/`with` body is
+    the same scope and is gathered.
 
     A `try`'s handlers run on import too, on the branch the exception takes.
     """
@@ -125,7 +126,18 @@ def _classes(body: list[ast.stmt]) -> list[ast.ClassDef]:
 
 
 def _bindings(statements: list[ast.stmt]) -> dict[str, str]:
-    """Name -> literal path, for the assignments in one scope."""
+    """Name -> literal path, for the assignments in these statements.
+
+    Callers apply this one statement at a time, in order, so a name resolves
+    to the binding in effect where it is used. Applied to a whole scope at
+    once it kept only the *last* literal per name, and
+
+        OUT = Path("/app/data")
+        OUT.mkdir()          # the write this check exists to find
+        OUT = Path("./local")
+
+    resolved `OUT` to the relative path and reported nothing.
+    """
     bound: dict[str, str] = {}
     for node in statements:
         if not isinstance(node, (ast.Assign, ast.AnnAssign)) or node.value is None:
@@ -253,10 +265,16 @@ def scan_file(path: Path) -> list[str]:
     found: list[str] = []
     relative = path.relative_to(REPO).as_posix()
 
-    def walk(body: list[ast.stmt], inherited: dict[str, str]) -> None:
-        statements = _same_scope(body)
-        defaults = {**inherited, **_bindings(statements)}
-        for node in statements:
+    def walk(body: list[ast.stmt], inherited: dict[str, str]) -> dict[str, str]:
+        """Check one scope and return the names it ends up binding.
+
+        Bindings are applied statement by statement rather than gathered for
+        the whole scope first, so a name resolves to the literal in effect
+        at the line that uses it. Gathering first meant a later rebind
+        rewrote history and hid the write.
+        """
+        defaults = dict(inherited)
+        for node in _same_scope(body):
             for call, lineno in _calls_in(node):
                 report = _write_target(call, defaults)
                 if report is None:
@@ -265,10 +283,22 @@ def scan_file(path: Path) -> list[str]:
                 if not literal.startswith("/"):
                     continue
                 found.append(f"{relative}:{lineno}: {method} {literal}")
-        for klass in _classes(body):
-            walk(klass.body, defaults)
+            defaults.update(_bindings([node]))
+        return defaults
 
-    walk(tree.body, {})
+    # A class body runs on import and is its own scope, but it is NOT an
+    # enclosing scope: an unqualified name inside a class body resolves to
+    # the module globals, never to the class above it. Python's own rule —
+    # `class A: P = Path("/a")` followed by a nested `class B: P.mkdir()`
+    # raises NameError unless `P` is also a module global. Passing the outer
+    # class's table down modelled a lookup the interpreter does not do, and
+    # resolved a name to a path the code never touches.
+    module_scope = walk(tree.body, {})
+    pending = _classes(tree.body)
+    while pending:
+        klass = pending.pop()
+        walk(klass.body, module_scope)
+        pending.extend(_classes(klass.body))
     return found
 
 

@@ -57,6 +57,25 @@ from src.entities.platform import PLATFORM_ENTITIES
 from src.event_bus.types import PlatformEventType
 from src.validation.primitives import validate_non_empty, validate_safe_string
 
+#: The four fields a decision is made of, and the length each is allowed.
+#: Declared once because both paths that accept a decision have to apply the
+#: same checks: `route()`, which takes it from an operator, and
+#: `load_decisions()`, which takes it from a file in the repository. When
+#: only the write path validated, the checks were optional in practice —
+#: anything hand-edited into the export bypassed all of them.
+_FIELD_LIMITS: dict[str, int] = {
+    "item_key": 400,
+    "location": 200,
+    "reason": 2000,
+    "authority": 200,
+}
+
+
+def _checked(field: str, value: str) -> str:
+    """The value, stripped, or a ValueError naming the field that failed."""
+    return validate_safe_string(validate_non_empty(value, field), field, _FIELD_LIMITS[field])
+
+
 logger = logging.getLogger("tranc3.townhall.routing")
 
 DEFAULT_DB_PATH = Path("data/townhall_routing.db")
@@ -191,12 +210,10 @@ class RoutingRegistry:
         Every refusal below is a case where recording the decision would put
         a fact into the backlog that nothing backs.
         """
-        item_key = validate_safe_string(validate_non_empty(item_key, "item_key"), "item_key", 400)
-        location = validate_safe_string(validate_non_empty(location, "location"), "location", 200)
-        reason = validate_safe_string(validate_non_empty(reason, "reason"), "reason", 2000)
-        authority = validate_safe_string(
-            validate_non_empty(authority, "authority"), "authority", 200
-        )
+        item_key = _checked("item_key", item_key)
+        location = _checked("location", location)
+        reason = _checked("reason", reason)
+        authority = _checked("authority", authority)
 
         if location not in PLATFORM_ENTITIES:
             raise RoutingRefused(
@@ -367,7 +384,14 @@ def load_decisions(path: Path | str | None = None) -> dict[str, dict[str, str]]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(payload, dict):
         raise InvalidExport(f"{path}: expected a mapping with a `decisions` list")
-    entries = payload.get("decisions", [])
+    if "decisions" not in payload:
+        raise InvalidExport(
+            f"{path}: has no `decisions` key. A file that exists but omits it is a "
+            "truncated or hand-edited export, not a register with nothing in it — "
+            "and reading it as zero decisions silently unroutes every item the Town "
+            "Hall has decided. An empty register is written as `decisions: []`."
+        )
+    entries = payload["decisions"]
     if not isinstance(entries, list):
         raise InvalidExport(f"{path}: `decisions` must be a list")
 
@@ -376,10 +400,19 @@ def load_decisions(path: Path | str | None = None) -> dict[str, dict[str, str]]:
         where = f"{path}: decision {index}"
         if not isinstance(entry, dict):
             raise InvalidExport(f"{where} is not a mapping")
-        for required in ("item_key", "location", "reason", "authority"):
+        for required in _FIELD_LIMITS:
             value = entry.get(required)
             if not isinstance(value, str) or not value.strip():
                 raise InvalidExport(f"{where} has no {required}")
+            # The same check `route()` applies, with the same limit. Presence
+            # alone is not what the write path enforces: an over-long field
+            # or one carrying an injection pattern is refused there, and an
+            # export is exactly the surface where such a value arrives by
+            # hand rather than through the route that validates it.
+            try:
+                _checked(required, value)
+            except ValueError as exc:
+                raise InvalidExport(f"{where}: {exc}") from exc
         location = entry["location"]
         if location not in PLATFORM_ENTITIES:
             raise InvalidExport(

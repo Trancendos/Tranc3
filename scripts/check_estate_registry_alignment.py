@@ -138,7 +138,15 @@ def check_compose_banners() -> list[str]:
         # stacked header — a note above its banner — had its banner never
         # checked, which is the drift this exists to catch hiding behind an
         # unrelated line of prose.
-        for above in range(index - 1, max(index - 6, -1), -1):
+        #
+        # The scan runs to the first non-comment line rather than stopping
+        # after a fixed six. "Every consecutive comment" was what the
+        # comment claimed and a six-line window is not that: a service whose
+        # banner sits under a seven-line block of explanation — several do
+        # in this file — had its banner silently skipped, and the check
+        # reported clean for a service it never looked at. A bounded window
+        # in a guard is a bound on what the guard can see.
+        for above in range(index - 1, -1, -1):
             comment = lines[above].strip()
             if not comment.startswith("#"):
                 break
