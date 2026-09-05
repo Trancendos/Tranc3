@@ -345,14 +345,20 @@ def _declared_match(surface: str) -> Optional[Tuple[str, Tuple[Optional[str], st
     the guessing this module refuses to do.
     """
     best: Optional[Tuple[str, Tuple[Optional[str], str]]] = None
+    # "Longest" is tracked as its own value rather than re-read off `best`.
+    # `len(best[0])` behind an `or best is None` guard is correct but reads as
+    # a subscript of an Optional, and static analysis says so; naming the
+    # length says what the comparison is for in the same breath.
+    longest = -1
     for prefix, value in DECLARED_OWNERS.items():
         if prefix == ".":
             if surface == ".":
                 return prefix, value
             continue
         if surface == prefix or surface.startswith(prefix + "/"):
-            if best is None or len(prefix) > len(best[0]):
+            if len(prefix) > longest:
                 best = (prefix, value)
+                longest = len(prefix)
     return best
 
 

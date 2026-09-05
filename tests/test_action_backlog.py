@@ -109,7 +109,7 @@ class TestTheSweepDoesNotReadItself:
         swept = {path.relative_to(builder.REPO).as_posix() for path in builder._documents()}
         assert "docs/governance/ACTION-BACKLOG.md" not in swept
 
-    def test_generating_twice_produces_the_same_document(self, builder, tmp_path):
+    def test_generating_twice_produces_the_same_document(self, builder):
         """The property the exclusion exists to give, asserted directly.
 
         Reading `_documents()` proves the output is skipped; this proves the
