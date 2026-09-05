@@ -98,7 +98,41 @@ def audit_action(
         severity: Observatory EventSeverity
         service: Trancendos service name
         target_fn: Optional callable(kwargs) → str to derive the target from route args
+
+    Raises:
+        TypeError: if `category` or `severity` is not the enum it claims to
+            be — including `None`.
     """
+    # Checked here, at decoration time, rather than coerced at record time.
+    #
+    # The defaults are real enums, so `None` only arrives when a caller
+    # passes it explicitly — typically from a config lookup that came back
+    # empty. Substituting the default would then write an audit record
+    # categorised `DATA` for an event the caller meant to categorise
+    # otherwise, and the record would look entirely valid. In an audit log
+    # that is the worst outcome available: a wrong fact, indistinguishable
+    # from a right one, written by the system whose job is to be the record
+    # of what happened. Letting `None` through instead reaches
+    # `Observatory.record`, where the `finally` block below swallows the
+    # AttributeError — so the event is simply not recorded, silently.
+    #
+    # A decorator's arguments are a programming error, not a runtime input:
+    # this runs when a route module is imported, so a bad one stops the
+    # service at startup with the offending line in the traceback, and can
+    # never affect a live request. A bare string is refused for the same
+    # reason — `EventCategory` subclasses `str`, so `"data"` would pass an
+    # `isinstance(..., str)` check and still not be a category.
+    for name, value, enum in (
+        ("category", category, EventCategory),
+        ("severity", severity, EventSeverity),
+    ):
+        if not isinstance(value, enum):
+            raise TypeError(
+                f"audit_action({event_type!r}): {name} must be an "
+                f"{enum.__name__}, got {value!r}. Pass the enum member "
+                f"(e.g. {enum.__name__}.{next(iter(enum)).name}) or omit the "
+                "argument to take the default."
+            )
 
     def decorator(fn: Callable) -> Callable:
         @functools.wraps(fn)

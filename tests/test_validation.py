@@ -517,3 +517,58 @@ class TestTheObservabilityPackageRootIsLazy:
         for name in observability.__all__:
             assert name in dir(observability), name
         assert len(observability.__all__) == 25
+
+
+class TestAuditActionRefusesArgumentsItCannotRecord:
+    """`None` reached `Observatory.record` and vanished.
+
+    cubic flagged this against the intermediate commit, where `None` was
+    the default and got resolved. Restoring the real enum defaults meant
+    `None` only arrives when a caller passes it explicitly — but it still
+    arrived, and `record()`'s serialization then raised an AttributeError
+    that `audit_action`'s own `finally` block swallows, because that block
+    exists so audit logging can never break a route. Net effect: the event
+    is not recorded and nothing says so.
+
+    Coercing to the default was the other option and is worse. It would
+    write a record categorised `DATA` for an event the caller meant to
+    categorise otherwise — a wrong fact indistinguishable from a right one,
+    in the log that exists to be the record of what happened.
+
+    Decoration runs at import, so this fails at startup with the offending
+    line in the traceback, and can never affect a live request.
+
+    Calibrated: drop the loop in `audit_action` and every case here passes
+    silently.
+    """
+
+    @pytest.mark.parametrize("field", ["category", "severity"])
+    @pytest.mark.parametrize("value", [None, "data", 7, object()])
+    def test_a_non_enum_is_refused_at_decoration_time(self, field, value):
+        from src.validation.validators import audit_action
+
+        with pytest.raises(TypeError, match=f"{field} must be an Event"):
+            audit_action("secret.retrieve", **{field: value})
+
+    def test_the_defaults_and_real_enum_members_are_accepted(self):
+        from src.observability.observatory import EventCategory, EventSeverity
+        from src.validation.validators import audit_action
+
+        assert callable(audit_action("secret.retrieve"))
+        assert callable(
+            audit_action(
+                "secret.retrieve",
+                category=EventCategory.SECRETS,
+                severity=EventSeverity.SECURITY,
+            )
+        )
+
+    def test_the_error_names_the_event_and_a_usable_replacement(self):
+        """A decorator error should not send anyone to the source to fix it."""
+        from src.validation.validators import audit_action
+
+        with pytest.raises(TypeError) as caught:
+            audit_action("secret.retrieve", category=None)
+        message = str(caught.value)
+        assert "secret.retrieve" in message
+        assert "EventCategory." in message
