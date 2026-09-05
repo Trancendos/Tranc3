@@ -1,7 +1,7 @@
 name: Submodule Pin Validation
 
 # Guards against a submodule gitlink pointing at a commit that no longer exists
-# upstream — a condition git itself never checks, and which stays invisible until
+# upstream - a condition git itself never checks, and which stays invisible until
 # someone clones fresh and runs `git submodule update --init`.
 #
 # That failure is worse than it looks: the aborted run leaves EVERY submodule
@@ -23,7 +23,7 @@ on:
     # No paths filter: a gitlink change is a tree-entry change, which does not
     # necessarily touch .gitmodules. Any PR can move a pin, so check them all.
   schedule:
-    # Upstream can invalidate a pin long after the commit that set it — a force
+    # Upstream can invalidate a pin long after the commit that set it - a force
     # push or a deleted branch breaks it with no event in this repo at all.
     # A daily sweep catches that drift rather than waiting for the next clone.
     - cron: '17 6 * * *'
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # v7
         with:
-          # Do NOT init submodules — that is the very operation under test, and
+          # Do NOT init submodules - that is the very operation under test, and
           # letting it run here would fail the job with a confusing checkout
           # error instead of this script's actionable report.
           submodules: false

@@ -1,4 +1,4 @@
-# Stale branch reporting — the GitHub-side twin of
+# Stale branch reporting - the GitHub-side twin of
 # .forgejo/workflows/stale-branch-cleanup.yml.
 #
 # WHY THIS EXISTS
@@ -19,7 +19,7 @@ name: Stale Branch Report
 
 on:
   schedule:
-    # Mondays 07:00 UTC — before the working week, after the weekend's merges.
+    # Mondays 07:00 UTC - before the working week, after the weekend's merges.
     - cron: "0 7 * * 1"
   workflow_dispatch:
     inputs:
@@ -125,7 +125,7 @@ jobs:
             echo
             echo "</details>"
             echo
-            echo "<details><summary>Not merged — review before doing anything</summary>"
+            echo "<details><summary>Not merged - review before doing anything</summary>"
             echo
             sed 's/^/- /' unmerged.txt || true
             echo
@@ -155,11 +155,11 @@ jobs:
             [ -z "$name" ] && continue
             live=$(git ls-remote origin "refs/heads/$name" | cut -f1)
             if [ -z "$live" ]; then
-              echo "::warning::$name no longer exists on the remote — skipping"
+              echo "::warning::$name no longer exists on the remote - skipping"
               skipped=$((skipped + 1)); continue
             fi
             if [ "$live" != "$sha" ]; then
-              echo "::warning::$name moved since classification ($sha -> $live) — skipping"
+              echo "::warning::$name moved since classification ($sha -> $live) - skipping"
               skipped=$((skipped + 1)); continue
             fi
             # The lease below protects the CANDIDATE tip, not the default
@@ -170,11 +170,11 @@ jobs:
             # falling back to a ref we know may be stale.
             if ! git fetch --no-tags --quiet origin \
                  "+refs/heads/${DEFAULT#origin/}:refs/remotes/$DEFAULT"; then
-              echo "::warning::could not refresh $DEFAULT — skipping $name"
+              echo "::warning::could not refresh $DEFAULT - skipping $name"
               skipped=$((skipped + 1)); continue
             fi
             if ! git merge-base --is-ancestor "$sha" "$DEFAULT" 2>/dev/null; then
-              echo "::warning::$name is no longer merged into the default branch — skipping"
+              echo "::warning::$name is no longer merged into the default branch - skipping"
               skipped=$((skipped + 1)); continue
             fi
             # --force-with-lease makes the server itself refuse the delete if

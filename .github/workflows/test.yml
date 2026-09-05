@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4 # v7
         with:
           # tests/ includes cases that read the real compliance/magna-carta
-          # submodule content (e.g. Matrix Suites tests) — without this, the
+          # submodule content (e.g. Matrix Suites tests) - without this, the
           # submodule dirs are empty gitlinks on ubuntu-latest's fresh
           # checkout, and those tests silently fall back to "no suites"/404
           # instead of exercising real data.

@@ -6,7 +6,7 @@ name: Production Gate
 # reasoning as .github/workflows/deploy-cloudflare.yml and frontend-build.yml
 # (see cloudflare/DEPLOY.md). The Forgejo original is pinned to
 # `runs-on: self-hosted`, so it needs The Workshop's runner on the Citadel host
-# that this phase explicitly defers standing back up — meaning the platform's
+# that this phase explicitly defers standing back up - meaning the platform's
 # own merge gate has not been running at all while it operates cloud-only.
 #
 # That is worth stating plainly: without this copy, the gate that is supposed to
@@ -15,7 +15,7 @@ name: Production Gate
 #
 # Retire this copy once The Workshop is back and hybrid/local is reactivated,
 # rather than maintaining both indefinitely. Until then, keep it in sync with
-# the Forgejo original — they should differ only in this header, the runner, and
+# the Forgejo original - they should differ only in this header, the runner, and
 # the hardening (persist-credentials, timeout) added below.
 
 on:
@@ -69,7 +69,7 @@ jobs:
           # Test-runner extras, in case the requirements install is partial.
           pip install pytest-asyncio psycopg2-binary -q 2>/dev/null || true
           # The exact tool set scripts/pre_deploy_quality_gate.py declares in its
-          # own `gate_tools` string — keep the two in step. Every one of these is
+          # own `gate_tools` string - keep the two in step. Every one of these is
           # a hard requirement of that gate, and a missing one fails it in a way
           # that reads as a code problem rather than a setup problem: absent
           # bandit reports "0 medium+ issue(s) (exit 1)" (a block with an empty
@@ -83,7 +83,7 @@ jobs:
           # python.yml and test.yml, so the gate and the lint checks cannot
           # disagree about what passes.
           #
-          # Not `|| true` — if the gate's own tooling cannot be installed, the
+          # Not `|| true` - if the gate's own tooling cannot be installed, the
           # gate is not running, and that should fail loudly here.
           pip install pytest pytest-asyncio "ruff==0.15.8" -q
           pip install -r requirements-security.txt -q
@@ -123,7 +123,7 @@ jobs:
 
       # The compose-config step below proves the *schema* is valid using synthesised
       # placeholder values. It deliberately says nothing about whether the real
-      # generator can produce those values — and it could not: 47 of 53 required
+      # generator can produce those values - and it could not: 47 of 53 required
       # variables were never generated, so a genuine `deploy_live.sh` run on the
       # Citadel host would have died before starting a container. This step closes
       # that gap without needing docker or secrets.
@@ -140,7 +140,7 @@ jobs:
           # secrets (53 at last count). That fail-fast is correct for a real deploy
           # and wrong for a syntax check: this step validates the compose *schema*,
           # not whether an operator has populated a .env. On the Citadel host a real .env exists,
-          # so the Forgejo original never hit this — on a hosted runner it aborts on
+          # so the Forgejo original never hit this - on a hosted runner it aborts on
           # the first missing variable and every later check in the file goes
           # unvalidated.
           #

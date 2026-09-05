@@ -43,7 +43,7 @@ jobs:
       matrix:
         python-version: ['3.10', '3.11', '3.12']
         include:
-          # Python 3.14 signal only — see docs/architecture/PYTHON-3.14-UPGRADE-ASSESSMENT.md.
+          # Python 3.14 signal only - see docs/architecture/PYTHON-3.14-UPGRADE-ASSESSMENT.md.
           # continue-on-error keeps this from gating the PR or affecting the three
           # versions this job has always tested; it exists purely to start collecting
           # real 3.14 compatibility data instead of reasoning about it from release notes.

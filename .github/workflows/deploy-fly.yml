@@ -6,8 +6,8 @@ name: Deploy to Fly.io
 # dual-path rationale. Keep this file and the Forgejo copy in sync.
 #
 # Runs on GitHub-hosted runners (no self-hosted runner dependency), and
-# targets the backend app's real name — `tranc3-backend`, matching the root
-# fly.toml — rather than the `trancendos-backend` name used by mistake in
+# targets the backend app's real name - `tranc3-backend`, matching the root
+# fly.toml - rather than the `trancendos-backend` name used by mistake in
 # the original Forgejo workflow.
 #
 # Secrets are passed to flyctl via step-level `env:` and referenced as
@@ -32,7 +32,7 @@ on:
       - ".github/workflows/deploy-fly.yml"
   workflow_dispatch:
 
-# Serialize deploys to main so two pushes can't race the same Fly app — an
+# Serialize deploys to main so two pushes can't race the same Fly app - an
 # older run finishing after a newer one could leave production on stale code
 # or clobber TRANC3_BOTS_URL mid-deploy.
 concurrency:
@@ -72,7 +72,7 @@ jobs:
           fi
 
       - name: Install flyctl
-        # No FLY_API_TOKEN in this step's env — the installer only downloads
+        # No FLY_API_TOKEN in this step's env - the installer only downloads
         # and unpacks the flyctl binary, it never needs the token, so it
         # shouldn't be handed one.
         run: |
@@ -89,7 +89,7 @@ jobs:
         # known dev placeholder strings and whitespace-only values even
         # when they're long enough to pass the length check alone.
         # `flyctl secrets set` happily accepts an empty/placeholder/
-        # malformed value with no error — the app then only fails at
+        # malformed value with no error - the app then only fails at
         # runtime, minutes later, as a bare 503 with no indication why.
         # Catch it here instead, with a readable message, before anything
         # is deployed.
@@ -107,10 +107,10 @@ jobs:
               echo "::error::$name is not set (or empty/whitespace-only) in GitHub repo secrets (Settings > Secrets and variables > Actions)."
               fail=1
             elif [ "${#val}" -lt "$min" ]; then
-              echo "::error::$name is set but shorter than $min characters — startup_validator.py rejects this in production."
+              echo "::error::$name is set but shorter than $min characters - startup_validator.py rejects this in production."
               fail=1
             elif [ -n "$placeholder" ] && [ "$val" = "$placeholder" ]; then
-              echo "::error::$name is still set to the dev placeholder value ('$placeholder') — config.py's field_validator rejects this in production. Set a real generated secret."
+              echo "::error::$name is still set to the dev placeholder value ('$placeholder') - config.py's field_validator rejects this in production. Set a real generated secret."
               fail=1
             fi
           }
@@ -124,11 +124,11 @@ jobs:
             echo "::error::REDIS_URL is not set (or empty) in GitHub repo secrets."
             fail=1
           elif ! echo "$IN_REDIS_URL" | grep -qE '^(redis|rediss|unix)://'; then
-            echo "::error::REDIS_URL doesn't start with redis://, rediss://, or unix:// — the app will silently fall back to an in-memory queue. Likely cause: the Upstash REST URL (https://...) was used instead of the TCP connection string."
+            echo "::error::REDIS_URL doesn't start with redis://, rediss://, or unix:// - the app will silently fall back to an in-memory queue. Likely cause: the Upstash REST URL (https://...) was used instead of the TCP connection string."
             fail=1
           fi
           if [ "$fail" -eq 1 ]; then
-            echo "::error::One or more required deploy secrets are missing/invalid — see errors above. Fix them, then re-run this workflow."
+            echo "::error::One or more required deploy secrets are missing/invalid - see errors above. Fix them, then re-run this workflow."
             exit 1
           fi
           echo "All required deploy secrets present and well-formed."
@@ -206,7 +206,7 @@ jobs:
           done
           if [ "$STATUS" != "200" ]; then
             echo "::error::Health check failed after $MAX_ATTEMPTS attempts (final status=$STATUS). Dumping Fly status/logs for diagnosis below \
-              — no need to fetch these manually from the Fly dashboard next time."
+              - no need to fetch these manually from the Fly dashboard next time."
             flyctl status --app tranc3-backend || echo "(flyctl status unavailable)"
             echo "--- flyctl logs (tranc3-backend) ---"
             timeout 25 flyctl logs --app tranc3-backend --no-tail || echo "(log dump timed out or unavailable)"
