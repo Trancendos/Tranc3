@@ -135,6 +135,10 @@ class PlatformEventType(str, enum.Enum):
     PLM_CRITERION_WAIVED = "plm.criterion.waived"
     PLM_DELIVERABLE_CLOSED = "plm.deliverable.closed"
 
+    # The Town Hall routing a backlog item to a Location — a governed
+    # decision with a named authority and a written reason, not a lookup.
+    TOWNHALL_ITEM_ROUTED = "townhall.item.routed"
+
 
 class DeliveryStatus(str, enum.Enum):
     """Event delivery status."""

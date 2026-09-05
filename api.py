@@ -957,6 +957,18 @@ from src.townhall.plm_routes import (
 
 app.include_router(_plm_router)
 
+# ── Town Hall backlog routing (which Location owns an outstanding item) ──────
+# 170 of the action backlog's 201 items named no Location. Assigning them by
+# judgement in the generator would write a decision nobody made into a file
+# that reads as derived fact, so routing is recorded here instead: a named
+# authority, a written reason, the Location's design pack, and an Observatory
+# event. Items with no decision stay unrouted, and that count is a queue.
+from src.townhall.routing_routes import (
+    router as _townhall_routing_router,  # noqa: F401  # intentional top-level import
+)
+
+app.include_router(_townhall_routing_router)
+
 # ── Creative route table (which Location answers a creative request) ─────────
 # The front door for creative work. /creative/resolve names the Location and
 # endpoint; it deliberately does not dispatch, so it can report a capability

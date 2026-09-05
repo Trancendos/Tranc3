@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "4963d5ad",
+  "commit": "355fea6b",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-09-05T04:35:50.552356+00:00",
+  "generated_at": "2026-09-05T09:05:58.547801+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -333,6 +333,7 @@
     "_thinktank_router",
     "_townhall_itsm_router",
     "_townhall_router",
+    "_townhall_routing_router",
     "_tranc3ts_router",
     "_trance_one_router",
     "_tranquility_router",

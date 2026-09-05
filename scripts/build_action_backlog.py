@@ -289,6 +289,33 @@ def _checkbox_items(rel: str, text: str, locations: dict[str, str]) -> list[dict
     return found
 
 
+def _apply_routing(items: list[dict]) -> list[dict]:
+    """Overlay the Town Hall's routing decisions onto the swept items.
+
+    A Location named inside a register row is a hint the register's author
+    left; a Town Hall decision is a governed answer with an authority, a
+    written reason and an Observatory record. Where both exist the decision
+    wins, because the point of routing through the Town Hall is that the
+    decision is appealable and a mention in prose is not.
+
+    Reading a file rather than the registry's database is deliberate: this
+    runs in CI on a fresh checkout with no service. The export is what makes
+    a routing decision visible in a diff.
+    """
+    try:
+        from src.townhall.routing import load_decisions  # noqa: PLC0415
+    except Exception:  # noqa: BLE001 - the sweep must still run without src/
+        return items
+    decisions = load_decisions()
+    for item in items:
+        decision = decisions.get(f"{item['source']}:{item['line']}")
+        if decision:
+            item["location"] = decision["location"]
+            item["routed_by"] = decision["authority"]
+            item["routing_reason"] = decision["reason"]
+    return items
+
+
 def harvest() -> list[dict]:
     """Every open register row in the documentation estate.
 
@@ -351,7 +378,7 @@ def harvest() -> list[dict]:
                     "location": named[0] if named else "",
                 }
             )
-    return items
+    return _apply_routing(items)
 
 
 def size(item: dict, locations: dict[str, str]) -> tuple[int, list[str]]:
@@ -428,6 +455,7 @@ def render(items: list[dict]) -> str:
     add(f"**{len(items)} open items** across **{len(grouped)} epics**.")
     add("")
     routed = sum(1 for item in items if item["location"])
+    decided = sum(1 for item in items if item.get("routed_by"))
     add(
         f"**{routed} of {len(items)} are routed to a Location** and link to that "
         f"Location's solution pack — its architecture, compose-derived routing, user "
@@ -435,6 +463,23 @@ def render(items: list[dict]) -> str:
         f"Location, so they have no design material and no one accountable; routing "
         f"them is the first story in each case, which is what the +1 in their sizing "
         f"says. That ratio is the single most useful number in this document."
+    )
+    add("")
+    add(
+        f"**{decided} of those {routed} carry a Town Hall routing decision** "
+        "(`/townhall/routing`, exported to `config/estate/backlog_routing.yaml`): a "
+        "named authority, a written reason, the Location's design pack and an "
+        "Observatory event. The rest are routed only because a register row happens "
+        "to mention a Location by name, which is a hint its author left rather than "
+        "a decision anybody made or can appeal."
+    )
+    add("")
+    add(
+        f"The remaining **{len(items) - routed} are a queue the Town Hall owes an "
+        "answer to**, not a number to be made to go away. Assigning them here by "
+        "judgement would write a decision nobody made into a generated file that "
+        "reads as derived fact — the same move that made a routing defect read as "
+        "deliberate design in twenty solution packs."
     )
     add("")
 

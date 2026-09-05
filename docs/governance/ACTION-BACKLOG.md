@@ -8,6 +8,10 @@ The estate records outstanding work in dozens of separate registers, each correc
 
 **31 of 201 are routed to a Location** and link to that Location's solution pack — its architecture, compose-derived routing, user journey and acceptance criteria. The other 170 name no Location, so they have no design material and no one accountable; routing them is the first story in each case, which is what the +1 in their sizing says. That ratio is the single most useful number in this document.
 
+**0 of those 31 carry a Town Hall routing decision** (`/townhall/routing`, exported to `config/estate/backlog_routing.yaml`): a named authority, a written reason, the Location's design pack and an Observatory event. The rest are routed only because a register row happens to mention a Location by name, which is a hint its author left rather than a decision anybody made or can appeal.
+
+The remaining **170 are a queue the Town Hall owes an answer to**, not a number to be made to go away. Assigning them here by judgement would write a decision nobody made into a generated file that reads as derived fact — the same move that made a routing defect read as deliberate design in twenty solution packs.
+
 ## Definition of Ready
 
 An item is ready to start when all of these hold. They are properties of this

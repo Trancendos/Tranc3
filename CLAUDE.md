@@ -51,6 +51,19 @@ mutable at runtime via the Role Assignment Registry (`src/roles/registry.py`, SQ
 exposed at `/roles` — `src/roles/routes.py`, mounted in `api.py`), letting operators add, remove,
 or reassign AIs to a role without a code change; every change is recorded in an audit history.
 
+**Backlog Routing Register.** Which Location owns an outstanding item is a Town Hall
+decision, not a lookup: `src/townhall/routing.py` (SQLite-backed, exposed at
+`/townhall/routing` — `src/townhall/routing_routes.py`, mounted in `api.py`) records the
+Location, the named authority, the written reason and the Location's solution pack, emits
+`townhall.item.routed` to The Observatory, and never overwrites — a re-route supersedes and
+both rows stay in `routing_history`. It refuses a Location that is not one of the 43, and one
+with no solution pack, because routing work to a place with no architecture or acceptance
+criteria is what "unrouted" already means. Decisions are exported to
+`config/estate/backlog_routing.yaml`, which is what `scripts/build_action_backlog.py` reads in
+CI — the export is also what makes a routing decision show up in a diff. Items with no
+decision stay `_unrouted_` in the backlog, and that count is a queue the Town Hall owes an
+answer to rather than a number assigned away by judgement.
+
 **Trancendos Models Matrix.** Every named AI's base model is one of the platform's existing
 orchestration tiers — **Trance-One** (Tier 1, Sovereign/Orchestrator, most capable), **T2ance**
 (Tier 2, Primes), or **Tranc3** (Tier 3, Lead AI/AI Base, the default) — via
