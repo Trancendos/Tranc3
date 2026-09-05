@@ -35,6 +35,7 @@ Standard library only: the production gate installs little else.
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -58,6 +59,17 @@ _SKIP = {
 #: nltk APIs that read or write a filesystem path. The advisory is a
 #: path-sandbox bypass; these are the calls that could reach it.
 _NLTK_PATH_APIS = {"load", "download", "find", "retrieve"}
+
+#: Manifests whose contents install into a *running* service. SEC-006 rests
+#: partly on nltk not being one of these: today it reaches the tree only
+#: transitively, because `safety` declares `nltk>=3.9`, so it is present in
+#: the security tooling's resolution and in no production image.
+#:
+#: A manifest whose name marks it as tooling is exempt. Pinning nltk in
+#: `requirements-security.txt` is how a future advisory would be remediated,
+#: and a check that failed on the remediation would be a check pushing
+#: people the wrong way.
+_TOOLING_MANIFEST_MARKERS = ("test", "dev", "security", "lint", "docs", "ci")
 
 #: fflate's decompression surface. `posthog-js` calls only the compression
 #: side, which is why SEC-007 holds.
@@ -143,10 +155,84 @@ def _nltk_path_calls(tree: ast.AST) -> list[tuple[int, str]]:
     return found
 
 
+def _is_tooling_manifest(path: Path) -> bool:
+    """Does this manifest install tooling rather than a running service?"""
+    return any(marker in path.name.lower() for marker in _TOOLING_MANIFEST_MARKERS)
+
+
+def _declares_nltk(line: str) -> bool:
+    """Is this requirements line a direct `nltk` requirement?"""
+    line = line.split("#", 1)[0].strip()
+    if not line or line.startswith("-"):
+        return False
+    # Strip environment markers, extras and any version specifier.
+    name = re.split(r"[<>=!~;\[ ]", line, maxsplit=1)[0].strip()
+    return name.lower().replace("_", "-") == "nltk"
+
+
+def _runtime_nltk_declarations() -> list[str]:
+    """Runtime manifests that declare nltk directly.
+
+    SEC-006's `Re-evaluate` row names "nltk becoming a declared runtime
+    dependency" as a trigger, and said the row was enforced here. It was not
+    — nothing read a manifest, so adding `nltk` to `requirements.txt` would
+    have left this gate green while the entry claimed the opposite. A
+    reviewer caught the claim outrunning the code, which is the same defect
+    the entries themselves were corrected for.
+    """
+    found: list[str] = []
+
+    for path in ROOT.rglob("requirements*.txt"):
+        if any(part in _SKIP for part in path.parts) or _is_tooling_manifest(path):
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for number, line in enumerate(lines, start=1):
+            if _declares_nltk(line):
+                found.append(f"{path.relative_to(ROOT).as_posix()}:{number}")
+
+    pyproject = ROOT / "pyproject.toml"
+    if pyproject.is_file():
+        try:
+            import tomllib  # noqa: PLC0415 - stdlib from 3.11, which CI runs
+
+            data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, ValueError, ModuleNotFoundError):
+            data = {}
+        project = data.get("project") or {}
+        groups: list[tuple[str, object]] = [("dependencies", project.get("dependencies"))]
+        for name, deps in (project.get("optional-dependencies") or {}).items():
+            if not any(marker in name.lower() for marker in _TOOLING_MANIFEST_MARKERS):
+                groups.append((f"optional-dependencies.{name}", deps))
+        for label, deps in groups:
+            if not isinstance(deps, list):
+                continue
+            for entry in deps:
+                if isinstance(entry, str) and _declares_nltk(entry):
+                    found.append(f"pyproject.toml [project.{label}]")
+
+    return found
+
+
 def check_sec_006() -> list[str]:
-    """nltk stays a single lazy wordnet lookup, with no path-taking call."""
+    """nltk stays a single lazy wordnet lookup, with no path-taking call.
+
+    Three premises, matching the three the register's `Re-evaluate` row now
+    names: the import surface, the absence of any path-taking call, and nltk
+    not being a declared runtime dependency.
+    """
     failures: list[str] = []
     sites: list[str] = []
+
+    for manifest in _runtime_nltk_declarations():
+        failures.append(
+            f"SEC-006: {manifest} declares `nltk` as a runtime dependency. The "
+            f"suppression in {REGISTER} rests on nltk reaching the tree only "
+            "transitively, through `safety`, and so shipping in no production image. "
+            "Declaring it changes what is deployed and needs re-evaluating."
+        )
 
     for path in _walk(ROOT, {".py"}):
         try:
@@ -273,9 +359,10 @@ def main() -> int:
         return 1
     pins = ", ".join(f"{name}@{version}" for name, version in _SEC_007_MEASURED.items())
     print(
-        "Disposition premises: PASSED — SEC-006 (nltk reached lazily, wordnet only, no "
-        f"path call) and SEC-007 (no fflate decompression in web/; {pins} still the "
-        "versions the call-site evidence was measured on) both still hold"
+        "Disposition premises: PASSED — SEC-006 (nltk undeclared in runtime manifests, "
+        "reached lazily, wordnet only, no path call) and SEC-007 (no fflate "
+        f"decompression in web/; {pins} still the versions the call-site evidence was "
+        "measured on) both still hold"
     )
     return 0
 

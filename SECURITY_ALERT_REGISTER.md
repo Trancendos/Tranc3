@@ -175,7 +175,7 @@ above, drop this entry and take the fix.
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-03 |
-| **Re-evaluate** | On any `nltk` release above 3.10.3; on nltk becoming a declared runtime dependency; or on any change to how this repository uses nltk — a second import site, an import outside `nltk.corpus`, an import-time (non-lazy) import, or any call handing nltk a path (`nltk.data.load`, `download`, `find`, `retrieve`). **Enforced by `scripts/check_disposition_premises.py`**, not left to memory |
+| **Re-evaluate** | On any `nltk` release above 3.10.3 — **the census watches this, not the premise checker**. Also on nltk becoming a declared runtime dependency, or on any change to how this repository uses nltk: a second import site, an import outside `nltk.corpus`, an import-time (non-lazy) import, or any call handing nltk a path (`nltk.data.load`, `download`, `find`, `retrieve`). **Those four are enforced by `scripts/check_disposition_premises.py`**, which reads the runtime manifests and every Python file rather than relying on anyone remembering |
 
 **No patched release exists.** 3.10.3 is the latest version on PyPI, and the GHSA
 record's range is `introduced: 0, last_affected: 3.10.3` — every published release is
