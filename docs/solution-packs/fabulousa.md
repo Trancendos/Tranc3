@@ -22,7 +22,7 @@
 | Code path | `workers/fabulousa-service/` ✅ on disk | filesystem |
 | Port | 8048 | compose / `worker_port` |
 | Compose service | `fabulousa-service` | `docker-compose.production.yml` |
-| Traefik route | `Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`)` | compose labels |
+| Traefik route | ``Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `penpot/penpot` (35K★, MPL 2.0) | CLAUDE.md |
 
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /fabulousa | Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`) |
+| Ingress | Traefik → /fabulousa | ``Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Tailor + The Weaver | the two Agents below |
 | Automation | Pixel-Pusher-Bot, Hex-Code-Bot, Font-Fetcher-Bot, Padding-Bot | the four Bots below |

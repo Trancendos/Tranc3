@@ -38,6 +38,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 
 from src.entities.platform import PLATFORM_ENTITIES
@@ -104,11 +106,41 @@ def _letters(name: str) -> str:
     return re.sub(r"[^A-Za-z]", "", name.removeprefix("The ").removeprefix("the "))
 
 
-def location_code(name: str) -> str:
-    """A Location's reference code — four letters, extended to stay unique.
+#: Codes already issued to Locations, allocated once and never recomputed.
+#: See `location_code` for why this file exists.
+ALLOCATIONS = Path(__file__).resolve().parents[2] / "config" / "estate" / "location_codes.yaml"
 
-    Derived rather than held in a second table, because a hand-kept code list
-    is one more register to drift out of step with the entity register.
+
+@lru_cache(maxsize=1)
+def allocated() -> dict[str, str]:
+    """Location name -> the code already issued to it.
+
+    Empty when the file is absent, so a fresh checkout derives rather than
+    failing; the alignment test is what makes the file's presence mandatory.
+    """
+    import yaml  # noqa: PLC0415
+
+    if not ALLOCATIONS.is_file():
+        return {}
+    payload = yaml.safe_load(ALLOCATIONS.read_text(encoding="utf-8")) or {}
+    return dict(payload.get("codes", {}))
+
+
+def location_code(name: str) -> str:
+    """A Location's reference code — allocated once, then never recomputed.
+
+    An allocated code is returned verbatim. Only a Location with no
+    allocation is derived, and its derivation must avoid every allocated
+    code as well as its unallocated peers.
+
+    **Why an allocation file rather than pure derivation.** Derivation alone
+    is not stable: it extends a code only as far as the *current* register
+    requires, so adding a Location beginning "Tran" would push `Tranc` to
+    `Trance` and `Tranq` to `Tranqu` — and every `Tranc-KB-0001` already
+    issued, cited and printed would stop resolving. A reference that stops
+    resolving because an unrelated Location was added is not a reference.
+    The file is append-only; `tests/test_library_references.py` fails if an
+    existing code changes or disappears.
 
     Four letters is the base, from the owner's own example (`Infi-KB` for
     Infinity). It is not enough for three pairs, and the collisions are real:
@@ -127,11 +159,30 @@ def location_code(name: str) -> str:
     code look canonical and the longer look like an exception, and the next
     person to add a Location beginning "Tran" would collide again silently.
     """
+    issued = allocated()
+    if name in issued:
+        return issued[name]
+
     letters = _letters(name)
-    others = [_letters(other) for other in PLATFORM_ENTITIES if other != name]
+    taken = {code.lower() for other, code in issued.items() if other != name}
+    others = [
+        _letters(other) for other in PLATFORM_ENTITIES if other != name and other not in issued
+    ]
     length = _MIN_CODE
-    while length < len(letters) and any(
-        other[:length].lower() == letters[:length].lower() for other in others
+    while (
+        length < len(letters)
+        and (
+            # An exact clash: two Locations answering to one code.
+            letters[:length].lower() in taken
+            # A *prefix* of an allocated code. Distinctness alone would allow it
+            # — `Tran-KB-0001` and `Tranq-KB-0001` parse to different Locations —
+            # but `Tran` is the code the owner wrote for Tranquility, and handing
+            # it to a later Location would make their own example resolve to
+            # somewhere else. The shorter code is the one that reads as canonical,
+            # so a newcomer never takes it.
+            or any(code.startswith(letters[:length].lower()) for code in taken)
+            or any(other[:length].lower() == letters[:length].lower() for other in others)
+        )
     ):
         length += 1
     return letters[:length].capitalize()
@@ -167,6 +218,20 @@ class InvalidReference(ValueError):
     """A reference that does not parse, with the reason it did not."""
 
 
+def _number(text: str, digits: str) -> int:
+    """The reference's number, refusing zero.
+
+    `format_reference` refuses a number below 1, but the shape regexes match
+    all-zero digits, so `TKB000000` parsed cleanly to number 0 — a reference
+    the platform will never issue, accepted as valid on the read side. A
+    document citing it would pass review and resolve to nothing.
+    """
+    number = int(digits)
+    if number < 1:
+        raise InvalidReference(f"{text!r}: reference numbers start at 1")
+    return number
+
+
 def parse(raw: str) -> Reference:
     """Parse a reference, or raise `InvalidReference` saying why.
 
@@ -179,12 +244,12 @@ def parse(raw: str) -> Reference:
     match = _PLATFORM.match(text)
     if match:
         kind = Kind.KB if match.group(1).upper() == "KB" else Kind.WIKI
-        return Reference(text, kind, Scope.PLATFORM, int(match.group(2)))
+        return Reference(text, kind, Scope.PLATFORM, _number(text, match.group(2)))
 
     match = _PERSONAL.match(text)
     if match:
         kind = Kind.KB if match.group(1).upper() == "KB" else Kind.WIKI
-        return Reference(text, kind, Scope.PERSONAL, int(match.group(2)))
+        return Reference(text, kind, Scope.PERSONAL, _number(text, match.group(2)))
 
     match = _LOCATION.match(text)
     if match:
@@ -196,7 +261,7 @@ def parse(raw: str) -> Reference:
                 "A reference may not name a Location the register does not hold."
             )
         kind = Kind.KB if kind_text.upper() == "KB" else Kind.WIKI
-        return Reference(text, kind, Scope.LOCATION, int(number), resolved)
+        return Reference(text, kind, Scope.LOCATION, _number(text, number), resolved)
 
     raise InvalidReference(
         f"{text!r} matches no reference form. Expected one of: "
@@ -205,10 +270,22 @@ def parse(raw: str) -> Reference:
     )
 
 
+#: The widest number each scope's fixed-width field can hold. A number past
+#: this formats to a wider field than `parse` will read back, so issuing one
+#: would mint an identifier the platform cannot resolve — a reference that
+#: only looks like a reference.
+_CEILING = {Scope.PLATFORM: 999_999, Scope.PERSONAL: 9_999, Scope.LOCATION: 9_999}
+
+
 def format_reference(kind: Kind, scope: Scope, number: int, location: str | None = None) -> str:
     """Build a reference, refusing the combinations that have no meaning."""
     if number < 1:
         raise InvalidReference("reference numbers start at 1")
+    if number > _CEILING[scope]:
+        raise InvalidReference(
+            f"{number} exceeds the {scope.value} scope's range (1–{_CEILING[scope]}). "
+            "A wider number formats to a field `parse` cannot read back."
+        )
     marker = "KB" if kind is Kind.KB else "WIX"
 
     if scope is Scope.PLATFORM:

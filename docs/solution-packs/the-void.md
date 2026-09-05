@@ -22,7 +22,7 @@
 | Code path | `workers/infinity-void/` ✅ on disk | filesystem |
 | Port | 8002 | compose / `worker_port` |
 | Compose service | `infinity-void` | `docker-compose.production.yml` |
-| Traefik route | `Host(`api.trancendos.com`) && PathPrefix(`/api/void`)` | compose labels |
+| Traefik route | ``Host(`api.trancendos.com`) && PathPrefix(`/api/void`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Secrets + password vault (AES-GCM)
@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /api/void | Host(`api.trancendos.com`) && PathPrefix(`/api/void`) |
+| Ingress | Traefik → /api/void | ``Host(`api.trancendos.com`) && PathPrefix(`/api/void`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Crypt-Keeper + The Silencer | the two Agents below |
 | Automation | Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot | the four Bots below |

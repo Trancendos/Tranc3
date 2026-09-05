@@ -22,7 +22,7 @@
 | Code path | `workers/infinity-ws/` ✅ on disk | filesystem |
 | Port | 8004 | compose / `worker_port` |
 | Compose service | `infinity-ws` | `docker-compose.production.yml` |
-| Traefik route | `Host(`api.trancendos.com`) && PathPrefix(`/ws`)` | compose labels |
+| Traefik route | ``Host(`api.trancendos.com`) && PathPrefix(`/ws`)`` | compose labels |
 | Rollout priority | P0 | CLAUDE.md worker map |
 
 **Role.** AI communications and transfer hub
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /ws | Host(`api.trancendos.com`) && PathPrefix(`/ws`) |
+| Ingress | Traefik → /ws | ``Host(`api.trancendos.com`) && PathPrefix(`/ws`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Pathfinder + Omni-Router | the two Agents below |
 | Automation | Ping-Bot, Ack-Bot, Syn-Bot, Fin-Bot | the four Bots below |

@@ -23,7 +23,7 @@
 | Code path | `workers/the-lab/` ✅ on disk | filesystem |
 | Port | 8055 | compose / `worker_port` |
 | Compose service | `the-lab` | `docker-compose.production.yml` |
-| Traefik route | `Host(`the-lab.trancendos.com`) && PathPrefix(`/the-lab`)` | compose labels |
+| Traefik route | ``Host(`the-lab.trancendos.com`) && PathPrefix(`/the-lab`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `continuedev/continue` (24K★, Apache 2.0) | CLAUDE.md |
 
@@ -93,7 +93,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /the-lab | Host(`the-lab.trancendos.com`) && PathPrefix(`/the-lab`) |
+| Ingress | Traefik → /the-lab | ``Host(`the-lab.trancendos.com`) && PathPrefix(`/the-lab`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Hounds + Syntax-Sage | the two Agents below |
 | Automation | Lint-Bot, Compile-Bot, Debug-Bot, Test-Bot | the four Bots below |

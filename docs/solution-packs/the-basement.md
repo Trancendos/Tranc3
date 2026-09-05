@@ -22,7 +22,7 @@
 | Code path | `workers/basement/` ✅ on disk | filesystem |
 | Port | 8068 | compose / `worker_port` |
 | Compose service | `basement` | `docker-compose.production.yml` |
-| Traefik route | `Host(`basement.trancendos.com`) && PathPrefix(`/basement`)` | compose labels |
+| Traefik route | ``Host(`basement.trancendos.com`) && PathPrefix(`/basement`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Archived information store from The Observatory
@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /basement | Host(`basement.trancendos.com`) && PathPrefix(`/basement`) |
+| Ingress | Traefik → /basement | ``Host(`basement.trancendos.com`) && PathPrefix(`/basement`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Undertaker + The Miner | the two Agents below |
 | Automation | Compressor-Bot, Extractor-Bot, Dust-Bunny-Bot, Mothball-Bot | the four Bots below |

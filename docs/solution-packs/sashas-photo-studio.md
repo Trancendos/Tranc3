@@ -22,7 +22,7 @@
 | Code path | `workers/sashas-photo-studio/` ✅ on disk | filesystem |
 | Port | 8062 | compose / `worker_port` |
 | Compose service | `sashas-photo-studio` | `docker-compose.production.yml` |
-| Traefik route | `Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`)` | compose labels |
+| Traefik route | ``Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `comfyanonymous/ComfyUI` (72K★, GPL 3.0) | CLAUDE.md |
 
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /sashas-photo-studio | Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`) |
+| Ingress | Traefik → /sashas-photo-studio | ``Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Retoucher + Prompt-Smith | the two Agents below |
 | Automation | Aperture-Bot, Shutter-Bot, Flash-Bot, Lens-Bot | the four Bots below |

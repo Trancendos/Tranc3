@@ -22,7 +22,7 @@
 | Code path | `workers/the-dutchy/` ✅ on disk | filesystem |
 | Port | 8057 | compose / `worker_port` |
 | Compose service | `the-dutchy` | `docker-compose.production.yml` |
-| Traefik route | `Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`)` | compose labels |
+| Traefik route | ``Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Intelligence & market analysis
@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /the-dutchy | Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`) |
+| Ingress | Traefik → /the-dutchy | ``Host(`the-dutchy.trancendos.com`) && PathPrefix(`/the-dutchy`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Spy + The Oracle | the two Agents below |
 | Automation | Scraper-Bot, Parser-Bot, Crawler-Bot, Whisper-Bot | the four Bots below |

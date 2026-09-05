@@ -22,7 +22,7 @@
 | Code path | `workers/imaginarium/` ✅ on disk | filesystem |
 | Port | 8064 | compose / `worker_port` |
 | Compose service | `imaginarium` | `docker-compose.production.yml` |
-| Traefik route | `Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`)` | compose labels |
+| Traefik route | ``Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo)
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /imaginarium | Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`) |
+| Ingress | Traefik → /imaginarium | ``Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Alchemist + The Architect | the two Agents below |
 | Automation | Mixer-Bot, Blender-Bot, Welder-Bot, Polisher-Bot | the four Bots below |

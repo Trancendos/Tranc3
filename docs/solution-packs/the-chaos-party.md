@@ -23,7 +23,7 @@
 | Code path | `workers/chaos-party/` ✅ on disk | filesystem |
 | Port | 8079 | compose / `worker_port` |
 | Compose service | `chaos-party` | `docker-compose.production.yml` |
-| Traefik route | `Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)` | compose labels |
+| Traefik route | ``Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Central testing platform — validation & compliance (Alice in Wonderland themed)
@@ -92,7 +92,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /chaos-party | Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`) |
+| Ingress | Traefik → /chaos-party | ``Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The March Hare + The Dormouse | the two Agents below |
 | Automation | Teapot-Bot, Pocket-Watch-Bot, Sugar-Cube-Bot, Jam-Tart-Bot | the four Bots below |

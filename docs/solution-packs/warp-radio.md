@@ -22,7 +22,7 @@
 | Code path | `workers/warp-radio/` ✅ on disk | filesystem |
 | Port | 8073 | compose / `worker_port` |
 | Compose service | `warp-radio` | `docker-compose.production.yml` |
-| Traefik route | `Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`)` | compose labels |
+| Traefik route | ``Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Music & audio streaming integration
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /warp-radio | Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`) |
+| Ingress | Traefik → /warp-radio | ``Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The DJ + The Maestro | the two Agents below |
 | Automation | Play-Bot, Pause-Bot, Skip-Bot, Volume-Bot | the four Bots below |

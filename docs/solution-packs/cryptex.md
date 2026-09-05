@@ -22,7 +22,7 @@
 | Code path | `workers/cryptex/` ✅ on disk | filesystem |
 | Port | 8053 | compose / `worker_port` |
 | Compose service | `cryptex` | `docker-compose.production.yml` |
-| Traefik route | `Host(`trancendos.com`) && PathPrefix(`/cryptex`)` | compose labels |
+| Traefik route | ``Host(`trancendos.com`) && PathPrefix(`/cryptex`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `MISP/MISP` (5.7K★, AGPL 3.0) | CLAUDE.md |
 
@@ -92,7 +92,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /cryptex | Host(`trancendos.com`) && PathPrefix(`/cryptex`) |
+| Ingress | Traefik → /cryptex | ``Host(`trancendos.com`) && PathPrefix(`/cryptex`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Shield + The Spear | the two Agents below |
 | Automation | Blocker-Bot, Trace-Bot, Patcher-Bot, Honeypot-Bot | the four Bots below |

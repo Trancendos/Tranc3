@@ -23,7 +23,7 @@
 | Code path | `workers/tateking/` ✅ on disk | filesystem |
 | Port | 8061 | compose / `worker_port` |
 | Compose service | `tateking` | `docker-compose.production.yml` |
-| Traefik route | `Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`)` | compose labels |
+| Traefik route | ``Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Video creation & editing platform
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /tateking | Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`) |
+| Ingress | Traefik → /tateking | ``Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Director-B + The Editor-B | the two Agents below |
 | Automation | Cutter-Bot, Splicer-Bot, Renderer-Bot, Scrubber-Bot | the four Bots below |

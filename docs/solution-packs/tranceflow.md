@@ -22,7 +22,7 @@
 | Code path | `workers/tranceflow/` ✅ on disk | filesystem |
 | Port | 8059 | compose / `worker_port` |
 | Compose service | `tranceflow` | `docker-compose.production.yml` |
-| Traefik route | `Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`)` | compose labels |
+| Traefik route | ``Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `godotengine/godot` (94K★, MIT) | CLAUDE.md |
 
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /tranceflow | Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`) |
+| Ingress | Traefik → /tranceflow | ``Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Mesh-Weaver + The Physicist | the two Agents below |
 | Automation | Voxel-1-Bot, Collider-Bot, Ray-Tracer-Bot, Sprite-Bot | the four Bots below |

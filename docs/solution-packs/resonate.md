@@ -22,7 +22,7 @@
 | Code path | `workers/resonate/` ✅ on disk | filesystem |
 | Port | 8076 | compose / `worker_port` |
 | Compose service | `resonate` | `docker-compose.production.yml` |
-| Traefik route | `Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`)` | compose labels |
+| Traefik route | ``Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Empathy engine
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /resonate | Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`) |
+| Ingress | Traefik → /resonate | ``Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Tuner + The Balancer | the two Agents below |
 | Automation | Frequency-Bot, Wave-Bot, Pitch-Bot, Harmonic-Bot | the four Bots below |

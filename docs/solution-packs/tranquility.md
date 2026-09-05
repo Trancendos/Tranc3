@@ -22,7 +22,7 @@
 | Code path | `workers/tranquility/` ✅ on disk | filesystem |
 | Port | 8077 | compose / `worker_port` |
 | Compose service | `tranquility` | `docker-compose.production.yml` |
-| Traefik route | `Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`)` | compose labels |
+| Traefik route | ``Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Wellbeing central hub
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /tranquility | Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`) |
+| Ingress | Traefik → /tranquility | ``Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Guide + The Healer | the two Agents below |
 | Automation | Breath-Bot, Pulse-Bot, Calm-Bot, Aura-Bot | the four Bots below |

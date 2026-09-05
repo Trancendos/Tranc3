@@ -23,7 +23,7 @@
 | Code path | `workers/infinity-auth/` ✅ on disk | filesystem |
 | Port | 8005 | compose / `worker_port` |
 | Compose service | `infinity-auth` | `docker-compose.production.yml` |
-| Traefik route | `Host(`api.trancendos.com`) && PathPrefix(`/auth/`)` | compose labels |
+| Traefik route | ``Host(`api.trancendos.com`) && PathPrefix(`/auth/`)`` | compose labels |
 | Rollout priority | P0 | CLAUDE.md worker map |
 
 **Role.** OAuth, SSO, central user management (1 account, all services)
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /auth/ | Host(`api.trancendos.com`) && PathPrefix(`/auth/`) |
+| Ingress | Traefik → /auth/ | ``Host(`api.trancendos.com`) && PathPrefix(`/auth/`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Gatekeeper + The Bouncer | the two Agents below |
 | Automation | Token-Minter-Bot, Auth-Check-Bot, Key-Gen-Bot, Sentry-Bot | the four Bots below |

@@ -60,6 +60,25 @@ the same four letters. Tranquility is `Tranq`, TranceFlow is `Tranc`.
 `collisions()` returns `{}` today and exists so that "codes are unique" is a
 checked claim rather than an assumed one.
 
+## Codes are allocated once, not recomputed
+
+`config/estate/location_codes.yaml` holds the code issued to each of the 43
+Locations. It is append-only, and `location_code` returns an allocated code
+verbatim; only a Location with no allocation is derived.
+
+Derivation alone is not stable enough to build references on. It extends a
+code only as far as the *current* register requires, so adding a Location
+called "Tranquil Waters" would push Tranquility from `Tranq` to `Tranquili`
+and TranceFlow along with it — and every `Tranq-KB-0001` already cited,
+printed or linked would stop resolving. A reference that breaks because an
+unrelated Location was added is not a reference.
+
+A newcomer therefore moves instead, and it may not take a code that is a
+*prefix* of an allocated one either. `Tran` would parse unambiguously
+alongside `Tranq` and `Tranc`, but it is the spelling the owner wrote for
+Tranquility, and handing it to a later Location would make their own example
+resolve somewhere else.
+
 ## What it refuses
 
 A malformed reference raises rather than returning `None`, so it cannot be
@@ -70,7 +89,13 @@ survive review.
 - A shape matching none of the three forms, with all three named in the error
 - A Location-scoped reference with no Location
 - A Location outside the 43
-- A number below 1
+- A number below 1 — on both sides. `format_reference` refuses to issue one,
+  and `parse` refuses to read one back: the shape patterns match all-zero
+  digits, so `TKB000000` used to parse cleanly into a reference the platform
+  will never issue, and a document citing it would have passed review
+- A number wider than its scope's field: above `999999` platform-wide, above
+  `9999` for a Location or a personal reference. Formatting one would emit an
+  identifier `parse` cannot read back — a reference that only looks like one
 
 The owner's lowercase `Wix` spelling parses; `WIX` is what is emitted. A
 scheme that rejects the spelling it was defined in is a scheme nobody can use

@@ -47,7 +47,7 @@ import shutil
 import statistics
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,6 +82,9 @@ class Joined:
     #: slug wires a middleware to a router that does not exist.
     traefik_router: str = ""
     traefik_strip: str = ""
+    #: Additional routers the same service declares — aliases, not the
+    #: contract the pack is written against.
+    traefik_other: list = field(default_factory=list)
     #: The build context and Dockerfile compose actually uses. Inferring the
     #: context from the worker directory was wrong for every service built
     #: with `context: .` — ice-box's Dockerfile COPYs `src/`, so the inferred
@@ -159,6 +162,7 @@ def parse_compose() -> dict:
             services[current] = {
                 "traefik": "",
                 "router": "",
+                "rules": [],
                 "strip": "",
                 "port": "",
                 "context": "",
@@ -169,10 +173,9 @@ def parse_compose() -> dict:
         if not current:
             continue
         if "rule=" in line and "routers." in line:
-            services[current]["traefik"] = line.split("rule=", 1)[1].strip().rstrip('"')
+            rule = line.split("rule=", 1)[1].strip().rstrip('"')
             router = re.search(r"routers\.([A-Za-z0-9_.-]+)\.rule", line)
-            if router:
-                services[current]["router"] = router.group(1)
+            services[current]["rules"].append((router.group(1) if router else "", rule))
         ctx = re.match(r"^\s+context:\s*(\S+)\s*$", line)
         if ctx and not services[current]["context"]:
             services[current]["context"] = ctx.group(1)
@@ -191,7 +194,33 @@ def parse_compose() -> dict:
         vm = re.search(r"^\s+- ([a-z0-9-]+-data):(\S+)", line)
         if vm:
             services[current]["volumes"].append(f"{vm.group(1)} → {vm.group(2)}")
+
+    for service in services.values():
+        _choose_router(service)
     return services
+
+
+def _choose_router(service: dict) -> None:
+    """Pick the router a pack should describe, and record the others.
+
+    A service may declare several Traefik routers. `forgejo` declares two —
+    `Host(trancendos.com) && PathPrefix(/the-workshop)` and a bare
+    `Host(the-workshop.trancendos.com)` — and taking whichever the scan read
+    last described The Workshop as host-only with no path contract, while the
+    URL the whole estate documents (`trancendos.com/the-workshop`) went
+    unmentioned in its own solution pack.
+
+    The path-prefixed router wins, because "all Trancendos services are
+    subdirectories of trancendos.com, not subdomains" is the deployment
+    topology; a host router alongside it is an alias. The others are kept so
+    the pack can say they exist rather than silently dropping them.
+    """
+    rules = service.get("rules") or []
+    if not rules:
+        return
+    primary = next((r for r in rules if "PathPrefix(" in r[1]), rules[0])
+    service["router"], service["traefik"] = primary
+    service["other_rules"] = [r for r in rules if r is not primary]
 
 
 def slug(name: str) -> str:
@@ -220,6 +249,7 @@ def join_entity(name: str, ent, entity_md, priority_md, oss_md, compose) -> Join
             j.traefik_rule = compose[c]["traefik"]
             j.traefik_router = compose[c]["router"]
             j.traefik_strip = compose[c]["strip"]
+            j.traefik_other = list(compose[c].get("other_rules") or [])
             j.build_context = compose[c]["context"]
             j.build_dockerfile = compose[c]["dockerfile"]
             j.compose_port = compose[c]["port"]
@@ -381,8 +411,16 @@ def worker_serves_prefix(build_context: str, prefix: str) -> bool | None:
     that is checkable: whether any route or router prefix in the worker's own
     source begins with the external prefix.
     """
-    directory = Path(build_context.lstrip("./")) if build_context else None
-    if directory is None or not directory.is_dir():
+    if not build_context:
+        return None
+    # Resolved against the repository, not the caller's cwd. A relative
+    # context read from `os.getcwd()` makes every routing verdict depend on
+    # where the generator happened to be invoked from: run it from anywhere
+    # but the repo root and 24 real routing defects silently become
+    # "unverifiable", while `--check` fails on a diff nobody introduced.
+    candidate = Path(build_context)
+    directory = candidate if candidate.is_absolute() else ROOT / build_context.lstrip("./")
+    if not directory.is_dir():
         return None
     sources = list(directory.glob("*.py")) + list(directory.glob("*/*.py"))
     if not sources:
@@ -449,7 +487,13 @@ def render_pack(
     if j.compose_service:
         add(f"| Compose service | `{j.compose_service}` | `docker-compose.production.yml` |")
     if j.traefik_rule:
-        add(f"| Traefik route | `{j.traefik_rule}` | compose labels |")
+        # Traefik rules contain backticks of their own, so a single-backtick
+        # span closes at the first one and the rest of the rule leaks into
+        # the table as prose. A double-backtick span with padding is the
+        # markdown-correct way to quote text that contains backticks.
+        add(f"| Traefik route | ``{j.traefik_rule}`` | compose labels |")
+        for router, rule in j.traefik_other:
+            add(f"| Also routed by | ``{rule}`` | router `{router}` — an alias |")
     if j.priority:
         add(f"| Rollout priority | {j.priority} | CLAUDE.md worker map |")
     if j.oss_repo:
@@ -573,7 +617,8 @@ def render_pack(
     add("| Layer | Component | Note |")
     add("|---|---|---|")
     add(
-        f"| Ingress | {'Traefik → ' + (route_prefix or 'host rule') if j.traefik_rule else 'in-process router'} | {j.traefik_rule or 'mounted in api.py'} |"
+        f"| Ingress | {'Traefik → ' + (route_prefix or 'host rule') if j.traefik_rule else 'in-process router'} | "
+        f"{'``' + j.traefik_rule + '``' if j.traefik_rule else 'mounted in api.py'} |"
     )
     add("| API | FastAPI app | `/health`, `/status`, domain routes |")
     add(f"| Domain | {agents[0].code_name} + {agents[1].code_name} | the two Agents below |")
@@ -873,7 +918,7 @@ def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
                 "As a reviewer, NO stripprefix middleware is attached — adding one "
                 "would break every route.",
             ]
-        else:
+        elif worker_serves_prefix(j.build_context, route_prefix) is False:
             # The acceptance criterion for a defect is the fix, not a
             # description of the broken state. Asking a reviewer to confirm a
             # middleware "exists" when section 3 has just proven it does not,
@@ -886,6 +931,24 @@ def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
                 "is added to the compose labels, OR the worker's router is given the "
                 "prefix. One of the two, not neither.",
                 "As a reviewer, a request through Traefik returns something other than 404.",
+            ]
+        else:
+            # Unverifiable is not the same as broken, and this branch used to
+            # conflate them: a third-party image whose routing this repo
+            # cannot read had "today they do not" asserted about it as fact,
+            # one page after section 3 said the opposite. The Workshop is the
+            # case — Forgejo's own ROOT_URL carries `/the-workshop`, so the
+            # prefix probably is served, and the pack has no standing to
+            # claim otherwise. So the epic is the measurement.
+            criteria = [
+                f"As a client, a request through Traefik to `{route_prefix}` returns "
+                "something other than 404 — measured, because this repo cannot read "
+                "the image's routing to decide it.",
+                f"As a reviewer, the measurement is recorded: either the worker serves "
+                f"`{route_prefix}` itself (leave the labels alone) or it does not "
+                "(a stripprefix middleware is then required).",
+                "As an implementer, nothing changes in the compose labels until that "
+                "measurement says which.",
             ]
         e.append(("Verify routing end to end", criteria))
     e.append(

@@ -22,7 +22,7 @@
 | Code path | `workers/vrar3d/` ✅ on disk | filesystem |
 | Port | 8060 | compose / `worker_port` |
 | Compose service | `vrar3d` | `docker-compose.production.yml` |
-| Traefik route | `Host(`vrar3d.trancendos.com`) && PathPrefix(`/vrar3d`)` | compose labels |
+| Traefik route | ``Host(`vrar3d.trancendos.com`) && PathPrefix(`/vrar3d`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `mrdoob/three.js` (103K★, MIT) | CLAUDE.md |
 
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /vrar3d | Host(`vrar3d.trancendos.com`) && PathPrefix(`/vrar3d`) |
+| Ingress | Traefik → /vrar3d | ``Host(`vrar3d.trancendos.com`) && PathPrefix(`/vrar3d`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | World-Builder + The VR-Guide | the two Agents below |
 | Automation | Render-Bot, Track-Bot, Haptic-Bot, VR-Lens-Bot | the four Bots below |

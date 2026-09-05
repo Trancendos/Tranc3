@@ -22,7 +22,7 @@
 | Code path | `workers/artifactory-service/` ✅ on disk | filesystem |
 | Port | 8047 | compose / `worker_port` |
 | Compose service | `artifactory-service` | `docker-compose.production.yml` |
-| Traefik route | `Host(`artifactory-service.trancendos.com`) && PathPrefix(`/artifactory`)` | compose labels |
+| Traefik route | ``Host(`artifactory-service.trancendos.com`) && PathPrefix(`/artifactory`)`` | compose labels |
 | Rollout priority | P2 | CLAUDE.md worker map |
 | OSS foundation | `project-zot/zot` (1.2K★, Apache 2.0) | CLAUDE.md |
 
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /artifactory | Host(`artifactory-service.trancendos.com`) && PathPrefix(`/artifactory`) |
+| Ingress | Traefik → /artifactory | ``Host(`artifactory-service.trancendos.com`) && PathPrefix(`/artifactory`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Librarian + The Archivist | the two Agents below |
 | Automation | Packer-Bot, Unpacker-Bot, Checksum-Bot, Versioner-Bot | the four Bots below |

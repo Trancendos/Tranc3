@@ -22,7 +22,7 @@
 | Code path | `workers/the-studio/` ✅ on disk | filesystem |
 | Port | 8069 | compose / `worker_port` |
 | Compose service | `the-studio` | `docker-compose.production.yml` |
-| Traefik route | `Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`)` | compose labels |
+| Traefik route | ``Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Central hub of the Creativity Center
@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /the-studio | Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`) |
+| Ingress | Traefik → /the-studio | ``Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Conductor + The Muse | the two Agents below |
 | Automation | Palette-Bot, Easel-Bot, Clay-Bot, Layout-Bot | the four Bots below |

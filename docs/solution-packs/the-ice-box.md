@@ -22,7 +22,7 @@
 | Code path | `workers/ice-box-service/` ✅ on disk | filesystem |
 | Port | 8046 | compose / `worker_port` |
 | Compose service | `ice-box-service` | `docker-compose.production.yml` |
-| Traefik route | `Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`)` | compose labels |
+| Traefik route | ``Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `cuckoosandbox/cuckoo` (5.7K★, GPL 3.0) | CLAUDE.md |
 
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /ice-box | Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`) |
+| Ingress | Traefik → /ice-box | ``Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Jailer + The Interrogator | the two Agents below |
 | Automation | Frostbite-Bot, Icicle-Bot, Glacier-Bot, Permafrost-Bot | the four Bots below |

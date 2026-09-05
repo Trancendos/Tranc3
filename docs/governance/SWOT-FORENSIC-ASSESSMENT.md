@@ -104,15 +104,18 @@ a list somebody can clear in a week, and unlike fifty-two, a true one.
 
 ### Weaknesses
 
-- **82% of the recorded backlog is unrouted.** 163 open items swept from 44
-  registers; **29 name a Location, 134 do not.** An item with no Location has
+- **85% of the recorded backlog is unrouted.** 201 open items swept from 51
+  registers; **31 name a Location, 170 do not.** An item with no Location has
   no owner, no solution pack, and no accountable party — routing it is the
-  first story in every one of those 134 cases.
-- **The backlog sweeps tables only.** 81 unchecked checkbox items sit in 13
-  documents — including all three `Todo-*` lists — and none of them reach the
-  backlog, because `harvest()` reads markdown tables. A backlog that claims
-  "every outstanding item the estate records" and cannot see `- [ ]` is
-  overstating its coverage.
+  first story in every one of those 170 cases. (This read 163/29/134 until
+  the checkbox blind spot below was closed; F7 records the correction. The
+  share got *worse*, because the 38 items the sweep had been missing are
+  themselves unrouted — which is what an honest denominator does.)
+- **The backlog swept tables only.** 81 unchecked checkbox items sat in 13
+  documents — including all three `Todo-*` lists — and none reached the
+  backlog, because `harvest()` read markdown tables. A backlog that claims
+  "every outstanding item the estate records" and cannot see `- [ ]` was
+  overstating its coverage. Closed; see F7.
 - **Forgejo is the declared primary CI and is dormant.** 32 workflow files, 57
   of 83 jobs pinned to a `self-hosted` runner that is not standing. The
   production merge gate exists in both trees and had already diverged
@@ -130,13 +133,13 @@ a list somebody can clear in a week, and unlike fifty-two, a true one.
 
 ### Opportunities
 
-- **Sweep checkbox work into the backlog.** A ~20-line addition to
-  `harvest()` closes the 81-item blind spot and is the highest coverage gain
-  per unit of effort available.
-- **Route the 134.** Each is a small, mechanical decision, and every one
-  converts an unowned item into an item with a Location, a pack, and an
-  accountable name. This is the largest single improvement to the estate's
-  answerability.
+- **Route the 170.** Every one converts an unowned item into an item with a
+  Location, a pack, and an accountable name. This is the largest single
+  improvement to the estate's answerability — and it is a decision, not a
+  mechanical mapping: the Town Hall's routing register
+  (`src/townhall/routing.py`, `/townhall/routing`) is now the place it is
+  made, with a named authority and a written reason, so the queue is
+  answerable rather than assignable by whoever regenerates the file.
 - **Link the 8.** A week's work, not a programme. Two of them are an index
   nothing indexes (`docs/DEPLOYMENT_INDEX.md`) and two are architecture
   documents no architecture document references.

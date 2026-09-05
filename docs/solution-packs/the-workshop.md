@@ -22,7 +22,8 @@
 | Code path | `deploy/forgejo/` ✅ on disk | filesystem |
 | Port | 2222 | compose / `worker_port` |
 | Compose service | `forgejo` | `docker-compose.production.yml` |
-| Traefik route | `Host(`the-workshop.trancendos.com`)` | compose labels |
+| Traefik route | ``Host(`trancendos.com`) && PathPrefix(`/the-workshop`)`` | compose labels |
+| Also routed by | ``Host(`the-workshop.trancendos.com`)`` | router `forgejo-subdomain` — an alias |
 
 **Role.** CI/CD hub — Forgejo self-hosted git + pipelines
 
@@ -52,10 +53,9 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **The router matches on host alone** — its rule carries no `PathPrefix`, so
-  there is no prefix to strip and no path contract to verify. Traefik forwards
-  the path unchanged and the worker serves what it registers under `/`. Do not
-  add a stripprefix middleware here; there is nothing for it to strip.
+- **No `stripprefix` on `/the-workshop`, and this could not be verified** —
+  the build context holds no Python to read (a third-party image). Confirm
+  against that image's own routing before relying on either behaviour.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -71,7 +71,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> T[Traefik]
-    T -->|host rule| S[The Workshop<br/>2222]
+    T -->|/the-workshop| S[The Workshop<br/>2222]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[The Dr. (Nikolai O'denhime)]
     S --> AA[Branch-Manager]
@@ -87,7 +87,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → host rule | Host(`the-workshop.trancendos.com`) |
+| Ingress | Traefik → /the-workshop | ``Host(`trancendos.com`) && PathPrefix(`/the-workshop`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Branch-Manager + Merge-Master | the two Agents below |
 | Automation | Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot | the four Bots below |
@@ -100,7 +100,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik matches the host; the path arrives unchanged
+1. Request arrives  →  Traefik forwards /the-workshop unchanged (no stripprefix)
 2. Branch-Manager — Tracks active code branches, conflicts, and pull requests.
 3. Merge-Master — Safely merges code branches, guiding users through conflicts.
 4. Bots fire: Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot
@@ -181,7 +181,7 @@ has to name.
     environment: [ PORT=2222 ]
     ports: [ "2222:2222" ]
     labels:
-      - "traefik.http.routers.forgejo-subdomain.rule=Host(`the-workshop.trancendos.com`)"
+      - "traefik.http.routers.forgejo.rule=Host(`trancendos.com`) && PathPrefix(`/the-workshop`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -191,8 +191,9 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, a request to the router's host reaches The Workshop with its path unchanged.
-- As a reviewer, NO stripprefix middleware is attached — a host-only rule carries no prefix to strip.
+- As a client, a request through Traefik to `/the-workshop` returns something other than 404 — measured, because this repo cannot read the image's routing to decide it.
+- As a reviewer, the measurement is recorded: either the worker serves `/the-workshop` itself (leave the labels alone) or it does not (a stripprefix middleware is then required).
+- As an implementer, nothing changes in the compose labels until that measurement says which.
 
 ### Epic 2 — Implement the abilities
 
@@ -224,7 +225,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot    │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  routed by host             │
+│  [ health ]  [ status ]  route /the-workshop        │
 └──────────────────────────────────────────────────────┘
 ```
 

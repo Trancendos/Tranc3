@@ -22,7 +22,7 @@
 | Code path | `workers/warp-tunnel/` ✅ on disk | filesystem |
 | Port | 8072 | compose / `worker_port` |
 | Compose service | `warp-tunnel` | `docker-compose.production.yml` |
-| Traefik route | `Host(`warp-tunnel.trancendos.com`) && PathPrefix(`/warp-tunnel`)` | compose labels |
+| Traefik route | ``Host(`warp-tunnel.trancendos.com`) && PathPrefix(`/warp-tunnel`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Cryptographic scanner & quarantine transport
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /warp-tunnel | Host(`warp-tunnel.trancendos.com`) && PathPrefix(`/warp-tunnel`) |
+| Ingress | Traefik → /warp-tunnel | ``Host(`warp-tunnel.trancendos.com`) && PathPrefix(`/warp-tunnel`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Warden + The Inspector | the two Agents below |
 | Automation | Scan-Bot, Sniffer-Bot, Beam-Bot, Portal-Bot | the four Bots below |

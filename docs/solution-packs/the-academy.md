@@ -22,7 +22,7 @@
 | Code path | `workers/the-academy/` ✅ on disk | filesystem |
 | Port | 8056 | compose / `worker_port` |
 | Compose service | `the-academy` | `docker-compose.production.yml` |
-| Traefik route | `Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`)` | compose labels |
+| Traefik route | ``Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Learning management — education & skill training
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /the-academy | Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`) |
+| Ingress | Traefik → /the-academy | ``Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Tutor + The Proctor | the two Agents below |
 | Automation | Chalk-Bot, Board-Bot, Eraser-Bot, Bell-Bot | the four Bots below |

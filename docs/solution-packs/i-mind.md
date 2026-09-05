@@ -22,7 +22,7 @@
 | Code path | `workers/imind/` ✅ on disk | filesystem |
 | Port | 8075 | compose / `worker_port` |
 | Compose service | `imind` | `docker-compose.production.yml` |
-| Traefik route | `Host(`imind.trancendos.com`) && PathPrefix(`/imind`)` | compose labels |
+| Traefik route | ``Host(`imind.trancendos.com`) && PathPrefix(`/imind`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Sensitivity to emotion engine
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /imind | Host(`imind.trancendos.com`) && PathPrefix(`/imind`) |
+| Ingress | Traefik → /imind | ``Host(`imind.trancendos.com`) && PathPrefix(`/imind`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Counselor + The Listener | the two Agents below |
 | Automation | Journal-Bot, Mood-Bot, Reflect-Bot, Soothe-Bot | the four Bots below |

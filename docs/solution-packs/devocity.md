@@ -22,7 +22,7 @@
 | Code path | `workers/devocity/` ✅ on disk | filesystem |
 | Port | 8110 | compose / `worker_port` |
 | Compose service | `devocity` | `docker-compose.production.yml` |
-| Traefik route | `Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`)` | compose labels |
+| Traefik route | ``Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Development operations hub
@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /devocity | Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`) |
+| Ingress | Traefik → /devocity | ``Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Foreman + The Dispatcher | the two Agents below |
 | Automation | Crane-Bot, Wrench-Bot, Gear-Bot, Belt-Bot | the four Bots below |

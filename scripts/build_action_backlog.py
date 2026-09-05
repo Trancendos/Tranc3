@@ -206,6 +206,37 @@ _ACTION_HEADERS = (
 _NOT_ACTION_HEADERS = ("status", "state", "owner", "due", "date", "priority", "severity", "#", "id")
 
 
+_WRAPPERS = ("**", "__", "`", "*", "_")
+
+
+def _unwrap(text: str) -> str:
+    """Strip whole-value markdown wrapping, and only when it is matched.
+
+    `str.strip("* `")` removes any of those characters from either end
+    independently, so an action that merely *begins* with inline code —
+    "`PENPOT_TOKEN` into The Void" — lost its opening backtick and kept its
+    closing one, and the backlog rendered a row with unbalanced markup. Only
+    a wrapper present at both ends is removed, and only whole pairs.
+    """
+    value = text.strip()
+    changed = True
+    while changed:
+        changed = False
+        for wrapper in _WRAPPERS:
+            if (
+                len(value) > 2 * len(wrapper)
+                and value.startswith(wrapper)
+                and value.endswith(wrapper)
+                # A value wrapped end to end, not two separate spans: the
+                # marker must not reappear in between, or "`a` and `b`" would
+                # be read as one span and lose both delimiters.
+                and wrapper not in value[len(wrapper) : -len(wrapper)]
+            ):
+                value = value[len(wrapper) : -len(wrapper)].strip()
+                changed = True
+    return value
+
+
 def _action_column(header: list[str]) -> int | None:
     """The index of the column holding the action, from the table's own header."""
     lowered = [h.strip("* `").lower() for h in header]
@@ -271,7 +302,7 @@ def _checkbox_items(rel: str, text: str, locations: dict[str, str]) -> list[dict
         match = _UNCHECKED.match(line)
         if not match:
             continue
-        action = match.group(1).strip("* `").strip()
+        action = _unwrap(match.group(1))
         if len(action) < 12:
             # Too short to be an action anybody could act on — "Step 2:",
             # "TBD", a stray bullet. The same floor the table sweep uses.
@@ -356,7 +387,7 @@ def harvest() -> list[dict]:
 
             action = ""
             if action_index is not None and action_index < len(cells):
-                candidate = cells[action_index].strip("* `")
+                candidate = _unwrap(cells[action_index])
                 if candidate and candidate is not status:
                     action = candidate
             if len(action) < 12:
@@ -364,7 +395,7 @@ def harvest() -> list[dict]:
                 # cell, which is right for the registers that have no header
                 # naming their action column.
                 body = [c for c in cells if c is not status and c.strip("* `")]
-                action = max(body, key=len).strip("* `") if body else ""
+                action = _unwrap(max(body, key=len)) if body else ""
             if len(action) < 12:
                 continue
 

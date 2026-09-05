@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import pytest
 
+from src.entities.platform import PLATFORM_ENTITIES
 from src.library.references import (
+    ALLOCATIONS,
     InvalidReference,
     Kind,
     Reference,
     Scope,
+    allocated,
     collisions,
     format_reference,
     location_code,
@@ -135,3 +138,99 @@ class TestRoundTrip:
         """
         assert parse("Tranq-Wix-0007").kind is Kind.WIKI
         assert parse("Tranq-WIX-0007").kind is Kind.WIKI
+
+
+class TestAllocatedCodesAreImmutable:
+    """A code that has been issued must never be recomputed.
+
+    Derivation alone extends a code only as far as the current register
+    requires. Adding a Location beginning "Tran" would push `Tranc` to
+    `Trance`, and every `Tranc-KB-0001` already cited would stop resolving —
+    a reference that breaks because an unrelated Location was added is not a
+    reference. The allocation file is what makes issued codes permanent.
+    """
+
+    def test_every_location_has_an_allocation(self):
+        missing = sorted(set(PLATFORM_ENTITIES) - set(allocated()))
+        assert missing == [], (
+            f"Locations with no allocated code: {missing}. "
+            f"Append their derived codes to {ALLOCATIONS.name}."
+        )
+
+    def test_allocated_codes_are_unique(self):
+        issued = allocated()
+        assert len(set(issued.values())) == len(issued)
+
+    def test_the_allocation_is_what_location_code_returns(self):
+        for name, code in allocated().items():
+            assert location_code(name) == code
+
+    def test_the_owners_three_collisions_keep_their_extended_codes(self):
+        """The pairs that forced extension, pinned by name.
+
+        Calibrated: shortening any of these to four letters fails this, and
+        would reintroduce a code naming two Locations.
+        """
+        issued = allocated()
+        assert issued["Arcadia"] != issued["Arcadian Exchange"]
+        assert issued["TranceFlow"] == "Tranc"
+        assert issued["Tranquility"] == "Tranq"
+        assert issued["The Warp Tunnel"] != issued["Warp Radio"]
+
+    def test_a_new_same_prefix_location_does_not_move_existing_codes(self, monkeypatch):
+        """Calibrated: with allocations ignored this returns `Tranquili`.
+
+        This is the whole reason the allocation file exists. "Tranquil
+        Waters" shares seven letters with Tranquility, so pure derivation
+        pushes Tranquility from `Tranq` to `Tranquili` — and every
+        `Tranq-KB-0001` already cited stops resolving, because an unrelated
+        Location was added.
+        """
+        import src.library.references as references
+
+        extended = dict(PLATFORM_ENTITIES)
+        extended["Tranquil Waters"] = extended["Tranquility"]
+        monkeypatch.setattr(references, "PLATFORM_ENTITIES", extended)
+
+        assert references.location_code("TranceFlow") == "Tranc"
+        assert references.location_code("Tranquility") == "Tranq"
+        # The newcomer moves, being the one with no references in the world
+        # yet — and it does not take `Tran` either, which is a prefix of two
+        # allocated codes and the spelling the owner used for Tranquility.
+        assert references.location_code("Tranquil Waters") == "Tranqu"
+
+
+class TestNumbersOutsideTheScopesRange:
+    def test_a_platform_number_wider_than_the_field_is_refused(self):
+        """Calibrated: dropping the ceiling check fails this.
+
+        `format_reference` would emit `TKB1000000`, which `parse` cannot read
+        back — an identifier that looks like a reference and resolves to
+        nothing.
+        """
+        with pytest.raises(InvalidReference, match="exceeds"):
+            format_reference(Kind.KB, Scope.PLATFORM, 1_000_000)
+        assert format_reference(Kind.KB, Scope.PLATFORM, 999_999) == "TKB999999"
+
+    def test_a_location_number_wider_than_the_field_is_refused(self):
+        with pytest.raises(InvalidReference, match="exceeds"):
+            format_reference(Kind.KB, Scope.LOCATION, 10_000, "Infinity")
+        assert format_reference(Kind.KB, Scope.LOCATION, 9_999, "Infinity") == "Infi-KB-9999"
+
+    def test_a_personal_number_wider_than_the_field_is_refused(self):
+        with pytest.raises(InvalidReference, match="exceeds"):
+            format_reference(Kind.KB, Scope.PERSONAL, 10_000)
+
+
+class TestZeroIsNotAReference:
+    """Calibrated: removing `_number`'s check passes all three of these.
+
+    `format_reference` refuses a number below 1, but the shape regexes match
+    all-zero digits — so a citation to `TKB000000` parsed cleanly, on the
+    read side, to a reference the platform will never issue.
+    """
+
+    @pytest.mark.parametrize("text", ["TKB000000", "TWIX000000", "Infi-KB-0000", "#One:KB-0000"])
+    def test_a_zero_numbered_reference_is_refused(self, text):
+        with pytest.raises(InvalidReference, match="start at 1"):
+            parse(text)

@@ -22,7 +22,7 @@
 | Code path | `workers/taimra/` ✅ on disk | filesystem |
 | Port | 8074 | compose / `worker_port` |
 | Compose service | `taimra` | `docker-compose.production.yml` |
-| Traefik route | `Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`)` | compose labels |
+| Traefik route | ``Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`)`` | compose labels |
 | Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Opt-in digital twin & life assistant
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → /taimra | Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`) |
+| Ingress | Traefik → /taimra | ``Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`)`` |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Shadow + The Scheduler | the two Agents below |
 | Automation | Sync-Bot, Fetch-Bot, Nudge-Bot, Alert-Bot | the four Bots below |
