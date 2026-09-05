@@ -6,13 +6,13 @@ name: Frontend Build & Deploy
 # reasoning as .github/workflows/deploy-cloudflare.yml (see cloudflare/DEPLOY.md):
 # The Workshop's runner lives on the self-hosted Citadel host, which the
 # cloud-only phase explicitly defers standing back up. Without a second trigger
-# path the frontend - the surface users actually land on at trancendos.com -
+# path the frontend — the surface users actually land on at trancendos.com —
 # has no way to deploy at all while the platform runs cloud-only.
 #
 # This diverges from the "prefer Forgejo" principle by explicit operator
 # decision. Retire this copy once The Workshop is back and hybrid/local is
 # reactivated, rather than maintaining both indefinitely. Until then, keep it in
-# sync with the Forgejo original - they should differ only in this header.
+# sync with the Forgejo original — they should differ only in this header.
 
 on:
   push:
@@ -34,7 +34,7 @@ on:
 permissions:
   contents: read
 
-# Serialize deploys to main so two pushes can't race the same Pages project -
+# Serialize deploys to main so two pushes can't race the same Pages project —
 # an older run finishing after a newer one could leave trancendos.com on stale
 # assets.
 concurrency:
@@ -50,7 +50,7 @@ jobs:
         working-directory: web
 
     steps:
-      - uses: actions/checkout@v4 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # npm ci, the production build and the Storybook/Playwright run all
           # execute third-party code; none of them need to push, so don't leave
@@ -91,9 +91,9 @@ jobs:
 
       - name: Verify dist output
         run: |
-          test -f dist/index.html || (echo "x dist/index.html missing" && exit 1)
-          test -d dist/assets   || (echo "x dist/assets missing" && exit 1)
-          echo "v dist/index.html present"
+          test -f dist/index.html || (echo "✗ dist/index.html missing" && exit 1)
+          test -d dist/assets   || (echo "✗ dist/assets missing" && exit 1)
+          echo "✓ dist/index.html present"
           du -sh dist/
           ls -lh dist/assets/
 
@@ -125,7 +125,7 @@ jobs:
       # red-X'ing every push to main.
       #
       # The skip must be LOUD. A green check on a job that deployed nothing is
-      # the same defect this repo's readiness scorecard already suffers from -
+      # the same defect this repo's readiness scorecard already suffers from —
       # a signal that reports success while doing no work. The job stays
       # non-blocking (failing every push on a repo without secrets is noise),
       # but the run summary says plainly whether anything actually shipped.
@@ -136,17 +136,17 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
           if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
-            echo "::warning::CF_API_TOKEN / CF_ACCOUNT_ID not set - NOT deploying to Pages."
+            echo "::warning::CF_API_TOKEN / CF_ACCOUNT_ID not set — NOT deploying to Pages."
             echo "present=false" >> "$GITHUB_OUTPUT"
             {
-              echo "## ! Frontend was NOT deployed"
+              echo "## ⚠️ Frontend was NOT deployed"
               echo
               echo "The bundle built and was uploaded as an artifact, but **no deploy happened**."
               echo
               echo "\`CF_API_TOKEN\` and/or \`CF_ACCOUNT_ID\` are not set as repository secrets,"
               echo "so the Cloudflare Pages step was skipped. trancendos.com is unchanged."
               echo
-              echo "Set them under **Settings -> Secrets and variables -> Actions**, then re-run."
+              echo "Set them under **Settings → Secrets and variables → Actions**, then re-run."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
@@ -154,7 +154,7 @@ jobs:
 
       - name: Install Wrangler
         if: steps.creds.outputs.present == 'true'
-        # Pinned to the fleet-wide version in cloudflare/DEPLOY.md - an
+        # Pinned to the fleet-wide version in cloudflare/DEPLOY.md — an
         # unpinned global install lets a new major change deploy behaviour
         # with no corresponding change in this repo.
         run: npm install -g wrangler@4.102.0
@@ -164,9 +164,9 @@ jobs:
         run: |
           wrangler pages deploy web/dist --project-name=trancendos-frontend --commit-dirty=true
           {
-            echo "## [OK] Frontend deployed to Cloudflare Pages"
+            echo "## ✅ Frontend deployed to Cloudflare Pages"
             echo
-            echo "Project: \`trancendos-frontend\` - commit \`${GITHUB_SHA:0:8}\`."
+            echo "Project: \`trancendos-frontend\` — commit \`${GITHUB_SHA:0:8}\`."
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -178,13 +178,13 @@ jobs:
     needs: build
     # Deliberately NOT main-only. The pull_request trigger above includes
     # docker/Dockerfile.web and docker/nginx.conf, and this is the only job that
-    # builds and smoke-tests the image - gating it on main meant a PR touching
+    # builds and smoke-tests the image — gating it on main meant a PR touching
     # those exact files never validated them, and the first real build happened
     # after merge, alongside a Pages deploy that had already shipped. Unlike
     # deploy-pages this job has no external side effect, so it is safe on PRs.
 
     steps:
-      - uses: actions/checkout@v4 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
@@ -196,20 +196,20 @@ jobs:
           # Clear any container left behind by an earlier run, and remove this
           # one on every exit path. ubuntu-latest runners are ephemeral per job
           # so this is not load-bearing here, but the Forgejo copy runs on a
-          # self-hosted runner that keeps Docker state between jobs - where a
+          # self-hosted runner that keeps Docker state between jobs — where a
           # leftover container fails the next run on a name conflict. Kept
           # identical so the two copies stay in sync, as the header requires.
           #
           # A trap rather than `docker run --rm`: --rm deletes a container the
           # instant it dies, so `docker logs` would come back empty for one that
-          # crashed at startup - exactly the failure this test exists to catch
+          # crashed at startup — exactly the failure this test exists to catch
           # (it is how the /var/cache/nginx permission bug was found). The trap
           # runs after the logs have been read.
           docker rm -f tranc3-web-test >/dev/null 2>&1 || true
           docker run -d --name tranc3-web-test -p 3000:80 tranc3-web:${{ github.sha }}
           trap 'docker rm -f tranc3-web-test >/dev/null 2>&1 || true' EXIT
           sleep 3
-          # /health, not /healthz - nginx.conf defines `location /health`, while
+          # /health, not /healthz — nginx.conf defines `location /health`, while
           # `location /` does try_files ... /index.html. A request to /healthz
           # therefore falls through to the SPA and returns 200, so the old probe
           # passed without ever reaching the health endpoint. Assert the body is
@@ -217,6 +217,6 @@ jobs:
           body=$(curl -sf http://localhost:3000/health) \
             || (docker logs tranc3-web-test && exit 1)
           [ "$body" = "ok" ] \
-            || (echo "x /health returned '$body', expected 'ok'" && docker logs tranc3-web-test && exit 1)
+            || (echo "✗ /health returned '$body', expected 'ok'" && docker logs tranc3-web-test && exit 1)
           curl -sf http://localhost:3000/ | grep -q "<!DOCTYPE html>" || exit 1
-          echo "v Container smoke test passed"
+          echo "✓ Container smoke test passed"
