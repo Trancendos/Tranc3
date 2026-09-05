@@ -169,6 +169,15 @@ DECLARED_OWNERS: Dict[str, Tuple[Optional[str], str]] = {
     "workers/config-service": (None, "central configuration for every worker"),
     "workers/geo-service": (None, "geographic routing for every worker"),
     "workers/rate-limit-service": (None, "the token bucket in front of every worker"),
+    # Unowned from 2026-09-05 until this entry: The Library's `worker_path`
+    # used to point here, so the Location ladder resolved it by accident.
+    # Correcting that to `workers/library-service/` (its real code) left this
+    # surface with nobody, which is the right outcome to record rather than
+    # re-attach: `src/event_bus/wiring.py` indexes BOTH Library articles and
+    # Think Tank inference results into it, and its own worker docstring
+    # describes "multiple named indices" any Location may register. It is a
+    # generic FTS5 index server, not one Location's search.
+    "workers/search-service": (None, "compose port 8017 — the estate's shared FTS5 index"),
     "workers/health-aggregator": (None, "rolls up health across the whole estate"),
     "workers/topology-service": (None, "the service topology graph of the whole estate"),
     "workers/optional-services-health": (None, "health probes for optional services"),
