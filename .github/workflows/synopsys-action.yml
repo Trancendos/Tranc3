@@ -21,7 +21,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Is any Black Duck product configured?
+        id: products
+        env:
+          BLACKDUCKSCA_URL: ${{ secrets.BLACKDUCK_URL }}
+          COVERITY_URL: ${{ secrets.COVERITY_URL }}
+          POLARIS_SERVER_URL: ${{ secrets.POLARIS_SERVER_URL }}
+        run: |
+          if [ -n "$BLACKDUCKSCA_URL" ] || [ -n "$COVERITY_URL" ] \
+             || [ -n "$POLARIS_SERVER_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Black Duck scan skipped::Set one of the repository variables BLACKDUCKSCA_URL, COVERITY_URL, POLARIS_SERVER_URL or SRM_URL (with its matching token secret) to enable this scan. Until then it is skipped rather than failed."
+          fi
       - name: Synopsys Action
+        if: steps.products.outputs.configured == 'true'
         uses: synopsys-sig/synopsys-action@v1.6.0
         with:
           #------------------------------------------COVERITY-----------------------------------------
