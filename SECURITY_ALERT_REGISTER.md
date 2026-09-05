@@ -163,6 +163,44 @@ above, drop this entry and take the fix.
 
 ---
 
+
+
+### SEC-006 — nltk vulnerability
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | PYSEC-2026-3740 |
+| **Scanner** | pip-audit |
+| **Component** | `nltk` |
+| **Recorded** | 2026-09-04 |
+
+Remediated by updating nltk in requirements-security.txt.
+
+### SEC-007 — ecdsa vulnerability
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | PYSEC-2026-1325 |
+| **Scanner** | pip-audit |
+| **Component** | `ecdsa` |
+| **Recorded** | 2026-09-04 |
+
+Remediated by updating ecdsa in requirements.txt.
+
+### SEC-008 — fflate vulnerability
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **ID** | GHSA-px8p-9vwx-vf98 |
+| **Scanner** | npm audit |
+| **Component** | `fflate` |
+| **Recorded** | 2026-09-04 |
+
+Remediated by updating fflate in web/package.json.
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for
