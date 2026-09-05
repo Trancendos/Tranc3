@@ -61,7 +61,7 @@ DB_PATH = _data_dir / "audit.db"
 _ensured_parents: set[str] = set()
 
 
-def _ensure_parent(path: Path) -> Path:
+def _ensure_parent(path: str | os.PathLike[str]) -> Path:
     """Create the directory once, on first use — not at import.
 
     A module-level `mkdir` makes importing this module a filesystem write, so
@@ -69,12 +69,19 @@ def _ensure_parent(path: Path) -> Path:
     every CI runner, for a start. Three sibling workers already turned nine
     collected tests into `PermissionError` that way before an assertion ran.
     `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+
+    `path` is coerced rather than required to be a `Path`. A module-level
+    `DB_PATH` is one, but it is a configuration value callers and tests
+    substitute — `tests/test_workers_p3.py` patches in a plain string — and a
+    helper that raises `AttributeError` on the other spelling of a filesystem
+    path turns a type mismatch into 41 collection errors.
     """
-    parent = str(path.parent)
+    resolved = Path(path)
+    parent = str(resolved.parent)
     if parent not in _ensured_parents:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        resolved.parent.mkdir(parents=True, exist_ok=True)
         _ensured_parents.add(parent)
-    return path
+    return resolved
 
 
 # Serialise chain-tip reads + inserts to prevent concurrent hash-chain forks

@@ -96,6 +96,31 @@ class TestSizingIsDerived:
                     assert points in builder._FIBONACCI
 
 
+class TestTheSweepDoesNotReadItself:
+    def test_the_generated_backlog_is_not_a_register(self, builder):
+        """It is a markdown document full of tables, so it reads as one.
+
+        Every generation re-ingested the previous one: 163 items became 326,
+        then 489, compounding by the same 163 each run. `--check` could never
+        pass, because regenerating produced a different file from the one it
+        had just written — a gate that fails on correct input, which is how a
+        gate gets switched off.
+        """
+        swept = {path.relative_to(builder.REPO).as_posix() for path in builder._documents()}
+        assert "docs/governance/ACTION-BACKLOG.md" not in swept
+
+    def test_generating_twice_produces_the_same_document(self, builder, tmp_path):
+        """The property the exclusion exists to give, asserted directly.
+
+        Reading `_documents()` proves the output is skipped; this proves the
+        sweep as a whole is a function of the registers, which is what
+        `--check` relies on.
+        """
+        first = builder.render(builder.harvest())
+        second = builder.render(builder.harvest())
+        assert first == second
+
+
 class TestTheCommittedCopy:
     def test_it_matches_the_registers(self, builder):
         assert builder.main(["--check"]) == 0

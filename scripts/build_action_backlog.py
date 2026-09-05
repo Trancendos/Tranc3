@@ -111,10 +111,36 @@ _FIBONACCI = (1, 2, 3, 5, 8, 13)
 
 
 def _documents() -> list[Path]:
-    listed = subprocess.run(
-        ["git", "ls-files", "*.md"], cwd=REPO, capture_output=True, text=True, check=True
-    ).stdout.split()
-    return [REPO / p for p in listed if not any(skip in p for skip in _SKIP)]
+    """Every register this sweep reads — never its own output.
+
+    The backlog is a markdown document full of tables, so it reads as a
+    register like any other and every generation re-ingested the previous
+    one: 163 items became 326, then 489, compounding by the same 163 each
+    run. `--check` could therefore never pass, because regenerating produced
+    a different file than the one just written. A generated document is not
+    evidence of outstanding work; it is a restatement of it.
+
+    -z and a NUL split, not whitespace: a path containing a space would
+    otherwise become two names that resolve to nothing, silently dropping a
+    register from the sweep.
+    """
+    listed = [
+        entry
+        for entry in subprocess.run(
+            ["git", "ls-files", "-z", "*.md"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split("\0")
+        if entry
+    ]
+    generated = OUTPUT.relative_to(REPO).as_posix()
+    return [
+        REPO / p
+        for p in listed
+        if p != generated and not any(skip in p for skip in _SKIP) and (REPO / p).is_file()
+    ]
 
 
 def _locations() -> dict[str, str]:
