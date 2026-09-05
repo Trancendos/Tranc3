@@ -109,9 +109,24 @@ def _module_file(dotted: str) -> Path | None:
     return None
 
 
+def _reraises(handler: ast.ExceptHandler) -> bool:
+    """Can this handler let the failure through?
+
+    A handler that re-raises on some condition has not declared the
+    dependency optional — it has narrowed which absence it tolerates. The
+    backlog generator's own handler swallows a missing `src` and re-raises
+    everything else, so a missing `fastapi` propagates and the job dies;
+    treating that as an optional dependency is how this check reported
+    PASSED on a run that failed.
+    """
+    return any(isinstance(node, ast.Raise) for node in ast.walk(handler))
+
+
 def _guarded(handlers: list[ast.ExceptHandler]) -> bool:
     """Does this try block treat a missing module as an expected outcome?"""
     for handler in handlers:
+        if _reraises(handler):
+            continue
         if handler.type is None:
             return True
         candidates = handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type]
@@ -122,17 +137,28 @@ def _guarded(handlers: list[ast.ExceptHandler]) -> bool:
     return False
 
 
-def _import_time_nodes(body: list[ast.stmt]) -> list[ast.stmt]:
+def _import_time_nodes(body: list[ast.stmt], functions: bool = False) -> list[ast.stmt]:
     """Statements that run when the module is imported.
 
     Descends into `if`, `with`, `for`, `while` and class bodies — all of which
     execute — and stops at function boundaries, which do not. A `try` whose
     handlers catch an import failure is skipped entirely: that is an optional
     dependency, declared the way this repository declares them.
+
+    `functions=True` descends into function bodies as well, and is used for
+    the entry SCRIPT only. The question this check answers for a script is
+    not "does it import" but "does it run", and a script's own functions are
+    there to be called: the backlog generator's `_apply_routing` imports the
+    routing registry from inside a function on the unconditional path from
+    `main()`, so skipping it reported PASSED on a job that died there. The
+    exemption stays for library modules, where `src/event_bus/bus.py`'s
+    httpx-inside-a-webhook-branch genuinely may never run.
     """
     found: list[ast.stmt] = []
     for node in body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if functions:
+                found.extend(_import_time_nodes(node.body, functions))
             continue
         if isinstance(node, ast.Try):
             if _guarded(node.handlers):
@@ -144,17 +170,33 @@ def _import_time_nodes(body: list[ast.stmt]) -> list[ast.stmt]:
             for handler in node.handlers:
                 handler_bodies.extend(handler.body)
             found.extend(
-                _import_time_nodes(node.body + handler_bodies + node.orelse + node.finalbody)
+                _import_time_nodes(
+                    node.body + handler_bodies + node.orelse + node.finalbody, functions
+                )
             )
             continue
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             found.append(node)
             continue
+        if isinstance(node, ast.If) and _typing_only(node.test):
+            # `if TYPE_CHECKING:` is false at runtime by definition, so its
+            # imports never execute. Descending into it reported a
+            # dependency the job does not need — and the obvious remedy for
+            # a heavyweight import is to move it there, so a check that
+            # cannot see the difference punishes the fix.
+            found.extend(_import_time_nodes(node.orelse, functions))
+            continue
         for field in ("body", "orelse", "finalbody"):
             nested = getattr(node, field, None)
             if isinstance(nested, list):
-                found.extend(_import_time_nodes(nested))
+                found.extend(_import_time_nodes(nested, functions))
     return found
+
+
+def _typing_only(test: ast.expr) -> bool:
+    """Is this the `TYPE_CHECKING` guard, in either of its spellings?"""
+    name = getattr(test, "id", None) or getattr(test, "attr", None)
+    return name == "TYPE_CHECKING"
 
 
 def _relative_module_files(entry: Path, node: ast.ImportFrom) -> list[Path]:
@@ -184,7 +226,9 @@ def _relative_module_files(entry: Path, node: ast.ImportFrom) -> list[Path]:
     return found
 
 
-def external_imports(entry: Path, _seen: set[Path] | None = None) -> set[str]:
+def external_imports(
+    entry: Path, _seen: set[Path] | None = None, *, script: bool = False
+) -> set[str]:
     """Top-level names imported from outside this repository, transitively."""
     seen = _seen if _seen is not None else set()
     if entry in seen:
@@ -193,7 +237,7 @@ def external_imports(entry: Path, _seen: set[Path] | None = None) -> set[str]:
 
     external: set[str] = set()
     tree = ast.parse(entry.read_text(), filename=str(entry))
-    for node in _import_time_nodes(tree.body):
+    for node in _import_time_nodes(tree.body, functions=script):
         if isinstance(node, ast.Import):
             names = [alias.name for alias in node.names]
         elif node.level:
@@ -236,7 +280,7 @@ def main(argv: list[str] | None = None) -> int:
 
     problems: list[str] = []
     for script in scripts:
-        for name in sorted(external_imports(script) - provided):
+        for name in sorted(external_imports(script, script=True) - provided):
             problems.append(
                 f"{script.relative_to(REPO)} imports {name!r}, "
                 f"which job {args.job!r} does not install"

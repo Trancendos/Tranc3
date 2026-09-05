@@ -18,11 +18,21 @@ from __future__ import annotations
 
 import functools
 import re
-from typing import Any, Callable, Optional
-
-from fastapi import Request
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from src.observability.observatory import EventCategory, EventSeverity
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from fastapi import Request
+
+# `fastapi` is NOT imported at module level. This module's validators are
+# small pure functions used by CI scripts and by workers whose build context
+# excludes the web framework, and a top-level `from fastapi import Request`
+# made all of them unimportable without it — which is how the backlog
+# generator came to fail on a GitHub runner that installs only PyYAML and
+# pydantic. `audit_action` needs the real class at request time and imports
+# it there; `from __future__ import annotations` keeps the annotations
+# strings, so nothing else needs it.
 
 # ── Input validators ──────────────────────────────────────────────────────────
 
@@ -105,6 +115,8 @@ def audit_action(
     def decorator(fn: Callable) -> Callable:
         @functools.wraps(fn)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            from fastapi import Request  # noqa: PLC0415 - see the note above
+
             # Extract FastAPI Request from positional or keyword args
             request: Optional[Request] = None
             for a in args:
