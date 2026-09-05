@@ -35,7 +35,30 @@ jobs:
     steps:
       - name : Code Checkout
         uses: actions/checkout@v4
+
+      # Absent credentials, this scan cannot run. It used to fail the job,
+      # which put a permanent red X on every pull request and taught everyone
+      # to read red as background noise. A scanner that cannot run should be
+      # skipped and say so, not fail: the repository is no less secure than it
+      # was, and the signal stays worth reading.
+      #
+      # The check lives in a step rather than the job's `if:` because the
+      # `secrets` context is not available in a job-level condition.
+      - name: Are Zscaler credentials configured?
+        id: credentials
+        env:
+          CLIENT_ID: ${{ secrets.ZSCANNER_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.ZSCANNER_CLIENT_SECRET }}
+        run: |
+          if [ -n "$CLIENT_ID" ] && [ -n "$CLIENT_SECRET" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Zscaler IaC scan skipped::Set the repository secrets ZSCANNER_CLIENT_ID and ZSCANNER_CLIENT_SECRET to enable this scan. Until then it is skipped rather than failed."
+          fi
+
       - name : Zscaler IAC Scan
+        if: steps.credentials.outputs.configured == 'true'
         uses : ZscalerCWP/Zscaler-IaC-Action@8d2afb33b10b4bd50e2dc2c932b37c6e70ac1087
         id : zscaler-iac-scan
         with:
@@ -47,10 +70,12 @@ jobs:
           iac_file : #Enter the IaC file path from root.
           output_format : #(Optional) By default, the output is provided in a human readable format. However, if you require a different format, you can specify it here.
           #To fail the build based on policy violations identified in the IaC templates, set the input value (fail_build) to true.
-          fail_build : #Enter true/false
+          # Report rather than block, matching how trivy.yml treats scanners on
+          # pull requests. Enforcement belongs in a deliberate main-only job.
+          fail_build : 'false'
       #Ensure that the following step is included in order to post the scan results under the code scanning alerts section within the repository.
       - name: Upload SARIF file
-        if: ${{ success() || failure() && (steps.zscaler-iac-scan.outputs.sarif_file_path != '') }}
+        if: ${{ steps.credentials.outputs.configured == 'true' && (success() || failure()) && (steps.zscaler-iac-scan.outputs.sarif_file_path != '') }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.zscaler-iac-scan.sarif_file_path }}

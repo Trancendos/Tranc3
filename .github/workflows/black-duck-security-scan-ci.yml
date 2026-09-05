@@ -30,7 +30,36 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
+      # The action refuses to start unless at least one product is pointed at
+      # a server: "Requires at least one scan type: (polaris_server_url,
+      # coverity_url, blackducksca_url, srm_url)". None of the four is set
+      # here, so every run failed at that check — a red X on every pull
+      # request, from a scan that never looked at the code.
+      #
+      # Configuring any one product is enough. Set its URL as a repository
+      # variable and its token as a repository secret and this scan starts
+      # working with no edit to this file. Until then it is skipped with a
+      # notice, which is the honest report: not "this repository failed a
+      # security scan", but "no security scan ran".
+      - name: Is any Black Duck product configured?
+        id: products
+        env:
+          BLACKDUCKSCA_URL: ${{ vars.BLACKDUCKSCA_URL }}
+          COVERITY_URL: ${{ vars.COVERITY_URL }}
+          POLARIS_SERVER_URL: ${{ vars.POLARIS_SERVER_URL }}
+          SRM_URL: ${{ vars.SRM_URL }}
+        run: |
+          if [ -n "$BLACKDUCKSCA_URL" ] || [ -n "$COVERITY_URL" ] \
+             || [ -n "$POLARIS_SERVER_URL" ] || [ -n "$SRM_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Black Duck scan skipped::Set one of the repository variables BLACKDUCKSCA_URL, COVERITY_URL, POLARIS_SERVER_URL or SRM_URL (with its matching token secret) to enable this scan. Until then it is skipped rather than failed."
+          fi
+
       - name: Black Duck SCA scan
+        if: steps.products.outputs.configured == 'true'
         uses: blackduck-inc/black-duck-security-scan@805cbd09e806b01907bbea0f990723c2bb85abe9
         with:
           ### ---------- BLACKDUCK SCA SCANNING: REQUIRED FIELDS ----------
