@@ -175,9 +175,9 @@ above, drop this entry and take the fix.
 | **Recorded** | 2026-09-03 |
 | **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
 | **Next review** | 2026-12-03 |
-| **Re-evaluate** | On any `nltk` release above 3.10.3 — **the census watches this, not the premise checker**. Also on nltk becoming a declared runtime dependency, or on any change to how this repository uses nltk: a second import site, an import outside `nltk.corpus`, an import-time (non-lazy) import, or any call handing nltk a path (`nltk.data.load`, `download`, `find`, `retrieve`). **Those four are enforced by `scripts/check_disposition_premises.py`**, which reads the runtime manifests and every Python file rather than relying on anyone remembering |
+| **Re-evaluate** | On the census resolving any nltk version other than 3.10.3; on the advisory naming a fixed version (a SUPPRESS then means declining an available fix); on nltk becoming a declared runtime dependency; or on any change to how this repository uses nltk — a second import site, an import outside `nltk.corpus`, an import that runs at import time (including a lazy import inside a function the module calls itself), or any call handing nltk a path (`nltk.data.load`, `download`, `find`, `retrieve`). **Every one of these is enforced by `scripts/check_disposition_premises.py`**, which reads the census output, the runtime manifests and every Python file, rather than relying on anyone remembering |
 
-**No patched release exists.** 3.10.3 is the latest version on PyPI, and the GHSA
+**No patched release exists — as resolved today.** The premise checker reads the census output and fails the gate the moment either half of this stops being true: a different resolved version, or a `fix_versions` entry on the advisory. 3.10.3 is the latest version on PyPI, and the GHSA
 record's range is `introduced: 0, last_affected: 3.10.3` — every published release is
 affected. There is deliberately **no Blocked-by row**: a fix is not merely out of
 reach, it does not exist, and that distinction is what keeps this entry failing the
