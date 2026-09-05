@@ -264,6 +264,42 @@ disposition; the audit field never did.
 
 ---
 
+## SEC-006 — `esbuild` and `ws` in the Cloudflare workers' dev toolchain
+
+Recovered from a second, divergent copy of this register that lived at
+`wiki-content/Security-SECURITY_ALERT_REGISTER.md` until 2026-09-04. These
+two entries existed only there, so the canonical register carried no record
+of them at all.
+
+| Field | Value |
+|---|---|
+| **Disposition** | **FIX** |
+| **IDs** | GHSA-67mh-4wv8-2f99 (`esbuild`), GHSA-3h5v-q93c-6h6q (`ws`) |
+| **Scanner** | npm audit — `cloudflare/*` surfaces |
+| **Component** | Both transitive through `wrangler`/`miniflare`, a devDependency. Neither reaches the Workers runtime. |
+| **Remedy** | `overrides: {"esbuild": ">=0.25.0", "ws": ">=8.21.0"}` in every `cloudflare/*/package.json` that depends on wrangler |
+| **Recorded** | 2026-09-04 (finding itself predates this register entry) |
+| **Owner** | The Guardian (Marcus Magnolia) — Security pillar, SUITE-SEC |
+| **Next review** | 2026-12-04 |
+| **Re-evaluate** | When wrangler ships a release whose own dependency ranges satisfy both advisories, at which point the overrides can be dropped |
+
+**The correction this entry carries.** The lost copy stated the overrides were
+present in *all* CF `package.json` files. They were in one of seven —
+`trancendos-api-gateway`. The other six (`infinity-void`, `tranc3-ai`,
+`notifications-rotation`, `queue-rotation`, `search-rotation`,
+`storage-rotation`) declare the same `wrangler` devDependency and carried no
+override, so six of the seven surfaces the record claimed to cover were
+unremediated for as long as the claim stood. All seven carry the overrides as
+of this entry.
+
+This is why a duplicated register is worse than a single one that is
+incomplete: the copy nobody read asserted a remediation that the copy people
+did read had never heard of, and neither was checked against the packages.
+`scripts/check_doc_duplication.py` now fails on a second document claiming to
+be the same register.
+
+---
+
 ## Closed entries
 
 None yet. Entries move here when the finding is resolved at source — for

@@ -234,6 +234,27 @@ jobs:
       - name: Solution packs are current
         run: python scripts/build_solution_packs.py --check
 
+      # 320 markdown documents carry ~2,000 internal links, and the
+      # wiki-content migration moved 62 of them at once. Eight links pointed
+      # at files that had not existed for weeks, four of them in README.md —
+      # the first document anybody reads. A link is not read until somebody
+      # clicks it, so nothing noticed. The checker knows both conventions the
+      # estate writes in (repository paths and GitHub Wiki's flattened,
+      # extensionless names) because a version that knew only the first
+      # reported 137 failures, 128 of them fine.
+      - name: Documentation links resolve
+        run: python scripts/check_doc_links.py
+
+      # Two documents claiming to be the same thing drift, and each stays blind
+      # to the other. `SECURITY_ALERT_REGISTER.md` (read by security_score.py)
+      # had a wiki copy that carried two advisories the canonical register had
+      # never heard of, and asserted their remedy across all seven Cloudflare
+      # packages when it was in one. Six surfaces stood unremediated behind a
+      # record that said otherwise. A pointer page is the resolution and is
+      # exempt; a second copy is not.
+      - name: No document is claimed twice
+        run: python scripts/check_doc_duplication.py
+
       # FastAPI 0.141 stopped copying a router's routes into `app.routes` on
       # include_router — it appends a lazy marker and resolves them at request
       # time. Routing is unaffected; what changed is what the attribute shows,

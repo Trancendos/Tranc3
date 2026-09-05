@@ -3,7 +3,7 @@
 **Target:** Self-hosted, zero-cost Trancendos stack with editable governance names and merge-clean `main`.
 
 > **Live % scorecard:** run `make production-score` → `logs/production_readiness_scorecard.md`
-> **Detailed status:** [`PRODUCTION_READINESS_STATUS.md`](PRODUCTION_READINESS_STATUS.md)
+> **Detailed status:** [`PRODUCTION_READINESS_STATUS.md`](../wiki-content/Historical-PRODUCTION_READINESS_STATUS.md)
 
 ## Phase 0 — Immediate (this week)
 

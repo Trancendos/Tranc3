@@ -315,4 +315,4 @@ journalctl -u tranc3 -f
 
 ---
 
-*Generated for the Tranc3 platform. For architecture details, see [System Architecture](DOC-02-System-Architecture.md). For zero-cost cloud providers research, see [Zero-Cost Cloud Providers](ZERO_COST_CLOUD_PROVIDERS.md). For the full self-hosted production runbook see [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md).*
+*Generated for the Tranc3 platform. For architecture details, see [System Architecture](../wiki-content/Strategy-DOC-02-System-Architecture.md). For zero-cost cloud providers research, see [Zero-Cost Cloud Providers](../wiki-content/Strategy-ZERO_COST_CLOUD_PROVIDERS.md). For the full self-hosted production runbook see [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md).*
