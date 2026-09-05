@@ -1,12 +1,12 @@
 {
   "counts": {
     "compose_services": 306,
-    "deployed": 35,
-    "in_process": 3,
+    "deployed": 36,
+    "in_process": 5,
     "infrastructure": 87,
     "locations": 43,
-    "routed": 25,
-    "undeployed": 5
+    "routed": 26,
+    "undeployed": 2
   },
   "creative": [
     {
@@ -633,7 +633,7 @@
       "abilities": 2,
       "agents": [],
       "compose_service": "",
-      "in_process": false,
+      "in_process": true,
       "lead_ai": "Samantha Turing",
       "name": "Turing's Hub",
       "on_disk": true,
@@ -649,16 +649,16 @@
         "The Mad Hatter",
         "Alice Dream"
       ],
-      "compose_service": "",
+      "compose_service": "chaos-party",
       "in_process": false,
       "lead_ai": "The Mad Hatter",
       "name": "The Chaos Party",
       "on_disk": true,
       "pid": "PID-TCP",
       "pillar": "Development (Code)",
-      "port": null,
-      "route_prefix": "",
-      "worker_path": "tests/"
+      "port": 8079,
+      "route_prefix": "/chaos-party",
+      "worker_path": "workers/chaos-party/"
     },
     {
       "abilities": 2,
@@ -779,7 +779,7 @@
       "abilities": 2,
       "agents": [],
       "compose_service": "",
-      "in_process": false,
+      "in_process": true,
       "lead_ai": "Imfy",
       "name": "The Spark",
       "on_disk": true,

@@ -178,6 +178,14 @@ DECLARED_OWNERS: Dict[str, Tuple[Optional[str], str]] = {
     # describes "multiple named indices" any Location may register. It is a
     # generic FTS5 index server, not one Location's search.
     "workers/search-service": (None, "compose port 8017 — the estate's shared FTS5 index"),
+    # The Chaos Party's entity record pointed at `tests/` until 2026-09-05,
+    # which is how the Playwright suite under it resolved to an owner at all.
+    # Correcting that record to the deployed worker (`workers/chaos-party/`,
+    # compose port 8079) left this surface unowned — the right outcome to
+    # declare rather than reverse: The Chaos Party is the testing platform, so
+    # the estate's browser end-to-end suite is its to answer for, but the
+    # suite is not the service and the register should not say it is.
+    "tests/e2e": ("The Chaos Party", "the Playwright end-to-end suite the testing platform runs"),
     "workers/health-aggregator": (None, "rolls up health across the whole estate"),
     "workers/topology-service": (None, "the service topology graph of the whole estate"),
     "workers/optional-services-health": (None, "health probes for optional services"),

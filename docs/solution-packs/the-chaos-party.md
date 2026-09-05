@@ -19,9 +19,12 @@
 | Job Description | Head of Quality Assurance & Testing | `docs/governance/LOCATION-FUNCTIONS.md` |
 | Pillar | Development (Code) | `Pillar` enum |
 | Reports to Prime(s) | The Dr. (Nikolai O'denhime) | `primes` |
-| Status | 🔧 Partial | `CLAUDE.md` service table |
-| Code path | `tests/` ✅ on disk | filesystem |
-| Port | _unassigned_ | compose / `worker_port` |
+| Status | ✅ Self-hosted | `CLAUDE.md` service table |
+| Code path | `workers/chaos-party/` ✅ on disk | filesystem |
+| Port | 8079 | compose / `worker_port` |
+| Compose service | `chaos-party` | `docker-compose.production.yml` |
+| Traefik route | `Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)` | compose labels |
+| Rollout priority | P3 | CLAUDE.md worker map |
 
 **Role.** Central testing platform — validation & compliance (Alice in Wonderland themed)
 
@@ -46,11 +49,15 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- Runs in-process under `api.py` (path `tests/`), so it *may*
-  import from `src/` — but that also means it shares the backend's failure domain.
+- **Build context is `./workers/chaos-party`**, so `src/` is *not* in the image. This Location
+  cannot `from src.* import ...` — ported logic must be self-contained. This is the
+  single most common cause of a worker that passes tests and dies in the container.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
+- **No `stripprefix` on `/chaos-party`** — and that is deliberate: this
+  worker serves the prefixed paths itself, so stripping would route `/chaos-party/x`
+  to `/x`, which it does not serve. Adding the middleware would break it.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -65,8 +72,8 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 ```mermaid
 flowchart LR
-    C[Client] --> A[api.py]
-    A --> S[The Chaos Party<br/>no port]
+    C[Client] --> T[Traefik]
+    T -->|/the-chaos-party| S[The Chaos Party<br/>8079]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[The Dr. (Nikolai O'denhime)]
     S --> AA[The March Hare]
@@ -82,11 +89,11 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | in-process router | mounted in api.py |
+| Ingress | Traefik → the-chaos-party | Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The March Hare + The Dormouse | the two Agents below |
 | Automation | Teapot-Bot, Pocket-Watch-Bot, Sugar-Cube-Bot, Jam-Tart-Bot | the four Bots below |
-| Persistence | SQLite | volume not yet declared |
+| Persistence | SQLite | chaos-party-data → /app/data |
 | Observability | structured JSON + W3C trace | `src/observability/tracing.py` |
 
 ## 6. Storyboard and schema — SCAFFOLD
@@ -95,7 +102,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  api.py routes
+1. Request arrives  →  Traefik strips /chaos-party
 2. The March Hare — Sends rapid mock inputs and payloads to stress-test systems.
 3. The Dormouse — Sits silently in tests, measuring memory leaks/performance dips.
 4. Bots fire: Teapot-Bot, Pocket-Watch-Bot, Sugar-Cube-Bot, Jam-Tart-Bot
@@ -178,10 +185,12 @@ has to name.
 **Compose service:**
 
 ```yaml
-  the-chaos-party:
-    build: { context: ., dockerfile: Dockerfile }
-    environment: [ PORT=TBD ]
-    ports: [ "TBD:TBD" ]
+  chaos-party:
+    build: { context: ./workers/chaos-party, dockerfile: Dockerfile }
+    environment: [ PORT=8079 ]
+    ports: [ "8079:8079" ]
+    labels:
+      - "traefik.http.routers.chaos-party.rule=Host(`chaos-party.trancendos.com`) && PathPrefix(`/chaos-party`)"
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -189,11 +198,10 @@ has to name.
 Sequenced against the readiness gaps below, so the first epic is whatever is
 actually missing rather than a generic phase 1.
 
-### Epic 1 — Declare the deployment
+### Epic 1 — Verify routing end to end
 
-- As an operator, The Chaos Party has a `docker-compose.production.yml` service with an explicit `PORT`.
-- As an operator, a named volume backs the SQLite file so restarts do not lose state.
-- As an operator, a healthcheck polls `/health` and marks the container unhealthy on failure.
+- As a client, requests to `/chaos-party` reach the worker with the prefix stripped.
+- As a reviewer, a stripprefix middleware exists and is referenced by the router.
 
 ### Epic 2 — Implement the abilities
 
@@ -201,12 +209,16 @@ actually missing rather than a generic phase 1.
 - As a user, I can exercise: Mutation Testing.
 - As an auditor, every action emits an Observatory event carrying `PID-TCP`.
 
+### Epic 3 — Prove it works
+
+- As a maintainer, `tests/` covers The Chaos Party's health, status and each ability.
+- As a maintainer, the offline mode above is tested, not assumed.
+
 ## 11. Technical debt — DERIVED where evidenced
 
 | Item | Evidence | Impact |
 |---|---|---|
-| No port assigned | `worker_port` is None and compose has none | Not independently deployable |
-| Status is 🔧 Partial | CLAUDE.md service table | Partial — not production-complete |
+| No test files under the code path | filesystem check | Regressions land silently |
 
 ## 12. Wireframe — SCAFFOLD
 
@@ -227,9 +239,9 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 2/10 · Readiness 6/10 → Defer — below median on both axes**
+**Criticality 4/10 · Readiness 9/10 → Harvest — built out, below-median dependency; polish and ship**
 
-Classified against the estate's own medians (criticality 3, readiness
+Classified against the estate's own medians (criticality 4, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
 share a scale, so one absolute cut-off would bucket almost everything together.
 
@@ -239,8 +251,8 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 
 | Axis | Score | Reasons |
 |---|---|---|
-| Criticality | 2/10 | answers to 1 Prime(s) (+1); 2 Lead AIs — multi-team Location (+1) |
-| Readiness | 6/10 | status 🔧 partial/migrating (+1); code path `tests/` exists on disk (+2); three or more Python files present (+2); at least one test file present (+1) |
+| Criticality | 4/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1); 2 Lead AIs — multi-team Location (+1); externally routed via Traefik (+1) |
+| Readiness | 9/10 | status ✅ in CLAUDE.md (+3); code path `workers/chaos-party/` exists on disk (+2); three or more Python files present (+2); compose service `chaos-party` defined (+2) |
 
 ## 14. Documentation — DERIVED
 
@@ -248,5 +260,6 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 - `src/entities/platform.py` — `PLATFORM_ENTITIES["The Chaos Party"]`
 - `docs/governance/LOCATION-FUNCTIONS.md` — Job Description
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — base tier and variants
-- `tests/` — implementation
+- `docker-compose.production.yml` — service `chaos-party`
+- `workers/chaos-party/` — implementation
 - `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation

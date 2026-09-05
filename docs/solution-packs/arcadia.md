@@ -227,7 +227,7 @@ actually missing rather than a generic phase 1.
 
 **Criticality 1/10 · Readiness 3/10 → Defer — below median on both axes**
 
-Classified against the estate's own medians (criticality 3, readiness
+Classified against the estate's own medians (criticality 4, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
 share a scale, so one absolute cut-off would bucket almost everything together.
 

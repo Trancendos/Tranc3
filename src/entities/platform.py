@@ -476,8 +476,17 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Sugar-Cube-Bot", "Generates messy mockup databases to test bad dataset handling."
         ),
         bot_04=Bot("Jam-Tart-Bot", "Shuts down minor random services mid-test to check recovery."),
-        worker_port=None,
-        worker_path="tests/",
+        # `tests/` and no port until 2026-09-05, which made The Chaos Party
+        # read as a Location with nowhere to receive traffic. It is deployed:
+        # `docker-compose.production.yml` builds `./workers/chaos-party`,
+        # publishes 8079, sets `PORT=8079`, and gives it its own Traefik rule
+        # (`chaos-party.trancendos.com` + PathPrefix `/chaos-party`) — one of
+        # the few Locations with a dedicated host. `tests/test_chaos.py` is
+        # the suite it runs, not the service; recording the suite as the
+        # service left the service itself unrecorded, so nothing that reads
+        # this register could route to it or hold it accountable.
+        worker_port=8079,
+        worker_path="workers/chaos-party/",
     ),
     "The Artifactory": LocationEntity(
         location="The Artifactory",

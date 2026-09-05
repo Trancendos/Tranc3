@@ -9,7 +9,7 @@ rather than multiplied into a single score, because the same status and
 dependency facts feed both — collapsing them would double-count and quietly
 rank safe, unimportant work above important, unfinished work.
 
-Quadrants split at each axis's median across all 43 Locations (criticality 3, readiness 8). The split is relative: "Defer" means below this estate's own middle, not unimportant.
+Quadrants split at each axis's median across all 43 Locations (criticality 4, readiness 8). The split is relative: "Defer" means below this estate's own middle, not unimportant.
 
 ## Finish first — above-median dependency, above-median readiness  (2)
 
@@ -18,7 +18,7 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | Infinity | `PID-INF` | Security | 10/10 | 10/10 | 5 | 8005 | [pack](infinity.md) |
 | Cryptex | `PID-CRX` | Security | 5/10 | 9/10 | 0 | 8053 | [pack](cryptex.md) |
 
-## Invest — above-median dependency, below-median readiness  (19)
+## Invest — above-median dependency, below-median readiness  (14)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
@@ -36,25 +36,26 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | The Lighthouse | `PID-LTH` | Security | 5/10 | 8/10 | 0 | 8015 | [pack](the-lighthouse.md) |
 | The Warp Tunnel | `PID-WTP` | Security | 5/10 | 8/10 | 0 | 8072 | [pack](the-warp-tunnel.md) |
 | The Void | `PID-VOI` | Security | 5/10 | 6/10 | 0 | 8002 | [pack](the-void.md) |
-| Arcadian Exchange | `PID-AEX` | Commercial / Financial | 4/10 | 8/10 | 0 | 8012 | [pack](arcadian-exchange.md) |
-| ChronosSphere / ArcStream | `PID-CHR` | DevOps | 4/10 | 8/10 | 0 | 8021 | [pack](chronossphere-arcstream.md) |
-| TateKing | `PID-TKG` | Creativity | 4/10 | 8/10 | 0 | 8061 | [pack](tateking.md) |
-| The Artifactory | `PID-ART` | Commercial / Financial | 4/10 | 8/10 | 0 | 8047 | [pack](the-artifactory.md) |
-| The HIVE | `PID-HVE` | Architectural | 4/10 | 8/10 | 0 | 8022 | [pack](the-hive.md) |
 
-## Harvest — built out, below-median dependency; polish and ship  (4)
+## Harvest — built out, below-median dependency; polish and ship  (5)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
+| The Chaos Party | `PID-TCP` | Development (Code) | 4/10 | 9/10 | 0 | 8079 | [pack](the-chaos-party.md) |
 | The Digital Grid | `PID-DGR` | Development (Code) | 3/10 | 9/10 | 0 | 8010 | [pack](the-digital-grid.md) |
 | TranceFlow | `PID-TFL` | Creativity | 3/10 | 9/10 | 0 | 8059 | [pack](tranceflow.md) |
 | VRAR3D | `PID-VR3` | Wellbeing | 3/10 | 9/10 | 0 | 8060 | [pack](vrar3d.md) |
 | The Library | `PID-LIB` | Knowledge | 2/10 | 9/10 | 0 | 8067 | [pack](the-library.md) |
 
-## Defer — below median on both axes  (18)
+## Defer — below median on both axes  (22)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
+| Arcadian Exchange | `PID-AEX` | Commercial / Financial | 4/10 | 8/10 | 0 | 8012 | [pack](arcadian-exchange.md) |
+| ChronosSphere / ArcStream | `PID-CHR` | DevOps | 4/10 | 8/10 | 0 | 8021 | [pack](chronossphere-arcstream.md) |
+| TateKing | `PID-TKG` | Creativity | 4/10 | 8/10 | 0 | 8061 | [pack](tateking.md) |
+| The Artifactory | `PID-ART` | Commercial / Financial | 4/10 | 8/10 | 0 | 8047 | [pack](the-artifactory.md) |
+| The HIVE | `PID-HVE` | Architectural | 4/10 | 8/10 | 0 | 8022 | [pack](the-hive.md) |
 | DocUtari | `PID-DOC` | Knowledge | 3/10 | 8/10 | 0 | 8014 | [pack](docutari.md) |
 | Fabulousa | `PID-FAB` | Creativity | 3/10 | 8/10 | 0 | 8048 | [pack](fabulousa.md) |
 | I-Mind | `PID-IMD` | Wellbeing | 3/10 | 8/10 | 0 | 8075 | [pack](i-mind.md) |
@@ -69,7 +70,6 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | The Citadel | `PID-CTL` | DevOps | 3/10 | 6/10 | 0 | — | [pack](the-citadel.md) |
 | Turing's Hub | `PID-THB` | DevOps | 3/10 | 5/10 | 0 | — | [pack](turing-s-hub.md) |
 | The Workshop | `PID-WRK` | Development (Code) | 2/10 | 7/10 | 0 | 2222 | [pack](the-workshop.md) |
-| The Chaos Party | `PID-TCP` | Development (Code) | 2/10 | 6/10 | 0 | — | [pack](the-chaos-party.md) |
 | API Marketplace | `PID-APM` | Commercial / Financial | 1/10 | 7/10 | 0 | — | [pack](api-marketplace.md) |
 | The Spark | `PID-SPK` | Knowledge | 1/10 | 7/10 | 0 | — | [pack](the-spark.md) |
 | Arcadia | `PID-ARC` | Commercial / Financial | 1/10 | 3/10 | 0 | — | [pack](arcadia.md) |

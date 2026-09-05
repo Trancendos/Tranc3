@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -68,9 +69,55 @@ def compose_services() -> dict[str, dict]:
 
 
 def mounted_in_api() -> set[str]:
-    """Router module names api.py mounts in-process."""
-    text = API.read_text(encoding="utf-8")
-    return set(re.findall(r"from (src\.[a-z0-9_.]+)\.routes import", text))
+    """Every module `api.py` actually mounts as a router.
+
+    This used to match one import spelling — `from src.X.routes import` — and
+    so could see 25 of the 39 routers `api.py` mounts. The 14 it could not see
+    were the ones that do not call their module `routes`: The Spark's is
+    `src.mcp.server`, Turing's Hub's is `src.personality.turingshub.routes`,
+    billing's is `src.monetisation.router`. The map therefore reported The
+    Spark — the MCP server, reachable at `/mcp/*` on the backend since
+    `api.py:798` — as a Location with nowhere to receive traffic, and I
+    reported that to the owner as a finding. It was a defect in the detector.
+
+    A regex that recognises one naming convention is a detector with a
+    documented blind spot. This resolves it the way the interpreter does:
+    find every `include_router(<name>)` call, then resolve `<name>` back
+    through the file's `from ... import ... as ...` bindings to the module it
+    came from. A router mounted under any name, from any module, is seen.
+    """
+    tree = ast.parse(API.read_text(encoding="utf-8"))
+
+    bindings: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                bindings[alias.asname or alias.name] = node.module
+
+    mounted: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if getattr(node.func, "attr", None) != "include_router" or not node.args:
+            continue
+        argument = node.args[0]
+        name = getattr(argument, "id", None) or getattr(argument, "attr", None)
+        if name and name in bindings:
+            mounted.add(bindings[name])
+    return mounted
+
+
+def _is_mounted(module: str, mounts: set[str]) -> bool:
+    """Is this Location's package mounted, under any module inside it?
+
+    `entity.worker_path` names a package (`src/mcp/`); the mount names the
+    module within it (`src.mcp.server`). Comparing them for equality found
+    neither, so the prefix is what is compared — with the dot required, so
+    `src.lab` does not match `src.laboratory`.
+    """
+    if not module:
+        return False
+    return any(m == module or m.startswith(module + ".") for m in mounts)
 
 
 def flow_edges() -> list[dict]:
@@ -133,7 +180,7 @@ def build() -> dict:
                 "compose_service": service,
                 "port": services.get(service, {}).get("port") or entity.worker_port,
                 "route_prefix": services.get(service, {}).get("prefix", ""),
-                "in_process": module in mounts,
+                "in_process": _is_mounted(module, mounts),
                 "agents": list(getattr(entity, "agent_teams", None) or []),
                 "abilities": len(getattr(entity, "abilities", []) or []),
             }

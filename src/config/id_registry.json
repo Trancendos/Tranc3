@@ -1080,8 +1080,8 @@
         "Rabbit Hole Sandbox: Bizarre edge-case simulations.",
         "Mutation Testing: Mutates code to catch regressions."
       ],
-      "worker_port": null,
-      "worker_path": "tests/",
+      "worker_port": 8079,
+      "worker_path": "workers/chaos-party/",
       "agents": [
         {
           "name": "The March Hare",
