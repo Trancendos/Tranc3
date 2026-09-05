@@ -62,6 +62,7 @@ _ADVISORY_FLOORS = {"esbuild": (0, 25, 0), "ws": (8, 21, 0)}
 
 @pytest.fixture(scope="module")
 def checker():
+    """The duplication checker, loaded from `scripts/` by path."""
     path = REPO / "scripts" / "check_doc_duplication.py"
     spec = importlib.util.spec_from_file_location("check_doc_duplication", path)
     module = importlib.util.module_from_spec(spec)
@@ -71,6 +72,12 @@ def checker():
 
 
 class TestWhatCountsAsADuplicate:
+    """Where the line falls between a second copy and a pointer to the first.
+
+    Both halves matter: too strict and the remedy reads as the violation, too
+    loose and a short second copy exempts itself.
+    """
+
     def test_a_shared_title_is_a_duplicate(self, checker):
         """Calibrated: comparing content hashes fails this.
 
@@ -147,10 +154,14 @@ class TestWhatCountsAsADuplicate:
 
 
 class TestTheEstate:
+    """The gate's verdict on the real tree, not on constructed examples."""
+
     def test_no_title_is_claimed_twice(self, checker):
+        """The assertion the gate exists for, run against the whole estate."""
         assert checker.duplicates() == {}
 
     def test_the_two_wiki_copies_are_now_pointers(self):
+        """The resolution actually landed — both are pointers, not deletions."""
         for path in (
             "wiki-content/Security-SECURITY_ALERT_REGISTER.md",
             "wiki-content/Strategy-DOC-03-API-Reference.md",
@@ -161,6 +172,12 @@ class TestTheEstate:
 
 
 class TestTheRecoveredAdvisories:
+    """The two advisories the lost register copy carried, and their remedy.
+
+    This suite is the reason the duplication gate exists: a record asserting a
+    fix that six of seven packages never received.
+    """
+
     def test_both_lost_advisories_are_in_the_canonical_register(self):
         """The point of consolidating: nothing the copy held may be dropped."""
         register = (REPO / "SECURITY_ALERT_REGISTER.md").read_text(encoding="utf-8")

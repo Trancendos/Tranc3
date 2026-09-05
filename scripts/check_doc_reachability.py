@@ -134,6 +134,7 @@ def unreachable() -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ratchet, or rewrite the baseline. Returns a process exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--write-baseline", action="store_true", help="record the current set as the baseline"

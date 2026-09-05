@@ -298,6 +298,12 @@ def size(item: dict, locations: dict[str, str]) -> tuple[int, list[str]]:
 
 
 def epic_for(source: str) -> tuple[str, str]:
+    """The epic a register belongs to, as `(title, blurb)`.
+
+    Matched on the source path so a new register lands in an existing epic
+    without anyone editing this file; an unmatched one falls to the catch-all
+    rather than being dropped.
+    """
     for marker, title, blurb in _EPICS:
         if marker and marker in source:
             return title, blurb
@@ -305,6 +311,12 @@ def epic_for(source: str) -> tuple[str, str]:
 
 
 def render(items: list[dict]) -> str:
+    """The whole backlog document, as text.
+
+    A pure function of `items` — no filesystem reads, no clock — which is what
+    lets `--check` compare a fresh render against the committed copy and lets
+    the idempotence test assert two renders are identical.
+    """
     locations = _locations()
     grouped: dict[str, list[dict]] = defaultdict(list)
     blurbs: dict[str, str] = {}
@@ -456,6 +468,7 @@ def render(items: list[dict]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Write the backlog, or verify the committed copy. Returns an exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="fail if the committed copy is stale")
     args = parser.parse_args(argv)

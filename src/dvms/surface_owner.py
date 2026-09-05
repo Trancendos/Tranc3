@@ -93,6 +93,12 @@ class SurfaceOwner:
 
     @property
     def is_owned(self) -> bool:
+        """True when a named Location answers for this surface.
+
+        `shared` is deliberately False here: a cross-cutting surface has a steward
+        who acts, but no Location owns it, and conflating the two is how a finding
+        gets routed to somebody who closes it as not-mine.
+        """
         return self.kind == "location"
 
     @property
@@ -257,6 +263,13 @@ _COMPOSE_UNAVAILABLE: list = []
 
 
 def _note_compose_unavailable(reason: str) -> None:
+    """Record, once, that the compose ladder could not run.
+
+    PyYAML is optional here. Without it the port ladder goes dark and more
+    surfaces fall through to `DECLARED_OWNERS` — which is why the declared
+    block exists even for surfaces compose can resolve. Saying so once beats
+    saying nothing or saying it per surface.
+    """
     if reason not in _COMPOSE_UNAVAILABLE:
         _COMPOSE_UNAVAILABLE.append(reason)
 

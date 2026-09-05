@@ -141,6 +141,11 @@ def flow_edges() -> list[dict]:
 
 
 def creative_capabilities() -> list[dict]:
+    """The creative routing table's capabilities and their measured status.
+
+    Read from `src.creative.routing` rather than restated here, so the map
+    cannot claim a capability the router does not declare.
+    """
     from src.creative.routing import CAPABILITIES  # noqa: PLC0415
 
     return [
@@ -155,6 +160,14 @@ def creative_capabilities() -> list[dict]:
 
 
 def build() -> dict:
+    """The estate's shape, derived from four sources that can each be re-checked.
+
+    Locations come from the canonical entity register; ports, Traefik rules and
+    build contexts from `docker-compose.production.yml`; in-process mounts from
+    `api.py`; flow verdicts from the measured baseline. Nothing here is
+    asserted by hand, which is the point — a hand-maintained topology is a
+    drawing, not a map.
+    """
     from src.entities.platform import PLATFORM_ENTITIES  # noqa: PLC0415
 
     services = compose_services()
@@ -204,6 +217,7 @@ def build() -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Write the topology, or verify the committed copy. Returns an exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)

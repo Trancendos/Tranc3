@@ -62,6 +62,7 @@ _SUBMODULE_PREFIXES = ("compliance/magna-carta/", "workers/cranbania/")
 def documents() -> list[Path]:
     # -z and a NUL split: whitespace splitting turns one path containing a
     # space into two names that resolve to nothing, dropping the document.
+    """Tracked markdown files this gate is responsible for, submodules excluded."""
     listed = [
         entry
         for entry in subprocess.run(
@@ -128,6 +129,11 @@ def resolve(source: Path, target: str) -> bool:
 
 
 def broken() -> list[str]:
+    """Internal links that resolve to nothing, as `path:line: -> target`.
+
+    Code is stripped before extraction, so a link inside a fence or a code
+    span is read as the illustration it is rather than a reference.
+    """
     found: list[str] = []
     for document in documents():
         if not document.is_file():
@@ -144,6 +150,7 @@ def broken() -> list[str]:
 
 
 def main() -> int:
+    """Report every unresolved internal link. Returns a process exit code."""
     found = broken()
     if found:
         print("Documentation link check: FAILED")

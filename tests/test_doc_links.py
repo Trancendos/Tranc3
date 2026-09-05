@@ -18,6 +18,11 @@ REPO = Path(__file__).resolve().parent.parent
 
 @pytest.fixture(scope="module")
 def checker():
+    """The link checker, loaded from `scripts/` by path.
+
+    Imported rather than shelled out to, so a test can call `resolve()` on one
+    link instead of asserting against the whole estate's output.
+    """
     path = REPO / "scripts" / "check_doc_links.py"
     spec = importlib.util.spec_from_file_location("check_doc_links", path)
     module = importlib.util.module_from_spec(spec)
@@ -27,7 +32,14 @@ def checker():
 
 
 class TestBothConventionsResolve:
+    """The estate writes links two ways, and both have to resolve.
+
+    Repository-style (`docs/X.md`) and wiki-style (`X`, extension elided).
+    A checker that knows one of them fails documents written in the other.
+    """
+
     def test_a_repository_style_link_resolves(self, checker):
+        """The common case: a relative path with its extension."""
         assert checker.resolve(REPO / "README.md", "docs/SECURITY-ASSESSMENT.md")
 
     def test_a_wiki_style_extensionless_link_resolves(self, checker):
@@ -51,6 +63,7 @@ class TestBothConventionsResolve:
         assert not checker.resolve(REPO / "README.md", "docs/NO-SUCH-DOCUMENT.md")
 
     def test_an_anchor_only_link_resolves(self, checker):
+        """`#section` addresses this document; there is no file to find."""
         assert checker.resolve(REPO / "README.md", "#architecture")
 
     def test_a_submodule_link_is_not_reported(self, checker):
@@ -79,6 +92,7 @@ class TestBothConventionsResolve:
         import socket
 
         def refuse(*args, **kwargs):
+            """Stand-in for `socket.socket` that fails loudly if anything opens one."""
             raise AssertionError("check_doc_links.py opened a socket")
 
         monkeypatch.setattr(socket, "socket", refuse)
@@ -98,7 +112,10 @@ class TestBothConventionsResolve:
 
 
 class TestTheEstate:
+    """The gate's verdict on the real tree, not on constructed examples."""
+
     def test_every_internal_link_resolves(self, checker):
+        """The assertion the gate exists for, run against the whole estate."""
         assert checker.broken() == []
 
     def test_the_readme_links_are_among_those_checked(self, checker):

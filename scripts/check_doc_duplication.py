@@ -135,6 +135,11 @@ def duplicates() -> dict[str, list[str]]:
     # -z and a NUL split, not .split(): a path containing a space is one path,
     # and whitespace splitting turns it into two names that resolve to nothing,
     # so the document silently drops out of the comparison.
+    """Normalised titles claimed by more than one document, to the paths claiming them.
+
+    Pointer pages and generically-titled documents are excluded before the
+    comparison, so the result contains only genuine competing claims.
+    """
     listed = [
         entry
         for entry in subprocess.run(
@@ -191,6 +196,11 @@ def repeated_entry_ids() -> dict[str, int]:
 
 
 def main() -> int:
+    """Check entry IDs first, then titles. Returns a process exit code.
+
+    IDs are checked first because a colliding ID is the narrower, more
+    actionable failure: it names one file and one number to change.
+    """
     repeated = repeated_entry_ids()
     if repeated:
         print("Documentation duplication check: FAILED")

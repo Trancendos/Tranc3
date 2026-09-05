@@ -24,6 +24,7 @@ BACKLOG = REPO / "docs" / "governance" / "ACTION-BACKLOG.md"
 
 @pytest.fixture(scope="module")
 def builder():
+    """The backlog generator, loaded from `scripts/` by path."""
     path = REPO / "scripts" / "build_action_backlog.py"
     spec = importlib.util.spec_from_file_location("build_action_backlog", path)
     module = importlib.util.module_from_spec(spec)
@@ -34,6 +35,10 @@ def builder():
 
 
 class TestItReadsTheAction:
+    """A backlog that reports a register's notes instead of its actions is worse
+    than one that misses them: it is confidently wrong about work it found.
+    """
+
     def test_the_header_names_the_action_column(self, builder):
         """Calibrated: taking the longest cell fails this.
 
@@ -46,6 +51,7 @@ class TestItReadsTheAction:
         assert builder._action_column(header) == 1
 
     def test_a_status_column_is_never_the_action(self, builder):
+        """A status is what an item *is*, never what to do about it."""
         header = ["ID", "Status", "Owner"]
         assert builder._action_column(header) is None
 
@@ -62,13 +68,21 @@ class TestItReadsTheAction:
 
 
 class TestSizingIsDerived:
+    """Points come from facts about the item and print their reasons.
+
+    An estimate nobody can interrogate is a number nobody trusts, so each
+    contribution has to be attributable to something observable.
+    """
+
     def test_an_impeded_item_costs_more_than_an_open_one(self, builder):
+        """Blocked work carries the cost of clearing the blocker as well as doing it."""
         locations = builder._locations()
         open_item = {"status": "Open", "location": "Fabulousa", "source": "docs/x.md"}
         blocked = {"status": "Funding-gated", "location": "Fabulousa", "source": "docs/x.md"}
         assert builder.size(blocked, locations)[0] > builder.size(open_item, locations)[0]
 
     def test_an_unrouted_item_costs_more_than_a_routed_one(self, builder):
+        """Finding an owner is real work, and it has to happen before anything else."""
         locations = builder._locations()
         routed = {"status": "Open", "location": "Fabulousa", "source": "docs/x.md"}
         unrouted = {"status": "Open", "location": "", "source": "docs/x.md"}
@@ -87,6 +101,7 @@ class TestSizingIsDerived:
         assert len(why) == 4
 
     def test_points_land_on_the_fibonacci_scale(self, builder):
+        """Rounding down to Fibonacci keeps a 13 meaningful rather than arithmetic."""
         locations = builder._locations()
         for status in ("Open", "Blocked", "Needs owner", "Partial"):
             for source in ("docs/x.md", "docs/compliance/x.md"):
@@ -98,6 +113,8 @@ class TestSizingIsDerived:
 
 
 class TestTheSweepDoesNotReadItself:
+    """The generated backlog must not be one of the registers it sweeps."""
+
     def test_the_generated_backlog_is_not_a_register(self, builder):
         """It is a markdown document full of tables, so it reads as one.
 
@@ -123,6 +140,8 @@ class TestTheSweepDoesNotReadItself:
 
 
 class TestEachRoutedItemLinksItsDesign:
+    """A routed item's design material exists; the backlog has to say where."""
+
     def test_every_pack_link_resolves(self):
         """A generated link into the void is worse than no link.
 
@@ -161,7 +180,10 @@ class TestEachRoutedItemLinksItsDesign:
 
 
 class TestTheCommittedCopy:
+    """The file in the tree matches what the registers currently say."""
+
     def test_it_matches_the_registers(self, builder):
+        """What `--check` asserts in CI, asserted here against the committed file."""
         assert builder.main(["--check"]) == 0
 
     def test_it_actually_found_the_estate(self, builder):
@@ -171,6 +193,7 @@ class TestTheCommittedCopy:
         assert len({item["source"] for item in items}) > 30
 
     def test_it_states_a_definition_of_ready_and_done(self):
+        """Stated once for the whole backlog, not restated per item."""
         text = BACKLOG.read_text(encoding="utf-8")
         assert "## Definition of Ready" in text
         assert "## Definition of Done" in text

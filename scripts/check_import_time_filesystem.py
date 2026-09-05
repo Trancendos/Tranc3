@@ -233,6 +233,7 @@ def scan_file(path: Path) -> list[str]:
 
 
 def scan() -> list[str]:
+    """Every import-time absolute-path write in the tree, sorted for stable diffs."""
     found: list[str] = []
     for path in sorted(REPO.rglob("*.py")):
         posix = path.as_posix()
@@ -243,6 +244,7 @@ def scan() -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the ratchet, or rewrite the baseline. Returns a process exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--write-baseline", action="store_true", help="record the current set as the baseline"

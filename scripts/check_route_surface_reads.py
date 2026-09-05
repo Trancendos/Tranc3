@@ -96,6 +96,7 @@ def offenders() -> list[str]:
 
 
 def main() -> int:
+    """Report every direct `app.routes` read outside the exempt helpers."""
     found = offenders()
     if found:
         print("Route surface check: FAILED")

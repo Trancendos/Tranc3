@@ -177,6 +177,7 @@ def evaluate(guards: list[str], wired: set[str], exceptions: dict[str, str]) -> 
 
 
 def main() -> int:
+    """Check both directions of the wiring contract. Returns an exit code."""
     guards = discover_guards()
     wired = wired_guards()
     failures = evaluate(guards, wired, UNWIRED_BY_DESIGN)

@@ -49,6 +49,13 @@ def _registry_paths() -> dict[str, str]:
     found: dict[str, str] = {}
 
     def walk(node: object) -> None:
+        """Collect every record carrying both a `pid` and a `worker_path`.
+
+        The registry nests records at varying depths, so this recurses rather
+        than assuming a shape — a record moved one level down would otherwise
+        drop silently out of the comparison, which is the opposite of what an
+        alignment check is for.
+        """
         if isinstance(node, dict):
             pid = node.get("pid")
             if isinstance(pid, str) and "worker_path" in node:
@@ -75,6 +82,12 @@ def _entity_paths() -> dict[str, str]:
 
 
 def drift() -> list[str]:
+    """Disagreements between the CMDB and the canonical entity register.
+
+    Reports two kinds: a PID whose `worker_path` differs between the two, and
+    a path both agree on that is not on disk — the second is how six records
+    kept pointing at `src/studio/` after that router was removed.
+    """
     registry = _registry_paths()
     entities = _entity_paths()
     failures: list[str] = []
@@ -95,6 +108,7 @@ def drift() -> list[str]:
 
 
 def main() -> int:
+    """Report every registry disagreement. Returns a process exit code."""
     failures = drift()
     if failures:
         print("ID registry alignment: FAILED")
