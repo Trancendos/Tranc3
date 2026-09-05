@@ -47,7 +47,7 @@ import shutil
 import statistics
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,6 +75,26 @@ class Joined:
     oss_licence: str = ""
     compose_service: str = ""
     traefik_rule: str = ""
+    #: The router's name in compose, and its stripprefix middleware if any.
+    #: The scaffold below uses these rather than the Location's slug: the two
+    #: differ for eight Locations (`the-ice-box` vs `ice-box-service`,
+    #: `fabulousa` vs `fabulousa-service`, …), and a template built on the
+    #: slug wires a middleware to a router that does not exist.
+    traefik_router: str = ""
+    traefik_strip: str = ""
+    #: Additional routers the same service declares — aliases, not the
+    #: contract the pack is written against.
+    traefik_other: list = field(default_factory=list)
+    #: Base URLs the compose environment configures for this service.
+    env_urls: list = field(default_factory=list)
+    #: `(middleware, destination)` for each redirect this service declares.
+    redirects: list = field(default_factory=list)
+    #: The build context and Dockerfile compose actually uses. Inferring the
+    #: context from the worker directory was wrong for every service built
+    #: with `context: .` — ice-box's Dockerfile COPYs `src/`, so the inferred
+    #: `./workers/ice-box-service` context would fail the build outright.
+    build_context: str = ""
+    build_dockerfile: str = ""
     compose_port: str = ""
     volumes: list[str] = None
     priority: str = ""
@@ -143,22 +163,87 @@ def parse_compose() -> dict:
         m = re.match(r"^  ([a-z0-9][a-z0-9_-]*):\s*$", line)
         if m:
             current = m.group(1)
-            services[current] = {"traefik": "", "port": "", "volumes": []}
+            services[current] = {
+                "traefik": "",
+                "router": "",
+                "rules": [],
+                "redirects": [],
+                "env_urls": [],
+                "strip": "",
+                "port": "",
+                "context": "",
+                "dockerfile": "",
+                "volumes": [],
+            }
             continue
         if not current:
             continue
         if "rule=" in line and "routers." in line:
-            services[current]["traefik"] = line.split("rule=", 1)[1].strip().rstrip('"')
+            rule = line.split("rule=", 1)[1].strip().rstrip('"')
+            router = re.search(r"routers\.([A-Za-z0-9_.-]+)\.rule", line)
+            services[current]["rules"].append((router.group(1) if router else "", rule))
+        ctx = re.match(r"^\s+context:\s*(\S+)\s*$", line)
+        if ctx and not services[current]["context"]:
+            services[current]["context"] = ctx.group(1)
+        dkf = re.match(r"^\s+dockerfile:\s*(\S+)\s*$", line)
+        if dkf and not services[current]["dockerfile"]:
+            services[current]["dockerfile"] = dkf.group(1)
+        # A router carrying a redirect middleware does not serve the app at
+        # its own rule; it sends the caller somewhere else. Calling it "an
+        # alias" told a reader the opposite of what the deployment does.
+        redirect = re.search(
+            r"middlewares\.([A-Za-z0-9_.-]+)\.redirectregex\.replacement=(\S+?)\"?\s*$", line
+        )
+        if redirect:
+            services[current]["redirects"].append((redirect.group(1), redirect.group(2)))
+        strip = re.search(r"middlewares\.([A-Za-z0-9_.-]+)\.stripprefix\.prefixes=(\S+)", line)
+        if strip:
+            services[current]["strip"] = f"{strip.group(1)}|{strip.group(2).rstrip(chr(34))}"
         pm = re.search(r'^\s+- "(\d+):(\d+)"', line)
         if pm:
             services[current]["port"] = pm.group(1)
+        # A configured base URL is evidence about routing that this repo can
+        # read even for a third-party image whose source it cannot: Forgejo
+        # is told `ROOT_URL=https://trancendos.com/the-workshop/`, which is
+        # the image being rooted at the prefix, stated by the deployment.
+        url = re.search(
+            r"^\s+-?\s*[A-Za-z0-9_]*URL[A-Za-z0-9_]*[:=]\s*\"?(\S*://\S+?)\"?\s*$", line
+        )
+        if url:
+            services[current]["env_urls"].append(url.group(1))
         pe = re.search(r"^\s+- PORT=(\d+)", line)
         if pe and not services[current]["port"]:
             services[current]["port"] = pe.group(1)
         vm = re.search(r"^\s+- ([a-z0-9-]+-data):(\S+)", line)
         if vm:
             services[current]["volumes"].append(f"{vm.group(1)} → {vm.group(2)}")
+
+    for service in services.values():
+        _choose_router(service)
     return services
+
+
+def _choose_router(service: dict) -> None:
+    """Pick the router a pack should describe, and record the others.
+
+    A service may declare several Traefik routers. `forgejo` declares two —
+    `Host(trancendos.com) && PathPrefix(/the-workshop)` and a bare
+    `Host(the-workshop.trancendos.com)` — and taking whichever the scan read
+    last described The Workshop as host-only with no path contract, while the
+    URL the whole estate documents (`trancendos.com/the-workshop`) went
+    unmentioned in its own solution pack.
+
+    The path-prefixed router wins, because "all Trancendos services are
+    subdirectories of trancendos.com, not subdomains" is the deployment
+    topology; a host router alongside it is an alias. The others are kept so
+    the pack can say they exist rather than silently dropping them.
+    """
+    rules = service.get("rules") or []
+    if not rules:
+        return
+    primary = next((r for r in rules if "PathPrefix(" in r[1]), rules[0])
+    service["router"], service["traefik"] = primary
+    service["other_rules"] = [r for r in rules if r is not primary]
 
 
 def slug(name: str) -> str:
@@ -185,6 +270,13 @@ def join_entity(name: str, ent, entity_md, priority_md, oss_md, compose) -> Join
         if c in compose:
             j.compose_service = c
             j.traefik_rule = compose[c]["traefik"]
+            j.traefik_router = compose[c]["router"]
+            j.traefik_strip = compose[c]["strip"]
+            j.traefik_other = list(compose[c].get("other_rules") or [])
+            j.env_urls = list(compose[c].get("env_urls") or [])
+            j.redirects = list(compose[c].get("redirects") or [])
+            j.build_context = compose[c]["context"]
+            j.build_dockerfile = compose[c]["dockerfile"]
             j.compose_port = compose[c]["port"]
             j.volumes = compose[c]["volumes"]
             break
@@ -269,18 +361,25 @@ def readiness(ent, j: Joined) -> tuple[int, list[str]]:
     if j.path_exists:
         score += 2
         why.append(f"code path `{ent.worker_path}` exists on disk (+2)")
+    # The reasons name the threshold each point was earned at, not the exact
+    # file count. The score buckets at 1 and 3 files, so an exact count adds
+    # nothing a reader can act on — and it made every pack stale on any commit
+    # that added a file anywhere beneath a Location's path. A generated
+    # document that churns on facts which do not change its meaning trains
+    # people to regenerate without reading, which is how real drift gets
+    # committed unseen.
     if j.py_files >= 3:
         score += 2
-        why.append(f"{j.py_files} Python files present (+2)")
+        why.append("three or more Python files present (+2)")
     elif j.py_files:
         score += 1
-        why.append(f"{j.py_files} Python file(s) present (+1)")
+        why.append("at least one Python file present (+1)")
     if j.compose_service:
         score += 2
         why.append(f"compose service `{j.compose_service}` defined (+2)")
     if j.test_files:
         score += 1
-        why.append(f"{j.test_files} test file(s) (+1)")
+        why.append("at least one test file present (+1)")
     return min(score, 10), why
 
 
@@ -313,6 +412,81 @@ def quadrant(c: int, r: int, c_split: float, r_split: float) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def worker_serves_prefix(j: "Joined", prefix: str) -> tuple[bool | None, str]:
+    """Does the worker itself serve paths under `prefix`?
+
+    `None` when it cannot be determined — a third-party image (Forgejo, n8n,
+    Paperless) with no Python in the build context. Unknown is reported as
+    unknown; the whole point of this function is that absence of evidence was
+    previously reported as evidence of design.
+
+    Why this exists
+    ---------------
+    An earlier version of this generator saw "no stripprefix middleware" and
+    wrote, in 20-odd packs, that the omission was **deliberate** — that the
+    worker served the prefixed paths itself and adding the middleware would
+    break it. For most of them the opposite is true: `workers/cryptex/router.py`
+    registers `/scan`, `/intel`, `/engines` with no prefix, compose routes
+    ``PathPrefix(`/cryptex`)`` with no strip, so `/cryptex/scan` reaches the
+    worker unchanged and 404s. The absence was a defect, and the pack called
+    it a design decision — inverting a real routing fault into a reassurance,
+    in the document an implementer is told to trust.
+
+    So intent is no longer inferred from absence. This checks the one thing
+    that is checkable: whether any route or router prefix in the worker's own
+    source begins with the external prefix.
+    """
+    # The verdict AND what it rests on. Returning a bare boolean made the
+    # pack describe every positive as "this worker's own source registers
+    # paths under the prefix" — true for the Python workers, false for
+    # Forgejo, where the evidence is a configured base URL. Saying the wrong
+    # reason for a right answer is how a reader learns to distrust the pack.
+    #
+    # Source first, env URL second. The comment on the fallback said it was
+    # "consulted only when the source cannot be", and the code consulted it
+    # first — so for any worker that had both, the weaker evidence decided,
+    # and the pack cited a base URL where it could have read the routes. A
+    # worker whose own source is readable and does not register the prefix
+    # is not rescued by an environment variable: the source is the thing
+    # that answers the request.
+    build_context = j.build_context
+    directory: Path | None = None
+    if build_context:
+        # Resolved against the repository, not the caller's cwd. A relative
+        # context read from `os.getcwd()` makes every routing verdict depend
+        # on where the generator happened to be invoked from: run it from
+        # anywhere but the repo root and 24 real routing defects silently
+        # become "unverifiable", while `--check` fails on a diff nobody
+        # introduced.
+        candidate = Path(build_context)
+        resolved = candidate if candidate.is_absolute() else ROOT / build_context.lstrip("./")
+        directory = resolved if resolved.is_dir() else None
+
+    sources = list(directory.glob("*.py")) + list(directory.glob("*/*.py")) if directory else []
+    if sources:
+        text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in sources)
+        serves = f'"{prefix}' in text or f"'{prefix}" in text
+        return serves, "this worker's own source registers paths under it"
+
+    for url in j.env_urls:
+        # A base URL whose own path carries the prefix is the deployment
+        # saying the image is rooted there. It is weaker evidence than
+        # reading routes, so it is consulted only when the source cannot be:
+        # it settles exactly the third-party-image case the packs used to
+        # hedge about, and hedging where evidence exists is its own defect.
+        path = url.split("://", 1)[-1]
+        path = path[path.find("/") :] if "/" in path else ""
+        if path.rstrip("/").endswith(prefix.rstrip("/")):
+            return True, f"its compose environment configures the base URL `{url}`"
+
+    if not build_context:
+        return None, "it declares no build context"
+    if directory is None:
+        return None, f"its build context `{build_context}` is not a directory here"
+    # A third-party image; its routing is not ours to read.
+    return None, "its build context holds no Python to read (a third-party image)"
+
+
 def render_pack(
     name: str, ent, j: Joined, crit, ready, quad, dependents, c_split, r_split, priority_md
 ) -> str:
@@ -324,13 +498,23 @@ def render_pack(
     agents = [ent.agent_alpha, ent.agent_beta]
     bots = [ent.bot_01, ent.bot_02, ent.bot_03, ent.bot_04]
     sl = slug(name)
+    # Routing names come from compose when compose has them. The Location's
+    # slug and its deployed router name differ for several Locations —
+    # `the-ice-box` vs `ice-box-service`, `fabulousa` vs `fabulousa-service`,
+    # `/the-warp-tunnel` vs `/warp-tunnel` — and a scaffold built on the slug
+    # attaches a middleware to a router that does not exist, or strips a
+    # prefix the router never matches. Both produce a 404 that looks like a
+    # code fault, which is the exact failure this pack warns about elsewhere.
+    router_name, strip_name, route_prefix = route_names(j, sl)
+    dockerfile = j.build_dockerfile or "Dockerfile"
 
     L: list[str] = []
     add = L.append
 
     add(f"# Solution Pack — {name}")
     add("")
-    add(f"> **{ent.pid} · {ent.aid} · {ent.pillar.value} pillar**  ")
+    add(f"> **{ent.pid} · {ent.aid} · {ent.pillar.value} pillar**")
+    add(">")
     add("> Generated by `scripts/build_solution_packs.py`. **DERIVED** sections are read")
     add("> from the registers named inline and are verifiable. **SCAFFOLD** sections are")
     add("> generated starting points shaped by those facts — drafts to accept or replace,")
@@ -361,7 +545,19 @@ def render_pack(
     if j.compose_service:
         add(f"| Compose service | `{j.compose_service}` | `docker-compose.production.yml` |")
     if j.traefik_rule:
-        add(f"| Traefik route | `{j.traefik_rule}` | compose labels |")
+        # Traefik rules contain backticks of their own, so a single-backtick
+        # span closes at the first one and the rest of the rule leaks into
+        # the table as prose. A double-backtick span with padding is the
+        # markdown-correct way to quote text that contains backticks.
+        add(f"| Traefik route | ``{_cell(j.traefik_rule)}`` | compose labels |")
+        for router, rule in j.traefik_other:
+            destination = _redirect_for(j, router)
+            note = (
+                f"router `{router}` — a permanent redirect to {destination}"
+                if destination
+                else f"router `{router}` — a second route to the same service"
+            )
+            add(f"| Also routed by | ``{_cell(rule)}`` | {note} |")
     if j.priority:
         add(f"| Rollout priority | {j.priority} | CLAUDE.md worker map |")
     if j.oss_repo:
@@ -394,23 +590,56 @@ def render_pack(
     add("")
     add("**Hard constraints — these come from the estate, not from preference.**")
     add("")
-    ctx = (
+    # DERIVED from compose where compose says; inferred only where it is
+    # silent. Inferring it unconditionally produced a template that fails the
+    # build for every service compose builds with `context: .` — ice-box's
+    # Dockerfile COPYs `src/`, which a worker-directory context does not hold.
+    ctx = j.build_context or (
         f"./{ent.worker_path.rstrip('/')}"
         if ent.worker_path and ent.worker_path.startswith("workers/")
         else "."
     )
-    if ent.worker_path and ent.worker_path.startswith("workers/"):
+    if ctx not in (".", "./") and ent.worker_path and ent.worker_path.startswith("workers/"):
         add(f"- **Build context is `{ctx}`**, so `src/` is *not* in the image. This Location")
         add("  cannot `from src.* import ...` — ported logic must be self-contained. This is the")
         add("  single most common cause of a worker that passes tests and dies in the container.")
+    elif ent.worker_path and ent.worker_path.startswith("workers/"):
+        add(f"- **Build context is `{ctx}`** (the repo root), so `src/` *is* in the image and")
+        add("  this worker's Dockerfile may COPY from it. Narrowing the context to the worker")
+        add("  directory would break the build — check the Dockerfile before changing it.")
     else:
         add(f"- Runs in-process under `api.py` (path `{ent.worker_path or 'n/a'}`), so it *may*")
         add("  import from `src/` — but that also means it shares the backend's failure domain.")
     add("- **SQLite over shared state** — each worker owns its own database file (principle 1).")
     add("- **In-memory token-bucket rate limiting** — no external KV (principle 2).")
     add("- **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.")
-    if j.traefik_rule:
-        add(f"- **Traefik `stripprefix` is mandatory** for `/{sl}` routing; without the middleware")
+    if j.traefik_rule and route_prefix is None:
+        add("- **The router matches on host alone** — its rule carries no `PathPrefix`, so")
+        add("  there is no prefix to strip and no path contract to verify. Traefik forwards")
+        add("  the path unchanged and the worker serves what it registers under `/`. Do not")
+        add("  add a stripprefix middleware here; there is nothing for it to strip.")
+    elif j.traefik_rule and not j.traefik_strip:
+        serves, evidence = worker_serves_prefix(j, route_prefix)
+        if serves is True:
+            add(f"- **No `stripprefix` on `{route_prefix}`, and none is needed** — verified,")
+            add(f"  because {evidence}, so the prefix must reach")
+            add("  it intact. Adding the middleware would break it.")
+        elif serves is False:
+            add(f"- **ROUTING DEFECT — `{route_prefix}` has no `stripprefix` and this worker")
+            add("  does not serve the prefixed path.** Verified against its own source: every")
+            add(f"  route it registers sits below `/`, not below `{route_prefix}`, so Traefik")
+            add(f"  forwards `{route_prefix}/x` unchanged and the worker 404s on all of them.")
+            add("  Either add a stripprefix middleware to the compose labels, or give the")
+            add("  worker's router the prefix. **Fix this before building anything on it.**")
+        else:
+            add(f"- **No `stripprefix` on `{route_prefix}`, and this could not be verified** —")
+            add(f"  {evidence}. Confirm against that image's own routing")
+            add("  before relying on either behaviour.")
+    elif j.traefik_rule:
+        add(
+            f"- **Traefik `stripprefix` is mandatory** for `{route_prefix}` routing; "
+            "without the middleware"
+        )
         add("  the router matches and the worker 404s on every path. This has bitten the estate")
         add("  before (resonate, imind).")
     add("")
@@ -432,7 +661,7 @@ def render_pack(
     add("    C[Client] --> T[Traefik]" if j.traefik_rule else "    C[Client] --> A[api.py]")
     node = f"S[{name}<br/>{port or 'no port'}]"
     if j.traefik_rule:
-        add(f"    T -->|/{sl}| {node}")
+        add(f"    T -->|{route_prefix or 'host rule'}| {node}")
     else:
         add(f"    A --> {node}")
     add("    S --> DB[(SQLite<br/>own file)]")
@@ -452,7 +681,8 @@ def render_pack(
     add("| Layer | Component | Note |")
     add("|---|---|---|")
     add(
-        f"| Ingress | {'Traefik → ' + sl if j.traefik_rule else 'in-process router'} | {j.traefik_rule or 'mounted in api.py'} |"
+        f"| Ingress | {'Traefik → ' + (route_prefix or 'host rule') if j.traefik_rule else 'in-process router'} | "
+        f"{'``' + _cell(j.traefik_rule) + '``' if j.traefik_rule else 'mounted in api.py'} |"
     )
     add("| API | FastAPI app | `/health`, `/status`, domain routes |")
     add(f"| Domain | {agents[0].code_name} + {agents[1].code_name} | the two Agents below |")
@@ -470,7 +700,20 @@ def render_pack(
     add("journey once a user has actually walked it.")
     add("")
     add("```")
-    add(f"1. Request arrives  →  {'Traefik strips /' + sl if j.traefik_rule else 'api.py routes'}")
+    if not j.traefik_rule:
+        arrival = "api.py routes"
+    elif route_prefix is None:
+        arrival = "Traefik matches the host; the path arrives unchanged"
+    elif j.traefik_strip:
+        arrival = f"Traefik strips {route_prefix}"
+    else:
+        # No middleware: the prefix reaches the worker unchanged. Whether that
+        # works is section 3's verified finding, and this line must not
+        # contradict it — the earlier version said "strips" regardless, so a
+        # pack could declare a routing defect on one page and describe the
+        # stripping that does not happen on the next.
+        arrival = f"Traefik forwards {route_prefix} unchanged (no stripprefix)"
+    add(f"1. Request arrives  →  {arrival}")
     add(f"2. {agents[0].code_name} — {agents[0].description}")
     add(f"3. {agents[1].code_name} — {agents[1].description}")
     add(f"4. Bots fire: {', '.join(b.code_name for b in bots)}")
@@ -565,13 +808,18 @@ def render_pack(
     add("")
     add("```yaml")
     add(f"  {j.compose_service or sl}:")
-    add(f"    build: {{ context: {ctx}, dockerfile: Dockerfile }}")
+    add(f"    build: {{ context: {ctx}, dockerfile: {dockerfile} }}")
     add(f"    environment: [ PORT={port or 'TBD'} ]")
     add(f'    ports: [ "{port or "TBD"}:{port or "TBD"}" ]')
     if j.traefik_rule:
         add("    labels:")
-        add(f'      - "traefik.http.routers.{sl}.middlewares=strip-{sl}@docker"')
-        add(f'      - "traefik.http.middlewares.strip-{sl}.stripprefix.prefixes=/{sl}"')
+        add(f'      - "traefik.http.routers.{router_name}.rule={j.traefik_rule}"')
+        if j.traefik_strip:
+            add(f'      - "traefik.http.routers.{router_name}.middlewares={strip_name}@docker"')
+            add(
+                f'      - "traefik.http.middlewares.{strip_name}.stripprefix.'
+                f'prefixes={route_prefix}"'
+            )
     add("```")
     add("")
 
@@ -607,18 +855,19 @@ def render_pack(
     add("## 12. Wireframe — SCAFFOLD")
     add("")
     add("```")
-    add("┌──────────────────────────────────────────────────────┐")
-    add(f"│ {name[:36]:<36} {(ent.pid or ''):>15} │")
-    add("├──────────────────────────────────────────────────────┤")
-    add(f"│ {ent.primary_function[:52]:<52} │")
-    add("├──────────────────────────────────────────────────────┤")
+    add("┌" + "─" * _BOX + "┐")
+    add(_row(f" {name[:36]:<36} {(ent.pid or ''):>15} "))
+    add("├" + "─" * _BOX + "┤")
+    add(_row(f" {ent.primary_function[:52]:<52} "))
+    add("├" + "─" * _BOX + "┤")
     for a in agents:
-        add(f"│  ▸ {a.code_name[:24]:<24} {a.description[:24][:24]:<24}│")
-    add("├──────────────────────────────────────────────────────┤")
-    add(f"│  bots: {', '.join(b.code_name for b in bots)[:44]:<44} │")
-    add("├──────────────────────────────────────────────────────┤")
-    add(f"│  [ health ]  [ status ]  {('route /' + sl)[:26]:<26} │")
-    add("└──────────────────────────────────────────────────────┘")
+        add(_row(f"  ▸ {a.code_name[:24]:<24} {a.description[:24]:<24}"))
+    add("├" + "─" * _BOX + "┤")
+    add(_row(f"  bots: {', '.join(b.code_name for b in bots)[:44]:<44}"))
+    add("├" + "─" * _BOX + "┤")
+    routed = f"route {route_prefix}" if route_prefix else "routed by host"
+    add(_row(f"  [ health ]  [ status ]  {routed[:26]:<26}"))
+    add("└" + "─" * _BOX + "┘")
     add("```")
     add("")
 
@@ -658,10 +907,76 @@ def render_pack(
         add(f"- `{ent.worker_path}` — implementation")
     add("- `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation")
     add("")
-    return "\n".join(L) + "\n"
+    return _document(L)
+
+
+def _cell(text: str) -> str:
+    """A value safe to place in a markdown table cell.
+
+    A Traefik rule may contain `||`, which is valid rule syntax and a column
+    delimiter in a markdown table — so the route row would split into extra
+    columns and the table would render wrong from that row down. No rule in
+    the estate uses one today; that is a fact about today.
+    """
+    return text.replace("|", "\\|")
+
+
+def _redirect_for(j: "Joined", router: str) -> str | None:
+    """Where `router` sends callers, if it redirects rather than serving."""
+    for middleware, destination in j.redirects:
+        if middleware.startswith(router):
+            # The replacement carries the captured path as a trailing group
+            # (`$${1}` after compose escaping). Showing it raw makes the
+            # destination read as a literal URL nobody would type; what the
+            # reader needs is where the redirect lands.
+            landing = re.sub(r"\$+\{?\d+\}?$", "", destination.replace("$$", "$"))
+            return f"`{landing}`"
+    return None
+
+
+#: Inner width of the wireframe box, in characters.
+_BOX = 54
+
+
+def _row(inner: str) -> str:
+    """One wireframe row, padded to the box so its right edge closes.
+
+    Three of the row shapes were hand-counted and came out one character
+    short of the borders, so every wireframe in all 43 packs had a ragged
+    right edge — including rows nobody had edited. Padding once, against the
+    same constant the borders are drawn from, is what makes the box a box.
+    """
+    return "│" + f"{inner[:_BOX]:<{_BOX}}" + "│"
+
+
+def route_names(j: "Joined", sl: str) -> tuple[str, str | None, str | None]:
+    """(router, stripprefix middleware, path prefix) — from compose where it says.
+
+    The Location's slug and its deployed router name differ for several
+    Locations, and a scaffold built on the slug wires a middleware to a
+    router that does not exist or strips a prefix the router never matches.
+    Either way the worker 404s, which is the failure these packs warn about.
+
+    A `None` prefix means there is no path contract to honour: either the
+    Location is not routed by Traefik at all, or its router matches on host
+    alone. Both were previously given a manufactured `/{slug}`, which wrote a
+    path the estate does not route into fourteen sections of the pack — the
+    same inference-instead-of-verification that made these packs call a
+    routing defect deliberate. Callers must branch on `None`, not format it.
+    """
+    router = j.traefik_router or sl
+    if j.traefik_strip:
+        strip, prefix = j.traefik_strip.split("|", 1)
+        return router, strip, prefix
+    match = re.search(r"PathPrefix\(`([^`]+)`\)", j.traefik_rule or "")
+    if match is None:
+        return router, None, None
+    prefix = match.group(1)
+    return router, f"strip-{prefix.lstrip('/')}", prefix
 
 
 def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
+    _, _, route_prefix = route_names(j, slug(name))
     e: list[tuple[str, list[str]]] = []
     if not j.path_exists:
         e.append(
@@ -686,15 +1001,59 @@ def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
             )
         )
     if j.traefik_rule and j.compose_service:
-        e.append(
-            (
-                "Verify routing end to end",
-                [
-                    f"As a client, requests to `/{slug(name)}` reach the worker with the prefix stripped.",
-                    "As a reviewer, a stripprefix middleware exists and is referenced by the router.",
-                ],
-            )
-        )
+        if route_prefix is None:
+            criteria = [
+                f"As a client, a request to the router's host reaches {name} with its "
+                "path unchanged.",
+                "As a reviewer, NO stripprefix middleware is attached — a host-only "
+                "rule carries no prefix to strip.",
+            ]
+        elif j.traefik_strip:
+            criteria = [
+                f"As a client, requests to `{route_prefix}` reach the worker "
+                "with the prefix stripped.",
+                "As a reviewer, a stripprefix middleware exists and is referenced by the router.",
+            ]
+        elif worker_serves_prefix(j, route_prefix)[0] is True:
+            criteria = [
+                f"As a client, requests to `{route_prefix}` reach the worker with the "
+                "prefix intact, which is what its own routes expect.",
+                "As a reviewer, NO stripprefix middleware is attached — adding one "
+                "would break every route.",
+            ]
+        elif worker_serves_prefix(j, route_prefix)[0] is False:
+            # The acceptance criterion for a defect is the fix, not a
+            # description of the broken state. Asking a reviewer to confirm a
+            # middleware "exists" when section 3 has just proven it does not,
+            # and that its absence 404s the service, is how a pack sends
+            # somebody to re-add the thing it told them was deliberate.
+            criteria = [
+                f"As a client, requests to `{route_prefix}` reach a route the worker "
+                "actually serves — today they do not, and this epic is that fix.",
+                f"As an implementer, EITHER a stripprefix middleware for `{route_prefix}` "
+                "is added to the compose labels, OR the worker's router is given the "
+                "prefix. One of the two, not neither.",
+                "As a reviewer, a request through Traefik returns something other than 404.",
+            ]
+        else:
+            # Unverifiable is not the same as broken, and this branch used to
+            # conflate them: a third-party image whose routing this repo
+            # cannot read had "today they do not" asserted about it as fact,
+            # one page after section 3 said the opposite. The Workshop is the
+            # case — Forgejo's own ROOT_URL carries `/the-workshop`, so the
+            # prefix probably is served, and the pack has no standing to
+            # claim otherwise. So the epic is the measurement.
+            criteria = [
+                f"As a client, a request through Traefik to `{route_prefix}` returns "
+                "something other than 404 — measured, because this repo cannot read "
+                "the image's routing to decide it.",
+                f"As a reviewer, the measurement is recorded: either the worker serves "
+                f"`{route_prefix}` itself (leave the labels alone) or it does not "
+                "(a stripprefix middleware is then required).",
+                "As an implementer, nothing changes in the compose labels until that "
+                "measurement says which.",
+            ]
+        e.append(("Verify routing end to end", criteria))
     e.append(
         (
             "Implement the abilities",
@@ -816,6 +1175,21 @@ def _debt(ent, j: Joined, name, port, priority_md) -> list[tuple[str, str, str]]
     return d
 
 
+def _document(lines: list[str]) -> str:
+    """Join rendered lines the way the repository's own hooks want them.
+
+    Trailing whitespace and a trailing blank line are both fixed up by
+    pre-commit, which would rewrite every generated pack the moment it ran and
+    leave `--check` failing forever on a diff nobody wrote. A generator that
+    disagrees with the formatter turns its own drift gate into noise, so the
+    agreement is enforced here rather than remembered at each call site.
+    """
+    cleaned = [line.rstrip() for line in lines]
+    while cleaned and not cleaned[-1]:
+        cleaned.pop()
+    return "\n".join(cleaned) + "\n"
+
+
 def render_index(rows, c_split, r_split) -> str:
     L = ["# Solution Packs — index", ""]
     L += [
@@ -853,7 +1227,7 @@ def render_index(rows, c_split, r_split) -> str:
                 f"{r['ready']}/10 | {r['deps']} | {r['port'] or '—'} | [pack]({r['file']}) |"
             )
         L.append("")
-    return "\n".join(L) + "\n"
+    return _document(L)
 
 
 def build(out_dir: Path) -> list[dict]:

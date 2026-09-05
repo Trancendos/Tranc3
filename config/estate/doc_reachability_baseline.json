@@ -1,0 +1,10 @@
+[
+  "deploy/mattermost/forgejo-webhook-setup.md",
+  "docs/SECURITY_RESEARCH_FINDINGS.md",
+  "docs/architecture/SHARED-FUNCTIONAL-SERVICES-CORE.md",
+  "docs/architecture/TEST-INTELLIGENCE.md",
+  "docs/architecture/THREE-LANE-TRANSPORT.md",
+  "docs/defstan/standards/00-056-safety-management.md",
+  "docs/engineering/TRANC3-INTEGRATION-GUIDE.md",
+  "docs/procedures/PROC-TRN-001-Security-Awareness-Attestation.md"
+]

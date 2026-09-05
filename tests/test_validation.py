@@ -13,6 +13,7 @@ Covers:
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -405,3 +406,169 @@ class TestErrorCodeValidation:
         count = len(list(ErrorCode))
         _log.info("val.error_codes total_count=%d", count)
         assert count >= 20, f"Expected ≥20 error codes, found {count}"
+
+
+class TestTheValidatorsImportWithoutTheWebStack:
+    """The point of splitting `primitives.py` out was importability.
+
+    Four modules import the pure validators from `validators.py` —
+    `src/auth/db_user_manager.py`, `src/relations/registry.py`,
+    `src/notebooks/registry.py`, `src/roles/registry.py` — and a CI script
+    imports them through `src.townhall.routing`. Moving the functions into
+    `primitives.py` and re-exporting them meant no caller had to change its
+    import line, but it did not make `validators.py` itself importable
+    without the chain: the module's `EventCategory` import ended at
+    `aiohttp` and `structlog`.
+
+    What this asserts is the third-party weight, not the Observatory. The
+    first attempt at this test forbade `src.observability` outright, which
+    described the workaround rather than the requirement — `observatory.py`
+    is standard library plus one in-repo helper, and importing it was never
+    the problem. The weight lived in `src/observability/__init__.py`, whose
+    eager metrics/tracing/health re-exports ran first. Those are lazy now,
+    so `validators.py` imports the enums at module level again and
+    `typing.get_type_hints(audit_action)` resolves.
+
+    Calibrated: restore the eager imports in `src/observability/__init__.py`
+    and every assertion here fails. A subprocess is used because an earlier
+    test in the session may already have imported the chain for its own
+    reasons.
+    """
+
+    #: The result is tagged and read off its own line. Importing the chain
+    #: also emits a structlog warning on stdout, which an untagged parse
+    #: folded into the module list — so the failure message named a log line
+    #: as a leaked module, and a *passing* run would have been misread just
+    #: as easily had anything else printed.
+    MARKER = "LEAKED:"
+
+    SNIPPET = (
+        "import sys; import {module}; "
+        "leaked = sorted(m for m in sys.modules "
+        "if m.split('.')[0] in {{'aiohttp', 'structlog', 'fastapi', 'prometheus_client'}} "
+        "or m.startswith(('src.observability.health', 'src.observability.metrics', "
+        "'src.observability.tracing'))); "
+        "print('" + MARKER + "' + ','.join(leaked))"
+    )
+
+    @pytest.mark.parametrize("module", ["src.validation.primitives", "src.validation.validators"])
+    def test_importing_it_pulls_in_no_web_or_observatory_module(self, module):
+        import subprocess
+        import sys
+
+        result = subprocess.run(
+            [sys.executable, "-c", self.SNIPPET.format(module=module)],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=str(Path(__file__).resolve().parents[1]),
+        )
+        tagged = [line for line in result.stdout.splitlines() if line.startswith(self.MARKER)]
+        assert len(tagged) == 1, f"expected one {self.MARKER} line, got {result.stdout!r}"
+        leaked = [name for name in tagged[0][len(self.MARKER) :].split(",") if name]
+        assert not leaked, f"{module} dragged in {len(leaked)} module(s): {leaked[:8]}"
+
+    def test_the_decorators_annotations_resolve_at_runtime(self):
+        """`get_type_hints` must not raise on a public signature.
+
+        Deferring the enum import into `decorator()` took `EventCategory`
+        out of the module namespace, so the string annotation on
+        `audit_action`'s `category` parameter had nothing to resolve
+        against and `typing.get_type_hints` raised NameError. Anything that
+        introspects the decorator at runtime — a schema generator, a doc
+        tool, a dependency injector — broke on it.
+        """
+        import typing
+
+        from src.observability.observatory import EventCategory, EventSeverity
+        from src.validation.validators import audit_action
+
+        hints = typing.get_type_hints(audit_action)
+        assert hints["category"] is EventCategory
+        assert hints["severity"] is EventSeverity
+
+
+class TestTheObservabilityPackageRootIsLazy:
+    """A package `__init__` runs before any module inside it.
+
+    `src/observability/__init__.py` imported `health`, `metrics` and
+    `tracing` eagerly to offer 25 convenience names at the package root.
+    Nothing in the repository imports any of those 25 from there — the sole
+    importer of the package root imports a submodule. The convenience had no
+    consumers and a real cost: it broke this PR's Service Topology job at
+    596a4431 on a runner installing only PyYAML and pydantic.
+    """
+
+    def test_the_convenience_names_still_resolve(self):
+        import src.observability as observability
+
+        assert observability.HealthChecker.__name__ == "HealthChecker"
+        assert observability.Tracer.__name__ == "Tracer"
+
+    def test_an_unknown_name_still_raises_attribute_error(self):
+        import src.observability as observability
+
+        with pytest.raises(AttributeError, match="has no attribute"):
+            observability.not_a_real_export
+
+    def test_dir_and_all_still_advertise_every_export(self):
+        import src.observability as observability
+
+        for name in observability.__all__:
+            assert name in dir(observability), name
+        assert len(observability.__all__) == 25
+
+
+class TestAuditActionRefusesArgumentsItCannotRecord:
+    """`None` reached `Observatory.record` and vanished.
+
+    cubic flagged this against the intermediate commit, where `None` was
+    the default and got resolved. Restoring the real enum defaults meant
+    `None` only arrives when a caller passes it explicitly — but it still
+    arrived, and `record()`'s serialization then raised an AttributeError
+    that `audit_action`'s own `finally` block swallows, because that block
+    exists so audit logging can never break a route. Net effect: the event
+    is not recorded and nothing says so.
+
+    Coercing to the default was the other option and is worse. It would
+    write a record categorised `DATA` for an event the caller meant to
+    categorise otherwise — a wrong fact indistinguishable from a right one,
+    in the log that exists to be the record of what happened.
+
+    Decoration runs at import, so this fails at startup with the offending
+    line in the traceback, and can never affect a live request.
+
+    Calibrated: drop the loop in `audit_action` and every case here passes
+    silently.
+    """
+
+    @pytest.mark.parametrize("field", ["category", "severity"])
+    @pytest.mark.parametrize("value", [None, "data", 7, object()])
+    def test_a_non_enum_is_refused_at_decoration_time(self, field, value):
+        from src.validation.validators import audit_action
+
+        with pytest.raises(TypeError, match=f"{field} must be an Event"):
+            audit_action("secret.retrieve", **{field: value})
+
+    def test_the_defaults_and_real_enum_members_are_accepted(self):
+        from src.observability.observatory import EventCategory, EventSeverity
+        from src.validation.validators import audit_action
+
+        assert callable(audit_action("secret.retrieve"))
+        assert callable(
+            audit_action(
+                "secret.retrieve",
+                category=EventCategory.SECRETS,
+                severity=EventSeverity.SECURITY,
+            )
+        )
+
+    def test_the_error_names_the_event_and_a_usable_replacement(self):
+        """A decorator error should not send anyone to the source to fix it."""
+        from src.validation.validators import audit_action
+
+        with pytest.raises(TypeError) as caught:
+            audit_action("secret.retrieve", category=None)
+        message = str(caught.value)
+        assert "secret.retrieve" in message
+        assert "EventCategory." in message

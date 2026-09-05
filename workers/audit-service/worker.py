@@ -52,8 +52,43 @@ INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 
 _data_dir = Path(os.environ.get("DATA_DIR", "/data"))
-_data_dir.mkdir(parents=True, exist_ok=True)
 DB_PATH = _data_dir / "audit.db"
+
+
+#: Directories already created in this process. `_conn()` opens a fresh
+#: connection for nearly every request, so without this the lazy-once intent
+#: became a per-request mkdir syscall on a directory that already exists.
+_ensured_parents: set[str] = set()
+
+
+def _ensure_parent(path: str | os.PathLike[str]) -> Path:
+    """Create the directory once, on first use — not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the container's path is absent or unwritable —
+    every CI runner, for a start. Three sibling workers already turned nine
+    collected tests into `PermissionError` that way before an assertion ran.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+
+    `path` is coerced rather than required to be a `Path`. A module-level
+    `DB_PATH` is one, but it is a configuration value callers and tests
+    substitute — `tests/test_workers_p3.py` patches in a plain string — and a
+    helper that raises `AttributeError` on the other spelling of a filesystem
+    path turns a type mismatch into 41 collection errors.
+    """
+    resolved = Path(path)
+    parent = str(resolved.parent)
+    # The cache skips a `mkdir` syscall per connection, but it must not skip
+    # the check that the directory is still there: a volume remounted or a
+    # path cleaned up under a running container leaves the cache asserting
+    # something false, and every later SQLite open fails with "unable to open
+    # database file" for a reason nothing explains. A stat is far cheaper
+    # than the mkdir it replaces and is the correct place to spend it.
+    if parent not in _ensured_parents or not resolved.parent.is_dir():
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        _ensured_parents.add(parent)
+    return resolved
+
 
 # Serialise chain-tip reads + inserts to prevent concurrent hash-chain forks
 _chain_lock = threading.Lock()
@@ -118,7 +153,7 @@ _INDEXES = [
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=15)
+    conn = sqlite3.connect(str(_ensure_parent(DB_PATH)), check_same_thread=False, timeout=15)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=FULL")  # append-only log: durability matters

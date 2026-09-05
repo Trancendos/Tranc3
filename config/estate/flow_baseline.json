@@ -35,7 +35,7 @@
   "FLOW-061": "unwired",
   "FLOW-062": "enforced",
   "FLOW-063": "enforced",
-  "FLOW-064": "unwired",
+  "FLOW-064": "enforced",
   "FLOW-065": "enforced",
   "FLOW-066": "enforced"
 }

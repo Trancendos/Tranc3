@@ -217,7 +217,7 @@ Ruff, Black, isort, Bandit, Semgrep, Gitleaks, detect-secrets, Safety, and Typos
 - **80 justified nosec comments** (bandit suppressions with documented rationale)
 - **0 npm vulnerabilities** across all workspaces
 
-See [SECURITY.md](SECURITY.md) and [SECURITY-ASSESSMENT.md](SECURITY-ASSESSMENT.md) for details.
+See [SECURITY.md](SECURITY.md) and [SECURITY-ASSESSMENT.md](docs/SECURITY-ASSESSMENT.md) for details.
 
 ---
 
@@ -251,9 +251,9 @@ It will be available immediately — no restart, no retraining.
 |----------|-------------|
 | [Deployment Runbook](docs/DEPLOYMENT_RUNBOOK.md) | Full deployment guide |
 | [Architecture Threat Model](ARCHITECTURE_THREAT_MODEL.md) | Security architecture |
-| [CF Worker Migration Roadmap](CF_WORKER_MIGRATION_ROADMAP.md) | Cloudflare → self-hosted plan |
-| [Security Assessment](SECURITY-ASSESSMENT.md) | Vulnerability analysis |
-| [Project Pulse](PROJECT_PULSE.md) | Current status + metrics |
+| [CF Worker Migration Roadmap](wiki-content/Architecture-CF_WORKER_MIGRATION_ROADMAP.md) | Cloudflare → self-hosted plan |
+| [Security Assessment](docs/SECURITY-ASSESSMENT.md) | Vulnerability analysis |
+| [Project Pulse](wiki-content/Historical-PROJECT_PULSE.md) | Current status + metrics |
 
 ---
 

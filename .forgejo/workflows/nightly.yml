@@ -112,7 +112,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install lint tools
-        run: python3 -m pip install ruff mypy --quiet
+        run: python3 -m pip install "ruff==0.15.8" mypy --quiet
 
       - name: ruff (full check)
         run: ruff check src/ api.py --select E,F,W,C,B --ignore E501 || true

@@ -15,7 +15,7 @@ steps:
   ruff-lint:
     image: python:3.11-slim@sha256:1042b61448fef4ba92d16a8c7eb4996d027568ce64792a7877fd88511e0af7c6
     commands:
-      - pip install --quiet ruff
+      - pip install --quiet "ruff==0.15.8"
       - ruff check --select E,F,W,B --ignore E501,B008,B904 .
       - ruff format --check .
 

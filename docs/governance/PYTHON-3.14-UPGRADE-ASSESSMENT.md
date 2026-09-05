@@ -85,18 +85,32 @@ digest per Dockerfile, not a mechanical tag edit.
 ### CI `python-version` matrix entries
 
 ```
-.github/workflows/*.yml     : 8 files hardcode "3.11" (test.yml, ci.yml, codecov.yml,
+.github/workflows/*.yml     : 10 files hardcode "3.11" — measured, not counted by hand:
+                               bot-health-watchdog.yml, ci.yml (x3 jobs), perf-smoke.yml,
                                production-gate.yml, publish-matrix-site.yml, rust.yml,
-                               submodule-pins.yml, and python.yml's lint/install-check jobs)
+                               submodule-pins.yml, supply-chain-watch.yml (x2),
+                               python.yml's lint/install-check jobs, and test.yml — whose
+                               pin is a ONE-ENTRY matrix (`python-version: ["3.11"]`), which
+                               is why a grep for `python-version: "3.11"` misses it
+                               -- this line said 7 until 2026-09-04. bot-health-watchdog.yml,
+                               perf-smoke.yml and supply-chain-watch.yml were never counted,
+                               and retiring codecov.yml took the real figure 11 → 10, not 8 → 7
 .github/workflows/python.yml: test job matrix = ['3.10','3.11','3.12'], PLUS a '3.14' entry
                                with experimental:true / continue-on-error:true (already landed,
                                see §3) — scoped to aeonmind/python/** only, not the main backend
-.forgejo/workflows/*.yml    : 16 of 30 files hardcode python-version: "3.11" (adaptive-ci.yml x4,
-                               audit-key-check.yml, benchmark-eval.yml x4, ci.yml x3,
-                               citadel-preflight.yml, compliance-gate.yml, dependency-audit.yml x4,
-                               dependency-scanner.yml x4, deploy-self-hosted.yml, e2e-playwright.yml,
-                               nightly.yml, phase7-nanoservices.yml x3, phase8-trancex.yml x3,
-                               proactive-health.yml, proactive-security.yml x2, production-gate.yml)
+.forgejo/workflows/*.yml    : 19 of 33 files hardcode python-version: "3.11" — this
+                               enumeration is generated from the tree, not typed:
+                               adaptive-ci.yml x4, audit-key-check.yml, benchmark-eval.yml x4,
+                               bot-health-watchdog.yml, ci.yml x3, citadel-preflight.yml,
+                               compliance-gate.yml, dependency-audit.yml x5,
+                               dependency-scanner.yml x4, deploy-self-hosted.yml,
+                               e2e-playwright.yml, matrix-suites-cranbania-sync.yml,
+                               nightly.yml, perf-smoke.yml, phase7-nanoservices.yml x3,
+                               phase8-trancex.yml x3, proactive-health.yml,
+                               proactive-security.yml x2, production-gate.yml
+                               (the count said 19 against a list of 16 until 2026-09-04:
+                               bot-health-watchdog.yml, matrix-suites-cranbania-sync.yml and
+                               perf-smoke.yml were counted but never written down)
 compliance/magna-carta       : both .github/workflows/layer-b-ci.yml and
   (submodule)                  .forgejo/workflows/layer-b-ci.yml hardcode python-version: "3.11"
 ```

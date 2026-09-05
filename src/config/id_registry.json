@@ -478,7 +478,7 @@
         "Aesthetic Homogenization: Enforces design languages."
       ],
       "worker_port": null,
-      "worker_path": "src/studio/",
+      "worker_path": "workers/the-studio/",
       "agents": [
         {
           "name": "The Conductor",
@@ -545,7 +545,7 @@
         "Algorithmic Retouching: Enhances/upscales imagery."
       ],
       "worker_port": null,
-      "worker_path": "src/studio/",
+      "worker_path": "workers/sashas-photo-studio/",
       "agents": [
         {
           "name": "The Retoucher",
@@ -612,7 +612,7 @@
         "Real-time Sculpting: Shapes/textures 3D spaces."
       ],
       "worker_port": null,
-      "worker_path": "src/studio/",
+      "worker_path": "workers/tranceflow/",
       "agents": [
         {
           "name": "Mesh-Weaver",
@@ -679,7 +679,7 @@
         "Timeline-as-Code: Translates edits into code."
       ],
       "worker_port": null,
-      "worker_path": "src/studio/",
+      "worker_path": "workers/tateking/",
       "agents": [
         {
           "name": "The Director-B",
@@ -746,7 +746,7 @@
         "Hyper-Fidelity Prototyping: Builds interactive UI mockups."
       ],
       "worker_port": null,
-      "worker_path": "src/studio/",
+      "worker_path": "workers/fabulousa-service/",
       "agents": [
         {
           "name": "The Tailor",
@@ -813,7 +813,7 @@
         "Feature Alchemy: Wires assets/code via natural language."
       ],
       "worker_port": null,
-      "worker_path": "src/studio/",
+      "worker_path": "workers/imaginarium/",
       "agents": [
         {
           "name": "The Alchemist",
@@ -947,7 +947,7 @@
         "Instant Sandbox Compiling: Executes isolated code."
       ],
       "worker_port": null,
-      "worker_path": "src/lab/",
+      "worker_path": "workers/the-lab/",
       "agents": [
         {
           "name": "The Hounds",
@@ -1080,8 +1080,8 @@
         "Rabbit Hole Sandbox: Bizarre edge-case simulations.",
         "Mutation Testing: Mutates code to catch regressions."
       ],
-      "worker_port": null,
-      "worker_path": "tests/",
+      "worker_port": 8079,
+      "worker_path": "workers/chaos-party/",
       "agents": [
         {
           "name": "The March Hare",
@@ -1148,7 +1148,7 @@
         "Disaster Recovery Backup: Complete environment restoral."
       ],
       "worker_port": null,
-      "worker_path": "src/artifactory/",
+      "worker_path": "workers/artifactory-service/",
       "agents": [
         {
           "name": "The Librarian",
@@ -1483,7 +1483,7 @@
         "Contextual Search: Returns precise answers from intent."
       ],
       "worker_port": 8017,
-      "worker_path": "workers/search-service/",
+      "worker_path": "workers/library-service/",
       "agents": [
         {
           "name": "The Curator",
@@ -1550,7 +1550,7 @@
         "Skill Gap Analysis: Suggests targeted training modules."
       ],
       "worker_port": null,
-      "worker_path": "src/academy/",
+      "worker_path": "workers/the-academy/",
       "agents": [
         {
           "name": "The Tutor",
@@ -1684,7 +1684,7 @@
         "Data Retrieval: Restores highly compressed historical data."
       ],
       "worker_port": null,
-      "worker_path": "src/basement/",
+      "worker_path": "workers/basement/",
       "agents": [
         {
           "name": "The Undertaker",
@@ -1885,7 +1885,7 @@
         "Classified Data Enclave: Isolated storage for passwords."
       ],
       "worker_port": 8024,
-      "worker_path": "workers/config-service/",
+      "worker_path": "workers/infinity-void/",
       "agents": [
         {
           "name": "Crypt-Keeper",
@@ -2019,7 +2019,7 @@
         "Instant Quarantine Warping: Moves corrupted entities to Ice Box."
       ],
       "worker_port": null,
-      "worker_path": "src/security/warp_tunnel/",
+      "worker_path": "workers/warp-tunnel/",
       "agents": [
         {
           "name": "The Warden",
@@ -2086,7 +2086,7 @@
         "Automated Pen-Testing: Assaults defenses to patch zero-days."
       ],
       "worker_port": 8026,
-      "worker_path": "workers/rate-limit-service/",
+      "worker_path": "workers/cryptex/",
       "agents": [
         {
           "name": "The Shield",
@@ -2153,7 +2153,7 @@
         "Cryo-Quarantine Extraction: Deep-freezes threats for analysis."
       ],
       "worker_port": null,
-      "worker_path": "src/security/ice_box/",
+      "worker_path": "workers/ice-box-service/",
       "agents": [
         {
           "name": "The Jailer",
@@ -2220,7 +2220,7 @@
         "Ecosystem Audio Broadcasting: Routes synced audio to nodes."
       ],
       "worker_port": null,
-      "worker_path": "src/warp_radio/",
+      "worker_path": "workers/warp-radio/",
       "agents": [
         {
           "name": "The DJ",
@@ -2287,7 +2287,7 @@
         "Structural Blueprint Generation: Converts intel into JSON."
       ],
       "worker_port": 8027,
-      "worker_path": "workers/geo-service/",
+      "worker_path": "workers/the-dutchy/",
       "agents": [
         {
           "name": "The Spy",
@@ -2622,7 +2622,7 @@
         "System Pulses: Monitors health and operational heartbeats."
       ],
       "worker_port": 8029,
-      "worker_path": "workers/health-aggregator/",
+      "worker_path": "workers/devocity/",
       "agents": [
         {
           "name": "The Foreman",
@@ -2689,7 +2689,7 @@
         "Baseline Anchoring: Centralized, secure grounding state."
       ],
       "worker_port": null,
-      "worker_path": "src/tranquility/",
+      "worker_path": "workers/tranquility/",
       "agents": [
         {
           "name": "The Guide",
@@ -2756,7 +2756,7 @@
         "Contextual Sentiment Journaling: Maps structured emotions."
       ],
       "worker_port": null,
-      "worker_path": "src/imind/",
+      "worker_path": "workers/imind/",
       "agents": [
         {
           "name": "The Counselor",
@@ -2823,7 +2823,7 @@
         "Proactive Life Assistance: Adjusts schedules to reduce friction."
       ],
       "worker_port": null,
-      "worker_path": "src/taimra/",
+      "worker_path": "workers/taimra/",
       "agents": [
         {
           "name": "The Shadow",
@@ -2890,7 +2890,7 @@
         "Spatial Therapy Environments: Infinite 3D calming landscapes."
       ],
       "worker_port": null,
-      "worker_path": "src/vrar3d/",
+      "worker_path": "workers/vrar3d/",
       "agents": [
         {
           "name": "World-Builder",
@@ -2957,7 +2957,7 @@
         "Binaural Entrainment: Uses frequencies to guide biological states."
       ],
       "worker_port": null,
-      "worker_path": "src/resonate/",
+      "worker_path": "workers/resonate/",
       "agents": [
         {
           "name": "The Tuner",

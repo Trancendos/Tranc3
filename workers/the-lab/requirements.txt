@@ -6,3 +6,27 @@ fastapi==0.141.1
 starlette==1.6.0
 uvicorn[standard]==0.52.4
 httpx==0.28.1
+
+# ── Verification toolchain ───────────────────────────────────────────────────
+# The Lab generated code in twenty-nine languages and could prove nothing
+# about any of them: the image was python:3.11-slim with four packages, so
+# scripts/lab_capability_report.py measured 27 of 29 at verification tier
+# `none` and the remaining two at `parse`, which is only the stdlib's own ast
+# and json. Generation without verification produces output nobody checked.
+#
+# These five are the whole pip-installable share of that gap. They take
+# Python from parse to test, and SQL and YAML from none to lint. Everything
+# else — node, go, rustc, javac — needs a real toolchain and belongs in a
+# verification sidecar rather than in this image.
+#
+# Versions carry their own history: Trivy flagged the first pass of this block
+# on the PR that added it. sqlfluff 3.4.2 carried CVE-2026-46373 and
+# CVE-2026-46374 (both HIGH, fixed in 4.1.0 and 4.2.0), and pytest 8.4.2
+# carried CVE-2025-71176 (MEDIUM, insecure temporary directory handling, fixed
+# in 9.0.3). Adding a verification toolchain that ships known-vulnerable
+# packages would have traded one gap for another.
+ruff==0.15.8
+mypy==1.14.1
+pytest==9.0.3
+sqlfluff==4.2.0
+yamllint==1.37.1

@@ -64,8 +64,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install PyYAML
-        run: pip install PyYAML
+      # PyYAML for the compose checks; pydantic because the guards below now
+      # import real platform modules rather than re-parsing them. That is what
+      # lets them check the thing itself — generate_plm_docs.py renders the
+      # policy from the gate criteria, and src/event_bus/types.py, which the
+      # PLM imports for its event enum, is built on pydantic.
+      - name: Install PyYAML and pydantic
+        run: pip install PyYAML pydantic
 
       - name: Cross-service URL check
         run: python scripts/check_service_urls.py
@@ -104,6 +109,235 @@ jobs:
 
       - name: Framework pin alignment
         run: python scripts/align_framework_pins.py --check
+
+      # The pin check above only sees the tree. It cannot see that both
+      # dependency bots were configured to propose the very packages that
+      # script governs, which made those PRs unmergeable by construction
+      # (#1139/#1140/#1141) and set automerge on a 63-file framework change
+      # (#1054). Both configs are fixed; this keeps them fixed, including the
+      # ordering rule -- a Renovate block undone by a rule placed below it.
+      - name: Canonical pin governance
+        run: python scripts/check_canonical_pin_governance.py
+
+      # production-gate.yml's own comment claims the 0.15.8 pin means "the gate
+      # and the lint checks cannot disagree about what passes". True across the
+      # workflows; false across the full lint surface, because
+      # .pre-commit-config.yaml pinned ruff v0.16.4 -- a second formatter running
+      # on every commit and as a PR status. 0.16.x formats Python inside Markdown
+      # fences and 0.15.8 does not, a ten-file difference here. Latent only
+      # because the ruff hooks are typed to Python, which is not a guarantee.
+      - name: Ruff pin alignment
+        run: python scripts/check_ruff_pin_alignment.py
+
+      # conftest.py guards four shared auth env vars, and that guard works -- but
+      # it is module-scoped, so it can only report which module FINISHED with a
+      # value wrong, not which one set it. When the write is at import time, the
+      # module it blames is chosen by collection order. On 2026-09-03 it blamed
+      # tests/core/test_dependencies.py for a write in tests/test_backup_service.py,
+      # and because the Pytest job then ran with `-x`, that single teardown error
+      # stopped the run after four tests while `|| true` reported the job green.
+      # tests/test_encrypted_sqlite.py had the same bug, was fixed, and the sibling
+      # was missed -- which is the argument for a check rather than a comment.
+      - name: Test env isolation
+        run: python scripts/check_test_env_isolation.py
+
+      # Every dependency surface the census scans must have a Location that
+      # answers for it. Without the join, a finding names a manifest path and
+      # nobody -- and an unrouted finding is indistinguishable from no finding
+      # at all in a summary, so exposure disappears rather than being reported.
+      # Fails on an unowned surface, on a mapping whose path has moved, and on
+      # one naming a Location that is not among the 43.
+      - name: DVMS surface ownership
+        run: python scripts/check_surface_ownership.py
+
+      # .trivyignore silences findings in three scanners at once, and a bare id
+      # on a line is valid Trivy syntax. This requires every entry to carry a
+      # written justification, a re-check trigger, and -- for a vulnerability
+      # id -- a matching record in the accepted-risk register, so a suppression
+      # stays a decision rather than becoming a blind spot. Two of the four
+      # existing entries had no trigger when this was added.
+      # Offline only: the upstream OSV check is opt-in and runs on the Trivy
+      # schedule, because a gate whose verdict depends on a third party's
+      # uptime fails for reasons unrelated to the tree.
+      - name: Trivy suppression governance
+        run: python scripts/check_trivyignore_governance.py
+
+      # CodeQL raised twelve py/unreachable-statement alerts in
+      # src/agents/goal_manager.py and the SARIF filter's --strict-surprises is
+      # the only reason anybody looked. A sweep found fifteen more in six other
+      # files and api.py -- twenty-seven bare `return None`s after a block that
+      # always leaves the frame, several under a `-> bool` they contradicted.
+      # CodeQL had been raising most of them into a tab that gates nothing.
+      # This runs in about a second and FAILS, which is the whole difference.
+      - name: Unreachable code
+        run: python scripts/check_unreachable_code.py
+
+      # The PLM policy and procedure are rendered from the gate criteria in
+      # src/townhall/plm.py, because a hand-written governance document drifts
+      # in exactly the situation where somebody reads it instead of the code.
+      # This fails when the committed copy no longer matches.
+      - name: PLM gate documentation is current
+        run: python scripts/generate_plm_docs.py --check
+
+      # Several creative Locations ship two FastAPI apps — a thin main.py and
+      # a richer worker.py — and only the Dockerfile CMD says which one runs.
+      # The first creative route table read the interesting file rather than
+      # the deployed one and marked Warp Radio ROUTED at a POST its image does
+      # not serve. This verifies every declared endpoint against the module
+      # the container actually executes.
+      - name: Creative routes exist in the deployed image
+        run: python scripts/check_creative_routes.py
+
+      # The Lab's accepted-language list lives in two places by necessity:
+      # src/lab/languages.py is the registry, and workers/the-lab mirrors the
+      # ids and aliases because its Docker build context cannot import the
+      # registry. A drifted mirror fails in the worst direction — a language
+      # the capability matrix advertises, refused by the running service with
+      # a 400. This checker existed unwired for one commit, which is the same
+      # defect class it was written to catch.
+      - name: Lab language registry matches the worker
+        run: python scripts/check_lab_languages.py
+
+      # This job's own pip install line, checked against what its steps
+      # actually import. The guards here read real platform modules now —
+      # that is what lets them check the thing rather than a copy of it —
+      # so the day one of those modules grows a dependency, this job breaks
+      # several import hops from anything the change touched. It broke
+      # exactly that way when the PLM started importing the event-type enum.
+      - name: CI job installs what its scripts import
+        run: python scripts/check_ci_job_dependencies.py
+
+      # The gate-engine specification is rendered from the resolver, so the
+      # document cannot describe decisions the code does not take.
+      - name: Gate engine documentation is current
+        run: python scripts/generate_gate_engine_doc.py --check
+
+      # The documentation estate is declared as a contract in
+      # config/estate/documentation_estate.yaml. This fails when an artefact
+      # declared live or descriptive has lost its file — leaving the estate
+      # claiming coverage it no longer has. It does not fail on the known
+      # gaps: a gate red on day one for reasons nobody can fix that day
+      # teaches people to wave it through.
+      - name: Documentation estate coverage
+        run: python scripts/check_docs_estate.py --check
+
+      # 52 of 321 documents were named by nothing anywhere in the repository
+      # on 2026-09-05 — including five SWOT and forensic assessments, so when
+      # the owner asked for one the honest answer was that five existed and
+      # none could be found. A ratchet, because failing all of them today
+      # would put the build red for work nobody can do today.
+      - name: Documents are reachable
+        run: python scripts/check_doc_reachability.py
+
+      # The 43 solution packs are regenerated from the entity register, the
+      # compose file and the tree, so they answer questions about readiness and
+      # code paths with facts rather than recollection. They went stale the day
+      # The Lab's registered path moved from src/lab/ to workers/the-lab/, and
+      # the packs kept reporting the retired path with a readiness point it no
+      # longer earned. A generated document nobody regenerates is a stale
+      # document that looks authoritative. The readiness reasons name the
+      # threshold each point was earned at rather than an exact file count, so
+      # this fails on drift that changes what a pack says and not on every
+      # commit that adds a file somewhere beneath a Location.
+      - name: Solution packs are current
+        run: python scripts/build_solution_packs.py --check
+
+      # 320 markdown documents carry ~2,000 internal links, and the
+      # wiki-content migration moved 62 of them at once. Eight links pointed
+      # at files that had not existed for weeks, four of them in README.md —
+      # the first document anybody reads. A link is not read until somebody
+      # clicks it, so nothing noticed. The checker knows both conventions the
+      # estate writes in (repository paths and GitHub Wiki's flattened,
+      # extensionless names) because a version that knew only the first
+      # reported 137 failures, 128 of them fine.
+      - name: Documentation links resolve
+        run: python scripts/check_doc_links.py
+
+      # The 3D topology map is rendered from this JSON, which is read out of
+      # the entity register, compose, the flow contract and the creative
+      # route table — never asserted. A map that drifts from the deployment
+      # is worse than no map: it is a confident answer to "what is wired to
+      # what" that happens to be wrong.
+      - name: Topology map data is current
+        run: python scripts/build_topology_3d.py --check
+
+      # The estate records outstanding work in 44 separate registers, each
+      # correct about its own domain and blind to the rest — so nobody can
+      # answer "what is outstanding across the platform" without reading 320
+      # documents, and an action in a register nobody sweeps is an action
+      # nobody does. docs/governance/ACTION-BACKLOG.md is that sweep,
+      # generated with derived story points and one Definition of
+      # Ready/Done. This fails when it drifts from the registers it reads.
+      - name: Action backlog is current
+        run: python scripts/build_action_backlog.py --check
+
+      # The CMDB register and the canonical entity register had parted on 22
+      # of 43 Locations. Six Creativity Locations all claimed `src/studio/`, a
+      # router recorded as unmounted and removed; worse, four named a
+      # different LIVE service — The Void at config-service, Cryptex at
+      # rate-limit-service, Section 7 at geo-service, DevOcity at
+      # health-aggregator. A configuration item pointing at another service's
+      # code answers every dependency question about the wrong thing.
+      - name: CMDB and entity registers agree
+        run: python scripts/check_id_registry_alignment.py
+
+      # The estate registry is the CMDB an operator reads during an incident,
+      # and 63 of its 93 records disagreed with the compose file: 45 named a
+      # container that does not exist on the host, and 15 recorded a live,
+      # Traefik-routed Location as having no deployment at all. `estate_lint`
+      # passed throughout, because it checked the registry against the
+      # *naming convention* and reported reality separately as a warning — so
+      # the CMDB stayed green by recording the name the convention wants.
+      # This compares record to deployment, in both files, and blocks.
+      - name: Estate registry matches the deployment
+        run: python scripts/check_estate_registry_alignment.py
+
+      # estate_lint reaches 0 errors for the first time now that its container
+      # check reads compose. It had only ever run in the dormant Forgejo tree,
+      # behind `|| true`, so nothing it found had ever failed a build.
+      - name: Estate lint
+        run: python scripts/estate_lint.py
+
+      # Two documents claiming to be the same thing drift, and each stays blind
+      # to the other. `SECURITY_ALERT_REGISTER.md` (read by security_score.py)
+      # had a wiki copy that carried two advisories the canonical register had
+      # never heard of, and asserted their remedy across all seven Cloudflare
+      # packages when it was in one. Six surfaces stood unremediated behind a
+      # record that said otherwise. A pointer page is the resolution and is
+      # exempt; a second copy is not.
+      - name: No document is claimed twice
+        run: python scripts/check_doc_duplication.py
+
+      # FastAPI 0.141 stopped copying a router's routes into `app.routes` on
+      # include_router — it appends a lazy marker and resolves them at request
+      # time. Routing is unaffected; what changed is what the attribute shows,
+      # from 342 route objects to 83. Three mount assertions failed loudly on
+      # a working application, and two scans (RBAC's mutable-default sweep,
+      # test_api's handler search) kept passing while inspecting a quarter of
+      # the surface. tests/support/routes.py reads the real thing; this stops
+      # the raw attribute coming back.
+      - name: Tests read the real route surface
+        run: python scripts/check_route_surface_reads.py
+
+      # Nine tests raised PermissionError on `/app` during collection, before
+      # a single assertion ran, because three workers created their output
+      # directory at module level. That works in the container and nowhere
+      # else. The baseline started at eight such writes and is now empty, so
+      # this holds a closed invariant rather than a backlog: one new entry is
+      # unambiguous. It fails on an unrecorded improvement too — an
+      # improvement nobody records lets the next regression slip in under the
+      # old count.
+      - name: No import-time writes outside the repo
+        run: python scripts/check_import_time_filesystem.py
+
+      # The defect class this whole job exists for, turned on the job itself: a
+      # guard that is written, reviewed, merged and never invoked.
+      # check_lab_languages.py shipped exactly that way — its docstring and its
+      # commit message both said it ran here, and it did not. This fails when a
+      # guard in scripts/ is named in no workflow and carries no written reason
+      # for staying out.
+      - name: Every guard is wired into a workflow
+        run: python scripts/check_guards_are_wired.py
 
       # Guards the invariant that took CodeQL red on main for three days:
       # init stamps its config with its own release version and analyze
@@ -225,11 +459,49 @@ jobs:
         run: |
           pip install -r requirements-test.txt || true
           pip install -r requirements.txt || true
-          pip install pytest pytest-asyncio || true
+          pip install pytest pytest-asyncio pytest-cov || true
 
-      - name: Run tests
+      # Coverage is produced here rather than in a second workflow. `codecov.yml`
+      # ran the whole suite again, on every PR and every push to main, purely to
+      # attach --cov flags and upload the result -- a second full-suite run whose
+      # only difference was the flags, and which was suppressed with `|| true`
+      # exactly as this one was at the time, so it gated nothing either.
+      # Measuring coverage over the run that already happens costs nothing
+      # extra.
+      #
+      # That suppression is gone as of f98aadb4: this step now fails the job
+      # when a test fails. The paragraph above is history, not a description
+      # of the current run — kept because it explains why codecov.yml was
+      # retired rather than fixed.
+      #
+      # This selection is narrower than codecov.yml's was: `integration` is
+      # documented in pyproject.toml as "requires live external services", which
+      # CI does not have, so those tests could only ever error. They contributed
+      # no coverage there and their absence costs none here.
+      #
+      # Also strictly better than codecov.yml's run: that job checked out
+      # WITHOUT `submodules: recursive`, so every test reading real
+      # compliance/magna-carta content saw an empty gitlink and silently took a
+      # "no suites"/404 path. This job checks them out.
+      # No `-x`. With it, this job ran FOUR tests and one error, stopped, and
+      # `|| true` reported success -- measured on run 33808374262, whose entire
+      # pytest output was `....E` followed by "stopping after 1 failures". The
+      # suppression was not "run everything and ignore failures"; it was "run
+      # five tests and ignore the result", and coverage folded in here would
+      # have been measured over those five.
+      - name: Run tests with coverage
         run: |
-          python -m pytest tests/ -x -q --tb=short \
+          python -m pytest tests/ -q --tb=short \
             -m "not integration and not chaos" \
             --ignore=tests/test_full_suite.py \
-            || true  # Don't block PRs on test failures yet
+            --cov=src --cov=workers \
+            --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+        with:
+          files: ./coverage.xml
+          flags: unittests,workers
+          name: tranc3-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

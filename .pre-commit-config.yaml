@@ -19,8 +19,13 @@ ci:
 
 repos:
   # ── Ruff (lint + format) ──────────────────────────────────────────
+  # Pinned to the same ruff every other surface installs (`ruff==0.15.8` in the
+  # GitHub, Forgejo and Woodpecker pipelines and in the Forgejo runner image).
+  # Kept in lockstep by scripts/check_ruff_pin_alignment.py, which fails on an
+  # unpinned install as well as a divergent pin -- two ruff versions formatting
+  # one tree is a split gate, not a detail.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.4
+    rev: v0.15.8
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]

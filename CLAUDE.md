@@ -51,6 +51,19 @@ mutable at runtime via the Role Assignment Registry (`src/roles/registry.py`, SQ
 exposed at `/roles` — `src/roles/routes.py`, mounted in `api.py`), letting operators add, remove,
 or reassign AIs to a role without a code change; every change is recorded in an audit history.
 
+**Backlog Routing Register.** Which Location owns an outstanding item is a Town Hall
+decision, not a lookup: `src/townhall/routing.py` (SQLite-backed, exposed at
+`/townhall/routing` — `src/townhall/routing_routes.py`, mounted in `api.py`) records the
+Location, the named authority, the written reason and the Location's solution pack, emits
+`townhall.item.routed` to The Observatory, and never overwrites — a re-route supersedes and
+both rows stay in `routing_history`. It refuses a Location that is not one of the 43, and one
+with no solution pack, because routing work to a place with no architecture or acceptance
+criteria is what "unrouted" already means. Decisions are exported to
+`config/estate/backlog_routing.yaml`, which is what `scripts/build_action_backlog.py` reads in
+CI — the export is also what makes a routing decision show up in a diff. Items with no
+decision stay `_unrouted_` in the backlog, and that count is a queue the Town Hall owes an
+answer to rather than a number assigned away by judgement.
+
 **Trancendos Models Matrix.** Every named AI's base model is one of the platform's existing
 orchestration tiers — **Trance-One** (Tier 1, Sovereign/Orchestrator, most capable), **T2ance**
 (Tier 2, Primes), or **Tranc3** (Tier 3, Lead AI/AI Base, the default) — via
@@ -137,7 +150,7 @@ mounted in `api.py`).
 | **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | ✅ In repo | `workers/fabulousa-service/` (standalone worker, port 8048); Penpot planned integration |
 | **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | ✅ In repo | `workers/imaginarium/worker.py` (standalone worker); orchestrates the others |
 | **The Lab** | The Dr. (Nikolai O'denhime) + Slime | Code creation platform (Claude Code-style) | ✅ Self-hosted | `workers/the-lab/` (Port 8055) + `workers/lab-service/` (Port 8066) — supersedes the old `src/lab/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
-| **The Chaos Party** | The Mad Hatter + Alice Dream | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py`; `workers/chaos-party/worker.py` (standalone worker, port 8079) |
+| **The Chaos Party** | The Mad Hatter + Alice Dream | Central testing platform — validation & compliance (Alice in Wonderland themed) | ✅ Self-hosted | `workers/chaos-party/worker.py` (Port 8079 — its own Traefik host rule `chaos-party.trancendos.com` + PathPrefix `/chaos-party`, one of the few Locations with a dedicated host); `tests/test_chaos.py` and `tests/e2e/` are suites it runs, not the service. `src/entities/platform.py` recorded `tests/` as its `worker_path` with no port until 2026-09-05, which made a deployed, Traefik-routed Location read as having nowhere to receive traffic |
 | **The Artifactory** | Lunascene | Central artifact repository library | ✅ Self-hosted | `workers/artifactory-service/` (Port 8047, Zot OCI registry bridge) — supersedes the old `src/artifactory/` router once mounted in `api.py`, unmounted (dead duplicate removed) |
 | **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | ✅ In repo | `src/apimarket/` (router registered in `api.py`); Gravitee.io planned integration |
 | **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | ✅ In repo | `src/cryptex/` (router registered in `api.py`); Wazuh + MISP planned integration |
@@ -198,6 +211,20 @@ The Tranc3 platform is moving from a Cloudflare Workers + paid-services architec
 - `wiki-content/Architecture-CROSS_REPO_SYNERGY.md` — Maps all 29 infinity-adminOS TypeScript packages to Python equivalents (moved from repo root during the wiki-content migration — see `docs/WIKI_INDEX.md`)
 - `wiki-content/Architecture-CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python, describing the Hybrid/Local path once funded (moved from repo root — see `docs/WIKI_INDEX.md`)
 - `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
+- `docs/governance/SWOT-FORENSIC-ASSESSMENT.md` — the current SWOT and forensic assessment,
+  measured rather than carried forward, with the eight findings and the repository state. The
+  five prior phase assessments stay in `wiki-content/Historical-*` and are indexed from it
+- `docs/governance/ACTION-BACKLOG.md` — generated sweep of every outstanding item across 44
+  registers, routed to Locations and linked to their solution packs
+- `docs/governance/DVMS-COMPETITIVE-ANALYSIS.md` — DVMS measured against comparable platforms
+- `docs/governance/REFERENCE-NUMBERING.md` — Wiki (`WIX`, administrative) vs Knowledge Base
+  (`KB`, user) reference numbering across three scopes: platform-wide `TKB000001`/`TWIX000042`,
+  Location-scoped `Infi-KB-0001`, and personal `#One:KB-0001` (Infinity-One, per-user, private
+  unless shared). Set by the owner 2026-09-05; implemented in `src/library/references.py`,
+  which derives Location codes rather than tabulating them and extends the three colliding
+  pairs (Arcadia/Arcadian Exchange, TranceFlow/Tranquility, Warp Tunnel/Warp Radio)
+- `docs/architecture/topology-3d.json` — the estate's shape derived from compose, `api.py` and
+  the entity register; regenerated by `scripts/build_topology_3d.py --check`
 - `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
 - `docs/architecture/ea-workbook/` — EA/CMDB workbook (19 CSVs + runbooks/API-spec/compliance
   docs) covering 6 real anchor services in depth (The Spark, The Digital Grid, Infinity,
@@ -467,12 +494,29 @@ pipelines — but it is dormant, so today GitHub Actions is the only CI that act
 an act-runner on the Citadel host that the cloud-only phase defers standing back up. None of them
 execute. Describe them as the target state, not as a system currently gating anything.
 
-`.github/workflows/` has **20** files (this said 12 until 2026-08-28; it had not been recounted
-since eight more were added). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint and
-Service Topology checks, `codeql.yml`, `test.yml`, `trivy.yml`, `codecov.yml`, `python.yml`,
-`rust.yml`, `go.yml`, `production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`). Two are
-deliberate, narrow exceptions for GitHub-native features with no Forgejo equivalent —
-`publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
+`.github/workflows/` has **19** files (this said 12 until 2026-08-28 and 20 until 2026-09-03,
+when `codecov.yml` was retired). Several gate this repo's PRs directly (`ci.yml`'s Ruff/lint,
+Service Topology and Pytest jobs, `codeql.yml`, `trivy.yml`, `python.yml`, `rust.yml`, `go.yml`,
+`production-gate.yml`, `submodule-pins.yml`, `perf-smoke.yml`).
+
+**`codecov.yml` was retired on 2026-09-03**, not dropped: coverage is now produced by `ci.yml`'s
+Pytest job, which already ran the same suite. The retired workflow existed only to run that suite
+a second time with `--cov` flags attached, on every PR and every push to `main`, and it was
+suppressed with `|| true` exactly as `ci.yml`'s run is — so it gated nothing either way. Its
+checkout also omitted `submodules: recursive`, so tests reading real `compliance/magna-carta`
+content silently took a "no suites"/404 path; the job coverage now runs in does not. `test.yml`'s
+`Ruff Lint + Format` job went at the same time: it ran the identical ruff command at the identical
+pin as `ci.yml`'s `lint`, and both fire on a push to `main`.
+
+**`ci.yml`'s Pytest job no longer runs with `-x`.** With it, one teardown error stopped the run
+after four tests and `|| true` reported the job green — measured on run 33808374262, whose entire
+pytest output was `....E`. The suppression was not "run everything and ignore failures"; it was
+"run five tests and ignore the result". The error itself was a module-level `os.environ` write in
+`tests/test_backup_service.py` executing during collection; `scripts/check_test_env_isolation.py`
+now fails CI on that pattern.
+
+Two of the 19 are deliberate, narrow exceptions for GitHub-native features with no Forgejo
+equivalent — `publish-wiki.yml` (GitHub Wiki) and `publish-matrix-site.yml` (GitHub Pages, publishing
 `docs/architecture/ea-workbook/Trancendos_Master_Service_Matrix.xlsx`). Prefer Forgejo for new
 deployment/build automation; GitHub Actions stays in play for checks GitHub itself needs to run
 (PR status checks, CodeQL, Pages/Wiki) rather than being phased out.

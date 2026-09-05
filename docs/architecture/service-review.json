@@ -186,7 +186,7 @@
       "vault-service-rs"
     ]
   },
-  "commit": "10f7ec84",
+  "commit": "355fea6b",
   "failures_by_check": {
     "imports_resolve": [
       "analytics-service",
@@ -297,7 +297,7 @@
       "workflow-engine-service"
     ]
   },
-  "generated_at": "2026-09-02T12:58:21.702094+00:00",
+  "generated_at": "2026-09-05T09:05:58.547801+00:00",
   "mounted_routers": [
     "_access_router",
     "_admin_os_router",
@@ -306,6 +306,7 @@
     "_basement_router",
     "_billing_router",
     "_citadel_router",
+    "_creative_router",
     "_cryptex_router",
     "_deployment_modes_router",
     "_ecosystem_router",
@@ -322,6 +323,7 @@
     "_nexus_router",
     "_notebooks_router",
     "_observatory_router",
+    "_plm_router",
     "_relations_router",
     "_resonate_router",
     "_roles_router",
@@ -331,6 +333,7 @@
     "_thinktank_router",
     "_townhall_itsm_router",
     "_townhall_router",
+    "_townhall_routing_router",
     "_tranc3ts_router",
     "_trance_one_router",
     "_tranquility_router",
@@ -797,7 +800,7 @@
       "build_context": "workers/chaos-party",
       "checks": {
         "entity_mapped": {
-          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "detail": "claimed by The Chaos Party",
           "ok": null
         },
         "healthcheck": {
@@ -1236,7 +1239,7 @@
         "imports_resolve": {
           "detail": "1 unguarded, 1 guarded, 0 vendored",
           "offenders": [
-            "workers/ffmpeg-worker/worker.py:23 Dimensional.service_auth_fastapi"
+            "workers/ffmpeg-worker/worker.py:24 Dimensional.service_auth_fastapi"
           ],
           "ok": false
         },
@@ -2148,7 +2151,7 @@
       "build_context": "workers/library-service",
       "checks": {
         "entity_mapped": {
-          "detail": "no Location claims it \u2014 expected for platform plumbing",
+          "detail": "claimed by The Library",
           "ok": null
         },
         "healthcheck": {
@@ -3075,7 +3078,7 @@
       "build_context": "workers/search-service",
       "checks": {
         "entity_mapped": {
-          "detail": "claimed by The Library",
+          "detail": "no Location claims it \u2014 expected for platform plumbing",
           "ok": null
         },
         "healthcheck": {

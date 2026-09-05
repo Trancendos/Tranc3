@@ -70,33 +70,27 @@ jobs:
           output: sarif-results
           upload: false
 
-      - name: Filter false-positive path-injection alerts
+      # Was an inline heredoc that removed EVERY alert whose location fell in
+      # one of three files, at every rule and every severity, under a step name
+      # that said "path-injection". A SQL injection or hardcoded credential
+      # introduced in one of those files would have been deleted before it
+      # reached the Security tab, with nothing left to show it had existed.
+      #
+      # Now a script, so it can be tested: it drops an alert only when the file
+      # is adjudicated AND the rule is a path-injection rule, prints what it
+      # dropped, keeps and reports anything else those files raise, and fails
+      # if an adjudicated path no longer exists.
+      #
+      # `--strict-surprises` because the alternative is the failure this
+      # replaced, one step removed: an unadjudicated rule in an adjudicated file
+      # would be kept and printed while the job went green, and nobody reads a
+      # green job. A new rule in one of these three files is a decision
+      # somebody has to make, so it stops the run until they make it.
+      - name: Filter adjudicated path-injection false positives
         if: matrix.language == 'python'
         run: |
-          python3 - <<'PYEOF'
-          import json, pathlib
-          sarif_path = pathlib.Path("sarif-results/python.sarif")
-          if not sarif_path.exists():
-              exit(0)
-          sarif = json.loads(sarif_path.read_text())
-          SUPPRESSED_PATHS = {
-              "Dimensional/path_validation.py",
-              "Dimensional/orchestration/heartbeat_aggregator.py",
-              "src/agents/goal_manager.py",
-          }
-          for run in sarif.get("runs", []):
-              run["results"] = [
-                  r for r in run.get("results", [])
-                  if not any(
-                      loc.get("physicalLocation", {})
-                         .get("artifactLocation", {})
-                         .get("uri", "")
-                      in SUPPRESSED_PATHS
-                      for loc in r.get("locations", [])
-                  )
-              ]
-          sarif_path.write_text(json.dumps(sarif))
-          PYEOF
+          python3 scripts/filter_codeql_alerts.py \
+            sarif-results/python.sarif --strict-surprises
 
       - name: Upload SARIF results
         id: upload_sarif

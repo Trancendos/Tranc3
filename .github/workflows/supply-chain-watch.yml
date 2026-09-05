@@ -121,7 +121,15 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: vulnerability-census
-          path: logs/vulnerability_census.json
+          # The trend record rides along with the full census. This job checks
+          # out with persist-credentials: false and holds no write token by
+          # design -- see the permissions note above -- so it cannot commit the
+          # appended history line, and the tracked file records only runs a
+          # human landed. Granting this job write access to close that gap is a
+          # real privilege trade-off and has not been made unilaterally.
+          path: |
+            logs/vulnerability_census.json
+            docs/governance/vulnerability-census-history.jsonl
           retention-days: 90
 
   obsolescence:

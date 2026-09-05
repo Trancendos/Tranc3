@@ -9,67 +9,67 @@ rather than multiplied into a single score, because the same status and
 dependency facts feed both — collapsing them would double-count and quietly
 rank safe, unimportant work above important, unfinished work.
 
-Quadrants split at each axis's median across all 43 Locations (criticality 3, readiness 8). The split is relative: "Defer" means below this estate's own middle, not unimportant.
+Quadrants split at each axis's median across all 43 Locations (criticality 4, readiness 8). The split is relative: "Defer" means below this estate's own middle, not unimportant.
 
-## Finish first — above-median dependency, above-median readiness  (6)
+## Finish first — above-median dependency, above-median readiness  (2)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
 | Infinity | `PID-INF` | Security | 10/10 | 10/10 | 5 | 8005 | [pack](infinity.md) |
-| Imaginarium | `PID-IMG` | Creativity | 7/10 | 9/10 | 4 | 8064 | [pack](imaginarium.md) |
-| The Lab | `PID-LAB` | Development (Code) | 7/10 | 9/10 | 3 | 8055 | [pack](the-lab.md) |
-| Tranquility | `PID-TRQ` | Wellbeing | 7/10 | 9/10 | 4 | 8077 | [pack](tranquility.md) |
 | Cryptex | `PID-CRX` | Security | 5/10 | 9/10 | 0 | 8053 | [pack](cryptex.md) |
-| TateKing | `PID-TKG` | Creativity | 4/10 | 9/10 | 0 | 8061 | [pack](tateking.md) |
 
-## Invest — above-median dependency, below-median readiness  (12)
+## Invest — above-median dependency, below-median readiness  (14)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
 | Luminous | `PID-LUM` | Architectural | 10/10 | 8/10 | 11 | 8009 | [pack](luminous.md) |
 | The Observatory | `PID-OBS` | Knowledge | 9/10 | 8/10 | 5 | 8007 | [pack](the-observatory.md) |
 | The Nexus | `PID-NXS` | Architectural | 9/10 | 6/10 | 0 | 8004 | [pack](the-nexus.md) |
+| Imaginarium | `PID-IMG` | Creativity | 7/10 | 8/10 | 4 | 8064 | [pack](imaginarium.md) |
 | Royal Bank of Arcadia | `PID-RBA` | Commercial / Financial | 7/10 | 8/10 | 5 | 8013 | [pack](royal-bank-of-arcadia.md) |
+| The Lab | `PID-LAB` | Development (Code) | 7/10 | 8/10 | 3 | 8055 | [pack](the-lab.md) |
+| Tranquility | `PID-TRQ` | Wellbeing | 7/10 | 8/10 | 4 | 8077 | [pack](tranquility.md) |
 | Think Tank | `PID-TNK` | DevOps | 7/10 | 7/10 | 4 | — | [pack](think-tank.md) |
 | DevOcity | `PID-DEV` | DevOps | 5/10 | 8/10 | 0 | 8110 | [pack](devocity.md) |
 | Section 7 | `PID-DUT` | DevOps | 5/10 | 8/10 | 0 | 8057 | [pack](section-7.md) |
+| The Ice Box | `PID-ICB` | Security | 5/10 | 8/10 | 0 | 8046 | [pack](the-ice-box.md) |
 | The Lighthouse | `PID-LTH` | Security | 5/10 | 8/10 | 0 | 8015 | [pack](the-lighthouse.md) |
+| The Warp Tunnel | `PID-WTP` | Security | 5/10 | 8/10 | 0 | 8072 | [pack](the-warp-tunnel.md) |
 | The Void | `PID-VOI` | Security | 5/10 | 6/10 | 0 | 8002 | [pack](the-void.md) |
+
+## Harvest — built out, below-median dependency; polish and ship  (5)
+
+| Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
+|---|---|---|---|---|---|---|---|
+| The Chaos Party | `PID-TCP` | Development (Code) | 4/10 | 9/10 | 0 | 8079 | [pack](the-chaos-party.md) |
+| The Digital Grid | `PID-DGR` | Development (Code) | 3/10 | 9/10 | 0 | 8010 | [pack](the-digital-grid.md) |
+| TranceFlow | `PID-TFL` | Creativity | 3/10 | 9/10 | 0 | 8059 | [pack](tranceflow.md) |
+| VRAR3D | `PID-VR3` | Wellbeing | 3/10 | 9/10 | 0 | 8060 | [pack](vrar3d.md) |
+| The Library | `PID-LIB` | Knowledge | 2/10 | 9/10 | 0 | 8067 | [pack](the-library.md) |
+
+## Defer — below median on both axes  (22)
+
+| Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
+|---|---|---|---|---|---|---|---|
 | Arcadian Exchange | `PID-AEX` | Commercial / Financial | 4/10 | 8/10 | 0 | 8012 | [pack](arcadian-exchange.md) |
 | ChronosSphere / ArcStream | `PID-CHR` | DevOps | 4/10 | 8/10 | 0 | 8021 | [pack](chronossphere-arcstream.md) |
+| TateKing | `PID-TKG` | Creativity | 4/10 | 8/10 | 0 | 8061 | [pack](tateking.md) |
+| The Artifactory | `PID-ART` | Commercial / Financial | 4/10 | 8/10 | 0 | 8047 | [pack](the-artifactory.md) |
 | The HIVE | `PID-HVE` | Architectural | 4/10 | 8/10 | 0 | 8022 | [pack](the-hive.md) |
-
-## Harvest — built out, below-median dependency; polish and ship  (9)
-
-| Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
-|---|---|---|---|---|---|---|---|
-| I-Mind | `PID-IMD` | Wellbeing | 3/10 | 9/10 | 0 | 8075 | [pack](i-mind.md) |
-| Resonate | `PID-RES` | Wellbeing | 3/10 | 9/10 | 0 | 8076 | [pack](resonate.md) |
-| Sashas Photo Studio | `PID-SPS` | Creativity | 3/10 | 9/10 | 0 | 8062 | [pack](sashas-photo-studio.md) |
-| The Basement | `PID-BSM` | Knowledge | 3/10 | 9/10 | 0 | 8068 | [pack](the-basement.md) |
-| The Digital Grid | `PID-DGR` | Development (Code) | 3/10 | 9/10 | 0 | 8010 | [pack](the-digital-grid.md) |
-| The Studio | `PID-STD` | Creativity | 3/10 | 9/10 | 0 | 8069 | [pack](the-studio.md) |
-| TranceFlow | `PID-TFL` | Creativity | 3/10 | 9/10 | 0 | — | [pack](tranceflow.md) |
-| VRAR3D | `PID-VR3` | Wellbeing | 3/10 | 9/10 | 0 | — | [pack](vrar3d.md) |
-| tAimra | `PID-TMR` | Wellbeing | 3/10 | 9/10 | 0 | 8074 | [pack](taimra.md) |
-
-## Defer — below median on both axes  (16)
-
-| Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
-|---|---|---|---|---|---|---|---|
 | DocUtari | `PID-DOC` | Knowledge | 3/10 | 8/10 | 0 | 8014 | [pack](docutari.md) |
+| Fabulousa | `PID-FAB` | Creativity | 3/10 | 8/10 | 0 | 8048 | [pack](fabulousa.md) |
+| I-Mind | `PID-IMD` | Wellbeing | 3/10 | 8/10 | 0 | 8075 | [pack](i-mind.md) |
+| Resonate | `PID-RES` | Wellbeing | 3/10 | 8/10 | 0 | 8076 | [pack](resonate.md) |
+| Sashas Photo Studio | `PID-SPS` | Creativity | 3/10 | 8/10 | 0 | 8062 | [pack](sashas-photo-studio.md) |
+| The Academy | `PID-ACA` | Knowledge | 3/10 | 8/10 | 0 | 8056 | [pack](the-academy.md) |
+| The Basement | `PID-BSM` | Knowledge | 3/10 | 8/10 | 0 | 8068 | [pack](the-basement.md) |
+| The Studio | `PID-STD` | Creativity | 3/10 | 8/10 | 0 | 8069 | [pack](the-studio.md) |
 | Warp Radio | `PID-WRA` | Commercial / Financial | 3/10 | 8/10 | 0 | 8073 | [pack](warp-radio.md) |
-| The Ice Box | `PID-ICB` | Security | 3/10 | 7/10 | 0 | — | [pack](the-ice-box.md) |
+| tAimra | `PID-TMR` | Wellbeing | 3/10 | 8/10 | 0 | 8074 | [pack](taimra.md) |
 | The Town Hall | `PID-TWH` | Architectural | 3/10 | 7/10 | 0 | — | [pack](the-town-hall.md) |
 | The Citadel | `PID-CTL` | DevOps | 3/10 | 6/10 | 0 | — | [pack](the-citadel.md) |
-| The Warp Tunnel | `PID-WTP` | Security | 3/10 | 6/10 | 0 | — | [pack](the-warp-tunnel.md) |
-| The Academy | `PID-ACA` | Knowledge | 3/10 | 5/10 | 0 | 8056 | [pack](the-academy.md) |
 | Turing's Hub | `PID-THB` | DevOps | 3/10 | 5/10 | 0 | — | [pack](turing-s-hub.md) |
-| The Library | `PID-LIB` | Knowledge | 2/10 | 8/10 | 0 | 8017 | [pack](the-library.md) |
 | The Workshop | `PID-WRK` | Development (Code) | 2/10 | 7/10 | 0 | 2222 | [pack](the-workshop.md) |
-| The Chaos Party | `PID-TCP` | Development (Code) | 2/10 | 6/10 | 0 | — | [pack](the-chaos-party.md) |
 | API Marketplace | `PID-APM` | Commercial / Financial | 1/10 | 7/10 | 0 | — | [pack](api-marketplace.md) |
-| Fabulousa | `PID-FAB` | Creativity | 1/10 | 7/10 | 0 | — | [pack](fabulousa.md) |
-| The Artifactory | `PID-ART` | Commercial / Financial | 1/10 | 7/10 | 0 | — | [pack](the-artifactory.md) |
 | The Spark | `PID-SPK` | Knowledge | 1/10 | 7/10 | 0 | — | [pack](the-spark.md) |
 | Arcadia | `PID-ARC` | Commercial / Financial | 1/10 | 3/10 | 0 | — | [pack](arcadia.md) |

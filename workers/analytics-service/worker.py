@@ -39,7 +39,42 @@ WORKER_PORT = int(os.environ.get("ANALYTICS_PORT", "8016"))
 WORKER_NAME = "analytics-service"
 DB_PATH = Path(os.environ.get("ANALYTICS_DB_PATH", "/data/analytics.db"))
 DUCKDB_PATH = os.environ.get("ANALYTICS_DUCKDB_PATH", "/data/analytics.duckdb")
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+#: Directories already created in this process. `_conn()` opens a fresh
+#: connection for nearly every request, so without this the lazy-once intent
+#: became a per-request mkdir syscall on a directory that already exists.
+_ensured_parents: set[str] = set()
+
+
+def _ensure_parent(path: str | os.PathLike[str]) -> Path:
+    """Create the directory once, on first use — not at import.
+
+    A module-level `mkdir` makes importing this module a filesystem write, so
+    the import fails wherever the container's path is absent or unwritable —
+    every CI runner, for a start. Three sibling workers already turned nine
+    collected tests into `PermissionError` that way before an assertion ran.
+    `scripts/check_import_time_filesystem.py` keeps the pattern from returning.
+
+    `path` is coerced rather than required to be a `Path`. A module-level
+    `DB_PATH` is one, but it is a configuration value callers and tests
+    substitute — `tests/test_workers_p3.py` patches in a plain string — and a
+    helper that raises `AttributeError` on the other spelling of a filesystem
+    path turns a type mismatch into 41 collection errors.
+    """
+    resolved = Path(path)
+    parent = str(resolved.parent)
+    # The cache skips a `mkdir` syscall per connection, but it must not skip
+    # the check that the directory is still there: a volume remounted or a
+    # path cleaned up under a running container leaves the cache asserting
+    # something false, and every later SQLite open fails with "unable to open
+    # database file" for a reason nothing explains. A stat is far cheaper
+    # than the mkdir it replaces and is the correct place to spend it.
+    if parent not in _ensured_parents or not resolved.parent.is_dir():
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        _ensured_parents.add(parent)
+    return resolved
+
 
 MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "http://minio:9000")
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ROOT_USER", "minioadmin")
@@ -134,7 +169,7 @@ def _select_backend() -> str:
 
 
 def _db_conn() -> sqlite3.Connection:
-    c = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    c = sqlite3.connect(str(_ensure_parent(DB_PATH)), check_same_thread=False)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL")
     return c

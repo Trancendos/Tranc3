@@ -1886,3 +1886,67 @@ class TestEnhancedUsersService:
         fetched = client.get(f"/users/{user_id}").json()
         assert isinstance(fetched["preferences"], dict)
         assert fetched["preferences"]["theme"] == "dark"
+
+
+# ===========================================================================
+# The lazy directory helper the six SQLite workers share
+# ===========================================================================
+
+
+class TestEnsureParentAcceptsEitherSpellingOfAPath:
+    """A regression, not a hypothetical: it took the whole file down.
+
+    Six workers create their data directory on first use rather than at
+    import, through a shared `_ensure_parent` helper. The first version
+    annotated its argument `Path` and used `path.parent` directly — but
+    `DB_PATH` is a configuration value, and every fixture in this file
+    substitutes a plain string for it. The result was
+    `AttributeError: 'str' object has no attribute 'parent'` raised during
+    fixture setup, which pytest reports as a collection ERROR: 41 of them,
+    none naming a real defect in the code under test.
+
+    A helper about filesystem paths has no business rejecting the other
+    spelling of one.
+    """
+
+    @pytest.mark.parametrize(
+        "module",
+        [analytics_mod, storage_mod, cron_mod, cache_mod, audit_mod, health_agg_mod],
+        ids=["analytics", "storage", "cron", "cache", "audit", "health-aggregator"],
+    )
+    def test_the_directory_is_recreated_if_it_disappears(self, module, tmp_path):
+        """The cache must not outlive the thing it caches.
+
+        The first version cached the parent path as a string and skipped
+        `mkdir` on every later call. A volume remounted or a path cleaned up
+        under a running container then left the cache asserting something
+        false, and every subsequent SQLite open failed with "unable to open
+        database file" — a failure with nothing in the logs to explain it,
+        because the code believed it had already done the work.
+        """
+        import shutil
+
+        target = tmp_path / "vanishing" / "worker.db"
+        module._ensure_parent(target)
+        assert target.parent.is_dir()
+
+        shutil.rmtree(target.parent)
+        assert not target.parent.exists()
+
+        module._ensure_parent(target)
+        assert target.parent.is_dir(), "the cache skipped mkdir for a directory that was gone"
+
+    @pytest.mark.parametrize(
+        "module",
+        [analytics_mod, storage_mod, cron_mod, cache_mod, audit_mod, health_agg_mod],
+        ids=["analytics", "storage", "cron", "cache", "audit", "health-aggregator"],
+    )
+    def test_a_string_and_a_path_both_work(self, module, tmp_path):
+        target = tmp_path / "nested" / "deeper" / "worker.db"
+
+        as_string = module._ensure_parent(str(target))
+        assert isinstance(as_string, Path)
+        assert as_string.parent.is_dir()
+
+        as_path = module._ensure_parent(target)
+        assert as_path == as_string

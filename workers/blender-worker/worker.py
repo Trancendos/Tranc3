@@ -32,7 +32,21 @@ WORKER_PORT = int(os.getenv("PORT") or "8050")
 WORKER_NAME = "blender-worker"
 
 RENDERS_DIR = Path(os.environ.get("RENDERS_DIR", "/app/renders"))
-RENDERS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure(directory: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` gives importing the module a filesystem side
+    effect, which fails wherever the container's path does not exist and is
+    not writable — every CI runner, for a start. It took nine tests in
+    tests/test_workers_p5.py to PermissionError on `/app` before anything ran,
+    and an import that cannot fail is worth more than a directory created a
+    few milliseconds earlier.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
 
 _internal_secret_raw = os.environ.get("INTERNAL_SECRET")
 if (
@@ -364,7 +378,7 @@ async def create_scene(req: CreateSceneRequest):
         import uuid
 
         output_name = f"render_{uuid.uuid4().hex[:8]}"
-        output_path = str(RENDERS_DIR / output_name)
+        output_path = str(_ensure(RENDERS_DIR) / output_name)
 
     script = _build_scene_script(
         req.objects,

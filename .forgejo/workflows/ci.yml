@@ -24,7 +24,15 @@ jobs:
 
       - name: Install uv (fast Python package manager)
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          # Downloaded to a file and then run, never piped straight into a
+          # shell: a truncated or reset transfer piped into `sh` executes the
+          # prefix that did arrive, and the exit status seen is the shell's,
+          # not curl's. `--fail` plus a separate invocation makes a partial
+          # download a failed step instead of a half-run installer.
+          curl -LsSf --proto '=https' --tlsv1.2 \
+            https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+          sh /tmp/uv-install.sh
+          rm -f /tmp/uv-install.sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version
 
@@ -36,7 +44,7 @@ jobs:
       - name: Lint (ruff)
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system ruff --quiet
+          uv pip install --system "ruff==0.15.8" --quiet
           ruff check src/ api.py --select E,F,W --ignore E501 || true
 
       - name: Validate EA workbook CSVs
@@ -46,14 +54,18 @@ jobs:
         run: python scripts/check_master_matrix_freshness.py
 
       - name: Estate lint (duplication + registry drift)
-        # Non-blocking (no --strict): the registry/compose reconciliation
-        # checks currently carry a real pre-existing backlog (unregistered
-        # services, container-naming) unrelated to duplication detection —
-        # failing CI on those now would be a surprise, unscoped break. The
-        # duplication/orphan checks specifically (see
-        # config/estate/duplication_baseline.yaml) are the newly-added part;
-        # promote this to --strict once the pre-existing backlog is triaged.
-        run: python scripts/estate_lint.py || true
+        # The container-naming backlog this suppression was waiting on is
+        # gone, and it was never a backlog: the check compared the registry
+        # against the naming convention rather than against compose, so 45
+        # records held a container name the convention wants and no host
+        # creates. It now compares record to deployment and reports zero
+        # errors, so the suppression comes off. Leaving it on would repeat
+        # the production-gate lesson — the weaker copy is the one that takes
+        # over the day The Workshop comes back up.
+        run: python scripts/estate_lint.py
+
+      - name: Estate registry matches the deployment
+        run: python scripts/check_estate_registry_alignment.py
 
       - name: Create logs dir
         run: mkdir -p logs
@@ -136,7 +148,15 @@ jobs:
 
       - name: Install uv (fast Python package manager)
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          # Downloaded to a file and then run, never piped straight into a
+          # shell: a truncated or reset transfer piped into `sh` executes the
+          # prefix that did arrive, and the exit status seen is the shell's,
+          # not curl's. `--fail` plus a separate invocation makes a partial
+          # download a failed step instead of a half-run installer.
+          curl -LsSf --proto '=https' --tlsv1.2 \
+            https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+          sh /tmp/uv-install.sh
+          rm -f /tmp/uv-install.sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version
 
@@ -180,8 +200,14 @@ jobs:
 
       - name: Notify The Citadel on failure
         if: failure()
+        env:
+          # Passed as an environment variable rather than interpolated into the
+          # script body: `${{ }}` is substituted as text before the shell ever
+          # runs, so a branch name containing shell metacharacters would be
+          # executed rather than printed.
+          BRANCH: ${{ github.ref_name }}
         run: |
-          echo "CI failed on branch ${{ github.ref_name }} — check logs"
+          echo "CI failed on branch $BRANCH — check logs"
           # When Citadel webhook is live this will auto-create an incident
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -202,7 +228,15 @@ jobs:
 
       - name: Install uv (fast Python package manager)
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          # Downloaded to a file and then run, never piped straight into a
+          # shell: a truncated or reset transfer piped into `sh` executes the
+          # prefix that did arrive, and the exit status seen is the shell's,
+          # not curl's. `--fail` plus a separate invocation makes a partial
+          # download a failed step instead of a half-run installer.
+          curl -LsSf --proto '=https' --tlsv1.2 \
+            https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+          sh /tmp/uv-install.sh
+          rm -f /tmp/uv-install.sh
           export PATH="$HOME/.local/bin:$PATH"
           uv --version
 

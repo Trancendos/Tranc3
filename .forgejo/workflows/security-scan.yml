@@ -51,7 +51,7 @@ jobs:
       - name: Install Python security tools
         run: |
           python3 -m pip install --quiet --upgrade \
-            pip-audit bandit ruff cyclonedx-bom
+            pip-audit bandit "ruff==0.15.8" cyclonedx-bom
 
       - name: pip-audit (CVE scan)
         run: |
@@ -212,7 +212,13 @@ jobs:
       - name: Install Trivy
         run: |
           which trivy 2>/dev/null && exit 0
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.0
+          # Downloaded then run, not piped into a shell -- see the note in
+          # .forgejo/workflows/ci.yml's uv step.
+          curl -sfL --proto '=https' --tlsv1.2 \
+            https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            -o /tmp/trivy-install.sh
+          sh /tmp/trivy-install.sh -b /usr/local/bin v0.58.0
+          rm -f /tmp/trivy-install.sh
 
       - name: Trivy config scan (Dockerfiles + K8s)
         run: |
@@ -272,8 +278,11 @@ jobs:
       - name: Install TruffleHog v3
         run: |
           if ! which trufflehog 2>/dev/null; then
-            curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
-              | sh -s -- -b /usr/local/bin
+            curl -sSfL --proto '=https' --tlsv1.2 \
+              https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+              -o /tmp/trufflehog-install.sh
+            sh /tmp/trufflehog-install.sh -b /usr/local/bin
+            rm -f /tmp/trufflehog-install.sh
           fi
           trufflehog --version
 
@@ -423,16 +432,26 @@ jobs:
       - name: Install syft
         run: |
           if ! which syft 2>/dev/null; then
-            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-              | sh -s -- -b /usr/local/bin
+            # Downloaded then run, not piped into a shell -- see the note in
+            # .forgejo/workflows/ci.yml's uv step.
+            curl -sSfL --proto '=https' --tlsv1.2 \
+              https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+              -o /tmp/syft-install.sh
+            sh /tmp/syft-install.sh -b /usr/local/bin
+            rm -f /tmp/syft-install.sh
           fi
           syft version
 
       - name: Install grype
         run: |
           if ! which grype 2>/dev/null; then
-            curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
-              | sh -s -- -b /usr/local/bin
+            # Downloaded then run, not piped into a shell -- see the note in
+            # .forgejo/workflows/ci.yml's uv step.
+            curl -sSfL --proto '=https' --tlsv1.2 \
+              https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+              -o /tmp/grype-install.sh
+            sh /tmp/grype-install.sh -b /usr/local/bin
+            rm -f /tmp/grype-install.sh
           fi
           grype version
 
@@ -522,23 +541,38 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Generate summary
+        env:
+          # Every workflow context reaches the script as an environment
+          # variable. `${{ }}` is substituted as text before the shell runs, so
+          # a value carrying shell metacharacters would be executed rather than
+          # written to the dashboard.
+          RUN_NUMBER: ${{ github.run_number }}
+          BRANCH: ${{ github.ref_name }}
+          PYTHON_SECURITY: ${{ needs.python-security.result }}
+          NODE_SECURITY: ${{ needs.node-security.result }}
+          TRIVY: ${{ needs.trivy.result }}
+          SEMGREP: ${{ needs.semgrep.result }}
+          SECRET_DETECTION: ${{ needs.secret-detection.result }}
+          OSV_SCANNER: ${{ needs.osv-scanner.result }}
+          CHECKOV: ${{ needs.checkov.result }}
+          SBOM_GENERATION: ${{ needs.sbom-generation.result }}
         run: |
           mkdir -p logs
           echo "=== Security Dashboard Summary ===" | tee logs/security-dashboard.txt
-          echo "Run: ${{ github.run_number }}" | tee -a logs/security-dashboard.txt
-          echo "Branch: ${{ github.ref_name }}" | tee -a logs/security-dashboard.txt
+          echo "Run: $RUN_NUMBER" | tee -a logs/security-dashboard.txt
+          echo "Branch: $BRANCH" | tee -a logs/security-dashboard.txt
           echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a logs/security-dashboard.txt
           echo "" | tee -a logs/security-dashboard.txt
           echo "| Scanner | Status | Notes |" | tee -a logs/security-dashboard.txt
           echo "|---------|--------|-------|" | tee -a logs/security-dashboard.txt
-          echo "| Python Security (pip-audit + bandit + ruff) | ${{ needs.python-security.result }} | |" | tee -a logs/security-dashboard.txt
-          echo "| Node Security (npm audit) | ${{ needs.node-security.result }} | |" | tee -a logs/security-dashboard.txt
-          echo "| Trivy (container + IaC) | ${{ needs.trivy.result }} | binary curl install |" | tee -a logs/security-dashboard.txt
-          echo "| Semgrep OSS SAST (auto + fastapi + owasp) | ${{ needs.semgrep.result }} | LGPL-2.1 |" | tee -a logs/security-dashboard.txt
-          echo "| Secret Detection (gitleaks + TruffleHog) | ${{ needs.secret-detection.result }} | MIT + AGPL-3.0 |" | tee -a logs/security-dashboard.txt
-          echo "| OSV-Scanner (multi-ecosystem SCA) | ${{ needs.osv-scanner.result }} | Google Apache-2.0 |" | tee -a logs/security-dashboard.txt
-          echo "| Checkov (IaC + Docker Compose) | ${{ needs.checkov.result }} | Apache-2.0 |" | tee -a logs/security-dashboard.txt
-          echo "| SBOM (syft CycloneDX + grype) | ${{ needs.sbom-generation.result }} | Apache-2.0 |" | tee -a logs/security-dashboard.txt
+          echo "| Python Security (pip-audit + bandit + ruff) | $PYTHON_SECURITY | |" | tee -a logs/security-dashboard.txt
+          echo "| Node Security (npm audit) | $NODE_SECURITY | |" | tee -a logs/security-dashboard.txt
+          echo "| Trivy (container + IaC) | $TRIVY | binary curl install |" | tee -a logs/security-dashboard.txt
+          echo "| Semgrep OSS SAST (auto + fastapi + owasp) | $SEMGREP | LGPL-2.1 |" | tee -a logs/security-dashboard.txt
+          echo "| Secret Detection (gitleaks + TruffleHog) | $SECRET_DETECTION | MIT + AGPL-3.0 |" | tee -a logs/security-dashboard.txt
+          echo "| OSV-Scanner (multi-ecosystem SCA) | $OSV_SCANNER | Google Apache-2.0 |" | tee -a logs/security-dashboard.txt
+          echo "| Checkov (IaC + Docker Compose) | $CHECKOV | Apache-2.0 |" | tee -a logs/security-dashboard.txt
+          echo "| SBOM (syft CycloneDX + grype) | $SBOM_GENERATION | Apache-2.0 |" | tee -a logs/security-dashboard.txt
           echo "" | tee -a logs/security-dashboard.txt
           echo "See individual job logs for detailed findings." | tee -a logs/security-dashboard.txt
           echo "NOTE: Safety removed — no longer free for commercial use." | tee -a logs/security-dashboard.txt
@@ -657,13 +691,23 @@ jobs:
     if: failure()
     steps:
       - name: Post security alert to The Citadel
+        env:
+          # As above: contexts arrive as environment variables, and the JSON
+          # body is built by a JSON encoder rather than by string interpolation,
+          # so a branch name containing a quote cannot break out of the payload.
+          BRANCH: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
         run: |
+          python3 -c 'import json, os; print(json.dumps({
+              "event": "security_scan_failure",
+              "branch": os.environ["BRANCH"],
+              "run_id": os.environ["RUN_ID"],
+              "repo": os.environ["REPO"],
+              "message": "Security scan failed on branch " + os.environ["BRANCH"],
+          }))' > /tmp/citadel-alert.json
           curl -sf -X POST "https://trancendos-backend.fly.dev/citadel/webhooks/forgejo" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"event\": \"security_scan_failure\",
-              \"branch\": \"${{ github.ref_name }}\",
-              \"run_id\": \"${{ github.run_id }}\",
-              \"repo\": \"${{ github.repository }}\",
-              \"message\": \"Security scan failed on branch ${{ github.ref_name }}\"
-            }" || echo "Citadel notification skipped (backend warming)"
+            --data-binary @/tmp/citadel-alert.json \
+            || echo "Citadel notification skipped (backend warming)"
+          rm -f /tmp/citadel-alert.json

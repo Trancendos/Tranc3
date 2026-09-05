@@ -13,6 +13,7 @@ import logging
 import os
 import shutil
 import uuid
+from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional
@@ -51,10 +52,45 @@ def _require_internal_auth(x_internal_secret: str = Header(default="")) -> None:
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Prove the workdir is writable at startup, and refuse to serve if not.
+
+    The `mkdir` used to run at import, which made importing this module a
+    filesystem write and broke every CI collection. Moving it to first use
+    fixed that and cost something real: a mis-mounted or read-only workdir
+    then let the worker start clean, answer /health 200, accept every job
+    with a 202, and fail each one asynchronously — a broken deployment
+    degrading silently instead of failing loudly.
+
+    Startup is the right place for the check. It is not import, so the module
+    still loads anywhere; and it is before the first request, so an
+    unwritable workdir stops the container rather than being discovered one
+    job at a time.
+    """
+    try:
+        _ensure(WORKDIR)
+        # `mkdir(exist_ok=True)` is a no-op on a directory that already
+        # exists, so on a mounted volume it proves nothing — a read-only
+        # workdir passed this check and the worker started, which is exactly
+        # the silent degradation the lifespan exists to prevent. Writing and
+        # removing a sentinel is the only answer that means what it says.
+        probe = WORKDIR / f".write-probe-{uuid.uuid4().hex}"
+        probe.write_bytes(b"")
+        probe.unlink()
+    except OSError as exc:
+        raise RuntimeError(
+            f"FFMPEG_WORKDIR {WORKDIR} is not writable: {exc}. "
+            "The worker cannot process any job without it."
+        ) from exc
+    yield
+
+
 app = FastAPI(
     title="FFmpeg Worker",
     description="TateKing — Video processing worker (transcode, thumbnail, compress)",
     version="1.0.0",
+    lifespan=_lifespan,
 )
 
 # OpenTelemetry instrumentation
@@ -100,7 +136,21 @@ _jobs: Dict[str, Job] = {}
 
 # Working directory for processed files
 WORKDIR = Path(os.environ.get("FFMPEG_WORKDIR", "/app/workdir"))
-WORKDIR.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure(directory: Path) -> Path:
+    """Create the directory on first use, not at import.
+
+    A module-level `mkdir` gives importing the module a filesystem side
+    effect, which fails wherever the container's path does not exist and is
+    not writable — every CI runner, for a start. It took nine tests in
+    tests/test_workers_p5.py to PermissionError on `/app` before anything ran,
+    and an import that cannot fail is worth more than a directory created a
+    few milliseconds earlier.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -203,11 +253,11 @@ async def _run_job(job_id: str, coro) -> None:  # noqa: ANN001
 async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
     crf = _quality_to_crf(quality)
     out_name = f"{uuid.uuid4().hex}.{output_format}"
-    out_path = WORKDIR / out_name
+    out_path = _ensure(WORKDIR) / out_name
 
     if output_format == "gif":
         # Two-pass GIF: generate palette then render
-        palette_path = WORKDIR / f"{uuid.uuid4().hex}_palette.png"
+        palette_path = _ensure(WORKDIR) / f"{uuid.uuid4().hex}_palette.png"
         rc, _, stderr = await _run_ffmpeg(
             "-i",
             input_path,
@@ -268,7 +318,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
 
 
 async def _thumbnail(input_path: str, timestamp_seconds: float) -> Path:
-    out_path = WORKDIR / f"{uuid.uuid4().hex}_thumb.jpg"
+    out_path = _ensure(WORKDIR) / f"{uuid.uuid4().hex}_thumb.jpg"
     rc, _, stderr = await _run_ffmpeg(
         "-ss",
         str(timestamp_seconds),
@@ -287,7 +337,7 @@ async def _thumbnail(input_path: str, timestamp_seconds: float) -> Path:
 
 async def _compress(input_path: str, target_mb: float) -> Path:
     """Compress to approximate target size using two-pass encoding."""
-    out_path = WORKDIR / f"{uuid.uuid4().hex}_compressed.mp4"
+    out_path = _ensure(WORKDIR) / f"{uuid.uuid4().hex}_compressed.mp4"
 
     # Probe duration to compute target bitrate
     probe_proc = await asyncio.create_subprocess_exec(
@@ -317,7 +367,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
         # Fallback: compress with CRF 28
         bitrate_str = None
 
-    log_prefix = str(WORKDIR / uuid.uuid4().hex)
+    log_prefix = str(_ensure(WORKDIR) / uuid.uuid4().hex)
 
     if bitrate_str:
         # Pass 1
@@ -400,6 +450,11 @@ async def health() -> dict:
         "service": "ffmpeg-worker",
         "available": available,
         "ffmpeg_version": _ffmpeg_version(),
+        # Reported as well as enforced at startup: a volume can be remounted
+        # read-only under a running container, and the jobs would then fail
+        # one at a time with nothing saying why.
+        "workdir": str(WORKDIR),
+        "workdir_writable": os.access(WORKDIR, os.W_OK) if WORKDIR.exists() else False,
     }
 
 
