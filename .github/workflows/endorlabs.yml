@@ -11,8 +11,12 @@ on:
     branches: [ "main" ]
   schedule:
     - cron: '42 19 * * 6'
+  workflow_dispatch: {}
+
 jobs:
   scan:
+    # Only run when ENDOR namespace is configured and the PR is same-repo
+    if: ${{ (secrets.ENDOR_LABS_NAMESPACE != '' || secrets.ENDOR_LABS_API_KEY != '') && (github.event.pull_request == null || github.event.pull_request.head.repo.full_name == github.repository) }}
     permissions:
       security-events: write # Used to upload sarif artifact to GitHub
       contents: read # Used to checkout a private repository by actions/checkout.
@@ -36,13 +40,13 @@ jobs:
       if: github.event_name == 'pull_request'
       uses: endorlabs/github-action@b51bd06466b545f01a6ac788e3e1147695d3936c
       with:
-        namespace: "example" # Modify the namespace to your Endor Labs tenant namespace.
+        namespace: "${{ secrets.ENDOR_LABS_NAMESPACE }}" # Tenant namespace set as a repo secret
         sarif_file: findings.sarif
     - name: Endor Labs scan monitor
       if: github.event_name == 'push'
       uses: endorlabs/github-action@b51bd06466b545f01a6ac788e3e1147695d3936c
       with:
-        namespace: "example" # Modify the namespace to your Endor Labs tenant namespace.
+        namespace: "${{ secrets.ENDOR_LABS_NAMESPACE }}" # Tenant namespace set as a repo secret
         ci_run: "false"
         sarif_file: findings.sarif
     - name: Upload SARIF to github
