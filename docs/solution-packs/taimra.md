@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → taimra | Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`) |
+| Ingress | Traefik → /taimra | Host(`taimra.trancendos.com`) && PathPrefix(`/taimra`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Shadow + The Scheduler | the two Agents below |
 | Automation | Sync-Bot, Fetch-Bot, Nudge-Bot, Alert-Bot | the four Bots below |

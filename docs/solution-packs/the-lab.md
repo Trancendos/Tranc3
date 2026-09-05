@@ -93,7 +93,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → the-lab | Host(`the-lab.trancendos.com`) && PathPrefix(`/the-lab`) |
+| Ingress | Traefik → /the-lab | Host(`the-lab.trancendos.com`) && PathPrefix(`/the-lab`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Hounds + Syntax-Sage | the two Agents below |
 | Automation | Lint-Bot, Compile-Bot, Debug-Bot, Test-Bot | the four Bots below |

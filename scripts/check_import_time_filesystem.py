@@ -208,8 +208,14 @@ def scan_file(path: Path) -> list[str]:
         return []
 
     statements = _module_level(tree.body)
+
+    # Module-level names only. A class body executes on import, so its writes
+    # are still import-time writes and are still walked — but a name bound
+    # inside one is class-local, and letting it into the file-wide table meant
+    # `class C: DB_PATH = Path("/tmp/x")` silently rebound the module's own
+    # `DB_PATH` and hid the real write behind a harmless-looking path.
     defaults: dict[str, str] = {}
-    for node in statements:
+    for node in tree.body:
         if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None:
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
             literal = _literal_default(node.value)

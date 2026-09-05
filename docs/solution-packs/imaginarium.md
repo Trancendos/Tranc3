@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → imaginarium | Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`) |
+| Ingress | Traefik → /imaginarium | Host(`imaginarium.trancendos.com`) && PathPrefix(`/imaginarium`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Alchemist + The Architect | the two Agents below |
 | Automation | Mixer-Bot, Blender-Bot, Welder-Bot, Polisher-Bot | the four Bots below |

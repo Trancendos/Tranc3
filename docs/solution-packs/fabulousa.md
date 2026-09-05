@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → fabulousa | Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`) |
+| Ingress | Traefik → /fabulousa | Host(`fabulousa-service.trancendos.com`) && PathPrefix(`/fabulousa`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Tailor + The Weaver | the two Agents below |
 | Automation | Pixel-Pusher-Bot, Hex-Code-Bot, Font-Fetcher-Bot, Padding-Bot | the four Bots below |

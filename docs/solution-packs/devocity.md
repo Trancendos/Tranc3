@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → devocity | Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`) |
+| Ingress | Traefik → /devocity | Host(`devocity.trancendos.com`) && PathPrefix(`/devocity`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Foreman + The Dispatcher | the two Agents below |
 | Automation | Crane-Bot, Wrench-Bot, Gear-Bot, Belt-Bot | the four Bots below |

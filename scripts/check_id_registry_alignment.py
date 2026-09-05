@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parent.parent
 if str(REPO) not in sys.path:
@@ -43,10 +43,11 @@ if str(REPO) not in sys.path:
 REGISTRY = REPO / "src" / "config" / "id_registry.json"
 
 
-def _registry_paths() -> dict[str, str]:
-    """PID -> worker_path, from the CMDB register."""
+def _registry_paths() -> tuple[dict[str, str], dict[str, list[str]]]:
+    """PID -> worker_path from the CMDB, and any PID recorded twice differently."""
     data = json.loads(REGISTRY.read_text(encoding="utf-8"))
     found: dict[str, str] = {}
+    duplicates: dict[str, list[str]] = {}
 
     def walk(node: object) -> None:
         """Collect every record carrying both a `pid` and a `worker_path`.
@@ -59,6 +60,12 @@ def _registry_paths() -> dict[str, str]:
         if isinstance(node, dict):
             pid = node.get("pid")
             if isinstance(pid, str) and "worker_path" in node:
+                if pid in found and found[pid] != node["worker_path"]:
+                    # Last-write-wins would hide the conflict: a second record
+                    # for the same PID carrying a different path is exactly
+                    # the kind of drift this check exists to surface, and
+                    # silently overwriting it makes the register look aligned.
+                    duplicates.setdefault(pid, [found[pid]]).append(node["worker_path"])
                 found[pid] = node["worker_path"]
             for value in node.values():
                 walk(value)
@@ -67,7 +74,7 @@ def _registry_paths() -> dict[str, str]:
                 walk(value)
 
     walk(data)
-    return found
+    return found, duplicates
 
 
 def _entity_paths() -> dict[str, str]:
@@ -88,9 +95,15 @@ def drift() -> list[str]:
     a path both agree on that is not on disk — the second is how six records
     kept pointing at `src/studio/` after that router was removed.
     """
-    registry = _registry_paths()
+    registry, duplicates = _registry_paths()
     entities = _entity_paths()
     failures: list[str] = []
+
+    for pid, paths in sorted(duplicates.items()):
+        failures.append(
+            f"{pid}: id_registry.json records this PID more than once with "
+            f"different paths ({', '.join(repr(p) for p in paths)}). One PID, one record."
+        )
 
     for pid, declared in sorted(registry.items()):
         canonical = entities.get(pid)
@@ -101,10 +114,38 @@ def drift() -> list[str]:
                 f"{pid}: id_registry.json says {declared!r}, "
                 f"src/entities/platform.py says {canonical!r}"
             )
-        elif declared and not (REPO / declared).exists():
-            failures.append(f"{pid}: both registers say {declared!r}, which is not on disk")
+        elif declared:
+            failures.extend(_path_failures(pid, declared))
+
+    # A PID the canonical register holds and the CMDB does not is drift in the
+    # direction the loop above cannot see: it iterates the CMDB, so a record
+    # deleted or renamed there simply stops being visited and the check passes.
+    for pid in sorted(set(entities) - set(registry)):
+        failures.append(
+            f"{pid}: src/entities/platform.py holds this Location and "
+            "id_registry.json has no record for it"
+        )
 
     return failures
+
+
+def _path_failures(pid: str, declared: str) -> list[str]:
+    """Reasons an agreed-upon path is still not a usable repository path.
+
+    Agreement between the two registers is necessary and not sufficient. Both
+    can agree on an absolute path, or one containing `..`, and
+    `(REPO / declared).exists()` would then test something outside the
+    repository entirely — reporting a pass because a directory happens to
+    exist on the machine running the check.
+    """
+    path = PurePosixPath(declared)
+    if path.is_absolute():
+        return [f"{pid}: {declared!r} is absolute; worker paths are repository-relative"]
+    if ".." in path.parts:
+        return [f"{pid}: {declared!r} escapes the repository with '..'"]
+    if not (REPO / declared).exists():
+        return [f"{pid}: both registers say {declared!r}, which is not on disk"]
+    return []
 
 
 def main() -> int:
@@ -120,7 +161,7 @@ def main() -> int:
         print("  pointing at another service's code answers every dependency question")
         print("  about the wrong thing.")
         return 1
-    print(f"ID registry alignment: PASSED — {len(_registry_paths())} Location record(s) agree")
+    print(f"ID registry alignment: PASSED — {len(_registry_paths()[0])} Location record(s) agree")
     return 0
 
 

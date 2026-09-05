@@ -218,7 +218,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Beaker-Bot, Bunsen-Bot, Pipette-Bot, Petri-B │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /think-tank          │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

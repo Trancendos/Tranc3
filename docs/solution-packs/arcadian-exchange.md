@@ -226,7 +226,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Bidder-Bot, Asker-Bot, Miner-Bot, Harvester- │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /arcadian-exchange   │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

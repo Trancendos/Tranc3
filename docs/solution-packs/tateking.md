@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → tateking | Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`) |
+| Ingress | Traefik → /tateking | Host(`tateking.trancendos.com`) && PathPrefix(`/tateking`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Director-B + The Editor-B | the two Agents below |
 | Automation | Cutter-Bot, Splicer-Bot, Renderer-Bot, Scrubber-Bot | the four Bots below |

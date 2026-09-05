@@ -210,7 +210,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Neuron-1-Bot, Neuron-2-Bot, Dendrite-Bot, Ax │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /luminous            │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

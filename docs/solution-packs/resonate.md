@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → resonate | Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`) |
+| Ingress | Traefik → /resonate | Host(`resonate.trancendos.com`) && PathPrefix(`/resonate`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Tuner + The Balancer | the two Agents below |
 | Automation | Frequency-Bot, Wave-Bot, Pitch-Bot, Harmonic-Bot | the four Bots below |

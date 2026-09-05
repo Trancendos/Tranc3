@@ -70,6 +70,14 @@ async def _lifespan(_app: FastAPI):
     """
     try:
         _ensure(WORKDIR)
+        # `mkdir(exist_ok=True)` is a no-op on a directory that already
+        # exists, so on a mounted volume it proves nothing — a read-only
+        # workdir passed this check and the worker started, which is exactly
+        # the silent degradation the lifespan exists to prevent. Writing and
+        # removing a sentinel is the only answer that means what it says.
+        probe = WORKDIR / f".write-probe-{uuid.uuid4().hex}"
+        probe.write_bytes(b"")
+        probe.unlink()
     except OSError as exc:
         raise RuntimeError(
             f"FFMPEG_WORKDIR {WORKDIR} is not writable: {exc}. "

@@ -215,7 +215,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Tick-Bot, Tock-Bot, Pendulum-Bot, Sandglass- │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /chronossphere-arcst │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → tranquility | Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`) |
+| Ingress | Traefik → /tranquility | Host(`tranquility.trancendos.com`) && PathPrefix(`/tranquility`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Guide + The Healer | the two Agents below |
 | Automation | Breath-Bot, Pulse-Bot, Calm-Bot, Aura-Bot | the four Bots below |

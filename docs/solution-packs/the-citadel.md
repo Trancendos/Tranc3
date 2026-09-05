@@ -218,7 +218,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Map-Bot, Compass-Bot, Clock-Bot, Radio-Bot   │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-citadel         │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

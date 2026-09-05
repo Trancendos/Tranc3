@@ -77,7 +77,12 @@ _POINTER_PATH = re.compile(r"[\w./-]+\.md")
 #: home. Resolving only bare paths worked by accident — both pointer pages
 #: happen to use the bare filename as the link TEXT — and would have broken
 #: the moment someone wrote a link with a prose label instead.
-_BLOB_URL = re.compile(r"github\.com/[^/\s]+/[^/\s]+/blob/[^/\s]+/([\w./-]+\.md)")
+#:
+#: Scoped to THIS repository. Accepting any owner/repo meant a link to a
+#: different project resolved as a pointer whenever its URL happened to end
+#: in a filename that also exists here — a duplicate could exempt itself by
+#: pointing at somebody else's document.
+_BLOB_URL = re.compile(r"github\.com/Trancendos/Tranc3/blob/[^/\s]+/([\w./-]+\.md)")
 
 #: Titles that are generic by nature — a per-service README is not a duplicate
 #: of another service's README.

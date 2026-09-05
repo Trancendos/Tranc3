@@ -73,7 +73,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> T[Traefik]
-    T -->|/the-ice-box| S[The Ice Box<br/>8046]
+    T -->|/ice-box| S[The Ice Box<br/>8046]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[The Guardian (Marcus Magnolia)]
     S --> AA[The Jailer]
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → the-ice-box | Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`) |
+| Ingress | Traefik → /ice-box | Host(`ice-box-service.trancendos.com`) && PathPrefix(`/ice-box`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Jailer + The Interrogator | the two Agents below |
 | Automation | Frostbite-Bot, Icicle-Bot, Glacier-Bot, Permafrost-Bot | the four Bots below |
@@ -228,7 +228,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Frostbite-Bot, Icicle-Bot, Glacier-Bot, Perm │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-ice-box         │
+│  [ health ]  [ status ]  route /ice-box             │
 └──────────────────────────────────────────────────────┘
 ```
 

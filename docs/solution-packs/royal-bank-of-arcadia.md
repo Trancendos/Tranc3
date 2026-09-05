@@ -215,7 +215,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Ledger-Bot, Coin-Bot, Ticker-Bot, Receipt-Bo │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /royal-bank-of-arcad │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

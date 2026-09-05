@@ -73,7 +73,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> T[Traefik]
-    T -->|/the-artifactory| S[The Artifactory<br/>8047]
+    T -->|/artifactory| S[The Artifactory<br/>8047]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[Dorris Fontaine]
     S --> AA[The Librarian]
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → the-artifactory | Host(`artifactory-service.trancendos.com`) && PathPrefix(`/artifactory`) |
+| Ingress | Traefik → /artifactory | Host(`artifactory-service.trancendos.com`) && PathPrefix(`/artifactory`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Librarian + The Archivist | the two Agents below |
 | Automation | Packer-Bot, Unpacker-Bot, Checksum-Bot, Versioner-Bot | the four Bots below |
@@ -226,7 +226,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Packer-Bot, Unpacker-Bot, Checksum-Bot, Vers │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-artifactory     │
+│  [ health ]  [ status ]  route /artifactory         │
 └──────────────────────────────────────────────────────┘
 ```
 

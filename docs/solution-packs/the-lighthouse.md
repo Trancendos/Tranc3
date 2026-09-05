@@ -215,7 +215,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Seal-Bot, Wax-Bot, Signet-Bot, Seal-Stamp-Bo │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-lighthouse      │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

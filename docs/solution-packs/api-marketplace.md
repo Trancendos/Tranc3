@@ -219,7 +219,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: GET-Bot, POST-Bot, PUT-Bot, DELETE-Bot       │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /api-marketplace     │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

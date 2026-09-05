@@ -218,7 +218,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Spark-1-Bot, Spark-2-Bot, Linker-Bot, Pinger │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-spark           │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -216,7 +216,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Page-Bot, Bookmark-Bot, Spine-Bot, Dust-Jack │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-library         │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

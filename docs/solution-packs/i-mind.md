@@ -72,7 +72,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> T[Traefik]
-    T -->|/i-mind| S[I-Mind<br/>8075]
+    T -->|/imind| S[I-Mind<br/>8075]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[Savania]
     S --> AA[The Counselor]
@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → i-mind | Host(`imind.trancendos.com`) && PathPrefix(`/imind`) |
+| Ingress | Traefik → /imind | Host(`imind.trancendos.com`) && PathPrefix(`/imind`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Counselor + The Listener | the two Agents below |
 | Automation | Journal-Bot, Mood-Bot, Reflect-Bot, Soothe-Bot | the four Bots below |
@@ -227,7 +227,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Journal-Bot, Mood-Bot, Reflect-Bot, Soothe-B │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /i-mind              │
+│  [ health ]  [ status ]  route /imind               │
 └──────────────────────────────────────────────────────┘
 ```
 

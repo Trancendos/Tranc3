@@ -217,7 +217,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Log-Alpha-Bot, Log-Beta-Bot, Tracer-Bot, Tim │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-observatory     │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

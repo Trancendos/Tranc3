@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → the-academy | Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`) |
+| Ingress | Traefik → /the-academy | Host(`the-academy.trancendos.com`) && PathPrefix(`/the-academy`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Tutor + The Proctor | the two Agents below |
 | Automation | Chalk-Bot, Board-Bot, Eraser-Bot, Bell-Bot | the four Bots below |

@@ -505,7 +505,12 @@ def render_pack(
     add("- **SQLite over shared state** — each worker owns its own database file (principle 1).")
     add("- **In-memory token-bucket rate limiting** — no external KV (principle 2).")
     add("- **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.")
-    if j.traefik_rule and not j.traefik_strip:
+    if j.traefik_rule and route_prefix is None:
+        add("- **The router matches on host alone** — its rule carries no `PathPrefix`, so")
+        add("  there is no prefix to strip and no path contract to verify. Traefik forwards")
+        add("  the path unchanged and the worker serves what it registers under `/`. Do not")
+        add("  add a stripprefix middleware here; there is nothing for it to strip.")
+    elif j.traefik_rule and not j.traefik_strip:
         serves = worker_serves_prefix(j.build_context, route_prefix)
         if serves is True:
             add(f"- **No `stripprefix` on `{route_prefix}`, and none is needed** — verified:")
@@ -548,7 +553,7 @@ def render_pack(
     add("    C[Client] --> T[Traefik]" if j.traefik_rule else "    C[Client] --> A[api.py]")
     node = f"S[{name}<br/>{port or 'no port'}]"
     if j.traefik_rule:
-        add(f"    T -->|/{sl}| {node}")
+        add(f"    T -->|{route_prefix or 'host rule'}| {node}")
     else:
         add(f"    A --> {node}")
     add("    S --> DB[(SQLite<br/>own file)]")
@@ -568,7 +573,7 @@ def render_pack(
     add("| Layer | Component | Note |")
     add("|---|---|---|")
     add(
-        f"| Ingress | {'Traefik → ' + sl if j.traefik_rule else 'in-process router'} | {j.traefik_rule or 'mounted in api.py'} |"
+        f"| Ingress | {'Traefik → ' + (route_prefix or 'host rule') if j.traefik_rule else 'in-process router'} | {j.traefik_rule or 'mounted in api.py'} |"
     )
     add("| API | FastAPI app | `/health`, `/status`, domain routes |")
     add(f"| Domain | {agents[0].code_name} + {agents[1].code_name} | the two Agents below |")
@@ -588,6 +593,8 @@ def render_pack(
     add("```")
     if not j.traefik_rule:
         arrival = "api.py routes"
+    elif route_prefix is None:
+        arrival = "Traefik matches the host; the path arrives unchanged"
     elif j.traefik_strip:
         arrival = f"Traefik strips {route_prefix}"
     else:
@@ -749,7 +756,8 @@ def render_pack(
     add("├──────────────────────────────────────────────────────┤")
     add(f"│  bots: {', '.join(b.code_name for b in bots)[:44]:<44} │")
     add("├──────────────────────────────────────────────────────┤")
-    add(f"│  [ health ]  [ status ]  {('route /' + sl)[:26]:<26} │")
+    routed = f"route {route_prefix}" if route_prefix else "routed by host"
+    add(f"│  [ health ]  [ status ]  {routed[:26]:<26} │")
     add("└──────────────────────────────────────────────────────┘")
     add("```")
     add("")
@@ -793,20 +801,29 @@ def render_pack(
     return _document(L)
 
 
-def route_names(j: "Joined", sl: str) -> tuple[str, str, str]:
+def route_names(j: "Joined", sl: str) -> tuple[str, str | None, str | None]:
     """(router, stripprefix middleware, path prefix) — from compose where it says.
 
     The Location's slug and its deployed router name differ for several
     Locations, and a scaffold built on the slug wires a middleware to a
     router that does not exist or strips a prefix the router never matches.
     Either way the worker 404s, which is the failure these packs warn about.
+
+    A `None` prefix means there is no path contract to honour: either the
+    Location is not routed by Traefik at all, or its router matches on host
+    alone. Both were previously given a manufactured `/{slug}`, which wrote a
+    path the estate does not route into fourteen sections of the pack — the
+    same inference-instead-of-verification that made these packs call a
+    routing defect deliberate. Callers must branch on `None`, not format it.
     """
     router = j.traefik_router or sl
     if j.traefik_strip:
         strip, prefix = j.traefik_strip.split("|", 1)
         return router, strip, prefix
     match = re.search(r"PathPrefix\(`([^`]+)`\)", j.traefik_rule or "")
-    prefix = match.group(1) if match else f"/{sl}"
+    if match is None:
+        return router, None, None
+    prefix = match.group(1)
     return router, f"strip-{prefix.lstrip('/')}", prefix
 
 
@@ -836,7 +853,14 @@ def _epics(ent, j: Joined, name) -> list[tuple[str, list[str]]]:
             )
         )
     if j.traefik_rule and j.compose_service:
-        if j.traefik_strip:
+        if route_prefix is None:
+            criteria = [
+                f"As a client, a request to the router's host reaches {name} with its "
+                "path unchanged.",
+                "As a reviewer, NO stripprefix middleware is attached — a host-only "
+                "rule carries no prefix to strip.",
+            ]
+        elif j.traefik_strip:
             criteria = [
                 f"As a client, requests to `{route_prefix}` reach the worker "
                 "with the prefix stripped.",

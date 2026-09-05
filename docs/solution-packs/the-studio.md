@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → the-studio | Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`) |
+| Ingress | Traefik → /the-studio | Host(`the-studio.trancendos.com`) && PathPrefix(`/the-studio`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Conductor + The Muse | the two Agents below |
 | Automation | Palette-Bot, Easel-Bot, Clay-Bot, Layout-Bot | the four Bots below |

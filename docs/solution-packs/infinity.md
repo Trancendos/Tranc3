@@ -73,7 +73,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> T[Traefik]
-    T -->|/infinity| S[Infinity<br/>8005]
+    T -->|/auth/| S[Infinity<br/>8005]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[Cornelius MacIntyre]
     S --> AA[The Gatekeeper]
@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → infinity | Host(`api.trancendos.com`) && PathPrefix(`/auth/`) |
+| Ingress | Traefik → /auth/ | Host(`api.trancendos.com`) && PathPrefix(`/auth/`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Gatekeeper + The Bouncer | the two Agents below |
 | Automation | Token-Minter-Bot, Auth-Check-Bot, Key-Gen-Bot, Sentry-Bot | the four Bots below |
@@ -228,7 +228,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Token-Minter-Bot, Auth-Check-Bot, Key-Gen-Bo │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /infinity            │
+│  [ health ]  [ status ]  route /auth/               │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -281,6 +281,23 @@ jobs:
       - name: CMDB and entity registers agree
         run: python scripts/check_id_registry_alignment.py
 
+      # The estate registry is the CMDB an operator reads during an incident,
+      # and 63 of its 93 records disagreed with the compose file: 45 named a
+      # container that does not exist on the host, and 15 recorded a live,
+      # Traefik-routed Location as having no deployment at all. `estate_lint`
+      # passed throughout, because it checked the registry against the
+      # *naming convention* and reported reality separately as a warning — so
+      # the CMDB stayed green by recording the name the convention wants.
+      # This compares record to deployment, in both files, and blocks.
+      - name: Estate registry matches the deployment
+        run: python scripts/check_estate_registry_alignment.py
+
+      # estate_lint reaches 0 errors for the first time now that its container
+      # check reads compose. It had only ever run in the dormant Forgejo tree,
+      # behind `|| true`, so nothing it found had ever failed a build.
+      - name: Estate lint
+        run: python scripts/estate_lint.py
+
       # Two documents claiming to be the same thing drift, and each stays blind
       # to the other. `SECURITY_ALERT_REGISTER.md` (read by security_score.py)
       # had a wiki copy that carried two advisories the canonical register had

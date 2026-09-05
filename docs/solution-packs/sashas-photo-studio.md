@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → sashas-photo-studio | Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`) |
+| Ingress | Traefik → /sashas-photo-studio | Host(`sashas-photo-studio.trancendos.com`) && PathPrefix(`/sashas-photo-studio`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Retoucher + Prompt-Smith | the two Agents below |
 | Automation | Aperture-Bot, Shutter-Bot, Flash-Bot, Lens-Bot | the four Bots below |

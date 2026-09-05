@@ -47,12 +47,18 @@ _SKIP = ("compliance/magna-carta", "workers/cranbania", "node_modules")
 _LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)")
 _EXTERNAL = ("http://", "https://", "mailto:", "tel:", "#")
 
-#: A fenced block, ``` or ~~~, with whatever language tag follows the fence.
-_FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+#: A fenced block opener or closer: ``` or ~~~ (three or more), optionally
+#: indented, capturing the FULL run — a four-backtick fence is not closed by
+#: three, and storing only three resumed scanning inside the block.
+_FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
 
-#: Inline code spans. Backtick runs must match in length, so ``a `b` c`` is one
-#: span rather than two.
-_INLINE_CODE = re.compile(r"(?P<ticks>`+)(?:(?!(?P=ticks)).)*(?P=ticks)", re.DOTALL)
+#: Inline code spans. The delimiter runs must match in length AND be complete
+#: — the lookarounds stop the pattern backtracking into part of a longer run,
+#: which would end a span in the middle of one and leave real links on the far
+#: side unmasked. `re.DOTALL` because a span may cross a line break.
+_INLINE_CODE = re.compile(
+    r"(?<!`)(?P<ticks>`+)(?!`)(?:(?!(?P=ticks)).)*?(?P=ticks)(?!`)", re.DOTALL
+)
 
 #: Links into a submodule's tree: the file is real, it just is not checked out
 #: here. Reporting them would make the gate depend on submodule state.
@@ -90,21 +96,41 @@ def prose(text: str) -> str:
     Code is replaced with blank lines and spaces rather than deleted, so the
     surviving text keeps its original line numbers for the report.
     """
+    # Fences first, on whole lines. An inline-code pass cannot be trusted to
+    # run before this: a stray ``` in prose would otherwise open a span that
+    # swallows the rest of the document.
     kept: list[str] = []
     fence: str | None = None
     for line in text.splitlines():
-        opener = _FENCE.match(line)
-        if fence is None and opener:
-            fence = opener.group(1)[0] * 3
-            kept.append("")
+        match = _FENCE.match(line)
+        marker = match.group(1) if match else ""
+        trailing = match.group(2) if match else ""
+        if fence is None:
+            if marker:
+                fence = marker
+                kept.append("")
+                continue
+            kept.append(line)
             continue
-        if fence is not None:
-            if opener and opener.group(1).startswith(fence):
-                fence = None
-            kept.append("")
-            continue
-        kept.append(_INLINE_CODE.sub(lambda m: " " * len(m.group(0)), line))
-    return "\n".join(kept)
+        # Inside a block. Only a run at least as long as the opener, of the
+        # same character, with nothing but whitespace after it, closes it —
+        # a marker followed by text is code content, and treating it as a
+        # close resumed scanning for links inside the block.
+        closes = (
+            marker and marker[0] == fence[0] and len(marker) >= len(fence) and not trailing.strip()
+        )
+        if closes:
+            fence = None
+        kept.append("")
+
+    # Then inline spans, over the whole remaining text rather than line by
+    # line, so a span that crosses a newline masks its continuation too.
+    # Replacing each character with a space (newlines excepted) keeps every
+    # line number exactly where it was, which is what the report prints.
+    def blank(match: re.Match[str]) -> str:
+        return "".join("\n" if c == "\n" else " " for c in match.group(0))
+
+    return _INLINE_CODE.sub(blank, "\n".join(kept))
 
 
 def resolve(source: Path, target: str) -> bool:

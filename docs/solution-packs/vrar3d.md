@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → vrar3d | Host(`vrar3d.trancendos.com`) && PathPrefix(`/vrar3d`) |
+| Ingress | Traefik → /vrar3d | Host(`vrar3d.trancendos.com`) && PathPrefix(`/vrar3d`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | World-Builder + The VR-Guide | the two Agents below |
 | Automation | Render-Bot, Track-Bot, Haptic-Bot, VR-Lens-Bot | the four Bots below |

@@ -219,7 +219,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Wireframe-Bot, Texture-Bot, Vocoder-Bot, Opt │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /turing-s-hub        │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

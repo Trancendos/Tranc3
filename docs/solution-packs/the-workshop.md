@@ -52,9 +52,10 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
 - **In-memory token-bucket rate limiting** — no external KV (principle 2).
 - **Zero-cost posture** — no paid dependency may be introduced without funding sign-off.
-- **No `stripprefix` on `/the-workshop`, and this could not be verified** —
-  the build context holds no Python to read (a third-party image). Confirm
-  against that image's own routing before relying on either behaviour.
+- **The router matches on host alone** — its rule carries no `PathPrefix`, so
+  there is no prefix to strip and no path contract to verify. Traefik forwards
+  the path unchanged and the worker serves what it registers under `/`. Do not
+  add a stripprefix middleware here; there is nothing for it to strip.
 
 **Non-functional targets — SCAFFOLD, set these against real measurements.**
 
@@ -70,7 +71,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> T[Traefik]
-    T -->|/the-workshop| S[The Workshop<br/>2222]
+    T -->|host rule| S[The Workshop<br/>2222]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[The Dr. (Nikolai O'denhime)]
     S --> AA[Branch-Manager]
@@ -86,7 +87,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → the-workshop | Host(`the-workshop.trancendos.com`) |
+| Ingress | Traefik → host rule | Host(`the-workshop.trancendos.com`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Branch-Manager + Merge-Master | the two Agents below |
 | Automation | Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot | the four Bots below |
@@ -99,7 +100,7 @@ A first-run journey, derived from the abilities above. Replace with the real
 journey once a user has actually walked it.
 
 ```
-1. Request arrives  →  Traefik forwards /the-workshop unchanged (no stripprefix)
+1. Request arrives  →  Traefik matches the host; the path arrives unchanged
 2. Branch-Manager — Tracks active code branches, conflicts, and pull requests.
 3. Merge-Master — Safely merges code branches, guiding users through conflicts.
 4. Bots fire: Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot
@@ -190,9 +191,8 @@ actually missing rather than a generic phase 1.
 
 ### Epic 1 — Verify routing end to end
 
-- As a client, requests to `/the-workshop` reach a route the worker actually serves — today they do not, and this epic is that fix.
-- As an implementer, EITHER a stripprefix middleware for `/the-workshop` is added to the compose labels, OR the worker's router is given the prefix. One of the two, not neither.
-- As a reviewer, a request through Traefik returns something other than 404.
+- As a client, a request to the router's host reaches The Workshop with its path unchanged.
+- As a reviewer, NO stripprefix middleware is attached — a host-only rule carries no prefix to strip.
 
 ### Epic 2 — Implement the abilities
 
@@ -224,7 +224,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Commit-Bot, Push-Bot, Pull-Bot, Clone-Bot    │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-workshop        │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

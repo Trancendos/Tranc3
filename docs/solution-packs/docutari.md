@@ -216,7 +216,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Scanner-Bot, Stapler-Bot, Folder-Bot, Shredd │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /docutari            │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -171,8 +171,29 @@ TRANC3_{SERVICE_UPPER}_{KEY}
 ## 10. Validation
 
 Run `python scripts/estate_lint.py` to check the estate for:
-- Container name convention compliance
+- Registry container names matching the container compose actually creates
+- Container name convention compliance, reported against the compose file
 - Port conflicts
 - Registry completeness
 - docker-compose services not in registry
 - Registry entries with no docker-compose service (if status is active/building)
+
+Run `python scripts/check_estate_registry_alignment.py` to check every record's
+`port`, `worker_path`, `docker_service` and `docker_container` against
+`docker-compose.production.yml`, and every `# ── Name (Port N) ──` banner in that
+file against the service beneath it. Both run in CI and both block.
+
+**Why these are separate checks.** `docker_container` is a *mirror* of a
+deployment fact, so the only enforceable rule for it is that it mirrors
+correctly; the `tranc3-` convention is a judgement about the name itself and
+belongs where the name is set, in compose. Applying the convention to the mirror
+is what let the CMDB pass while disagreeing with the estate: 45 records held the
+name the convention wants, compose created a different one, and nothing compared
+the two. Fifteen more recorded a live, Traefik-routed Location as having no
+deployment at all. A record consulted during an incident named a container that
+does not exist on the host.
+
+A field that legitimately cannot mirror compose — The Spark and Infinity Gate
+have no port of their own, being in-process and embedded respectively — is
+listed in that script's `ACCEPTED_DIVERGENCES` with a written reason, keyed by
+`(ref, field)` so exempting one field never exempts the rest of the record.

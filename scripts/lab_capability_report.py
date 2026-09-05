@@ -27,7 +27,7 @@ import argparse
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parent.parent
 if str(REPO) not in sys.path:
@@ -48,6 +48,22 @@ _BASE_IMAGE_BINARIES: dict[str, tuple[str, ...]] = {
     "eclipse-temurin": ("java", "javac", "sh"),
 }
 
+#: Where each of those images actually keeps the executables listed above.
+#: A `COPY --from` brings a tool across only when its source path is one of
+#: these directories or an ancestor of it. This used to be a single generic
+#: list of "toolchain roots" shared by every image, which was wrong in both
+#: directions at once: it credited `/usr/bin` for golang and rust, which
+#: keep nothing there (`/usr/local/go/bin`, `/usr/local/cargo/bin`), and it
+#: did not recognise those directories themselves, so the one COPY that
+#: really does ship a Go toolchain read as shipping nothing.
+_BASE_IMAGE_ROOTS: dict[str, tuple[str, ...]] = {
+    "python": ("/usr/local/bin",),
+    "node": ("/usr/local/bin",),
+    "golang": ("/usr/local/go/bin",),
+    "rust": ("/usr/local/cargo/bin",),
+    "eclipse-temurin": ("/opt/java/openjdk/bin",),
+}
+
 #: pip distributions that put a differently-named console script on PATH.
 _PIP_CONSOLE_SCRIPTS: dict[str, tuple[str, ...]] = {
     "ruff": ("ruff",),
@@ -59,13 +75,49 @@ _PIP_CONSOLE_SCRIPTS: dict[str, tuple[str, ...]] = {
 }
 
 
+def _image_key(reference: str) -> str | None:
+    """The known base image an image reference names, or None."""
+    image = reference.split("@")[0].split(":")[0]
+    for prefix in _BASE_IMAGE_BINARIES:
+        if image == prefix or image.endswith(f"/{prefix}"):
+            return prefix
+    return None
+
+
 def _image_binaries(reference: str) -> set[str]:
     """Binaries a known base image provides, from an image reference."""
-    image = reference.split("@")[0].split(":")[0]
-    for prefix, binaries in _BASE_IMAGE_BINARIES.items():
-        if image == prefix or image.endswith(f"/{prefix}"):
-            return set(binaries)
-    return set()
+    key = _image_key(reference)
+    return set(_BASE_IMAGE_BINARIES[key]) if key else set()
+
+
+def _logical_lines(dockerfile: str) -> list[str]:
+    """Dockerfile instructions — comments dropped, continuations joined.
+
+    Two things the raw lines get wrong. A `#` line is not an instruction, so
+    scanning raw text credited a commented-out `# RUN apt-get install gcc`
+    as an install and reported a verification tier for a compiler nobody
+    ships. And a trailing backslash continues one instruction across several
+    lines, so a `pip install \\` followed by `  -r requirements.txt` — the
+    ordinary way that line is written — read as a pip install of nothing.
+    Both are fixed here once, for every scanner below.
+    """
+    out: list[str] = []
+    buffer = ""
+    for raw in dockerfile.splitlines():
+        line = raw.strip()
+        if line.startswith("#") or (not buffer and not line):
+            # A comment is never an argument, inside a continuation or out.
+            continue
+        if line.endswith("\\"):
+            buffer += line[:-1].strip() + " "
+            continue
+        joined = (buffer + line).strip()
+        buffer = ""
+        if joined:
+            out.append(joined)
+    if buffer.strip():
+        out.append(buffer.strip())
+    return out
 
 
 def final_stage(dockerfile: str) -> str:
@@ -79,30 +131,38 @@ def final_stage(dockerfile: str) -> str:
     over-claim this whole module exists to prevent. The Lab's own Dockerfile
     has one stage today; that is a fact about today, not a property to rely on.
     """
-    lines = dockerfile.splitlines()
-    starts = [i for i, line in enumerate(lines) if line.strip().upper().startswith("FROM ")]
+    lines = _logical_lines(dockerfile)
+    starts = [i for i, line in enumerate(lines) if line.upper().startswith("FROM ")]
     if not starts:
-        return dockerfile
+        return "\n".join(lines)
     return "\n".join(lines[starts[-1] :])
 
 
-#: Paths that, when copied wholesale from a toolchain image, actually bring
-#: its executables with them. Anything narrower copies data, not tools.
-_TOOLCHAIN_ROOTS = ("/", "/usr", "/usr/local", "/usr/bin", "/usr/local/bin", "/bin")
+def _covers(source: str, executables: str) -> bool:
+    """Does copying `source` bring everything in `executables` with it?"""
+    src = PurePosixPath(source.rstrip("/") or "/")
+    target = PurePosixPath(executables)
+    return src == target or src in target.parents
 
 
-def _copies_the_toolchain(source_paths: list[str]) -> bool:
-    """Does this COPY bring the source image's executables across?
+def _copies_the_toolchain(source_paths: list[str], image: str) -> bool:
+    """Does this COPY bring *this image's* executables across?
 
     `COPY --from=golang:1.22 /app/binary /app/binary` copies one file. It
     does not put `go` and `gofmt` in the shipped image, and crediting them
     because the source image happens to contain them is the over-claim this
     whole report exists to prevent — reintroduced through the back door.
+    Which paths do carry them is a property of the image, not a constant:
+    `/usr/bin` ships a Go toolchain from nowhere, and `/usr/local/go` ships
+    one from golang and nothing at all from python.
     """
+    key = _image_key(image)
+    if key is None:
+        return False
     return any(
-        path.rstrip("/") in {root.rstrip("/") for root in _TOOLCHAIN_ROOTS}
-        or path.rstrip("/") == ""
+        _covers(path, executables)
         for path in source_paths
+        for executables in _BASE_IMAGE_ROOTS[key]
     )
 
 
@@ -125,7 +185,7 @@ def _base_binaries(dockerfile: str) -> set[str]:
         match = re.search(r"COPY\s+--from=(\S+)\s+(.*)$", stripped, re.IGNORECASE)
         if match:
             sources = [t for t in match.group(2).split() if not t.startswith("--")][:-1]
-            if _copies_the_toolchain(sources):
+            if _copies_the_toolchain(sources, match.group(1)):
                 found |= _image_binaries(match.group(1))
     return found
 
@@ -148,8 +208,15 @@ def _apt_binaries(dockerfile: str) -> set[str]:
     return found
 
 
-#: `pip install -r requirements.txt`, in any of its spellings.
-_REQUIREMENTS_INSTALL = re.compile(r"pip\s+install\b[^\n&|]*?(?:-r|--requirement)\s+\S*\.txt")
+#: `pip install -r requirements.txt`, in any of its spellings: `pip3`, a
+#: `python -m pip` invocation, `--requirement`, and the `=`-joined or
+#: directly-attached argument forms. Requiring a literal `pip install` with
+#: a space-separated `-r` missed real Dockerfiles and silently dropped the
+#: whole requirements file from the toolchain.
+_REQUIREMENTS_INSTALL = re.compile(
+    r"(?:python[\d.]*\s+-m\s+)?pip[\d.]*\s+install\b[^\n&|]*?"
+    r"(?:--requirement|-r)[=\s]*\S*\.txt"
+)
 
 
 def _pip_binaries(dockerfile: str, requirements: str) -> set[str]:

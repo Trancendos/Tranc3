@@ -88,7 +88,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → warp-radio | Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`) |
+| Ingress | Traefik → /warp-radio | Host(`warp-radio.trancendos.com`) && PathPrefix(`/warp-radio`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The DJ + The Maestro | the two Agents below |
 | Automation | Play-Bot, Pause-Bot, Skip-Bot, Volume-Bot | the four Bots below |

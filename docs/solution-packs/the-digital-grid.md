@@ -217,7 +217,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Trigger-Bot, Action-Bot, Condition-Bot, Loop │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-digital-grid    │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

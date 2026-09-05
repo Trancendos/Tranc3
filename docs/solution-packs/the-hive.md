@@ -216,7 +216,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Worker-Bee-Bot, Drone-7-Bot, Nectar-Fetch-Bo │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-hive            │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -92,7 +92,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → cryptex | Host(`trancendos.com`) && PathPrefix(`/cryptex`) |
+| Ingress | Traefik → /cryptex | Host(`trancendos.com`) && PathPrefix(`/cryptex`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Shield + The Spear | the two Agents below |
 | Automation | Blocker-Bot, Trace-Bot, Patcher-Bot, Honeypot-Bot | the four Bots below |

@@ -78,7 +78,13 @@ def _ensure_parent(path: str | os.PathLike[str]) -> Path:
     """
     resolved = Path(path)
     parent = str(resolved.parent)
-    if parent not in _ensured_parents:
+    # The cache skips a `mkdir` syscall per connection, but it must not skip
+    # the check that the directory is still there: a volume remounted or a
+    # path cleaned up under a running container leaves the cache asserting
+    # something false, and every later SQLite open fails with "unable to open
+    # database file" for a reason nothing explains. A stat is far cheaper
+    # than the mkdir it replaces and is the correct place to spend it.
+    if parent not in _ensured_parents or not resolved.parent.is_dir():
         resolved.parent.mkdir(parents=True, exist_ok=True)
         _ensured_parents.add(parent)
     return resolved

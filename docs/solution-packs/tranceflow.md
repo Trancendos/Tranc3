@@ -89,7 +89,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → tranceflow | Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`) |
+| Ingress | Traefik → /tranceflow | Host(`tranceflow.trancendos.com`) && PathPrefix(`/tranceflow`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Mesh-Weaver + The Physicist | the two Agents below |
 | Automation | Voxel-1-Bot, Collider-Bot, Ray-Tracer-Bot, Sprite-Bot | the four Bots below |

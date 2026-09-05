@@ -242,6 +242,58 @@ class TestTheImageReport:
         dockerfile = "FROM python:3.11-slim\nCOPY --from=golang:1.22 /usr/local /usr/local\n"
         assert {"go", "gofmt"} <= lab_capability_report._base_binaries(dockerfile)
 
+    def test_a_narrow_copy_from_the_wrong_directory_is_not_credited(self):
+        """Calibrated: a shared generic root list fails this.
+
+        `/usr/bin` used to count as a toolchain root for every image. The
+        golang image keeps nothing there — `go` and `gofmt` live under
+        `/usr/local/go/bin` — so copying `/usr/bin` from it ships no Go
+        toolchain, and crediting one is the over-claim in miniature.
+        """
+        dockerfile = "FROM python:3.11-slim\nCOPY --from=golang:1.22 /usr/bin /usr/bin\n"
+        assert not {"go", "gofmt"} & lab_capability_report._base_binaries(dockerfile)
+
+    def test_a_copy_of_the_images_own_toolchain_directory_is_credited(self):
+        """Calibrated: the same generic root list fails this in the other
+        direction — `/usr/local/go` was not on it, so the one copy that
+        really does ship a Go toolchain read as shipping nothing."""
+        dockerfile = "FROM python:3.11-slim\nCOPY --from=golang:1.22 /usr/local/go /usr/local/go\n"
+        assert {"go", "gofmt"} <= lab_capability_report._base_binaries(dockerfile)
+
+    def test_a_commented_out_install_is_not_an_install(self):
+        """Calibrated: scanning raw Dockerfile lines fails this.
+
+        `# RUN apt-get install -y gcc` is a comment. Reading it as an install
+        reports a compiler tier for a compiler the image does not contain.
+        """
+        dockerfile = "FROM python:3.11-slim\n# RUN apt-get install -y gcc g++\n"
+        assert not {"gcc", "g++"} & lab_capability_report._apt_binaries(dockerfile)
+        live = "FROM python:3.11-slim\nRUN apt-get install -y gcc g++\n"
+        assert {"gcc", "g++"} <= lab_capability_report._apt_binaries(live)
+
+    def test_a_continued_pip_install_still_finds_the_requirements_file(self):
+        """Calibrated: matching within a single raw line fails this.
+
+        The ordinary way this line is written wraps across three lines with
+        trailing backslashes, and a scanner that stops at the newline sees
+        `pip install` with no arguments — so the whole requirements file
+        dropped out of the toolchain silently.
+        """
+        dockerfile = (
+            "FROM python:3.11-slim\n"
+            "RUN pip install \\\n"
+            "  --no-cache-dir \\\n"
+            "  -r requirements.txt\n"
+        )
+        assert lab_capability_report._pip_binaries(dockerfile, "ruff==0.15.8\n") == {"ruff"}
+
+    def test_the_other_spellings_of_a_requirements_install_are_found(self):
+        """`python -m pip` and `--requirement=` are the same instruction."""
+        dockerfile = (
+            "FROM python:3.11-slim\nRUN python -m pip install --requirement=/app/requirements.txt\n"
+        )
+        assert lab_capability_report._pip_binaries(dockerfile, "mypy==1.19.0\n") == {"mypy"}
+
     def test_requirements_installed_only_in_a_builder_are_not_credited(self):
         """Calibrated: parsing requirements unconditionally fails this.
 

@@ -218,7 +218,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Gavel-Bot, Scroll-Bot, Red-Tape-Bot, Stamp-B │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-town-hall       │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

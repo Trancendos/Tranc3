@@ -219,7 +219,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Mail-Sorter-Bot, Thread-Pumper-Bot, UI-Rende │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /arcadia             │
+│  [ health ]  [ status ]  routed by host             │
 └──────────────────────────────────────────────────────┘
 ```
 

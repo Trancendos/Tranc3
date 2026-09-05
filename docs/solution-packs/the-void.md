@@ -75,7 +75,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> T[Traefik]
-    T -->|/the-void| S[The Void<br/>8002]
+    T -->|/api/void| S[The Void<br/>8002]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[The Guardian (Marcus Magnolia)]
     S --> AA[Crypt-Keeper]
@@ -91,7 +91,7 @@ flowchart LR
 
 | Layer | Component | Note |
 |---|---|---|
-| Ingress | Traefik → the-void | Host(`api.trancendos.com`) && PathPrefix(`/api/void`) |
+| Ingress | Traefik → /api/void | Host(`api.trancendos.com`) && PathPrefix(`/api/void`) |
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | Crypt-Keeper + The Silencer | the two Agents below |
 | Automation | Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot | the four Bots below |
@@ -231,7 +231,7 @@ actually missing rather than a generic phase 1.
 ├──────────────────────────────────────────────────────┤
 │  bots: Hash-Bot, Salt-Bot, Cipher-Bot, Padlock-Bot  │
 ├──────────────────────────────────────────────────────┤
-│  [ health ]  [ status ]  route /the-void            │
+│  [ health ]  [ status ]  route /api/void            │
 └──────────────────────────────────────────────────────┘
 ```
 
