@@ -109,6 +109,37 @@ _EPICS: tuple[tuple[str, str, str], ...] = (
 
 _FIBONACCI = (1, 2, 3, 5, 8, 13)
 
+#: Where a Location's solution pack lives, relative to this document.
+_PACKS = REPO / "docs" / "solution-packs"
+
+
+def _pack_slug(location: str) -> str:
+    """A Location name as its solution-pack filename."""
+    return re.sub(r"[^a-z0-9]+", "-", location.lower()).strip("-")
+
+
+def _design_link(location: str | None) -> str:
+    """The Location's solution pack — its storyboard, blueprint and wireframes.
+
+    Every routed item already had design material: 43 packs, one per Location,
+    each carrying the architecture, the Traefik routing derived from compose,
+    the user journey and the acceptance criteria. Nothing said so. A backlog
+    that names the work and not where its design lives sends the reader to
+    guess at a directory, and the packs go unread — which is the same failure
+    as the 44 registers this document exists to sweep, one level over.
+
+    An unrouted item genuinely has no pack: routing it to a Location is the
+    first story, and that is already what its sizing says.
+    """
+    if not location:
+        return "—"
+    pack = _PACKS / f"{_pack_slug(location)}.md"
+    if not pack.is_file():
+        # Said plainly rather than linked into the void. A dead link in a
+        # generated document is worse than an admission.
+        return "_no pack_"
+    return f"[pack](../solution-packs/{pack.name})"
+
 
 def _documents() -> list[Path]:
     """Every register this sweep reads — never its own output.
@@ -303,6 +334,16 @@ def render(items: list[dict]) -> str:
     add("")
     add(f"**{len(items)} open items** across **{len(grouped)} epics**.")
     add("")
+    routed = sum(1 for item in items if item["location"])
+    add(
+        f"**{routed} of {len(items)} are routed to a Location** and link to that "
+        f"Location's solution pack — its architecture, compose-derived routing, user "
+        f"journey and acceptance criteria. The other {len(items) - routed} name no "
+        f"Location, so they have no design material and no one accountable; routing "
+        f"them is the first story in each case, which is what the +1 in their sizing "
+        f"says. That ratio is the single most useful number in this document."
+    )
+    add("")
 
     add("## Definition of Ready")
     add("")
@@ -388,15 +429,16 @@ def render(items: list[dict]) -> str:
         add("")
         add(f"**{len(rows)} stories · {epic_points} points**")
         add("")
-        add("| Story | Location | Status | Pts | Sized because | Source |")
-        add("|---|---|---|---|---|---|")
+        add("| Story | Location | Design | Status | Pts | Sized because | Source |")
+        add("|---|---|---|---|---|---|---|")
         for item, points, why in sized:
             action = item["action"].replace("|", "\\|")
             if len(action) > 110:
                 action = action[:107] + "…"
             add(
-                f"| {action} | {item['location'] or '_unrouted_'} | {item['status']} "
-                f"| {points} | {'; '.join(why)} | `{item['source']}:{item['line']}` |"
+                f"| {action} | {item['location'] or '_unrouted_'} | {_design_link(item['location'])} "
+                f"| {item['status']} | {points} | {'; '.join(why)} "
+                f"| `{item['source']}:{item['line']}` |"
             )
         add("")
 

@@ -12,6 +12,7 @@ it looks like an answer.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -119,6 +120,44 @@ class TestTheSweepDoesNotReadItself:
         first = builder.render(builder.harvest())
         second = builder.render(builder.harvest())
         assert first == second
+
+
+class TestEachRoutedItemLinksItsDesign:
+    def test_every_pack_link_resolves(self):
+        """A generated link into the void is worse than no link.
+
+        The reader trusts a generated document more than a hand-kept one, so a
+        dead link here is believed for longer.
+        """
+        backlog = REPO / "docs" / "governance" / "ACTION-BACKLOG.md"
+        targets = re.findall(r"\[pack\]\(([^)]+)\)", backlog.read_text(encoding="utf-8"))
+        assert targets, "no pack links at all — the Design column is not being emitted"
+        missing = [t for t in set(targets) if not (backlog.parent / t).resolve().is_file()]
+        assert missing == []
+
+    def test_an_unrouted_item_claims_no_design(self, builder):
+        """It has none. Linking one anyway would name the wrong Location's pack."""
+        assert builder._design_link(None) == "—"
+        assert builder._design_link("") == "—"
+
+    def test_every_location_has_a_pack_to_link(self, builder):
+        """Calibrated against the alternative: a `_no pack_` cell.
+
+        The helper degrades rather than emitting a dead link, and this asserts
+        the degradation is not currently needed — all 43 Locations have one.
+        If a Location is added without a pack, this fails and names it, rather
+        than the backlog quietly printing `_no pack_` where a reader expects a
+        design.
+        """
+        from src.entities.platform import PLATFORM_ENTITIES
+
+        without = [
+            entity.location
+            for entity in PLATFORM_ENTITIES.values()
+            if getattr(entity, "location", None)
+            and builder._design_link(entity.location) == "_no pack_"
+        ]
+        assert without == []
 
 
 class TestTheCommittedCopy:
