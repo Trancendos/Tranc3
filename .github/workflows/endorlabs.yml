@@ -45,7 +45,7 @@ jobs:
       env:
         ENDOR_NAMESPACE: ${{ vars.ENDOR_NAMESPACE }}
       run: |
-        if [ -n "$ENDOR_NAMESPACE" ]; then
+        if [ -n "${ENDOR_NAMESPACE//[[:space:]]/}" ]; then
           echo "configured=true" >> "$GITHUB_OUTPUT"
         else
           echo "configured=false" >> "$GITHUB_OUTPUT"
