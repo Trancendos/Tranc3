@@ -74,13 +74,35 @@ class TestTheGateFailsOnlyOnMeaning:
         nothing a reader can act on — and it made every pack stale on any
         commit that added a file beneath a Location's path, score unchanged.
         A gate that cries wolf is one people learn to regenerate past.
+
+        Asserted across every pack rather than sampled from one. The first
+        version read `the-chaos-party.md` and required it to contain "at least
+        one test file present (+1)" — true only because that Location's
+        recorded code path was `tests/`. Correcting the CMDB to its deployed
+        worker (`workers/chaos-party/`, compose port 8079) removed the reason
+        and failed this test, which had pinned an accident of one record
+        rather than the property it was written for. A property that holds of
+        all 43 should be asserted of all 43.
         """
         packs.build(tmp_path)
-        chaos = (tmp_path / "the-chaos-party.md").read_text(encoding="utf-8")
-        readiness = [line for line in chaos.splitlines() if "| Readiness |" in line]
-        assert readiness, "the pack no longer states a readiness score"
-        assert "test file(s) (+1)" not in readiness[0]
-        assert "at least one test file present (+1)" in readiness[0]
+
+        exact_counts = []
+        threshold_wordings = set()
+        for pack in sorted(tmp_path.glob("*.md")):
+            for line in pack.read_text(encoding="utf-8").splitlines():
+                if "| Readiness |" not in line:
+                    continue
+                if "test file(s) (+1)" in line:
+                    exact_counts.append(pack.name)
+                if "at least one test file present (+1)" in line:
+                    threshold_wordings.add(pack.name)
+
+        assert exact_counts == [], "a readiness reason printed an exact file count"
+        assert threshold_wordings, (
+            "no pack states the test-file reason at all — either the reason was "
+            "removed or no Location's code path contains a test file, and both "
+            "are changes worth seeing rather than passing silently"
+        )
 
     def test_the_committed_packs_are_current(self, packs, tmp_path):
         """Regenerate into a temp dir and compare, as --check does."""
