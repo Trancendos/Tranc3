@@ -161,9 +161,20 @@ class TestAllocatedCodesAreImmutable:
         issued = allocated()
         assert len(set(issued.values())) == len(issued)
 
-    def test_the_allocation_is_what_location_code_returns(self):
-        for name, code in allocated().items():
-            assert location_code(name) == code
+    def test_the_allocation_wins_over_what_derivation_would_say(self, monkeypatch):
+        """Calibrated: making `location_code` re-derive fails this.
+
+        Asserting `location_code(name) == allocated()[name]` for the real
+        file proves nothing — the allocation IS what it returns, so it reads
+        `code == code` and would pass a change that ignored the file
+        entirely. Pinning a code the derivation could not produce is what
+        makes the assertion about precedence rather than about equality.
+        """
+        import src.library.references as references
+
+        monkeypatch.setattr(references, "allocated", lambda: {**allocated(), "Cryptex": "Zzzz"})
+        assert references.location_code("Cryptex") == "Zzzz"
+        assert references.location_code("Cryptex") != "Cryp"
 
     def test_the_owners_three_collisions_keep_their_extended_codes(self):
         """The pairs that forced extension, pinned by name.

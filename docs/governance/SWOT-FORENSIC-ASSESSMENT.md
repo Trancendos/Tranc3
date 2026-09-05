@@ -109,8 +109,8 @@ a list somebody can clear in a week, and unlike fifty-two, a true one.
   no owner, no solution pack, and no accountable party — routing it is the
   first story in every one of those 170 cases. (This read 163/29/134 until
   the checkbox blind spot below was closed; F7 records the correction. The
-  share got *worse*, because the 38 items the sweep had been missing are
-  themselves unrouted — which is what an honest denominator does.)
+  share got *worse*: 36 of the 38 items the sweep had been missing name no
+  Location, and only 2 do — which is what an honest denominator does.)
 - **The backlog swept tables only.** 81 unchecked checkbox items sat in 13
   documents — including all three `Todo-*` lists — and none reached the
   backlog, because `harvest()` read markdown tables. A backlog that claims

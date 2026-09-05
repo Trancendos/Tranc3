@@ -23,7 +23,7 @@
 | Port | 2222 | compose / `worker_port` |
 | Compose service | `forgejo` | `docker-compose.production.yml` |
 | Traefik route | ``Host(`trancendos.com`) && PathPrefix(`/the-workshop`)`` | compose labels |
-| Also routed by | ``Host(`the-workshop.trancendos.com`)`` | router `forgejo-subdomain` — an alias |
+| Also routed by | ``Host(`the-workshop.trancendos.com`)`` | router `forgejo-subdomain` — a permanent redirect to `https://trancendos.com/the-workshop/` |
 
 **Role.** CI/CD hub — Forgejo self-hosted git + pipelines
 

@@ -33,11 +33,15 @@ as personal at a glance, and `Reference.is_private` exposes that as a property
 rather than leaving callers to compare scope values — the check that gets
 skipped is the one nobody had to name.
 
-## Location codes are derived, not tabulated
+## Location codes are derived once, then allocated
 
 `location_code()` cuts a Location's name to four letters, dropping a leading
-"The" — twenty of the forty-three begin with it. A hand-kept code table would
-be one more register to drift out of step with `src/entities/platform.py`.
+"The" — twenty of the forty-three begin with it. That derivation is how a
+code is *first chosen*; it is not consulted again once the code is issued.
+See "Codes are allocated once" below for why, and note the distinction: the
+allocation file is not a hand-maintained naming table anyone edits to their
+taste — nothing is written into it by judgement, only the derivation's own
+answer, recorded so it stops moving.
 
 **Four letters is not enough for three pairs, and the collisions are real:**
 
@@ -65,6 +69,12 @@ checked claim rather than an assumed one.
 `config/estate/location_codes.yaml` holds the code issued to each of the 43
 Locations. It is append-only, and `location_code` returns an allocated code
 verbatim; only a Location with no allocation is derived.
+
+This is not the "hand-kept code table" the derivation was meant to avoid.
+Nothing goes into it by judgement — a new Location's entry is the
+derivation's own output, appended so that from then on it cannot move. The
+register that would drift is one where a person picks the codes; this one
+records what the code already was.
 
 Derivation alone is not stable enough to build references on. It extends a
 code only as far as the *current* register requires, so adding a Location

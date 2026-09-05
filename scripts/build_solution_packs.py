@@ -87,6 +87,8 @@ class Joined:
     traefik_other: list = field(default_factory=list)
     #: Base URLs the compose environment configures for this service.
     env_urls: list = field(default_factory=list)
+    #: `(middleware, destination)` for each redirect this service declares.
+    redirects: list = field(default_factory=list)
     #: The build context and Dockerfile compose actually uses. Inferring the
     #: context from the worker directory was wrong for every service built
     #: with `context: .` — ice-box's Dockerfile COPYs `src/`, so the inferred
@@ -165,6 +167,7 @@ def parse_compose() -> dict:
                 "traefik": "",
                 "router": "",
                 "rules": [],
+                "redirects": [],
                 "env_urls": [],
                 "strip": "",
                 "port": "",
@@ -185,6 +188,14 @@ def parse_compose() -> dict:
         dkf = re.match(r"^\s+dockerfile:\s*(\S+)\s*$", line)
         if dkf and not services[current]["dockerfile"]:
             services[current]["dockerfile"] = dkf.group(1)
+        # A router carrying a redirect middleware does not serve the app at
+        # its own rule; it sends the caller somewhere else. Calling it "an
+        # alias" told a reader the opposite of what the deployment does.
+        redirect = re.search(
+            r"middlewares\.([A-Za-z0-9_.-]+)\.redirectregex\.replacement=(\S+?)\"?\s*$", line
+        )
+        if redirect:
+            services[current]["redirects"].append((redirect.group(1), redirect.group(2)))
         strip = re.search(r"middlewares\.([A-Za-z0-9_.-]+)\.stripprefix\.prefixes=(\S+)", line)
         if strip:
             services[current]["strip"] = f"{strip.group(1)}|{strip.group(2).rstrip(chr(34))}"
@@ -263,6 +274,7 @@ def join_entity(name: str, ent, entity_md, priority_md, oss_md, compose) -> Join
             j.traefik_strip = compose[c]["strip"]
             j.traefik_other = list(compose[c].get("other_rules") or [])
             j.env_urls = list(compose[c].get("env_urls") or [])
+            j.redirects = list(compose[c].get("redirects") or [])
             j.build_context = compose[c]["context"]
             j.build_dockerfile = compose[c]["dockerfile"]
             j.compose_port = compose[c]["port"]
@@ -522,9 +534,15 @@ def render_pack(
         # span closes at the first one and the rest of the rule leaks into
         # the table as prose. A double-backtick span with padding is the
         # markdown-correct way to quote text that contains backticks.
-        add(f"| Traefik route | ``{j.traefik_rule}`` | compose labels |")
+        add(f"| Traefik route | ``{_cell(j.traefik_rule)}`` | compose labels |")
         for router, rule in j.traefik_other:
-            add(f"| Also routed by | ``{rule}`` | router `{router}` — an alias |")
+            destination = _redirect_for(j, router)
+            note = (
+                f"router `{router}` — a permanent redirect to {destination}"
+                if destination
+                else f"router `{router}` — a second route to the same service"
+            )
+            add(f"| Also routed by | ``{_cell(rule)}`` | {note} |")
     if j.priority:
         add(f"| Rollout priority | {j.priority} | CLAUDE.md worker map |")
     if j.oss_repo:
@@ -649,7 +667,7 @@ def render_pack(
     add("|---|---|---|")
     add(
         f"| Ingress | {'Traefik → ' + (route_prefix or 'host rule') if j.traefik_rule else 'in-process router'} | "
-        f"{'``' + j.traefik_rule + '``' if j.traefik_rule else 'mounted in api.py'} |"
+        f"{'``' + _cell(j.traefik_rule) + '``' if j.traefik_rule else 'mounted in api.py'} |"
     )
     add("| API | FastAPI app | `/health`, `/status`, domain routes |")
     add(f"| Domain | {agents[0].code_name} + {agents[1].code_name} | the two Agents below |")
@@ -875,6 +893,30 @@ def render_pack(
     add("- `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation")
     add("")
     return _document(L)
+
+
+def _cell(text: str) -> str:
+    """A value safe to place in a markdown table cell.
+
+    A Traefik rule may contain `||`, which is valid rule syntax and a column
+    delimiter in a markdown table — so the route row would split into extra
+    columns and the table would render wrong from that row down. No rule in
+    the estate uses one today; that is a fact about today.
+    """
+    return text.replace("|", "\\|")
+
+
+def _redirect_for(j: "Joined", router: str) -> str | None:
+    """Where `router` sends callers, if it redirects rather than serving."""
+    for middleware, destination in j.redirects:
+        if middleware.startswith(router):
+            # The replacement carries the captured path as a trailing group
+            # (`$${1}` after compose escaping). Showing it raw makes the
+            # destination read as a literal URL nobody would type; what the
+            # reader needs is where the redirect lands.
+            landing = re.sub(r"\$+\{?\d+\}?$", "", destination.replace("$$", "$"))
+            return f"`{landing}`"
+    return None
 
 
 #: Inner width of the wireframe box, in characters.

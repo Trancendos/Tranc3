@@ -233,6 +233,13 @@ def _unwrap(text: str) -> str:
                 and wrapper not in value[len(wrapper) : -len(wrapper)]
             ):
                 value = value[len(wrapper) : -len(wrapper)].strip()
+                if wrapper == "`":
+                    # Stop at a code span. Its contents are code, and
+                    # continuing to unwrap read the underscores in
+                    # `__init__` as emphasis and returned `init` — a
+                    # corruption of the very thing the span exists to
+                    # protect from markdown.
+                    return value
                 changed = True
     return value
 
