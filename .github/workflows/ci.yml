@@ -245,6 +245,14 @@ jobs:
       - name: Documentation links resolve
         run: python scripts/check_doc_links.py
 
+      # The 3D topology map is rendered from this JSON, which is read out of
+      # the entity register, compose, the flow contract and the creative
+      # route table — never asserted. A map that drifts from the deployment
+      # is worse than no map: it is a confident answer to "what is wired to
+      # what" that happens to be wrong.
+      - name: Topology map data is current
+        run: python scripts/build_topology_3d.py --check
+
       # The estate records outstanding work in 44 separate registers, each
       # correct about its own domain and blind to the rest — so nobody can
       # answer "what is outstanding across the platform" without reading 320

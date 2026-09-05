@@ -19,9 +19,9 @@
 | Pillar | Knowledge | `Pillar` enum |
 | Reports to Prime(s) | Norman Hawkins | `primes` |
 | Status | ✅ In repo | `CLAUDE.md` service table |
-| Code path | `workers/search-service/` ✅ on disk | filesystem |
-| Port | 8017 | compose / `worker_port` |
-| Compose service | `search-service` | `docker-compose.production.yml` |
+| Code path | `workers/library-service/` ✅ on disk | filesystem |
+| Port | 8067 | compose / `worker_port` |
+| Compose service | `library-service` | `docker-compose.production.yml` |
 | Rollout priority | P3 | CLAUDE.md worker map |
 | OSS foundation | `outline/outline` (29K★, BSL (self-host free)) | CLAUDE.md |
 
@@ -48,7 +48,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 
 **Hard constraints — these come from the estate, not from preference.**
 
-- **Build context is `./workers/search-service`**, so `src/` is *not* in the image. This Location
+- **Build context is `./workers/library-service`**, so `src/` is *not* in the image. This Location
   cannot `from src.* import ...` — ported logic must be self-contained. This is the
   single most common cause of a worker that passes tests and dies in the container.
 - **SQLite over shared state** — each worker owns its own database file (principle 1).
@@ -69,7 +69,7 @@ implementation that cannot honour it is incomplete regardless of test coverage.
 ```mermaid
 flowchart LR
     C[Client] --> A[api.py]
-    A --> S[The Library<br/>8017]
+    A --> S[The Library<br/>8067]
     S --> DB[(SQLite<br/>own file)]
     S -.reports.-> P[Norman Hawkins]
     S --> AA[The Curator]
@@ -89,7 +89,7 @@ flowchart LR
 | API | FastAPI app | `/health`, `/status`, domain routes |
 | Domain | The Curator + The Indexer | the two Agents below |
 | Automation | Page-Bot, Bookmark-Bot, Spine-Bot, Dust-Jacket-Bot | the four Bots below |
-| Persistence | SQLite | volume not yet declared |
+| Persistence | SQLite | library-data → /data |
 | Observability | structured JSON + W3C trace | `src/observability/tracing.py` |
 
 ## 6. Storyboard and schema — SCAFFOLD
@@ -174,10 +174,10 @@ has to name.
 **Compose service:**
 
 ```yaml
-  search-service:
-    build: { context: ./workers/search-service, dockerfile: Dockerfile }
-    environment: [ PORT=8017 ]
-    ports: [ "8017:8017" ]
+  library-service:
+    build: { context: ./workers/library-service, dockerfile: Dockerfile }
+    environment: [ PORT=8067 ]
+    ports: [ "8067:8067" ]
 ```
 
 ## 10. Epics and stories — SCAFFOLD
@@ -200,7 +200,6 @@ actually missing rather than a generic phase 1.
 
 | Item | Evidence | Impact |
 |---|---|---|
-| Two candidate implementations: registered `workers/search-service/` vs `workers/library-service/` | both directories exist on disk | Registry and CLAUDE.md name different workers for this Location — port, route and readiness above follow the registered one |
 | Compose service has no Traefik router | compose labels | Reachable inside the network only — no external route |
 | No test files under the code path | filesystem check | Regressions land silently |
 
@@ -223,7 +222,7 @@ actually missing rather than a generic phase 1.
 
 ## 13. Prioritisation — DERIVED
 
-**Criticality 2/10 · Readiness 8/10 → Defer — below median on both axes**
+**Criticality 2/10 · Readiness 9/10 → Harvest — built out, below-median dependency; polish and ship**
 
 Classified against the estate's own medians (criticality 3, readiness
 8 across all 43 Locations), not a fixed threshold — the two axes do not
@@ -236,7 +235,7 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 | Axis | Score | Reasons |
 |---|---|---|
 | Criticality | 2/10 | worker-map priority P3 (+1); answers to 1 Prime(s) (+1) |
-| Readiness | 8/10 | status ✅ in CLAUDE.md (+3); code path `workers/search-service/` exists on disk (+2); at least one Python file present (+1); compose service `search-service` defined (+2) |
+| Readiness | 9/10 | status ✅ in CLAUDE.md (+3); code path `workers/library-service/` exists on disk (+2); three or more Python files present (+2); compose service `library-service` defined (+2) |
 
 ## 14. Documentation — DERIVED
 
@@ -244,6 +243,6 @@ systematically ranks safe-and-unimportant above important-and-unfinished.
 - `src/entities/platform.py` — `PLATFORM_ENTITIES["The Library"]`
 - `docs/governance/LOCATION-FUNCTIONS.md` — Job Description
 - `docs/governance/TRANCENDOS-MODELS-MATRIX.md` — base tier and variants
-- `docker-compose.production.yml` — service `search-service`
-- `workers/search-service/` — implementation
+- `docker-compose.production.yml` — service `library-service`
+- `workers/library-service/` — implementation
 - `compliance/magna-carta/compliance/sector_profiles.yaml` — sector activation

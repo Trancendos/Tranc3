@@ -42,15 +42,16 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | The Artifactory | `PID-ART` | Commercial / Financial | 4/10 | 8/10 | 0 | 8047 | [pack](the-artifactory.md) |
 | The HIVE | `PID-HVE` | Architectural | 4/10 | 8/10 | 0 | 8022 | [pack](the-hive.md) |
 
-## Harvest — built out, below-median dependency; polish and ship  (3)
+## Harvest — built out, below-median dependency; polish and ship  (4)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
 | The Digital Grid | `PID-DGR` | Development (Code) | 3/10 | 9/10 | 0 | 8010 | [pack](the-digital-grid.md) |
 | TranceFlow | `PID-TFL` | Creativity | 3/10 | 9/10 | 0 | 8059 | [pack](tranceflow.md) |
 | VRAR3D | `PID-VR3` | Wellbeing | 3/10 | 9/10 | 0 | 8060 | [pack](vrar3d.md) |
+| The Library | `PID-LIB` | Knowledge | 2/10 | 9/10 | 0 | 8067 | [pack](the-library.md) |
 
-## Defer — below median on both axes  (19)
+## Defer — below median on both axes  (18)
 
 | Location | PID | Pillar | Crit | Ready | Dependents | Port | Pack |
 |---|---|---|---|---|---|---|---|
@@ -67,7 +68,6 @@ Quadrants split at each axis's median across all 43 Locations (criticality 3, re
 | The Town Hall | `PID-TWH` | Architectural | 3/10 | 7/10 | 0 | — | [pack](the-town-hall.md) |
 | The Citadel | `PID-CTL` | DevOps | 3/10 | 6/10 | 0 | — | [pack](the-citadel.md) |
 | Turing's Hub | `PID-THB` | DevOps | 3/10 | 5/10 | 0 | — | [pack](turing-s-hub.md) |
-| The Library | `PID-LIB` | Knowledge | 2/10 | 8/10 | 0 | 8017 | [pack](the-library.md) |
 | The Workshop | `PID-WRK` | Development (Code) | 2/10 | 7/10 | 0 | 2222 | [pack](the-workshop.md) |
 | The Chaos Party | `PID-TCP` | Development (Code) | 2/10 | 6/10 | 0 | — | [pack](the-chaos-party.md) |
 | API Marketplace | `PID-APM` | Commercial / Financial | 1/10 | 7/10 | 0 | — | [pack](api-marketplace.md) |

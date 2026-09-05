@@ -1,0 +1,950 @@
+{
+  "counts": {
+    "compose_services": 306,
+    "deployed": 35,
+    "in_process": 3,
+    "infrastructure": 87,
+    "locations": 43,
+    "routed": 25,
+    "undeployed": 5
+  },
+  "creative": [
+    {
+      "delivers": "An image, or an honest offline placeholder when no backend answers.",
+      "id": "image.create",
+      "location": "Sashas Photo Studio",
+      "status": "degraded"
+    },
+    {
+      "delivers": "Nothing \u2014 no endpoint accepts an input image.",
+      "id": "image.edit",
+      "location": "Sashas Photo Studio",
+      "status": "absent"
+    },
+    {
+      "delivers": "HTTP 501.",
+      "id": "image.upscale",
+      "location": "Sashas Photo Studio",
+      "status": "absent"
+    },
+    {
+      "delivers": "A game record with engine, scenes, entities and assets.",
+      "id": "game.create",
+      "location": "TranceFlow",
+      "status": "degraded"
+    },
+    {
+      "delivers": "Nothing \u2014 the deployed TranceFlow image serves no asset route.",
+      "id": "game.asset.add",
+      "location": "TranceFlow",
+      "status": "absent"
+    },
+    {
+      "delivers": "Nothing \u2014 the deployed TranceFlow image serves no scene route.",
+      "id": "model3d.create",
+      "location": "TranceFlow",
+      "status": "absent"
+    },
+    {
+      "delivers": "A video project, clips and a render job record.",
+      "id": "video.create",
+      "location": "TateKing",
+      "status": "degraded"
+    },
+    {
+      "delivers": "A Penpot design file.",
+      "id": "design.create",
+      "location": "Fabulousa",
+      "status": "degraded"
+    },
+    {
+      "delivers": "Nothing \u2014 Fabulousa holds no components, widgets or tokens.",
+      "id": "design.component",
+      "location": "Fabulousa",
+      "status": "absent"
+    },
+    {
+      "delivers": "Nothing \u2014 no accessibility check runs anywhere in the estate.",
+      "id": "design.accessibility",
+      "location": "Fabulousa",
+      "status": "absent"
+    },
+    {
+      "delivers": "Generated source, reviewed and optionally executed in a sandbox.",
+      "id": "code.generate",
+      "location": "The Lab",
+      "status": "routed"
+    },
+    {
+      "delivers": "Nothing \u2014 the deployed Warp Radio image serves no POST at all.",
+      "id": "music.create",
+      "location": "Warp Radio",
+      "status": "absent"
+    },
+    {
+      "delivers": "A project that fans out across the creative Locations.",
+      "id": "creative.brief",
+      "location": "Imaginarium",
+      "status": "degraded"
+    }
+  ],
+  "flows": [
+    {
+      "claim": "Workflow and pipeline execution routes through The Digital Grid",
+      "hub": "The Digital Grid",
+      "id": "FLOW-001",
+      "verdict": "partial"
+    },
+    {
+      "claim": "All MCP tool traffic routes through The Spark",
+      "hub": "The Spark",
+      "id": "FLOW-002",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All external and internal APIs are catalogued by the API Marketplace",
+      "hub": "API Marketplace",
+      "id": "FLOW-003",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "All AI-to-AI communication routes through The Nexus",
+      "hub": "The Nexus",
+      "id": "FLOW-004",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All cyber-defence signal routes through Cryptex",
+      "hub": "Cryptex",
+      "id": "FLOW-010",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All secrets and confidential material flow into The Void",
+      "hub": "The Void",
+      "id": "FLOW-011",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "The Lighthouse cryptographically tags and scans all inbound and outbound traffic",
+      "hub": "The Lighthouse",
+      "id": "FLOW-012",
+      "verdict": "absent"
+    },
+    {
+      "claim": "The Warp Tunnel isolates anomalous entities and transports them to The Ice Box",
+      "hub": "The Warp Tunnel",
+      "id": "FLOW-013",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "The Ice Box spins up containers, VMs and sandboxes on demand",
+      "hub": "The Ice Box",
+      "id": "FLOW-014",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "A Cryptex threat escalation raises a platform-wide alert state (Call to Arms)",
+      "hub": "The HIVE",
+      "id": "FLOW-015",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "Every action and change is observed and logged by The Observatory",
+      "hub": "The Observatory",
+      "id": "FLOW-020",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Observatory records age out into The Basement",
+      "hub": "The Basement",
+      "id": "FLOW-021",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "The Basement's confirmed patterns are promoted into The Library",
+      "hub": "The Library",
+      "id": "FLOW-022",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Library KB articles are scanned by The Academy and developed into training material",
+      "hub": "The Academy",
+      "id": "FLOW-023",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "Section 7 research findings are handed to Think Tank for solution assessment",
+      "hub": "Think Tank",
+      "id": "FLOW-024",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Luminous orchestrates and coordinates the platform on Cornelius's behalf",
+      "hub": "Luminous",
+      "id": "FLOW-025",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All photo and image generation routes through Sashas Photo Studio",
+      "hub": "Sashas Photo Studio",
+      "id": "FLOW-030",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All UX, UI and design-system work routes through Fabulousa",
+      "hub": "Fabulousa",
+      "id": "FLOW-031",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All video creation and editing routes through TateKing",
+      "hub": "TateKing",
+      "id": "FLOW-032",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All game and 3D development routes through TranceFlow",
+      "hub": "TranceFlow",
+      "id": "FLOW-033",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "The Imaginarium orchestrates the creative Locations rather than duplicating them",
+      "hub": "Imaginarium",
+      "id": "FLOW-034",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Warp Radio connects users to music on demand",
+      "hub": "Warp Radio",
+      "id": "FLOW-035",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All coding and development work routes through The Lab",
+      "hub": "The Lab",
+      "id": "FLOW-040",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All debugging routes through Slime",
+      "hub": "The Lab",
+      "id": "FLOW-041",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "All testing routes through The Chaos Party",
+      "hub": "The Chaos Party",
+      "id": "FLOW-042",
+      "verdict": "partial"
+    },
+    {
+      "claim": "The Workshop holds repositories and mirrors to GitHub, GitLab and Bitbucket",
+      "hub": "The Workshop",
+      "id": "FLOW-043",
+      "verdict": "partial"
+    },
+    {
+      "claim": "Produced artifacts are held and analysed by The Artifactory",
+      "hub": "The Artifactory",
+      "id": "FLOW-044",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "Infinity Portal is the single login entrance",
+      "hub": "Infinity",
+      "id": "FLOW-050",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Infinity Gate routes a multi-role user to the right platform entrance",
+      "hub": "Infinity",
+      "id": "FLOW-051",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Infinity-One is the central user account and profile hub",
+      "hub": "Infinity",
+      "id": "FLOW-052",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Infinity Bridge is the transport layer users navigate through",
+      "hub": "Infinity",
+      "id": "FLOW-053",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "Arcadia is the post-login user entrance with forum, AI chat and email",
+      "hub": "Arcadia",
+      "id": "FLOW-054",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "All financial regulation routes through Royal Bank of Arcadia",
+      "hub": "Royal Bank of Arcadia",
+      "id": "FLOW-060",
+      "verdict": "partial"
+    },
+    {
+      "claim": "Transactions are executed by Arcadian Exchange and regulated by Royal Bank of Arcadia",
+      "hub": "Arcadian Exchange",
+      "id": "FLOW-061",
+      "verdict": "unwired"
+    },
+    {
+      "claim": "The Town Hall carries ITIL/ITSM, the CI register and CMDB",
+      "hub": "The Town Hall",
+      "id": "FLOW-062",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "The Town Hall carries the War Room and Governance Board Room",
+      "hub": "The Town Hall",
+      "id": "FLOW-063",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "User-requested work passes a PLM gate review before it is signed off",
+      "hub": "The Town Hall",
+      "id": "FLOW-064",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "All user documents and files are stored in DocUtari",
+      "hub": "DocUtari",
+      "id": "FLOW-065",
+      "verdict": "enforced"
+    },
+    {
+      "claim": "Diagnostic assessment is aggregated rather than per-service",
+      "hub": "The Observatory",
+      "id": "FLOW-066",
+      "verdict": "enforced"
+    }
+  ],
+  "generated_by": "scripts/build_topology_3d.py",
+  "locations": [
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "infinity-ai",
+      "in_process": false,
+      "lead_ai": "Cornelius MacIntyre",
+      "name": "Luminous",
+      "on_disk": true,
+      "pid": "PID-LUM",
+      "pillar": "Architectural",
+      "port": 8009,
+      "route_prefix": "",
+      "worker_path": "workers/infinity-ai/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "queue-service",
+      "in_process": false,
+      "lead_ai": "The Queen",
+      "name": "The HIVE",
+      "on_disk": true,
+      "pid": "PID-HVE",
+      "pillar": "Architectural",
+      "port": 8022,
+      "route_prefix": "",
+      "worker_path": "workers/queue-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "infinity-ws",
+      "in_process": false,
+      "lead_ai": "Nexus-Prime",
+      "name": "The Nexus",
+      "on_disk": true,
+      "pid": "PID-NXS",
+      "pillar": "Architectural",
+      "port": 8004,
+      "route_prefix": "/ws",
+      "worker_path": "workers/infinity-ws/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "",
+      "in_process": true,
+      "lead_ai": "Tristuran",
+      "name": "The Town Hall",
+      "on_disk": true,
+      "pid": "PID-TWH",
+      "pillar": "Architectural",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "src/townhall/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "",
+      "in_process": true,
+      "lead_ai": "Solarscene",
+      "name": "API Marketplace",
+      "on_disk": true,
+      "pid": "PID-APM",
+      "pillar": "Commercial / Financial",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "src/apimarket/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "",
+      "in_process": false,
+      "lead_ai": "Lilli SC",
+      "name": "Arcadia",
+      "on_disk": true,
+      "pid": "PID-ARC",
+      "pillar": "Commercial / Financial",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "web/"
+    },
+    {
+      "abilities": 2,
+      "agents": [
+        "Clarence Porter",
+        "Ann Porter",
+        "George Porter",
+        "Edward Porter",
+        "James Porter"
+      ],
+      "compose_service": "orders-service",
+      "in_process": false,
+      "lead_ai": "Clarence Porter",
+      "name": "Arcadian Exchange",
+      "on_disk": true,
+      "pid": "PID-AEX",
+      "pillar": "Commercial / Financial",
+      "port": 8012,
+      "route_prefix": "",
+      "worker_path": "workers/orders-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "payments-service",
+      "in_process": false,
+      "lead_ai": "Dorris Fontaine",
+      "name": "Royal Bank of Arcadia",
+      "on_disk": true,
+      "pid": "PID-RBA",
+      "pillar": "Commercial / Financial",
+      "port": 8013,
+      "route_prefix": "",
+      "worker_path": "workers/payments-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "artifactory-service",
+      "in_process": false,
+      "lead_ai": "Lunascene",
+      "name": "The Artifactory",
+      "on_disk": true,
+      "pid": "PID-ART",
+      "pillar": "Commercial / Financial",
+      "port": 8047,
+      "route_prefix": "/artifactory",
+      "worker_path": "workers/artifactory-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "warp-radio",
+      "in_process": false,
+      "lead_ai": "Rocking Ricki",
+      "name": "Warp Radio",
+      "on_disk": true,
+      "pid": "PID-WRA",
+      "pillar": "Commercial / Financial",
+      "port": 8073,
+      "route_prefix": "/warp-radio",
+      "worker_path": "workers/warp-radio/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "fabulousa-service",
+      "in_process": false,
+      "lead_ai": "Baron Von Hilton",
+      "name": "Fabulousa",
+      "on_disk": true,
+      "pid": "PID-FAB",
+      "pillar": "Creativity",
+      "port": 8048,
+      "route_prefix": "/fabulousa",
+      "worker_path": "workers/fabulousa-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "imaginarium",
+      "in_process": false,
+      "lead_ai": "Voxx",
+      "name": "Imaginarium",
+      "on_disk": true,
+      "pid": "PID-IMG",
+      "pillar": "Creativity",
+      "port": 8064,
+      "route_prefix": "/imaginarium",
+      "worker_path": "workers/imaginarium/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "sashas-photo-studio",
+      "in_process": false,
+      "lead_ai": "Madam Krystal",
+      "name": "Sashas Photo Studio",
+      "on_disk": true,
+      "pid": "PID-SPS",
+      "pillar": "Creativity",
+      "port": 8062,
+      "route_prefix": "/sashas-photo-studio",
+      "worker_path": "workers/sashas-photo-studio/"
+    },
+    {
+      "abilities": 2,
+      "agents": [
+        "Benji Tate",
+        "Sam King"
+      ],
+      "compose_service": "tateking",
+      "in_process": false,
+      "lead_ai": "Benji Tate",
+      "name": "TateKing",
+      "on_disk": true,
+      "pid": "PID-TKG",
+      "pillar": "Creativity",
+      "port": 8061,
+      "route_prefix": "/tateking",
+      "worker_path": "workers/tateking/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "the-studio",
+      "in_process": false,
+      "lead_ai": "Voxx",
+      "name": "The Studio",
+      "on_disk": true,
+      "pid": "PID-STD",
+      "pillar": "Creativity",
+      "port": 8069,
+      "route_prefix": "/the-studio",
+      "worker_path": "workers/the-studio/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "tranceflow",
+      "in_process": false,
+      "lead_ai": "Junior Cesar",
+      "name": "TranceFlow",
+      "on_disk": true,
+      "pid": "PID-TFL",
+      "pillar": "Creativity",
+      "port": 8059,
+      "route_prefix": "/tranceflow",
+      "worker_path": "workers/tranceflow/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "cron-service",
+      "in_process": false,
+      "lead_ai": "Chronos",
+      "name": "ChronosSphere / ArcStream",
+      "on_disk": true,
+      "pid": "PID-CHR",
+      "pillar": "DevOps",
+      "port": 8021,
+      "route_prefix": "",
+      "worker_path": "workers/cron-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "devocity",
+      "in_process": false,
+      "lead_ai": "Kitty",
+      "name": "DevOcity",
+      "on_disk": true,
+      "pid": "PID-DEV",
+      "pillar": "DevOps",
+      "port": 8110,
+      "route_prefix": "/devocity",
+      "worker_path": "workers/devocity/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "the-dutchy",
+      "in_process": false,
+      "lead_ai": "The Dutchy",
+      "name": "Section 7",
+      "on_disk": true,
+      "pid": "PID-DUT",
+      "pillar": "DevOps",
+      "port": 8057,
+      "route_prefix": "/the-dutchy",
+      "worker_path": "workers/the-dutchy/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "",
+      "in_process": false,
+      "lead_ai": "Trancendos",
+      "name": "The Citadel",
+      "on_disk": true,
+      "pid": "PID-CTL",
+      "pillar": "DevOps",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "deploy/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "",
+      "in_process": true,
+      "lead_ai": "Trancendos",
+      "name": "Think Tank",
+      "on_disk": true,
+      "pid": "PID-TNK",
+      "pillar": "DevOps",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "src/quantum/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "",
+      "in_process": false,
+      "lead_ai": "Samantha Turing",
+      "name": "Turing's Hub",
+      "on_disk": true,
+      "pid": "PID-THB",
+      "pillar": "DevOps",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "src/personality/"
+    },
+    {
+      "abilities": 2,
+      "agents": [
+        "The Mad Hatter",
+        "Alice Dream"
+      ],
+      "compose_service": "",
+      "in_process": false,
+      "lead_ai": "The Mad Hatter",
+      "name": "The Chaos Party",
+      "on_disk": true,
+      "pid": "PID-TCP",
+      "pillar": "Development (Code)",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "tests/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "the-grid",
+      "in_process": false,
+      "lead_ai": "Tyler Towncroft",
+      "name": "The Digital Grid",
+      "on_disk": true,
+      "pid": "PID-DGR",
+      "pillar": "Development (Code)",
+      "port": 8010,
+      "route_prefix": "",
+      "worker_path": "workers/the-grid/"
+    },
+    {
+      "abilities": 2,
+      "agents": [
+        "The Dr. (Nikolai O'denhime)",
+        "Slime"
+      ],
+      "compose_service": "the-lab",
+      "in_process": false,
+      "lead_ai": "The Dr. (Nikolai O'denhime)",
+      "name": "The Lab",
+      "on_disk": true,
+      "pid": "PID-LAB",
+      "pillar": "Development (Code)",
+      "port": 8055,
+      "route_prefix": "/the-lab",
+      "worker_path": "workers/the-lab/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "forgejo",
+      "in_process": false,
+      "lead_ai": "Larry Lowhammer",
+      "name": "The Workshop",
+      "on_disk": true,
+      "pid": "PID-WRK",
+      "pillar": "Development (Code)",
+      "port": 2222,
+      "route_prefix": "/the-workshop",
+      "worker_path": "deploy/forgejo/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "files-service",
+      "in_process": false,
+      "lead_ai": "Fiddsy",
+      "name": "DocUtari",
+      "on_disk": true,
+      "pid": "PID-DOC",
+      "pillar": "Knowledge",
+      "port": 8014,
+      "route_prefix": "",
+      "worker_path": "workers/files-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "the-academy",
+      "in_process": false,
+      "lead_ai": "Shimshi",
+      "name": "The Academy",
+      "on_disk": true,
+      "pid": "PID-ACA",
+      "pillar": "Knowledge",
+      "port": 8056,
+      "route_prefix": "/the-academy",
+      "worker_path": "workers/the-academy/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "basement",
+      "in_process": false,
+      "lead_ai": "Gary Glowman (Glow-Worm)",
+      "name": "The Basement",
+      "on_disk": true,
+      "pid": "PID-BSM",
+      "pillar": "Knowledge",
+      "port": 8068,
+      "route_prefix": "/basement",
+      "worker_path": "workers/basement/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "library-service",
+      "in_process": false,
+      "lead_ai": "Zimik",
+      "name": "The Library",
+      "on_disk": true,
+      "pid": "PID-LIB",
+      "pillar": "Knowledge",
+      "port": 8067,
+      "route_prefix": "",
+      "worker_path": "workers/library-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "monitoring",
+      "in_process": false,
+      "lead_ai": "Norman Hawkins",
+      "name": "The Observatory",
+      "on_disk": true,
+      "pid": "PID-OBS",
+      "pillar": "Knowledge",
+      "port": 8007,
+      "route_prefix": "",
+      "worker_path": "workers/monitoring/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "",
+      "in_process": false,
+      "lead_ai": "Imfy",
+      "name": "The Spark",
+      "on_disk": true,
+      "pid": "PID-SPK",
+      "pillar": "Knowledge",
+      "port": null,
+      "route_prefix": "",
+      "worker_path": "src/mcp/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "cryptex",
+      "in_process": false,
+      "lead_ai": "Renik",
+      "name": "Cryptex",
+      "on_disk": true,
+      "pid": "PID-CRX",
+      "pillar": "Security",
+      "port": 8053,
+      "route_prefix": "/cryptex",
+      "worker_path": "workers/cryptex/"
+    },
+    {
+      "abilities": 2,
+      "agents": [
+        "The Guardian (Marcus Magnolia)",
+        "The Orb of Orisis"
+      ],
+      "compose_service": "infinity-auth",
+      "in_process": false,
+      "lead_ai": "The Guardian (Marcus Magnolia)",
+      "name": "Infinity",
+      "on_disk": true,
+      "pid": "PID-INF",
+      "pillar": "Security",
+      "port": 8005,
+      "route_prefix": "/auth/",
+      "worker_path": "workers/infinity-auth/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "ice-box-service",
+      "in_process": false,
+      "lead_ai": "Neonach",
+      "name": "The Ice Box",
+      "on_disk": true,
+      "pid": "PID-ICB",
+      "pillar": "Security",
+      "port": 8046,
+      "route_prefix": "/ice-box",
+      "worker_path": "workers/ice-box-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "identity-service",
+      "in_process": false,
+      "lead_ai": "Rocking Ricki",
+      "name": "The Lighthouse",
+      "on_disk": true,
+      "pid": "PID-LTH",
+      "pillar": "Security",
+      "port": 8015,
+      "route_prefix": "",
+      "worker_path": "workers/identity-service/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "infinity-void",
+      "in_process": false,
+      "lead_ai": "Prometheus",
+      "name": "The Void",
+      "on_disk": true,
+      "pid": "PID-VOI",
+      "pillar": "Security",
+      "port": 8002,
+      "route_prefix": "/api/void",
+      "worker_path": "workers/infinity-void/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "warp-tunnel",
+      "in_process": false,
+      "lead_ai": "Rocking Ricki",
+      "name": "The Warp Tunnel",
+      "on_disk": true,
+      "pid": "PID-WTP",
+      "pillar": "Security",
+      "port": 8072,
+      "route_prefix": "/warp-tunnel",
+      "worker_path": "workers/warp-tunnel/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "imind",
+      "in_process": false,
+      "lead_ai": "Elouise",
+      "name": "I-Mind",
+      "on_disk": true,
+      "pid": "PID-IMD",
+      "pillar": "Wellbeing",
+      "port": 8075,
+      "route_prefix": "/imind",
+      "worker_path": "workers/imind/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "resonate",
+      "in_process": false,
+      "lead_ai": "Magdalena",
+      "name": "Resonate",
+      "on_disk": true,
+      "pid": "PID-RES",
+      "pillar": "Wellbeing",
+      "port": 8076,
+      "route_prefix": "/resonate",
+      "worker_path": "workers/resonate/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "tranquility",
+      "in_process": false,
+      "lead_ai": "Savania",
+      "name": "Tranquility",
+      "on_disk": true,
+      "pid": "PID-TRQ",
+      "pillar": "Wellbeing",
+      "port": 8077,
+      "route_prefix": "/tranquility",
+      "worker_path": "workers/tranquility/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "vrar3d",
+      "in_process": false,
+      "lead_ai": "Entari",
+      "name": "VRAR3D",
+      "on_disk": true,
+      "pid": "PID-VR3",
+      "pillar": "Wellbeing",
+      "port": 8060,
+      "route_prefix": "/vrar3d",
+      "worker_path": "workers/vrar3d/"
+    },
+    {
+      "abilities": 2,
+      "agents": [],
+      "compose_service": "taimra",
+      "in_process": false,
+      "lead_ai": "tAImra",
+      "name": "tAimra",
+      "on_disk": true,
+      "pid": "PID-TMR",
+      "pillar": "Wellbeing",
+      "port": 8074,
+      "route_prefix": "/taimra",
+      "worker_path": "workers/taimra/"
+    }
+  ]
+}

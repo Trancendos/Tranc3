@@ -655,8 +655,16 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Spine-Bot", "Ensures all internal page links work, keeping documents connected."
         ),
         bot_04=Bot("Dust-Jacket-Bot", "Generates quick summaries of newly updated documentation."),
-        worker_port=8017,
-        worker_path="workers/search-service/",
+        # workers/library-service/ (8067), not workers/search-service/ (8017).
+        # The evidence is unambiguous in three places: that worker's own app
+        # is titled "The Library — Knowledge Base API", compose's comment on
+        # the service reads "The Library ACO router (Port 8067, Lead AI:
+        # Zimik)", and search-service titles itself "search-service" and is a
+        # full-text/semantic search worker in its own right. No Location
+        # claimed library-service at all, so The Library was pointed at
+        # another service's code while its own went unowned.
+        worker_port=8067,
+        worker_path="workers/library-service/",
     ),
     "The Academy": LocationEntity(
         location="The Academy",

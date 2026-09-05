@@ -1483,7 +1483,7 @@
         "Contextual Search: Returns precise answers from intent."
       ],
       "worker_port": 8017,
-      "worker_path": "workers/search-service/",
+      "worker_path": "workers/library-service/",
       "agents": [
         {
           "name": "The Curator",
